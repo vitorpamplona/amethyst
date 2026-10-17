@@ -26,10 +26,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -58,14 +60,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.concordChannelUnreadCountFlow
 import com.vitorpamplona.amethyst.commons.chats.publicChannels.concord.newestTimelineNote
 import com.vitorpamplona.amethyst.commons.concord.ui.ConcordUnreadBadge
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_community
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_message
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_owner_warning
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
+import com.vitorpamplona.amethyst.commons.resources.concord_member_count
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
@@ -117,19 +118,25 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
+import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
+import com.vitorpamplona.amethyst.commons.ui.layouts.chatRowTitleWeight
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.MyExtensibleTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.HeaderPictureModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelId
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
 import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
@@ -318,93 +325,113 @@ fun ConcordChannelListScreen(
         )
     }
 
+    // Read once here: the overflow menu is composed lazily inside the top bar.
+    val canEdit =
+        state?.authority?.let {
+            it.isOwner(account.signer.pubKey) ||
+                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
+        } == true &&
+            session?.controlPlaneKeys()?.canWrite == true
+
+    // Minting an invite hands out a working key to the community, so it takes
+    // CREATE_INVITE like any other privileged action. This button used to be the one
+    // control on the screen with no gate at all.
+    val canInvite =
+        state?.authority?.let {
+            it.isOwner(account.signer.pubKey) ||
+                it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
+        } == true
+
+    val memberCount = remember(session, state, revision) { session?.memberCount() ?: 0 }
+    val description =
+        state
+            ?.metadata
+            ?.description
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+
     Scaffold(
         topBar = {
-            ShorterTopAppBar(
+            // The bar stays to icon + name + member count, the one thing a returning member reads. The
+            // description and the Public/Private mode (CORD-05 §5) sit in the panel a tap on the bar
+            // opens, like a NIP-28 channel's: pinned above the list they greeted every daily visit.
+            MyExtensibleTopAppBar(
                 title = {
-                    Column {
-                        Text(communityName, maxLines = 1)
-                        // The Public/Private mode (CORD-05 §5): any live invite link in the folded
-                        // registries makes the community Public; none makes it Private, where a ban
-                        // rotates the keys (CORD-06 §3). Unknown until the Control Plane has folded.
-                        state?.let { folded ->
+                    ConcordServerTitle(
+                        communityId = communityId,
+                        name = communityName,
+                        iconPointer = state?.metadata?.icon,
+                        memberCount = memberCount,
+                        accountViewModel = accountViewModel,
+                    )
+                },
+                extendableRow =
+                    state?.let { folded ->
+                        {
                             val links = folded.liveInviteLinks.size
-                            Text(
-                                if (folded.isPublic) pluralStringRes(Res.plurals.concord_mode_public, links, links) else stringRes(Res.string.concord_mode_private),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                            ConcordAboutPanel(
+                                description = description,
+                                // Any live invite link in the folded registries makes the community
+                                // Public; none makes it Private, where a ban rotates the keys (CORD-06 §3).
+                                mode = if (folded.isPublic) pluralStringRes(Res.plurals.concord_mode_public, links, links) else stringRes(Res.string.concord_mode_private),
+                                isPublic = folded.isPublic,
                             )
                         }
-                    }
-                },
-                navigationIcon = {
-                    // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
+                    },
+                // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
+                navigationIcon =
                     if (canPop) {
-                        IconButton(onClick = { nav.popBack() }) {
-                            SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                        {
+                            IconButton(onClick = { nav.popBack() }) {
+                                SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
+                            }
                         }
-                    }
-                },
+                    } else {
+                        null
+                    },
                 actions = {
-                    // Rank + the Control write key (CORD-02 §2), like [canManageChannels] above.
-                    val canEdit =
-                        state?.authority?.let {
-                            it.isOwner(account.signer.pubKey) ||
-                                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
-                        } == true &&
-                            session?.controlPlaneKeys()?.canWrite == true
-
-                    // Minting an invite hands out a working key to the community, so it takes
-                    // CREATE_INVITE like any other privileged action. This button used to be the one
-                    // control on the screen with no gate at all.
-                    val canInvite =
-                        state?.authority?.let {
-                            it.isOwner(account.signer.pubKey) ||
-                                it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
-                        } == true
-
-                    IconButton(onClick = { nav.nav(Route.ConcordMembers(communityId)) }) {
-                        SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = stringRes(Res.string.concord_members_title))
-                    }
-                    if (canEdit) {
-                        IconButton(onClick = { nav.nav(Route.ConcordEdit(communityId)) }) {
-                            SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = stringRes(Res.string.concord_edit_title))
-                        }
-                    }
-                    if (canInvite) {
-                        IconButton(
-                            enabled = !minting,
-                            onClick = {
-                                minting = true
-                                scope.launch {
-                                    try {
-                                        inviteLink = account.concord.mintConcordInvite(communityId)
-                                    } finally {
-                                        // Always clear the flag — a thrown mint would otherwise leave the
-                                        // button disabled until the screen is recreated.
-                                        minting = false
-                                    }
-                                }
-                            },
-                        ) {
-                            SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = stringRes(Res.string.concord_invite_action))
-                        }
-                    }
-
-                    // Overflow, mirroring the NIP-29 relay-group top bar: destructive membership
-                    // actions live behind the menu, never as a one-tap icon.
+                    // One overflow instead of four icons: at phone width the icons squeezed the name, and
+                    // none of these is a daily action. Destructive membership actions stay at the bottom,
+                    // mirroring the NIP-29 relay-group top bar, never as a one-tap icon.
                     var menuOpen by remember { mutableStateOf(false) }
                     IconButton(onClick = { menuOpen = true }) {
                         SymbolIcon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
                     }
                     DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = { Text(stringRes(Res.string.concord_members_title)) },
+                            leadingIcon = { SymbolIcon(symbol = MaterialSymbols.Group, contentDescription = null) },
+                            onClick = {
+                                menuOpen = false
+                                nav.nav(Route.ConcordMembers(communityId))
+                            },
+                        )
+                        if (canInvite) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(Res.string.concord_invite_action)) },
+                                leadingIcon = { SymbolIcon(symbol = MaterialSymbols.PersonAdd, contentDescription = null) },
+                                enabled = !minting,
+                                onClick = {
+                                    menuOpen = false
+                                    minting = true
+                                    scope.launch {
+                                        try {
+                                            inviteLink = account.concord.mintConcordInvite(communityId)
+                                        } finally {
+                                            // Always clear the flag — a thrown mint would otherwise leave the
+                                            // item disabled until the screen is recreated.
+                                            minting = false
+                                        }
+                                    }
+                                },
+                            )
+                        }
                         // A Direct Invite (CORD-05 §6) hands keys to one known npub. No permission gates
                         // it — none could, any keyholder can whisper keys — so neither does this item;
                         // what it carries is bounded by the recipient's roles instead.
                         DropdownMenuItem(
                             text = { Text(stringRes(Res.string.concord_direct_invite_action)) },
+                            leadingIcon = { SymbolIcon(symbol = MaterialSymbols.Mail, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
                                 showDirectInvite = true
@@ -416,17 +443,32 @@ fun ConcordChannelListScreen(
                         // links they had already handed out — exactly when that matters most.
                         DropdownMenuItem(
                             text = { Text(stringRes(Res.string.concord_invite_links_action)) },
+                            leadingIcon = { SymbolIcon(symbol = MaterialSymbols.Link, contentDescription = null) },
                             onClick = {
                                 menuOpen = false
                                 nav.nav(Route.ConcordInviteLinks(communityId))
                             },
                         )
+                        if (canEdit) {
+                            DropdownMenuItem(
+                                text = { Text(stringRes(Res.string.concord_edit_title)) },
+                                leadingIcon = { SymbolIcon(symbol = MaterialSymbols.Edit, contentDescription = null) },
+                                onClick = {
+                                    menuOpen = false
+                                    nav.nav(Route.ConcordEdit(communityId))
+                                },
+                            )
+                        }
+                        HorizontalDivider()
                         DropdownMenuItem(
                             text = {
                                 Text(
                                     stringRes(Res.string.concord_leave_community),
                                     color = MaterialTheme.colorScheme.error,
                                 )
+                            },
+                            leadingIcon = {
+                                SymbolIcon(symbol = MaterialSymbols.AutoMirrored.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                             },
                             onClick = {
                                 menuOpen = false
@@ -441,6 +483,9 @@ fun ConcordChannelListScreen(
                                         stringRes(Res.string.concord_dissolve_community),
                                         color = MaterialTheme.colorScheme.error,
                                     )
+                                },
+                                leadingIcon = {
+                                    SymbolIcon(symbol = MaterialSymbols.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                                 },
                                 onClick = {
                                     menuOpen = false
@@ -494,31 +539,9 @@ fun ConcordChannelListScreen(
                 Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(bottom = if (canManageChannels) FAB_CLEARANCE else 0.dp),
             ) {
-                // The community's description (CORD-02 §6). Only the Edit screen showed it, so a member
-                // never saw what the community is about.
-                state
-                    ?.metadata
-                    ?.description
-                    ?.trim()
-                    ?.takeIf { it.isNotEmpty() }
-                    ?.let { description ->
-                        item(key = "concord-community-description") {
-                            Text(
-                                description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 4,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                            )
-                            HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                        }
-                    }
                 items(channels, key = { it.key }) { entry ->
                     val def = entry.value.definition
                     val name = def.name.ifBlank { entry.key }
-                    // Every Channel is callable (CORD-07), so there is no voice-only icon.
-                    val icon = if (def.private) MaterialSymbols.Lock else MaterialSymbols.Tag
                     val typingAuthors =
                         remember(typingMap, typingNow, entry.key) {
                             (typingMap[entry.key] ?: emptyMap())
@@ -532,7 +555,6 @@ fun ConcordChannelListScreen(
                         communityId = communityId,
                         channelKey = entry.key,
                         channelName = name,
-                        icon = icon,
                         typingAuthors = typingAuthors,
                         canManageChannels = canManageChannels,
                         accountViewModel = accountViewModel,
@@ -543,7 +565,6 @@ fun ConcordChannelListScreen(
                         isPrivate = def.private,
                         onRotateKey = if (holdsKey) ({ accountViewModel.rotateConcordChannelKey(communityId, entry.key) }) else null,
                     )
-                    HorizontalDivider(thickness = 0.25.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }
@@ -562,7 +583,6 @@ private fun ConcordChannelListRow(
     communityId: String,
     channelKey: String,
     channelName: String,
-    icon: MaterialSymbol,
     typingAuthors: List<HexKey>,
     canManageChannels: Boolean,
     accountViewModel: AccountViewModel,
@@ -589,34 +609,39 @@ private fun ConcordChannelListRow(
             .collectAsStateWithLifecycle(0)
     val hasUnread = unread > 0
 
+    // Same metrics as a Messages-list row (ChatHeaderLayout): 16dp sides, 12dp vertical, no dividers.
+    // The channel glyph rides inline before the name instead of holding its own column, so the
+    // preview line starts at the edge and gets the width a column of identical "#"s used to take.
     Row(
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = if (canManageChannels) 4.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SymbolIcon(
-            symbol = icon,
-            contentDescription = null,
-            modifier = Modifier.size(20.dp),
-            tint = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            // Line 1: channel name + the last-message time pushed to the right.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            // Line 1: # / lock, the channel name, and the last-message time pushed to the right.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SymbolIcon(
+                    // Every Channel is callable (CORD-07), so there is no voice-only icon.
+                    symbol = if (isPrivate) MaterialSymbols.Lock else MaterialSymbols.Tag,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.width(6.dp))
                 Text(
                     channelName,
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.Medium,
+                    fontWeight = chatRowTitleWeight(hasUnread),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 lastNote?.createdAt()?.let { ts ->
                     Text(
                         timeAgo(ts, prefix = ""),
+                        modifier = Modifier.padding(start = 8.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (hasUnread) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -624,11 +649,14 @@ private fun ConcordChannelListRow(
                 }
             }
             // Line 2: the last-message preview (or a live "typing…"), then the unread-message badge.
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f)) {
-                    ConcordChannelPreviewLine(lastNote, typingAuthors, accountViewModel)
+                    ConcordChannelPreviewLine(lastNote, typingAuthors, hasUnread, accountViewModel)
                 }
-                ConcordUnreadBadge(unread)
+                if (hasUnread) {
+                    Spacer(Modifier.width(8.dp))
+                    ConcordUnreadBadge(unread)
+                }
             }
         }
         if (canManageChannels) {
@@ -638,6 +666,78 @@ private fun ConcordChannelListRow(
                 onTogglePrivate = onTogglePrivate,
                 isPrivate = isPrivate,
                 onRotateKey = onRotateKey,
+            )
+        }
+    }
+}
+
+/**
+ * The top bar's title: the community icon, its name, and the member count. The icon is what tells
+ * one community's server view from another's at a glance, the member count is the one fact about the
+ * community worth a second line every visit.
+ */
+@Composable
+private fun ConcordServerTitle(
+    communityId: String,
+    name: String,
+    iconPointer: ImagePointer?,
+    memberCount: Int,
+    accountViewModel: AccountViewModel,
+) {
+    val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+    RobohashFallbackAsyncImage(
+        robot = communityId,
+        model = rememberConcordImageModel(iconPointer, accountViewModel),
+        contentDescription = name,
+        modifier = HeaderPictureModifier,
+        loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+        loadRobohash = LocalDisplaySettings.current.loadRobohash,
+        autoPlayGif = autoPlayGif,
+    )
+    Spacer(Modifier.width(10.dp))
+    Column {
+        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (memberCount > 0) {
+            Text(
+                pluralStringRes(Res.plurals.concord_member_count, memberCount, memberCount),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * What a tap on the top bar reveals: the community's description (CORD-02 §6) in full, and its
+ * Public/Private mode. Both are worth reading once, not on every visit, so neither sits above the list.
+ */
+@Composable
+private fun ConcordAboutPanel(
+    description: String?,
+    mode: String,
+    isPublic: Boolean,
+) {
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        description?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SymbolIcon(
+                symbol = if (isPublic) MaterialSymbols.Public else MaterialSymbols.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                mode,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -659,6 +759,7 @@ private val FAB_CLEARANCE = 96.dp
 private fun ConcordChannelPreviewLine(
     lastNote: Note?,
     typingAuthors: List<HexKey>,
+    hasUnread: Boolean,
     accountViewModel: AccountViewModel,
 ) {
     if (typingAuthors.isNotEmpty()) {
@@ -699,7 +800,8 @@ private fun ConcordChannelPreviewLine(
     Text(
         preview,
         style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // Unread lifts the preview to full contrast, as a Messages-list row does.
+        color = if (hasUnread) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
