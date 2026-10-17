@@ -2750,8 +2750,6 @@
     <string name="git_repo_settings_web_urls">Web URLs (one per line)</string>
     <string name="git_repo_settings_topics">Topics (comma separated)</string>
     <string name="git_repo_settings_save">Save</string>
-    <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
-    <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
     <string name="profile_tab_apps">Apps &amp; Sites</string>
     <string name="profile_tab_repos">Repos</string>
     <string name="edit_article">Edit Article</string>
@@ -4236,8 +4234,6 @@
         <item quantity="other">%1$d items</item>
     </plurals>
     <string name="git_repositories">Git Repositories</string>
-    <string name="git_repositories_search_close">Close filter</string>
-    <string name="git_repositories_search_open">Filter repositories</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="goal_progress">%1$s funded of %2$s sats goal</string>
     <string name="h">h</string>
