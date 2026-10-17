@@ -611,7 +611,7 @@
     <string name="login">Login</string>
     <string name="sign_up">Sign Up</string>
     <string name="create_account">Create Account</string>
-    <string name="how_should_we_call_you">How should we call you?</string>
+    <string name="how_should_we_call_you">What should we call you?</string>
     <string name="don_t_have_an_account">Don't have a Nostr account?</string>
     <string name="already_have_an_account">Already have a Nostr account?</string>
     <string name="loading_feed">Loading feed</string>
