@@ -7453,8 +7453,14 @@
     <string name="open_markets_rating_communication">Communication</string>
     <string name="open_markets_product_not_found">Looking for the product…</string>
     <string name="drawing_open">Draw by hand</string>
-    <string name="drawing_title">Draw</string>
     <string name="drawing_add_to_post">Add to post</string>
+    <string name="drawing_next">Next</string>
+    <string name="drawing_preview">Preview</string>
+    <string name="drawing_preview_caption">This is how it will play in every feed</string>
+    <string name="drawing_paper">Paper</string>
+    <string name="drawing_change_paper">Change paper</string>
+    <string name="drawing_your_pictures">Your pictures</string>
+    <string name="drawing_add_picture">Add a picture</string>
     <string name="drawing_empty_hint">Draw anything</string>
     <string name="drawing_undo">Undo</string>
     <string name="drawing_redo">Redo</string>
@@ -7473,7 +7479,7 @@
     <string name="drawing_background_grid">Grid paper</string>
     <string name="drawing_background_dots">Dot grid</string>
     <string name="drawing_background_chalkboard">Chalkboard</string>
-    <string name="drawing_background_photo">Draw on your own picture</string>
+    <string name="drawing_background_photo">Your picture</string>
     <string name="drawing_background_photo_failed">Could not open that picture</string>
     <string name="drawing_background_saved">A picture you drew on before</string>
     <string name="drawing_background_remove">Remove this picture</string>

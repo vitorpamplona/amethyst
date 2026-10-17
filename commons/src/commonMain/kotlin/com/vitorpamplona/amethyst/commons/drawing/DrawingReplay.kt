@@ -107,6 +107,17 @@ class DrawingReplay(
         return lo
     }
 
+    /**
+     * The replay time on screen [playbackMs] into a loop, frame for frame what
+     * the GIF shows at that moment: blank paper for [LEAD_MS], then one frame
+     * every [FRAME_MS], then the finished drawing held until the loop restarts.
+     */
+    fun replayTimeAt(playbackMs: Long): Long {
+        if (playbackMs < LEAD_MS) return frameTimes[0]
+        val frame = 1 + ((playbackMs - LEAD_MS) / FRAME_MS).toInt()
+        return if (frame >= frameTimes.size) endMs else frameTimes[frame]
+    }
+
     /** Total playback length of one loop, in ms. */
     val durationMs: Long get() = (0 until frameTimes.size).sumOf { frameDelayCs(it) * 10L }
 

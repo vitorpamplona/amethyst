@@ -4,13 +4,21 @@ Draw by hand in the composer and post the drawing as a looping GIF that replays 
 
 ## What the user gets
 
-- A **Draw** button in the short-note composer opens a full-window editor (`DrawingEditorDialog`).
+- A **Draw** button in the short-note composer opens a full-window editor (`DrawingEditorDialog`)
+  in two steps:
+  - **Draw**: the paper fills the window. A floating dock (`DrawingDock`) holds a tray of
+    illustrated pens tipped with the current ink (the one in hand springs up), mirror, undo/redo,
+    the inks and a size button with a live stroke preview. A chip in the top bar opens the paper
+    sheet (`PaperSheet`), which shows real samples of every paper and the user's saved pictures.
+  - **Preview**: the drawing replays exactly as the posted GIF will (`ReplayPreview`, using
+    `DrawingReplay.replayTimeAt`). The alt text and "Add to post" live here.
 - Tools: brush (follows stylus pressure), pencil, spray, eraser, mirror; eight inks; pen size.
 - Backgrounds: plain paper, four sticky notes (square, with a glue strip), a notebook page,
   grid paper, a dot grid, a chalkboard, or **the user's own picture** to draw on. Pictures are
   kept on the device (`DrawingBackgroundStore`) and come back in the row next time, so a user can
   reuse their own "stationery".
-- An alt-text field, since a picture of handwriting is unreadable to a screen reader without it.
+- An alt-text field in the preview step, since a picture of handwriting is unreadable to a screen
+  reader without it.
 - **Add to post** renders the replay GIF and a PNG of the finished drawing, uploads both and puts
   the GIF's URL in the note, with an `imeta` the uploader could not have built on its own.
 

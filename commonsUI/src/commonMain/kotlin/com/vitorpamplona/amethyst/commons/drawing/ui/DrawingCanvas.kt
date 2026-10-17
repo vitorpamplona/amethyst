@@ -25,6 +25,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -73,56 +74,70 @@ fun DrawingCanvas(
     state: DrawingEditorState,
     modifier: Modifier = Modifier,
 ) {
+    val background = state.background
+    val painter = remember(background) { BackgroundPainter(background) }
+    val layer = remember { FinishedStrokesLayer() }
+
+    PaperFrame(background, modifier) {
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .pointerInput(state) { trackStrokes(state) },
+        ) {
+            val finished = layer.update(this, state.strokes)
+            // Read so that every new point redraws.
+            state.activeVersion
+            val active = state.active
+
+            with(painter) { drawBase() }
+            inStrokeLayer {
+                drawImage(finished)
+                active?.let { drawStroke(it) }
+            }
+            with(painter) { drawOverlay() }
+        }
+
+        if (state.isEmpty) {
+            val paper = (background as? DrawingBackground.Paper)?.paper
+            Text(
+                text = stringRes(Res.string.drawing_empty_hint),
+                // Over a photo nothing guarantees contrast, so the hint gets a chip of its own.
+                modifier =
+                    if (paper == null) {
+                        Modifier.align(Alignment.Center).background(HINT_CHIP, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 8.dp)
+                    } else {
+                        Modifier.align(Alignment.Center)
+                    },
+                color = if (paper == null || paper.isDark) HINT_ON_DARK else HINT_COLOR,
+                fontSize = 22.sp,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+/**
+ * The paper's frame: the largest rectangle of the background's shape that fits,
+ * with rounded corners, or a sharp-cornered sticky note casting a deeper shadow.
+ */
+@Composable
+fun PaperFrame(
+    background: DrawingBackground,
+    modifier: Modifier = Modifier,
+    content: @Composable BoxScope.() -> Unit,
+) {
     BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
-        val background = state.background
         val aspect = background.aspect
         val width = if (maxWidth * aspect <= maxHeight) maxWidth else maxHeight / aspect
         val isSticky = (background as? DrawingBackground.Paper)?.paper?.pattern == PaperPattern.GLUE_STRIP
-        val shape = if (isSticky) RoundedCornerShape(2.dp) else RoundedCornerShape(12.dp)
-        val painter = remember(background) { BackgroundPainter(background) }
-        val layer = remember { FinishedStrokesLayer() }
-
+        val shape = if (isSticky) RoundedCornerShape(3.dp) else RoundedCornerShape(16.dp)
         Box(
             Modifier
                 .size(width, width * aspect)
-                .shadow(if (isSticky) 10.dp else 2.dp, shape)
+                .shadow(if (isSticky) 14.dp else 6.dp, shape)
                 .clip(shape),
-        ) {
-            Canvas(
-                Modifier
-                    .fillMaxSize()
-                    .pointerInput(state) { trackStrokes(state) },
-            ) {
-                val finished = layer.update(this, state.strokes)
-                // Read so that every new point redraws.
-                state.activeVersion
-                val active = state.active
-
-                with(painter) { drawBase() }
-                inStrokeLayer {
-                    drawImage(finished)
-                    active?.let { drawStroke(it) }
-                }
-                with(painter) { drawOverlay() }
-            }
-
-            if (state.isEmpty) {
-                val paper = (background as? DrawingBackground.Paper)?.paper
-                Text(
-                    text = stringRes(Res.string.drawing_empty_hint),
-                    // Over a photo nothing guarantees contrast, so the hint gets a chip of its own.
-                    modifier =
-                        if (paper == null) {
-                            Modifier.align(Alignment.Center).background(HINT_CHIP, RoundedCornerShape(50)).padding(horizontal = 16.dp, vertical = 8.dp)
-                        } else {
-                            Modifier.align(Alignment.Center)
-                        },
-                    color = if (paper == null || paper.isDark) HINT_ON_DARK else HINT_COLOR,
-                    fontSize = 22.sp,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
+            content = content,
+        )
     }
 }
 

@@ -81,6 +81,18 @@ class DrawingReplayTest {
     }
 
     @Test
+    fun aPreviewShowsTheSameFramesAsTheGifAtTheSameMoment() {
+        val replay = DrawingReplay(listOf(stroke(*LongArray(6_000) { it * 20L })))
+        // The GIF holds frame k for frameDelayCs(k); playing those delays back must land on frameTimes[k].
+        var playback = 0L
+        for (k in replay.frameTimes.indices) {
+            assertEquals(replay.frameTimes[k], replay.replayTimeAt(playback), "frame $k")
+            playback += replay.frameDelayCs(k) * 10L
+        }
+        assertEquals(replay.endMs, replay.replayTimeAt(replay.durationMs - 1))
+    }
+
+    @Test
     fun nothingDrawnIsOneBlankFrame() {
         val replay = DrawingReplay(emptyList())
         assertEquals(1, replay.frameTimes.size)
