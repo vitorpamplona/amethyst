@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,6 +84,23 @@ class RelayPool(
 
     private val _availableRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val availableRelays = _availableRelays.asStateFlow()
+
+    /** Makes reading the membership and publishing it one step; see [publishMembers]. */
+    private val membersLock = PlatformLock()
+
+    /**
+     * Publishes a snapshot of the pool's membership. A copy, not `relays.keys()`: on JVM that is
+     * the map's live key view, the same object on every call, so the flow saw an equal value and
+     * never emitted again after the first, while its `value` kept changing under collectors.
+     *
+     * Read and written under [membersLock]: two members joining at once could otherwise publish
+     * the older snapshot last. Every change publishes after it lands, so the last publish sees
+     * all of them.
+     */
+    private fun publishMembers() =
+        membersLock.withLock {
+            _availableRelays.value = relays.keys().toSet()
+        }
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
@@ -183,12 +202,16 @@ class RelayPool(
     // --------------------
     // Pool Maintenance
     // --------------------
+
+    /**
+     * Called on every send, so the common case is one lookup. It used to compare the published
+     * size with `relays.size()` each time, which walks the whole map on a skip list.
+     */
     fun getOrCreateRelay(relay: NormalizedRelayUrl): IRelayClient {
-        val r = relays.getOrCreate(relay, ::createNewRelay)
-        if (_availableRelays.value.size != relays.size()) {
-            _availableRelays.update { relays.keys() }
-        }
-        return r
+        relays.get(relay)?.let { return it }
+        if (createRelayIfAbsent(relay)) publishMembers()
+        // Created here or by a racing caller; recreated if a pool update dropped it in between.
+        return relays.getOrCreate(relay, ::createNewRelay)
     }
 
     fun createRelayIfAbsent(relay: NormalizedRelayUrl): Boolean = relays.createIfAbsent(relay, ::createNewRelay)
@@ -223,7 +246,7 @@ class RelayPool(
         }
 
         if (added || removed) {
-            _availableRelays.update { relays.keys() }
+            publishMembers()
         }
         dropIdleGates()
         return added
@@ -239,7 +262,7 @@ class RelayPool(
 
     fun addRelay(relay: NormalizedRelayUrl): IRelayClient {
         if (createRelayIfAbsent(relay)) {
-            _availableRelays.update { relays.keys() }
+            publishMembers()
         }
         return getOrCreateRelay(relay)
     }
@@ -253,7 +276,7 @@ class RelayPool(
         }
 
         if (atLeastOne) {
-            _availableRelays.update { relays.keys() }
+            publishMembers()
         }
     }
 
@@ -271,7 +294,7 @@ class RelayPool(
 
     fun removeRelay(relay: NormalizedRelayUrl) {
         if (removeRelayInner(relay)) {
-            _availableRelays.update { relays.keys() }
+            publishMembers()
         }
         dropIdleGates()
     }
@@ -280,7 +303,7 @@ class RelayPool(
         if (relays.size() > 0) {
             disconnect()
             relays.clear()
-            _availableRelays.update { emptySet() }
+            publishMembers()
             _connectedRelays.update { emptySet() }
         }
     }
