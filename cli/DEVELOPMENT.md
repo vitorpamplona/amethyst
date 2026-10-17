@@ -307,8 +307,11 @@ contract.
 - **Relay routing:** `no_relays`, `no_dm_relays`, `no_inbox_relays`,
   `no_servers`, `servers_unreachable`, `relay_error`, `sync_error`,
   `no_relay_served` (`fetch`: every queried relay CLOSED the REQ, refused it for
-  auth, could not be reached, or (`--paginate`) stayed silent past `--timeout`, and
-  nothing arrived; payload carries `relay_errors`).
+  auth, could not be reached, or stayed silent past `--timeout`, and
+  nothing arrived; payload carries `relay_errors`), `incomplete` (`fetch
+  --paginate`: a walk delivered events and then gave up; what arrived is still
+  written, and the payload carries `count`, `out`, `incomplete_relays` and
+  `relay_errors`).
 - **Groups:** `not_member` (you aren't in the group / group unknown),
   `target_not_member` (the *other* user isn't).
 - **Cashu:** `no_wallet`, `no_mint`, `insufficient_funds`,

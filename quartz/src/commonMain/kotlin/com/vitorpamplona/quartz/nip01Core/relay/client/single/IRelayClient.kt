@@ -64,5 +64,14 @@ interface IRelayClient {
 
     fun sendIfConnected(cmd: Command)
 
+    /**
+     * Sends [cmd] as part of replaying this connection's subscriptions and pending EVENTs
+     * ([com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient.syncFilters]). A transport
+     * that holds other sends while a fresh connection's replay runs, so the replay goes out first
+     * ([com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.BasicRelayClient]), lets these
+     * through. Defaults to [sendOrConnectAndSync].
+     */
+    fun sendFromSync(cmd: Command) = sendOrConnectAndSync(cmd)
+
     fun disconnect()
 }

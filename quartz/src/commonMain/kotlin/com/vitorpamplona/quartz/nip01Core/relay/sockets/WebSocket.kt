@@ -29,10 +29,15 @@ package com.vitorpamplona.quartz.nip01Core.relay.sockets
  * - A session ends with **exactly one** terminal callback on its [WebSocketListener], `onClosed`
  *   or `onFailure`, however it ends.
  * - [disconnect] ends the session itself: it reports `onClosed` **synchronously**, before
- *   returning, and nothing from that socket reaches the listener afterwards. The relay client
- *   may dial a new socket immediately, so a late report from the old one -- which OkHttp
- *   delivers on its own threads for a cancel, and never delivers at all for a relay-initiated
- *   close it was not allowed to finish -- must be swallowed by the adapter, not forwarded.
+ *   returning, and nothing from that socket reaches the listener afterwards, not even messages
+ *   it had already received. The relay client may dial a new socket immediately, so a late
+ *   report from the old one -- which OkHttp delivers on its own threads for a cancel, and never
+ *   delivers at all for a relay-initiated close it was not allowed to finish -- must be
+ *   swallowed by the adapter, not forwarded.
+ * - When the relay ends the session, the messages already received are delivered, in order,
+ *   before its terminal callback, and [needsReconnect] stays false until that callback: a
+ *   reconnect pass tearing the session down would drop them. A [disconnect] meanwhile ends the
+ *   session at once, as above, and is its one terminal report.
  */
 interface WebSocket {
     fun needsReconnect(): Boolean

@@ -155,7 +155,9 @@ class BasicOkHttpWebSocketDialRaceTest {
         var midDial: Boolean? = null
         socket =
             BasicOkHttpWebSocket(server.url, { _ ->
-                midDial = socket.needsReconnect()
+                // Only the dial's own call: an open session's needsReconnect() asks for the client
+                // too (to notice a changed proxy or timeout), and asking back from here would recurse.
+                if (midDial == null) midDial = socket.needsReconnect()
                 okhttp
             }, listener)
 

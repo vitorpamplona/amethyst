@@ -220,7 +220,7 @@ class PoolEventOutbox {
     // --------------------------
     // State management functions
     // --------------------------
-    suspend fun syncState(
+    fun syncState(
         relay: NormalizedRelayUrl,
         sync: (Command) -> Unit,
     ) {
