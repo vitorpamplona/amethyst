@@ -107,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.resources.concord_leave_community
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_message
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_owner_warning
 import com.vitorpamplona.amethyst.commons.resources.concord_leave_title
-import com.vitorpamplona.amethyst.commons.resources.concord_member_count
 import com.vitorpamplona.amethyst.commons.resources.concord_members_title
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_private
 import com.vitorpamplona.amethyst.commons.resources.concord_mode_public
@@ -342,7 +341,6 @@ fun ConcordChannelListScreen(
                 it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
         } == true
 
-    val memberCount = remember(session, state, revision) { session?.memberCount() ?: 0 }
     val description =
         state
             ?.metadata
@@ -352,7 +350,7 @@ fun ConcordChannelListScreen(
 
     Scaffold(
         topBar = {
-            // The bar stays to icon + name + member count, the one thing a returning member reads. The
+            // The bar stays to icon + name, all a returning member needs to know where they are. The
             // description and the Public/Private mode (CORD-05 §5) sit in the panel a tap on the bar
             // opens, like a NIP-28 channel's: pinned above the list they greeted every daily visit.
             MyExtensibleTopAppBar(
@@ -361,7 +359,6 @@ fun ConcordChannelListScreen(
                         communityId = communityId,
                         name = communityName,
                         iconPointer = state?.metadata?.icon,
-                        memberCount = memberCount,
                         accountViewModel = accountViewModel,
                     )
                 },
@@ -672,16 +669,14 @@ private fun ConcordChannelListRow(
 }
 
 /**
- * The top bar's title: the community icon, its name, and the member count. The icon is what tells
- * one community's server view from another's at a glance, the member count is the one fact about the
- * community worth a second line every visit.
+ * The top bar's title: the community icon and its name, on one line. The icon is what tells one
+ * community's server view from another's at a glance; the member count lives on the Members screen.
  */
 @Composable
 private fun ConcordServerTitle(
     communityId: String,
     name: String,
     iconPointer: ImagePointer?,
-    memberCount: Int,
     accountViewModel: AccountViewModel,
 ) {
     val autoPlayGif by accountViewModel.settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
@@ -695,18 +690,7 @@ private fun ConcordServerTitle(
         autoPlayGif = autoPlayGif,
     )
     Spacer(Modifier.width(10.dp))
-    Column {
-        Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        if (memberCount > 0) {
-            Text(
-                pluralStringRes(Res.plurals.concord_member_count, memberCount, memberCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+    Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
 /**
