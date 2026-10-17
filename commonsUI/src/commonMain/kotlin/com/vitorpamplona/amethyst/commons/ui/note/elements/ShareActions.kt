@@ -102,7 +102,21 @@ fun shareNoteActions(
     }
 }
 
-/** [shareNoteActions] as rows, for the Share drawer ([ShareOptionsBottomSheet]). */
+/**
+ * [shareNoteActions] as a dropdown from the reaction row's Share button. The menu already is the
+ * Share submenu, so its items are listed rather than folded into one.
+ */
+@Composable
+fun ShareDropdownMenu(
+    note: Note,
+    nav: INav,
+    onDismiss: () -> Unit,
+) {
+    val actions = shareNoteActions(note, nav, onDismiss).map { it.copy(group = null) }
+    NoteActionDropdownMenu(sections = listOf(actions), onDismiss = onDismiss)
+}
+
+/** [shareNoteActions] as rows, for the Share drawer of the chat long-press sheet ([ShareOptionsBottomSheet]). */
 @Composable
 fun ShareActionRows(
     note: Note,
