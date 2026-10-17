@@ -43,6 +43,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
@@ -144,14 +145,13 @@ fun VideoView(
     // A player surface can't be recorded into a share-as-image capture: draw a still instead.
     if (LocalMediaCapture.current != null && waveform == null && !RichTextParser.isAudioContent(mimeType, videoUri)) {
         VideoStillFrame(
-            videoUri = videoUri,
-            artworkUri = artworkUri,
+            // Coil's VideoFrameDecoder reads the first frame of a file; a live stream has none.
+            model = artworkUri ?: videoUri.takeIf { !isLiveStream },
             ratio = ratio,
             blurhash = blurhash,
             thumbhash = thumbhash,
             borderModifier = borderModifier,
             contentDescription = title,
-            isLiveStream = isLiveStream,
         )
         return
     }

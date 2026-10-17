@@ -18,13 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.share
+package com.vitorpamplona.amethyst.commons.ui.note.share
 
-import android.content.ClipData
-import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -68,21 +64,18 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amethyst_logo
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
@@ -100,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MediaCaptureState
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberImageSharer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
@@ -111,15 +106,15 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Full-screen flow that turns [id]'s note into a shareable image: it renders the post into a
  * framed card, captures it to a bitmap, uploads the PNG to one of the user's Blossom media
- * servers, and hands the resulting URL to the Android share sheet.
+ * servers, and hands the resulting URL to the platform's share sheet (the clipboard on desktop).
  */
 @Composable
 fun ShareNoteAsImageScreen(
@@ -136,9 +131,9 @@ fun ShareNoteAsImageScreen(
 
 /**
  * Renders [id]'s note into the same framed card as [ShareNoteAsImageScreen], captures it to a
- * bitmap, writes it to the cache as a PNG and hands the local file straight to the Android share
- * sheet — no preview, no upload. The screen only shows a brief progress indicator while the card
- * is being captured.
+ * bitmap and hands it straight to the platform as a PNG (the share sheet on Android, the
+ * clipboard on desktop) — no preview, no upload. The screen only shows a brief progress
+ * indicator while the card is being captured.
  */
 @Composable
 fun ShareNoteAsImageFileScreen(
@@ -160,9 +155,8 @@ fun ShareNoteAsImageFileScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
+    val imageSharer = rememberImageSharer()
     val shareImageTitle = stringRes(Res.string.share_as_image)
-    val shareUrlTitle = stringRes(Res.string.share_as_image_url)
     val graphicsLayer = rememberGraphicsLayer()
     val mediaCapture = remember { MediaCaptureState() }
 
@@ -209,11 +203,10 @@ fun ShareNoteAsImageFileScreen(
 
                 if (!shared) {
                     shared = true
-                    val uri =
-                        withContext(Dispatchers.IO) {
-                            saveBitmapToCache(context, bitmap.asAndroidBitmap())
-                        }
-                    startShareImageFileIntent(context, uri, shareImageTitle)
+                    imageSharer.share(bitmap, shareImageTitle)
+                    if (!imageSharer.opensShareSheet) {
+                        accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.copied_to_clipboard)
+                    }
                     nav.popBack()
                 }
             }
@@ -229,7 +222,8 @@ fun ShareNoteAsImageScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val context = LocalContext.current
+    val imageSharer = rememberImageSharer()
+    val textSharer = rememberTextSharer()
     val scope = rememberCoroutineScope()
     val shareUrlTitle = stringRes(Res.string.share_as_image_url)
 
@@ -266,7 +260,7 @@ fun ShareNoteAsImageScreen(
             val server = selectedServer
             val finalState =
                 withContext(Dispatchers.IO) {
-                    val uri = saveBitmapToCache(context, image.asAndroidBitmap())
+                    val uri = imageSharer.writePng(image)
                     orchestrator.upload(
                         uri = uri,
                         mimeType = PNG_MIME,
@@ -287,7 +281,10 @@ fun ShareNoteAsImageScreen(
                     val result = finalState.result
                     if (result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         account.settings.changeDefaultFileServer(server)
-                        startShareUrlIntent(context, result.url, shareUrlTitle)
+                        textSharer.share(result.url, null, shareUrlTitle)
+                        if (!imageSharer.opensShareSheet) {
+                            accountViewModel.toastManager.toast(Res.string.share_as_image_url, Res.string.copied_to_clipboard)
+                        }
                         nav.popBack()
                     } else {
                         accountViewModel.toastManager.toast(
@@ -502,6 +499,10 @@ private fun CaptureCard(
             Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxWidth()
+                // Measured at its full height, not the window's: a note taller than the screen
+                // would otherwise be squeezed to fit and centred, cutting its top and bottom out
+                // of the snapshot. Bounded so a scrollable inside never sees an infinite height.
+                .requiredHeightIn(max = MAX_CAPTURE_HEIGHT)
                 .drawWithContent {
                     graphicsLayer.record { this@drawWithContent.drawContent() }
                     // Intentionally no drawLayer: this source stays invisible and only feeds the
@@ -530,7 +531,7 @@ private fun CaptureCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.amethyst),
+                painter = painterResource(Res.drawable.amethyst_logo),
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
             )
@@ -553,47 +554,5 @@ private const val MEDIA_LOAD_TIMEOUT_MS = 15_000L
 
 private val PreviewShape = RoundedCornerShape(18.dp)
 
-private fun saveBitmapToCache(
-    context: Context,
-    bitmap: Bitmap,
-): Uri {
-    val file = File(context.cacheDir, "amethyst_share_${System.currentTimeMillis()}.png")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-    }
-    return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-}
-
-private fun startShareUrlIntent(
-    context: Context,
-    url: String,
-    chooserTitle: String,
-) {
-    val sendIntent =
-        Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }
-    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
-    context.startActivity(shareIntent)
-}
-
-private fun startShareImageFileIntent(
-    context: Context,
-    uri: Uri,
-    chooserTitle: String,
-) {
-    val sendIntent =
-        Intent().apply {
-            action = Intent.ACTION_SEND
-            type = PNG_MIME
-            putExtra(Intent.EXTRA_STREAM, uri)
-            // Attaching the URI as ClipData (not just EXTRA_STREAM) lets the system share sheet
-            // itself read the file so it can render the image thumbnail preview at the top.
-            clipData = ClipData.newUri(context.contentResolver, "Image", uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
-    context.startActivity(shareIntent)
-}
+// Tallest card the capture renders; a longer note is cut at the bottom.
+private val MAX_CAPTURE_HEIGHT = 8000.dp

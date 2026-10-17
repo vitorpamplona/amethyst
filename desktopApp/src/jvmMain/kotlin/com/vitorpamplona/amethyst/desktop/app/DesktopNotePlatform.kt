@@ -46,6 +46,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -69,8 +70,11 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
+import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
@@ -88,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
 import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
@@ -141,6 +146,38 @@ object DesktopNotePlatform : NotePlatform {
         if (!GlobalMediaPlayer.isFullscreen.value) GlobalMediaPlayer.enterFullscreen(source, cornerRadius)
     }
 
+    /**
+     * What a video shows while its note is captured as an image, where the player's surface
+     * can't be recorded: the poster when the post names one, else the frame
+     * [VideoThumbnailCache] extracts (none for a live stream).
+     */
+    @Composable
+    private fun CapturedVideoStill(
+        url: String,
+        artworkUri: String?,
+        isLive: Boolean,
+        ratio: Float?,
+        blurhash: String?,
+        thumbhash: String?,
+        shape: Shape,
+        description: String?,
+    ) {
+        val border = Modifier.clip(shape)
+        if (artworkUri != null) {
+            VideoStillFrame(model = artworkUri, ratio = ratio, blurhash = blurhash, thumbhash = thumbhash, borderModifier = border, contentDescription = description)
+        } else {
+            VideoStillFrame(
+                key = url,
+                loadFrame = { if (isLive) null else VideoThumbnailCache.getThumbnail(url) },
+                ratio = ratio,
+                blurhash = blurhash,
+                thumbhash = thumbhash,
+                borderModifier = border,
+                contentDescription = description,
+            )
+        }
+    }
+
     @Composable
     override fun ZoomableContentView(
         content: BaseMediaContent,
@@ -179,6 +216,11 @@ object DesktopNotePlatform : NotePlatform {
                     )
                     return
                 }
+                if (LocalMediaCapture.current != null) {
+                    val ratio = content.dim.ratioOrNull() ?: MediaAspectRatioCache.get(url)
+                    CapturedVideoStill(url, video?.artworkUri, isLive, ratio, content.blurhash, content.thumbhash, shape, content.description)
+                    return
+                }
                 DesktopVideoPlayer(
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
@@ -214,6 +256,9 @@ object DesktopNotePlatform : NotePlatform {
                 if (isAnimatedGifUrl(url)) {
                     AnimatedGifImage(url = url, contentDescription = content.description, modifier = modifier, contentScale = contentScale)
                 } else {
+                    // Only a share-as-image capture reads this, to wait for the picture.
+                    var loading by remember(url) { mutableStateOf(true) }
+                    if (loading) ReportCaptureLoading()
                     AsyncImage(
                         model = url,
                         contentDescription = content.description,
@@ -222,7 +267,9 @@ object DesktopNotePlatform : NotePlatform {
                         onSuccess = { state ->
                             val image = state.result.image
                             MediaAspectRatioCache.add(url, image.width, image.height)
+                            loading = false
                         },
+                        onError = { loading = false },
                     )
                 }
             }
@@ -292,6 +339,14 @@ object DesktopNotePlatform : NotePlatform {
         thumbhash: String?,
     ) {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
+        if (LocalMediaCapture.current != null) {
+            if (isAnimatedGifUrl(videoUri)) {
+                AnimatedGifImage(url = videoUri, contentDescription = contentDescription, modifier = Modifier.fillMaxWidth().clip(shape), contentScale = ContentScale.FillWidth)
+            } else {
+                CapturedVideoStill(videoUri, null, false, dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri), blurhash, thumbhash, shape, contentDescription)
+            }
+            return
+        }
         DesktopVideoPlayer(
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
@@ -318,6 +373,10 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
+        if (LocalMediaCapture.current != null) {
+            CapturedVideoStill(videoUri, artworkUri, isLiveStream, MediaAspectRatioCache.get(videoUri), null, null, shape, title)
+            return
+        }
         val source = rememberZoomSourceAnchor()
         DesktopVideoPlayer(
             url = videoUri,

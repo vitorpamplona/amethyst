@@ -36,6 +36,7 @@ import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -97,6 +98,7 @@ fun AnimatedGifImage(
     var gifFrames by remember(url) { mutableStateOf(GifFrameCache.get(url)) }
     var currentFrame by remember(url) { mutableIntStateOf(0) }
     var loadFailed by remember(url) { mutableStateOf(false) }
+    if (gifFrames == null && !loadFailed) ReportCaptureLoading()
 
     LaunchedEffect(url) {
         currentFrame = 0

@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.ReplyCommentPostScreen
+import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsImageFileScreen
+import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsQrScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.ArticlesScreen
@@ -481,6 +483,8 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
+    composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
+    composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.PollResults> { PollResultsScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }

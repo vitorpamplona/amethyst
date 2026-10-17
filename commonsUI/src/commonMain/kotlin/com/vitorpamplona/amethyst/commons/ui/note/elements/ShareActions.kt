@@ -68,7 +68,7 @@ fun ShareActionRows(
         sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
         onDismiss()
     }
-    // Rendering a note to an image is Android-only so far; the desktop leaves these rows out.
+    // A front end whose nav host doesn't register the image routes leaves these rows out.
     if (canOpen(Route.ShareNoteAsImageFile(shareId))) {
         M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
             nav.nav(Route.ShareNoteAsImageFile(shareId))
