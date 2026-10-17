@@ -164,11 +164,8 @@ class RenderableKindsTest {
                 30018,
                 30019,
                 30020,
-                // Open Markets collections, shipping options and product reviews: no card yet,
-                // reached through their merchant or product, not searched
-                30405,
+                // Open Markets shipping options: drawn on the product that names them, not searched
                 30406,
-                31555,
                 // podcasting 2.0 mirrors of kinds already in the window
                 30054,
                 30055,

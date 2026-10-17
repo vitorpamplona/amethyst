@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.isInCatalog
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 
 open class DiscoverMarketplaceFeedFilter(
@@ -52,7 +53,7 @@ open class DiscoverMarketplaceFeedFilter(
         val notes =
             LocalCache.addressables.filterIntoSet(ClassifiedsEvent.KIND) { _, it ->
                 val noteEvent = it.event
-                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent, it.relays)
+                noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && noteEvent.isInCatalog() && params.match(noteEvent, it.relays)
             }
 
         return sort(notes)
@@ -71,7 +72,7 @@ open class DiscoverMarketplaceFeedFilter(
 
         return collection.filterTo(HashSet()) {
             val noteEvent = it.event
-            noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && params.match(noteEvent, it.relays)
+            noteEvent is ClassifiedsEvent && noteEvent.isWellFormed() && noteEvent.isInCatalog() && params.match(noteEvent, it.relays)
         }
     }
 

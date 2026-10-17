@@ -135,6 +135,8 @@ import com.vitorpamplona.amethyst.commons.resources.kind_poll
 import com.vitorpamplona.amethyst.commons.resources.kind_poll_response
 import com.vitorpamplona.amethyst.commons.resources.kind_private_relays
 import com.vitorpamplona.amethyst.commons.resources.kind_private_zaps
+import com.vitorpamplona.amethyst.commons.resources.kind_product_collection
+import com.vitorpamplona.amethyst.commons.resources.kind_product_review
 import com.vitorpamplona.amethyst.commons.resources.kind_profile
 import com.vitorpamplona.amethyst.commons.resources.kind_profile_badges
 import com.vitorpamplona.amethyst.commons.resources.kind_profile_gallery
@@ -154,6 +156,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_reposts_16
 import com.vitorpamplona.amethyst.commons.resources.kind_room_presence
 import com.vitorpamplona.amethyst.commons.resources.kind_seals
 import com.vitorpamplona.amethyst.commons.resources.kind_search_relays
+import com.vitorpamplona.amethyst.commons.resources.kind_shipping_option
 import com.vitorpamplona.amethyst.commons.resources.kind_shorts
 import com.vitorpamplona.amethyst.commons.resources.kind_shorts_repl
 import com.vitorpamplona.amethyst.commons.resources.kind_torrent_comments
@@ -326,6 +329,9 @@ import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
 import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
@@ -395,6 +401,9 @@ fun kindDisplayName(kind: Int): StringResource? =
         ChatMessageEvent.KIND -> Res.string.kind_dm_message
         DmRelayListEvent.KIND -> Res.string.kind_dm_relays
         ClassifiedsEvent.KIND -> Res.string.kind_classifieds
+        ProductCollectionEvent.KIND -> Res.string.kind_product_collection
+        ShippingOptionEvent.KIND -> Res.string.kind_shipping_option
+        ProductReviewEvent.KIND -> Res.string.kind_product_review
         CommentEvent.KIND -> Res.string.kind_comments
         CommunityDefinitionEvent.KIND -> Res.string.kind_community_def
         CommunityListEvent.KIND -> Res.string.kind_community_list

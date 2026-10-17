@@ -56,6 +56,8 @@ import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
@@ -104,6 +106,10 @@ object KindRegistry {
             "community" to listOf(CommunityDefinitionEvent.KIND),
             "wiki" to listOf(WikiArticleEvent.KIND),
             "classified" to listOf(ClassifiedsEvent.KIND),
+            // Open Markets around the listings: a seller's (or an event's) collection of products,
+            // and a buyer's review of one. `productreview`, not `review`: relays are reviewed too.
+            "collection" to listOf(ProductCollectionEvent.KIND),
+            "productreview" to listOf(ProductReviewEvent.KIND),
             "geocache" to listOf(GeocacheListingEvent.KIND),
             "highlight" to listOf(HighlightEvent.KIND),
             "poll" to listOf(PollEvent.KIND),

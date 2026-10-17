@@ -83,6 +83,9 @@ import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderMarketplace
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderProduct
 import com.vitorpamplona.amethyst.commons.nip15Marketplace.ui.RenderStall
 import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.ui.RenderMostroInfo
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductReview
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderShippingOption
 import com.vitorpamplona.amethyst.commons.nipC0CodeSnippets.ui.RenderCodeSnippetEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -510,6 +513,11 @@ import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.UnrecognizedKind30405Event
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
@@ -1607,6 +1615,9 @@ internal fun RenderNoteRow(
         is UnrecognizedKind30301Event,
         is UnrecognizedKind30302Event,
         is UnrecognizedKind38385Event,
+        // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
+        is UnrecognizedKind30405Event,
+        is UnrecognizedKind30406Event,
         -> {}
 
         is PredictionMarketEvent -> {
@@ -1624,6 +1635,19 @@ internal fun RenderNoteRow(
                 accountViewModel,
                 nav,
             )
+        }
+
+        // Open Markets, around the NIP-99 listings.
+        is ProductCollectionEvent -> {
+            RenderProductCollection(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is ShippingOptionEvent -> {
+            RenderShippingOption(baseNote, makeItShort, accountViewModel, nav)
+        }
+
+        is ProductReviewEvent -> {
+            RenderProductReview(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         }
 
         // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the

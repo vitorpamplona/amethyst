@@ -152,4 +152,18 @@ class RepostRenderabilityTest {
         val nothing: Event? = null
         assertFalse(nothing.isRenderableRepost())
     }
+
+    @Test
+    fun aRepostOfAnOpenMarketsCollectionOrOptionShowsButNotAShopstrCartOrEscrowRecord() {
+        val collection = embedded(30405, arrayOf("title", "Summit"), arrayOf("a", "30402:$pubKey:socks"))
+        val option = embedded(30406, arrayOf("title", "Worldwide"), arrayOf("price", "10", "USD"), arrayOf("country", "US"))
+        // Shopstr's cart is all ciphertext; its escrow record names no title, service or country.
+        val cart = embedded(30405, content = "ciphertext")
+        val escrow = embedded(30406, arrayOf("p", pubKey), content = "ciphertext")
+
+        assertTrue(repostOf(30405, collection).isRenderableRepost(), "collection")
+        assertTrue(repostOf(30406, option).isRenderableRepost(), "shipping option")
+        assertFalse(repostOf(30405, cart).isRenderableRepost(), "cart")
+        assertFalse(repostOf(30406, escrow).isRenderableRepost(), "escrow record")
+    }
 }

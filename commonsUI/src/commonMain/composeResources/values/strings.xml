@@ -7390,4 +7390,67 @@
     <string name="marketplace_bid_status_pending">Pending</string>
     <string name="marketplace_bid_status_winner">Winner</string>
     <string name="marketplace_bid_extended">Auction extended by %1$s</string>
+    <string name="kind_product_collection">Product collections</string>
+    <string name="kind_shipping_option">Shipping options</string>
+    <string name="kind_product_review">Product reviews</string>
+    <string name="open_markets_status_ended">Ended</string>
+    <string name="open_markets_status_inactive">Inactive</string>
+    <string name="open_markets_status_removed">Removed</string>
+    <string name="open_markets_status_sold_out">Sold out</string>
+    <string name="open_markets_status_unlisted">Unlisted</string>
+    <string name="open_markets_status_pre_order">Pre-order</string>
+    <string name="open_markets_digital">Digital</string>
+    <string name="open_markets_collection">Collection</string>
+    <plurals name="open_markets_products">
+        <item quantity="one">%1$d product</item>
+        <item quantity="other">%1$d products</item>
+    </plurals>
+    <string name="open_markets_in_collection">In %1$s</string>
+    <string name="open_markets_shipping_option">Shipping option</string>
+    <string name="open_markets_priced_by_seller">Priced by the seller</string>
+    <string name="open_markets_service">Service</string>
+    <string name="open_markets_carrier">Carrier</string>
+    <string name="open_markets_ships_to">Ships to</string>
+    <string name="open_markets_regions">Regions</string>
+    <string name="open_markets_takes">Takes</string>
+    <string name="open_markets_ships_from">From</string>
+    <string name="open_markets_pick_up_at">Pick up at</string>
+    <string name="open_markets_service_standard">Standard</string>
+    <string name="open_markets_service_express">Express</string>
+    <string name="open_markets_service_overnight">Overnight</string>
+    <string name="open_markets_service_pickup">Pickup</string>
+    <string name="open_markets_service_digital">Digital delivery</string>
+    <plurals name="open_markets_duration_hours">
+        <item quantity="one">%1$s hour</item>
+        <item quantity="other">%1$s hours</item>
+    </plurals>
+    <plurals name="open_markets_duration_days">
+        <item quantity="one">%1$s day</item>
+        <item quantity="other">%1$s days</item>
+    </plurals>
+    <plurals name="open_markets_duration_weeks">
+        <item quantity="one">%1$s week</item>
+        <item quantity="other">%1$s weeks</item>
+    </plurals>
+    <string name="open_markets_min_weight">Min weight</string>
+    <string name="open_markets_max_weight">Max weight</string>
+    <string name="open_markets_min_size">Min size</string>
+    <string name="open_markets_max_size">Max size</string>
+    <string name="open_markets_per_weight">Per weight</string>
+    <string name="open_markets_per_volume">Per volume</string>
+    <string name="open_markets_per_distance">Per distance</string>
+    <string name="open_markets_surcharge">+%1$s</string>
+    <string name="open_markets_cost_split">%1$s + %2$s</string>
+    <string name="open_markets_unnamed_shipping_option">Shipping option</string>
+    <string name="open_markets_collection_shipping">Shipping options of the collection</string>
+    <string name="open_markets_via_collection">via %1$s</string>
+    <string name="open_markets_product_review">Product review</string>
+    <string name="open_markets_review_of">Review of %1$s</string>
+    <string name="open_markets_recommends">Recommends</string>
+    <string name="open_markets_does_not_recommend">Doesn’t recommend</string>
+    <string name="open_markets_rating_value">Value</string>
+    <string name="open_markets_rating_quality">Quality</string>
+    <string name="open_markets_rating_delivery">Delivery</string>
+    <string name="open_markets_rating_communication">Communication</string>
+    <string name="open_markets_product_not_found">Looking for the product…</string>
 </resources>

@@ -81,6 +81,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
@@ -214,8 +216,12 @@ object RenderableKinds {
             CalendarDateSlotEvent.KIND,
             CalendarTimeSlotEvent.KIND,
             CalendarCollectionEvent.KIND,
-            // marketplace, apps, code and sites
+            // marketplace, apps, code and sites. Open Markets collections and product reviews have
+            // cards and are what a shopper searches for; shipping options are reached through the
+            // product that names them.
             ClassifiedsEvent.KIND,
+            ProductCollectionEvent.KIND,
+            ProductReviewEvent.KIND,
             SoftwareApplicationEvent.KIND,
             AppCurationSetEvent.KIND,
             GitRepositoryEvent.KIND,

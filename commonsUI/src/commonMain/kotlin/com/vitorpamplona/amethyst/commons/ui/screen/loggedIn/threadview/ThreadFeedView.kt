@@ -81,6 +81,10 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.listingStatus
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ClassifiedsOpenMarketsDetails
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.ListingStatusBadge
+import com.vitorpamplona.amethyst.commons.nip99Classifieds.ui.RenderProductCollection
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityApprovalNeedStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.expand
@@ -143,7 +147,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentSc
 import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.types.ClassifiedSoldBadge
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormPublishedAndReadingTime
@@ -210,7 +213,7 @@ import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
-import com.vitorpamplona.quartz.nip99Classifieds.tags.StatusTag
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.parseBigDecimalOrNull
@@ -855,6 +858,9 @@ private fun FullBleedNoteCompose(
                             nav,
                         )
                     }
+                } else if (noteEvent is ProductCollectionEvent) {
+                    // The collection's page: more of its products and shipping than a feed card.
+                    RenderProductCollection(baseNote, false, accountViewModel, nav, isPage = true)
                 } else if (isDListItemPage(noteEvent)) {
                     // The item's own page: a concept with a view of its own draws it (tier three).
                     RenderDListItem(baseNote, 3, backgroundColor, accountViewModel, nav, isPage = true)
@@ -1008,7 +1014,7 @@ private fun RenderClassifiedsReaderForThread(
         }
     val price = remember(noteEvent) { noteEvent.price() }
     val location = remember(noteEvent) { noteEvent.location() }
-    val isSold = remember(noteEvent) { noteEvent.status().equals(StatusTag.STATUS.SOLD.value, ignoreCase = true) }
+    val status = remember(noteEvent) { noteEvent.listingStatus() }
 
     Row(modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
         Column {
@@ -1037,8 +1043,9 @@ private fun RenderClassifiedsReaderForThread(
                         modifier = Modifier.weight(1f),
                     )
                 }
-                if (isSold) {
-                    ClassifiedSoldBadge()
+                status?.let {
+                    Spacer(Modifier.width(5.dp))
+                    ListingStatusBadge(it)
                 }
             }
 
@@ -1092,6 +1099,8 @@ private fun RenderClassifiedsReaderForThread(
                     )
                 }
             }
+
+            ClassifiedsOpenMarketsDetails(noteEvent, accountViewModel, nav)
 
             Row(
                 Modifier

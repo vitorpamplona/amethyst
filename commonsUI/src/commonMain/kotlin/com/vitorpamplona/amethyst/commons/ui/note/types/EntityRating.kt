@@ -441,7 +441,13 @@ private fun CoverPlaceholder(mark: String) {
  * stars would only repeat it. Relay reviews belong here too: [RenderRelayReview] prints the relay
  * URL directly above the star row.
  */
-internal val MARKS_WITH_A_CARD = setOf(RatingMark.BOOKS, RatingMark.MOVIES, RatingMark.RELAY)
+internal val MARKS_WITH_A_CARD = setOf(RatingMark.BOOKS, RatingMark.MOVIES, RatingMark.RELAY, PRODUCT_RATING_MARK)
+
+/**
+ * Not a NIP mark: what an Open Markets product review (31555) passes to [RatingStars], whose card
+ * names the product above the stars.
+ */
+internal const val PRODUCT_RATING_MARK = "product"
 
 private fun iconForMark(mark: String): MaterialSymbol =
     when (mark) {

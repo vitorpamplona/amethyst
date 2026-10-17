@@ -57,6 +57,10 @@ import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.collection.UnrecognizedKind30405Event
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
+import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.contracts.ExperimentalContracts
@@ -100,8 +104,9 @@ fun Event?.isRenderableRepost(): Boolean {
 /**
  * Kinds several apps share, where Quartz picks the class from the tags and only some of the classes
  * have a card: 30301 (Kanban board, WalletScrutiny verification, or an encrypted planner's task),
- * 30302 (Kanban card, or a Fieldbook membership record) and 38385 (Mostro instance terms, or a
- * Paygress / bondtrade / game record). The kind alone cannot say whether a repost of one shows
+ * 30302 (Kanban card, or a Fieldbook membership record), 38385 (Mostro instance terms, or a
+ * Paygress / bondtrade / game record), 30405 (Open Markets collection, or a Shopstr encrypted cart)
+ * and 30406 (Open Markets shipping option, or a Shopstr escrow record). The kind alone cannot say whether a repost of one shows
  * anything, so [isRenderableRepost] decides on the reposted event itself.
  */
 val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
@@ -109,6 +114,8 @@ val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
         KanbanBoardEvent.KIND,
         KanbanCardEvent.KIND,
         MostroInfoEvent.KIND,
+        ProductCollectionEvent.KIND,
+        ShippingOptionEvent.KIND,
     )
 
 /**
@@ -118,7 +125,9 @@ val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
 fun Event.hasACardOfItsShape(): Boolean =
     this !is UnrecognizedKind30301Event &&
         this !is UnrecognizedKind30302Event &&
-        this !is UnrecognizedKind38385Event
+        this !is UnrecognizedKind38385Event &&
+        this !is UnrecognizedKind30405Event &&
+        this !is UnrecognizedKind30406Event
 
 /**
  * The event a repost carries in its `content` (NIP-18 asks for the stringified event). Parsed only
