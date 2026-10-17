@@ -140,6 +140,33 @@ class FetchRelayErrorsTest {
         }
     }
 
+    // The single-REQ fetch had the same hole: a relay that never sent EOSE was simply left out.
+    @Test
+    fun aRelaySilentThroughAPlainFetchIsReportedAsNoRelayServed() {
+        SilentRelay().use { silent ->
+            val r = amy("--json", "fetch", "--kind", "1", "--relay", silent.url, "--timeout", "2")
+
+            assertEquals(1, r.exit, "silence is not an empty success: ${r.stdout} ${r.stderr}")
+            val error = jsonErrorOf(r)
+            assertEquals("no_relay_served", error["error"].asText())
+            assertEquals("timeout", error["relay_errors"][silent.url.normalized()]["reason"].asText(), "$error")
+        }
+    }
+
+    @Test
+    fun aServingRelayStillSucceedsAndListsTheOneThatStayedSilent() {
+        SilentRelay().use { silent ->
+            val r = amy("--json", "fetch", "--kind", "1", "--relay", "${silent.url},${serving.url}", "--timeout", "2")
+
+            assertEquals(0, r.exit, r.stderr)
+            val result = Output.mapper.readTree(r.stdoutLines.single())
+            assertEquals(1, result["count"].asInt(), "$result")
+            assertEquals("timeout", result["relay_errors"][silent.url.normalized()]["reason"].asText(), "$result")
+            assertNull(result["relay_errors"][serving.url.normalized()], "the serving relay answered: $result")
+            assertTrue(r.stderr.contains("warning: ${silent.url.normalized()} stopped answering"), r.stderr)
+        }
+    }
+
     @Test
     fun aServingRelayStillSucceedsAndListsTheOneThatRefused() {
         val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", "${refusing.url},${serving.url}", "--timeout", "5")
