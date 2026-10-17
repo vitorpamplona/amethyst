@@ -194,28 +194,39 @@ class RelayPool(
     fun createRelayIfAbsent(relay: NormalizedRelayUrl): Boolean = relays.createIfAbsent(relay, ::createNewRelay)
 
     /**
-     * Updates the pool of relays without disconnecting the existing ones.
+     * Updates the pool of relays without disconnecting the existing ones. Returns whether it
+     * added any relay: a new member is not dialed here, so a caller with work for it connects it.
+     *
+     * [stillWanted] is asked again right before each relay is dropped. [newRelays] can be a
+     * snapshot that is already stale: the client samples its wanted set, and a publish that
+     * came in after the sample has put its EVENT on this very socket. Dropping it then
+     * disconnects the socket under the in-flight EVENT, whose OK is lost.
      */
-    fun updatePool(newRelays: Set<NormalizedRelayUrl>) {
+    fun updatePool(
+        newRelays: Set<NormalizedRelayUrl>,
+        stillWanted: (NormalizedRelayUrl) -> Boolean = { false },
+    ): Boolean {
         val toRemove = relays.keys() - newRelays
-        var atLeastOne = false
+        var added = false
+        var removed = false
 
         newRelays.forEach { relay ->
             if (createRelayIfAbsent(relay)) {
-                atLeastOne = true
+                added = true
             }
         }
 
         toRemove.forEach { relay ->
-            if (removeRelayInner(relay)) {
-                atLeastOne = true
+            if (!stillWanted(relay) && removeRelayInner(relay)) {
+                removed = true
             }
         }
 
-        if (atLeastOne) {
+        if (added || removed) {
             _availableRelays.update { relays.keys() }
         }
         dropIdleGates()
+        return added
     }
 
     /** Forgets the gates of relays that left the pool once their back-offs ran out. */
