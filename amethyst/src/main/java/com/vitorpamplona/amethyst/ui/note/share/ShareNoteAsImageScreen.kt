@@ -52,6 +52,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -95,11 +96,14 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.MediaCaptureState
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
@@ -107,7 +111,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -161,6 +164,7 @@ fun ShareNoteAsImageFileScreen(
     val shareImageTitle = stringRes(Res.string.share_as_image)
     val shareUrlTitle = stringRes(Res.string.share_as_image_url)
     val graphicsLayer = rememberGraphicsLayer()
+    val mediaCapture = remember { MediaCaptureState() }
 
     // Guards against capturing/sharing more than once across recompositions.
     var shared by remember { mutableStateOf(false) }
@@ -187,6 +191,7 @@ fun ShareNoteAsImageFileScreen(
             CaptureSource(
                 note = note,
                 graphicsLayer = graphicsLayer,
+                mediaCapture = mediaCapture,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -194,12 +199,12 @@ fun ShareNoteAsImageFileScreen(
             GeneratingPreview()
 
             LaunchedEffect(note) {
-                // Wait a couple of frames so the card is measured and drawn, then let network
-                // media settle before the final snapshot.
+                // Wait a couple of frames so the card is measured and drawn, then for its media
+                // to finish loading before the final snapshot.
                 withFrameNanos {}
                 withFrameNanos {}
-                graphicsLayer.toImageBitmap()
-                delay(IMAGE_SETTLE_MS)
+                mediaCapture.awaitMediaLoaded(MEDIA_LOAD_TIMEOUT_MS)
+                withFrameNanos {}
                 val bitmap = graphicsLayer.toImageBitmap()
 
                 if (!shared) {
@@ -229,6 +234,7 @@ fun ShareNoteAsImageScreen(
     val shareUrlTitle = stringRes(Res.string.share_as_image_url)
 
     val graphicsLayer = rememberGraphicsLayer()
+    val mediaCapture = remember { MediaCaptureState() }
     val orchestrator = remember { UploadOrchestrator() }
 
     // The captured bitmap that becomes the preview and, on share, the uploaded file.
@@ -309,7 +315,7 @@ fun ShareNoteAsImageScreen(
                 serverName = selectedServer.name,
                 serverOptions = fileServerOptions,
                 onSelectServer = { selectedServer = fileServers[it] },
-                shareEnabled = preview != null && !isProcessing,
+                shareEnabled = captureComplete && preview != null && !isProcessing,
                 onShare = ::shareImage,
             )
         },
@@ -330,21 +336,23 @@ fun ShareNoteAsImageScreen(
             contentAlignment = Alignment.Center,
         ) {
             // Keep the note rendered (but unpainted) until the snapshot is final, so async
-            // images have a chance to load into the layer before the second capture.
+            // media has a chance to load into the layer before the second capture.
             if (!captureComplete) {
                 CaptureSource(
                     note = note,
                     graphicsLayer = graphicsLayer,
+                    mediaCapture = mediaCapture,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
                 LaunchedEffect(note) {
                     // Wait a couple of frames so the card is measured and drawn, snapshot a
-                    // first preview, then refine once network media has had time to settle.
+                    // first preview, then refine once its media has finished loading.
                     withFrameNanos {}
                     withFrameNanos {}
                     preview = graphicsLayer.toImageBitmap()
-                    delay(IMAGE_SETTLE_MS)
+                    mediaCapture.awaitMediaLoaded(MEDIA_LOAD_TIMEOUT_MS)
+                    withFrameNanos {}
                     preview = graphicsLayer.toImageBitmap()
                     captureComplete = true
                 }
@@ -462,9 +470,28 @@ private fun ShareBottomBar(
  * The framed card that is recorded into [graphicsLayer] but not painted to the screen — the
  * visible preview is the captured [ImageBitmap] instead. The capture modifier is first in the
  * chain so the opaque background and border are part of the bitmap.
+ *
+ * [mediaCapture] makes the note's media load regardless of the data-saving settings, draws
+ * videos as still frames, and tracks what is still loading.
  */
 @Composable
 private fun CaptureSource(
+    note: Note,
+    graphicsLayer: GraphicsLayer,
+    mediaCapture: MediaCaptureState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    CompositionLocalProvider(
+        LocalMediaCapture provides mediaCapture,
+        LocalDisplaySettings provides LocalDisplaySettings.current.copy(showProfilePictures = true),
+    ) {
+        CaptureCard(note, graphicsLayer, accountViewModel, nav)
+    }
+}
+
+@Composable
+private fun CaptureCard(
     note: Note,
     graphicsLayer: GraphicsLayer,
     accountViewModel: AccountViewModel,
@@ -520,8 +547,9 @@ private fun CaptureSource(
 
 private const val PNG_MIME = "image/png"
 
-// Time given for async media to load into the off-screen card before the final snapshot.
-private const val IMAGE_SETTLE_MS = 900L
+// Upper bound on waiting for the off-screen card's media before the final snapshot. Video
+// frames need the file downloaded first, so this is generous.
+private const val MEDIA_LOAD_TIMEOUT_MS = 15_000L
 
 private val PreviewShape = RoundedCornerShape(18.dp)
 
