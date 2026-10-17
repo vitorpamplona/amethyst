@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay
 
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilter
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilter
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class RelayTopNavPerRelayFilterSet(
@@ -32,4 +34,10 @@ class RelayTopNavPerRelayFilterSet(
     override fun scopeFor(relay: NormalizedRelayUrl): IFeedTopNavPerRelayFilter? = null
 
     override fun relays() = setOf(relayUrl)
+
+    /**
+     * The same selection as Global over this one relay: everything the relay holds, nobody
+     * narrowed by author. Feeds that have no relay-specific REQ of their own read it this way.
+     */
+    fun asGlobal() = GlobalTopNavPerRelayFilterSet(mapOf(relayUrl to GlobalTopNavPerRelayFilter))
 }
