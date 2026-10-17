@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.topNavFeeds
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.IFeedTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -39,18 +38,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
-
-/**
- * Where a feed's REQ starts when no relay has answered it yet: the feed's own [feedFloor], or
- * null so the builder falls back to its recent window (a week of Global media, a month of
- * hashtags). A single relay is the exception: it starts from the beginning and is bounded by
- * the REQ's limit, because a quiet relay has nothing in that window and its feed would come up
- * empty. A relay's own EOSE time still takes precedence over this in every builder.
- */
-fun defaultSinceFor(
-    selection: IFeedTopNavPerRelayFilterSet,
-    feedFloor: Long?,
-): Long? = feedFloor ?: if (selection is RelayTopNavPerRelayFilterSet) 0L else null
 
 /** Turns a resolved top-nav selection into the per-relay REQs for one feed kind. */
 typealias TopNavFeedFilterMaker = (
@@ -84,24 +71,6 @@ abstract class TopNavFeedSubAssembler<K : TopNavFeedQueryState>(
 
     /** Additional flows whose every emission re-issues the REQ, unsampled. */
     protected open fun extraInvalidators(key: K): List<Flow<*>> = emptyList()
-
-    /** [defaultSinceFor] over the key's selection, for a feed whose oldest loaded note is [feedFloor]. */
-    protected fun defaultSince(
-        key: K,
-        feedFloor: Long?,
-    ): Long? = defaultSinceFor(key.followsPerRelay.value, feedFloor)
-
-    /**
-     * The key's resolved selection, as the feed builders read it. A single relay picked in the
-     * top bar goes out as Global over that relay: the builders know Global, and none of them has
-     * a case of its own for one relay, so without this the REQ came out empty and the feed stayed
-     * blank. Home keeps its own single-relay REQ (it also asks for replies) and does not use this.
-     */
-    protected fun feedSettings(key: K): IFeedTopNavPerRelayFilterSet =
-        when (val settings = key.followsPerRelay.value) {
-            is RelayTopNavPerRelayFilterSet -> settings.asGlobal()
-            else -> settings
-        }
 
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
@@ -178,7 +147,7 @@ open class SingleTopNavFeedSubAssembler(
     override fun updateFilter(
         key: TopNavFeedQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = makeFilter(feedSettings(key), since, defaultSince(key, key.feeds.firstOrNull()?.lastNoteCreatedAtIfFilled()))
+    ): List<RelayBasedFilter> = makeFilter(key.followsPerRelay.value, since, key.feeds.firstOrNull()?.lastNoteCreatedAtIfFilled())
 
     override fun onListChanged(key: TopNavFeedQueryState) {
         if (resetEoseOnListChange) clearEoseFor(key)

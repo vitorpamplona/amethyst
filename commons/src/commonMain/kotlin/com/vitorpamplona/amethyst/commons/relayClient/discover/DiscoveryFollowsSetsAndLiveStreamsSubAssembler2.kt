@@ -36,9 +36,9 @@ class DiscoveryFollowsSetsAndLiveStreamsSubAssembler2(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val feedSettings = feedSettings(key)
-        return makeFollowSetsFilter(feedSettings, since, defaultSince(key, key.followSets.lastNoteCreatedAtIfFilled())) +
-            makeLiveActivitiesFilter(feedSettings, since, defaultSince(key, key.live.lastNoteCreatedAtIfFilled()))
+        val feedSettings = key.followsPerRelay.value
+        return makeFollowSetsFilter(feedSettings, since, key.followSets.lastNoteCreatedAtIfFilled()) +
+            makeLiveActivitiesFilter(feedSettings, since, key.live.lastNoteCreatedAtIfFilled())
     }
 
     override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = listOf(key.followSets, key.live).map { it.lastNoteCreatedAtWhenFullyLoaded }

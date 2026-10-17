@@ -35,9 +35,9 @@ class SoftwareAppsSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> =
         makeSoftwareAppsFilter(
-            feedSettings(key),
+            key.followsPerRelay.value,
             since,
-            defaultSince(key, key.feeds.first().lastNoteCreatedAtIfFilled()),
+            key.feeds.first().lastNoteCreatedAtIfFilled(),
             key.blockedRelays.value,
         )
 

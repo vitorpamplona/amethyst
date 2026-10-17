@@ -37,10 +37,10 @@ class DiscoveryLongFormClassifiedsAndDVMSubAssembler1(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val feedSettings = feedSettings(key)
-        return makeLongFormFilter(feedSettings, since, defaultSince(key, key.reads.lastNoteCreatedAtIfFilled())) +
-            makeClassifiedsFilter(feedSettings, since, defaultSince(key, key.marketplace.lastNoteCreatedAtIfFilled())) +
-            makeContentDVMsFilter(feedSettings, since, defaultSince(key, key.dvms.lastNoteCreatedAtIfFilled()))
+        val feedSettings = key.followsPerRelay.value
+        return makeLongFormFilter(feedSettings, since, key.reads.lastNoteCreatedAtIfFilled()) +
+            makeClassifiedsFilter(feedSettings, since, key.marketplace.lastNoteCreatedAtIfFilled()) +
+            makeContentDVMsFilter(feedSettings, since, key.dvms.lastNoteCreatedAtIfFilled())
     }
 
     override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = listOf(key.reads, key.marketplace, key.dvms).map { it.lastNoteCreatedAtWhenFullyLoaded }

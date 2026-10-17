@@ -36,9 +36,9 @@ class DiscoveryPublicChatsAndCommunitiesSubAssembler3(
         key: DiscoveryQueryState,
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter> {
-        val feedSettings = feedSettings(key)
-        return makePublicChatsFilter(feedSettings, since, defaultSince(key, key.publicChats.lastNoteCreatedAtIfFilled())) +
-            makeCommunitiesFilter(feedSettings, since, defaultSince(key, key.communities.lastNoteCreatedAtIfFilled()))
+        val feedSettings = key.followsPerRelay.value
+        return makePublicChatsFilter(feedSettings, since, key.publicChats.lastNoteCreatedAtIfFilled()) +
+            makeCommunitiesFilter(feedSettings, since, key.communities.lastNoteCreatedAtIfFilled())
     }
 
     override fun floors(key: DiscoveryQueryState): List<StateFlow<Long?>> = listOf(key.publicChats, key.communities).map { it.lastNoteCreatedAtWhenFullyLoaded }
