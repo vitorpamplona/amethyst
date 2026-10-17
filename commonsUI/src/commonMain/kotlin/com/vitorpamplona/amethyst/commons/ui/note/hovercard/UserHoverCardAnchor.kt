@@ -55,7 +55,7 @@ import kotlin.math.max
 import kotlin.time.Duration.Companion.milliseconds
 
 /** How long the mouse rests on a face or name before its card opens. */
-private val OpenDelay = 500.milliseconds
+private val OpenDelay = 250.milliseconds
 
 /** Time to cross the gap between the face and the card, or to come back, before it closes. */
 private val CloseDelay = 300.milliseconds
