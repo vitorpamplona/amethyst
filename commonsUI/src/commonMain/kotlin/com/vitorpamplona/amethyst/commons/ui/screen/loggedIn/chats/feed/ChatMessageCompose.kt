@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.RenderZapRaiser
 import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
@@ -397,7 +398,9 @@ fun NormalChatNote(
             if (drawAuthorInfo && !isLoggedInUser && !innerQuote) {
                 {
                     note.author?.let { author ->
-                        ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                        UserHoverCardAnchor(author, accountViewModel, nav) {
+                            ChatAuthorAvatar(author.pubkeyHex, accountViewModel) { nav.nav(routeFor(author)) }
+                        }
                     }
                 }
             } else {

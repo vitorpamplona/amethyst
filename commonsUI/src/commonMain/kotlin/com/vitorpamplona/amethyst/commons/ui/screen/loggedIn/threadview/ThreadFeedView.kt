@@ -557,7 +557,7 @@ private fun CollapsedNoteCompose(
             Spacer(modifier = Modifier.width(10.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel)
+                NoteUsernameDisplay(baseNote, accountViewModel = accountViewModel, nav = nav)
 
                 if (outsideNetwork) {
                     // No preview: a reply collapsed for being outside the network is often spam.
@@ -716,7 +716,7 @@ private fun FullBleedNoteCompose(
                     if (zapSender != null) {
                         UsernameDisplay(zapSender, Modifier.weight(1f), accountViewModel = accountViewModel)
                     } else {
-                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel)
+                        NoteUsernameDisplay(baseNote, Modifier.weight(1f), accountViewModel = accountViewModel, nav = nav)
                     }
 
                     if (isDraft) {
