@@ -138,10 +138,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Použít přímou URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Přezdívka</string>
-    <string name="nickname_dialog_explainer">Zobrazí se vám místo jména tohoto uživatele všude v aplikaci. Ukládá se zašifrovaně ve vaší kartě kontaktu: přečíst jej můžete jen vy. Napsáním : použijete vlastní emoji.</string>
     <string name="nickname_label">Přezdívka</string>
-    <string name="nickname_summary_label">Soukromá poznámka o tomto uživateli</string>
     <string name="nickname_save">Uložit</string>
     <string name="nickname_cancel">Zrušit</string>
     <string name="git_status_open">Otevřeno</string>

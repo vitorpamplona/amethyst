@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui.EditNickname
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserNickname
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nickname_private
-import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -69,12 +68,9 @@ fun UserNicknameCard(
     val isEditDialogOpen = remember { mutableStateOf(false) }
 
     if (isEditDialogOpen.value) {
-        // keeps the account's selected emoji packs loaded for the : autocomplete
-        WatchAndLoadMyEmojiList(accountViewModel)
         EditNicknameDialog(
             user = baseUser,
-            userAssertions = accountViewModel.account.userAssertions,
-            onSave = { petName, summary -> accountViewModel.updateUserAssertionPetName(baseUser, petName, summary) },
+            accountViewModel = accountViewModel,
             onDismiss = { isEditDialogOpen.value = false },
         )
     }

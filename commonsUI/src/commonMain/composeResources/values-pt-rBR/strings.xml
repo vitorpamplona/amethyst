@@ -136,10 +136,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Usar URL direto</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Apelido</string>
-    <string name="nickname_dialog_explainer">Mostrado a você em vez do nome deste usuário, em todo o aplicativo. É salvo criptografado no seu cartão de contato: só você pode ler. Digite : para usar seus emojis personalizados.</string>
     <string name="nickname_label">Apelido</string>
-    <string name="nickname_summary_label">Nota privada sobre este usuário</string>
     <string name="nickname_save">Salvar</string>
     <string name="nickname_cancel">Cancelar</string>
     <string name="git_status_open">Aberto</string>

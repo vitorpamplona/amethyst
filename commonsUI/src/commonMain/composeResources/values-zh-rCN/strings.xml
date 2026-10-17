@@ -84,10 +84,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">使用直接 URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">昵称</string>
-    <string name="nickname_dialog_explainer">显示给你而不是这个用户的名字，在应用中的每个地方。 它被加密保存到您的联系卡上：只有您可以阅读它。请输入 : 使用您的自定义表情符号。</string>
     <string name="nickname_label">昵称</string>
-    <string name="nickname_summary_label">关于此用户的私人便笺</string>
     <string name="nickname_save">保存</string>
     <string name="nickname_cancel">取消</string>
     <string name="git_status_open">打开</string>

@@ -121,10 +121,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Uporabi direktni URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Vzdevek</string>
-    <string name="nickname_dialog_explainer">Prikazano namesto imena tega uporabnika, povsod v aplikaciji. Shranjeno je šifrirano v vaši kontaktni kartici: samo vi ga lahko preberete. Vtipkajte : za uporabo svojih lastnih emoji-jev.</string>
     <string name="nickname_label">Vzdevek</string>
-    <string name="nickname_summary_label">Zasebni zapisek o tem uporabniku</string>
     <string name="nickname_save">Shrani</string>
     <string name="nickname_cancel">Prekliči</string>
     <string name="git_status_open">Odprto</string>

@@ -136,10 +136,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">उपनाम</string>
-    <string name="nickname_dialog_explainer">आपको दिखाया गया इस प्रयोक्ता के नाम के स्थान पर तथा क्रमक में सर्वत्र। यह अभिलेखित है रहस्यीकृत रूप में आपके सम्पर्क पत्रक में। केवल आप इसे पढ सकेंगे। अपने विशिष्ट भावचिह्नों का उपयोग करने के लिए : टंकण करें।</string>
     <string name="nickname_label">उपनाम</string>
-    <string name="nickname_summary_label">निजी टीका इस प्रयोक्ता के विषय में</string>
     <string name="nickname_save">अभिलेखन</string>
     <string name="nickname_cancel">निरस्त</string>
     <string name="git_status_open">खुला</string>
