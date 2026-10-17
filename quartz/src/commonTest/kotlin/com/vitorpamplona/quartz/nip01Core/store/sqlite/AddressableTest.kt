@@ -21,8 +21,11 @@
 package com.vitorpamplona.quartz.nip01Core.store.sqlite
 
 import androidx.sqlite.SQLiteException
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
@@ -184,5 +187,36 @@ class AddressableTest : BaseDBTest() {
                 """.trimIndent(),
                 explainer,
             )
+        }
+
+    @Test
+    fun testDTagUnderTagsAllIsNeverDropped() =
+        forEachDB { db ->
+            // STORE-F05: a `#d` under tagsAll folds into the d_tag condition on
+            // EVERY path. The tag-join/union/count/delete subquery used to read
+            // only `tags["d"]`, so a tagsAll-d-only delete deleted every row.
+            val blogA = signer.sign(LongFormContentEvent.build("body a", "title", dTag = "a", createdAt = 1) { hashtag("x") })
+            val blogB = signer.sign(LongFormContentEvent.build("body b", "title", dTag = "b", createdAt = 2) { hashtag("x") })
+            val note = signer.sign(TextNoteEvent.build("note", createdAt = 3))
+
+            db.insert(blogA)
+            db.insert(blogB)
+            db.insert(note)
+
+            db.delete(Filter(tagsAll = mapOf("d" to listOf("nope"))))
+            assertEquals(3, db.count(Filter()))
+
+            // simple path
+            db.assertQuery(blogA, Filter(tagsAll = mapOf("d" to listOf("a"))))
+            // tag-join path
+            db.assertQuery(blogA, Filter(tags = mapOf("t" to listOf("x")), tagsAll = mapOf("d" to listOf("a"))))
+            // union + count
+            val union = listOf(Filter(tagsAll = mapOf("d" to listOf("a"))), Filter(ids = listOf(note.id)))
+            assertEquals(2, db.query<Event>(union).size)
+            assertEquals(2, db.count(union))
+
+            db.delete(Filter(tagsAll = mapOf("d" to listOf("a"))))
+            db.assertQuery(null, Filter(ids = listOf(blogA.id)))
+            assertEquals(2, db.count(Filter()))
         }
 }

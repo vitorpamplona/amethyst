@@ -57,8 +57,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.concurrent.Volatile
 
 /**
  * The INostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -127,16 +127,17 @@ class NostrClient(
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
 
-    private var listeners = setOf<RelayConnectionListener>()
+    // Copy-on-write sets, swapped whole: registration is rare, while [listeners] is read on
+    // every relay message. The swap is a compare-and-set (`update`), not `x = x.plus(y)`:
+    // registrations race — every publish, COUNT and negentropy pass adds and removes its own
+    // listener from an IO thread — and a plain read-modify-write loses one of two concurrent
+    // writes, leaving a caller deaf to its own OKs (it waits out its timeout) or a removed
+    // listener running on every message for good.
+    private val listeners = MutableStateFlow(setOf<RelayConnectionListener>())
 
-    // Copy-on-write, same as [listeners]: registration happens a handful of times at
-    // wiring, while reads happen on every fetch that meets an auth-gated relay.
-    //
-    // Note the explicit `kotlin.concurrent.Volatile` import this needs. On JVM
-    // `kotlin.jvm.Volatile` is a default import, so an unimported `@Volatile` compiles
-    // there and fails only on Kotlin/Native — which is how it reached CI.
-    @Volatile
-    private var authResponders = setOf<IAuthStatus>()
+    // Same shape: registration happens a handful of times at wiring, while reads happen on
+    // every fetch that meets an auth-gated relay.
+    private val authResponders = MutableStateFlow(setOf<IAuthStatus>())
 
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
@@ -413,7 +414,7 @@ class NostrClient(
      */
     override fun onConnecting(relay: IRelayClient) {
         activeRequests.onConnecting(relay.url)
-        listeners.forEach { it.onConnecting(relay) }
+        listeners.value.forEach { it.onConnecting(relay) }
     }
 
     /**
@@ -426,7 +427,7 @@ class NostrClient(
         compressed: Boolean,
     ) {
         syncFilters(relay)
-        listeners.forEach { it.onConnected(relay, pingMillis, compressed) }
+        listeners.value.forEach { it.onConnected(relay, pingMillis, compressed) }
     }
 
     override fun onSent(
@@ -439,10 +440,10 @@ class NostrClient(
             activeRequests.onSent(relay.url, cmd)
             activeCounts.onSent(relay.url, cmd)
             eventOutbox.onSent(relay.url, cmd)?.let { gaveUp ->
-                listeners.forEach { it.onEventGaveUp(relay, gaveUp) }
+                listeners.value.forEach { it.onEventGaveUp(relay, gaveUp) }
             }
         }
-        listeners.forEach { it.onSent(relay, cmdStr, cmd, success) }
+        listeners.value.forEach { it.onSent(relay, cmdStr, cmd, success) }
     }
 
     override suspend fun onIncomingMessage(
@@ -475,7 +476,7 @@ class NostrClient(
             else -> {}
         }
 
-        listeners.forEach { it.onIncomingMessage(relay, msgStr, msg) }
+        listeners.value.forEach { it.onIncomingMessage(relay, msgStr, msg) }
     }
 
     /**
@@ -483,7 +484,7 @@ class NostrClient(
      */
     override fun onDisconnected(relay: IRelayClient) {
         activeRequests.onDisconnected(relay.url)
-        listeners.forEach { it.onDisconnected(relay) }
+        listeners.value.forEach { it.onDisconnected(relay) }
 
         // If the client is still active and the relay is still in the
         // desired set (i.e. there are subscriptions, counts or pending
@@ -506,29 +507,29 @@ class NostrClient(
         activeCounts.onCannotConnect(relay.url, errorMessage)
         eventOutbox.onCannotConnect(relay.url, errorMessage)
 
-        listeners.forEach { it.onCannotConnect(relay, errorMessage) }
+        listeners.value.forEach { it.onCannotConnect(relay, errorMessage) }
     }
 
     override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
 
-    override fun authResponders(): Set<IAuthStatus> = authResponders
+    override fun authResponders(): Set<IAuthStatus> = authResponders.value
 
     override fun addAuthResponder(responder: IAuthStatus) {
-        authResponders = authResponders.plus(responder)
+        authResponders.update { it + responder }
     }
 
     override fun removeAuthResponder(responder: IAuthStatus) {
-        authResponders = authResponders.minus(responder)
+        authResponders.update { it - responder }
     }
 
     override fun addConnectionListener(listener: RelayConnectionListener) {
-        listeners = listeners.plus(listener)
+        listeners.update { it + listener }
     }
 
-    fun hasConnectionListener(listener: RelayConnectionListener): Boolean = listeners.contains(listener)
+    fun hasConnectionListener(listener: RelayConnectionListener): Boolean = listener in listeners.value
 
     override fun removeConnectionListener(listener: RelayConnectionListener) {
-        listeners = listeners.minus(listener)
+        listeners.update { it - listener }
     }
 
     override fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeRequests.activeFiltersFor(url)
@@ -557,7 +558,7 @@ class NostrClient(
 
     override fun close() {
         disconnect()
-        listeners = emptySet()
+        listeners.value = emptySet()
         activeCounts.destroy()
         activeRequests.destroy()
         eventOutbox.destroy()

@@ -162,6 +162,52 @@ class RelayLimitsTest {
     }
 
     @Test
+    fun negativeLimitGetsTheDefaultNotUnbounded() {
+        // `limit: -1` is no page size. Passed through, SQLite reads `LIMIT -1`
+        // as "no limit", so one REQ dumped the whole relay past max_limit.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+        val result = policy.accept(ReqCmd("s", listOf(Filter(kinds = listOf(1), limit = -1)))) as PolicyResult.Accepted
+        assertEquals(
+            50,
+            result.cmd.filters
+                .single()
+                .limit,
+        )
+    }
+
+    @Test
+    fun negativeLimitFallsBackToMaxWithoutADefault() {
+        val policy = LimitsPolicy(RelayLimits(maxLimit = 100))
+        val result = policy.accept(ReqCmd("s", listOf(Filter(kinds = listOf(1), limit = -1)))) as PolicyResult.Accepted
+        assertEquals(
+            100,
+            result.cmd.filters
+                .single()
+                .limit,
+        )
+    }
+
+    @Test
+    fun negativeCountLimitIsDropped() {
+        // A COUNT with a negative limit asks for no bound, like one with none.
+        val policy = LimitsPolicy(RelayLimits(defaultLimit = 50, maxLimit = 100))
+        val result = policy.accept(CountCmd("q", listOf(Filter(kinds = listOf(1), limit = -1)))) as PolicyResult.Accepted
+        assertNull(
+            result.cmd.filters
+                .single()
+                .limit,
+        )
+
+        // also when no max is configured, so COUNT answers the same either way
+        val noMax = LimitsPolicy(RelayLimits(defaultLimit = 50)).accept(CountCmd("q", listOf(Filter(kinds = listOf(1), limit = -1)))) as PolicyResult.Accepted
+        assertNull(
+            noMax.cmd.filters
+                .single()
+                .limit,
+        )
+    }
+
+    @Test
     fun countNeverGetsTheDefaultLimit() {
         // A COUNT returns no events, so "how many should a REQ return by
         // default" is not a question it asked. Applying the answer anyway turns

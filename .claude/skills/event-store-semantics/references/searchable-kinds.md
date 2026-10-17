@@ -2,9 +2,9 @@
 
 Every concrete `SearchableEvent` implementor in Quartz, with the exact `indexableContent()`
 expression. **Update this file in the same PR as any change to the searchable set or to an
-`indexableContent()` body** (see the maintenance list in this skill's SKILL.md). Verified against the code 2026-10-08.
+`indexableContent()` body** (see the maintenance list in this skill's SKILL.md). Verified against the code 2026-10-16.
 
-Counts: 204 concrete classes covering 204 kind values (`GitStatusEvent` spans 4 kinds;
+Counts: 207 concrete classes covering 207 kind values (`GitStatusEvent` spans 4 kinds;
 kind 30063 is shared by two NIPs, kind 38000 by three classes, kind 30301 by two, kind 38385 with other apps and kinds 30405 / 30406 with Shopstr — see the footnotes). The kind
 set is exactly `SearchableKinds.ALL` (`nip50Search/SearchableKinds.kt`). File paths are under
 `quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`.
@@ -60,6 +60,7 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 2003 | TorrentEvent | nip35Torrents | `(listOfNotNull(title(), content) + fileNames())` NL — the `file` tags' paths |
 | 2004 | TorrentCommentEvent | nip35Torrents | `content` |
 | 2473 | BirdDetectionEvent | experimental/birdstar | `listOfNotNull(summary(), speciesName())` NL |
+| 3184 | ExtensionReleaseEvent | openagents/nipExtExtensions/release | `listOfNotNull(packageSlug(), version())` NL — the JSON body parsed; never the root key or manifest |
 | 3302 | ConcordChatEditEvent | concord/cord03Channels | `content` |
 | 5050 | DvmTextGenerationRequestEvent | nip90Dvms/textGeneration | `inputs().filter { it.type == "prompt" \|\| it.type == "text" }.joinToString(" ") { it.value }` (SP) |
 | 5100 | DvmImageGenerationRequestEvent | nip90Dvms/imageGeneration | `listOfNotNull(prompt(), negativePrompt()).joinToString(" ")` (SP) |
@@ -129,6 +130,8 @@ Separator legend: **NL** = `joinToString("\n")`, **SP** = `joinToString(" ")`.
 | 30176 | TeamEvent | buzz/teams | `teamOrNull()?.let { listOfNotNull(it.name, it.description, it.instructions).joinToString("\n") } ?: ""` |
 | 30177 | ManagedAgentEvent | buzz/managedAgents | `agentOrNull()?.let { listOfNotNull(it.name, it.systemPrompt).joinToString("\n") } ?: ""` |
 | 30178 | TeamCatalogEvent | buzz/teamCatalog | `catalogOrNull()?.let { catalog -> buildList { add(catalog.name); catalog.description?.let(::add); catalog.instructions?.let(::add); catalog.members.forEach { member -> add(member.displayName); member.systemPrompt?.let(::add) } }.joinToString("\n") } ?: ""` |
+| 30180 | CapabilityDiscoveryEvent | openagents/nipCapCapabilities/discovery | `listOfNotNull(summary(), qualifiedId()?.path(), operations().joinToString(" ").ifEmpty { null }, interfaceId())` NL — the JSON body parsed; schemas, effects, payment terms and keys stay out |
+| 30184 | ExtensionListingEvent | openagents/nipExtExtensions/listing | `listOfNotNull(title(), description(), slug().ifBlank { null })` NL — the JSON body parsed; never the release reference or root key |
 | 30267 | AppCurationSetEvent | nip51Lists/appCurationSet | `listOfNotNull(titleOrName(), description())` NL |
 | 30296 | InteractiveStoryPrologueEvent | experimental/interactiveStories | inherited base: `(listOfNotNull(title(), summary(), content) + optionLabels())` NL |
 | 30297 | InteractiveStorySceneEvent | experimental/interactiveStories | inherited base: `(listOfNotNull(title(), summary(), content) + optionLabels())` NL |

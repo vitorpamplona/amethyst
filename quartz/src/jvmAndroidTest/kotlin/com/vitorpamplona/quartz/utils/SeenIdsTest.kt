@@ -87,6 +87,23 @@ class SeenIdsTest {
     }
 
     @Test
+    fun `an id with chars outside the hex table is let through, not thrown`() {
+        // Hex.readLong indexes a 256-entry table by char code, so a char above
+        // U+00FF threw ArrayIndexOutOfBounds — reached before verification, one
+        // hostile event aborted a whole multi-relay fetch.
+        val seen = SeenIds()
+        val hostile = listOf("\u0142".repeat(64), "0".repeat(31) + "\u0142" + "0".repeat(32), "\uD83D\uDE00".repeat(32))
+        hostile.forEach { id ->
+            assertFalse(seen.contains(id), "never contained")
+            assertTrue(seen.add(id), "flows to verify")
+            assertTrue(seen.add(id), "and is never recorded")
+        }
+        assertEquals(0, seen.size())
+        assertTrue(seen.add(id(3)), "the set still works")
+        assertTrue(seen.contains(id(3)))
+    }
+
+    @Test
     fun `contains peeks without recording`() {
         val seen = SeenIds()
         assertFalse(seen.contains(id(9)), "never added -> not contained")

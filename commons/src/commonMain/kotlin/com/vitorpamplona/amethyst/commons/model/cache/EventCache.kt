@@ -226,6 +226,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.isAddressable
 import com.vitorpamplona.quartz.nip01Core.core.isRegular
 import com.vitorpamplona.quartz.nip01Core.core.isReplaceable
+import com.vitorpamplona.quartz.nip01Core.core.supersedes
 import com.vitorpamplona.quartz.nip01Core.crypto.checkSignature
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -464,6 +465,9 @@ import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEven
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -1146,14 +1150,15 @@ open class EventCache :
         relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
     ): Boolean {
-        // new event
-        consumeBaseReplaceable(event, relay, wasVerified)
+        // new event. consumeBaseReplaceable only reports a new version after verifying it, so a
+        // true here spares the second Schnorr check below — the common case for a fresh kind 0.
+        val isNew = consumeBaseReplaceable(event, relay, wasVerified)
 
         val user = getOrCreateUser(event.pubKey)
 
         if (user.metadata().shouldUpdateWith(event)) {
             val newUserMetadata = event.contactMetaData()
-            if (newUserMetadata != null && (wasVerified || justVerify(event))) {
+            if (newUserMetadata != null && (wasVerified || isNew || justVerify(event))) {
                 user.updateUserInfo(newUserMetadata, event)
                 BuzzIdentityNames.invalidate()
                 if (relay != null) {
@@ -1270,7 +1275,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1315,7 +1320,7 @@ open class EventCache :
         if (isVerified || justVerify(event)) {
             val replyTo = computeReplyTo(event)
 
-            if (event.createdAt > (note.createdAt() ?: 0L)) {
+            if (supersedesCurrent(event, note)) {
                 note.loadEvent(event, author, replyTo)
 
                 refreshNewNoteObservers(note)
@@ -1357,7 +1362,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1400,7 +1405,7 @@ open class EventCache :
             return false
         }
 
-        if ((isVerified || justVerify(event)) && event.createdAt > (note.createdAt() ?: 0L)) {
+        if ((isVerified || justVerify(event)) && supersedesCurrent(event, note)) {
             val replyTo = computeReplyTo(event)
 
             note.loadEvent(event, author, replyTo)
@@ -1643,7 +1648,7 @@ open class EventCache :
 
         if (note.event?.id == event.id) return false
 
-        if (event.createdAt > (note.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        if (supersedesCurrent(event, note) && (isVerified || justVerify(event))) {
             note.loadEvent(event, author, emptyList())
 
             val channel = getOrCreateLiveChannel(note.address)
@@ -1729,6 +1734,23 @@ open class EventCache :
         return false
     }
 
+    /**
+     * NIP-01 supersession: true when [event] should replace the version [note] holds — the higher
+     * `created_at`, a same-second tie to the lowest id, as every relay and store resolves it.
+     *
+     * Reads the stored event's own `created_at`, never [AddressableNote.createdAt]: that one shows
+     * `published_at` when the kind carries it (articles, wiki, classifieds, video, app definitions,
+     * drafts), a date every edit of the address keeps. Compared against it, any edit looks newer
+     * than the current one, so an older edit arriving late from a slow relay replaced the newest.
+     */
+    private fun supersedesCurrent(
+        event: Event,
+        note: AddressableNote,
+    ): Boolean {
+        val current = note.event ?: return true
+        return event.supersedes(current)
+    }
+
     private fun consumeBaseReplaceable(
         event: Event,
         relay: NormalizedRelayUrl?,
@@ -1758,7 +1780,7 @@ open class EventCache :
         // Already processed this event.
         if (replaceableNote.event?.id == event.id) return isVerified
 
-        return if (event.createdAt > (replaceableNote.createdAt() ?: 0L) && (isVerified || justVerify(event))) {
+        return if (supersedesCurrent(event, replaceableNote) && (isVerified || justVerify(event))) {
             // clear index from previous tags
             replaceableNote.replyTo?.forEach {
                 it.removeNote(replaceableNote)
@@ -1793,7 +1815,8 @@ open class EventCache :
         return if (wasVerified || justVerify(event)) {
             note.loadEvent(event, author, emptyList())
 
-            if (deletionIndex.add(event, wasVerified)) {
+            // Verified just above: passing the caller's flag on made the index check it again.
+            if (deletionIndex.add(event, true)) {
                 event
                     .deleteEvents()
                     .mapNotNull { getNoteIfExists(it) }
@@ -1802,10 +1825,11 @@ open class EventCache :
                         if (deleteNoteEvent is AddressableEvent) {
                             val addressableNote = getAddressableNoteIfExists(deleteNoteEvent.addressTag())
                             // An `e` tag deletes that one version: the address goes only when the
-                            // version it currently shows is the one being deleted.
+                            // version it currently shows is the one being deleted. Its real
+                            // `created_at`, not the note's `published_at`-aware display date.
                             if (addressableNote?.author?.pubkeyHex == event.pubKey &&
                                 addressableNote.event?.id == deleteNoteEvent.id &&
-                                (addressableNote.createdAt() ?: 0L) <= event.createdAt
+                                deleteNoteEvent.createdAt <= event.createdAt
                             ) {
                                 // Counts the replies
                                 deleteNote(addressableNote)
@@ -1827,8 +1851,10 @@ open class EventCache :
                 addressList
                     .mapNotNull { getAddressableNoteIfExists(it) }
                     .forEach { deleteNote ->
-                        // must be the same author
-                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.createdAt() ?: 0L) <= event.createdAt) {
+                        // must be the same author, and an `a` deletion only reaches versions up to its
+                        // own `created_at` — the stored event's, since `createdAt()` may be the
+                        // `published_at` an edit made after the deletion still carries.
+                        if (deleteNote.author?.pubkeyHex == event.pubKey && (deleteNote.event?.createdAt ?: 0L) <= event.createdAt) {
                             // Counts the replies
                             deleteNote(deleteNote)
 
@@ -2046,8 +2072,9 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new: a `true` here re-ran the hint, mint and gatherer
+        // indexes for every relay that served it, and made the Marmot inbound path re-persist it.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
@@ -2072,8 +2099,8 @@ open class EventCache :
     ): Boolean {
         val note = getOrCreateNote(event.id)
 
-        // Already processed this event.
-        if (note.event != null) return true
+        // Already processed this event. Not new, as for reactions above.
+        if (note.event != null) return false
 
         if (wasVerified || justVerify(event)) {
             val author = getOrCreateUser(event.pubKey)
@@ -3374,6 +3401,12 @@ open class EventCache :
         // indistinguishable in the field.
         if (getNoteIfExists(event.id)?.event != null) return false
 
+        // Verify before the tracker: matching consumes the pending entry, and the two things it
+        // matches on — the wallet's pubkey and the request id — are public on the relay. A copy
+        // with a forged signature that names them would otherwise use up the entry, and the real
+        // wallet answer arriving next would find nothing waiting and be dropped as late.
+        if (!wasVerified && !justVerify(event)) return false
+
         val pending =
             when (val match = paymentTracker.onResponseReceived(requestId, event.pubKey)) {
                 is NwcPaymentTracker.MatchResult.Matched -> {
@@ -3416,19 +3449,15 @@ open class EventCache :
         // check above and here. Same outcome, no warning: it is not a protocol problem.
         if (note.event != null) return false
 
-        if (wasVerified || justVerify(event)) {
-            note.loadEvent(event, author, emptyList())
+        note.loadEvent(event, author, emptyList())
 
-            requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
+        requestNote?.let { request -> zappedNote?.addZapPayment(request, note) }
 
-            appHost.scope.launch {
-                responseCallback(event)
-            }
-
-            return true
+        appHost.scope.launch {
+            responseCallback(event)
         }
 
-        return false
+        return true
     }
 
     fun getPeopleListNotesFor(user: User): List<AddressableNote> = addressables.filter(FollowSetEvent.KIND, user.pubkeyHex)
@@ -4007,6 +4036,10 @@ open class EventCache :
                 // The relay-signed NIP-29 39004 AV-participants addressable is durable group state.
                 is GroupParticipantsEvent,
                 is ExternalIdentitiesEvent,
+                // OpenAgents capability heads (30180) and package listings (30184): discovery records,
+                // newest per address; nothing derives state from them yet.
+                is CapabilityDiscoveryEvent,
+                is ExtensionListingEvent,
                 is FileServersEvent,
                 is StarterPackEvent,
                 is GeocacheListingEvent,
@@ -4164,6 +4197,8 @@ open class EventCache :
                 is ChatMessageEvent,
                 is BirdDetectionEvent,
                 is CommentEvent,
+                // OpenAgents package releases (3184): immutable, pointed at by a 30184 listing.
+                is ExtensionReleaseEvent,
                 // The NIP-29 9xxx moderation actions and join/leave requests are regular
                 // one-shot events the relay is authoritative for (it applies them and
                 // republishes the 39000/39001/39002); we store them so they're queryable,

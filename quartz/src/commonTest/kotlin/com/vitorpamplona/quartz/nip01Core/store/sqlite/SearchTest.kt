@@ -25,17 +25,21 @@ import com.vitorpamplona.quartz.experimental.trustedLists.metric
 import com.vitorpamplona.quartz.experimental.trustedLists.title
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.tags.PubKeyMemberTag
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip52Calendar.calendar.CalendarCollectionEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class SearchTest : BaseDBTest() {
     val signer = NostrSignerSync()
@@ -124,6 +128,40 @@ class SearchTest : BaseDBTest() {
             // deletes nothing (safe-by-default contract).
             db.store.delete(Filter(search = "language:en"))
             db.assertQuery(comment, Filter(search = "testing"))
+        }
+
+    @Test
+    fun testExtensionsOnlySearchDoesNotRestrictToSearchableKinds() =
+        forEachDB { db ->
+            // STORE-S01: an extensions-only search collapses to NO search
+            // constraint. Reactions are not FTS-indexed, so a branch that still
+            // joined event_fts on the blank term returned zero reactions.
+            val note = signer.sign(TextNoteEvent.build("hello world", createdAt = 1))
+            val reaction = signer.sign(ReactionEvent.like(EventHintBundle<Event>(note), createdAt = 2))
+
+            db.insert(note)
+            db.insert(reaction)
+
+            val withTags = Filter(kinds = listOf(ReactionEvent.KIND), tags = mapOf("e" to listOf(note.id)), search = "include:spam")
+            db.assertQuery(reaction, withTags)
+            db.assertQuery(reaction, withTags.copy(search = ""))
+            db.assertQuery(reaction, withTags.copy(search = "  "))
+            db.assertQuery(reaction, Filter(kinds = listOf(ReactionEvent.KIND), search = "  "))
+
+            // the union and its count build every branch through the same subquery
+            val union = listOf(Filter(kinds = listOf(ReactionEvent.KIND), search = "include:spam"), Filter(ids = listOf(note.id)))
+            assertEquals(2, db.query<Event>(union).size)
+            assertEquals(2, db.count(union))
+
+            // a blank search alone is the empty filter: it deletes nothing
+            db.delete(Filter(search = "  "))
+            db.delete(listOf(Filter(search = "  "), Filter(search = "")))
+            assertEquals(2, db.count(Filter()))
+
+            // and delete-by-filter builds the same subquery as the union
+            db.delete(withTags)
+            db.assertQuery(null, Filter(ids = listOf(reaction.id)))
+            db.assertQuery(note, Filter(ids = listOf(note.id)))
         }
 
     @Test

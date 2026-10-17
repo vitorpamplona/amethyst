@@ -488,6 +488,51 @@ class NIP19ParserTest {
         assertEquals(null, Nip19Parser.uriToRoute("nostr:" + NProfile.create(compressedPubKey, emptyList()))?.entity)
     }
 
+    private val xOnlyKey = "bb3d6543d4a4f45f402b674ecb5cb2155ff12456fcdd2d66d9727660d3037365"
+    private val eventId = "82c19ee9db7644829b4420f40b72ce2d32e5b7962744b261d0d53e770432dac3"
+
+    @Test
+    fun rejects_compressed_pubkey_encoded_as_naddr() {
+        val naddr = NAddress.create(30023, compressedPubKey, "d", emptyList())
+        assertEquals(null, NAddress.parse(naddr))
+        assertEquals(null, Nip19Parser.uriToRoute("nostr:$naddr")?.entity)
+    }
+
+    @Test
+    fun rejects_naddr_kind_out_of_range() {
+        // A 4-byte TLV kind of 0xFFFFFFFF read as a signed Int is -1.
+        assertEquals(null, NAddress.parse(NAddress.create(-1, xOnlyKey, "d", emptyList())))
+        assertEquals(null, NAddress.parse(NAddress.create(65536, xOnlyKey, "d", emptyList())))
+        assertEquals(65535, NAddress.parse(NAddress.create(65535, xOnlyKey, "d", emptyList()))?.kind)
+        assertEquals(0, NAddress.parse(NAddress.create(0, xOnlyKey, "d", emptyList()))?.kind)
+    }
+
+    @Test
+    fun rejects_nevent_id_not_32_bytes() {
+        val short = eventId.substring(2)
+        val long = eventId + "00"
+        assertEquals(null, Nip19Parser.uriToRoute("nostr:" + NEvent.create(short, xOnlyKey, 1, emptyList()))?.entity)
+        assertEquals(null, Nip19Parser.uriToRoute("nostr:" + NEvent.create(long, xOnlyKey, 1, emptyList()))?.entity)
+    }
+
+    @Test
+    fun drops_nevent_compressed_author_but_keeps_the_event() {
+        val parsed = Nip19Parser.uriToRoute("nostr:" + NEvent.create(eventId, compressedPubKey, 1, emptyList()))?.entity as? NEvent
+        assertNotNull(parsed)
+        assertEquals(eventId, parsed.hex)
+        assertEquals(null, parsed.author)
+        assertEquals(1, parsed.kind)
+    }
+
+    @Test
+    fun drops_nevent_kind_out_of_range_but_keeps_the_event() {
+        val parsed = Nip19Parser.uriToRoute("nostr:" + NEvent.create(eventId, xOnlyKey, -1, emptyList()))?.entity as? NEvent
+        assertNotNull(parsed)
+        assertEquals(eventId, parsed.hex)
+        assertEquals(xOnlyKey, parsed.author)
+        assertEquals(null, parsed.kind)
+    }
+
     @Test
     fun accepts_valid_xonly_pubkey() {
         val xOnly = "bb3d6543d4a4f45f402b674ecb5cb2155ff12456fcdd2d66d9727660d3037365"

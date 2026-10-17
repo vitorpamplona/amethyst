@@ -57,10 +57,14 @@ fun DisplayUncitedHashtags(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Keyed on what it reads: an edit (NIP-41) or a step through the versions changes [content]
+    // while the card stays composed, and the row has to follow the text it sits under.
     val unusedHashtags by
-        produceState(initialValue = emptyList()) {
+        produceState(initialValue = emptyList<String>(), event, content, callbackUri) {
             val tagsInEvent = event.hashtags()
-            if (tagsInEvent.isNotEmpty()) {
+            if (tagsInEvent.isEmpty()) {
+                value = emptyList()
+            } else {
                 val state = CachedRichTextParser.parseText(content, event.tags.toImmutableListOfLists(), callbackUri)
 
                 val tagsInContent =
@@ -83,9 +87,7 @@ fun DisplayUncitedHashtags(
                         }
                     }
 
-                if (unusedHashtags.isNotEmpty()) {
-                    value = unusedHashtags
-                }
+                value = unusedHashtags
             }
         }
 

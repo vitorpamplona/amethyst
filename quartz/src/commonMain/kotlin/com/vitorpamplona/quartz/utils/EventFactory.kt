@@ -499,6 +499,9 @@ import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 
 interface EventBuilder {
     fun build(
@@ -641,6 +644,7 @@ class EventFactory {
                 CalendarCollectionEvent.KIND -> CalendarCollectionEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarTimeSlotEvent.KIND -> CalendarTimeSlotEvent(id, pubKey, createdAt, tags, content, sig)
                 CalendarRSVPEvent.KIND -> CalendarRSVPEvent(id, pubKey, createdAt, tags, content, sig)
+                CapabilityDiscoveryEvent.KIND -> CapabilityDiscoveryEvent(id, pubKey, createdAt, tags, content, sig)
                 CallAnswerEvent.KIND -> CallAnswerEvent(id, pubKey, createdAt, tags, content, sig)
                 CallHangupEvent.KIND -> CallHangupEvent(id, pubKey, createdAt, tags, content, sig)
                 CallIceCandidateEvent.KIND -> CallIceCandidateEvent(id, pubKey, createdAt, tags, content, sig)
@@ -738,6 +742,8 @@ class EventFactory {
                 EphemeralChatEvent.KIND -> EphemeralChatEvent(id, pubKey, createdAt, tags, content, sig)
                 EphemeralChatListEvent.KIND -> EphemeralChatListEvent(id, pubKey, createdAt, tags, content, sig)
                 ExternalIdentitiesEvent.KIND -> ExternalIdentitiesEvent(id, pubKey, createdAt, tags, content, sig)
+                ExtensionListingEvent.KIND -> ExtensionListingEvent(id, pubKey, createdAt, tags, content, sig)
+                ExtensionReleaseEvent.KIND -> ExtensionReleaseEvent(id, pubKey, createdAt, tags, content, sig)
                 FedimintEvent.KIND -> FedimintEvent(id, pubKey, createdAt, tags, content, sig)
                 FeedDefinitionEvent.KIND -> FeedDefinitionEvent(id, pubKey, createdAt, tags, content, sig)
                 FileMetadataEvent.KIND -> FileMetadataEvent(id, pubKey, createdAt, tags, content, sig)

@@ -66,14 +66,18 @@ class AppSpecificDataRepublishTest {
     @Test
     fun theWallClockAloneLosesAnEditMadeInTheSameSecond() =
         runBlocking {
-            // Why the fix has to exist: LocalCache keeps the strictly newest version per address, so
-            // a same-second republish never reaches the collector that persists it.
+            // Why the fix has to exist: LocalCache resolves a same-second tie the NIP-01 way — the
+            // lowest id stays — so a republish in the same second lands only when its id happens to
+            // sort lower, about half the time; otherwise it never reaches the collector that persists it.
             val sameSecond = TimeUtils.now()
 
-            LocalCache.justConsumeMyOwnEvent(signer.sign(AppSpecificDataEvent.build(dTag, "first", createdAt = sameSecond)))
-            LocalCache.justConsumeMyOwnEvent(signer.sign(AppSpecificDataEvent.build(dTag, "second", createdAt = sameSecond)))
+            val first = signer.sign(AppSpecificDataEvent.build(dTag, "first", createdAt = sameSecond))
+            val second = signer.sign(AppSpecificDataEvent.build(dTag, "second", createdAt = sameSecond))
+            LocalCache.justConsumeMyOwnEvent(first)
+            LocalCache.justConsumeMyOwnEvent(second)
 
-            assertEquals("first", LocalCache.getOrCreateAddressableNote(address).event?.content)
+            val kept = if (first.id < second.id) first else second
+            assertEquals(kept.content, LocalCache.getOrCreateAddressableNote(address).event?.content)
         }
 
     @Test

@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.note.elements
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -44,22 +41,18 @@ fun DisplayFollowingHashtagsInPost(
 ) {
     val userFollowState by accountViewModel.account.allFollows.flow
         .collectAsStateWithLifecycle()
-    var firstTag by remember(baseNote) { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(key1 = userFollowState) {
-        val noteEvent = baseNote.event
-
-        val newFirstTag =
+    // Computed in composition, keyed on both inputs. An effect keyed on the follows alone never
+    // re-ran for a new note (a draft is a new Note on every edit), so the label vanished for good,
+    // and on every card it arrived one frame late, re-laying out the first row on each scroll-in.
+    val firstTag =
+        remember(baseNote, userFollowState) {
+            val noteEvent = baseNote.event
             if (noteEvent is CommentEvent) {
                 noteEvent.firstTaggedScopeIn(userFollowState.hashtagScopes)?.let { HashtagId.parse(it) } ?: noteEvent.firstIsTaggedHashes(userFollowState.hashtags)
             } else {
                 noteEvent?.firstIsTaggedHashes(userFollowState.hashtags)
             }
-
-        if (firstTag != newFirstTag) {
-            firstTag = newFirstTag
         }
-    }
 
     firstTag?.let { tag ->
         FollowedHashtagLabel(tag) { nav.nav(Route.Hashtag(tag.lowercase())) }

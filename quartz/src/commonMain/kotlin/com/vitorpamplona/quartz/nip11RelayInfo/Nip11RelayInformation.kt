@@ -82,7 +82,9 @@ data class Nip11RelayInformation(
     @Stable
     @Serializable
     data class RelayInformationFee(
-        val amount: Int? = null,
+        // Long: an Int of msats tops out at ~2.1M sats, and a number past it failed the whole
+        // document, not just this field.
+        val amount: Long? = null,
         val unit: String? = null,
         val period: Int? = null,
         val kinds: List<Int>? = null,
@@ -116,11 +118,17 @@ data class Nip11RelayInformation(
         val created_at_upper_limit: Int? = null,
     )
 
+    /**
+     * A NIP-11 `retention` entry. On the wire `kinds` mixes plain kinds and `[from, to]`
+     * ranges; [kinds] holds the plain ones and [kindRanges] the ranges (see
+     * [RetentionDataSerializer]).
+     */
     @Stable
-    @Serializable
+    @Serializable(with = RetentionDataSerializer::class)
     data class RelayInformationRetentionData(
         val kinds: ArrayList<Int>? = null,
         val time: Int? = null,
         val count: Int? = null,
+        val kindRanges: List<IntRange>? = null,
     )
 }

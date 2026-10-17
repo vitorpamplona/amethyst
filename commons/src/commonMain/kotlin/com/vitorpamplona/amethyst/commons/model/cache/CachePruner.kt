@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.supersedes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUsers
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -287,13 +288,12 @@ class CachePruner(
             cache.notes.filter { _, note ->
                 val noteEvent = note.event
                 if (noteEvent is AddressableEvent) {
-                    noteEvent.createdAt <
-                        (
-                            cache.addressables
-                                .get(noteEvent.address())
-                                ?.event
-                                ?.createdAt ?: 0
-                        )
+                    // The same NIP-01 rule that picked the address's version, tiebreak included,
+                    // so a same-second loser is pruned too while the kept version never is.
+                    cache.addressables
+                        .get(noteEvent.address())
+                        ?.event
+                        ?.supersedes(noteEvent) == true
                 } else {
                     false
                 }
@@ -468,6 +468,8 @@ class CachePruner(
 
         addressesToBeRemoved.forEach {
             unlinkAndRemove(it)
+            // unlinkAndRemove only clears `notes`; every address lookup reads `addressables`.
+            cache.addressables.remove(it.address)
             childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 
@@ -488,13 +490,19 @@ class CachePruner(
     fun pruneHiddenEvents(hidden: LiveHiddenUsers) {
         val childrenToBeRemoved = mutableListOf<Note>()
 
+        val hiddenUsers = hidden.hiddenUsers
+        if (hiddenUsers.isEmpty()) return
+
+        // One pass per store, each author looked up in the set. A pass per muted user made every
+        // trim cost (mutes x cache size), and mute lists run into the hundreds.
         val toBeRemoved =
-            hidden.hiddenUsers.flatMap { userHex ->
-                (cache.notes.filter { _, it -> it.event?.pubKey == userHex } + cache.addressables.filter { _, it -> it.event?.pubKey == userHex }).toSet()
-            }
+            cache.notes.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true } +
+                cache.addressables.filter { _, it -> it.event?.pubKey?.let { author -> author in hiddenUsers } == true }
 
         toBeRemoved.forEach {
             unlinkAndRemove(it)
+            // unlinkAndRemove only clears `notes`; every address lookup reads `addressables`.
+            if (it is AddressableNote) cache.addressables.remove(it.address)
             childrenToBeRemoved.addAll(it.clearChildLinks())
         }
 

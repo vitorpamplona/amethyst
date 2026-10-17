@@ -283,4 +283,90 @@ class Nip11RelayInformationTest {
         assertEquals("https://vitor.nostr1.com#policy", info.posting_policy)
         assertEquals("https://image.nostr.build/6e291df3474cab17a7c079b35e704fde319fa7cd44086684a27cddcc53c3ba07.png", info.icon)
     }
+
+    // NIP-11's own `retention` example: a kinds entry may be a `[from, to]` range.
+    val retentionWithRangesJson =
+        """
+        {
+          "name": "ranged relay",
+          "retention": [
+            {"kinds": [0, 1, [5, 7], [40, 49]], "time": 3600},
+            {"kinds": [[40000, 49999]], "time": 100},
+            {"kinds": [[30000, 39999]], "count": 1000},
+            {"time": 3600, "count": 10000}
+          ]
+        }
+        """.trimIndent()
+
+    @Test
+    fun `Parse retention kind ranges`() {
+        val info = Nip11RelayInformation.fromJson(retentionWithRangesJson)
+
+        assertEquals("ranged relay", info.name)
+        val retention = assertNotNull(info.retention)
+        assertEquals(4, retention.size)
+        assertEquals<List<Int>?>(listOf(0, 1), retention[0].kinds)
+        assertEquals(listOf(5..7, 40..49), retention[0].kindRanges)
+        assertEquals(3600, retention[0].time)
+        assertEquals<List<Int>?>(emptyList(), retention[1].kinds)
+        assertEquals(listOf(40000..49999), retention[1].kindRanges)
+        assertEquals(1000, retention[2].count)
+        assertNull(retention[3].kinds)
+        assertNull(retention[3].kindRanges)
+        assertEquals(10000, retention[3].count)
+    }
+
+    @Test
+    fun `Retention kind ranges round trip`() {
+        val info = Nip11RelayInformation.fromJson(retentionWithRangesJson)
+        assertEquals(info, Nip11RelayInformation.fromJson(info.toJson()))
+    }
+
+    @Test
+    fun `Parse fee amount above Int range`() {
+        // 21 BTC in msats: past Int.MAX_VALUE, which used to fail the whole document.
+        val json =
+            """
+            {
+              "name": "pricey relay",
+              "fees": {
+                "admission": [{"amount": 2100000000000, "unit": "msats"}],
+                "subscription": [{"amount": 5000000, "unit": "msats", "period": 2592000}],
+                "publication": [{"kinds": [4], "amount": 100, "unit": "msats"}]
+              }
+            }
+            """.trimIndent()
+
+        val info = Nip11RelayInformation.fromJson(json)
+
+        assertEquals("pricey relay", info.name)
+        assertEquals(
+            2_100_000_000_000L,
+            info.fees
+                ?.admission
+                ?.first()
+                ?.amount,
+        )
+        assertEquals(
+            5_000_000L,
+            info.fees
+                ?.subscription
+                ?.first()
+                ?.amount,
+        )
+        assertEquals(
+            2592000,
+            info.fees
+                ?.subscription
+                ?.first()
+                ?.period,
+        )
+        assertEquals(
+            listOf(4),
+            info.fees
+                ?.publication
+                ?.first()
+                ?.kinds,
+        )
+    }
 }

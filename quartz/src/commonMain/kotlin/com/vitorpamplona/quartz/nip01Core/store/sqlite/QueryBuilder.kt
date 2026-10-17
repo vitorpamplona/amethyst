@@ -206,7 +206,7 @@ class QueryBuilder(
         // A search term that survived the simple-search branch above always
         // combines with tags here (search + #t etc.). NIP-50 still orders by
         // relevance, so carry the FTS rank through the subquery and out.
-        val rankSearch = newFilter.search != null && newFilter.search.isNotEmpty()
+        val rankSearch = hasSearchTerm(newFilter.search)
         val rowIdSubqueries = prepareRowIDSubQueries(filter, hasher, projectRank = rankSearch)
 
         return if (rowIdSubqueries == null) {
@@ -230,7 +230,7 @@ class QueryBuilder(
         // Only when EVERY branch is a search branch (and FTS is on, so each has
         // a rank column) — a non-search branch has no defined relevance, so a
         // mixed REQ falls back to created_at.
-        val rankSearch = fts.enabled && filters.all { !it.search.isNullOrEmpty() }
+        val rankSearch = fts.enabled && filters.all { hasSearchTerm(it.search) }
         val rowIdSubqueries = unionSubqueriesIfNeeded(filters, hasher, projectRank = rankSearch)
 
         return if (rowIdSubqueries == null) {
@@ -403,7 +403,7 @@ class QueryBuilder(
                         append(", id ASC")
                     }
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -449,7 +449,7 @@ class QueryBuilder(
                         append(", event_headers.id ASC")
                     }
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -474,13 +474,20 @@ class QueryBuilder(
 
     /**
      * True when full-text search is turned off ([FullTextSearchModule.enabled]
-     * is `false`) and the filter carries a non-empty `search` term. Such a
+     * is `false`) and the filter carries a non-blank `search` term. Such a
      * filter can never be satisfied — there is no `event_fts` table to
-     * MATCH — so callers short-circuit to a "matches nothing" query. An
-     * empty-string search imposes no constraint and is left to the normal
+     * MATCH — so callers short-circuit to a "matches nothing" query. A
+     * blank search imposes no constraint and is left to the normal
      * (non-search) query path, matching the FTS-enabled behaviour.
      */
-    private fun searchDisabledMatchesNothing(search: String?): Boolean = !fts.enabled && search != null && search.isNotEmpty()
+    private fun searchDisabledMatchesNothing(search: String?): Boolean = !fts.enabled && hasSearchTerm(search)
+
+    /**
+     * True when [search] carries a term to MATCH. A blank one (an extensions-only search after
+     * [com.vitorpamplona.quartz.nip50Search.strippingSearchExtensions]) is no constraint, so it
+     * neither joins `event_fts` nor ranks.
+     */
+    private fun hasSearchTerm(search: String?): Boolean = search != null && search.isNotBlank()
 
     private fun makeMatchesNothingQuery() = "SELECT id, pubkey, created_at, kind, tags, content, sig FROM event_headers WHERE 0"
 
@@ -798,15 +805,24 @@ class QueryBuilder(
     ): QuerySpec? {
         if (filter.isEmpty()) return null
 
+        // A blank search is no constraint (STORE-S01), so a filter carrying
+        // nothing else IS the empty filter — a delete must not read it as
+        // "every row" (STORE-F10).
+        if (filter.search != null && !hasSearchTerm(filter.search) && filter.copy(search = null).isEmpty()) return null
+
         // With FTS off there is no event_fts table to MATCH/JOIN against.
-        // A non-empty search can never match, so this filter contributes
+        // A non-blank search can never match, so this filter contributes
         // no row ids (returns an empty branch to any UNION/COUNT/DELETE);
-        // an empty search imposes no constraint and is simply dropped below.
+        // a blank search imposes no constraint and is simply dropped below.
         if (searchDisabledMatchesNothing(filter.search)) {
             return QuerySpec("SELECT event_headers.row_id as row_id FROM event_headers WHERE 0")
         }
 
-        val mustJoinSearch = filter.search != null && fts.enabled
+        // A blank search (what an extensions-only search strips to) imposes no
+        // constraint (STORE-S01), and the MATCH below is skipped for it, so the
+        // FTS join must be skipped too: joined, it alone restricted the branch
+        // to FTS-indexed kinds and a `#e` + `include:spam` REQ lost every reaction.
+        val mustJoinSearch = fts.enabled && hasSearchTerm(filter.search)
 
         // Only emit the rank column when there is actually an FTS join to take
         // it from; a `projectRank` request on a tag-only filter is ignored.
@@ -818,9 +834,15 @@ class QueryBuilder(
 
         val reverseLookup = nonDTagsIn.isNotEmpty() || nonDTagsAll.isNotEmpty()
 
+        // `#d` lives in event_headers.d_tag, whether it came under tags or
+        // tagsAll (STORE-F05). Reading only tags["d"] here dropped a tagsAll d
+        // from the tag-join/union/count/delete paths, so a delete whose only
+        // field was tagsAll d deleted every row.
+        val dTags = filter.dTagValues()
+
         val needHeaders =
             with(filter) {
-                (ids != null) || (tags != null && tags.containsKey("d"))
+                (ids != null) || (dTags != null)
             }
 
         val hasHeaders =
@@ -828,7 +850,7 @@ class QueryBuilder(
                 (ids != null) ||
                     (authors != null && authors.isNotEmpty()) ||
                     (kinds != null && kinds.isNotEmpty()) ||
-                    (tags != null && tags.containsKey("d")) ||
+                    (dTags != null) ||
                     (since != null) ||
                     (until != null) ||
                     (limit != null)
@@ -941,10 +963,8 @@ class QueryBuilder(
                     }
 
                     // there are indexes for these, starting with tags.
-                    filter.tags?.forEach { (tagName, tagValues) ->
-                        if (tagName == "d") {
-                            equalsOrIn("event_headers.d_tag", tagValues)
-                        }
+                    dTags?.let {
+                        equalsOrIn("event_headers.d_tag", it)
                     }
                 } else {
                     filter.kinds?.let {
@@ -955,10 +975,8 @@ class QueryBuilder(
                     }
 
                     // there are indexes for these, starting with tags.
-                    filter.tags?.forEach { (tagName, tagValues) ->
-                        if (tagName == "d") {
-                            equalsOrIn("event_headers.d_tag", tagValues)
-                        }
+                    dTags?.let {
+                        equalsOrIn("event_headers.d_tag", it)
                     }
 
                     filter.since?.let {
@@ -1001,7 +1019,9 @@ class QueryBuilder(
                         append(" ORDER BY event_headers.created_at DESC")
                     }
                     append(" LIMIT ")
-                    append(filter.limit)
+                    // SQLite reads a negative LIMIT as "no limit": clamp so a
+                    // `limit: -1` returns nothing instead of every row (STORE-F12).
+                    append(filter.limit.coerceAtLeast(0))
                 }
             }
 
@@ -1076,7 +1096,7 @@ class QueryBuilder(
                 }
                 if (limit != null) {
                     append("\nLIMIT ")
-                    append(limit)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -1175,7 +1195,8 @@ class QueryBuilder(
                 }
                 if (limit != null) {
                     append("\nLIMIT ")
-                    append(limit)
+                    // negative LIMIT is unbounded in SQLite (STORE-F12)
+                    append(limit.coerceAtLeast(0))
                 }
             }
 
@@ -1196,7 +1217,7 @@ class QueryBuilder(
     ) {
         fun isSimpleSearch() =
             search != null &&
-                search.isNotEmpty() &&
+                search.isNotBlank() &&
                 (nonDTagsIn == null || nonDTagsIn.isEmpty()) &&
                 (nonDTagsAll == null || nonDTagsAll.isEmpty())
 
@@ -1204,7 +1225,8 @@ class QueryBuilder(
         fun isSimpleQuery() =
             (nonDTagsIn == null || nonDTagsIn.isEmpty()) &&
                 (nonDTagsAll == null || nonDTagsAll.isEmpty()) &&
-                (search == null || search.isEmpty())
+                // blank = no search constraint (STORE-S01); FTS5 rejects a blank MATCH
+                (search == null || search.isBlank())
     }
 
     fun Filter.toFilterWithDTags(): FilterWithDTags =
@@ -1212,7 +1234,7 @@ class QueryBuilder(
             ids = ids,
             authors = authors,
             kinds = kinds,
-            dTags = tags?.get("d") ?: tagsAll?.get("d"),
+            dTags = dTagValues(),
             nonDTagsIn = tags?.filter { it.key != "d" }?.ifEmpty { null },
             nonDTagsAll = tagsAll?.filter { it.key != "d" }?.ifEmpty { null },
             since = since,
@@ -1220,6 +1242,13 @@ class QueryBuilder(
             limit = limit,
             search = search,
         )
+
+    /**
+     * The `#d` values a filter matches against `event_headers.d_tag` (STORE-F05): `tags["d"]`,
+     * else `tagsAll["d"]` (an event has one d-tag, so AND-across-values degrades to IN). Every
+     * path reads it from here so none of them can drop it.
+     */
+    fun Filter.dTagValues(): List<String>? = tags?.get("d") ?: tagsAll?.get("d")
 
     data class QuerySpec(
         val sql: String,

@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.utils.mapOfSet
 
 class RepositoryContentSubAssembler(
     val cache: ICacheProvider,
@@ -39,20 +40,30 @@ class RepositoryContentSubAssembler(
     ): List<RelayBasedFilter> {
         if (keys.isEmpty()) return emptyList()
 
-        return keys.flatMap { key ->
-            val repoEvent = key.repository.event as? GitRepositoryEvent ?: return@flatMap emptyList()
+        val relaysPerRepo =
+            keys.mapNotNull { key ->
+                val repoEvent = key.repository.event as? GitRepositoryEvent ?: return@mapNotNull null
 
-            val announcedRelays = repoEvent.relays().mapNotNull(RelayUrlNormalizer::normalizeOrNull)
-            val hintRelays =
-                if (announcedRelays.isEmpty()) {
-                    cache.relayHints.hintsForAddress(repoEvent.addressTag())
-                } else {
-                    emptyList()
-                }
-            val repoRelays = (announcedRelays + hintRelays + key.repository.relayUrls()).toSet()
+                val announcedRelays = repoEvent.relays().mapNotNull(RelayUrlNormalizer::normalizeOrNull)
+                val hintRelays =
+                    if (announcedRelays.isEmpty()) {
+                        cache.relayHints.hintsForAddress(repoEvent.addressTag())
+                    } else {
+                        emptyList()
+                    }
+                Triple(key, repoEvent, (announcedRelays + hintRelays + key.repository.relayUrls()).toSet())
+            }
 
+        // One cursor per relay is shared by every repository opened on it.
+        val sinceNow =
+            sinceDroppingGrownRelays(
+                mapOfSet { relaysPerRepo.forEach { (key, _, relays) -> relays.forEach { add(it, key.repository.idHex) } } },
+                since,
+            )
+
+        return relaysPerRepo.flatMap { (_, repoEvent, repoRelays) ->
             repoRelays.flatMap { relay ->
-                val relaySince = since?.get(relay)?.time
+                val relaySince = sinceNow?.get(relay)?.time
                 listOf(
                     filterRepositoryContent(relay, repoEvent, relaySince),
                     filterRepositoryCi(relay, repoEvent, relaySince),
