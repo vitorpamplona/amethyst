@@ -42,9 +42,12 @@ import com.vitorpamplona.quartz.utils.Log
  * not delivered again. A filter with a [Filter.limit] resumes with what is left of it.
  * Searches are relevance-ranked, one page, and never resumed.
  *
- * Only a walk that got somewhere is resumed: a relay that cannot be reached, or stays silent,
- * before delivering a single event ends the walk at once, as [fetchAllPages] would, instead of
- * after the whole backoff.
+ * Only a walk that got somewhere is resumed through the whole backoff. One whose connection ended
+ * before a single event is asked once more, after [resumeBackoff]'s first delay: a relay that took
+ * the connection and closed it before answering (overloaded, restarting, still writing a page to
+ * the socket it dropped) usually answers the next one, and one that is down costs that one delay.
+ * A relay that stays silent before delivering anything ends the walk at once, as [fetchAllPages]
+ * would: each re-ask of a silent relay costs a whole idle window.
  *
  * A walk that ends [PagedFetchResult.End.DRAINED] after at least [CONFIRM_AFTER_PAGES] pages
  * and something new is confirmed once, after [resumeBackoff]'s first delay, from its cursor: a
@@ -124,9 +127,11 @@ private suspend fun INostrClient.resumingWalk(
                 throttleBackoff,
             ) { event ->
                 if (cursor.alreadyDelivered(event)) return@walkPages
+                onEvent(event)
+                // Recorded only once handed on: an [onEvent] cancelled where it suspends (the socket
+                // ending under it) delivered nothing, and its next copy must not look like a repeat.
                 cursor.record(event)
                 deliveredNew++
-                onEvent(event)
             }
         downloaded += deliveredNew
         if (deliveredNew > 0) {
@@ -141,7 +146,8 @@ private suspend fun INostrClient.resumingWalk(
         val stalled = result.end == PagedFetchResult.End.CANNOT_CONNECT || result.end == PagedFetchResult.End.IDLE
         val toConfirm = result.end == PagedFetchResult.End.DRAINED && deliveredNew > 0 && pages >= CONFIRM_AFTER_PAGES
         val next = cursor.resumeFilter()
-        if (!(stalled || toConfirm) || downloaded == 0 || next == null || attempt >= resumeBackoff.delaysMs.size) {
+        val unanswered = downloaded == 0 && (result.end != PagedFetchResult.End.CANNOT_CONNECT || attempt >= 1)
+        if (!(stalled || toConfirm) || unanswered || next == null || attempt >= resumeBackoff.delaysMs.size) {
             return result.copy(downloaded = downloaded)
         }
         if (toConfirm) confirming = result

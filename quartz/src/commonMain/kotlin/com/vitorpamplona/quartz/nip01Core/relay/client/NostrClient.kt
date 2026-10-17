@@ -313,6 +313,10 @@ class NostrClient(
         relayPool.resetBackoff()
     }
 
+    override fun resetBackoff(url: NormalizedRelayUrl) {
+        relayPool.getRelay(url)?.resetBackoff()
+    }
+
     override fun ensureInPool(url: NormalizedRelayUrl) {
         // Membership only. Connecting is reconnect()'s job, and going through the pool's
         // own create keeps the relay client identical to the one publish would have made.
