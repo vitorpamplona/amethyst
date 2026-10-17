@@ -119,10 +119,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Directe URL gebruiken</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Bijnaam</string>
-    <string name="nickname_dialog_explainer">Wordt aan jou getoond in plaats van de naam van deze gebruiker, overal in de app. Het wordt versleuteld opgeslagen in je contactkaart: alleen jij kunt het lezen. Typ : om je eigen emoji's te gebruiken.</string>
     <string name="nickname_label">Bijnaam</string>
-    <string name="nickname_summary_label">Privénote over deze gebruiker</string>
     <string name="nickname_save">Opslaan</string>
     <string name="nickname_cancel">Annuleren</string>
     <string name="git_status_open">Openen</string>

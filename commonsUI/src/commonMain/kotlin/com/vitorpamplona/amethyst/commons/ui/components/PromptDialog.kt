@@ -71,7 +71,8 @@ import com.vitorpamplona.amethyst.commons.resources.show_password
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 
-private val PromptShape = RoundedCornerShape(16.dp)
+/** The corners of a [PromptDialog]'s button and fields. */
+val PromptShape = RoundedCornerShape(16.dp)
 
 /**
  * A dialog that asks one thing: an icon badge, a title, a short [description], the fields in
@@ -93,6 +94,40 @@ fun PromptDialog(
     dismissible: Boolean = false,
     content: @Composable ColumnScope.() -> Unit = {},
 ) {
+    PromptDialog(
+        badge = {
+            val badge = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+            val onBadge = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+            Box(Modifier.size(56.dp).background(badge, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(symbol, contentDescription = null, tint = onBadge, modifier = Modifier.size(28.dp))
+            }
+        },
+        title = title,
+        description = description,
+        confirmText = confirmText,
+        onConfirm = onConfirm,
+        dismissText = dismissText,
+        onDismiss = onDismiss,
+        confirmEnabled = confirmEnabled,
+        dismissible = dismissible,
+        content = content,
+    )
+}
+
+/** A [PromptDialog] headed by any [badge], such as the avatar of the person it is about. */
+@Composable
+fun PromptDialog(
+    badge: @Composable () -> Unit,
+    title: String,
+    description: String?,
+    confirmText: String,
+    onConfirm: () -> Unit,
+    dismissText: String,
+    onDismiss: () -> Unit,
+    confirmEnabled: Boolean = true,
+    dismissible: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit = {},
+) {
     Dialog(
         onDismissRequest = { if (dismissible) onDismiss() },
         properties = DialogProperties(dismissOnBackPress = dismissible, dismissOnClickOutside = dismissible, usePlatformDefaultWidth = false),
@@ -108,11 +143,7 @@ fun PromptDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                val badge = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-                val onBadge = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
-                Box(Modifier.size(56.dp).background(badge, CircleShape), contentAlignment = Alignment.Center) {
-                    Icon(symbol, contentDescription = null, tint = onBadge, modifier = Modifier.size(28.dp))
-                }
+                badge()
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleLarge,

@@ -136,10 +136,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Använd direkt URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Smeknamn</string>
-    <string name="nickname_dialog_explainer">Visas för dig i stället för den här användarens namn, överallt i appen. Det sparas krypterat i ditt kontaktkort: bara du kan läsa det. Skriv : för att använda dina egna emojier.</string>
     <string name="nickname_label">Smeknamn</string>
-    <string name="nickname_summary_label">Privat anteckning om den här användaren</string>
     <string name="nickname_save">Spara</string>
     <string name="nickname_cancel">Avbryt</string>
     <string name="git_status_open">Öppen</string>

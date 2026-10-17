@@ -136,10 +136,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Direkte URL verwenden</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Spitzname</string>
-    <string name="nickname_dialog_explainer">Wird dir überall in der App anstelle des Namens dieses Benutzers angezeigt. Er wird verschlüsselt in deiner Kontaktkarte gespeichert: nur du kannst ihn lesen. Tippe :, um deine benutzerdefinierten Emojis zu verwenden.</string>
     <string name="nickname_label">Spitzname</string>
-    <string name="nickname_summary_label">Private Notiz über diesen Benutzer</string>
     <string name="nickname_save">Speichern</string>
     <string name="nickname_cancel">Abbrechen</string>
     <string name="git_status_open">Offen</string>

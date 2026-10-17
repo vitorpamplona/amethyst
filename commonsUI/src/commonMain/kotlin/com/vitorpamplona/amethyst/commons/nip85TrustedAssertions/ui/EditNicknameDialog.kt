@@ -22,75 +22,90 @@ package com.vitorpamplona.amethyst.commons.nip85TrustedAssertions.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.clearText
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
-import com.vitorpamplona.amethyst.commons.model.nip85TrustedAssertions.UserAssertionsState
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.nickname_cancel
-import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_explainer
-import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_title
+import com.vitorpamplona.amethyst.commons.resources.nickname_dialog_description
 import com.vitorpamplona.amethyst.commons.resources.nickname_label
+import com.vitorpamplona.amethyst.commons.resources.nickname_note_label
 import com.vitorpamplona.amethyst.commons.resources.nickname_save
-import com.vitorpamplona.amethyst.commons.resources.nickname_summary_label
+import com.vitorpamplona.amethyst.commons.ui.components.PromptDialog
+import com.vitorpamplona.amethyst.commons.ui.components.PromptShape
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
-import org.jetbrains.compose.resources.stringResource
 
 /**
  * Edits the nickname (petname) and private note (summary) the account keeps for
- * [user] in its own kind:30382 contact card. Both fields are saved NIP-44
- * encrypted, so only this account can read them. Blank fields clear the value.
+ * [user] in its own kind:30382 contact card, and publishes the change. Both fields
+ * are saved NIP-44 encrypted, so only this account can read them. Blank fields
+ * clear the value.
  *
  * Typing `:` offers the account's NIP-30 custom emojis; the mappings for any
  * shortcode used are embedded (also encrypted) so the nickname renders with them.
- *
- * Shared by every front end: the caller supplies the account's [userAssertions]
- * and publishes the result in [onSave] (e.g. through its outbox relays). On
- * Android, compose `WatchAndLoadMyEmojiList` alongside so the emoji packs load.
  */
 @Composable
 fun EditNicknameDialog(
     user: User,
-    userAssertions: UserAssertionsState,
-    onSave: (petName: String?, summary: String?) -> Unit,
+    accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    // keeps the account's selected emoji packs loaded for the : autocomplete
+    WatchAndLoadMyEmojiList(accountViewModel)
+
+    val userAssertions = accountViewModel.account.userAssertions
     val nickname = rememberTextFieldState()
     val summary = rememberTextFieldState()
     val emojiSuggestions = remember(userAssertions) { EmojiSuggestionState(userAssertions.emojiPacks) }
     // which field the emoji autocomplete should insert into: the last one edited
     val emojiTarget = remember { mutableStateOf<TextFieldState?>(null) }
+    // what the card holds now, so Save only lights up for a real change
+    var saved by remember { mutableStateOf<Pair<String?, String?>>(null to null) }
+    val focusRequester = remember { FocusRequester() }
 
     // Prefill with the card's current encrypted values, if any. Decryption can
     // be slow on external signers, so don't clobber anything already typed.
     LaunchedEffect(user) {
-        userAssertions
-            .petName(user.pubkeyHex)
-            ?.takeIf { nickname.text.isEmpty() }
-            ?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
-        userAssertions
-            .summary(user.pubkeyHex)
-            ?.takeIf { summary.text.isEmpty() }
-            ?.let { summary.setTextAndPlaceCursorAtEnd(it) }
+        try {
+            focusRequester.requestFocus()
+        } catch (e: IllegalStateException) {
+            // Not attached yet; the user can still tap into the field.
+        }
+        val petName = userAssertions.petName(user.pubkeyHex)
+        val note = userAssertions.summary(user.pubkeyHex)
+        saved = petName to note
+        petName?.takeIf { nickname.text.isEmpty() }?.let { nickname.setTextAndPlaceCursorAtEnd(it) }
+        note?.takeIf { summary.text.isEmpty() }?.let { summary.setTextAndPlaceCursorAtEnd(it) }
     }
 
     // Feed the word under the cursor of the last-edited field to the autocomplete.
@@ -105,69 +120,61 @@ fun EditNicknameDialog(
         launch { snapshotFlow { summary.text }.collect { watch(summary) } }
     }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(text = stringResource(Res.string.nickname_dialog_title))
+    val newPetName = nickname.text.cleaned()
+    val newSummary = summary.text.cleaned()
+
+    PromptDialog(
+        badge = { BaseUserPicture(user, 64.dp, accountViewModel) },
+        title = user.toBestDisplayName(),
+        description = stringRes(Res.string.nickname_dialog_description),
+        confirmText = stringRes(Res.string.nickname_save),
+        confirmEnabled = (newPetName to newSummary) != saved,
+        onConfirm = {
+            accountViewModel.updateUserAssertionPetName(user, newPetName, newSummary)
+            onDismiss()
         },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text(
-                    text = stringResource(Res.string.nickname_dialog_explainer),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    state = nickname,
-                    lineLimits = TextFieldLineLimits.SingleLine,
-                    label = {
-                        Text(text = stringResource(Res.string.nickname_label))
+        dismissText = stringRes(Res.string.nickname_cancel),
+        onDismiss = onDismiss,
+        dismissible = true,
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                state = nickname,
+                lineLimits = TextFieldLineLimits.SingleLine,
+                label = { Text(stringRes(Res.string.nickname_label)) },
+                trailingIcon =
+                    if (nickname.text.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { nickname.clearText() }) {
+                                Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.clear))
+                            }
+                        }
+                    } else {
+                        null
                     },
-                )
-                SpellCheckedOutlinedTextField(
-                    state = summary,
-                    label = {
-                        Text(text = stringResource(Res.string.nickname_summary_label))
-                    },
-                )
-                ShowEmojiSuggestionList(
-                    emojiSuggestions,
-                    onSelect = { emoji ->
-                        emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
-                    },
-                    onFullSize = { emoji ->
-                        emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
-                    },
-                    modifier = Modifier.heightIn(max = 200.dp),
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSave(
-                        nickname.text
-                            .toString()
-                            .trim()
-                            .ifBlank { null },
-                        summary.text
-                            .toString()
-                            .trim()
-                            .ifBlank { null },
-                    )
-                    onDismiss()
+                shape = PromptShape,
+                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            )
+            SpellCheckedOutlinedTextField(
+                state = summary,
+                label = { Text(stringRes(Res.string.nickname_note_label)) },
+                minLines = 2,
+                maxLines = 5,
+                shape = PromptShape,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ShowEmojiSuggestionList(
+                emojiSuggestions,
+                onSelect = { emoji ->
+                    emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
                 },
-            ) {
-                Text(stringResource(Res.string.nickname_save))
-            }
-        },
-        dismissButton = {
-            Button(
-                onClick = onDismiss,
-            ) {
-                Text(stringResource(Res.string.nickname_cancel))
-            }
-        },
-    )
+                onFullSize = { emoji ->
+                    emojiTarget.value?.let { emojiSuggestions.autocompleteInto(it, emoji) }
+                },
+                modifier = Modifier.heightIn(max = 200.dp),
+            )
+        }
+    }
 }
+
+private fun CharSequence.cleaned(): String? = toString().trim().ifBlank { null }

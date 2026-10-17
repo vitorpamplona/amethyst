@@ -136,10 +136,7 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Közvetlen webcím használata</string>
     <!-- Nicknames (NIP-85 contact cards) -->
-    <string name="nickname_dialog_title">Becenév</string>
-    <string name="nickname_dialog_explainer">Ez jelenik meg Önnek ezen felhasználó neve helyett az alkalmazásban bárhol. Titkosítva tárolódik el a kapcsolatkártyájára: csak Ön olvashatja. Írjon be kettőspontot (:) az egyéni emodzsik használatához.</string>
     <string name="nickname_label">Becenév</string>
-    <string name="nickname_summary_label">Privát megjegyzés erről a felhasználóról</string>
     <string name="nickname_save">Mentés</string>
     <string name="nickname_cancel">Mégse</string>
     <string name="git_status_open">Nyitva</string>
