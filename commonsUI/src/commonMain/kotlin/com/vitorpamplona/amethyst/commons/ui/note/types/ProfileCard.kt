@@ -105,7 +105,9 @@ private val ChipShape = RoundedCornerShape(50)
 
 private val BannerModifier = Modifier.fillMaxWidth().height(BannerHeight)
 
-private val AvatarRingModifier = Modifier.size(AvatarSize + AvatarRingWidth * 2).clip(CircleShape)
+// A disc painted behind the avatar, not a clip: the picture clips itself, and clipping here also
+// cut off the follow mark that BaseUserPicture draws past the circle's edge.
+private val AvatarRingModifier = Modifier.size(AvatarSize + AvatarRingWidth * 2)
 
 private val AvatarRowModifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = AvatarOverhang)
 
@@ -217,7 +219,7 @@ internal fun ProfileCardHeader(
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
-                modifier = AvatarRingModifier.background(cardBackground),
+                modifier = AvatarRingModifier.background(cardBackground, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 if (proposedPicture != null) {
