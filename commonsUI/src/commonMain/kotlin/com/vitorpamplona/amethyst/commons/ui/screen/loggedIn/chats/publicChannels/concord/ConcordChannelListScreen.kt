@@ -29,12 +29,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -74,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_name
-import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_access_role_label
 import com.vitorpamplona.amethyst.commons.resources.concord_channel_create
@@ -122,7 +124,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.layouts.chatRowTitleWeight
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.MyExtensibleTopAppBar
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgo
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
@@ -142,6 +144,7 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ConcordPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
@@ -165,13 +168,13 @@ fun ConcordChannelListScreen(
     // Re-resolve on each revision so a deep link that lands before the session exists picks it up.
     val revision by account.concordSessions.revision.collectAsStateWithLifecycle()
     val session = remember(account, communityId, revision) { account.concordSessions.sessionFor(communityId) }
-    val state by (session?.state ?: remember { kotlinx.coroutines.flow.MutableStateFlow(null) })
+    val state by (session?.state ?: remember { MutableStateFlow(null) })
         .collectAsStateWithLifecycle()
 
     // Live typing heartbeats (kind 23311) per channel, so a channel where someone is composing shows
     // "typing…" in place of its last-message preview. A single screen-level ticker re-applies the
     // freshness window for every row at once, and only spins while at least one heartbeat is live.
-    val typingMap by (session?.typing ?: remember { kotlinx.coroutines.flow.MutableStateFlow(emptyMap<HexKey, Map<HexKey, Long>>()) })
+    val typingMap by (session?.typing ?: remember { MutableStateFlow(emptyMap<HexKey, Map<HexKey, Long>>()) })
         .collectAsStateWithLifecycle()
     var typingNow by remember { mutableLongStateOf(TimeUtils.now()) }
     LaunchedEffect(typingMap) {
@@ -249,12 +252,16 @@ fun ConcordChannelListScreen(
     // moderator kept seeing every control here. The editions they authored were dropped by everyone's
     // fold, which made these buttons silently no-op — worse than absent, and the same trap this file
     // already avoids for the Roles… menu.
+    // Remembered per fold: a typing heartbeat recomposes this screen every 2s, and controlPlaneKeys()
+    // takes the session lock. The write key only arrives with a List change, which bumps [revision].
     val canManageChannels =
-        state?.authority?.let {
-            it.isOwner(account.signer.pubKey) ||
-                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_CHANNELS)
-        } == true &&
-            session?.controlPlaneKeys()?.canWrite == true
+        remember(state, session, revision) {
+            state?.authority?.let {
+                it.isOwner(account.signer.pubKey) ||
+                    it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_CHANNELS)
+            } == true &&
+                session?.controlPlaneKeys()?.canWrite == true
+        }
 
     // channelIdHex == null → create; else → rename that channel.
     var channelEditor by remember { mutableStateOf<ConcordChannelEditor?>(null) }
@@ -324,36 +331,42 @@ fun ConcordChannelListScreen(
         )
     }
 
-    // Read once here: the overflow menu is composed lazily inside the top bar.
+    // Rank + the Control write key (CORD-02 §2), like [canManageChannels] above.
     val canEdit =
-        state?.authority?.let {
-            it.isOwner(account.signer.pubKey) ||
-                it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
-        } == true &&
-            session?.controlPlaneKeys()?.canWrite == true
+        remember(state, session, revision) {
+            state?.authority?.let {
+                it.isOwner(account.signer.pubKey) ||
+                    it.hasPermission(account.signer.pubKey, ConcordPermissions.MANAGE_METADATA)
+            } == true &&
+                session?.controlPlaneKeys()?.canWrite == true
+        }
 
     // Minting an invite hands out a working key to the community, so it takes
     // CREATE_INVITE like any other privileged action. This button used to be the one
     // control on the screen with no gate at all.
     val canInvite =
-        state?.authority?.let {
-            it.isOwner(account.signer.pubKey) ||
-                it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
-        } == true
+        remember(state) {
+            state?.authority?.let {
+                it.isOwner(account.signer.pubKey) ||
+                    it.hasPermission(account.signer.pubKey, ConcordPermissions.CREATE_INVITE)
+            } == true
+        }
 
     val description =
-        state
-            ?.metadata
-            ?.description
-            ?.trim()
-            ?.takeIf { it.isNotEmpty() }
+        remember(state) {
+            state
+                ?.metadata
+                ?.description
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+        }
 
     Scaffold(
         topBar = {
             // The bar stays to icon + name, all a returning member needs to know where they are. The
             // description and the Public/Private mode (CORD-05 §5) sit in the panel a tap on the bar
             // opens, like a NIP-28 channel's: pinned above the list they greeted every daily visit.
-            MyExtensibleTopAppBar(
+            TopBarExtensibleWithBackButton(
                 title = {
                     ConcordServerTitle(
                         communityId = communityId,
@@ -376,16 +389,8 @@ fun ConcordChannelListScreen(
                         }
                     },
                 // Back arrow only when pushed from elsewhere; as a bottom-nav tab the bar takes its place.
-                navigationIcon =
-                    if (canPop) {
-                        {
-                            IconButton(onClick = { nav.popBack() }) {
-                                SymbolIcon(symbol = MaterialSymbols.AutoMirrored.ArrowBack, contentDescription = stringRes(Res.string.back))
-                            }
-                        }
-                    } else {
-                        null
-                    },
+                showBackButton = canPop,
+                popBack = nav::popBack,
                 actions = {
                     // One overflow instead of four icons: at phone width the icons squeezed the name, and
                     // none of these is a daily action. Destructive membership actions stay at the bottom,
@@ -615,6 +620,8 @@ private fun ConcordChannelListRow(
             .clickable(onClick = onClick)
             .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = if (canManageChannels) 4.dp else 16.dp),
         verticalAlignment = Alignment.CenterVertically,
+        // Only matters for managers: keeps the badge off the row menu's touch target.
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             // Line 1: # / lock, the channel name, and the last-message time pushed to the right.
@@ -683,7 +690,8 @@ private fun ConcordServerTitle(
     RobohashFallbackAsyncImage(
         robot = communityId,
         model = rememberConcordImageModel(iconPointer, accountViewModel),
-        contentDescription = name,
+        // Decorative: the name is drawn right beside it, so a screen reader would read it twice.
+        contentDescription = null,
         modifier = HeaderPictureModifier,
         loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
         loadRobohash = LocalDisplaySettings.current.loadRobohash,
@@ -703,8 +711,14 @@ private fun ConcordAboutPanel(
     mode: String,
     isPublic: Boolean,
 ) {
+    // Capped and scrollable: it lives in the Scaffold's top bar, so a long description would
+    // otherwise push the whole channel list off screen.
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        Modifier
+            .fillMaxWidth()
+            .heightIn(max = 280.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         description?.let {
