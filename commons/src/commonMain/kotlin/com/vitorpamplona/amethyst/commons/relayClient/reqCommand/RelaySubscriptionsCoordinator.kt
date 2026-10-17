@@ -79,7 +79,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.podcasts.PodcastsFilterAss
 import com.vitorpamplona.amethyst.commons.relayClient.polls.PollsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.polls.results.PollResponsesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.products.ProductsFilterAssembler
-import com.vitorpamplona.amethyst.commons.relayClient.profile.UserHoverCardFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.profile.UserProfileFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.publicChats.PublicChatsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.relay.RelayFeedFilterAssembler
@@ -188,7 +187,6 @@ class RelaySubscriptionsCoordinator(
     val dListItems = DListItemsFilterAssembler(client)
     val thread = ThreadFilterAssembler(cache, client)
     val profile = UserProfileFilterAssembler(cache, client)
-    val userHoverCard = UserHoverCardFilterAssembler(cache, client) // the profile hover card's follow lists
     val hashtags = HashtagFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val urls = UrlFilterAssembler(client)
@@ -306,7 +304,6 @@ class RelaySubscriptionsCoordinator(
             dListItems,
             thread,
             profile,
-            userHoverCard,
             hashtags,
             geohashes,
             urls,

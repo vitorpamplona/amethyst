@@ -21,60 +21,37 @@
 package com.vitorpamplona.amethyst.commons.ui.note.hovercard
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.profile.followers.followsWhoFollow
-import com.vitorpamplona.amethyst.commons.relayClient.profile.UserHoverCardFilterAssemblerSubscription
-import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
-import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserFollowCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowing
-import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.more_options
-import com.vitorpamplona.amethyst.commons.resources.number_followers
-import com.vitorpamplona.amethyst.commons.resources.number_following
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
-import com.vitorpamplona.amethyst.commons.resources.user_hover_card_followed_by_many
-import com.vitorpamplona.amethyst.commons.resources.user_hover_card_followed_by_one
-import com.vitorpamplona.amethyst.commons.resources.user_hover_card_followed_by_two
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.ObserveAndDrawInnerUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
 import com.vitorpamplona.amethyst.commons.ui.note.types.ProfileCardBodyTopPadding
 import com.vitorpamplona.amethyst.commons.ui.note.types.ProfileCardChip
 import com.vitorpamplona.amethyst.commons.ui.note.types.ProfileCardHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.ProfileCardNames
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.ProfileActions
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -84,17 +61,11 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 private val CardWidth = 340.dp
 private val CardShape = RoundedCornerShape(16.dp)
-private val FaceSize = 22.dp
-private val FaceRing = 2.dp
-
-/** How much each face in the "followed by" pile overlaps the one before it. */
-private val FaceOverlap = 8.dp
 
 /**
  * A profile at a glance, opened by resting the mouse on someone's face or name: the same
- * banner, avatar, names and bio as the profile screen, plus who in your circle follows them
- * and the profile's own actions (message, follow, lists), so following or blocking someone
- * doesn't take a trip to their profile.
+ * banner, avatar, names and bio as the profile screen and the profile's own actions (message,
+ * follow, lists), so following or blocking someone doesn't take a trip to their profile.
  *
  * Clicking the header opens the profile. [onMoreOptions] asks the host for the profile's
  * action menu (block, report, nickname): the host draws it outside the card, so its dialogs
@@ -109,10 +80,6 @@ fun UserHoverCard(
     onMoreOptions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val myFollows by accountViewModel.account.kind3FollowList.flow
-        .collectAsStateWithLifecycle()
-    UserHoverCardFilterAssemblerSubscription(user, myFollows.authors, accountViewModel.dataSources().userHoverCard)
-
     val userInfo by observeUserInfo(user, accountViewModel)
     val metadata = userInfo?.info
     val tags = userInfo?.tags
@@ -149,29 +116,20 @@ fun UserHoverCard(
                 }
             }
 
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 14.dp),
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 10.dp, bottom = 14.dp).height(Size35dp),
             ) {
-                FollowCounts(user, accountViewModel)
+                ProfileActions(user, accountViewModel, nav)
 
-                FollowedByFollows(user, cardBackground, accountViewModel)
+                Spacer(Modifier.weight(1f))
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.height(Size35dp),
-                ) {
-                    ProfileActions(user, accountViewModel, nav)
-
-                    Spacer(Modifier.weight(1f))
-
-                    IconButton(onClick = onMoreOptions) {
-                        Icon(
-                            symbol = MaterialSymbols.MoreVert,
-                            contentDescription = stringRes(Res.string.more_options),
-                            tint = MaterialTheme.colorScheme.placeholderText,
-                        )
-                    }
+                IconButton(onClick = onMoreOptions) {
+                    Icon(
+                        symbol = MaterialSymbols.MoreVert,
+                        contentDescription = stringRes(Res.string.more_options),
+                        tint = MaterialTheme.colorScheme.placeholderText,
+                    )
                 }
             }
         }
@@ -191,109 +149,5 @@ private fun FollowsYouChip(
             label = stringRes(Res.string.profile_card_follows_you),
             color = MaterialTheme.colorScheme.primary,
         )
-    }
-}
-
-@Composable
-private fun FollowCounts(
-    user: User,
-    accountViewModel: AccountViewModel,
-) {
-    // "--" is the placeholder while no trusted assertion for this user has arrived.
-    val followerCount by observeUserAssertionsFollowerCount(user, accountViewModel)
-    val followCount by observeUserFollowCount(user, accountViewModel)
-
-    val followers = followerCount.takeIf { it != "--" }
-    val following = followCount
-    if (followers == null && following == null) return
-
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        if (followers != null) {
-            CountText(stringRes(Res.string.number_followers, followers))
-        }
-        if (following != null) {
-            CountText(stringRes(Res.string.number_following, following))
-        }
-    }
-}
-
-@Composable
-private fun CountText(text: String) {
-    Text(
-        text = text,
-        fontSize = 13.sp,
-        color = MaterialTheme.colorScheme.placeholderText,
-        maxLines = 1,
-    )
-}
-
-@Composable
-private fun FollowedByFollows(
-    user: User,
-    cardBackground: Color,
-    accountViewModel: AccountViewModel,
-) {
-    // One flow per person: it follows the account's follows and their lists by itself, so the row
-    // keeps showing the last count while it recounts instead of blinking out.
-    val known by
-        remember(user) { followsWhoFollow(accountViewModel.account, user.pubkeyHex) }
-            .collectAsStateWithLifecycle(emptyList())
-
-    if (known.isEmpty()) return
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        FacePile(known.take(3), cardBackground, accountViewModel)
-
-        Text(
-            text = followedByText(known, accountViewModel),
-            fontSize = 13.sp,
-            color = MaterialTheme.colorScheme.placeholderText,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-@Composable
-private fun followedByText(
-    known: List<User>,
-    accountViewModel: AccountViewModel,
-): String {
-    // Observed, not read once: these follows' profiles may still be loading when the card opens.
-    val first by observeUserName(known[0], accountViewModel)
-    if (known.size == 1) return stringRes(Res.string.user_hover_card_followed_by_one, first)
-
-    val second by observeUserName(known[1], accountViewModel)
-    if (known.size == 2) return stringRes(Res.string.user_hover_card_followed_by_two, first, second)
-
-    val others = known.size - 2
-    return pluralStringRes(Res.plurals.user_hover_card_followed_by_many, others, first, second, others)
-}
-
-@Composable
-private fun FacePile(
-    users: List<User>,
-    ringColor: Color,
-    accountViewModel: AccountViewModel,
-) {
-    val step = FaceSize + FaceRing * 2 - FaceOverlap
-
-    Box {
-        users.forEachIndexed { index, face ->
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier =
-                    Modifier
-                        .padding(start = step * index)
-                        .size(FaceSize + FaceRing * 2)
-                        .clip(CircleShape)
-                        .background(ringColor),
-            ) {
-                ObserveAndDrawInnerUserPicture(face, FaceSize, accountViewModel)
-            }
-        }
     }
 }

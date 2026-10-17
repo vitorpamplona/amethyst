@@ -3431,12 +3431,6 @@
     <string name="buzz_persona_publish">Publish persona</string>
     <string name="profile_card_follows_you">Follows you</string>
     <string name="profile_card_bot">Bot</string>
-    <string name="user_hover_card_followed_by_one">Followed by %1$s</string>
-    <string name="user_hover_card_followed_by_two">Followed by %1$s and %2$s</string>
-    <plurals name="user_hover_card_followed_by_many">
-        <item quantity="one">Followed by %1$s, %2$s and %3$d other you follow</item>
-        <item quantity="other">Followed by %1$s, %2$s and %3$d others you follow</item>
-    </plurals>
     <string name="about_legal">About &amp; Legal</string>
     <string name="accent_color_blue">Blue</string>
     <string name="accent_color_green">Green</string>
