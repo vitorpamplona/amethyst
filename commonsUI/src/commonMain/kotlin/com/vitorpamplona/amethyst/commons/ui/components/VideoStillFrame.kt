@@ -44,6 +44,8 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.quartz.utils.Log
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * What a video view draws while the note is being captured as an image (see
@@ -107,8 +109,17 @@ fun VideoStillFrame(
     borderModifier: Modifier,
     contentDescription: String?,
 ) {
-    // Null while loading, then the frame, or Unit when there is none.
-    val frame by produceState<Any?>(null, key) { value = loadFrame() ?: Unit }
+    // Null while loading, then the frame, or Unit when there is none or extracting it failed.
+    val frame by produceState<Any?>(null, key) {
+        value =
+            try {
+                loadFrame()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("VideoStillFrame", "Could not extract a frame for the capture", e)
+                null
+            } ?: Unit
+    }
 
     VideoStillFrameBox(ratio, borderModifier) {
         val bitmap = frame

@@ -46,6 +46,8 @@ actual fun rememberImageSharer(): ImageSharer {
 private class AndroidImageSharer(
     val context: Context,
 ) : ImageSharer {
+    override val canShare = true
+
     override val opensShareSheet = true
 
     override suspend fun writePng(image: ImageBitmap): MediaUri = withContext(Dispatchers.IO) { saveToCache(image) }
@@ -53,7 +55,7 @@ private class AndroidImageSharer(
     override suspend fun share(
         image: ImageBitmap,
         chooserTitle: String,
-    ) {
+    ): Boolean {
         val uri = writePng(image)
         val sendIntent =
             Intent().apply {
@@ -66,6 +68,7 @@ private class AndroidImageSharer(
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
         context.startActivity(Intent.createChooser(sendIntent, chooserTitle))
+        return true
     }
 
     /** The file lives in `cacheDir`, covered by the `<cache-path>` entry in `file_paths.xml`. */

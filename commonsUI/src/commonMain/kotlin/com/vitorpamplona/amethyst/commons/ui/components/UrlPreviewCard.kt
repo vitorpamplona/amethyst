@@ -167,6 +167,7 @@ private fun LargeUrlPreviewCard(
                 contentDescription = previewInfo.title,
                 contentScale = ContentScale.FillWidth,
                 modifier = previewCardImageModifier,
+                onState = rememberCaptureLoadingTracker(previewInfo.imageUrlFullPath),
             )
         }
 

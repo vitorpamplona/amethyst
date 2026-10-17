@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.resources.share_as_image
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_qr
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
+import com.vitorpamplona.amethyst.commons.ui.components.rememberImageSharer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -60,6 +61,7 @@ fun ShareActionRows(
     val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
     val quickActionShareStr = stringRes(Res.string.quick_action_share)
     val sharer = rememberTextSharer()
+    val imageSharer = rememberImageSharer()
     // AddressableNotes are shared by their replaceable address; everything else
     // by event id. The two image routes resolve the note from this same id.
     val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
@@ -68,8 +70,9 @@ fun ShareActionRows(
         sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
         onDismiss()
     }
-    // A front end whose nav host doesn't register the image routes leaves these rows out.
-    if (canOpen(Route.ShareNoteAsImageFile(shareId))) {
+    // A front end whose nav host doesn't register the image routes leaves these rows out, and one
+    // with nowhere to send an image file (iOS for now) leaves out that row.
+    if (imageSharer.canShare && canOpen(Route.ShareNoteAsImageFile(shareId))) {
         M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
             nav.nav(Route.ShareNoteAsImageFile(shareId))
             onDismiss()

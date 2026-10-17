@@ -23,11 +23,18 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
+import coil3.compose.AsyncImagePainter
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -53,19 +60,25 @@ class MediaCaptureState {
     }
 
     /**
-     * Suspends until nothing has been loading for [quietMs] in a row, or [timeoutMs] passes.
-     * The quiet window covers loads that start only after another finishes, like the image
-     * inside a link preview, and the first frames before a load registers.
+     * Suspends until nothing has been loading for [quietMs] in a row and at least [minMs] have
+     * passed, or [timeoutMs] passes. The quiet window covers loads that start only after another
+     * finishes, like the image inside a link preview, and the first frames before a load
+     * registers. The floor covers what doesn't report, like avatars and custom emoji.
      */
     suspend fun awaitMediaLoaded(
         timeoutMs: Long,
+        minMs: Long = 900,
         quietMs: Long = 400,
     ) {
         withTimeoutOrNull(timeoutMs) {
-            do {
-                snapshotFlow { pending.intValue }.first { it <= 0 }
-                delay(quietMs)
-            } while (pending.intValue > 0)
+            coroutineScope {
+                val floor = launch { delay(minMs) }
+                do {
+                    snapshotFlow { pending.intValue }.first { it <= 0 }
+                    delay(quietMs)
+                } while (pending.intValue > 0)
+                floor.join()
+            }
         }
     }
 }
@@ -79,5 +92,26 @@ fun ReportCaptureLoading() {
     DisposableEffect(capture) {
         capture.begin()
         onDispose { capture.end() }
+    }
+}
+
+/**
+ * For a plain `AsyncImage`: an `onState` that keeps the image reported as loading until it
+ * succeeds or fails, while a capture is running. Null otherwise, so a feed pays for no extra
+ * state or recomposition.
+ */
+@Composable
+fun rememberCaptureLoadingTracker(key: Any?): ((AsyncImagePainter.State) -> Unit)? {
+    if (LocalMediaCapture.current == null) return null
+    var loading by remember(key) { mutableStateOf(true) }
+    if (loading) ReportCaptureLoading()
+    return remember(key) {
+        { state ->
+            when (state) {
+                is AsyncImagePainter.State.Loading -> loading = true
+                is AsyncImagePainter.State.Success, is AsyncImagePainter.State.Error -> loading = false
+                else -> {}
+            }
+        }
     }
 }

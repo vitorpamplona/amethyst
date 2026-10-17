@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 
 /** Hands a picture the app rendered, like a note shared as an image, to the platform. */
 interface ImageSharer {
+    /** False where [share] has nowhere to send the image yet, so the option is left out. */
+    val canShare: Boolean
+
     /**
      * True when [share] opens a share sheet. False on platforms without one, where [share] and
      * [rememberTextSharer] put things on the clipboard instead and the caller should say so.
@@ -35,11 +38,14 @@ interface ImageSharer {
     /** Writes [image] as a PNG to a temporary file the upload pipeline can read. */
     suspend fun writePng(image: ImageBitmap): MediaUri
 
-    /** Shares [image] as a PNG, behind a chooser titled [chooserTitle] where the platform has one. */
+    /**
+     * Shares [image] as a PNG, behind a chooser titled [chooserTitle] where the platform has one.
+     * False when the platform refused it, like a clipboard another app holds.
+     */
     suspend fun share(
         image: ImageBitmap,
         chooserTitle: String,
-    )
+    ): Boolean
 }
 
 /**

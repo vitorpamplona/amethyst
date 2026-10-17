@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.videoGalleryModifier
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
@@ -144,9 +145,11 @@ fun VideoView(
 
     // A player surface can't be recorded into a share-as-image capture: draw a still instead.
     if (LocalMediaCapture.current != null && waveform == null && !RichTextParser.isAudioContent(mimeType, videoUri)) {
+        // Coil's VideoFrameDecoder reads the first frame of a file, which means downloading all of
+        // it: only where the user lets videos load. An HLS playlist has no frame to decode.
+        val frameFromVideo = !isLiveStream && !isHlsMedia(videoUri, mimeType) && accountViewModel.settings.startVideoPlayback()
         VideoStillFrame(
-            // Coil's VideoFrameDecoder reads the first frame of a file; a live stream has none.
-            model = artworkUri ?: videoUri.takeIf { !isLiveStream },
+            model = artworkUri ?: videoUri.takeIf { frameFromVideo },
             ratio = ratio,
             blurhash = blurhash,
             thumbhash = thumbhash,

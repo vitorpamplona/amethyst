@@ -54,6 +54,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
 import com.vitorpamplona.amethyst.commons.audio.MediaTracks
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.declaredAsAudio
@@ -71,13 +72,13 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
-import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfViewerContent
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCaptureLoadingTracker
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
@@ -256,20 +257,20 @@ object DesktopNotePlatform : NotePlatform {
                 if (isAnimatedGifUrl(url)) {
                     AnimatedGifImage(url = url, contentDescription = content.description, modifier = modifier, contentScale = contentScale)
                 } else {
-                    // Only a share-as-image capture reads this, to wait for the picture.
-                    var loading by remember(url) { mutableStateOf(true) }
-                    if (loading) ReportCaptureLoading()
+                    // Null outside a share-as-image capture.
+                    val captureTracker = rememberCaptureLoadingTracker(url)
                     AsyncImage(
                         model = url,
                         contentDescription = content.description,
                         modifier = modifier,
                         contentScale = contentScale,
-                        onSuccess = { state ->
-                            val image = state.result.image
-                            MediaAspectRatioCache.add(url, image.width, image.height)
-                            loading = false
+                        onState = { state ->
+                            if (state is AsyncImagePainter.State.Success) {
+                                val image = state.result.image
+                                MediaAspectRatioCache.add(url, image.width, image.height)
+                            }
+                            captureTracker?.invoke(state)
                         },
-                        onError = { loading = false },
                     )
                 }
             }
@@ -341,7 +342,7 @@ object DesktopNotePlatform : NotePlatform {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
         if (LocalMediaCapture.current != null) {
             if (isAnimatedGifUrl(videoUri)) {
-                AnimatedGifImage(url = videoUri, contentDescription = contentDescription, modifier = Modifier.fillMaxWidth().clip(shape), contentScale = ContentScale.FillWidth)
+                AnimatedGifImage(url = videoUri, contentDescription = contentDescription, modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape), contentScale = contentScale)
             } else {
                 CapturedVideoStill(videoUri, null, false, dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri), blurhash, thumbhash, shape, contentDescription)
             }
@@ -373,7 +374,8 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
-        if (LocalMediaCapture.current != null) {
+        // Audio keeps its player: there is no frame to show.
+        if (LocalMediaCapture.current != null && declaredAsAudio(mimeType, videoUri) != true) {
             CapturedVideoStill(videoUri, artworkUri, isLiveStream, MediaAspectRatioCache.get(videoUri), null, null, shape, title)
             return
         }

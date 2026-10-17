@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.service.pdf.PdfPageRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -128,7 +129,8 @@ fun PdfPreviewCard(
     onOpen: () -> Unit,
     onLongPress: (() -> Unit)? = null,
 ) {
-    val showPdf = remember { mutableStateOf(accountViewModel.settings.showImages()) }
+    val capture = LocalMediaCapture.current
+    val showPdf = remember { mutableStateOf(capture != null || accountViewModel.settings.showImages()) }
 
     if (showPdf.value) {
         LoadedPdfPreviewCard(content, accountViewModel, onOpen, onLongPress)

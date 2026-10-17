@@ -28,6 +28,8 @@ import okio.FileSystem
 import kotlin.time.Clock
 
 private object NoImageSharer : ImageSharer {
+    override val canShare = false
+
     override val opensShareSheet = false
 
     override suspend fun writePng(image: ImageBitmap): MediaUri {
@@ -39,7 +41,7 @@ private object NoImageSharer : ImageSharer {
     override suspend fun share(
         image: ImageBitmap,
         chooserTitle: String,
-    ) {}
+    ): Boolean = false
 }
 
 /** No share sheet wired yet. */

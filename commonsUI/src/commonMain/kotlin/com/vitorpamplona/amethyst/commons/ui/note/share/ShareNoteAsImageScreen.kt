@@ -32,10 +32,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -60,14 +60,18 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -81,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.resources.share_as_image
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_failed
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_generating
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_watermark
@@ -110,6 +115,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.painterResource
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Full-screen flow that turns [id]'s note into a shareable image: it renders the post into a
@@ -203,8 +209,9 @@ fun ShareNoteAsImageFileScreen(
 
                 if (!shared) {
                     shared = true
-                    imageSharer.share(bitmap, shareImageTitle)
-                    if (!imageSharer.opensShareSheet) {
+                    if (!imageSharer.share(bitmap, shareImageTitle)) {
+                        accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.share_as_image_failed)
+                    } else if (!imageSharer.opensShareSheet) {
                         accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.copied_to_clipboard)
                     }
                     nav.popBack()
@@ -259,19 +266,27 @@ fun ShareNoteAsImageScreen(
         scope.launch {
             val server = selectedServer
             val finalState =
-                withContext(Dispatchers.IO) {
-                    val uri = imageSharer.writePng(image)
-                    orchestrator.upload(
-                        uri = uri,
-                        mimeType = PNG_MIME,
-                        alt = null,
-                        contentWarningReason = null,
-                        compressionQuality = CompressorQuality.UNCOMPRESSED,
-                        server = server,
-                        account = account,
-                        uploader = accountViewModel.host.mediaUploader,
-                        stripMetadata = false,
-                    )
+                try {
+                    withContext(Dispatchers.IO) {
+                        val uri = imageSharer.writePng(image)
+                        orchestrator.upload(
+                            uri = uri,
+                            mimeType = PNG_MIME,
+                            alt = null,
+                            contentWarningReason = null,
+                            compressionQuality = CompressorQuality.UNCOMPRESSED,
+                            server = server,
+                            account = account,
+                            uploader = accountViewModel.host.mediaUploader,
+                            stripMetadata = false,
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Writing the PNG can fail (a full disk); leave the screen usable for a retry.
+                    if (e is CancellationException) throw e
+                    isProcessing = false
+                    accountViewModel.toastManager.toast(Res.string.share_as_image_url, e.message, e)
+                    return@launch
                 }
 
             isProcessing = false
@@ -483,9 +498,33 @@ private fun CaptureSource(
         LocalMediaCapture provides mediaCapture,
         LocalDisplaySettings provides LocalDisplaySettings.current.copy(showProfilePictures = true),
     ) {
-        CaptureCard(note, graphicsLayer, accountViewModel, nav)
+        Box {
+            CaptureCard(note, graphicsLayer, accountViewModel, nav)
+            // The card is never seen: keep taps off the links and buttons inside it.
+            Box(Modifier.matchParentSize().then(BlockPointerInput))
+        }
     }
 }
+
+private val BlockPointerInput =
+    Modifier.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) awaitPointerEvent().changes.forEach { it.consume() }
+        }
+    }
+
+/**
+ * Measures the card at its full height, as a feed item is, so a note taller than the window
+ * isn't squeezed to fit and centred (which cut its top and bottom out of the snapshot). A
+ * runaway note is cut at [MAX_CAPTURE_PIXELS], keeping the bitmap small enough to hold and for
+ * Android's canvas to draw: it refuses bitmaps over 100 MB.
+ */
+private fun Modifier.capturedAtFullHeight() =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        val maxHeight = MAX_CAPTURE_PIXELS / placeable.width.coerceAtLeast(1)
+        layout(placeable.width, placeable.height.coerceAtMost(maxHeight)) { placeable.place(0, 0) }
+    }
 
 @Composable
 private fun CaptureCard(
@@ -499,15 +538,15 @@ private fun CaptureCard(
             Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxWidth()
-                // Measured at its full height, not the window's: a note taller than the screen
-                // would otherwise be squeezed to fit and centred, cutting its top and bottom out
-                // of the snapshot. Bounded so a scrollable inside never sees an infinite height.
-                .requiredHeightIn(max = MAX_CAPTURE_HEIGHT)
+                // Lets the recorded size below exceed the window's height.
+                .wrapContentHeight(align = Alignment.Top, unbounded = true)
                 .drawWithContent {
                     graphicsLayer.record { this@drawWithContent.drawContent() }
                     // Intentionally no drawLayer: this source stays invisible and only feeds the
                     // snapshot; the user sees the resulting Image.
-                }.clip(PreviewShape)
+                }.clipToBounds()
+                .capturedAtFullHeight()
+                .clip(PreviewShape)
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PreviewShape)
                 .padding(14.dp),
@@ -554,5 +593,5 @@ private const val MEDIA_LOAD_TIMEOUT_MS = 15_000L
 
 private val PreviewShape = RoundedCornerShape(18.dp)
 
-// Tallest card the capture renders; a longer note is cut at the bottom.
-private val MAX_CAPTURE_HEIGHT = 8000.dp
+// Largest snapshot, in pixels (48 MB as ARGB): 1080 px wide allows a card about 11,000 px tall.
+private const val MAX_CAPTURE_PIXELS = 12_000_000

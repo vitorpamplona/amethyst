@@ -23,24 +23,29 @@ package com.vitorpamplona.amethyst.commons.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
+import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.awt.HeadlessException
 import java.awt.Image
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
 import java.awt.datatransfer.UnsupportedFlavorException
-import java.io.File
 
 /** Desktop has no share sheet: the image goes to the clipboard, ready to paste anywhere. */
 private object ClipboardImageSharer : ImageSharer {
+    override val canShare = true
+
     override val opensShareSheet = false
 
     override suspend fun writePng(image: ImageBitmap): MediaUri =
         withContext(Dispatchers.IO) {
-            val file = File.createTempFile("amethyst_share_", ".png")
+            // The per-user (0700) temp dir, whose leftovers are swept at startup after a crash.
+            val file = AmethystTempDir.createTempFile("amethyst_share_", ".png")
             file.deleteOnExit()
             file.writeBytes(image.encodePng())
             StringMediaUri(file.absolutePath)
@@ -49,9 +54,18 @@ private object ClipboardImageSharer : ImageSharer {
     override suspend fun share(
         image: ImageBitmap,
         chooserTitle: String,
-    ) {
-        Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(image.toAwtImage()), null)
-    }
+    ): Boolean =
+        try {
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(image.toAwtImage()), null)
+            true
+        } catch (e: IllegalStateException) {
+            // Another app holds the clipboard open (Windows).
+            Log.w("ImageSharer", "Clipboard unavailable", e)
+            false
+        } catch (e: HeadlessException) {
+            Log.w("ImageSharer", "No clipboard in a headless JVM", e)
+            false
+        }
 }
 
 private class ImageTransferable(
