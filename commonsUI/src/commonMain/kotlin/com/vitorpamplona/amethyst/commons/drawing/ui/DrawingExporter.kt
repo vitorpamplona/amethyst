@@ -1,0 +1,112 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.drawing.ui
+
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import com.vitorpamplona.amethyst.commons.blurhash.PlatformImage
+import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
+import com.vitorpamplona.amethyst.commons.drawing.AnimatedGifEncoder
+import com.vitorpamplona.amethyst.commons.drawing.DrawingBackground
+import com.vitorpamplona.amethyst.commons.drawing.DrawingReplay
+import com.vitorpamplona.amethyst.commons.drawing.DrawingStroke
+import com.vitorpamplona.amethyst.commons.drawing.GifPalette
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
+import com.vitorpamplona.amethyst.commons.service.image.encodeArgbAsPng
+import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.platformTempDirectory
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
+
+/**
+ * Turns a drawing into the two files a post needs: the replay as a looping GIF
+ * and the finished drawing as a PNG, written to the temp directory.
+ *
+ * Every frame is drawn by the same [drawDrawing] the live canvas uses, onto an
+ * offscreen [ImageBitmap], and read back as pixels for [AnimatedGifEncoder].
+ */
+object DrawingExporter {
+    /** Wide enough to stay crisp in a feed, small enough that a replay stays a light GIF. */
+    const val EXPORT_WIDTH = 540
+
+    suspend fun export(
+        background: DrawingBackground,
+        strokes: List<DrawingStroke>,
+        onProgress: (Float) -> Unit = {},
+    ): RenderedDrawing =
+        withContext(Dispatchers.Default) {
+            val width = EXPORT_WIDTH
+            val height = (EXPORT_WIDTH * background.aspect).roundToInt()
+            val painter = BackgroundPainter(background)
+            val bitmap = ImageBitmap(width, height)
+            val canvas = Canvas(bitmap)
+            val scope = CanvasDrawScope()
+            val size = Size(width.toFloat(), height.toFloat())
+            val pixels = IntArray(width * height)
+            val replay = DrawingReplay(strokes)
+
+            fun render(timeMs: Long) {
+                scope.draw(Density(1f), LayoutDirection.Ltr, canvas, size) {
+                    drawDrawing(painter, strokes, replay, timeMs)
+                }
+                bitmap.readPixels(pixels)
+            }
+
+            render(Long.MAX_VALUE)
+            val finished = pixels.copyOf()
+
+            val encoder = AnimatedGifEncoder(width, height, GifPalette.from(finished))
+            val frames = replay.frameTimes
+            for (k in frames.indices) {
+                ensureActive()
+                render(frames[k])
+                encoder.addFrame(pixels, replay.frameDelayCs(k))
+                onProgress((k + 1f) / frames.size)
+            }
+            val gifBytes = encoder.finish()
+            val pngBytes = encodeArgbAsPng(finished, width, height)
+
+            val image = PlatformImage.create(finished, width, height)
+            val blurhash = runCatching { image.toBlurhash() }.onFailure { Log.w(TAG, "Could not blurhash the drawing", it) }.getOrNull()
+            val thumbhash = runCatching { image.toThumbhash() }.onFailure { Log.w(TAG, "Could not thumbhash the drawing", it) }.getOrNull()
+
+            val name = "amethyst_drawing_" + RandomInstance.randomChars(12)
+            val gif = platformTempDirectory / "$name.gif"
+            val still = platformTempDirectory / "$name.png"
+            platformFileSystem.write(gif) { write(gifBytes) }
+            platformFileSystem.write(still) { write(pngBytes) }
+
+            Log.d(TAG) { "Drawing exported: ${frames.size} frames, GIF ${gifBytes.size} B, PNG ${pngBytes.size} B" }
+
+            RenderedDrawing(gif, still, width, height, blurhash, thumbhash)
+        }
+
+    private const val TAG = "DrawingExporter"
+}

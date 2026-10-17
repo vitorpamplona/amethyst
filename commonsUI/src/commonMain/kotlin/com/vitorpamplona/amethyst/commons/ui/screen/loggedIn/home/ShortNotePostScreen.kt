@@ -71,6 +71,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.drawing.DrawingBackgroundStore
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.BooleanType
@@ -842,6 +844,18 @@ private fun BottomRowActions(
                         vm.selectImage(it)
                     },
                 )
+
+                DrawingButton(
+                    readMedia = vm.accountViewModel.host.mediaUploader::readBytes,
+                    backgrounds =
+                        remember(vm.account.pubKey) {
+                            vm.accountViewModel.host.drawingBackgroundsDir
+                                ?.let { DrawingBackgroundStore(it / vm.account.pubKey) }
+                        },
+                    enabled = !vm.isUploadingImage && !vm.isUploadingFile,
+                ) { drawing, alt ->
+                    vm.uploadDrawing(drawing, alt, vm.accountViewModel.toastManager::toast)
+                }
 
                 // The recorder fills its parent. The strip bounds it to 50dp tall and lets it take only
                 // the width it needs; wrapped, a strip of its own does the same instead of letting it
