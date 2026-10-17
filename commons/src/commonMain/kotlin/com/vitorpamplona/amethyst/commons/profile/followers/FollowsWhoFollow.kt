@@ -23,33 +23,45 @@ package com.vitorpamplona.amethyst.commons.profile.followers
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 /**
  * The people [account] follows who also follow [target], highest trust rank first: the
  * "Followed by Alice, Bob and 4 others" line that tells a stranger from someone your circle knows.
  *
- * Reads only the contact lists already in the cache and starts no relay request, so the answer
- * grows as those lists arrive. Blocked follows are left out.
+ * Emits what the cache holds now and again as more of those follow lists arrive. It starts no
+ * relay request of its own; `UserHoverCardFilterAssembler` asks for exactly these lists.
+ * Blocked follows are left out.
  */
 fun followsWhoFollow(
     account: Account,
     target: HexKey,
-): List<User> {
+): Flow<List<User>> {
     val me = account.signer.pubKey
-    val result = ArrayList<User>()
+    val follows = account.followingKeySet().filter { it != target && it != me }
+    if (follows.isEmpty()) return flowOf(emptyList())
 
-    account.followingKeySet().forEach { key ->
-        if (key == target || key == me || account.isHidden(key)) return@forEach
+    val filter =
+        Filter(
+            kinds = listOf(ContactListEvent.KIND),
+            authors = follows,
+            tags = mapOf("p" to listOf(target)),
+        )
 
-        val contactList = account.cache.getAddressableNoteIfExists(ContactListEvent.createAddress(key))?.event as? ContactListEvent
-        if (contactList != null && contactList.isFollowing(target)) {
-            account.cache.getUserIfExists(key)?.let(result::add)
-        }
-    }
-
-    if (result.size < 2) return result
-
-    val ranks = result.associateWith { account.trustRankOf(it.pubkeyHex) ?: 0 }
-    return result.sortedByDescending { ranks[it] }
+    return account.cache
+        .observeEvents<ContactListEvent>(filter)
+        .map { lists ->
+            val people =
+                lists.mapNotNullTo(LinkedHashSet()) { list ->
+                    if (account.isHidden(list.pubKey)) null else account.cache.getOrCreateUser(list.pubKey)
+                }
+            val ranks = people.associateWith { account.trustRankOf(it.pubkeyHex) ?: 0 }
+            people.sortedByDescending { ranks[it] }
+        }.flowOn(Dispatchers.Default)
 }

@@ -40,7 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,10 +53,12 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.profile.followers.followsWhoFollow
+import com.vitorpamplona.amethyst.commons.relayClient.profile.UserHoverCardFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserFollowCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowing
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.resources.number_followers
@@ -79,8 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 private val CardWidth = 340.dp
 private val CardShape = RoundedCornerShape(16.dp)
@@ -109,6 +110,10 @@ fun UserHoverCard(
     onMoreOptions: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val myFollows by accountViewModel.account.kind3FollowList.flow
+        .collectAsStateWithLifecycle()
+    UserHoverCardFilterAssemblerSubscription(user, myFollows.authors, accountViewModel.dataSources().userHoverCard)
+
     val userInfo by observeUserInfo(user, accountViewModel)
     val metadata = userInfo?.info
     val tags = userInfo?.tags
@@ -151,7 +156,7 @@ fun UserHoverCard(
             ) {
                 FollowCounts(user, accountViewModel)
 
-                FollowedByFollows(user, cardBackground, accountViewModel)
+                FollowedByFollows(user, myFollows.authors, cardBackground, accountViewModel)
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -226,17 +231,14 @@ private fun CountText(text: String) {
 @Composable
 private fun FollowedByFollows(
     user: User,
+    myFollows: Set<HexKey>,
     cardBackground: Color,
     accountViewModel: AccountViewModel,
 ) {
-    val account = accountViewModel.account
-    // Recounts when the account's follows change, e.g. after following someone from this card.
-    val myFollows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
-
+    // Rebuilt when the account's follows change, e.g. after following someone from this card.
     val known by
-        produceState(emptyList<User>(), user, myFollows) {
-            value = withContext(Dispatchers.Default) { followsWhoFollow(account, user.pubkeyHex) }
-        }
+        remember(user, myFollows) { followsWhoFollow(accountViewModel.account, user.pubkeyHex) }
+            .collectAsStateWithLifecycle(emptyList())
 
     if (known.isEmpty()) return
 
@@ -247,7 +249,7 @@ private fun FollowedByFollows(
         FacePile(known.take(3), cardBackground, accountViewModel)
 
         Text(
-            text = followedByText(known),
+            text = followedByText(known, accountViewModel),
             fontSize = 13.sp,
             color = MaterialTheme.colorScheme.placeholderText,
             maxLines = 2,
@@ -257,16 +259,19 @@ private fun FollowedByFollows(
 }
 
 @Composable
-private fun followedByText(known: List<User>): String {
-    val first = known[0].toBestDisplayName()
-    return when (known.size) {
-        1 -> stringRes(Res.string.user_hover_card_followed_by_one, first)
-        2 -> stringRes(Res.string.user_hover_card_followed_by_two, first, known[1].toBestDisplayName())
-        else -> {
-            val others = known.size - 2
-            pluralStringRes(Res.plurals.user_hover_card_followed_by_many, others, first, known[1].toBestDisplayName(), others)
-        }
-    }
+private fun followedByText(
+    known: List<User>,
+    accountViewModel: AccountViewModel,
+): String {
+    // Observed, not read once: these follows' profiles may still be loading when the card opens.
+    val first by observeUserName(known[0], accountViewModel)
+    if (known.size == 1) return stringRes(Res.string.user_hover_card_followed_by_one, first)
+
+    val second by observeUserName(known[1], accountViewModel)
+    if (known.size == 2) return stringRes(Res.string.user_hover_card_followed_by_two, first, second)
+
+    val others = known.size - 2
+    return pluralStringRes(Res.plurals.user_hover_card_followed_by_many, others, first, second, others)
 }
 
 @Composable
