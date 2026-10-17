@@ -207,6 +207,7 @@ private fun OnchainZapEntryRow(
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 user,
                 accountViewModel,
+                nav,
             )
         }
 

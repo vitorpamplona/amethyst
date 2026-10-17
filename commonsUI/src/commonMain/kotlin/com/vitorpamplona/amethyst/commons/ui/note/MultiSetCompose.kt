@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchAuthorWithBlank
 import com.vitorpamplona.amethyst.commons.ui.note.WatchUserFollows
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteDropDownMenu
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
@@ -648,6 +649,7 @@ private fun DisplayAuthorCommentAndAmount(
         WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
             authorComment.user,
             accountViewModel,
+            nav,
         )
         authorComment.amount?.let { CrossfadeToDisplayAmount(it) }
     }
@@ -757,18 +759,30 @@ private fun BoxedAuthor(
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 author,
                 accountViewModel,
+                nav,
             )
         }
     }
 }
 
+/**
+ * A gallery face. With [nav], resting the mouse on it opens the author's [UserHoverCardAnchor]
+ * card, as faces in the feed do.
+ */
 @Composable
 fun WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
     author: User?,
     accountViewModel: AccountViewModel,
+    nav: INav? = null,
 ) {
     if (author != null) {
-        WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+        if (nav != null) {
+            UserHoverCardAnchor(author, accountViewModel, nav, Size35Modifier) {
+                WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+            }
+        } else {
+            WatchUserMetadataAndFollowsAndRenderUserProfilePicture(author, accountViewModel)
+        }
     } else {
         DisplayBlankAuthor(Size35dp, accountViewModel = accountViewModel)
     }
