@@ -74,7 +74,24 @@ class UserHoverCardState(
     var isOpen by mutableStateOf(false)
         private set
 
+    /** The profile's action menu, asked for from the card. */
+    var isMenuOpen by mutableStateOf(false)
+
+    /**
+     * Whether the menu has ever been opened here. Feeds hold two anchors per note, so the menu
+     * isn't composed until first asked for; from then on it stays, because its nickname dialog
+     * keeps running after the menu itself closes.
+     */
+    var wasMenuOpened by mutableStateOf(false)
+        private set
+
     private var pending: Job? = null
+
+    fun openMenu() {
+        dismiss()
+        wasMenuOpened = true
+        isMenuOpen = true
+    }
 
     fun onAnchorEnter() {
         pending?.cancel()
@@ -130,11 +147,6 @@ fun UserHoverCardAnchor(
 
     val scope = rememberCoroutineScope()
     val state = remember(user) { UserHoverCardState(scope) }
-    var menuOpen by remember(user) { mutableStateOf(false) }
-
-    // A feed has two anchors per note, so the menu isn't composed until first asked for. From then
-    // on it stays: its nickname dialog keeps running after the menu itself closes.
-    var menuUsed by remember(user) { mutableStateOf(false) }
 
     Box(modifier.anchorHover(state)) {
         content()
@@ -156,11 +168,7 @@ fun UserHoverCardAnchor(
                         state.dismiss()
                         nav.nav(routeFor(user))
                     },
-                    onMoreOptions = {
-                        state.dismiss()
-                        menuUsed = true
-                        menuOpen = true
-                    },
+                    onMoreOptions = state::openMenu,
                     modifier = Modifier.cardHover(state),
                 )
             }
@@ -168,8 +176,8 @@ fun UserHoverCardAnchor(
 
         // Drawn by the anchor, not the card: the card closes when the mouse moves to the menu,
         // and the menu's dialogs (nickname, reports) must outlive it.
-        if (menuUsed) {
-            UserProfileDropDownMenu(user, menuOpen, { menuOpen = false }, accountViewModel)
+        if (state.wasMenuOpened) {
+            UserProfileDropDownMenu(user, state.isMenuOpen, { state.isMenuOpen = false }, accountViewModel)
         }
     }
 }

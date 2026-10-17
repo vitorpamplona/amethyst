@@ -81,7 +81,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 private val CardWidth = 340.dp
 private val CardShape = RoundedCornerShape(16.dp)
@@ -156,7 +155,7 @@ fun UserHoverCard(
             ) {
                 FollowCounts(user, accountViewModel)
 
-                FollowedByFollows(user, myFollows.authors, cardBackground, accountViewModel)
+                FollowedByFollows(user, cardBackground, accountViewModel)
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -231,13 +230,13 @@ private fun CountText(text: String) {
 @Composable
 private fun FollowedByFollows(
     user: User,
-    myFollows: Set<HexKey>,
     cardBackground: Color,
     accountViewModel: AccountViewModel,
 ) {
-    // Rebuilt when the account's follows change, e.g. after following someone from this card.
+    // One flow per person: it follows the account's follows and their lists by itself, so the row
+    // keeps showing the last count while it recounts instead of blinking out.
     val known by
-        remember(user, myFollows) { followsWhoFollow(accountViewModel.account, user.pubkeyHex) }
+        remember(user) { followsWhoFollow(accountViewModel.account, user.pubkeyHex) }
             .collectAsStateWithLifecycle(emptyList())
 
     if (known.isEmpty()) return

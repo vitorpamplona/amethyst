@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.profile
 
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
@@ -43,9 +44,12 @@ class UserHoverCardQueryState(
  * the person's own follow list (the "following" count) and, of the account's follows, the
  * follow lists that include them ("followed by"). Only those lists, not every follower's: the
  * profile screen's followers tab pulls all of them, far too much for a hover.
+ *
+ * The subscription stays open while the card does, so a follow list published meanwhile
+ * arrives live.
  */
 class UserHoverCardFilterAssembler(
-    cache: ICacheProvider,
+    cache: EventCache,
     client: INostrClient,
 ) : ComposeSubscriptionManager<UserHoverCardQueryState>() {
     val group =
@@ -61,14 +65,17 @@ class UserHoverCardFilterAssembler(
 }
 
 class UserHoverCardFilterSubAssembler(
-    val cache: ICacheProvider,
+    val cache: EventCache,
     client: INostrClient,
     allKeys: () -> Set<UserHoverCardQueryState>,
 ) : PerUserEoseManager<UserHoverCardQueryState>(client, allKeys) {
     override fun updateFilter(
         key: UserHoverCardQueryState,
         since: SincePerRelayMap?,
-    ): List<RelayBasedFilter> = filterUserHoverCard(cache, key.user, key.follows, since)
+    ): List<RelayBasedFilter> =
+        filterUserHoverCard(cache, key.user, key.follows, since) {
+            cache.getAddressableNoteIfExists(ContactListEvent.createAddress(it))?.createdAt()
+        }
 
     override fun user(key: UserHoverCardQueryState) = key.user
 }
@@ -81,11 +88,16 @@ fun filterUserHoverCard(
     user: User,
     follows: Set<HexKey>,
     since: SincePerRelayMap?,
+    // created_at of the follow list the cache already holds for a key, null when none.
+    cachedListAt: (HexKey) -> Long?,
 ): List<RelayBasedFilter> {
     val hints = cache.relayHints.hintsForKey(user.pubkeyHex)
     val outbox = user.outboxRelays()?.ifEmpty { null } ?: user.allUsedRelaysOrNull() ?: hints
     // Follow lists that tag someone are sent to their inbox, as on the profile's followers tab.
     val inbox = user.inboxRelays()?.ifEmpty { null } ?: user.allUsedRelaysOrNull() ?: hints
+
+    // A follow list can run to hundreds of KB: never download the copy already in the cache.
+    val ownListSince = cachedListAt(user.pubkeyHex)?.let { it + 1 }
 
     val ownList =
         outbox.map {
@@ -97,15 +109,14 @@ fun filterUserHoverCard(
                         kinds = listOf(ContactListEvent.KIND),
                         authors = listOf(user.pubkeyHex),
                         limit = 1,
-                        since = since?.get(it)?.time,
+                        since = newest(since?.get(it)?.time, ownListSince),
                     ),
             )
         }
 
-    val authors = follows.filter { it != user.pubkeyHex }.sorted()
-    if (authors.isEmpty()) return ownList
+    val chunks = chunkByCachedList(follows.filter { it != user.pubkeyHex }, cachedListAt, AUTHORS_PER_FILTER)
+    if (chunks.isEmpty()) return ownList
 
-    val chunks = authors.chunked(AUTHORS_PER_FILTER)
     val followsWhoFollow =
         inbox.flatMap { relay ->
             chunks.map { chunk ->
@@ -115,9 +126,9 @@ fun filterUserHoverCard(
                         ExplainedFilter(
                             purpose = SubPurpose.USER_PROFILE,
                             kinds = listOf(ContactListEvent.KIND),
-                            authors = chunk,
+                            authors = chunk.authors,
                             tags = mapOf("p" to listOf(user.pubkeyHex)),
-                            since = since?.get(relay)?.time,
+                            since = newest(since?.get(relay)?.time, chunk.since),
                         ),
                 )
             }
@@ -125,3 +136,44 @@ fun filterUserHoverCard(
 
     return ownList + followsWhoFollow
 }
+
+/** Some [authors] and the oldest created_at any of them may still need, null for everything. */
+class AuthorChunk(
+    val authors: List<HexKey>,
+    val since: Long?,
+)
+
+/**
+ * Splits [authors] into chunks of [size], ordered by the age of the follow list the cache holds
+ * for each, so each chunk can ask only for lists newer than its oldest member's: once a few cards
+ * have loaded the follows' lists, the next card re-downloads none of them. Authors with nothing
+ * cached come first and ask for everything.
+ */
+fun chunkByCachedList(
+    authors: List<HexKey>,
+    cachedListAt: (HexKey) -> Long?,
+    size: Int,
+): List<AuthorChunk> {
+    if (authors.isEmpty()) return emptyList()
+
+    val ages = authors.associateWith { cachedListAt(it) }
+    val sorted = authors.sortedWith(compareBy<HexKey> { ages[it] ?: Long.MIN_VALUE }.thenBy { it })
+
+    return sorted.chunked(size).map { chunk ->
+        // The oldest member's own list is already here, so ask from just after it.
+        val oldest = ages[chunk.first()]
+        AuthorChunk(chunk.sorted(), oldest?.let { it + 1 })
+    }
+}
+
+private fun newest(
+    a: Long?,
+    b: Long?,
+): Long? =
+    if (a == null) {
+        b
+    } else if (b == null) {
+        a
+    } else {
+        maxOf(a, b)
+    }
