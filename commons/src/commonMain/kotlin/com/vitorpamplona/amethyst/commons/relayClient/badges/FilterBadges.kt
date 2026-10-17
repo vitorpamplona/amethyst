@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.allFollows.AllFollow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
@@ -47,6 +48,7 @@ fun makeBadgesFilter(
         is AuthorsTopNavPerRelayFilterSet -> filterBadgesByAuthors(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterBadgesByMutedAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterBadgesGlobal(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterBadgesByRelay(feedSettings, since, defaultSince)
         else -> emptyList()
     }.scopedTo(feedSettings)
 
@@ -129,4 +131,33 @@ private fun filterBadgesGlobal(
                 ),
         )
     }
+}
+
+/**
+ * Loads the badge definitions of the one relay the user picked in the top bar.
+ *
+ * Same filter as [filterBadgesGlobal] sends to each of its relays, but with no recent-window
+ * fallback on the starting point: a relay picked on its own may have nothing in Global's
+ * recent window, so a quiet relay's feed would come up empty. The REQ's limit bounds it instead.
+ */
+private fun filterBadgesByRelay(
+    relayFilter: RelayTopNavPerRelayFilterSet,
+    since: SincePerRelayMap?,
+    defaultSince: Long? = null,
+): List<RelayBasedFilter> {
+    val relayUrl = relayFilter.relayUrl
+    val since = since?.get(relayUrl)?.time ?: defaultSince
+
+    return listOf(
+        RelayBasedFilter(
+            relay = relayUrl,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.ADD_ONS,
+                    kinds = listOf(BadgeDefinitionEvent.KIND),
+                    limit = BADGE_FEED_LIMIT,
+                    since = since,
+                ),
+        ),
+    )
 }
