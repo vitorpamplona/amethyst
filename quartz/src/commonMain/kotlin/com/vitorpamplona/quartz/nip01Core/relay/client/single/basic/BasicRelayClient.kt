@@ -151,8 +151,11 @@ open class BasicRelayClient(
 
             lastConnectTentativeInSeconds = nowInSeconds()
 
-            socket = socketBuilder.build(url, MyWebsocketListener())
-            socket?.connect()
+            val listenerForSocket = MyWebsocketListener()
+            val newSocket = socketBuilder.build(url, listenerForSocket)
+            listenerForSocket.owner = newSocket
+            socket = newSocket
+            newSocket.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             val typeName = e::class.simpleName
@@ -167,10 +170,25 @@ open class BasicRelayClient(
     }
 
     inner class MyWebsocketListener : WebSocketListener {
+        /**
+         * The socket this listener was built for. A socket may now deliver its last messages and
+         * its end after the relay closed it (BasicOkHttpWebSocket drains what it had received),
+         * and a reconnect pass may already have replaced it by then: what an old socket says must
+         * not reach the new session, where a late EOSE would end the new REQ's page early.
+         */
+        @Volatile var owner: WebSocket? = null
+
+        /** True while [owner] is still this relay's socket. */
+        private fun isCurrent() = owner === socket
+
+        /** True when a newer socket replaced [owner]; an end with no socket at all is still ours. */
+        private fun isReplaced() = socket != null && owner !== socket
+
         override fun onOpen(
             pingMillis: Int,
             compression: Boolean,
         ) {
+            if (!isCurrent()) return
             replayGate.withLock { replaying = true }
             try {
                 markConnectionAsReady(compression)
@@ -181,6 +199,7 @@ open class BasicRelayClient(
         }
 
         override suspend fun onMessage(text: String) {
+            if (!isCurrent()) return
             try {
                 val msg = decoder.decode(text)
                 // Before the listener: a refusal's back-off must hold what the listener re-sends.
@@ -197,6 +216,7 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
+            if (isReplaced()) return
             markConnectionAsClosed()
             listener.onDisconnected(this@BasicRelayClient)
         }
@@ -208,6 +228,7 @@ open class BasicRelayClient(
         ) {
             // socket is already closed
             // socket?.disconnect()
+            if (isReplaced()) return
 
             if (socket == null) {
                 // comes from the disconnect action.
