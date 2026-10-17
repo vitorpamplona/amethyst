@@ -23,27 +23,56 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
-import com.vitorpamplona.quartz.utils.concurrent.withLock
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.incrementAndFetch
 
 /**
- * Counters are changed under [lock]: every relay's receive coroutine and every thread that sends
- * write them at once, and plain `+=` lost updates. Reads stay unlocked, a display value.
+ * Every field is atomic: every relay's receive coroutine and every thread that sends write them at
+ * once, and plain `+=` lost updates. No lock, so counting a frame costs one atomic add.
+ *
+ * [pingInMs] and [compression] are only ever overwritten; they are atomics too, rather than
+ * `@Volatile` constructor properties, because those crashed the Kotlin compiler's IR lowering in
+ * `:commons:compileAndroidMain` (Kotlin 2.4.20, in a caller's inline lambda reading this class).
  */
+@OptIn(ExperimentalAtomicApi::class)
 @Stable
 class RelayStat(
-    var receivedBytes: Int = 0,
-    var sentBytes: Int = 0,
-    var spamCounter: Int = 0,
-    var errorCounter: Int = 0,
-    var pingInMs: Int = 0,
-    var compression: Boolean = false,
-    var connectionTentatives: Int = 0,
-    var connectionCompleted: Int = 0,
+    receivedBytes: Int = 0,
+    sentBytes: Int = 0,
+    spamCounter: Int = 0,
+    errorCounter: Int = 0,
+    pingInMs: Int = 0,
+    compression: Boolean = false,
+    connectionTentatives: Int = 0,
+    connectionCompleted: Int = 0,
 ) {
-    val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
+    private val received = AtomicInt(receivedBytes)
+    private val sent = AtomicInt(sentBytes)
+    private val spam = AtomicInt(spamCounter)
+    private val errors = AtomicInt(errorCounter)
+    private val tentatives = AtomicInt(connectionTentatives)
+    private val completed = AtomicInt(connectionCompleted)
+    private val ping = AtomicInt(pingInMs)
+    private val compressed = AtomicBoolean(compression)
 
-    private val lock = PlatformLock()
+    var pingInMs: Int
+        get() = ping.load()
+        set(value) = ping.store(value)
+
+    var compression: Boolean
+        get() = compressed.load()
+        set(value) = compressed.store(value)
+
+    val receivedBytes: Int get() = received.load()
+    val sentBytes: Int get() = sent.load()
+    val spamCounter: Int get() = spam.load()
+    val errorCounter: Int get() = errors.load()
+    val connectionTentatives: Int get() = tentatives.load()
+    val connectionCompleted: Int get() = completed.load()
+
+    val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
 
     /** Tried this session and never got through: the relay looks dead. An untried relay is not. */
     val hasNeverConnected: Boolean
@@ -59,7 +88,7 @@ class RelayStat(
     }
 
     fun newError(error: String?) {
-        lock.withLock { errorCounter++ }
+        errors.incrementAndFetch()
 
         val debugMessage =
             ErrorDebugMessage(
@@ -70,26 +99,26 @@ class RelayStat(
     }
 
     fun addBytesReceived(bytesUsedInMemory: Int) {
-        lock.withLock { receivedBytes += bytesUsedInMemory }
+        received.addAndFetch(bytesUsedInMemory)
     }
 
     fun addBytesSent(bytesUsedInMemory: Int) {
-        lock.withLock { sentBytes += bytesUsedInMemory }
+        sent.addAndFetch(bytesUsedInMemory)
     }
 
     fun newConnection() {
-        lock.withLock { connectionTentatives++ }
+        tentatives.incrementAndFetch()
     }
 
     fun connectionCompleted() {
-        lock.withLock { connectionCompleted++ }
+        completed.incrementAndFetch()
     }
 
     fun newSpam(
         link1: String,
         link2: String,
     ) {
-        lock.withLock { spamCounter++ }
+        spam.incrementAndFetch()
 
         val debugMessage = SpamDebugMessage(link1, link2)
 

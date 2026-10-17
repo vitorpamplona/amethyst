@@ -31,8 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.cache.LargeCache
-import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
-import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -85,22 +83,17 @@ class RelayPool(
     private val _availableRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
     val availableRelays = _availableRelays.asStateFlow()
 
-    /** Makes reading the membership and publishing it one step; see [publishMembers]. */
-    private val membersLock = PlatformLock()
-
     /**
      * Publishes a snapshot of the pool's membership. A copy, not `relays.keys()`: on JVM that is
      * the map's live key view, the same object on every call, so the flow saw an equal value and
      * never emitted again after the first, while its `value` kept changing under collectors.
      *
-     * Read and written under [membersLock]: two members joining at once could otherwise publish
-     * the older snapshot last. Every change publishes after it lands, so the last publish sees
-     * all of them.
+     * Lock-free: [update] is a compare-and-set loop, and the snapshot is taken inside it. Two
+     * members joining at once cannot leave the older snapshot published: if another publish lands
+     * between this one reading the flow and setting it, the set fails and the membership is read
+     * again. A change made after the snapshot publishes itself.
      */
-    private fun publishMembers() =
-        membersLock.withLock {
-            _availableRelays.value = relays.keys().toSet()
-        }
+    private fun publishMembers() = _availableRelays.update { relays.keys().toSet() }
 
     fun getRelay(url: NormalizedRelayUrl): IRelayClient? = relays.get(url)
 
