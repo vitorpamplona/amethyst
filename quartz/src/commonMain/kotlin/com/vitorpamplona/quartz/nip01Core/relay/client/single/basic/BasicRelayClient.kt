@@ -317,7 +317,7 @@ open class BasicRelayClient(
             return
         }
 
-        // waits 60 seconds to reconnect after disconnected.
+        // The exponential backoff: dials once its delay since the last attempt has passed.
         if (ignoreRetryDelays || nowInSeconds() > lastConnectTentativeInSeconds + delayToConnectInSeconds) {
             upRelayDelayToConnect()
             connect()
@@ -331,6 +331,9 @@ open class BasicRelayClient(
         delayToConnectInSeconds = DELAY_TO_RECONNECT_IN_SECS
         lastConnectTentativeInSeconds = 0L
     }
+
+    // The gate in connectAndSyncFiltersIfDisconnected opens once now > last + delay.
+    override fun secondsUntilReconnect(): Long = (lastConnectTentativeInSeconds + delayToConnectInSeconds + 1 - nowInSeconds()).coerceAtLeast(0)
 
     fun upRelayDelayToConnect() {
         if (delayToConnectInSeconds < TimeUtils.FIVE_MINUTES) {

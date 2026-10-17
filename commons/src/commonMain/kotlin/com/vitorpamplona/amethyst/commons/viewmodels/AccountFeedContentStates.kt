@@ -516,8 +516,8 @@ class AccountFeedContentStates(
     }
 
     fun deleteNotes(newNotes: Set<Note>) {
-        notifications.deleteFromFeed(newNotes)
-        notificationsFollowing.deleteFromFeed(newNotes)
+        // The notification feeds are handled once, below, under the same split-setting gate the
+        // insert path uses: each deleteFromFeed on a card feed is a full card rebuild.
         homeLive.deleteFromFeed(newNotes)
         homeNewThreads.deleteFromFeed(newNotes)
         homeReplies.deleteFromFeed(newNotes)

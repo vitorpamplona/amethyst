@@ -45,10 +45,10 @@ single-letter-only.
 `event_headers.d_tag` column, not `event_tags` (`Filter.toFilterWithDTags()`). Consequences:
 `#d` works on addressable events (which populate `d_tag`); when all `kinds` are addressable the
 query adds `kind >= 30000 AND kind < 40000` to pin the addressable index. **Only use `#d` via
-plain `tags`.** A `#d` under `tagsAll` is handled inconsistently: on the simple (no other
-tags/search) path it degrades to OR semantics (`toFilterWithDTags` folds it into `dTags`), and
-when `tags["d"]` is also present it is dropped entirely; on the tag-join path it is ignored.
-(An event has one d-tag, so AND-across-values could never match anyway.)
+plain `tags`.** A `#d` under `tagsAll` is folded into the same `d_tag` condition on every path
+(simple, tag-join, union, count, delete — `Filter.dTagValues()`), with OR semantics, and is
+dropped when `tags["d"]` is also present. (An event has one d-tag, so AND-across-values could
+never match anyway.)
 
 **STORE-F06 — tag and author matching in the tag path is hash-based.** `event_tags` stores a
 64-bit MurmurHash3 of `(tag name, value)` keyed by a per-database random seed (`SeedModule`,
@@ -93,7 +93,10 @@ renders as `1 = 0` → matches nothing. But `Filter.isEmpty()` treats empty list
 empty-list filters as invalid input rather than replicating this shape.
 
 **STORE-F12 — `limit` edge cases.** `limit = 0` compiles to `LIMIT 0` → zero rows.
-`limit = null` means unbounded. Negative limits are not defended against (don't send them).
+`limit = null` means unbounded. A negative limit is clamped to `LIMIT 0` → zero rows on every
+path (query/count/delete/union/negentropy); SQLite alone would read `LIMIT -1` as unbounded.
+The relay's `LimitsPolicy` never lets one reach the store from a REQ: it serves it like an absent
+limit (`defaultLimit`, else `maxLimit`), and drops it from a COUNT.
 
 **STORE-F13 — the in-memory matcher is a separate (simpler) implementation.**
 `Filter.match(event)` (`FilterMatcher`) is used for live-stream matching, not storage queries;
@@ -244,7 +247,10 @@ and `searchable-kinds.md`; these rules are the store's query-side contract.
 **STORE-S01 — extension stripping at the store boundary.** Every filter-accepting method runs
 `strippingSearchExtensions()`: NIP-50 `key:value` tokens (`include:spam`, `domain:…`, …) are
 removed before FTS. Unsupported extensions are **ignored, never matched as literal text and
-never match-nothing** — an extensions-only search collapses to an unconstrained query. Stores
+never match-nothing** — an extensions-only search collapses to an unconstrained query. That holds
+for any blank (empty or whitespace) search on every path — tag joins, unions, counts and deletes
+neither `MATCH` nor join `event_fts` for it, so it never narrows a filter to FTS-indexed kinds, and
+a filter that is otherwise empty is the empty filter (F10: `delete` removes nothing). Stores
 that *do* implement extensions receive the raw string through the relay layer and parse it with
 `nip50Search.SearchQuery.parse` (see the `IEventStore` KDoc).
 
@@ -262,8 +268,8 @@ FTS5, so implicit-AND terms, `"phrase queries"`, `OR`, and `prefix*` follow FTS5
 Tokenization details live in `FullTextSearchModule` (see SKILL.md › How the stores index).
 
 **STORE-S05 — FTS off.** With `IndexingStrategy.indexFullTextSearch = false`: a filter with a
-non-empty search term matches **nothing** (query/count/delete alike); an empty-string search
-imposes no constraint. Everything else is unchanged.
+non-blank search term matches **nothing** (query/count/delete alike); a blank search imposes no
+constraint. Everything else is unchanged.
 
 **STORE-S06 — deferred FTS.** Relays may set `deferFullTextSearchIndexing = true` (geode does):
 tokenization moves off the insert path to a watermark-driven catch-up
@@ -298,6 +304,14 @@ non-itemizable cases).
 
 Add one line per behavior change, newest first: `YYYY-MM-DD <short sha> <rule id> — what changed`.
 
+- 2026-10-16 (pending) F05 — a `tagsAll` `#d` is no longer ignored on the tag-join/union/count/
+  delete paths; `delete(Filter(tagsAll = {"d": [x]}))` used to delete every row.
+- 2026-10-16 (pending) S01, S05 — a blank search no longer joins `event_fts` on the tag/union/
+  count/delete paths (it dropped every non-searchable kind, e.g. reactions under `#e` +
+  `include:spam`), a whitespace-only search no longer reaches FTS5 `MATCH` (syntax error), and a
+  blank-search-only filter deletes nothing.
+- 2026-10-16 (pending) F12 — a negative `limit` is clamped to zero rows instead of compiling to
+  SQLite's unbounded `LIMIT -1`; `LimitsPolicy` maps it to the default/max page on a REQ.
 - 2026-09-27 (pending) W01/W02, W09 — a stale replaceable/addressable version is `REPLACED`
   (`replaced:` → `OK false`) again, not `SUPERSEDED` (`duplicate:` → `OK true`): it is not
   written, and `OK true` told the client it was. `SUPERSEDED` is deprecated. Byte-for-byte

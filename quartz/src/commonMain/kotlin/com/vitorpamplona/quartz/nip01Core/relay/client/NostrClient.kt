@@ -42,10 +42,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
+import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -57,8 +59,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlin.concurrent.Volatile
 
 /**
  * The INostrClient manages Nostr relay operations, subscriptions, and event delivery. It maintains:
@@ -127,16 +129,17 @@ class NostrClient(
     private val activeCounts: PoolCounts = PoolCounts()
     private val eventOutbox: PoolEventOutbox = PoolEventOutbox()
 
-    private var listeners = setOf<RelayConnectionListener>()
+    // Copy-on-write sets, swapped whole: registration is rare, while [listeners] is read on
+    // every relay message. The swap is a compare-and-set (`update`), not `x = x.plus(y)`:
+    // registrations race — every publish, COUNT and negentropy pass adds and removes its own
+    // listener from an IO thread — and a plain read-modify-write loses one of two concurrent
+    // writes, leaving a caller deaf to its own OKs (it waits out its timeout) or a removed
+    // listener running on every message for good.
+    private val listeners = MutableStateFlow(setOf<RelayConnectionListener>())
 
-    // Copy-on-write, same as [listeners]: registration happens a handful of times at
-    // wiring, while reads happen on every fetch that meets an auth-gated relay.
-    //
-    // Note the explicit `kotlin.concurrent.Volatile` import this needs. On JVM
-    // `kotlin.jvm.Volatile` is a default import, so an unimported `@Volatile` compiles
-    // there and fails only on Kotlin/Native — which is how it reached CI.
-    @Volatile
-    private var authResponders = setOf<IAuthStatus>()
+    // Same shape: registration happens a handful of times at wiring, while reads happen on
+    // every fetch that meets an auth-gated relay.
+    private val authResponders = MutableStateFlow(setOf<IAuthStatus>())
 
     // controls the state of the client in such a way that if it is active
     // new filters will be sent to the relays and a potential reconnect can
@@ -163,12 +166,25 @@ class NostrClient(
             reqs + counts + outbox
         }.sample(300)
             .onEach {
-                relayPool.updatePool(it)
+                // The sample only says when to look. What the pool keeps is read now, and read
+                // again before each drop: a publish that came in after the sample has already sent
+                // its EVENT on the socket a stale set would close, losing that EVENT's OK until
+                // the keep-alive sweep redialed (a minute, measured on a one-at-a-time publisher).
+                val added = relayPool.updatePool(wantedRelays(), ::isWanted)
+                // A relay the pool takes back in has work waiting (a REQ, a COUNT or an EVENT the
+                // outbox still holds), and joining the pool does not dial it.
+                if (added && isActive()) reconnect(onlyIfChanged = true)
             }.stateIn(
                 scope,
                 SharingStarted.Eagerly,
                 activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value,
             )
+
+    /** Every relay a subscription, a count or a pending publish wants, as of now. */
+    private fun wantedRelays(): Set<NormalizedRelayUrl> = activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value
+
+    /** [wantedRelays] for one relay, without building the union. */
+    private fun isWanted(relay: NormalizedRelayUrl): Boolean = relay in activeRequests.desiredRelays.value || relay in activeCounts.relays.value || relay in eventOutbox.relays.value
 
     // Reconnects all relays that may have disconnected
     override fun connect() {
@@ -413,7 +429,7 @@ class NostrClient(
      */
     override fun onConnecting(relay: IRelayClient) {
         activeRequests.onConnecting(relay.url)
-        listeners.forEach { it.onConnecting(relay) }
+        listeners.value.forEach { it.onConnecting(relay) }
     }
 
     /**
@@ -426,7 +442,7 @@ class NostrClient(
         compressed: Boolean,
     ) {
         syncFilters(relay)
-        listeners.forEach { it.onConnected(relay, pingMillis, compressed) }
+        listeners.value.forEach { it.onConnected(relay, pingMillis, compressed) }
     }
 
     override fun onSent(
@@ -439,10 +455,10 @@ class NostrClient(
             activeRequests.onSent(relay.url, cmd)
             activeCounts.onSent(relay.url, cmd)
             eventOutbox.onSent(relay.url, cmd)?.let { gaveUp ->
-                listeners.forEach { it.onEventGaveUp(relay, gaveUp) }
+                listeners.value.forEach { it.onEventGaveUp(relay, gaveUp) }
             }
         }
-        listeners.forEach { it.onSent(relay, cmdStr, cmd, success) }
+        listeners.value.forEach { it.onSent(relay, cmdStr, cmd, success) }
     }
 
     override suspend fun onIncomingMessage(
@@ -475,7 +491,7 @@ class NostrClient(
             else -> {}
         }
 
-        listeners.forEach { it.onIncomingMessage(relay, msgStr, msg) }
+        listeners.value.forEach { it.onIncomingMessage(relay, msgStr, msg) }
     }
 
     /**
@@ -483,7 +499,7 @@ class NostrClient(
      */
     override fun onDisconnected(relay: IRelayClient) {
         activeRequests.onDisconnected(relay.url)
-        listeners.forEach { it.onDisconnected(relay) }
+        listeners.value.forEach { it.onDisconnected(relay) }
 
         // If the client is still active and the relay is still in the
         // desired set (i.e. there are subscriptions, counts or pending
@@ -493,9 +509,36 @@ class NostrClient(
         // The reconnect path is debounced and goes through
         // reconnectIfNeedsTo, which respects each relay's exponential
         // backoff so we don't hammer dead relays.
-        if (isActive() && relay.url in allRelays.value) {
+        // Live, not allRelays.value: that is a 300ms sample, and a relay that drops within one
+        // sample of joining would not be in it yet.
+        if (isActive() && isWanted(relay.url)) {
             reconnect(onlyIfChanged = true)
+            retryWhenBackoffEnds(relay)
         }
+    }
+
+    /** One pending retry per relay; a newer disconnect replaces the older timer. */
+    private val backoffRetries = LargeCache<NormalizedRelayUrl, Job>()
+
+    /**
+     * The reconnect above is gated by the relay's backoff: a relay that dropped soon after its
+     * last dial (1s, doubling) is skipped, and nothing asked again until the keep-alive sweep,
+     * up to a minute later. A subscription's REQ or a publish's EVENT waited that long. Ask
+     * again exactly when the backoff ends, as long as the client is active and still wants
+     * the relay (offline, the host calls [disconnect], so no retry storms a dead network).
+     */
+    private fun retryWhenBackoffEnds(relay: IRelayClient) {
+        val waitSeconds = relay.secondsUntilReconnect() ?: return
+        if (waitSeconds <= 0) return
+        backoffRetries.get(relay.url)?.cancel()
+        backoffRetries.put(
+            relay.url,
+            scope.launch {
+                delay(waitSeconds * 1000)
+                backoffRetries.remove(relay.url)
+                if (isActive() && isWanted(relay.url)) reconnect(onlyIfChanged = true)
+            },
+        )
     }
 
     override fun onCannotConnect(
@@ -506,29 +549,29 @@ class NostrClient(
         activeCounts.onCannotConnect(relay.url, errorMessage)
         eventOutbox.onCannotConnect(relay.url, errorMessage)
 
-        listeners.forEach { it.onCannotConnect(relay, errorMessage) }
+        listeners.value.forEach { it.onCannotConnect(relay, errorMessage) }
     }
 
     override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
 
-    override fun authResponders(): Set<IAuthStatus> = authResponders
+    override fun authResponders(): Set<IAuthStatus> = authResponders.value
 
     override fun addAuthResponder(responder: IAuthStatus) {
-        authResponders = authResponders.plus(responder)
+        authResponders.update { it + responder }
     }
 
     override fun removeAuthResponder(responder: IAuthStatus) {
-        authResponders = authResponders.minus(responder)
+        authResponders.update { it - responder }
     }
 
     override fun addConnectionListener(listener: RelayConnectionListener) {
-        listeners = listeners.plus(listener)
+        listeners.update { it + listener }
     }
 
-    fun hasConnectionListener(listener: RelayConnectionListener): Boolean = listeners.contains(listener)
+    fun hasConnectionListener(listener: RelayConnectionListener): Boolean = listener in listeners.value
 
     override fun removeConnectionListener(listener: RelayConnectionListener) {
-        listeners = listeners.minus(listener)
+        listeners.update { it - listener }
     }
 
     override fun activeRequests(url: NormalizedRelayUrl): Map<String, List<Filter>> = activeRequests.activeFiltersFor(url)
@@ -557,7 +600,7 @@ class NostrClient(
 
     override fun close() {
         disconnect()
-        listeners = emptySet()
+        listeners.value = emptySet()
         activeCounts.destroy()
         activeRequests.destroy()
         eventOutbox.destroy()

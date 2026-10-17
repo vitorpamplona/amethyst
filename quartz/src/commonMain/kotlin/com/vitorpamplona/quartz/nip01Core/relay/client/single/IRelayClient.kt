@@ -50,6 +50,14 @@ interface IRelayClient {
      */
     fun resetBackoff() { }
 
+    /**
+     * Seconds until [connectAndSyncFiltersIfDisconnected] will dial again without
+     * `ignoreRetryDelays`, 0 when it would dial now, or null when this transport has no
+     * reconnect backoff. Lets the owner of a disconnected relay ask again exactly when the
+     * backoff ends instead of on its next periodic sweep.
+     */
+    fun secondsUntilReconnect(): Long? = null
+
     fun isConnected(): Boolean
 
     fun sendOrConnectAndSync(cmd: Command)

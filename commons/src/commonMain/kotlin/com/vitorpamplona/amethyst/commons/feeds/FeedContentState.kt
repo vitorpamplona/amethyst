@@ -27,7 +27,9 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.service.BasicBundledInsert
 import com.vitorpamplona.amethyst.commons.service.BasicBundledUpdate
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.equalImmutableLists
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.flattenToSet
 import kotlinx.collections.immutable.ImmutableList
@@ -85,19 +87,64 @@ class FeedContentState(
 
     fun lastNoteCreatedAtIfFilled() = lastNoteCreatedAtWhenFullyLoaded.value
 
+    // The writers below — the insert bundler, the full refresh, deletions and the memory-pressure
+    // trim — run on different IO coroutines, and each reads the list, transforms it and writes it
+    // back. Interleaved, the slower one overwrote the other: a deletion landing while an insert
+    // batch merged was undone by the insert's stale copy, and the deleted note stayed until the
+    // next full rebuild.
+    //
+    // The slow part (loadTop, the filter merge) runs with no lock held, so a deletion or a trim
+    // never queues behind a rebuild. Only the commit is serialized, and it is short: it drops
+    // whatever was deleted while that writer computed, which is what the stale copy brought back.
+    private val commitLock = KmpLock()
+
+    // Guarded by [commitLock]. Deletions are remembered only while a writer is computing, and
+    // forgotten once none is, so the set never outlives the writes that need it.
+    private var writersInFlight = 0
+    private val deletedWhileWriting = mutableSetOf<Note>()
+
+    /**
+     * Runs [compute] with no lock held, then commits the list it returns minus the notes deleted
+     * in the meantime. A null result commits nothing.
+     */
+    private inline fun write(compute: () -> ImmutableList<Note>?) {
+        commitLock.withLock { writersInFlight++ }
+        var notes: ImmutableList<Note>? = null
+        try {
+            notes = compute()
+        } finally {
+            commitLock.withLock {
+                try {
+                    val computed = notes
+                    if (computed != null) {
+                        commitLocked(
+                            if (deletedWhileWriting.isEmpty()) {
+                                computed
+                            } else {
+                                computed.filterNot { it in deletedWhileWriting }.toImmutableList()
+                            },
+                        )
+                    }
+                } finally {
+                    writersInFlight--
+                    if (writersInFlight == 0) deletedWhileWriting.clear()
+                }
+            }
+        }
+    }
+
+    private fun commitLocked(notes: ImmutableList<Note>) {
+        val current = _feedContent.value
+        if (current is FeedState.Loaded && equalImmutableLists(notes, current.feed.value.list)) return
+        updateFeed(notes)
+    }
+
     fun refreshSuspended() {
         isRefreshing.value = true
         try {
-            lastFeedKey = localFilter.feedKey()
-            val notes = localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
-
-            val oldNotesState = _feedContent.value
-            if (oldNotesState is FeedState.Loaded) {
-                if (!equalImmutableLists(notes, oldNotesState.feed.value.list)) {
-                    updateFeed(notes)
-                }
-            } else {
-                updateFeed(notes)
+            write {
+                lastFeedKey = localFilter.feedKey()
+                localFilter.loadTop().distinctBy { it.idHex }.toImmutableList()
             }
         } finally {
             isRefreshing.value = false
@@ -127,78 +174,78 @@ class FeedContentState(
         }
     }
 
-    fun deleteFromFeed(deletedNotes: Set<Note>) {
-        val feed = _feedContent.value
-        if (feed is FeedState.Loaded) {
-            val notes = (feed.feed.value.list - deletedNotes).toImmutableList()
-            updateFeed(notes)
-        }
-    }
-
-    fun trimToSize(maxItems: Int) {
-        val current = _feedContent.value
-        if (current is FeedState.Loaded) {
-            val loaded = current.feed.value
-            if (loaded.list.size > maxItems) {
-                current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+    fun deleteFromFeed(deletedNotes: Set<Note>) =
+        commitLock.withLock {
+            if (writersInFlight > 0) deletedWhileWriting.addAll(deletedNotes)
+            val feed = _feedContent.value
+            if (feed is FeedState.Loaded) {
+                updateFeed((feed.feed.value.list - deletedNotes).toImmutableList())
             }
         }
-    }
+
+    fun trimToSize(maxItems: Int) =
+        commitLock.withLock {
+            val current = _feedContent.value
+            if (current is FeedState.Loaded) {
+                val loaded = current.feed.value
+                if (loaded.list.size > maxItems) {
+                    current.feed.tryEmit(LoadedFeedState(loaded.list.take(maxItems).toImmutableList(), loaded.showHidden))
+                }
+            }
+        }
 
     fun refreshFromOldState(newItems: Set<Note>) {
-        val oldNotesState = _feedContent.value
-        if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
-            if (oldNotesState is FeedState.Loaded) {
-                val deletionEvents: List<DeletionRequestEvent> = newItems.mapNotNull { it.event as? DeletionRequestEvent }
+        var refreshEverything = false
+        write {
+            // Read inside [write], so a deletion from here on is either already in this copy or
+            // remembered for the commit.
+            val oldNotesState = _feedContent.value
+            if (localFilter is AdditiveFeedFilter && lastFeedKey == localFilter.feedKey()) {
+                if (oldNotesState is FeedState.Loaded) {
+                    val deletionEvents: List<DeletionRequestEvent> = newItems.mapNotNull { it.event as? DeletionRequestEvent }
 
-                val oldList =
-                    if (deletionEvents.isEmpty()) {
-                        oldNotesState.feed.value.list
-                    } else {
-                        oldNotesState.feed.value.list
-                            .filter {
-                                val noteEvent = it.event
-                                if (noteEvent != null) {
-                                    !cacheProvider.hasBeenDeleted(noteEvent)
-                                } else {
-                                    // An event-less row is a placeholder the filter synthesized for a room
-                                    // that has no message yet — a just-joined Concord channel, NIP-29 group,
-                                    // Marmot group or geohash cell. It carries no event, so it cannot have
-                                    // been deleted, and dropping it here deleted every such row from the
-                                    // Messages list the moment ANY kind-5 landed in an unrelated batch. The
-                                    // row then stayed gone until the next full rebuild, which is why a quiet
-                                    // community looked like it had never loaded at all.
-                                    true
-                                }
-                            }.toImmutableList()
-                    }
+                    val oldList =
+                        if (deletionEvents.isEmpty()) {
+                            oldNotesState.feed.value.list
+                        } else {
+                            oldNotesState.feed.value.list
+                                .filter {
+                                    val noteEvent = it.event
+                                    if (noteEvent != null) {
+                                        !cacheProvider.hasBeenDeleted(noteEvent)
+                                    } else {
+                                        // An event-less row is a placeholder the filter synthesized for a room
+                                        // that has no message yet — a just-joined Concord channel, NIP-29 group,
+                                        // Marmot group or geohash cell. It carries no event, so it cannot have
+                                        // been deleted, and dropping it here deleted every such row from the
+                                        // Messages list the moment ANY kind-5 landed in an unrelated batch. The
+                                        // row then stayed gone until the next full rebuild, which is why a quiet
+                                        // community looked like it had never loaded at all.
+                                        true
+                                    }
+                                }.toImmutableList()
+                        }
 
-                val newList =
                     localFilter
                         .updateListWith(oldList, newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
-
-                if (!equalImmutableLists(newList, oldNotesState.feed.value.list)) {
-                    updateFeed(newList)
-                }
-            } else if (oldNotesState is FeedState.Empty) {
-                val newList =
+                } else if (oldNotesState is FeedState.Empty) {
                     localFilter
                         .updateListWith(emptyList(), newItems)
                         .distinctBy { it.idHex }
                         .toImmutableList()
-                if (newList.isNotEmpty()) {
-                    updateFeed(newList)
+                        .ifEmpty { null }
+                } else {
+                    refreshEverything = true
+                    null
                 }
             } else {
-                // Refresh Everything
-                refreshSuspended()
+                refreshEverything = true
+                null
             }
-        } else {
-            // Refresh Everything
-            refreshSuspended()
         }
+        if (refreshEverything) refreshSuspended()
     }
 
     private val bundler = BasicBundledUpdate(250, Dispatchers.IO, viewModelScope)

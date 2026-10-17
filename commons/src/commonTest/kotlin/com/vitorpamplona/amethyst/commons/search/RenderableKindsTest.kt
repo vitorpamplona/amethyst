@@ -245,6 +245,11 @@ class RenderableKindsTest {
                 45010,
                 46030,
                 46031,
+                // OpenAgents capability heads, package listings and releases: indexed so search
+                // relays can find agent capabilities and plugins, but Amethyst has no card for them
+                3184,
+                30180,
+                30184,
             ).sorted(),
             omitted.sorted(),
             "the set of searchable kinds not shown in search changed",

@@ -30,9 +30,18 @@ data class NEmbed(
     val event: Event,
 ) : Entity {
     companion object {
+        /**
+         * Ceiling on the inflated event JSON. This runs on ingest for every note citing a
+         * `nembed1…`, and whitespace deflates ~1000:1: unbounded, a ~50 KB payload inflated to
+         * 50 MB+ (200 MB of allocation) per citation. A real embedded event is a few KB; anything
+         * past this is not one we would render inline anyway.
+         */
+        const val MAX_INFLATED_BYTES = 256 * 1024
+
         fun parse(bytes: ByteArray): NEmbed? {
             if (bytes.isEmpty()) return null
-            return NEmbed(Event.fromJson(GZip.decompress(bytes)))
+            val json = GZip.decompress(bytes, MAX_INFLATED_BYTES) ?: return null
+            return NEmbed(Event.fromJson(json))
         }
 
         fun create(event: Event): String = GZip.compress(event.toJson()).toNEmbed()

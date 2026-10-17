@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
  * content/tags/created_at fall outside the configured bounds, rejects REQ/COUNT
  * with too many filters or an over-long subscription id, and clamps each
  * filter's `limit` to [RelayLimits.maxLimit] (substituting
- * [RelayLimits.defaultLimit] when the client gives none).
+ * [RelayLimits.defaultLimit] when the client gives none, or a negative one).
  *
  * Compose it ahead of your own policy so requests are clamped/rejected before
  * the application logic runs — `LimitsPolicy(limits) + myPolicy`. The server
@@ -141,13 +141,28 @@ class LimitsPolicy(
      * at most N is asking a question this relay may bound.
      */
     private fun capLimits(filters: List<Filter>): List<Filter> {
-        val max = limits.maxLimit ?: return filters
-        if (filters.none { it.limit != null && it.limit > max }) return filters
-        return filters.map { if (it.limit != null && it.limit > max) it.copy(limit = max) else it }
+        val max = limits.maxLimit
+        if (filters.none { it.limit != null && (it.limit < 0 || (max != null && it.limit > max)) }) return filters
+        return filters.map {
+            when {
+                it.limit == null -> it
+                // a negative limit names no bound, so it is counted like an absent one
+                it.limit < 0 -> it.copy(limit = null)
+                max != null && it.limit > max -> it.copy(limit = max)
+                else -> it
+            }
+        }
     }
 
+    /**
+     * A negative limit is no page size: it is served like an absent one (the default),
+     * or capped at the max when there is no default. Passed through, the SQLite store
+     * read `LIMIT -1` as "no limit", so `"limit":-1` walked past [RelayLimits.maxLimit]
+     * and dumped the whole relay.
+     */
     private fun targetLimit(current: Int?): Int? =
         when {
+            current != null && current < 0 -> limits.defaultLimit ?: limits.maxLimit ?: current
             current != null && limits.maxLimit != null && current > limits.maxLimit -> limits.maxLimit
             current == null && limits.defaultLimit != null -> limits.defaultLimit
             else -> current

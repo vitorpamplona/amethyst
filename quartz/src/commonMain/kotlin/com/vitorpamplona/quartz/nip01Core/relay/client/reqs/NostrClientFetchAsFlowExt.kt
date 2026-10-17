@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.hasAuthResponder
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MachineReadablePrefix
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -37,6 +39,11 @@ import kotlinx.coroutines.flow.conflate
  * 2. Emits accumulated events as a list on each new arrival
  * 3. Closes the flow (completes) when the relay sends EOSE,
  *    cancelling the subscription automatically via [awaitClose].
+ * 4. Also completes when the relay refuses the REQ (CLOSED) or cannot be reached — the
+ *    relay's answer then is "nothing more is coming", and a collector waiting on
+ *    `lastOrNull()` would otherwise hang until its own scope died. An `auth-required:`
+ *    refusal is the exception while something on this client will answer the challenge:
+ *    the client re-sends the REQ on the AUTH's OK, so the events are still coming.
  */
 fun INostrClient.fetchAsFlow(
     relay: String,
@@ -59,6 +66,7 @@ fun INostrClient.fetchAsFlow(
 ): Flow<List<Event>> =
     callbackFlow {
         val subId = RandomInstance.randomChars(10)
+        val waitOnAuthRequired = hasAuthResponder()
         val eventIds = mutableSetOf<HexKey>()
         var currentEvents = listOf<Event>()
 
@@ -79,6 +87,23 @@ fun INostrClient.fetchAsFlow(
 
                 override fun onEose(
                     relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    close()
+                }
+
+                override fun onClosed(
+                    message: String,
+                    relay: NormalizedRelayUrl,
+                    forFilters: List<Filter>?,
+                ) {
+                    if (waitOnAuthRequired && MachineReadablePrefix.parse(message) == MachineReadablePrefix.AUTH_REQUIRED) return
+                    close()
+                }
+
+                override fun onCannotConnect(
+                    relay: NormalizedRelayUrl,
+                    message: String,
                     forFilters: List<Filter>?,
                 ) {
                     close()

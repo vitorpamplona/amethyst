@@ -213,7 +213,9 @@ data class MarkedETag(
          */
 
         fun parseUnmarkedRoot(tag: Array<String>): MarkedETag? =
-            if (tag.size in 2..3 && tag[0] == TAG_NAME) {
+            // Same 64-char id check as the marked parsers: without it ["e", "garbage"]
+            // became the thread root, and the first-match scan never reached a valid tag.
+            if (tag.size in 2..3 && tag[0] == TAG_NAME && tag[1].length == 64) {
                 MarkedETag(tag[1], pickRelayHint(tag), MARKER.ROOT)
             } else {
                 null
@@ -240,7 +242,9 @@ data class MarkedETag(
          */
 
         fun parseUnmarkedReply(tag: Array<String>): MarkedETag? =
-            if (tag.size in 2..3 && tag[0] == TAG_NAME) {
+            // Same 64-char id check as the marked parsers: without it ["e", "garbage"]
+            // became the reply target, and the last-match scan never reached a valid tag.
+            if (tag.size in 2..3 && tag[0] == TAG_NAME && tag[1].length == 64) {
                 MarkedETag(tag[1], pickRelayHint(tag), MARKER.REPLY)
             } else {
                 null

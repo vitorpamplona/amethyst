@@ -37,6 +37,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
@@ -51,8 +52,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.flow.first
 
 private const val ASPECT_RATIO = 4f / 3f
 private const val PORTRAIT_ASPECT_RATIO = 3f / 4f
@@ -94,14 +94,11 @@ private fun rememberFirstImageOrientation(firstImage: MediaUrlImage?): FirstImag
         if (firstImage == null) return@LaunchedEffect
         if (firstImage.dim?.hasSize() == true) return@LaunchedEffect
 
-        while (isActive) {
-            val ratio = firstImage.resolvedAspectRatio()
-            if (ratio != null && ratio > 0f) {
-                orientationState.value = FirstImageOrientation(ratio, ratio >= 1f)
-                break
-            }
-            delay(200)
-        }
+        // MediaAspectRatioCache entries are snapshot state, so this suspends until the decoder
+        // records the ratio. It used to poll every 200 ms, forever when the ratio never came (images
+        // off, a 404, a decode failure), waking the main thread five times a second per gallery.
+        val ratio = snapshotFlow { firstImage.resolvedAspectRatio() }.first { it != null && it > 0f } ?: return@LaunchedEffect
+        orientationState.value = FirstImageOrientation(ratio, ratio >= 1f)
     }
 
     return orientationState.value

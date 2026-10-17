@@ -20,11 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.communities
 
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.SingleSubEoseManager
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.utils.mapOfSet
 
@@ -39,41 +41,61 @@ class CommunityFeedFilterSubAssembler(
     ): List<RelayBasedFilter> {
         if (keys.isEmpty()) return emptyList()
 
-        return keys.flatMap {
-            val commEvent = it.community.event
-            if (commEvent is CommunityDefinitionEvent) {
-                val communityRelays =
-                    (
-                        commEvent.relayUrls().ifEmpty {
-                            cache.relayHints.hintsForAddress(commEvent.addressTag())
-                        } + it.community.relayUrls()
-                    ).toSet()
+        val plans = keys.mapNotNull { plan(it) }
 
-                val moderatorsOutbox =
-                    mapOfSet {
-                        commEvent.moderatorKeys().forEach { modKey ->
-                            // hits the relay of each moderator for approvals
-                            cache.checkGetOrCreateUser(modKey)?.outboxRelays()?.forEach { relay ->
-                                add(relay, modKey)
-                            }
-
-                            // static relay hints from this community
-                            communityRelays.forEach { relay ->
-                                add(relay, modKey)
-                            }
-                        }
+        // One cursor per relay is shared by every community opened on it.
+        val relaySince =
+            sinceDroppingGrownRelays(
+                mapOfSet {
+                    plans.forEach { plan ->
+                        (plan.communityRelays + plan.moderatorsOutbox.keys).forEach { add(it, plan.community.idHex) }
                     }
+                },
+                since,
+            )
 
-                moderatorsOutbox.map { (relay, authors) ->
-                    filterCommunityPostsFromModerators(relay, authors, commEvent, since?.get(relay)?.time)
-                } +
-                    communityRelays.map { relay ->
-                        filterCommunityPostsFromEverybody(relay, commEvent, since?.get(relay)?.time)
-                    }
-            } else {
-                emptyList()
-            }
+        return plans.flatMap { plan ->
+            plan.moderatorsOutbox.map { (relay, authors) ->
+                filterCommunityPostsFromModerators(relay, authors, plan.event, relaySince?.get(relay)?.time)
+            } +
+                plan.communityRelays.map { relay ->
+                    filterCommunityPostsFromEverybody(relay, plan.event, relaySince?.get(relay)?.time)
+                }
         }
+    }
+
+    private class Plan(
+        val community: AddressableNote,
+        val event: CommunityDefinitionEvent,
+        val communityRelays: Set<NormalizedRelayUrl>,
+        val moderatorsOutbox: Map<NormalizedRelayUrl, Set<String>>,
+    )
+
+    private fun plan(key: CommunityQueryState): Plan? {
+        val commEvent = key.community.event as? CommunityDefinitionEvent ?: return null
+        val communityRelays =
+            (
+                commEvent.relayUrls().ifEmpty {
+                    cache.relayHints.hintsForAddress(commEvent.addressTag())
+                } + key.community.relayUrls()
+            ).toSet()
+
+        val moderatorsOutbox =
+            mapOfSet {
+                commEvent.moderatorKeys().forEach { modKey ->
+                    // hits the relay of each moderator for approvals
+                    cache.checkGetOrCreateUser(modKey)?.outboxRelays()?.forEach { relay ->
+                        add(relay, modKey)
+                    }
+
+                    // static relay hints from this community
+                    communityRelays.forEach { relay ->
+                        add(relay, modKey)
+                    }
+                }
+            }
+
+        return Plan(key.community, commEvent, communityRelays, moderatorsOutbox)
     }
 
     override fun distinct(key: CommunityQueryState) = key.community.idHex
