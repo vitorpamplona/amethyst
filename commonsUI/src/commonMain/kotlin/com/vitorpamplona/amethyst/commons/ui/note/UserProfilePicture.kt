@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.FollowingIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.ScoreTag
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -70,8 +71,12 @@ fun NoteAuthorPicture(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    NoteAuthorPicture(baseNote, size, accountViewModel, pictureModifier) {
-        nav.nav(routeFor(it))
+    WatchAuthorWithBlank(baseNote, accountViewModel = accountViewModel) {
+        if (it == null) {
+            DisplayBlankAuthor(size, pictureModifier, accountViewModel)
+        } else {
+            UserPicture(it, size, pictureModifier, accountViewModel, nav)
+        }
     }
 }
 
@@ -146,13 +151,15 @@ fun UserPicture(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ClickableUserPicture(
-        baseUser = user,
-        size = size,
-        accountViewModel = accountViewModel,
-        modifier = pictureModifier,
-        onClick = { nav.nav(routeFor(it)) },
-    )
+    UserHoverCardAnchor(user, accountViewModel, nav) {
+        ClickableUserPicture(
+            baseUser = user,
+            size = size,
+            accountViewModel = accountViewModel,
+            modifier = pictureModifier,
+            onClick = { nav.nav(routeFor(it)) },
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

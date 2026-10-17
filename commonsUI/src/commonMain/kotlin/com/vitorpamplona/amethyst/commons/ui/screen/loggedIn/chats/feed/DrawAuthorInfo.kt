@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserDisplayNic
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -151,15 +152,16 @@ private fun WatchAndDisplayUser(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        CreateTextWithEmoji(
-            text = displayName ?: author.pubkeyDisplayHex(),
-            tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
-            color = nameColor,
-            maxLines = 1,
-            fontWeight = ChatAuthorNameWeight,
-            fontSize = ChatAuthorNameSize,
-            modifier = Modifier.weight(1f, fill = false),
-        )
+        UserHoverCardAnchor(author, accountViewModel, nav, Modifier.weight(1f, fill = false)) {
+            CreateTextWithEmoji(
+                text = displayName ?: author.pubkeyDisplayHex(),
+                tags = (if (nameOverride == null && petName != null) nickname?.tags else userState?.tags) ?: EmptyTagList,
+                color = nameColor,
+                maxLines = 1,
+                fontWeight = ChatAuthorNameWeight,
+                fontSize = ChatAuthorNameSize,
+            )
+        }
         // An agent says so, and whose it is (its owner comes from the NIP-OA tag on its kind 0),
         // unless its contextual name already does.
         BuzzAgentLabel(author, userState?.nipOaOwner, accountViewModel, showOwner = !qualified)

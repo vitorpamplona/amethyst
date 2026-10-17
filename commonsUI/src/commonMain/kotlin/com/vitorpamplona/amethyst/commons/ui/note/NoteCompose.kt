@@ -2419,9 +2419,9 @@ fun FirstUserInfoRow(
             UsernameDisplay(zapSender, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
         } else if (showAuthorPicture) {
             NoteAuthorPicture(baseNote, Size25dp, accountViewModel = accountViewModel, nav = nav)
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel, nav = nav)
         } else {
-            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel)
+            NoteUsernameDisplay(baseNote, Modifier.weight(1f), textColor = textColor, accountViewModel = accountViewModel, nav = nav)
         }
 
         CheckAndDisplayEditStatus(editState)

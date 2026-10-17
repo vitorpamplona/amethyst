@@ -146,6 +146,7 @@ private fun NutzapEntryAvatar(
         WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
             user,
             accountViewModel,
+            nav,
         )
 
         if (amountText.isNotEmpty()) {

@@ -105,15 +105,20 @@ private val ChipShape = RoundedCornerShape(50)
 
 private val BannerModifier = Modifier.fillMaxWidth().height(BannerHeight)
 
-private val AvatarRingModifier = Modifier.size(AvatarSize + AvatarRingWidth * 2).clip(CircleShape)
+// A disc painted behind the avatar, not a clip: the picture clips itself, and clipping here also
+// cut off the follow mark that BaseUserPicture draws past the circle's edge.
+private val AvatarRingModifier = Modifier.size(AvatarSize + AvatarRingWidth * 2)
 
 private val AvatarRowModifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).offset(y = AvatarOverhang)
+
+/** The room the body leaves above itself for the avatar hanging out of [ProfileCardHeader]. */
+internal val ProfileCardBodyTopPadding = AvatarOverhang + 8.dp
 
 private val CardBodyPadding =
     Modifier.padding(
         start = 14.dp,
         end = 14.dp,
-        top = AvatarOverhang + 8.dp,
+        top = ProfileCardBodyTopPadding,
         bottom = 14.dp,
     )
 
@@ -155,7 +160,9 @@ fun ProfileCard(
             nav.nav(routeFor(author))
         },
     ) {
-        ProfileCardHeader(author, metadata?.banner, backgroundColor, accountViewModel, proposedPicture = proposed?.let { it.picture ?: "" })
+        ProfileCardHeader(author, metadata?.banner, backgroundColor.value, accountViewModel, proposedPicture = proposed?.let { it.picture ?: "" }) {
+            ProfileCardActions(author, accountViewModel)
+        }
 
         Column(CardBodyPadding) {
             ProfileCardNames(author, metadata, tags)
@@ -180,22 +187,21 @@ fun ProfileCard(
 }
 
 /**
- * Banner + avatar + follow action. The avatar and the action row are laid out inside the
- * banner's [Box] and pushed down by [AvatarOverhang]: the offset doesn't change the Box's
- * measured height, so the body below reserves the same amount as top padding and no gap is
- * left at the bottom of the card.
+ * Banner + avatar + [trailing] (the follow action on the feed card). The avatar and the
+ * trailing row are laid out inside the banner's [Box] and pushed down by [AvatarOverhang]: the
+ * offset doesn't change the Box's measured height, so the body below reserves the same amount
+ * as top padding ([ProfileCardBodyTopPadding]) and no gap is left at the bottom of the card.
  */
 @Composable
-private fun ProfileCardHeader(
+internal fun ProfileCardHeader(
     author: User,
     banner: String?,
-    backgroundColor: MutableState<Color>,
+    cardBackground: Color,
     accountViewModel: AccountViewModel,
     // Non-null in a signer prompt: the picture the new profile sets ("" for none).
     proposedPicture: String? = null,
+    trailing: @Composable () -> Unit,
 ) {
-    val cardBackground = backgroundColor.value
-
     // Fades the banner into the card so the avatar and the name below always have
     // enough contrast, whatever the user uploaded.
     val scrim =
@@ -213,7 +219,7 @@ private fun ProfileCardHeader(
             verticalAlignment = Alignment.Bottom,
         ) {
             Box(
-                modifier = AvatarRingModifier.background(cardBackground),
+                modifier = AvatarRingModifier.background(cardBackground, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 if (proposedPicture != null) {
@@ -231,7 +237,7 @@ private fun ProfileCardHeader(
 
             Spacer(Modifier.weight(1f))
 
-            ProfileCardActions(author, accountViewModel)
+            trailing()
         }
     }
 }
@@ -252,7 +258,7 @@ private fun ProfileCardActions(
 }
 
 @Composable
-private fun ProfileCardNames(
+internal fun ProfileCardNames(
     author: User,
     metadata: UserMetadata?,
     tags: ImmutableListOfLists<String>?,
@@ -383,7 +389,7 @@ private fun ProfileCardChips(
  * falls through to the card and opens the profile.
  */
 @Composable
-private fun ProfileCardChip(
+internal fun ProfileCardChip(
     symbol: MaterialSymbol,
     label: String,
     color: Color,

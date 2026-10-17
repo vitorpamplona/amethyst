@@ -150,6 +150,7 @@ private fun Bolt12ZapEntryRow(
             WatchUserMetadataAndFollowsAndRenderUserProfilePictureOrDefaultAuthor(
                 user,
                 accountViewModel,
+                nav,
             )
         }
 
