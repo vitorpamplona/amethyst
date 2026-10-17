@@ -40,52 +40,76 @@ import com.vitorpamplona.amethyst.commons.ui.note.externalLinkForNote
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
- * The shared Share rows used by the [ShareOptionsBottomSheet] drawer (opened
- * both from the reaction-row Share button and from the note's 3-dot menu).
+ * The note's Share options, in the [NoteActionGroup.SHARE] group: browser link, image file,
+ * image URL, and the display-only QR code. The 3-dot menu folds them into a Share submenu (on a
+ * phone it lists them, as it does Copy); [ShareActionRows] lays them out in the Share drawer of
+ * the reaction row and the chat long-press sheet. Copy-to-clipboard options are not here.
  *
- * Only the true "send it somewhere" options live here — browser link, image
- * file, image URL, and the display-only QR code. The copy-to-clipboard
- * options stay in the 3-dot menu, so they are intentionally NOT part of this
- * shared element.
- *
- * Callers only render these for non-private notes: every option exposes the
- * note publicly (a shareable web link, or an image of it), which must never
- * happen for a private gift-wrapped rumor.
+ * Callers only offer these for non-private notes: every option exposes the note publicly (a
+ * shareable web link, or an image of it), which must never happen for a private gift-wrapped
+ * rumor.
  */
+@Composable
+fun shareNoteActions(
+    note: Note,
+    nav: INav,
+    onDismiss: () -> Unit,
+): List<NoteAction> {
+    val shareLinkStr = stringRes(Res.string.quick_action_share_browser_link)
+    val shareStr = stringRes(Res.string.quick_action_share)
+    val shareAsImageStr = stringRes(Res.string.share_as_image)
+    val shareAsImageUrlStr = stringRes(Res.string.share_as_image_url)
+    val shareAsQrStr = stringRes(Res.string.share_as_qr)
+    val sharer = rememberTextSharer()
+    val imageSharer = rememberImageSharer()
+    // AddressableNotes are shared by their replaceable address; everything else
+    // by event id. The two image routes resolve the note from this same id.
+    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
+    // A front end whose nav host doesn't register the image routes leaves those options out, and
+    // one with nowhere to send an image file (iOS for now) leaves out that one.
+    val canShareImageFile = imageSharer.canShare && canOpen(Route.ShareNoteAsImageFile(shareId))
+    val canShareImageUrl = canOpen(Route.ShareNoteAsImage(shareId))
+
+    return buildList {
+        add(
+            NoteAction(MaterialSymbols.Share, shareLinkStr, group = NoteActionGroup.SHARE) {
+                sharer.share(externalLinkForNote(note), shareLinkStr, shareStr)
+                onDismiss()
+            },
+        )
+        if (canShareImageFile) {
+            add(
+                NoteAction(MaterialSymbols.Image, shareAsImageStr, group = NoteActionGroup.SHARE) {
+                    nav.nav(Route.ShareNoteAsImageFile(shareId))
+                    onDismiss()
+                },
+            )
+        }
+        if (canShareImageUrl) {
+            add(
+                NoteAction(MaterialSymbols.Image, shareAsImageUrlStr, group = NoteActionGroup.SHARE) {
+                    nav.nav(Route.ShareNoteAsImage(shareId))
+                    onDismiss()
+                },
+            )
+        }
+        add(
+            NoteAction(MaterialSymbols.QrCode2, shareAsQrStr, group = NoteActionGroup.SHARE) {
+                nav.nav(Route.ShareNoteAsQr(shareId))
+                onDismiss()
+            },
+        )
+    }
+}
+
+/** [shareNoteActions] as rows, for the Share drawer ([ShareOptionsBottomSheet]). */
 @Composable
 fun ShareActionRows(
     note: Note,
     nav: INav,
     onDismiss: () -> Unit,
 ) {
-    val quickActionShareBrowserLinkStr = stringRes(Res.string.quick_action_share_browser_link)
-    val quickActionShareStr = stringRes(Res.string.quick_action_share)
-    val sharer = rememberTextSharer()
-    val imageSharer = rememberImageSharer()
-    // AddressableNotes are shared by their replaceable address; everything else
-    // by event id. The two image routes resolve the note from this same id.
-    val shareId = if (note is AddressableNote) note.address.toValue() else note.idHex
-
-    M3ActionRow(icon = MaterialSymbols.Share, text = stringRes(Res.string.quick_action_share)) {
-        sharer.share(externalLinkForNote(note), quickActionShareBrowserLinkStr, quickActionShareStr)
-        onDismiss()
-    }
-    // A front end whose nav host doesn't register the image routes leaves these rows out, and one
-    // with nowhere to send an image file (iOS for now) leaves out that row.
-    if (imageSharer.canShare && canOpen(Route.ShareNoteAsImageFile(shareId))) {
-        M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image)) {
-            nav.nav(Route.ShareNoteAsImageFile(shareId))
-            onDismiss()
-        }
-    }
-    if (canOpen(Route.ShareNoteAsImage(shareId))) {
-        M3ActionRow(icon = MaterialSymbols.Image, text = stringRes(Res.string.share_as_image_url)) {
-            nav.nav(Route.ShareNoteAsImage(shareId))
-            onDismiss()
-        }
-    }
-    M3ActionRow(icon = MaterialSymbols.QrCode2, text = stringRes(Res.string.share_as_qr)) {
-        nav.nav(Route.ShareNoteAsQr(shareId))
-        onDismiss()
+    shareNoteActions(note, nav, onDismiss).forEach { action ->
+        M3ActionRow(icon = action.symbol, text = action.label, onClick = action.onClick)
     }
 }
