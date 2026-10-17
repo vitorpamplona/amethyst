@@ -23,7 +23,13 @@ package com.vitorpamplona.quartz.nip01Core.relay.client.stats
 import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 
+/**
+ * Counters are changed under [lock]: every relay's receive coroutine and every thread that sends
+ * write them at once, and plain `+=` lost updates. Reads stay unlocked, a display value.
+ */
 @Stable
 class RelayStat(
     var receivedBytes: Int = 0,
@@ -36,6 +42,8 @@ class RelayStat(
     var connectionCompleted: Int = 0,
 ) {
     val messages = LruCache<IRelayDebugMessage, IRelayDebugMessage>(100)
+
+    private val lock = PlatformLock()
 
     /** Tried this session and never got through: the relay looks dead. An untried relay is not. */
     val hasNeverConnected: Boolean
@@ -51,7 +59,7 @@ class RelayStat(
     }
 
     fun newError(error: String?) {
-        errorCounter++
+        lock.withLock { errorCounter++ }
 
         val debugMessage =
             ErrorDebugMessage(
@@ -62,26 +70,26 @@ class RelayStat(
     }
 
     fun addBytesReceived(bytesUsedInMemory: Int) {
-        receivedBytes += bytesUsedInMemory
+        lock.withLock { receivedBytes += bytesUsedInMemory }
     }
 
     fun addBytesSent(bytesUsedInMemory: Int) {
-        sentBytes += bytesUsedInMemory
+        lock.withLock { sentBytes += bytesUsedInMemory }
     }
 
     fun newConnection() {
-        connectionTentatives++
+        lock.withLock { connectionTentatives++ }
     }
 
     fun connectionCompleted() {
-        connectionCompleted++
+        lock.withLock { connectionCompleted++ }
     }
 
     fun newSpam(
         link1: String,
         link2: String,
     ) {
-        spamCounter++
+        lock.withLock { spamCounter++ }
 
         val debugMessage = SpamDebugMessage(link1, link2)
 
