@@ -234,8 +234,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -3568,22 +3566,30 @@ open class EventCache :
         return justConsumeAndUpdateIndexes(event, null, true)
     }
 
+    /**
+     * Consumes [event], received from [relay] when known. When that relay is behind (it sent an
+     * event this cache knows was deleted, or an older version of an addressable one), the
+     * deletion or the newer version is handed to [sendBack] for that relay, once per note.
+     * [sendBack] should publish through the client, so the relay gets the outbox's retries and
+     * the client's relay filters; this cache used to write it on the relay's socket itself.
+     */
     fun justConsume(
         event: Event,
-        relay: IRelayClient?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
+        sendBack: ((Event, NormalizedRelayUrl) -> Unit)? = null,
     ): Boolean {
         if (deletionIndex.hasBeenDeleted(event)) {
             // update relay with deletion event from another.
-            if (relay != null) {
+            if (relay != null && sendBack != null) {
                 deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
                     getNoteIfExists(deletionEvent.id)?.let { note ->
-                        if (!note.hasRelay(relay.url)) {
+                        if (!note.hasRelay(relay)) {
                             if (appHost.isDebug) {
-                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
+                                Log.d("LocalCache") { "Updating ${relay.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
-                            relay.sendIfConnected(EventCmd(deletionEvent))
-                            note.addRelay(relay.url)
+                            sendBack(deletionEvent, relay)
+                            note.addRelay(relay)
                         }
                     }
                 }
@@ -3591,24 +3597,24 @@ open class EventCache :
             return false
         }
 
-        if (event is AddressableEvent && relay != null) {
+        if (event is AddressableEvent && relay != null && sendBack != null) {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (appHost.isDebug) {
-                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
+                            Log.d("LocalCache") { "Updating ${relay.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
-                        relay.sendIfConnected(EventCmd(existingEvent))
+                        sendBack(existingEvent, relay)
                         // only send once.
-                        note.addRelay(relay.url)
+                        note.addRelay(relay)
                     }
                 }
             }
         }
 
-        return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
+        return justConsumeAndUpdateIndexes(event, relay, wasVerified)
     }
 
     fun checkDeletionAndConsume(

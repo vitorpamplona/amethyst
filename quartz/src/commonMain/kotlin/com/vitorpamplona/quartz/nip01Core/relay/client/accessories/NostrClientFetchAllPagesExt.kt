@@ -38,6 +38,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip50Search.SearchQuery
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -860,7 +861,14 @@ internal suspend fun INostrClient.walkPages(
                                             // reconnect re-serving it) is delivered instead of taken for a repeat.
                                             runIds.remove(event.id)
                                             firstPageIds?.remove(event.id)
-                                            throw e
+                                            if (e is CancellationException) throw e
+                                            // The caller's own failure ends the walk and reaches the caller:
+                                            // the page's wait rethrows it. Thrown from here instead, it only
+                                            // reached the socket's message loop, which logged it as a frame it
+                                            // could not parse, and the walk went on without the event.
+                                            gate.over = true
+                                            doneChannel.close(e)
+                                            return
                                         }
                                         // Nothing below runs unless [onEvent] returned. The socket cancels
                                         // the coroutine delivering its messages when the connection ends,

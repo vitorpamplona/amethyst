@@ -21,17 +21,24 @@
 package com.vitorpamplona.amethyst.commons.relayClient
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.EventCollector
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayInsertConfirmationCollector
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 class CacheClientConnector(
     val client: INostrClient,
     val cache: LocalCache,
 ) {
+    // A relay that is behind gets the deletion or newer version back through the client: the
+    // outbox retries it until the relay answers, and the client's relay filters (blocked relays)
+    // apply. The cache used to write it on the relay's socket, around both.
+    private val sendBack: (Event, NormalizedRelayUrl) -> Unit = { event, relay -> client.publish(event, setOf(relay)) }
+
     val receiver =
         EventCollector(client) { event, relay ->
-            cache.justConsume(event, relay, false)
+            cache.justConsume(event, relay.url, false, sendBack)
         }
 
     // markAsSeen drills into the gift-wrap chain (wrap → seal → rumor) via

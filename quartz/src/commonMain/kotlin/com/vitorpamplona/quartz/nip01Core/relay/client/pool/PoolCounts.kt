@@ -146,7 +146,7 @@ class PoolCounts {
         }
     }
 
-    suspend fun onIncomingMessage(
+    fun onIncomingMessage(
         relay: IRelayClient,
         msg: Message,
     ) {

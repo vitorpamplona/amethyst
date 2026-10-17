@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.single.basic.FakeWebsocke
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * [RelayPool.connectedRelays] is what the app reads as "how many relays am I connected to", so it
@@ -77,5 +78,27 @@ class RelayPoolConnectedFlowTest {
 
         assertEquals(emptySet(), pool.connectedRelays.value)
         assertEquals(setOf(url), pool.availableRelays.value, "still a member, just not connected")
+    }
+
+    // availableRelays used to hold the pool map's live key view: the same object on every update,
+    // so the flow never emitted again after the first member, and a value read earlier changed
+    // under the reader.
+    @Test
+    fun everyMembershipChangePublishesANewSnapshot() {
+        val pool = RelayPool(FakeWebsocketBuilder())
+        val other = NormalizedRelayUrl("wss://other.example.com/")
+
+        pool.getOrCreateRelay(url)
+        val first = pool.availableRelays.value
+        pool.getOrCreateRelay(other)
+        val second = pool.availableRelays.value
+
+        assertEquals(setOf(url), first, "a published value never changes afterwards")
+        assertEquals(setOf(url, other), second)
+        assertTrue(first !== second, "a new value, so the flow emits")
+
+        pool.removeRelay(url)
+        assertEquals(setOf(other), pool.availableRelays.value)
+        assertEquals(setOf(url, other), second)
     }
 }
