@@ -32,19 +32,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserAssertionsFollowerCount
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserIsFollowing
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.more_options
+import com.vitorpamplona.amethyst.commons.resources.number_followers
 import com.vitorpamplona.amethyst.commons.resources.profile_card_follows_you
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ObserveDisplayNip05Status
@@ -113,6 +117,8 @@ fun UserHoverCard(
                             modifier = Modifier.padding(top = 6.dp),
                         )
                     }
+
+                    FollowerCount(user, accountViewModel)
                 }
             }
 
@@ -148,6 +154,25 @@ private fun FollowsYouChip(
             symbol = MaterialSymbols.Person,
             label = stringRes(Res.string.profile_card_follows_you),
             color = MaterialTheme.colorScheme.primary,
+        )
+    }
+}
+
+@Composable
+private fun FollowerCount(
+    user: User,
+    accountViewModel: AccountViewModel,
+) {
+    // The count a trusted NIP-85 provider publishes; "--" while there is none for this user.
+    val followerCount by observeUserAssertionsFollowerCount(user, accountViewModel)
+
+    if (followerCount != "--") {
+        Text(
+            text = stringRes(Res.string.number_followers, followerCount),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.placeholderText,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 6.dp),
         )
     }
 }
