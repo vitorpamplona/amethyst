@@ -24,9 +24,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
@@ -43,7 +40,6 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
@@ -121,36 +117,11 @@ class NostrSignerRemotePrivateZapTest {
                         scope,
                     )
 
-                // Connect before anyone subscribes. A subscription that opens the connection does not
-                // send its REQ: the client replays its subscriptions to a fresh connection from a
-                // coroutine (NostrClient.syncFilters), while everything sent after the socket is up goes
-                // out at once. So the bunker's REQ could reach the relay after the request it is meant
-                // to catch, and kind 24133 is ephemeral: the relay hands it to whoever is subscribed
-                // right then, nobody, and the remote waits out its 65 s retry. That is how this timed
-                // out on the iOS simulator, whose 3-core runner was slow to run the replay. Waiting for
-                // this probe's EOSE waits for the replay; every REQ and EVENT below then goes straight
-                // onto the socket, in order, and the relay serves them in that order.
-                val connected = CompletableDeferred<Unit>()
-                val probe = newSubId()
-                client.subscribe(
-                    probe,
-                    mapOf(relay to listOf(Filter(ids = listOf("0".repeat(64))))),
-                    object : SubscriptionListener {
-                        override fun onEose(
-                            relay: NormalizedRelayUrl,
-                            forFilters: List<Filter>?,
-                        ) {
-                            connected.complete(Unit)
-                        }
-                    },
-                )
-                withTimeout(10_000) { connected.await() }
-
                 // The bunker: holds the user's key behind its own transport key.
                 val bunkerTransport = NostrSignerInternal(KeyPair())
                 val processor = BunkerRequestProcessor(user, { setOf(relay) }, AllowAuthorizer())
                 val service = NostrConnectSignerService(client, bunkerTransport, processor, setOf(relay))
-                // UNDISPATCHED so the bunker's REQ is sent before the client publishes a request.
+                // UNDISPATCHED so the bunker's REQ is registered before the client publishes a request.
                 scope.launch(start = CoroutineStart.UNDISPATCHED) { service.run() }
 
                 val remote =
@@ -170,7 +141,6 @@ class NostrSignerRemotePrivateZapTest {
                     assertEquals(sender.pubKey, decrypted.pubKey, "the private zap reveals the real sender")
                     assertEquals(user.decryptZapEvent(zap).id, decrypted.id)
                 } finally {
-                    client.unsubscribe(probe)
                     remote.closeSubscription()
                     scope.cancel()
                     server.close()
