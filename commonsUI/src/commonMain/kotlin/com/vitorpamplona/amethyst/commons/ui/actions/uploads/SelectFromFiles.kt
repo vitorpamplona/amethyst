@@ -101,3 +101,13 @@ expect fun DocumentSelectSingle(
     mimeTypes: List<String>,
     onPicked: (SelectedMedia?) -> Unit,
 )
+
+/**
+ * Opens the platform's document picker for any number of files of [mimeTypes], which may use a
+ * subtype wildcard (all images); reports an empty list on cancel.
+ */
+@Composable
+expect fun MultiDocumentSelect(
+    mimeTypes: List<String>,
+    onPicked: (ImmutableList<SelectedMedia>) -> Unit,
+)

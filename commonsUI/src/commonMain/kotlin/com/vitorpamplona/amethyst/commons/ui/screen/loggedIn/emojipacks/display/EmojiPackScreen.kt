@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_emoji_fab
+import com.vitorpamplona.amethyst.commons.resources.emoji_import_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_long_press_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_private_badge
 import com.vitorpamplona.amethyst.commons.resources.emoji_remove_dialog_title
@@ -99,6 +100,7 @@ private fun EmojiPackScreenView(
 ) {
     val pack by viewModel.selectedPackFlow.collectAsStateWithLifecycle()
     var showAddDialog by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<EmojiDeleteTarget?>(null) }
 
     Scaffold(
@@ -129,6 +131,14 @@ private fun EmojiPackScreenView(
                 navigationIcon = {
                     IconButton(nav::popBack) {
                         ArrowBackIcon()
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showImportDialog = true }) {
+                        Icon(
+                            symbol = MaterialSymbols.Upload,
+                            contentDescription = stringRes(Res.string.emoji_import_title),
+                        )
                     }
                 },
                 colors =
@@ -194,6 +204,14 @@ private fun EmojiPackScreenView(
         )
     }
 
+    if (showImportDialog) {
+        ImportEmojisDialog(
+            viewModel = viewModel,
+            accountViewModel = accountViewModel,
+            onDismiss = { showImportDialog = false },
+        )
+    }
+
     pendingDelete?.let { target ->
         M3ActionDialog(
             title = stringRes(Res.string.emoji_remove_dialog_title, target.emoji.code),
@@ -231,8 +249,8 @@ private fun EmojiGrid(
 ) {
     // Collapse to one cell per (shortcode, visibility). A pack can carry
     // duplicate shortcodes: NIP-30 puts no uniqueness constraint on emoji
-    // tags, so foreign packs may repeat them, and our own addEmoji appends
-    // without a duplicate guard. Two same-code cells in the same visibility
+    // tags, so foreign packs and ones edited by older versions of this app
+    // may repeat them. Two same-code cells in the same visibility
     // bucket are indistinguishable to the user and share one delete path
     // (removeEmoji deletes by shortcode, so it would drop both), and their
     // identical keys would crash the LazyGrid. distinctBy keeps the first.

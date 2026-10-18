@@ -3230,6 +3230,21 @@
     <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
     <string name="emoji_private_toggle">Private</string>
     <string name="emoji_private_badge">Private emoji</string>
+    <string name="emoji_import_title">Import emojis</string>
+    <string name="emoji_import_explainer">Pick images, or .zip files of images. Each image becomes an emoji named after its file: party parrot.gif becomes :party_parrot:. Names already in this pack are skipped.</string>
+    <string name="emoji_import_choose_files">Choose files</string>
+    <string name="emoji_import_reading">Reading files…</string>
+    <string name="emoji_import_uploading">Uploading %1$d of %2$d</string>
+    <plurals name="emoji_import_added">
+        <item quantity="one">Added %1$d emoji</item>
+        <item quantity="other">Added %1$d emojis</item>
+    </plurals>
+    <string name="emoji_import_skipped">Already in this pack: %1$s</string>
+    <string name="emoji_import_failed">Could not upload: %1$s</string>
+    <string name="emoji_import_unnamed">No usable name (letters, digits, - and _ only): %1$s</string>
+    <string name="emoji_import_too_large">Too large: %1$s</string>
+    <string name="emoji_import_unsupported">Not an image or .zip: %1$s</string>
+    <string name="emoji_import_unreadable">Could not open: %1$s</string>
     <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Community rule violation</string>
     <string name="community_rules_violation_author_denied">You are on this community's deny-list. Posts will not be accepted.</string>

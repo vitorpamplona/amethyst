@@ -22,9 +22,13 @@ package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.upload_file
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
 /** No document picker wired yet: reports a cancel. */
 @Composable
@@ -39,4 +43,25 @@ actual fun DocumentSelectSingle(
     onPicked: (SelectedMedia?) -> Unit,
 ) {
     LaunchedEffect(Unit) { onPicked(null) }
+}
+
+/** The file name extensions the desktop file dialog shows for [mimeTypes]. */
+private fun extensionsFor(mimeTypes: List<String>): Set<String> =
+    mimeTypes.flatMapTo(HashSet()) { mime ->
+        when (mime) {
+            "image/*" -> IMAGE_EXTENSIONS
+            "application/zip", "application/x-zip-compressed" -> setOf("zip")
+            else -> setOf(mime.substringAfter('/').substringAfter('+'))
+        }
+    }
+
+@Composable
+actual fun MultiDocumentSelect(
+    mimeTypes: List<String>,
+    onPicked: (ImmutableList<SelectedMedia>) -> Unit,
+) {
+    LaunchedEffect(Unit) {
+        val files = pickFiles(loadStringRes(Res.string.upload_file), multiple = true, extensionsFor(mimeTypes))
+        onPicked(files.map { it.toSelectedMedia() }.toImmutableList())
+    }
 }
