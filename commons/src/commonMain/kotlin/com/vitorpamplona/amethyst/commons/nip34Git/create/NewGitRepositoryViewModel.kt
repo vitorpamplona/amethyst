@@ -121,16 +121,6 @@ class NewGitRepositoryViewModel : ViewModel() {
         topicDraft = ""
     }
 
-    fun updateTopicDraft(value: String) {
-        // A typed separator finishes the topic, like a chip input.
-        if (value.endsWith(',') || value.endsWith(' ') || value.endsWith('\n')) {
-            topicDraft = value
-            commitTopicDraft()
-        } else {
-            topicDraft = value
-        }
-    }
-
     fun removeTopic(topic: String) {
         topics.remove(topic)
     }

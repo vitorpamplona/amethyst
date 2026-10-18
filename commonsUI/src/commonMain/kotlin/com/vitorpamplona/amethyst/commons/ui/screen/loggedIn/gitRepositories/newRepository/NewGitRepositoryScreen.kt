@@ -29,7 +29,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -47,15 +46,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +62,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -78,9 +72,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.create.NewGitRepositoryViewModel
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
@@ -110,7 +104,12 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_repository_untitled
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_web_urls
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_name
+import com.vitorpamplona.amethyst.commons.ui.components.ChipsInputField
+import com.vitorpamplona.amethyst.commons.ui.components.FormFieldShape
+import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
+import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -125,7 +124,6 @@ import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
 private val PreviewShape = RoundedCornerShape(24.dp)
-private val TileShape = RoundedCornerShape(16.dp)
 private val InsetShape = RoundedCornerShape(12.dp)
 private val Mono = TextStyle(fontFamily = FontFamily.Monospace)
 
@@ -222,16 +220,7 @@ private fun RepositoryPreviewCard(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(52.dp)
-                        .clip(TileShape)
-                        .background(Brush.linearGradient(listOf(colors.primary, colors.secondary))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(MaterialSymbols.Code, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.onPrimary)
-            }
+            GitIconTile()
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val untitled = model.name.isBlank()
                 Text(
@@ -373,95 +362,6 @@ private fun FormSection(
     }
 }
 
-// ---------------------------------------------------------------------------
-// Fields: label above, a soft tonal fill with rounded corners and no outline until focus,
-// helper text below. The same look as the settings search field.
-// ---------------------------------------------------------------------------
-
-private val FieldShape = RoundedCornerShape(14.dp)
-
-@Composable
-private fun formFieldColors(): TextFieldColors {
-    val colors = MaterialTheme.colorScheme
-    val fill = colors.surfaceContainerHigh
-    val hint = colors.onSurfaceVariant.copy(alpha = 0.6f)
-    return OutlinedTextFieldDefaults.colors(
-        focusedContainerColor = fill,
-        unfocusedContainerColor = fill,
-        errorContainerColor = fill,
-        disabledContainerColor = fill,
-        focusedBorderColor = colors.primary,
-        unfocusedBorderColor = Color.Transparent,
-        errorBorderColor = colors.error,
-        focusedPlaceholderColor = hint,
-        unfocusedPlaceholderColor = hint,
-        focusedLeadingIconColor = colors.primary,
-        unfocusedLeadingIconColor = colors.onSurfaceVariant,
-    )
-}
-
-@Composable
-private fun LabeledField(
-    label: StringResource,
-    helper: String? = null,
-    isError: Boolean = false,
-    field: @Composable () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(
-            text = stringRes(label),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Medium,
-            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = 4.dp),
-        )
-        field()
-        if (helper != null) {
-            Text(
-                text = helper,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText,
-                modifier = Modifier.padding(horizontal = 4.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun FormTextField(
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    placeholder: String? = null,
-    leadingIcon: MaterialSymbol? = null,
-    trailingIcon: @Composable (() -> Unit)? = null,
-    prefix: String? = null,
-    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
-    isError: Boolean = false,
-    singleLine: Boolean = true,
-    minLines: Int = 1,
-    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
-    keyboardActions: KeyboardActions = KeyboardActions.Default,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier.fillMaxWidth(),
-        placeholder = placeholder?.let { { Text(it, style = textStyle) } },
-        leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(20.dp)) } },
-        trailingIcon = trailingIcon,
-        prefix = prefix?.let { { Text(it, style = textStyle, color = MaterialTheme.colorScheme.grayText) } },
-        textStyle = textStyle,
-        isError = isError,
-        singleLine = singleLine,
-        minLines = minLines,
-        shape = FieldShape,
-        colors = formFieldColors(),
-        keyboardOptions = keyboardOptions,
-        keyboardActions = keyboardActions,
-    )
-}
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AboutFields(
@@ -499,7 +399,7 @@ private fun AboutFields(
             placeholder = { Text(stringRes(Res.string.git_new_repository_description_placeholder)) },
             minLines = 3,
             maxLines = 6,
-            shape = FieldShape,
+            shape = FormFieldShape,
             colors = formFieldColors(),
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             modifier = Modifier.fillMaxWidth(),
@@ -507,30 +407,16 @@ private fun AboutFields(
     }
 
     LabeledField(Res.string.git_new_repository_topics) {
-        if (model.topics.isNotEmpty()) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 2.dp),
-            ) {
-                model.topics.forEach { topic ->
-                    val remove = stringRes(Res.string.git_new_repository_remove_topic, topic)
-                    InputChip(
-                        selected = true,
-                        onClick = { model.removeTopic(topic) },
-                        label = { Text("#$topic") },
-                        trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
-                        shape = RoundedCornerShape(50),
-                    )
-                }
-            }
-        }
-        FormTextField(
-            value = model.topicDraft,
-            onValueChange = { model.updateTopicDraft(it) },
+        ChipsInputField(
+            items = model.topics,
+            draft = model.topicDraft,
+            onDraftChange = { model.topicDraft = it },
+            onCommit = model::commitTopicDraft,
+            onRemove = model::removeTopic,
+            removeDescription = { stringRes(Res.string.git_new_repository_remove_topic, it) },
             placeholder = stringRes(Res.string.git_new_repository_topics_placeholder),
             leadingIcon = MaterialSymbols.Tag,
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { model.commitTopicDraft() }),
+            chipLabel = { "#$it" },
         )
     }
 }

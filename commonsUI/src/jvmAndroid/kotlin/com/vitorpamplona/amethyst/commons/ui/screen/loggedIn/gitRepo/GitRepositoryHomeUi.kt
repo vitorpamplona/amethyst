@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_body
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_title
@@ -426,16 +427,7 @@ fun RepoPushFirstCommit(event: GitRepositoryEvent) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Brush.linearGradient(listOf(colors.primary, colors.secondary))),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(22.dp), tint = colors.onPrimary)
-            }
+            GitIconTile(symbol = MaterialSymbols.CloudUpload, size = 40.dp)
             Text(
                 text = stringRes(Res.string.git_repo_push_first_title),
                 style = MaterialTheme.typography.titleMedium,
