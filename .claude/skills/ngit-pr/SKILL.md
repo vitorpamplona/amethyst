@@ -33,6 +33,18 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 
 **Default to GitHub** unless the task is specifically about a nostr proposal (a gitworkshop link, a `pr/feat/*` branch, "the PRs on the nostr remote"). One remote decides it for you. Revise/merge a PR on **the same path it was created**.
 
+## The build gate (both paths, every create, revise and merge)
+
+`main` has no branch protection, and the JVM/Android builds accept APIs that break the shared code: `HashMap.putIfAbsent`, `Dispatchers.IO` without `import kotlinx.coroutines.IO`, the stdlib `use` on skia or okio types. Four PRs merged in one day broke `main` this way (#4529, #4536, #4540, #4541), each merged while its CI was red or still running. So, before **every** push, `ngit send` or merge:
+
+```bash
+bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites
+```
+
+That is the script the git pre-push hook runs, but `.git/hooks/pre-push` is a copy that only `:amethyst:preBuild` or `./gradlew installGitHook` refreshes: a fresh clone or web container may have none, and an old one lacks the KMP compiles. Run `./gradlew installGitHook` once per checkout, and run the script by hand before `ngit send` and `ngit pr merge`, which publish without a plain `git push` of your branch. On macOS, when `iosMain` changed, also run `./gradlew :commons:compileKotlinIosSimulatorArm64 :commonsUI:compileKotlinIosSimulatorArm64`.
+
+**Merge only on green CI.** `gh pr checks <n> --repo vitorpamplona/amethyst --watch` and wait for `lint` and the iOS jobs to pass; a skipped job means `lint` failed. An ngit merge publishes `main` directly, with no PR checks on GitHub, so the gate above is the only check it gets.
+
 ---
 
 # GitHub path (`gh`)
@@ -40,7 +52,7 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 Branch off `main`, `git push -u "$GH_REMOTE" feat/<slug>`, then
 `gh pr create --repo vitorpamplona/amethyst --base main --head feat/<slug>`.
 Revise by pushing more commits to the same branch; review with `gh pr view <n> --repo vitorpamplona/amethyst --comments`;
-the maintainer merges with `gh pr merge <n> --merge` (or `--squash`). GitHub is the source of truth here — no three-mains gate.
+the maintainer merges with `gh pr merge <n> --merge` (or `--squash`) once `gh pr checks <n>` is green (the build gate above). GitHub is the source of truth here — no three-mains gate.
 
 ---
 
@@ -108,7 +120,8 @@ git checkout -b <work> main
 git cherry-pick <original-pr-tip>      # existing PR commits
 git cherry-pick <your-new-commits…>    # yours on top   (or: git rebase main)
 
-# 2. verify it compiles + tests pass.
+# 2. the build gate: must pass before you send.
+bash .git-hooks/pre-push
 
 # 3. publish as a new version, linked to the proposal:
 ngit send --in-reply-to <proposal-nevent> \
@@ -138,7 +151,8 @@ Merges nostr proposal <short-id> into main:
 <your own attribution trailer, if any>
 MSG
 
-# 3. sanity-check, then publish (background — slow):
+# 3. the build gate on the merged tree (no GitHub PR checks run on this path), then sanity-check and publish (background — slow):
+bash .git-hooks/pre-push
 [ -n "$GH_REMOTE" ] && { git merge-base --is-ancestor "$GH_REMOTE/main" HEAD && echo "clean FF push" || echo "github moved; realign"; }
 git push "$NOSTR_REMOTE" main
 ```
@@ -158,3 +172,4 @@ Delete throwaway branches pushed to the nostr remote with `git push "$NOSTR_REMO
 | push "succeeds" but nothing on gitworkshop | pushed a plain branch, not a proposal | use the `pr/` prefix or `ngit send --in-reply-to` |
 | `ngit pr view`/`merge` "failed to parse event id" | used the short prefix | pass the **full** hex id or `nevent` |
 | push hangs / times out at 2 min | normal GRASP fan-out latency | run in background; verify via `git ls-remote` |
+| `main` CI red after a merge: `lint` fails in `compile…KotlinMetadata`, the jobs after it skipped | a JVM-only API in shared code, merged without the build gate | fix forward on a branch; run `bash .git-hooks/pre-push` before the next merge |
