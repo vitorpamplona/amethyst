@@ -794,7 +794,6 @@
     <string name="show_sensitive_content_explainer">يعرض رسالة تحذير عندما يُصنّف كاتب المنشور محتواه على أنه حساس</string>
     <string name="max_hashtag_limit_title">الحد الأقصى للوسوم في المنشور</string>
     <string name="max_hashtag_limit_explainer">تُخفي المنشورات التي تحتوي على وسوم أكثر من هذا الحد. اضبط على 0 للتعطيل</string>
-    <string name="new_reaction_symbol">رمز رد فعل جديد</string>
     <string name="zapraiser_explainer">إضافة هدف الساتوشي المراد جمعه. سوف يظهر العملاء هذا كشريط تقدم لتحفيز التبرعات</string>
     <string name="zapraiser_target_amount_in_sats">الساتوشي المراد جمعه</string>
     <string name="sats_to_complete">Zapraiser عند %1$s. %2$s sats لبلوغ الهدف</string>

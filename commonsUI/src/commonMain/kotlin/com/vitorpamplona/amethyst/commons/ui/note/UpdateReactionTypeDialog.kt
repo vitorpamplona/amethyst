@@ -49,13 +49,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.reaction_choices_add
 import com.vitorpamplona.amethyst.commons.resources.reaction_choices_empty
@@ -70,43 +70,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.FlushPickerEditsOnExit
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.EmojiChoices
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.toggleEmoji
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPicker
-import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.PickedEmojis
 import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
-import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-
-/** What the picker marks as already chosen, so a tap on it removes it instead. */
-internal fun pickedEmojis(choices: List<String>) =
-    PickedEmojis(
-        unicode = choices.toSet(),
-        customLinks = choices.mapNotNullTo(HashSet()) { it.customEmojiUrlOrNull() },
-    )
-
-/**
- * [choices] with a Unicode emoji (or anything typed into the picker's search) added, or removed when
- * it is already there. Typed text keeps only its first character, or an EmojiCoder message whole.
- */
-internal fun toggleReaction(
-    choices: List<String>,
-    emoji: String,
-): List<String> {
-    val value = if (EmojiCoder.isCoded(emoji)) EmojiCoder.cropToFirstMessage(emoji) else emoji.trim().firstFullChar()
-    if (value.isBlank()) return choices
-    return if (value in choices) choices - value else choices + value
-}
-
-/** Custom emojis are matched by image, as a saved `:shortcode:url` may use another code. */
-internal fun toggleReaction(
-    choices: List<String>,
-    custom: EmojiMedia,
-): List<String> =
-    if (choices.any { it.customEmojiUrlOrNull() == custom.link }) {
-        choices.filter { it.customEmojiUrlOrNull() != custom.link }
-    } else {
-        choices + EmojiUrlTag(custom.code, custom.link).encode()
-    }
 
 /**
  * The account's reaction choices on top, removable with a tap, over the full emoji picker: one
@@ -122,7 +90,7 @@ fun UpdateReactionTypeScreen(
     nav: INav,
 ) {
     val choices by accountViewModel.reactionChoicesFlow().collectAsStateWithLifecycle()
-    val picked = remember(choices) { pickedEmojis(choices) }
+    val chosen = remember(choices) { EmojiChoices.of(choices) }
 
     // The picker reads the selected packs from the cache; this fetches them while the screen is up.
     WatchAndLoadMyEmojiList(accountViewModel)
@@ -164,13 +132,11 @@ fun UpdateReactionTypeScreen(
 
             EmojiPicker(
                 emojiPacks = accountViewModel.account.emoji,
-                onPickUnicode = { emoji -> save { toggleReaction(it, emoji) } },
-                onPickCustom = { custom -> save { toggleReaction(it, custom) } },
+                onPickUnicode = { emoji -> save { it.toggleEmoji(emoji) } },
+                onPickCustom = { custom -> save { it.toggleEmoji(custom) } },
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                picked = picked,
+                choosing = chosen,
                 fillHeight = true,
-                showFavorites = false,
-                offerTypedEmoji = true,
             )
         }
     }
@@ -227,6 +193,8 @@ private fun ReactionChoiceChip(
     onRemove: () -> Unit,
 ) {
     val remove = stringRes(Res.string.reaction_choices_remove)
+    // A custom emoji is an image: name it by its shortcode. Text emojis are read out by themselves.
+    val shortcode = remember(reactionType) { if (reactionType.customEmojiUrlOrNull() != null) reactionType.substringAfter(':').substringBefore(':') else null }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier =
@@ -234,13 +202,14 @@ private fun ReactionChoiceChip(
                 .clip(RoundedCornerShape(12.dp))
                 .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 .clickable(role = Role.Button, onClickLabel = remove, onClick = onRemove)
+                .then(if (shortcode != null) Modifier.semantics { contentDescription = ":$shortcode:" } else Modifier)
                 .heightIn(min = 40.dp)
                 .padding(start = 10.dp, end = 6.dp),
     ) {
         RenderReaction(reactionType)
         Icon(
             symbol = MaterialSymbols.Close,
-            contentDescription = remove,
+            contentDescription = null,
             modifier = Modifier.padding(start = 4.dp).size(16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )

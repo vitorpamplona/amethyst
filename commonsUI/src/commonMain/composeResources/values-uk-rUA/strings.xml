@@ -785,7 +785,6 @@
     <string name="show_sensitive_content_explainer">Показує попередження, коли автор посту позначив його як чутливий</string>
     <string name="max_hashtag_limit_title">Максимальна кількість хештегів у пості</string>
     <string name="max_hashtag_limit_explainer">Приховує пости з більшою кількістю хештегів, ніж цей ліміт. Встановіть 0, щоб вимкнути</string>
-    <string name="new_reaction_symbol">Новий символ реакції</string>
     <string name="zapraiser_explainer">Додає цільову суму сат, яку потрібно отримати для цієї посади. Клієнти, які підтримують, можуть відображати це як індикатор прогресу, щоб стимулювати пожертвування</string>
     <string name="zapraiser_target_amount_in_sats">Цільова сума в sats</string>
     <string name="sats_to_complete">Zapraiser на %1$s. %2$s sats до мети</string>

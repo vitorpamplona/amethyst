@@ -1264,7 +1264,6 @@
     <string name="max_hashtag_limit_title">Največje število ključnikov na objavo</string>
     <string name="max_hashtag_limit_explainer">Skrije objave, ki imajo več oznak od te omejitve. Za izklop nastavi na 0</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">Nov reakcijski simbol</string>
     <string name="zapraiser">Zbiranje sredstev</string>
     <string name="zapraiser_explainer">Dodaj ciljni znesek v satoshi-jih, za zbiranje donacij v tej objavi. Podprti Nostr odjemalci lahko ta cilj prikažejo kot vrstico napredka za spodbujanje donacij</string>
     <string name="zapraiser_target_amount_in_sats">Ciljni znesek v sat</string>

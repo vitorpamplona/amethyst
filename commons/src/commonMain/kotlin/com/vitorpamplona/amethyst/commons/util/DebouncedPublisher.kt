@@ -28,7 +28,9 @@ import kotlinx.coroutines.delay
  *
  * Superseding a still-pending publish cancels it. That is safe for a whole-state publish — one that
  * reads the current state when it runs rather than carrying a payload — because the replacement
- * carries the same state or newer; it is wrong for anything that publishes a delta.
+ * carries the same state or newer; it is wrong for anything that publishes a delta. A publish that
+ * already started is left to finish (it may be parked on a remote signer), and the new edit gets a
+ * publish of its own; [publish] must order the two, as `saveNewAppSpecificData` does.
  *
  * A pending edit lives entirely in the [Job] that [launch] returned, so it is only as durable as the
  * scope that job belongs to — see `aPendingPublishDiesWithTheScopeItWasLaunchedOn`. Give [launch] a
@@ -65,7 +67,7 @@ class DebouncedPublisher(
     }
 
     private fun start(delayMs: Long) {
-        pending?.cancel()
+        if (waiting) pending?.cancel()
         waiting = true
         pending =
             launch {
