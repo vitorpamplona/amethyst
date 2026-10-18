@@ -1,7 +1,7 @@
 ---
 title: "Review: what is left in amethyst/ and desktopApp/, and what each platform can share with the other"
 type: refactor
-status: in-progress (the §1 bugs are fixed)
+status: in-progress (§1 and §2 done)
 date: 2026-10-17
 owner: commons
 consumers: amethyst, desktopApp, commonsUI, commons, nestsClient
@@ -62,6 +62,18 @@ Paths are relative to `amethyst/src/main/java/com/vitorpamplona/amethyst/` (Andr
 | 8 | **Encrypted Concord community images fall back to robohash.** | `rememberConcordImageModel` uses the plain URL by default; only Android decrypts. | §3, A6. |
 
 ## 2. Dead code in `desktopApp` (delete)
+
+**Done 2026-10-18.**
+- Deleted, with their tests: `AccountManager`, `LoginProgress`, `DesktopHttpClient`, the four theme
+  files, `PlatformMaterialTheme`, `LocalWindowState` and `DesktopScheduleAtPickerTest`.
+- `MediaHttp` and `DesktopImageLoaderSetup` no longer fall back to a direct client: a fetch before
+  `main` installs them fails instead of skipping Tor.
+- `BlossomClientTest`, `MediaCompressorTest`, `MediaMetadataReaderTest` and
+  `UploadOrchestratorClientTest` (renamed: commons already has an `UploadOrchestratorTest`) moved
+  to `commons/jvmTest`, and `NwcRpcIntegrationTest` to `quartz/jvmTest`.
+- The Compose UI tests and `DecodeImageWithSkiaTest` stay in `desktopApp`. They need Compose's UI
+  test library or Skia, and only the desktop smoke job runs them under Xvfb.
+
 
 Reachability was checked with grep from `desktop/app/`:
 

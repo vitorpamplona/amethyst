@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomMirrorUnsupportedException
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import io.mockk.Runs

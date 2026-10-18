@@ -18,11 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.upload
+package com.vitorpamplona.amethyst.commons.service.upload
 
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.amethyst.commons.service.upload.UploadOrchestrator
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import io.mockk.coEvery
@@ -40,7 +37,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-class UploadOrchestratorTest {
+class UploadOrchestratorClientTest {
     @BeforeTest
     fun setup() {
         mockkObject(BlossomAuth)
