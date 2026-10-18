@@ -18,31 +18,46 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.calendar
+package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
+import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.runTest
+import okio.Path.Companion.toOkioPath
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.File
 
 /**
- * The predicate that decides whether the CalendarReminderWorker's periodic
- * chain may cancel itself. Getting it wrong in either direction is a bug:
+ * The predicate that decides whether a reminder scan may stop (Android's periodic worker chain
+ * cancels itself on it). Getting it wrong in either direction is a bug:
  * a false "could fire" keeps waking the process forever; a false "can't fire"
  * silently kills a reminder the user RSVP'd to.
  *
  * Events go in through [consumePinned], which takes each event's note from the cache *before*
  * consuming it and keeps it for the test's lifetime. `LocalCache` holds notes weakly
- * (LargeSoftCache) and the worker finds RSVPs and their time slots by reading the cache, so a
+ * (LargeSoftCache) and the scanner finds RSVPs and their time slots by reading the cache, so a
  * GC before that read would lose them — a lost slot reads as "not fetched yet" and flips
  * `couldStillFire` to true.
  */
-class CalendarReminderCandidatesTest {
+class CalendarReminderScannerTest {
+    @get:Rule
+    val folder = TemporaryFolder()
+
     private val now = 2_000_000_000L
 
     private val pinned = mutableListOf<Note>()
@@ -103,7 +118,7 @@ class CalendarReminderCandidatesTest {
         consumePinned(accepted)
         consumePinned(declined)
 
-        val found = CalendarReminderWorker.acceptedRsvpsInCache()
+        val found = CalendarReminderScanner.acceptedRsvpsInCache()
         assertTrue("accepted RSVP must be found", found.any { it.dTag() == "cand-accepted" })
         assertFalse("declined RSVP must be skipped", found.any { it.dTag() == "cand-declined" })
     }
@@ -115,7 +130,7 @@ class CalendarReminderCandidatesTest {
         consumePinned(slot)
         consumePinned(r)
 
-        assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
+        assertTrue(CalendarReminderScanner.couldStillFire(listOf(r), now))
     }
 
     @Test
@@ -125,7 +140,7 @@ class CalendarReminderCandidatesTest {
         consumePinned(slot)
         consumePinned(r)
 
-        assertFalse(CalendarReminderWorker.couldStillFire(listOf(r), now))
+        assertFalse(CalendarReminderScanner.couldStillFire(listOf(r), now))
     }
 
     @Test
@@ -135,7 +150,7 @@ class CalendarReminderCandidatesTest {
         val r = rsvp("cand-rsvp-unresolved", "cand-never-fetched")
         consumePinned(r)
 
-        assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
+        assertTrue(CalendarReminderScanner.couldStillFire(listOf(r), now))
     }
 
     @Test
@@ -146,7 +161,7 @@ class CalendarReminderCandidatesTest {
         consumePinned(slot)
         consumePinned(r)
 
-        assertTrue(CalendarReminderWorker.couldStillFire(listOf(r), now))
+        assertTrue(CalendarReminderScanner.couldStillFire(listOf(r), now))
     }
 
     @Test
@@ -154,11 +169,43 @@ class CalendarReminderCandidatesTest {
         val r = rsvp("cand-rsvp-no-a-tag", targetDTag = null)
         consumePinned(r)
 
-        assertFalse(CalendarReminderWorker.couldStillFire(listOf(r), now))
+        assertFalse(CalendarReminderScanner.couldStillFire(listOf(r), now))
     }
 
     @Test
     fun emptyCache_doesNotKeepTheChainAlive() {
-        assertFalse(CalendarReminderWorker.couldStillFire(emptyList(), now))
+        assertFalse(CalendarReminderScanner.couldStillFire(emptyList(), now))
+    }
+
+    @Test
+    fun scan_notifiesOncePerStartInsideTheLeadWindow() =
+        runTest {
+            val soon = timeSlot("scan-soon", startSeconds = now + 10 * 60)
+            val later = timeSlot("scan-later", startSeconds = now + 60 * 60)
+            consumePinned(soon)
+            consumePinned(later)
+            consumePinned(rsvp("scan-rsvp-soon", "scan-soon"))
+            consumePinned(rsvp("scan-rsvp-later", "scan-later"))
+
+            val log = CalendarReminderLogStore(dataStore())
+            val fired = mutableListOf<DueCalendarReminder>()
+
+            CalendarReminderScanner.scan(leadMinutes = 15, log = log, now = now) { fired.add(it) }
+            val first = fired.filter { it.eventId == soon.id || it.eventId == later.id }
+            assertEquals(listOf(soon.id), first.map { it.eventId })
+            assertEquals(10, first.single().minutesAway)
+            assertTrue(first.single().deepLink.startsWith("nostr:naddr1"))
+
+            fired.clear()
+            CalendarReminderScanner.scan(leadMinutes = 15, log = log, now = now + 60) { fired.add(it) }
+            assertTrue("a reminder fires once per start", fired.none { it.eventId == soon.id })
+        }
+
+    private fun dataStore(): DataStore<Preferences> {
+        val file = File(folder.root, "reminder_log.preferences_pb")
+        return PreferenceDataStoreFactory.createWithPath(
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+            produceFile = { file.toOkioPath() },
+        )
     }
 }

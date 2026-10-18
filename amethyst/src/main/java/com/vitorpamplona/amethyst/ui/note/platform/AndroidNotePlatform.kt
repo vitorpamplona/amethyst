@@ -51,9 +51,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as A
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent as AppRenderMeetingRoomEvent
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence as AppRenderMeetingRoomPresence
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent as AppRenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
 import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
@@ -391,39 +388,6 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingSpaceEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingSpaceEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingRoomEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingRoomEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderMeetingRoomPresence(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderMeetingRoomPresence(
-        baseNote = baseNote,
         accountViewModel = accountViewModel,
         nav = nav,
     )

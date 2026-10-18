@@ -38,8 +38,10 @@ import coil3.request.Options
 import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
 import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.Call
@@ -48,12 +50,21 @@ import java.io.File
 
 object DesktopImageLoaderSetup {
     @OptIn(DelicateCoilApi::class)
-    fun setup(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }) {
-        SingletonImageLoader.setUnsafe(createImageLoader(clientForUrl))
+    fun setup(
+        clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() },
+        blossomServerResolver: (() -> BlossomServerResolver)? = null,
+    ) {
+        SingletonImageLoader.setUnsafe(createImageLoader(clientForUrl, blossomServerResolver))
     }
 
-    /** [clientForUrl] picks the HTTP client per image, so each URL gets its own Tor decision. */
-    fun createImageLoader(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }): ImageLoader =
+    /**
+     * [clientForUrl] picks the HTTP client per image, so each URL gets its own Tor decision.
+     * [blossomServerResolver] loads `blossom:` URIs from the server that holds the blob.
+     */
+    fun createImageLoader(
+        clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() },
+        blossomServerResolver: (() -> BlossomServerResolver)? = null,
+    ): ImageLoader =
         ImageLoader
             .Builder(PlatformContext.INSTANCE)
             .memoryCache { newMemoryCache() }
@@ -69,6 +80,7 @@ object DesktopImageLoaderSetup {
                 add(BlurHashFetcher.Factory)
                 add(SnoFetcher.Factory)
                 add(ThumbHashFetcher.Factory)
+                blossomServerResolver?.let { add(BlossomFetcher.Factory(it, clientForUrl, ConcurrentRequestStrategy.UNCOORDINATED)) }
                 add(Base64Fetcher.BKeyer)
                 add(BlurHashFetcher.BKeyer)
                 add(SnoFetcher.SKeyer)

@@ -44,6 +44,7 @@ import coil3.util.Logger
 import coil3.video.VideoFrameDecoder
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
@@ -110,7 +111,7 @@ class ImageLoaderSetup {
                         add(BlurHashFetcher.Factory)
                         add(SnoFetcher.Factory)
                         add(ThumbHashFetcher.Factory)
-                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
+                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth) { fetcher, key -> fetcher.onSystemFileSystem(key) })
                         add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
                         add(Base64Fetcher.BKeyer)
                         add(BlurHashFetcher.BKeyer)

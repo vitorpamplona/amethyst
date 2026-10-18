@@ -30,10 +30,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.richtext.BlossomUriSegment
 import com.vitorpamplona.amethyst.commons.richtext.BuzzInviteLinkSegment
+import com.vitorpamplona.amethyst.commons.richtext.CashuSegment
+import com.vitorpamplona.amethyst.commons.richtext.ClinkOfferSegment
 import com.vitorpamplona.amethyst.commons.richtext.ConcordInviteLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexEventSegment
 import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
+import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayGroupLinkSegment
@@ -41,7 +44,9 @@ import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.BechLink
+import com.vitorpamplona.amethyst.commons.ui.components.CashuPreview
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableEmail
@@ -51,10 +56,13 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.ImageGallery
+import com.vitorpamplona.amethyst.commons.ui.components.MayBeWithdrawal
 import com.vitorpamplona.amethyst.commons.ui.components.NowhereLinkCard
 import com.vitorpamplona.amethyst.commons.ui.components.RelayGroupCard
 import com.vitorpamplona.amethyst.commons.ui.components.TagLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.ClinkOfferPreview
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertPadding
@@ -62,9 +70,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * The rich-text segment renderer every front end shares: mentions, quoted notes, links and link
- * previews, media, relay and invite links. The leaves that need a platform engine (LaTeX, payment
- * cards, Blossom resolution, revealing secret emoji) degrade to text or a plain link here; a
- * platform subclasses this and overrides them with its own.
+ * previews, media, relay and invite links, payment cards, `blossom:` URIs and secret emoji. The
+ * leaves that need a platform engine (LaTeX) degrade to text here; a platform subclasses this and
+ * overrides them with its own.
  *
  * Recreate one per `RichTextViewer` call (it captures per-call state); it is cheap.
  */
@@ -148,13 +156,21 @@ open class DefaultRichTextSegmentRenderer(
         TagLink(segment, accountViewModel, nav)
     }
 
-    /** Invoices, withdrawals, Cashu tokens and Clink offers, as text where no payment card exists. */
+    /** Invoices, withdrawals, Cashu tokens and Clink offers, as their payment cards. */
     @Composable
     override fun Payment(
         segment: Segment,
         modifier: Modifier,
     ) {
-        Text(segment.segmentText)
+        when (segment) {
+            // Don't surface a pay/withdraw affordance when previews are suppressed: the raw text.
+            is InvoiceSegment -> if (canPreview) MayBeInvoicePreview(segment.segmentText, accountViewModel) else Text(segment.segmentText)
+            is WithdrawSegment -> if (canPreview) MayBeWithdrawal(segment.segmentText, accountViewModel) else Text(segment.segmentText)
+            // Cashu + Clink decode locally (network only on tap), so they render in both modes.
+            is CashuSegment -> CashuPreview(segment.segmentText, accountViewModel)
+            is ClinkOfferSegment -> ClinkOfferPreview(segment.offer, accountViewModel, nav)
+            else -> Text(segment.segmentText)
+        }
     }
 
     @Composable
@@ -219,7 +235,7 @@ open class DefaultRichTextSegmentRenderer(
         }
     }
 
-    /** A message hidden in an emoji, shown as the emoji itself where it cannot be revealed. */
+    /** A message hidden in an emoji, revealed on tap. */
     @Composable
     override fun SecretMessage(
         segment: SecretEmoji,
@@ -227,14 +243,18 @@ open class DefaultRichTextSegmentRenderer(
         canPreview: Boolean,
         quotesLeft: Int,
         modifier: Modifier,
-    ) {
-        Text(segment.segmentText)
-    }
+    ) = DisplaySecretEmoji(segment, state, callbackUri, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 
-    /** A `blossom:` URI: a link to the blob, until a platform resolves and previews it. */
+    /** A `blossom:` URI, resolved to a server that holds the blob (BUD-10) and previewed. */
     @Composable
     open fun BlossomUri(
         uri: String,
         state: RichTextViewerState,
-    ) = ClickableUrlOrBlossom(uri, uri)
+    ) {
+        if (canPreview) {
+            BlossomUriRenderer(uri, state, callbackUri, accountViewModel, nav)
+        } else {
+            BlossomUriRendererNoPreview(uri, accountViewModel)
+        }
+    }
 }

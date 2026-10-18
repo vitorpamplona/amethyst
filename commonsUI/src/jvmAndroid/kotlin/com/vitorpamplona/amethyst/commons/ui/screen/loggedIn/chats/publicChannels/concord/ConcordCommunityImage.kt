@@ -18,12 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.utils.Log
@@ -40,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
 private val resolvedByHash = ConcurrentHashMap<String, String>()
 
 /**
- * Resolve a CORD-02 §6 community [pointer] to a model string for [RobohashFallbackAsyncImage]:
+ * Resolve a CORD-02 §6 community [pointer] to a model string for `RobohashFallbackAsyncImage`:
  *
  *  - **null / blank** → null (caller falls back to the robohash).
  *  - **plain URL** (a url-only pointer, e.g. Amethyst's own metadata form) → the URL, loaded directly.
@@ -48,26 +47,29 @@ private val resolvedByHash = ConcurrentHashMap<String, String>()
  *    the plaintext SHA-256 (all in [ImagePointer.decryptOrNull]), cache the plaintext to disk, and
  *    return its `file://` path. Returns null while loading or on any fetch/decrypt/integrity failure,
  *    so a swapped or unreachable blob simply shows the robohash instead of garbage.
+ *
+ * The plaintext lands in [cacheDir], which must be private to the app (it holds a private
+ * community's pictures).
  */
 @Composable
-fun rememberConcordImageModel(
+fun rememberDecryptedConcordImageModel(
     pointer: ImagePointer?,
     accountViewModel: AccountViewModel,
+    cacheDir: File,
 ): String? {
     if (pointer == null) return null
 
     // A url-only pointer isn't encrypted media — hand the URL straight to Coil.
     if (!pointer.isResolvable()) return pointer.url.ifBlank { null }
 
-    val context = LocalContext.current
-    val model by produceState<String?>(resolvedByHash[pointer.hash], pointer, accountViewModel) {
+    val model by produceState<String?>(resolvedByHash[pointer.hash], pointer, accountViewModel, cacheDir) {
         if (value != null) return@produceState
         value =
             withContext(Dispatchers.IO) {
                 runCatching {
                     resolvedByHash[pointer.hash]?.let { return@runCatching it }
 
-                    val cacheFile = File(context.cacheDir, "concord-img-${pointer.hash}")
+                    val cacheFile = File(cacheDir, "concord-img-${pointer.hash}")
                     if (!cacheFile.exists()) {
                         val client = accountViewModel.httpClientBuilder.okHttpClientForImage(pointer.url)
                         val ciphertext =
@@ -77,6 +79,7 @@ fun rememberConcordImageModel(
                             }
 
                         val plaintext = pointer.decryptOrNull(ciphertext) ?: return@runCatching null
+                        cacheDir.mkdirs()
                         cacheFile.writeBytes(plaintext)
                     }
                     val uri = "file://${cacheFile.absolutePath}"
