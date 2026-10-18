@@ -73,7 +73,14 @@ private class AndroidImageSharer(
 
     /** The file lives in `cacheDir`, covered by the `<cache-path>` entry in `file_paths.xml`. */
     private fun saveToCache(image: ImageBitmap): Uri {
-        val file = File(context.cacheDir, "amethyst_share_${System.currentTimeMillis()}.png")
+        // The receiving app reads the file after we hand it over, so it can't be deleted then;
+        // the previous shares' files can, once any receiver has long finished with them.
+        val staleBefore = System.currentTimeMillis() - STALE_SHARE_MS
+        context.cacheDir
+            .listFiles { f -> f.name.startsWith(SHARE_FILE_PREFIX) && f.lastModified() < staleBefore }
+            ?.forEach { it.delete() }
+
+        val file = File(context.cacheDir, "$SHARE_FILE_PREFIX${System.currentTimeMillis()}.png")
         FileOutputStream(file).use { out ->
             image.asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, out)
         }
@@ -82,3 +89,7 @@ private class AndroidImageSharer(
 }
 
 private const val PNG_MIME = "image/png"
+
+private const val SHARE_FILE_PREFIX = "amethyst_share_"
+
+private const val STALE_SHARE_MS = 60 * 60 * 1000L

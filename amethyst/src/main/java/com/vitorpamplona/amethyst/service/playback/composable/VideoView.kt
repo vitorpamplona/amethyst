@@ -119,7 +119,10 @@ fun VideoView(
 
     // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
     // If the user manually tapped the download button, they want it to play.
-    val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
+    // Never inside a share-as-image capture: audio keeps its player there, unseen and unstoppable.
+    val autoplay =
+        LocalMediaCapture.current == null &&
+            (alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value))
 
     // Resolve the aspect ratio once per composition. Prime the URL-keyed cache from the imeta
     // dim tag so the next time this video appears (PiP, dialog, list re-enter) the cache hits

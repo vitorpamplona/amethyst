@@ -108,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -209,7 +210,16 @@ fun ShareNoteAsImageFileScreen(
 
                 if (!shared) {
                     shared = true
-                    if (!imageSharer.share(bitmap, shareImageTitle)) {
+                    val sent =
+                        try {
+                            imageSharer.share(bitmap, shareImageTitle)
+                        } catch (e: Exception) {
+                            // Writing the PNG (a full disk) or reaching the share sheet can fail.
+                            if (e is CancellationException) throw e
+                            Log.w("ShareNoteAsImage", "Could not share the image", e)
+                            false
+                        }
+                    if (!sent) {
                         accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.share_as_image_failed)
                     } else if (!imageSharer.opensShareSheet) {
                         accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.copied_to_clipboard)
@@ -296,11 +306,17 @@ fun ShareNoteAsImageScreen(
                     val result = finalState.result
                     if (result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         account.settings.changeDefaultFileServer(server)
-                        textSharer.share(result.url, null, shareUrlTitle)
-                        if (!imageSharer.opensShareSheet) {
-                            accountViewModel.toastManager.toast(Res.string.share_as_image_url, Res.string.copied_to_clipboard)
+                        try {
+                            textSharer.share(result.url, null, shareUrlTitle)
+                            if (!imageSharer.opensShareSheet) {
+                                accountViewModel.toastManager.toast(Res.string.share_as_image_url, Res.string.copied_to_clipboard)
+                            }
+                            nav.popBack()
+                        } catch (e: Exception) {
+                            // Desktop puts the link on a clipboard another app may hold: show it instead.
+                            if (e is CancellationException) throw e
+                            accountViewModel.toastManager.toast(Res.string.share_as_image_url, result.url, e)
                         }
-                        nav.popBack()
                     } else {
                         accountViewModel.toastManager.toast(
                             Res.string.failed_to_upload_media_no_details,

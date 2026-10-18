@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -92,8 +93,9 @@ fun RenderContentAsMarkdown(
                 CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
             }
 
+        val forCapture = LocalMediaCapture.current != null
         val renderer =
-            remember(content, tags, canPreview, quotesLeft, callbackUri, accountViewModel, nav) {
+            remember(content, tags, canPreview, quotesLeft, callbackUri, accountViewModel, nav, forCapture) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
                     imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),
@@ -103,6 +105,7 @@ fun RenderContentAsMarkdown(
                     callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    forCapture = forCapture,
                 )
             }
 

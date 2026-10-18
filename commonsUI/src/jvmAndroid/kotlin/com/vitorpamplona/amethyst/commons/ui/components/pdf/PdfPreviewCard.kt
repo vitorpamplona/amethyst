@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentRow
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
@@ -192,6 +193,7 @@ private fun LoadedPdfPreviewCard(
 
     when (val current = state) {
         is PdfLoadState.Loading -> {
+            ReportCaptureLoading()
             PdfSkeletonCard(filename, knownAspectRatio)
         }
 

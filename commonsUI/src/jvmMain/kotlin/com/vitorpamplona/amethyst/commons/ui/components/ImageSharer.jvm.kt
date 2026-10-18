@@ -25,10 +25,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toAwtImage
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
-import com.vitorpamplona.amethyst.commons.service.uploads.StringMediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.awt.HeadlessException
 import java.awt.Image
 import java.awt.Toolkit
@@ -48,15 +49,17 @@ private object ClipboardImageSharer : ImageSharer {
             val file = AmethystTempDir.createTempFile("amethyst_share_", ".png")
             file.deleteOnExit()
             file.writeBytes(image.encodePng())
-            StringMediaUri(file.absolutePath)
+            mediaUriOfFile(file.toOkioPath())
         }
 
     override suspend fun share(
         image: ImageBitmap,
         chooserTitle: String,
-    ): Boolean =
-        try {
-            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(image.toAwtImage()), null)
+    ): Boolean {
+        // A per-pixel copy, tens of MB for a long card: keep it off the UI thread.
+        val awtImage = withContext(Dispatchers.Default) { image.toAwtImage() }
+        return try {
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(ImageTransferable(awtImage), null)
             true
         } catch (e: IllegalStateException) {
             // Another app holds the clipboard open (Windows).
@@ -66,6 +69,7 @@ private object ClipboardImageSharer : ImageSharer {
             Log.w("ImageSharer", "No clipboard in a headless JVM", e)
             false
         }
+    }
 }
 
 private class ImageTransferable(

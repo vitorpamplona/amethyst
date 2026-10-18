@@ -201,8 +201,6 @@ fun noteActionSections(
             onDismiss = handlers.onDismiss,
         )
 
-    val shareActions = shareNoteActions(note, nav, handlers.onDismiss)
-
     val copyAndShare =
         buildList {
             add(
@@ -265,7 +263,7 @@ fun noteActionSections(
                 if (handlers.onShare != null) {
                     add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
                 } else {
-                    addAll(shareActions)
+                    addAll(shareNoteActions(note, nav, handlers.onDismiss))
                 }
             }
         }

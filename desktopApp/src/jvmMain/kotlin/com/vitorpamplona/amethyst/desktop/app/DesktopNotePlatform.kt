@@ -150,13 +150,15 @@ object DesktopNotePlatform : NotePlatform {
     /**
      * What a video shows while its note is captured as an image, where the player's surface
      * can't be recorded: the poster when the post names one, else the frame
-     * [VideoThumbnailCache] extracts (none for a live stream).
+     * [VideoThumbnailCache] extracts. None for a live stream, and none unless the user lets videos
+     * load on this connection ([AccountViewModel]'s startVideoPlayback), as on Android.
      */
     @Composable
     private fun CapturedVideoStill(
         url: String,
         artworkUri: String?,
         isLive: Boolean,
+        accountViewModel: AccountViewModel,
         ratio: Float?,
         blurhash: String?,
         thumbhash: String?,
@@ -169,7 +171,7 @@ object DesktopNotePlatform : NotePlatform {
         } else {
             VideoStillFrame(
                 key = url,
-                loadFrame = { if (isLive) null else VideoThumbnailCache.getThumbnail(url) },
+                loadFrame = { if (isLive || !accountViewModel.settings.startVideoPlayback()) null else VideoThumbnailCache.getThumbnail(url) },
                 ratio = ratio,
                 blurhash = blurhash,
                 thumbhash = thumbhash,
@@ -219,7 +221,7 @@ object DesktopNotePlatform : NotePlatform {
                 }
                 if (LocalMediaCapture.current != null) {
                     val ratio = content.dim.ratioOrNull() ?: MediaAspectRatioCache.get(url)
-                    CapturedVideoStill(url, video?.artworkUri, isLive, ratio, content.blurhash, content.thumbhash, shape, content.description)
+                    CapturedVideoStill(url, video?.artworkUri, isLive, accountViewModel, ratio, content.blurhash, content.thumbhash, shape, content.description)
                     return
                 }
                 DesktopVideoPlayer(
@@ -344,7 +346,7 @@ object DesktopNotePlatform : NotePlatform {
             if (isAnimatedGifUrl(videoUri)) {
                 AnimatedGifImage(url = videoUri, contentDescription = contentDescription, modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape), contentScale = contentScale)
             } else {
-                CapturedVideoStill(videoUri, null, false, dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri), blurhash, thumbhash, shape, contentDescription)
+                CapturedVideoStill(videoUri, null, false, accountViewModel, dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri), blurhash, thumbhash, shape, contentDescription)
             }
             return
         }
@@ -376,7 +378,7 @@ object DesktopNotePlatform : NotePlatform {
         val shape = RoundedCornerShape(cornerRadius)
         // Audio keeps its player: there is no frame to show.
         if (LocalMediaCapture.current != null && declaredAsAudio(mimeType, videoUri) != true) {
-            CapturedVideoStill(videoUri, artworkUri, isLiveStream, MediaAspectRatioCache.get(videoUri), null, null, shape, title)
+            CapturedVideoStill(videoUri, artworkUri, isLiveStream, accountViewModel, MediaAspectRatioCache.get(videoUri), null, null, shape, title)
             return
         }
         val source = rememberZoomSourceAnchor()
