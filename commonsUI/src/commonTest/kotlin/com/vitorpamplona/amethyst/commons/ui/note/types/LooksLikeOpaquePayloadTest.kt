@@ -54,4 +54,30 @@ class LooksLikeOpaquePayloadTest {
         assertTrue(looksLikeOpaquePayload("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDABQODxIPDRQSEBIXFRQYHjIhHhwcHj0sLiQySUBMS0dARkVQWnNiUFVtVkVGZIhlbXd7gYKBTmCNl4x9lnN+gXz/"))
         assertTrue(looksLikeOpaquePayload("AjL2Kc8m" + "x".repeat(200)))
     }
+
+    @Test
+    fun proseWithOneLongTokenIsShown() {
+        val invoice = "lnbc10u1p" + "q".repeat(200)
+        assertFalse(looksLikeOpaquePayload("Pay here: $invoice"))
+        assertFalse(looksLikeOpaquePayload("summarize naddr1" + "q".repeat(180) + " please"))
+        assertFalse(looksLikeOpaquePayload("Your change: cashuA" + "e".repeat(300)))
+    }
+
+    @Test
+    fun aLoneInvoiceOrEntityIsShown() {
+        assertFalse(looksLikeOpaquePayload("lnbc10u1p" + "q".repeat(200)))
+        assertFalse(looksLikeOpaquePayload("naddr1" + "q".repeat(180)))
+    }
+
+    @Test
+    fun bracketedProseIsNotJson() {
+        assertFalse(looksLikeOpaquePayload("[spam] posted links [x]"))
+        assertTrue(looksLikeOpaquePayload("""["a", "b"]"""))
+    }
+
+    @Test
+    fun lineWrappedBase64IsHidden() {
+        val wrapped = (1..4).joinToString("\n") { "QUJDREVGR0hJSktMTU5PUFFSU1RVVldYWVphYmNkZWZnaGlqa2xtbm9wcXJzdHV2d3h5ejAxMjM0NTY3ODk" }
+        assertTrue(looksLikeOpaquePayload(wrapped))
+    }
 }

@@ -152,7 +152,6 @@ import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import org.jetbrains.compose.resources.StringResource
@@ -437,7 +436,7 @@ fun RenderCiCoordinatorAdvertisement(baseNote: Note) {
     val execution = remember(event) { event.execution() }
     val billing = remember(event) { event.billing() }
     val acceptsSecrets = remember(event) { event.acceptsSecretUpdates() }
-    val liveUntil = remember(event) { if (event.isLive()) event.validExpiration() else null }
+    val liveUntil = rememberAtNow(event) { now -> if (event.isLive(now)) event.validExpiration() else null }
 
     KindCard(
         icon = MaterialSymbols.Dns,
@@ -469,7 +468,7 @@ fun RenderCiRequestReadinessList(
     val event = baseNote.event as? CiRequestReadinessListEvent ?: return
     val repositories = remember(event) { event.repositories().map { it.dTag } }
     val maintainers = remember(event) { event.maintainers().map { it.pubKey } }
-    val liveUntil = remember(event) { if (event.isLive()) event.validExpiration() else null }
+    val liveUntil = rememberAtNow(event) { now -> if (event.isLive(now)) event.validExpiration() else null }
 
     KindCard(
         icon = MaterialSymbols.Checklist,
@@ -498,7 +497,7 @@ fun RenderCiRepositoryStatus(baseNote: Note) {
             (event.runnerFamilies() + event.runnerSelectors().map { it.toValue() }).distinct()
         }
     val secrets = remember(event) { event.secrets().map { it.name } }
-    val liveUntil = remember(event) { if (event.isLive()) event.validExpiration() else null }
+    val liveUntil = rememberAtNow(event) { now -> if (event.isLive(now)) event.validExpiration() else null }
 
     KindCard(
         icon = MaterialSymbols.Dns,
@@ -773,7 +772,7 @@ fun RenderIdentityProof(baseNote: Note) {
     val revoked = remember(event) { event.isRevoked() }
     val reason = remember(event) { event.revocationReason() }
     val expiry = remember(event) { event.expiry() }
-    val expired = remember(event) { event.isExpired() }
+    val expired = rememberAtNow(event) { now -> event.isExpired(now) }
 
     KindCard(
         icon = MaterialSymbols.Security,
@@ -849,7 +848,7 @@ fun RenderSiteSnapshot(
         title = stringRes(Res.string.kc_dev_site_snapshot),
         subtitle = name,
     ) {
-        SnapshotFacts(event.description(), event.paths(), event.source(), event.servers())
+        SnapshotFacts(remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) })
         site?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
@@ -859,32 +858,37 @@ fun RenderSiteSnapshot(
 fun RenderNappletSnapshot(baseNote: Note) {
     val event = baseNote.event as? NappletSnapshotEvent ?: return
     val requires = remember(event) { event.requires() }
+    val title = remember(event) { event.title() }
 
     KindCard(
         icon = MaterialSymbols.Extension,
         title = stringRes(Res.string.kc_dev_napplet_snapshot),
-        subtitle = event.title(),
+        subtitle = title,
     ) {
-        SnapshotFacts(event.description(), event.paths(), event.source(), event.servers())
+        SnapshotFacts(remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) })
         SectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }
 
-@Composable
-private fun SnapshotFacts(
-    description: String?,
-    paths: List<PathTag>,
-    source: String?,
-    servers: List<String>,
+/**
+ * What a site or napplet snapshot card shows, parsed once per event: a snapshot can carry thousands
+ * of path tags, and the card only needs how many there are.
+ */
+private class SnapshotInfo(
+    val description: String?,
+    val fileCount: Int,
+    val source: String?,
+    serverUrls: List<String>,
 ) {
-    KindCardMeta(listOf(description))
-    KindCardMeta(listOf(if (paths.isNotEmpty()) pluralStringRes(Res.plurals.kc_dev_files_count, paths.size, paths.size) else null))
-    KindCardField(stringRes(Res.string.kc_dev_source), source, maxLines = 1)
-    SectionChips(
-        stringRes(Res.string.kc_dev_servers),
-        servers.map { it.removePrefix("https://").removeSuffix("/") },
-        MAX_SERVER_CHIPS,
-    )
+    val servers = serverUrls.map { it.removePrefix("https://").removeSuffix("/") }
+}
+
+@Composable
+private fun SnapshotFacts(info: SnapshotInfo) {
+    KindCardMeta(listOf(info.description))
+    KindCardMeta(listOf(if (info.fileCount > 0) pluralStringRes(Res.plurals.kc_dev_files_count, info.fileCount, info.fileCount) else null))
+    KindCardField(stringRes(Res.string.kc_dev_source), info.source, maxLines = 1)
+    SectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)
 }
 
 // ---------------------------------------------------------------------------------------------

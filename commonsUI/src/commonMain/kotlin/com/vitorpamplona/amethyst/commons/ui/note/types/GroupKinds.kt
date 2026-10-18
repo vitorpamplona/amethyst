@@ -174,20 +174,25 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 
 /**
  * The group a NIP-29 event belongs to. A group id is only unique within its host relay, and these
- * events never name it: the host is the relay that served the note. Null when no relay is known.
+ * events never name it: the host is one of the relays that served the note. Null when the cache
+ * knows no such group yet.
+ *
+ * Only looks groups up, never creates them: a card drawn from an outbox or aggregator relay would
+ * otherwise plant an empty group on the wrong relay. Not remembered, so a later recomposition finds
+ * a group that arrived after the card was first drawn; the lookups are map reads.
  */
 @Composable
 private fun rememberRelayGroup(
     baseNote: Note,
     groupId: String?,
-): RelayGroupChannel? = remember(baseNote, groupId) { groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) } }
+): RelayGroupChannel? = groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) }
 
 private fun relayGroupChannelOf(
     note: Note,
     groupId: String,
 ): RelayGroupChannel? =
     note.inGatherers?.firstNotNullOfOrNull { gatherer -> (gatherer as? RelayGroupChannel)?.takeIf { it.groupId.id == groupId } }
-        ?: note.relays.firstOrNull()?.let { LocalCache.getOrCreateRelayGroupChannel(GroupId(groupId, it)) }
+        ?: note.relays.firstNotNullOfOrNull { LocalCache.getRelayGroupChannelIfExists(GroupId(groupId, it)) }
 
 /**
  * A card's subtitle: [lead] (a count) and, when there is no [channel] header to name the group, the

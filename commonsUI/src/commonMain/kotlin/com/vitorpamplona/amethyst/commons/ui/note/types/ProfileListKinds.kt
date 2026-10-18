@@ -175,7 +175,6 @@ import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEve
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.PluralStringResource
@@ -878,7 +877,7 @@ fun RenderUserStatus(
     val eventId = remember(event) { event.referencedEventId() }
     val address = remember(event) { event.referencedAddressId()?.let { Address.parse(it) } }
 
-    val isExpired = remember(event) { expiration != null && expiration < TimeUtils.now() }
+    val isExpired = rememberAtNow(event) { now -> expiration != null && expiration < now }
     val isMusic = type == UserStatusEvent.MUSIC
 
     val title =
@@ -920,8 +919,7 @@ fun RenderUserStatus(
 fun RenderPostingStreak(baseNote: Note) {
     val event = baseNote.event as? PostingStreakEvent ?: return
 
-    val now = remember(event) { TimeUtils.now() }
-    val streak = remember(event) { event.streak(now) }
+    val streak = remember(event) { event.streak() }
 
     if (streak == null) {
         KindCard(
@@ -933,7 +931,7 @@ fun RenderPostingStreak(baseNote: Note) {
         return
     }
 
-    val isLive = streak.isLive(now)
+    val isLive = rememberAtNow(streak) { now -> streak.isLive(now) }
     val days = streak.days().toInt()
 
     KindCard(

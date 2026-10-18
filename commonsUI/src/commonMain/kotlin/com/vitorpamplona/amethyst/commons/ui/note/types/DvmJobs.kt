@@ -330,7 +330,7 @@ fun RenderDvmRequest(
     KindCard(
         icon = icon,
         title = title,
-        status = info.bidSats?.let { satsLabel(it) },
+        status = info.bidSats?.takeIf { it > 0 }?.let { satsLabel(it) },
         statusTone = KindTone.Money,
     ) {
         // The input is the hero: the prompt or text, the link (media previews inline), the event.
@@ -392,6 +392,7 @@ fun RenderDvmResult(
                 .firstAmount()
                 ?.amount
                 ?.div(1000)
+                ?.takeIf { it > 0 }
         }?.let { satsLabel(it) }
 
     if (encrypted) {
@@ -583,7 +584,7 @@ fun RenderDvmHeartbeat(
     nav: INav,
 ) {
     val event = baseNote.event as? DvmHeartbeatEvent ?: return
-    val fresh = remember(event) { event.isFreshAt() }
+    val fresh = rememberAtNow(event) { now -> event.isFreshAt(now) }
     val announcement =
         remember(event) {
             event.dTag().ifBlank { null }?.let { Address(AppDefinitionEvent.KIND, event.pubKey, it) }

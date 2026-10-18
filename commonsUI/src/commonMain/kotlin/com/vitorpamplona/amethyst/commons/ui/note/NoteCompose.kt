@@ -2696,7 +2696,7 @@ internal fun RenderNoteRow(
         is RelayAdminAddMemberEvent -> RenderBuzzRelayAdminAddMember(baseNote, accountViewModel, nav)
         is RelayAdminRemoveMemberEvent -> RenderBuzzRelayAdminRemoveMember(baseNote, accountViewModel, nav)
         is RelayAdminChangeRoleEvent -> RenderBuzzRelayAdminChangeRole(baseNote, accountViewModel, nav)
-        is SetWorkspaceProfileEvent -> RenderBuzzSetWorkspaceProfile(baseNote)
+        is SetWorkspaceProfileEvent -> RenderBuzzSetWorkspaceProfile(baseNote, accountViewModel)
         is ThreadWindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
         is WindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
 

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.draft
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_accept_title
@@ -926,8 +926,7 @@ fun RenderPollResponse(
                 } else {
                     // Checked cast through the note: the `e` tag is the voter's word, not a promise
                     // that it points at a poll.
-                    val noteState by observeNote(pollNote, accountViewModel)
-                    val poll = noteState.note.event as? PollEvent
+                    val poll by observeNoteEvent<PollEvent>(pollNote, accountViewModel)
                     val labels =
                         remember(poll, codes) {
                             val options = poll?.options()

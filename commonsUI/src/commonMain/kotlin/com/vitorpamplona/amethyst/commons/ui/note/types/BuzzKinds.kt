@@ -1319,7 +1319,10 @@ fun RenderBuzzRelayAdminChangeRole(
 
 /** kind 9033: an admin sets or clears the workspace icon. */
 @Composable
-fun RenderBuzzSetWorkspaceProfile(baseNote: Note) {
+fun RenderBuzzSetWorkspaceProfile(
+    baseNote: Note,
+    accountViewModel: AccountViewModel,
+) {
     val event = baseNote.event as? SetWorkspaceProfileEvent ?: return
     val icon = remember(event) { event.icon()?.ifBlank { null } }
     KindCard(
@@ -1327,7 +1330,8 @@ fun RenderBuzzSetWorkspaceProfile(baseNote: Note) {
         title = stringRes(if (icon != null) Res.string.kc_buzz_workspace_icon_set else Res.string.kc_buzz_workspace_icon_cleared),
         tone = if (icon != null) KindTone.Primary else KindTone.Neutral,
     ) {
-        if (icon != null) {
+        // The icon URL is the author's: honor the viewer's no-images setting before fetching it.
+        if (icon != null && accountViewModel.settings.showImages()) {
             AsyncImage(
                 model = icon,
                 contentDescription = null,

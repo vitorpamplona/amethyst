@@ -40,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -65,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_card_linked_event
 import com.vitorpamplona.amethyst.commons.resources.kind_card_more
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
+import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
@@ -75,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.elements.LocalNowSeconds
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -120,6 +123,27 @@ fun KindTone.color(): Color =
  * wash shows through. Passing the feed's background instead would paint them a solid block.
  */
 private val LocalKindCardBackground = staticCompositionLocalOf<MutableState<Color>?> { null }
+
+/**
+ * Whether card text may load link previews and inline media. False inside a quoted card, which is
+ * shown short: the text path stopped previews there too (`canPreview && !makeItShort`).
+ */
+private val LocalKindCardCanPreview = staticCompositionLocalOf { true }
+
+/**
+ * [compute] at the app's shared coarse clock ([LocalNowSeconds], ticking every 30 s), for a card
+ * whose state depends on the time: online/offline, live/ended, expired. Re-evaluated as the clock
+ * ticks, but the card only recomposes when the answer changes, not on every tick.
+ */
+@Composable
+fun <T> rememberAtNow(
+    key: Any?,
+    compute: (now: Long) -> T,
+): T {
+    val nowState = LocalNowSeconds.current
+    val value by remember(key, nowState) { derivedStateOf { compute(nowState.value) } }
+    return value
+}
 
 /**
  * The frame of a kind card: a [tone]-washed rounded frame, a badge with [icon], [title] and
@@ -325,40 +349,59 @@ fun KindCardText(
     nav: INav,
     quotesLeft: Int = 1,
 ) {
-    if (text.isNullOrBlank() || looksLikeOpaquePayload(text)) return
-    val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() }
-    TranslatableRichTextViewer(
-        content = text,
-        canPreview = true,
-        quotesLeft = quotesLeft,
-        modifier = Modifier,
-        tags = tags ?: return,
-        backgroundColor = LocalKindCardBackground.current ?: backgroundColor,
-        id = note.idHex,
-        callbackUri = note.toNostrUri(),
-        authorPubKey = note.author?.pubkeyHex,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    if (text.isNullOrBlank()) return
+    val opaque = remember(text) { looksLikeOpaquePayload(text) }
+    if (opaque) return
+    val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() } ?: return
+    val cardBackground = LocalKindCardBackground.current ?: backgroundColor
+    val canPreview = LocalKindCardCanPreview.current
+
+    // The text path gated content warnings (NIP-36) here; a card's text is the same author text.
+    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+        TranslatableRichTextViewer(
+            content = text,
+            canPreview = canPreview,
+            quotesLeft = quotesLeft,
+            modifier = Modifier,
+            tags = tags,
+            backgroundColor = cardBackground,
+            id = note.idHex,
+            callbackUri = note.toNostrUri(),
+            authorPubKey = note.author?.pubkeyHex,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 }
 
 private val NIP04_CIPHERTEXT = Regex("[A-Za-z0-9+/=]+\\?iv=[A-Za-z0-9+/=]+")
 
+/** A JSON array opens with a value: a string, an object, an array or a number. "[spam] links" doesn't. */
+private val JSON_ARRAY_START = Regex("^\\[\\s*[\\[{\"0-9-]")
+
+/** Long single tokens that are meant to be shown: links, invoices, ecash and bech32 entities. */
+private val READABLE_TOKEN_PREFIXES =
+    listOf("nostr:", "lightning:", "lnbc", "lntb", "lnurl", "lno1", "cashu", "npub1", "nprofile1", "note1", "nevent1", "naddr1", "nrelay1")
+
 /**
  * True for content that is a blob rather than words: JSON, ciphertext, a base64 image. Other
  * apps reuse many of these kinds with their own payloads, so a card checks before printing content.
+ *
+ * Only content that is a blob through and through counts: prose that carries one long token (an
+ * invoice, a bare naddr, a cashu token) is text, and the rich-text viewer knows how to draw it.
  */
 fun looksLikeOpaquePayload(text: String): Boolean {
     val trimmed = text.trim()
     // A JSON document is a payload for software, never prose.
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) return true
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) return true
+    if (trimmed.endsWith(']') && JSON_ARRAY_START.containsMatchIn(trimmed)) return true
     // NIP-04 ciphertext: base64 with an initialization vector, short or long.
     if (NIP04_CIPHERTEXT.matches(trimmed)) return true
-    if (trimmed.length < 120) return false
-    // One unbroken run of 120+ characters that is not a link reads as data, not prose.
-    return trimmed.split(' ', '\n', '\t').any { word ->
-        word.length >= 120 && !word.contains("://") && !word.startsWith("nostr:")
-    }
+    // One unbroken run of 120+ characters (line breaks allowed, as in wrapped base64) that is not
+    // a link, an invoice or a nostr entity: NIP-44 ciphertext, a base64 image, a hex dump.
+    if (trimmed.length < 120 || trimmed.any { it == ' ' || it == '\t' }) return false
+    if (trimmed.contains("://")) return false
+    return READABLE_TOKEN_PREFIXES.none { trimmed.startsWith(it, ignoreCase = true) }
 }
 
 /**
@@ -429,17 +472,24 @@ fun KindCardQuote(
         KindCardMissingReference(note, accountViewModel, nav)
         return
     }
-    NoteCompose(
-        baseNote = note,
-        modifier = MaterialTheme.colorScheme.replyModifier,
-        isQuotedNote = true,
-        unPackReply = ReplyRenderType.NONE,
-        makeItShort = true,
-        quotesLeft = quotesLeft - 1,
-        parentBackgroundColor = LocalKindCardBackground.current ?: backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+    val parentBackground = LocalKindCardBackground.current ?: backgroundColor
+    // The quoted note starts its own card tree: its cards draw on their own wash, not this one's.
+    CompositionLocalProvider(
+        LocalKindCardCanPreview provides false,
+        LocalKindCardBackground provides null,
+    ) {
+        NoteCompose(
+            baseNote = note,
+            modifier = MaterialTheme.colorScheme.replyModifier,
+            isQuotedNote = true,
+            unPackReply = ReplyRenderType.NONE,
+            makeItShort = true,
+            quotesLeft = quotesLeft - 1,
+            parentBackgroundColor = parentBackground,
+            accountViewModel = accountViewModel,
+            nav = nav,
+        )
+    }
 }
 
 @Composable
