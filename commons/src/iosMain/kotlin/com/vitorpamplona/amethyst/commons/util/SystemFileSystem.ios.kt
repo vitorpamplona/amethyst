@@ -21,5 +21,8 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import okio.FileSystem
+import okio.Path
 
 actual val platformFileSystem: FileSystem = FileSystem.SYSTEM
+
+actual val platformTempDirectory: Path = FileSystem.SYSTEM_TEMPORARY_DIRECTORY

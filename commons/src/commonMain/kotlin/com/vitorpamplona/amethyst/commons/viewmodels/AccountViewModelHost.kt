@@ -93,6 +93,12 @@ interface AccountViewModelHost {
     val scheduledPostStore: ScheduledPostStore? get() = null
 
     /**
+     * Where the pictures the user draws on are kept between sessions, one subfolder per account
+     * (see `DrawingBackgroundStore`). Null where the platform keeps none.
+     */
+    val drawingBackgroundsDir: Path? get() = null
+
+    /**
      * Re-voices the recording at [input] with the voice preset named [presetName], into a new file
      * beside it.
      */

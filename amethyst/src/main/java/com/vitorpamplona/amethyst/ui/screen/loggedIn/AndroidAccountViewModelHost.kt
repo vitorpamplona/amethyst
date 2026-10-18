@@ -65,6 +65,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.withContext
 import okio.Path
+import okio.Path.Companion.toOkioPath
 
 /** [AccountViewModelHost] over the app's [AppModules]. Lazy services are read on first use. */
 class AndroidAccountViewModelHost(
@@ -98,6 +99,8 @@ class AndroidAccountViewModelHost(
     override val deviceLocation: DeviceLocation get() = modules.locationManager
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
+
+    override val drawingBackgroundsDir: Path get() = modules.appContext.filesDir.toOkioPath() / DRAWING_BACKGROUNDS_DIR
 
     override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = LocalPreferences.hasBackedUpKeys(npub)
 
@@ -174,3 +177,5 @@ class AndroidAccountViewModelHost(
                 }
             }?.toSet() ?: emptySet()
 }
+
+private const val DRAWING_BACKGROUNDS_DIR = "drawing_backgrounds"

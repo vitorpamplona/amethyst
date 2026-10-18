@@ -45,6 +45,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
+import okio.Path
+import okio.Path.Companion.toOkioPath
 import java.util.concurrent.ConcurrentHashMap
 
 /** What every account's ViewModel reaches on a desktop: the shared graph in [modules]. */
@@ -81,6 +83,8 @@ class DesktopAccountViewModelHost(
 
     override val scheduledPostStore: ScheduledPostStore get() = modules.scheduledPostStore
 
+    override val drawingBackgroundsDir: Path get() = modules.filesDir.toOkioPath() / DRAWING_BACKGROUNDS_DIR
+
     // One flow per login, so the backup nudge watching it hears the change and goes away.
     private val backedUpKeys = ConcurrentHashMap<String, MutableStateFlow<Boolean>>()
 
@@ -116,3 +120,5 @@ class DesktopAccountViewModelHost(
                 }
             }?.toSet() ?: emptySet()
 }
+
+private const val DRAWING_BACKGROUNDS_DIR = "drawing_backgrounds"

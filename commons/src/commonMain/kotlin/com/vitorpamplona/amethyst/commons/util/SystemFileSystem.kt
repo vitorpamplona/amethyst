@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import okio.FileSystem
+import okio.Path
 
 /**
  * The real filesystem for this target.
@@ -29,3 +30,10 @@ import okio.FileSystem
  * on JS — so shared code that wants the ordinary filesystem has to come through here.
  */
 expect val platformFileSystem: FileSystem
+
+/**
+ * Where to put a file that only lives until it is uploaded, such as a drawing
+ * rendered for a post. The OS temporary directory: an app's cache directory on
+ * Android, which the system may clear, and `java.io.tmpdir` on desktop.
+ */
+expect val platformTempDirectory: Path
