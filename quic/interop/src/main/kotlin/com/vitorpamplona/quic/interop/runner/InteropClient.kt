@@ -33,7 +33,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
@@ -471,7 +473,7 @@ private fun runTransferTest(
 
             val handshake =
                 withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
-                    runCatching { conn.awaitHandshake() }
+                    runCatching { conn.awaitHandshake() }.onFailure { currentCoroutineContext().ensureActive() }
                 }
             if (handshake == null || handshake.isFailure) {
                 runCatching { driver.close() }
@@ -939,7 +941,7 @@ private suspend fun runOneResumptionConnection(
 
     val handshake =
         withTimeoutOrNull(HANDSHAKE_TIMEOUT_SEC * 1_000L) {
-            runCatching { conn.awaitHandshake() }
+            runCatching { conn.awaitHandshake() }.onFailure { currentCoroutineContext().ensureActive() }
         }
     if (handshake == null || handshake.isFailure) {
         runCatching { driver.close() }
@@ -1121,7 +1123,7 @@ private fun runMulticonnectTest(
 
                 val handshake =
                     withTimeoutOrNull(MULTICONNECT_HANDSHAKE_TIMEOUT_SEC * 1_000L) {
-                        runCatching { conn.awaitHandshake() }
+                        runCatching { conn.awaitHandshake() }.onFailure { currentCoroutineContext().ensureActive() }
                     }
                 if (handshake == null || handshake.isFailure) {
                     runCatching { driver.close() }

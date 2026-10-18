@@ -475,6 +475,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -2947,6 +2949,7 @@ open class EventCache :
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 Log.w("ZP", "validation failed for ${event.id}", t)
             }
         }

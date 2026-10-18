@@ -154,6 +154,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNu
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -362,6 +364,7 @@ fun MarmotGroupInfoScreen(
                                                 shortNotice.show(loadStringRes(Res.string.marmot_encrypted_media_enabled_toast))
                                             }
                                         } catch (e: Exception) {
+                                            currentCoroutineContext().ensureActive()
                                             launch(Dispatchers.Main) {
                                                 longNotice.show(
                                                     loadStringRes(
@@ -480,6 +483,7 @@ fun MarmotGroupInfoScreen(
                                 isAddError = true
                             }
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             addStatus = loadStringRes(Res.string.marmot_failed_to_add_user, targetName, e.message ?: loadStringRes(Res.string.marmot_unknown_error))
                             isAddError = true
                         } finally {
@@ -503,6 +507,7 @@ fun MarmotGroupInfoScreen(
                         nav.nav(Route.Message)
                     } catch (e: Exception) {
                         isLeaving = false
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_leave_group, e.message))
                         }
@@ -545,6 +550,7 @@ fun MarmotGroupInfoScreen(
                         // live, so the screen must stay usable rather than
                         // navigate away on a change that did not happen.
                         isDisbanding = false
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_disband, e.message))
                         }
@@ -568,6 +574,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_member_removed))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_remove_member, e.message))
                         }
@@ -591,6 +598,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_admin_granted))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_grant_admin, e.message))
                         }
@@ -614,6 +622,7 @@ fun MarmotGroupInfoScreen(
                             shortNotice.show(loadStringRes(Res.string.marmot_admin_revoked))
                         }
                     } catch (e: Exception) {
+                        currentCoroutineContext().ensureActive()
                         launch(Dispatchers.Main) {
                             longNotice.show(loadStringRes(Res.string.marmot_failed_to_revoke_admin, e.message))
                         }

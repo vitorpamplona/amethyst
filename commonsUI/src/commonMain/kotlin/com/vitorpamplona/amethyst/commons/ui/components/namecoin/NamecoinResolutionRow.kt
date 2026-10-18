@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -199,7 +200,7 @@ fun NamecoinResolutionRow(
         state = NamecoinResolveState.Loading
         val outcome =
             withContext(Dispatchers.IO) {
-                runCatching {
+                runCatchingCancellable {
                     resolver.resolveDetailed(term)
                 }.getOrElse {
                     NamecoinResolveOutcome.ServersUnreachable(

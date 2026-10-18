@@ -145,6 +145,8 @@ import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -299,6 +301,7 @@ private fun CordnGroupInfo(
             try {
                 block(target)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 // Not e.message. Those are written for a log and name pubkeys
                 // and gids in full, so the screen that had just shown a face
                 // answered with 64 hex characters.
@@ -893,6 +896,7 @@ private fun JoinRequests(
         try {
             requests = runtime.joinRequests(coordinatorPubKey, room.gid)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             error = e.message ?: failed
         } finally {
             busy = false
@@ -940,6 +944,7 @@ private fun JoinRequests(
                         try {
                             runtime.acceptJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()
@@ -952,6 +957,7 @@ private fun JoinRequests(
                         try {
                             runtime.declineJoinRequest(coordinatorPubKey, request)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()

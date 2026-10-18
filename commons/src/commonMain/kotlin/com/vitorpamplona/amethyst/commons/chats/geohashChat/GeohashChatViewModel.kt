@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,7 +129,7 @@ class GeohashChatViewModel : ViewModel() {
                     val hint = note.toEventHint<Event>() ?: return@launch
                     ReactionEvent.build(reaction, hint)
                 }
-            runCatching { account.signWithAndSendPrivately(template, signer, relays) }
+            runCatchingCancellable { account.signWithAndSendPrivately(template, signer, relays) }
         }
     }
 

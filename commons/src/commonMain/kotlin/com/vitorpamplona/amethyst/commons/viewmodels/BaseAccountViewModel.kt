@@ -3020,57 +3020,62 @@ open class BaseAccountViewModel(
     class CachedLoadedBechLink(
         val accountViewModel: BaseAccountViewModel,
     ) : GenericBaseCache<String, LoadedBechLink>(20) {
-        override suspend fun compute(key: String): LoadedBechLink? =
-            withContext(Dispatchers.IO) {
-                Nip19Parser.uriToRoute(key)?.let {
-                    var returningNote: Note? = null
+        override suspend fun compute(key: String): LoadedBechLink? = withContext(Dispatchers.IO) { load(key) }
 
-                    when (val parsed = it.entity) {
-                        is NSec -> {}
+        /**
+         * The cached link, or one loaded on the calling thread. For renderers that must answer
+         * synchronously inside composition: the load is in-memory cache work only, and the one
+         * expensive step, verifying an `nembed`'s event, runs in the background.
+         */
+        fun cachedOrLoad(key: String): LoadedBechLink? = cached(key) ?: load(key)?.also { put(key, it) }
 
-                        is NPub -> {}
+        private fun load(key: String): LoadedBechLink? =
+            Nip19Parser.uriToRoute(key)?.let {
+                var returningNote: Note? = null
 
-                        is NProfile -> {}
+                when (val parsed = it.entity) {
+                    is NSec -> {}
 
-                        is NNote -> {
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
-                                returningNote = note
-                            }
+                    is NPub -> {}
+
+                    is NProfile -> {}
+
+                    is NNote -> {
+                        LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            returningNote = note
                         }
-
-                        is NEvent -> {
-                            LocalCache.consume(parsed)
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
-                                returningNote = note
-                            }
-                        }
-
-                        is NEmbed -> {
-                            withContext(Dispatchers.IO) {
-                                val baseNote = LocalCache.getOrCreateNote(parsed.event)
-                                if (baseNote.event == null) {
-                                    launch(Dispatchers.IO) {
-                                        LocalCache.justConsume(parsed.event, null, false)
-                                    }
-                                }
-
-                                returningNote = baseNote
-                            }
-                        }
-
-                        is NRelay -> {}
-
-                        is NAddress -> {
-                            LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
-                                returningNote = note
-                            }
-                        }
-
-                        else -> {}
                     }
 
-                    LoadedBechLink(returningNote, it)
+                    is NEvent -> {
+                        LocalCache.consume(parsed)
+                        LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            returningNote = note
+                        }
+                    }
+
+                    is NEmbed -> {
+                        val baseNote = LocalCache.getOrCreateNote(parsed.event)
+                        if (baseNote.event == null) {
+                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                                LocalCache.justConsume(parsed.event, null, false)
+                            }
+                        }
+
+                        returningNote = baseNote
+                    }
+
+                    is NRelay -> {}
+
+                    is NAddress -> {
+                        LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
+                            returningNote = note
+                        }
+                    }
+
+                    else -> {}
                 }
+
+                LoadedBechLink(returningNote, it)
             }
     }
 }

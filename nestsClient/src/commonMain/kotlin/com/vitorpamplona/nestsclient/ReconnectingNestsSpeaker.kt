@@ -27,6 +27,7 @@ import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.transport.WebTransportFactory
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
@@ -636,7 +637,7 @@ private class ReissuingBroadcastHandle(
             // publisher reference, so the relay can't race a SUBSCRIBE
             // in between.
             newCatalogPublisher.setOnNewSubscriber {
-                runCatching {
+                runCatchingCancellable {
                     newCatalogPublisher.send(catalogPayload)
                     newCatalogPublisher.endGroup()
                 }
@@ -688,7 +689,7 @@ private class ReissuingBroadcastHandle(
             return
         }
         if (desiredMuted) {
-            runCatching { handle.setMuted(true) }
+            runCatchingCancellable { handle.setMuted(true) }
         }
         liveHandle.set(handle)
         try {
@@ -708,7 +709,7 @@ private class ReissuingBroadcastHandle(
         // and vice versa — but both reads are cheap and harmless if
         // the unused one is null.
         hotSwapBroadcaster?.setMuted(muted)
-        liveHandle.get()?.let { runCatching { it.setMuted(muted) } }
+        liveHandle.get()?.let { runCatchingCancellable { it.setMuted(muted) } }
     }
 
     override suspend fun close() {

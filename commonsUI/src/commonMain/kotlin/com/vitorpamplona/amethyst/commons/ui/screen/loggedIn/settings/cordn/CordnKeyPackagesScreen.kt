@@ -80,6 +80,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.CoordinatorIdentityRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -193,6 +195,7 @@ private fun CoordinatorKeyPackages(
         try {
             rows = runtime.keyPackages(config.pubKey)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             error = e.message ?: failed
         } finally {
             busy = false
@@ -253,6 +256,7 @@ private fun CoordinatorKeyPackages(
                             try {
                                 runtime.withdrawKeyPackages(config.pubKey, orphans.map { it.keyPackageRef })
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 error = e.message ?: failed
                             }
                             reload()
@@ -283,6 +287,7 @@ private fun CoordinatorKeyPackages(
                         try {
                             runtime.publishKeyPackage(config.pubKey)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()
@@ -298,6 +303,7 @@ private fun CoordinatorKeyPackages(
                         try {
                             runtime.publishKeyPackage(config.pubKey, lastResort = true)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failed
                         }
                         reload()
@@ -314,6 +320,7 @@ private fun CoordinatorKeyPackages(
                             try {
                                 runtime.withdrawKeyPackages(config.pubKey, loaded.map { it.keyPackageRef })
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 error = e.message ?: failed
                             }
                             reload()

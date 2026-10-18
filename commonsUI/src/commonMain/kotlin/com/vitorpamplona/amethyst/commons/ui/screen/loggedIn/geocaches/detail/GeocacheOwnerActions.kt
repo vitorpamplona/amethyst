@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.firstToFind.FirstToFindResolver
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingRevision
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -155,7 +156,7 @@ fun GeocacheOwnerActions(
             onConfirm = {
                 confirmArchive = false
                 scope.launch {
-                    runCatching {
+                    runCatchingCancellable {
                         accountViewModel.account.signAndComputeBroadcast(
                             GeocacheListingRevision.archived(listing),
                         )
@@ -179,7 +180,7 @@ fun GeocacheOwnerActions(
                 onConfirm = {
                     confirmLockIn = false
                     scope.launch {
-                        runCatching {
+                        runCatchingCancellable {
                             accountViewModel.account.signAndComputeBroadcast(
                                 GeocacheListingRevision.withFirstToFindWinner(listing, provisionalWinner),
                             )

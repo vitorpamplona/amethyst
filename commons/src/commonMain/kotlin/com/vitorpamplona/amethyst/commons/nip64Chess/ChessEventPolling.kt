@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.commons.nip64Chess
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -188,6 +190,7 @@ class ChessPollingDelegate(
                         try {
                             onRefreshGames(gameIds)
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             Log.d("chessdebug") { "[Polling] ERROR during game refresh: ${e.message}" }
                         }
                     }

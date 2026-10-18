@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -163,7 +164,7 @@ object VideoThumbnailCache {
         val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
 
         if (!isHls) {
-            val chunk = runCatching { downloadFirstChunk(url) }.getOrNull()
+            val chunk = runCatchingCancellable { downloadFirstChunk(url) }.getOrNull()
             if (chunk != null) {
                 try {
                     (tryJCodec(chunk) ?: runFfmpeg(chunk.absolutePath))?.let { return it }

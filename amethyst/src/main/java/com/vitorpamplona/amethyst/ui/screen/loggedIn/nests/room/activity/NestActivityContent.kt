@@ -338,7 +338,7 @@ private fun NestActivityBody(
     // action and a swipe-dismiss while in PIP — invoke this so the
     // speaker handle close (releases AudioRecord and clears the
     // system mic indicator) and the listener close run on
-    // cleanupScope/GlobalScope before the activity destruction
+    // cleanupScope (the application scope) before the activity destruction
     // queue eats viewModelScope.
     val activity = LocalActivity.current as? NestActivity
     DisposableEffect(activity, viewModel) {

@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * The shared "bring local Marmot state current" policy: which filters to ask
@@ -239,6 +241,7 @@ class MarmotSyncPolicy(
                     }
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 log("key-package rotation failed: ${e.message}")
             }
         }

@@ -98,7 +98,9 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -222,6 +224,7 @@ class MarmotManager(
             retryPendingPublishObligations()
             Log.d("MarmotManager") { "restoreAll(): done, ${activeIds.size} groups: $activeIds" }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e("MarmotManager", "Failed to restore Marmot state", e)
         }
     }
@@ -259,6 +262,7 @@ class MarmotManager(
             try {
                 ingestDedupStore?.mark(eventId)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 // A marker we failed to persist costs a re-decision next
                 // launch; it never costs correctness, so it is not worth
                 // failing the ingest over.
@@ -1530,6 +1534,7 @@ class MarmotManager(
         try {
             messageStore?.delete(nostrGroupId)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "Failed to delete persisted messages for $nostrGroupId", e)
         }
         return outboundEvent
@@ -1760,6 +1765,7 @@ class MarmotManager(
         try {
             messageStore?.loadEpochs(nostrGroupId) ?: emptyMap()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "Failed to read Marmot message epochs for $nostrGroupId", e)
             emptyMap()
         }
@@ -1778,6 +1784,7 @@ class MarmotManager(
             pruneExpiredMessages(nostrGroupId)
             store.loadMessages(nostrGroupId)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "Failed to load persisted messages for $nostrGroupId", e)
             emptyList()
         }
@@ -1861,6 +1868,7 @@ class MarmotManager(
         try {
             store.recordEpochRetention(nostrGroupId, epoch, retentionSeconds(nostrGroupId))
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "Failed to record retention at epoch $epoch for $nostrGroupId", e)
         }
     }
@@ -1875,6 +1883,7 @@ class MarmotManager(
         try {
             messageStore?.loadExpiries(nostrGroupId) ?: emptyMap()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "Failed to read expiries for $nostrGroupId", e)
             emptyMap()
         }
@@ -2344,6 +2353,7 @@ class MarmotManager(
             startConvergenceSettler()
             DisbandResolution.PENDING
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("MarmotManager", "could not regenerate the disband commit for $nostrGroupId", e)
             DisbandResolution.PENDING
         }

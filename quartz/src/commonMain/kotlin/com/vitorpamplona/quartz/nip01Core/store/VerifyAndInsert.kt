@@ -23,6 +23,8 @@ package com.vitorpamplona.quartz.nip01Core.store
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Verify [event]'s NIP-01 id + signature and, if valid, persist it to this store.
@@ -47,6 +49,7 @@ suspend fun IEventStore.verifyAndInsert(event: Event): Boolean {
     try {
         insert(event)
     } catch (t: Throwable) {
+        currentCoroutineContext().ensureActive()
         if (t.message?.contains("UNIQUE constraint", ignoreCase = true) != true) {
             Log.w("EventStore") { "store insert failed for ${event.id.take(8)}: ${t.message}" }
         }

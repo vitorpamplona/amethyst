@@ -141,9 +141,7 @@ import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -963,7 +961,6 @@ private suspend fun shareImageFile(
     }
 }
 
-@OptIn(DelicateCoroutinesApi::class)
 private suspend fun shareVideoFile(
     context: Context,
     videoUrl: String,
@@ -1019,8 +1016,8 @@ private suspend fun shareVideoFile(
         }
 
         // Schedule cleanup to allow the receiving app time to copy the file.
-        // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
-        GlobalScope.launch(Dispatchers.IO) {
+        // The application scope, not this one: cleanup must survive after the share UI is dismissed.
+        Amethyst.instance.applicationIOScope.launch {
             delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
             sharedFile?.let { file ->
                 if (!file.delete()) {

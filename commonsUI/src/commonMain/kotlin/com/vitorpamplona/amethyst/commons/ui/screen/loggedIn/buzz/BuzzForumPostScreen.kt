@@ -55,6 +55,8 @@ import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -144,6 +146,7 @@ fun BuzzForumPostScreen(
                             nav.popBack()
                         } catch (e: Exception) {
                             isPosting = false
+                            currentCoroutineContext().ensureActive()
                             error = "Failed to post: ${e.message ?: e::class.simpleName}"
                         }
                     }

@@ -58,7 +58,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import kotlinx.coroutines.runBlocking
 
 class MarkdownMediaRenderer(
     val startOfText: String,
@@ -156,12 +155,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        // This should be fast, so it is ok.
-        val loadedLink =
-            accountViewModel.bechLinkCache.cached(uri)
-                ?: runBlocking {
-                    accountViewModel.bechLinkCache.update(uri)
-                }
+        val loadedLink = accountViewModel.bechLinkCache.cachedOrLoad(uri)
 
         val baseNote = loadedLink?.baseNote
 

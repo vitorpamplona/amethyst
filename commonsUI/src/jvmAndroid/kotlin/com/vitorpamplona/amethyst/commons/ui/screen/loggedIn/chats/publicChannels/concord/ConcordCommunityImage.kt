@@ -26,6 +26,7 @@ import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -66,19 +67,19 @@ fun rememberDecryptedConcordImageModel(
         if (value != null) return@produceState
         value =
             withContext(Dispatchers.IO) {
-                runCatching {
-                    resolvedByHash[pointer.hash]?.let { return@runCatching it }
+                runCatchingCancellable {
+                    resolvedByHash[pointer.hash]?.let { return@runCatchingCancellable it }
 
                     val cacheFile = File(cacheDir, "concord-img-${pointer.hash}")
                     if (!cacheFile.exists()) {
                         val client = accountViewModel.httpClientBuilder.okHttpClientForImage(pointer.url)
                         val ciphertext =
                             client.newCall(Request.Builder().url(pointer.url).build()).executeAsync().use { resp ->
-                                if (!resp.isSuccessful) return@runCatching null
+                                if (!resp.isSuccessful) return@runCatchingCancellable null
                                 resp.body.bytes()
                             }
 
-                        val plaintext = pointer.decryptOrNull(ciphertext) ?: return@runCatching null
+                        val plaintext = pointer.decryptOrNull(ciphertext) ?: return@runCatchingCancellable null
                         cacheDir.mkdirs()
                         cacheFile.writeBytes(plaintext)
                     }

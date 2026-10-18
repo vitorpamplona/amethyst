@@ -70,8 +70,10 @@ fun runHeadlessPublish(): Int {
     }
 
     val result =
-        ScheduledPostLock.withDrainLock {
-            headlessDrain(::log)
+        runBlocking {
+            ScheduledPostLock.withDrainLock {
+                headlessDrain(::log)
+            }
         }
 
     if (result == null) {

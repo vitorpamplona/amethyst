@@ -26,6 +26,7 @@ import com.vitorpamplona.nestsclient.audio.OpusEncoder
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteHangCatalog
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.nestsclient.moq.lite.MoqLiteSession
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -174,7 +175,7 @@ class MoqLiteNestsSpeaker internal constructor(
                     numberOfChannels = broadcastConfig.channelCount,
                 )
             catalogPublisher.setOnNewSubscriber {
-                runCatching {
+                runCatchingCancellable {
                     catalogPublisher.send(catalogJson)
                     catalogPublisher.endGroup()
                 }

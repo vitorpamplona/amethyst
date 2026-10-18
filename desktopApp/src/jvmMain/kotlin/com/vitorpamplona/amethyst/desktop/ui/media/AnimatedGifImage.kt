@@ -38,7 +38,9 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -193,6 +195,7 @@ private suspend fun decodeGifFrames(url: String): GifFrames? =
 
         GifFrames(frames, durations, frameBitmapSize * decodableFrames)
     } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
         println("AnimatedGif: failed to load $url — ${e.message}")
         null
     }

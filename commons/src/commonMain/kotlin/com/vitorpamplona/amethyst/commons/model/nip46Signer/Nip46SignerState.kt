@@ -51,6 +51,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerServi
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -219,7 +220,7 @@ class Nip46SignerState(
         // abandoned app used — forget() already refreshes extraRelays, and we refresh again in case
         // nothing was pruned.
         scope.launch(Dispatchers.IO) {
-            runCatching { authorizer.pruneIdle(IDLE_PRUNE_SECONDS) }
+            runCatchingCancellable { authorizer.pruneIdle(IDLE_PRUNE_SECONDS) }
                 .onFailure { Log.w("NIP46Signer") { "idle prune failed: ${it.message}" } }
             refreshExtraRelaysFromStore()
         }

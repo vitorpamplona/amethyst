@@ -63,10 +63,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterIsInstance
@@ -246,7 +249,7 @@ class CordnRuntime(
                 // screens already fall back to the key.
                 val prefetch =
                     scope.launch {
-                        runCatching {
+                        runCatchingCancellable {
                             client.fetchAll(
                                 filters =
                                     config.relays.associateWith {
@@ -496,6 +499,7 @@ class CordnRuntime(
                 pending += inbox.pending.map { CordnInvitation(config, it) }
                 skipped += inbox.skipped.map { CordnSkippedInvitation(config, it.keyPackageRef, it.reason) }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "could not read invitations from ${config.pubKey.take(8)}\u2026: ${e.message}", e)
                 unreachable += CordnCoordinatorFailure(config, e.message ?: "the coordinator did not answer")
             }
@@ -646,6 +650,7 @@ class CordnRuntime(
             try {
                 session(it)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 // One unreachable coordinator must not stop the others: they
                 // are independent authorities and a user with two of them has
                 // two unrelated sets of groups.
@@ -979,6 +984,7 @@ class CordnRuntime(
                     .filterNot { it.pubKey in openKeys || it.pubKey == forgotten }
             coordinatorStore.save(kept + open)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "could not persist the coordinator list: ${e.message}", e)
         }
     }

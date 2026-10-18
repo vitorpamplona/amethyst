@@ -100,6 +100,8 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -308,6 +310,7 @@ fun MarmotGroupMessageComposer(
                             newMessageModel.sendPost()
                             onMessageSent()
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             launch(Dispatchers.Main) {
                                 shortNotice.show("Failed to send message: ${e.message}")
                             }

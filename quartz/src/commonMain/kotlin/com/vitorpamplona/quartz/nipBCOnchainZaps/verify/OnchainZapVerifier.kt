@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.OnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
  * NIP-BC verifier — validates a [OnchainZapEvent] against the configured
@@ -107,7 +108,7 @@ class OnchainZapVerifier(
      */
     private suspend fun realConfirmations(tx: BitcoinTx): Int {
         val height = tx.blockHeight ?: return tx.confirmations
-        val tip = runCatching { backend.tipHeight() }.getOrNull() ?: return tx.confirmations
+        val tip = runCatchingCancellable { backend.tipHeight() }.getOrNull() ?: return tx.confirmations
         return (tip - height + 1).coerceAtLeast(1).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 

@@ -45,6 +45,8 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Moving one account's cordn state from the phone it is on to a new one.
@@ -211,6 +213,7 @@ class CordnMigration(
             try {
                 signer.nip44Decrypt(outer.content, signer.pubKey)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 throw CordnMigrationException("the tip did not decrypt — is this the same account?")
             }
 

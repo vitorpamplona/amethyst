@@ -58,12 +58,15 @@ import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEven
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -336,7 +339,7 @@ class CashuWalletState(
 
     private suspend fun walletPrivkeyHex(): String? =
         _walletEvent.value?.let { evt ->
-            runCatching { evt.privkey(signer) }.getOrNull()
+            runCatchingCancellable { evt.privkey(signer) }.getOrNull()
         }
 
     /**
@@ -629,7 +632,7 @@ class CashuWalletState(
             // The callback runs on the relay reader thread and must not suspend,
             // so collect first and index after the walk.
             val collected = ConcurrentMap<HexKey, CashuTokenEvent>()
-            runCatching {
+            runCatchingCancellable {
                 client.fetchAllPagesFromPool(
                     filters = relays.associateWith { filters },
                     idleTimeoutMs = BACKFILL_IDLE_TIMEOUT_MS,
@@ -659,7 +662,7 @@ class CashuWalletState(
                 // A relay that ignores NIP-09 just handed back proofs the mint
                 // already burned. Let the mint arbitrate before the user sees a
                 // number.
-                runCatching { scrubLocallyStaleProofs() }
+                runCatchingCancellable { scrubLocallyStaleProofs() }
                     .onFailure { Log.w("CashuWallet", "Post-backfill NUT-07 sweep failed", it) }
             } else if (undecryptedTokenCount() > 0) {
                 // Nothing new off the relays, but we are still holding proofs
@@ -765,7 +768,7 @@ class CashuWalletState(
             cachedSeed = null
             walletEventInternal?.let { evt ->
                 _mints.value =
-                    runCatching { evt.mints(signer) }
+                    runCatchingCancellable { evt.mints(signer) }
                         .onFailure { Log.w("CashuWallet") { "Failed to decrypt wallet mints: ${it.message}" } }
                         .getOrNull() ?: emptyList()
                 // Persist the wallet event in AccountSettings so we can
@@ -869,7 +872,7 @@ class CashuWalletState(
         all.forEach { evt ->
             if (tokenContents[evt.id] == null) {
                 val content =
-                    runCatching { evt.tokenContent(signer) }
+                    runCatchingCancellable { evt.tokenContent(signer) }
                         .onFailure {
                             Log.w("CashuWallet") {
                                 "Failed to decrypt token ${evt.id.take(8)}: ${it.message}"
@@ -978,6 +981,7 @@ class CashuWalletState(
                         "Auto-redeem of nutzap ${ev.id.take(8)} skipped: ${e.message}"
                     }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.w("CashuWallet") {
                         "Auto-redeem of nutzap ${ev.id.take(8)} failed: ${describeMintError(e)}"
                     }
@@ -1246,7 +1250,7 @@ class CashuWalletState(
      * content can't be decrypted (not really ours / signer rejected).
      */
     suspend fun decryptDiscoveredWallet(event: CashuWalletEvent): DiscoveredWalletConfig? =
-        runCatching {
+        runCatchingCancellable {
             DiscoveredWalletConfig(
                 mints = event.mints(signer),
                 privkeyHex = event.privkey(signer),
@@ -1277,7 +1281,7 @@ class CashuWalletState(
         val result = LinkedHashMap<String, Long>()
         for (mint in mints) {
             val recoverable =
-                runCatching { ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets) }
+                runCatchingCancellable { ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets) }
                     .onFailure { Log.w("CashuWallet") { "Probe of $mint failed: ${describeMintError(it)}" } }
                     .getOrNull() ?: continue
             if (!recoverable.isEmpty) result[mint] = recoverable.amountSats
@@ -1318,7 +1322,7 @@ class CashuWalletState(
                     .flatMap { it.content.proofs }
                     .mapTo(HashSet()) { it.secret }
             val outcome =
-                runCatching {
+                runCatchingCancellable {
                     val recoverable = ops.scanRecoverableProofs(mint, seed, existingSecrets = existingSecrets)
                     val published = ops.publishRecoveredProofs(recoverable)
                     if (bumpCounter) {
@@ -1462,7 +1466,7 @@ class CashuWalletState(
             "Cleanup: NIP-09 deleting ${redundant.size} duplicate kind:7375 event(s)"
         }
         val redundantIds = redundant.map { it.event.id }.toSet()
-        runCatching {
+        runCatchingCancellable {
             val template = DeletionRequestEvent.build(redundant.map { it.event })
             val signed = signer.sign(template)
             publishEvent(signed)
@@ -1510,7 +1514,7 @@ class CashuWalletState(
             // Shared NUT-07 check + NIP-09 delete with amy's `cashu maintenance
             // scrub`. Returns the stale token events it published a deletion for.
             val staleEvents =
-                runCatching { ops.scrubStaleProofs(mintUrl, entries) }
+                runCatchingCancellable { ops.scrubStaleProofs(mintUrl, entries) }
                     .onFailure {
                         Log.w("CashuWallet", "scrubStaleProofs($mintUrl) failed; skipping sweep", it)
                     }.getOrNull()
@@ -1564,14 +1568,14 @@ class CashuWalletState(
         val byMint = _tokenEntries.value.groupBy { it.content.mint }
         for ((mintUrl, entries) in byMint) {
             val activeId =
-                runCatching { ops.fetchActiveKeysetId(mintUrl) }
+                runCatchingCancellable { ops.fetchActiveKeysetId(mintUrl) }
                     .onFailure {
                         Log.w("CashuWallet", "fetchActiveKeysetId($mintUrl) failed; skipping migration", it)
                     }.getOrNull()
                     ?: continue
             val staleEntries = entries.filter { entry -> entry.content.proofs.any { it.id != activeId } }
             if (staleEntries.isEmpty()) continue
-            runCatching { ops.migrateToActiveKeyset(mintUrl, staleEntries, activeId) }
+            runCatchingCancellable { ops.migrateToActiveKeyset(mintUrl, staleEntries, activeId) }
                 .onFailure {
                     Log.w("CashuWallet", "migrateToActiveKeyset($mintUrl) failed", it)
                 }

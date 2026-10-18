@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache.Re
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
@@ -154,7 +155,7 @@ class PollResultsViewModel(
             viewModelScope.launch(loadContext) {
                 val poll = awaitPollEvent()
                 completeness.value = CompletenessState(running = true)
-                val report = runCatching { loader.load(poll) }.getOrNull()
+                val report = runCatchingCancellable { loader.load(poll) }.getOrNull()
                 completeness.value = CompletenessState(running = false, report = report)
             }
         }
