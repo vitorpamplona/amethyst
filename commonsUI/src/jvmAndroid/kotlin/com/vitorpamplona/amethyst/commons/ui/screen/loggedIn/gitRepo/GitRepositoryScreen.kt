@@ -366,7 +366,7 @@ private fun GitRepositoryHome(
                 }
             } else if (currentEvent != null && !repoHasFetchableClone(currentEvent)) {
                 RepoExternalNotice(currentEvent)
-            } else if (currentEvent != null && browserState is GitBrowseState.Error && accountViewModel.isLoggedUser(currentEvent.pubKey)) {
+            } else if (currentEvent != null && (browserState as? GitBrowseState.Error)?.isEmptyRepository == true && accountViewModel.isLoggedUser(currentEvent.pubKey)) {
                 RepoPushFirstCommit(currentEvent)
             }
 

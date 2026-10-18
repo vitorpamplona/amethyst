@@ -32,11 +32,13 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.viewmodels.BaseAccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip34Git.grasp.GraspServer
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip34Git.repository.NostrCloneUrl
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
@@ -73,8 +75,10 @@ class NewGitRepositoryViewModel : ViewModel() {
     var relays by mutableStateOf("")
     var earliestCommit by mutableStateOf("")
 
-    var takenIdentifier by mutableStateOf<String?>(null)
-        private set
+    /** The user's existing repository identifiers, once [init]'s lookup returns. */
+    private var ownIdentifiers by mutableStateOf<Set<String>>(emptySet())
+    private var ownIdentifiersJob: Job? = null
+
     var isCreating by mutableStateOf(false)
         private set
 
@@ -87,6 +91,15 @@ class NewGitRepositoryViewModel : ViewModel() {
         npub = account.pubKey.hexToByteArray().toNpub()
         graspServers.clear()
         graspServers.addAll(GraspServer.DEFAULT_SERVERS.map { GraspChoice(it, true) })
+
+        // Fetched once up front, so a taken identifier shows while typing and Create needs no
+        // round trip. GRASP servers serve repositories that already have code.
+        val graspRelays = GraspServer.DEFAULT_SERVERS.mapNotNull { GraspServer.relayUrl(it)?.let(RelayUrlNormalizer::normalizeOrNull) }.toSet()
+        ownIdentifiersJob =
+            viewModelScope.launch(Dispatchers.IO) {
+                val found = account.myGitRepositoryIdentifiers(graspRelays) ?: return@launch
+                withContext(Dispatchers.Main) { ownIdentifiers = ownIdentifiers + found }
+            }
 
         viewModelScope.launch(Dispatchers.IO) {
             val mine = account.myGraspServers()?.mapNotNull { GraspServer.normalize(it) }?.distinct()
@@ -107,7 +120,7 @@ class NewGitRepositoryViewModel : ViewModel() {
         typedIdentifier = value
     }
 
-    val isIdentifierTaken: Boolean get() = takenIdentifier != null && takenIdentifier == identifier.trim()
+    val isIdentifierTaken: Boolean get() = identifier.trim() in ownIdentifiers
 
     // ---- topics ----
 
@@ -135,7 +148,7 @@ class NewGitRepositoryViewModel : ViewModel() {
         if (index >= 0) graspServers[index] = graspServers[index].copy(selected = !graspServers[index].selected)
     }
 
-    val isServerDraftValid: Boolean get() = serverDraft.isBlank() || GraspServer.normalize(serverDraft) != null
+    val isServerDraftValid: Boolean get() = serverDraft.isBlank() || NewGitRepository.isValidGraspServer(serverDraft)
 
     /** Adds [serverDraft] as a ticked server. False when it is not a server address. */
     fun addServerDraft(): Boolean {
@@ -193,8 +206,10 @@ class NewGitRepositoryViewModel : ViewModel() {
         )
 
     /**
-     * Checks the identifier is free (publishing over one of the user's repositories would
-     * replace it), then signs, sends and hands back the new repository's route.
+     * Signs, sends and hands back the new repository's route, unless the identifier turns out to
+     * be one of the user's repositories: publishing over it would replace it. The check uses the
+     * list [init] fetched (waiting for it up to 10 s if it is still on its way) plus the cache.
+     * It is best effort: a relay that never answers cannot report a repository it holds.
      */
     fun create(
         accountViewModel: BaseAccountViewModel,
@@ -203,21 +218,23 @@ class NewGitRepositoryViewModel : ViewModel() {
         val account = account ?: return
         if (!canCreate()) return
         val draft = draft()
+        val identifier = draft.identifier.trim()
         isCreating = true
 
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch {
             try {
-                val identifier = draft.identifier.trim()
-                val existing = withTimeoutOrNull(10_000L) { account.findMyGitRepository(identifier) }
-                if (existing != null) {
-                    takenIdentifier = existing.dTag()
+                withTimeoutOrNull(10_000L) { ownIdentifiersJob?.join() }
+                if (isIdentifierTaken || account.hasCachedGitRepository(identifier)) {
+                    ownIdentifiers = ownIdentifiers + identifier
                     return@launch
                 }
-                accountViewModel.reportSignerErrors {
-                    val signed = account.signer.sign(NewGitRepository.build(draft, account.pubKey))
-                    account.sendAutomatic(signed)
-                    withContext(Dispatchers.Main) {
-                        onCreated(Route.GitRepository(signed.kind, signed.pubKey, signed.dTag()))
+                withContext(Dispatchers.IO) {
+                    accountViewModel.reportSignerErrors {
+                        val signed = account.signer.sign(NewGitRepository.build(draft, account.pubKey))
+                        account.sendAutomatic(signed)
+                        withContext(Dispatchers.Main) {
+                            onCreated(Route.GitRepository(signed.kind, signed.pubKey, signed.dTag()))
+                        }
                     }
                 }
             } finally {

@@ -55,10 +55,29 @@ class GraspServerTest {
     }
 
     @Test
-    fun rejectsInputWithoutAHost() {
+    fun rejectsInputThatIsNotAHost() {
         assertNull(GraspServer.normalize(""))
         assertNull(GraspServer.normalize("   "))
         assertNull(GraspServer.normalize("https://"))
+        assertNull(GraspServer.normalize("my server"))
+        assertNull(GraspServer.normalize("hello"))
+        assertNull(GraspServer.normalize("-bad.example.com"))
+        assertNull(GraspServer.normalize("relay.example.com:99999"))
+        assertNull(GraspServer.normalize("relay.example.com:port"))
+    }
+
+    @Test
+    fun acceptsIpAddressesAndPorts() {
+        assertEquals("http://127.0.0.1:7777", GraspServer.normalize("ws://127.0.0.1:7777"))
+        assertEquals("relay.example.com:8443", GraspServer.normalize("relay.example.com:8443"))
+    }
+
+    @Test
+    fun onlyAnNpubPathSegmentIsCut() {
+        // ngit cuts at the first "npub1" anywhere, which would mangle these hosts.
+        assertEquals("npub1.example.com", GraspServer.normalize("wss://npub1.example.com"))
+        assertEquals("mynpub1host.dev", GraspServer.normalize("https://mynpub1host.dev/"))
+        assertEquals("mynpub1host.dev", GraspServer.normalize("https://mynpub1host.dev/$npub/r.git"))
     }
 
     @Test

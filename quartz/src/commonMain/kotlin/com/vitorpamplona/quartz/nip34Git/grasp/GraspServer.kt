@@ -43,28 +43,43 @@ object GraspServer {
      * Reduces any spelling of a GRASP server (`wss://host`, `https://host/`,
      * a clone URL, a bare host) to ngit's canonical form: `host[:port][/path]`
      * for TLS servers, `http://host[:port][/path]` for plain ones (`ws`/`http`).
-     * Everything from an `npub1` path segment on is dropped, so a clone URL
-     * normalizes to its server. Returns null when no host can be found.
+     * Everything from an `/npub1…` path segment on is dropped, so a clone URL
+     * normalizes to its server. Returns null for anything that is not a host:
+     * blank input, spaces, or a name with no dot other than `localhost`.
      */
     fun normalize(url: String): String? {
         val trimmed = url.trim()
+        if (trimmed.isEmpty() || trimmed.any { it.isWhitespace() }) return null
+
         val schemeEnd = trimmed.indexOf("://")
         val scheme = if (schemeEnd > 0) trimmed.substring(0, schemeEnd).lowercase() else "https"
         val rest = if (schemeEnd > 0) trimmed.substring(schemeEnd + 3) else trimmed
 
         val withoutQuery = rest.substringBefore('?').substringBefore('#')
-        val authority = withoutQuery.substringBefore('/').substringAfterLast('@').lowercase()
-        val path = withoutQuery.substring(withoutQuery.indexOf('/').let { if (it < 0) withoutQuery.length else it })
+        val slash = withoutQuery.indexOf('/')
+        val authority = (if (slash < 0) withoutQuery else withoutQuery.substring(0, slash)).substringAfterLast('@').lowercase()
+        var path = if (slash < 0) "" else withoutQuery.substring(slash)
 
-        if (authority.isEmpty() || authority.startsWith(':')) return null
+        if (!isHostAndPort(authority)) return null
+
+        val npubAt = path.indexOf("/npub1")
+        if (npubAt >= 0) path = path.substring(0, npubAt)
 
         val prefix = if (scheme == "ws" || scheme == "http") "http://" else ""
-        var normalized = "$prefix$authority$path"
+        return "$prefix$authority$path".trimEnd('/')
+    }
 
-        val npubAt = normalized.indexOf("npub1")
-        if (npubAt >= 0) normalized = normalized.substring(0, npubAt)
+    private val HOST = Regex("^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*$")
 
-        return normalized.trimEnd('/').ifEmpty { null }
+    /** A DNS name with at least one dot (or `localhost`), or an IPv4 address, with an optional port. */
+    private fun isHostAndPort(authority: String): Boolean {
+        val colon = authority.lastIndexOf(':')
+        val host = if (colon >= 0) authority.substring(0, colon) else authority
+        if (colon >= 0) {
+            val port = authority.substring(colon + 1).toIntOrNull() ?: return false
+            if (port !in 1..65535) return false
+        }
+        return HOST.matches(host) && ('.' in host || host == "localhost")
     }
 
     /** The relay URL a GRASP server answers nostr on: `wss://host`, or `ws://` for plain and `.onion` hosts. */

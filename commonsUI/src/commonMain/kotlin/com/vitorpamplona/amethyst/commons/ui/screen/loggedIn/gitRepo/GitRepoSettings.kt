@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.nip34Git.create.NewGitRepository
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_cancel
@@ -102,7 +103,7 @@ fun GitRepoSettingsDialog(
     val topicList = splitLines(topics)
 
     fun commitTopicDraft() {
-        val added = splitLines(topicDraft).map { it.removePrefix("#").lowercase() }.filter { it.isNotEmpty() && it !in topicList }
+        val added = NewGitRepository.splitList(topicDraft).map { it.removePrefix("#").lowercase() }.filter { it.isNotEmpty() && it !in topicList }
         if (added.isNotEmpty()) topics = (topicList + added).joinToString("\n")
         topicDraft = ""
     }
@@ -192,7 +193,7 @@ fun GitRepoSettingsDialog(
             Button(
                 enabled = name.isNotBlank(),
                 onClick = {
-                    val allTopics = (topicList + splitLines(topicDraft).map { it.removePrefix("#").lowercase() }).distinct()
+                    val allTopics = (topicList + NewGitRepository.splitList(topicDraft).map { it.removePrefix("#").lowercase() }).distinct()
                     saveRepository(accountViewModel, event, name.trim(), description.trim(), webUrls, cloneUrls, allTopics.joinToString("\n"))
                     onDismiss()
                 },

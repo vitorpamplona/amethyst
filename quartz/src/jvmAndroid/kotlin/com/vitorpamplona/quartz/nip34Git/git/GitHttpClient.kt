@@ -59,7 +59,12 @@ class GitHttpClient(
         }
 
         val refs = transport.lsRefs(cloneUrl, caps)
-        val head = selectHead(refs, ref) ?: throw GitHttpException("could not resolve a branch to browse")
+        val head =
+            selectHead(refs, ref)
+                ?: throw GitHttpException(
+                    "could not resolve a branch to browse",
+                    noBranches = ref == null && refs.none { it.name.startsWith("refs/heads/") },
+                )
         val branch = head.symrefTarget?.removePrefix("refs/heads/") ?: ref?.removePrefix("refs/heads/") ?: ref
 
         val branches = refs.mapNotNull { it.name.removePrefix("refs/heads/").takeIf { _ -> it.name.startsWith("refs/heads/") } }.distinct().sorted()

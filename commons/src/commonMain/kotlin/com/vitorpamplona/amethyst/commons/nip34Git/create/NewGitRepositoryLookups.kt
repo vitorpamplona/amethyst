@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
@@ -42,19 +43,32 @@ suspend fun Account.myGraspServers(idleTimeoutMs: Long = 5_000L): List<String>? 
     )?.grasps()
 
 /**
- * The account's own repository announcement under [identifier], from the cache or the outbox
- * relays. A new repository must not reuse one: the announcement is addressable, so publishing
- * under the same `d` tag would silently replace the existing repository.
+ * The `d` identifiers of the account's own repository announcements, asked of the outbox
+ * relays plus [extraRelays] (the GRASP servers a repository may live on) and kept in the
+ * cache. A new repository must not reuse one: the announcement is addressable, so publishing
+ * under the same `d` tag would silently replace the existing repository. Null when there is no
+ * relay to ask.
  */
-suspend fun Account.findMyGitRepository(
-    identifier: String,
+suspend fun Account.myGitRepositoryIdentifiers(
+    extraRelays: Set<NormalizedRelayUrl> = emptySet(),
     idleTimeoutMs: Long = 5_000L,
-): GitRepositoryEvent? =
-    newestOwn<GitRepositoryEvent>(
-        address = Address(GitRepositoryEvent.KIND, pubKey, identifier),
-        filter = Filter(kinds = listOf(GitRepositoryEvent.KIND), authors = listOf(pubKey), tags = mapOf("d" to listOf(identifier)), limit = 1),
-        idleTimeoutMs = idleTimeoutMs,
-    )
+): Set<String>? {
+    val relays = outboxRelays.flow.value + extraRelays
+    if (relays.isEmpty()) return null
+
+    val filter = Filter(kinds = listOf(GitRepositoryEvent.KIND), authors = listOf(pubKey))
+    val found =
+        client
+            .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs)
+            .filterIsInstance<GitRepositoryEvent>()
+            // A relay can answer with events the filter never asked for.
+            .filter { it.pubKey == pubKey }
+    found.forEach { cache.justConsume(it, null, false) }
+    return found.mapTo(mutableSetOf()) { it.dTag() }
+}
+
+/** True when the cache already holds one of the account's repositories under [identifier]. */
+fun Account.hasCachedGitRepository(identifier: String): Boolean = cache.getAddressableNoteIfExists(Address(GitRepositoryEvent.KIND, pubKey, identifier))?.event != null
 
 private suspend inline fun <reified T : Event> Account.newestOwn(
     address: Address,
@@ -70,6 +84,7 @@ private suspend inline fun <reified T : Event> Account.newestOwn(
         client
             .fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = idleTimeoutMs)
             .filterIsInstance<T>()
+            .filter { it.pubKey == pubKey }
             .maxByOrNull { it.createdAt }
             ?: return null
 

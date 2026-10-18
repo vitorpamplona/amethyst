@@ -102,19 +102,19 @@ class GitRepositoryEvent(
 
     /**
      * Relays the repository author monitors for patches and issues. NIP-34
-     * encodes this as a single multi-value tag, so the first matching
-     * `relays` tag wins.
+     * encodes this as one multi-value tag; repeated `relays` tags are read too,
+     * as [webs] does, so an edit republishing the list does not drop any.
      */
-    fun relays(): List<String> = tags.firstNotNullOfOrNull(RelaysTag::parse) ?: emptyList()
+    fun relays(): List<String> = tags.flatMap { RelaysTag.parse(it) ?: emptyList() }.distinct()
 
     /** [relays], normalized; entries that are not relay URLs are dropped. */
-    fun relaysNorm(): List<NormalizedRelayUrl> = tags.firstNotNullOfOrNull(RelaysTag::parseNorm) ?: emptyList()
+    fun relaysNorm(): List<NormalizedRelayUrl> = tags.flatMap { RelaysTag.parseNorm(it) ?: emptyList() }.distinct()
 
     /**
      * Accepted maintainer pubkeys. The event author is an implicit maintainer
      * and is not required to appear in this list.
      */
-    fun maintainers(): List<HexKey> = tags.firstNotNullOfOrNull(MaintainersTag::parse) ?: emptyList()
+    fun maintainers(): List<HexKey> = tags.flatMap { MaintainersTag.parse(it) ?: emptyList() }.distinct()
 
     fun hashtags(): List<String> = tags.hashtags()
 

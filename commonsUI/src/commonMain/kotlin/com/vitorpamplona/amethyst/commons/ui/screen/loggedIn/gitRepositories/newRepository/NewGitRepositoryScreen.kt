@@ -55,14 +55,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -76,8 +75,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.create.NewGitRepositoryViewModel
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
-import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_add_server
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_advanced_summary
@@ -105,22 +102,19 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_repository_web_urls
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_name
 import com.vitorpamplona.amethyst.commons.ui.components.ChipsInputField
+import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.components.FormFieldShape
 import com.vitorpamplona.amethyst.commons.ui.components.FormTextField
 import com.vitorpamplona.amethyst.commons.ui.components.LabeledField
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.formFieldColors
-import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
-import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.CreatingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
 
 private val PreviewShape = RoundedCornerShape(24.dp)
@@ -145,7 +139,7 @@ fun NewGitRepositoryScreen(
         model.init(accountViewModel.account)
     }
 
-    val shortNpub = accountViewModel.userProfile().pubkeyDisplayHex()
+    val shortNpub = remember(accountViewModel) { accountViewModel.userProfile().pubkeyDisplayHex() }
 
     Scaffold(
         topBar = {
@@ -256,11 +250,14 @@ private fun RepositoryPreviewCard(
             }
         }
 
-        val cloneUrl = model.nostrCloneUrl
-        CommandLine(
-            command = "git clone $cloneUrl",
-            display = "git clone ${cloneUrl.replace(model.npub, shortNpub)}" + if (model.identifier.isBlank()) "…" else "",
-        )
+        // npub is "" for the frame before init() runs; a command without it would be wrong to copy.
+        if (model.npub.isNotEmpty()) {
+            val cloneUrl = model.nostrCloneUrl
+            CommandLine(
+                command = "git clone $cloneUrl",
+                display = "git clone ${cloneUrl.replace(model.npub, shortNpub)}" + if (model.identifier.isBlank()) "…" else "",
+            )
+        }
     }
 }
 
@@ -276,61 +273,6 @@ private fun TopicPill(topic: String) {
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
                 .padding(horizontal = 10.dp, vertical = 4.dp),
     )
-}
-
-/**
- * A one-line shell command in a terminal-like inset, with a button that copies it. [display]
- * can shorten what is shown (an npub, say) so the end of the command stays visible; the copy
- * is always the full [command].
- */
-@Composable
-fun CommandLine(
-    command: String,
-    modifier: Modifier = Modifier,
-    display: String = command,
-) {
-    val clipboard = LocalClipboard.current
-    val notice = rememberShortNotice()
-    val scope = rememberCoroutineScope()
-    Row(
-        modifier =
-            modifier
-                .fillMaxWidth()
-                .clip(InsetShape)
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-                .padding(start = 12.dp),
-        verticalAlignment = Alignment.Top,
-    ) {
-        Text(
-            text = "$ ",
-            style = MaterialTheme.typography.bodySmall.merge(Mono),
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(vertical = 10.dp),
-        )
-        Text(
-            text = display,
-            style = MaterialTheme.typography.bodySmall.merge(Mono),
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(vertical = 10.dp),
-        )
-        IconButton(
-            modifier = Modifier.align(Alignment.CenterVertically),
-            onClick = {
-                scope.launch {
-                    clipboard.setText(command)
-                    notice.show(loadStringRes(Res.string.copied_to_clipboard))
-                }
-            },
-        ) {
-            Icon(
-                MaterialSymbols.ContentCopy,
-                contentDescription = stringRes(Res.string.copy_to_clipboard),
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.grayText,
-            )
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------

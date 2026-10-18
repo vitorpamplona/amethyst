@@ -73,12 +73,12 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_tags
 import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_updated
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitSubjectOf
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.newRepository.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText

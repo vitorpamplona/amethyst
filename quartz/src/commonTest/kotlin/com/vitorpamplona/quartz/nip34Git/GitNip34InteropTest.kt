@@ -199,4 +199,21 @@ class GitNip34InteropTest {
         assertEquals("v2-0-tools", GitRepositoryEvent.suggestIdentifier("v2.0 -- tools"))
         assertEquals("日本", GitRepositoryEvent.suggestIdentifier("日本"))
     }
+
+    @Test
+    fun readsRepeatedRelaysAndMaintainersTags() {
+        val r =
+            repo(
+                arrayOf(
+                    arrayOf("d", "x"),
+                    arrayOf("relays", "wss://a.com"),
+                    arrayOf("relays", "wss://b.com", "wss://a.com"),
+                    arrayOf("maintainers", "bb".repeat(32)),
+                    arrayOf("maintainers", "cc".repeat(32)),
+                ),
+            )
+        assertEquals(listOf("wss://a.com", "wss://b.com"), r.relays())
+        assertEquals(2, r.relaysNorm().size)
+        assertEquals(listOf("bb".repeat(32), "cc".repeat(32)), r.maintainers())
+    }
 }
