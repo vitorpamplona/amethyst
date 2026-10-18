@@ -86,6 +86,12 @@
     "since": "2026-10-14T09:06:00-04:00",
     "translators": [
       {
+        "user": "StellarStoic",
+        "languages": [
+          "Slovenian"
+        ]
+      },
+      {
         "user": "summoner001",
         "languages": [
           "Hungarian"
@@ -101,12 +107,6 @@
         "user": "raj2516",
         "languages": [
           "Hindi"
-        ]
-      },
-      {
-        "user": "StellarStoic",
-        "languages": [
-          "Slovenian"
         ]
       }
     ]
