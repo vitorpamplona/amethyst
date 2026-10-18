@@ -7450,28 +7450,18 @@
     <string name="open_markets_rating_delivery">Delivery</string>
     <string name="open_markets_rating_communication">Communication</string>
     <string name="open_markets_product_not_found">Looking for the product…</string>
-    <string name="kind_card_private_payload">Encrypted or app-only data, nothing to show here</string>
-    <string name="kc_proto_amount_sats">%1$s sats</string>
+    <string name="kind_card_private_pill">Private</string>
+    <string name="kind_card_linked_event">Linked event</string>
+    <string name="kind_card_more">+%1$d</string>
     <string name="kc_proto_offer">Offer</string>
     <string name="kc_proto_nwc_methods">Methods</string>
     <string name="kc_proto_nwc_notifications">Notifications</string>
     <string name="kc_proto_nwc_encryption">Encryption</string>
     <string name="kc_proto_nwc_extensions">Extensions</string>
-    <string name="kc_proto_mls_ciphersuite">Ciphersuite</string>
-    <string name="kc_proto_mls_version">MLS version</string>
-    <string name="kc_proto_mls_extensions">MLS extensions</string>
-    <string name="kc_proto_mls_proposals">MLS proposals</string>
-    <string name="kc_proto_app_components">App components</string>
     <string name="kc_proto_relays">Relays</string>
-    <string name="kc_proto_client">Client</string>
-    <string name="kc_proto_cashu_mint">Mint</string>
     <string name="kc_proto_nutzap_senders">Redeemed nutzaps from</string>
-    <string name="kc_proto_encryption_key">Key</string>
     <string name="kc_dvm_request_title">%1$s request</string>
     <string name="kc_dvm_result_title">%1$s result</string>
-    <string name="kc_dvm_subtitle">Data Vending Machine job</string>
-    <string name="kc_dvm_encrypted_request">Encrypted job request: only the chosen service provider can read its inputs</string>
-    <string name="kc_dvm_encrypted_result">Encrypted job result: only the customer can read it</string>
     <string name="kc_dvm_job_text_extraction">Text extraction</string>
     <string name="kc_dvm_job_summarization">Summarization</string>
     <string name="kc_dvm_job_translation">Translation</string>
@@ -7494,17 +7484,8 @@
     <string name="kc_dvm_label_providers">Asked of</string>
     <string name="kc_dvm_label_customer">Requested by</string>
     <string name="kc_dvm_label_for">For</string>
-    <string name="kc_dvm_label_output">Output</string>
-    <string name="kc_dvm_label_bid">Max bid</string>
-    <string name="kc_dvm_label_amount">Price</string>
     <string name="kc_dvm_sats">%1$s sats</string>
-    <string name="kc_dvm_label_result_relays">Results to</string>
-    <string name="kc_dvm_label_events">Events</string>
-    <string name="kc_dvm_label_results">Results</string>
-    <string name="kc_dvm_label_count">Count</string>
     <string name="kc_dvm_label_transaction">Transaction</string>
-    <string name="kc_dvm_malware_clean">No malware found</string>
-    <string name="kc_dvm_malware_flagged">Flagged: %1$s</string>
     <string name="kc_dvm_param_model">Model</string>
     <string name="kc_dvm_param_max_results">Max results</string>
     <string name="kc_dvm_param_max_tokens">Max tokens</string>
@@ -7517,10 +7498,8 @@
     <string name="kc_dvm_param_range">Range</string>
     <string name="kc_dvm_param_since">Since</string>
     <string name="kc_dvm_param_until">Until</string>
-    <string name="kc_dvm_param_relays">Relays</string>
     <string name="kc_dvm_param_group">Group</string>
     <string name="kc_dvm_heartbeat_title">DVM heartbeat</string>
-    <string name="kc_dvm_label_state">State</string>
     <string name="kc_dvm_online">Online</string>
     <string name="kc_dev_app_id">App</string>
     <string name="kc_dev_more">and %1$d more</string>
@@ -7528,29 +7507,17 @@
         <item quantity="one">%1$d file</item>
         <item quantity="other">%1$d files</item>
     </plurals>
-    <string name="kc_dev_files">Files</string>
-    <string name="kc_dev_hash">Hash</string>
     <string name="kc_dev_source">Source</string>
     <string name="kc_dev_servers">Servers</string>
     <string name="kc_dev_permissions">Permissions</string>
-    <string name="kc_dev_platform">Platform</string>
-    <string name="kc_dev_asset_bundle_title">Release files of %1$s</string>
     <string name="kc_dev_asset_bundle_untitled">Release files</string>
-    <string name="kc_dev_ci_workflow_run">CI workflow run</string>
-    <string name="kc_dev_ci_job">CI job</string>
-    <string name="kc_dev_ci_workflow">Workflow</string>
-    <string name="kc_dev_ci_repository">Repository</string>
     <string name="kc_dev_ci_repositories">Repositories</string>
-    <string name="kc_dev_ci_ref">Ref</string>
-    <string name="kc_dev_ci_trigger">Trigger</string>
     <string name="kc_dev_ci_trigger_push">Push</string>
     <string name="kc_dev_ci_trigger_pull_request">Pull request</string>
     <string name="kc_dev_ci_trigger_schedule">Schedule</string>
     <string name="kc_dev_ci_trigger_manual">Manual</string>
-    <string name="kc_dev_ci_run_id">Run</string>
     <string name="kc_dev_ci_jobs">Jobs</string>
     <string name="kc_dev_ci_running_jobs">Running</string>
-    <string name="kc_dev_ci_runs_on">Runs on</string>
     <string name="kc_dev_ci_exit_code">Exit code</string>
     <string name="kc_dev_ci_manual_trigger_title">CI run requested</string>
     <string name="kc_dev_ci_service_request_title">CI service requested</string>
@@ -7571,17 +7538,11 @@
     <string name="kc_dev_ci_workflows">Workflows</string>
     <string name="kc_dev_ci_secrets">Secrets</string>
     <string name="kc_dev_ci_accepts_secrets">Accepts repository secrets</string>
-    <string name="kc_dev_ci_availability">Availability</string>
-    <string name="kc_dev_ci_online_until">Online until %1$s</string>
     <string name="kc_dev_ci_offline">Offline</string>
     <string name="kc_dev_ci_readiness_title">Ready for CI service</string>
-    <string name="kc_dev_ci_repo_status_active">CI active for %1$s</string>
-    <string name="kc_dev_ci_repo_status">CI status for %1$s</string>
     <string name="kc_dev_feed_untitled">Custom feed</string>
     <string name="kc_dev_feed_subtitle">Custom feed definition</string>
-    <string name="kc_dev_repo_state_title">Repository state: %1$s</string>
     <string name="kc_dev_repo_state_head">HEAD: %1$s</string>
-    <string name="kc_dev_repo_state_discontinued">No longer publishing this repository's state</string>
     <string name="kc_dev_identity_proof_title">App signing key proof</string>
     <string name="kc_dev_identity_proof_subtitle">Links an app signing certificate to this Nostr key</string>
     <string name="kc_dev_certificate">Certificate</string>
@@ -7593,14 +7554,9 @@
     <string name="kc_dev_ipv4">IPv4</string>
     <string name="kc_dev_ipv6">IPv6</string>
     <string name="kc_dev_site_snapshot">nSite snapshot</string>
-    <string name="kc_dev_site_snapshot_title">nSite snapshot: %1$s</string>
     <string name="kc_dev_napplet_snapshot">nApplet snapshot</string>
-    <string name="kc_dev_napplet_snapshot_title">nApplet snapshot: %1$s</string>
     <string name="kc_dev_grasp_title">Git hosting servers</string>
     <string name="kc_agent_profile_title">Agent profile</string>
-    <string name="kc_agent_type">Type</string>
-    <string name="kc_agent_status">Status</string>
-    <string name="kc_agent_channel_add_policy">Who can add it to channels</string>
     <string name="kc_agent_policy_anyone">Anyone</string>
     <string name="kc_agent_policy_owner_only">Only its owner</string>
     <string name="kc_agent_policy_nobody">Nobody</string>
@@ -7608,11 +7564,6 @@
     <string name="kc_agent_persona_title">Agent persona</string>
     <string name="kc_agent_team_title">Agent team</string>
     <string name="kc_agent_team_catalog_title">Agent team template</string>
-    <string name="kc_agent_shared">Shared with the workspace</string>
-    <string name="kc_agent_model">Model</string>
-    <string name="kc_agent_provider">Provider</string>
-    <string name="kc_agent_runtime">Runtime</string>
-    <string name="kc_agent_parallelism">Parallel sessions</string>
     <string name="kc_agent_respond_to">Responds to</string>
     <string name="kc_agent_respond_owner_only">Its owner only</string>
     <string name="kc_agent_respond_allowlist">An allowlist</string>
@@ -7620,8 +7571,6 @@
     <string name="kc_agent_instructions">Instructions</string>
     <string name="kc_agent_personas">Personas</string>
     <string name="kc_agent_project_title">Project</string>
-    <string name="kc_agent_visibility">Visibility</string>
-    <string name="kc_agent_visibility_listed">Listed</string>
     <string name="kc_agent_visibility_unlisted">Unlisted</string>
     <string name="kc_agent_repositories">Repositories</string>
     <string name="kc_agent_artifact_op_create">New artifact</string>
@@ -7663,7 +7612,6 @@
     <string name="kc_agent_ext_published">Published</string>
     <string name="kc_agent_ext_hidden">Hidden</string>
     <string name="kc_agent_ext_version">Version %1$s</string>
-    <string name="kc_agent_ext_price">Price</string>
     <string name="kc_agent_ext_price_sats">%1$s sats</string>
     <string name="kc_agent_ext_free">Free</string>
     <string name="kc_agent_ext_payout">Payout</string>
@@ -7681,13 +7629,11 @@
     <string name="kc_agent_wf_approval_denied">Workflow approval denied</string>
     <string name="kc_agent_wf_grant">Approved a workflow run</string>
     <string name="kc_agent_wf_deny">Denied a workflow run</string>
-    <string name="kc_agent_wf_step">Step</string>
     <string name="kc_agent_wf_error">Error</string>
     <string name="kc_agent_wf_note">Note</string>
     <string name="kc_agent_wf_pr">Pull request</string>
     <string name="kc_buzz_channel">Channel</string>
     <string name="kc_buzz_reason">Reason</string>
-    <string name="kc_buzz_status">Status</string>
     <string name="kc_buzz_until">Until</string>
     <string name="kc_buzz_permanent">Permanent</string>
     <string name="kc_buzz_requested_by">Requested by</string>
@@ -7705,8 +7651,6 @@
     <string name="kc_buzz_channel_summary">Channel summary</string>
     <string name="kc_buzz_topic">Topic</string>
     <string name="kc_buzz_purpose">Purpose</string>
-    <string name="kc_buzz_visibility">Visibility</string>
-    <string name="kc_buzz_messages">Messages</string>
     <string name="kc_buzz_last_activity">Last activity</string>
     <string name="kc_buzz_archived">Archived</string>
     <string name="kc_buzz_dm_add_member">Added someone to a direct message</string>
@@ -7767,7 +7711,6 @@
     <string name="kc_buzz_relay_add_member">Add relay member</string>
     <string name="kc_buzz_relay_change_role">Change member role</string>
     <string name="kc_buzz_relay_remove_member">Remove relay member</string>
-    <string name="kc_buzz_role">Role</string>
     <string name="kc_buzz_role_owner">Owner</string>
     <string name="kc_buzz_role_admin">Admin</string>
     <string name="kc_buzz_role_member">Member</string>
@@ -7777,7 +7720,6 @@
     <string name="kc_buzz_diff">Code diff</string>
     <string name="kc_buzz_repository">Repository</string>
     <string name="kc_buzz_branch">Branch</string>
-    <string name="kc_buzz_pull_request">Pull request</string>
     <string name="kc_buzz_commit">Commit</string>
     <string name="kc_buzz_edited">Edited a message</string>
     <string name="kc_buzz_pinned">Pinned a message</string>
@@ -7790,7 +7732,6 @@
         <item quantity="other">%1$d replies</item>
     </plurals>
     <string name="kc_buzz_last_reply">Last reply</string>
-    <string name="kc_group_field_group">Group</string>
     <string name="kc_group_put_user">Added to group</string>
     <string name="kc_group_put_user_roles">Group role assigned</string>
     <string name="kc_group_remove_user">Removed from group</string>
@@ -7835,7 +7776,6 @@
     <string name="kc_group_channel_mute">User muted in channel</string>
     <string name="kc_group_geohash_presence">Is in this location chat</string>
     <string name="kc_group_field_nickname">Posting as</string>
-    <string name="kc_group_teleported">Teleported in</string>
     <string name="kc_group_nests_kick">Removed from audio room</string>
     <string name="kc_group_nests_mute">Muted in audio room</string>
     <string name="kc_group_nests_command">Audio room admin command</string>
@@ -7868,14 +7808,9 @@
     <string name="kc_group_concord_invite_revoked">Invite link revoked</string>
     <string name="kc_group_relay_invite_request">Asked the relay for an invite code</string>
     <string name="kc_group_relay_role">Relay role</string>
-    <string name="kc_list_empty">Empty list</string>
     <plurals name="kc_list_entry_count">
         <item quantity="one">%1$d entry</item>
         <item quantity="other">%1$d entries</item>
-    </plurals>
-    <plurals name="kc_list_public_count_plus_private">
-        <item quantity="one">%1$d public entry, plus private ones</item>
-        <item quantity="other">%1$d public entries, plus private ones</item>
     </plurals>
     <string name="kc_list_and_more">+%1$d</string>
     <plurals name="kc_list_badge_count">
@@ -7892,10 +7827,8 @@
         <item quantity="one">%1$d sensitive sticker not shown</item>
         <item quantity="other">%1$d sensitive stickers not shown</item>
     </plurals>
-    <string name="kc_list_nests_auth">Auth: %1$s</string>
     <string name="kc_list_nutzap_info_on">Accepts nutzaps</string>
     <string name="kc_list_nutzap_info_off">Stopped accepting nutzaps</string>
-    <string name="kc_list_mint">Mint</string>
     <string name="kc_list_relays">Relays</string>
     <string name="kc_list_p2pk_key">Locking key</string>
     <string name="kc_list_favorite_follow_sets">Favorite follow sets</string>
@@ -7916,15 +7849,11 @@
         <item quantity="one">%1$d-day posting streak</item>
         <item quantity="other">%1$d-day posting streak</item>
     </plurals>
-    <string name="kc_list_streak_live">Still going</string>
-    <string name="kc_list_streak_ended">Streak ended</string>
     <string name="kc_list_streak_invalid">Invalid streak dates</string>
     <string name="kc_list_streak_started">Started</string>
     <string name="kc_list_streak_last_post">Last post</string>
-    <string name="kc_list_streak_ends">Ends without a post by</string>
     <string name="kc_list_status_general">Status update</string>
     <string name="kc_list_status_music">Now playing</string>
-    <string name="kc_list_status_other">Status: %1$s</string>
     <string name="kc_list_status_cleared">Status cleared</string>
     <string name="kc_list_link">Link</string>
     <string name="kc_list_expires">Expires</string>
@@ -7946,19 +7875,11 @@
         <item quantity="one">%1$d second</item>
         <item quantity="other">%1$d seconds</item>
     </plurals>
-    <string name="kc_misc_status">Status</string>
     <string name="kc_misc_url">Link</string>
     <string name="kc_misc_source">Source</string>
-    <string name="kc_misc_rating">Rating</string>
     <string name="kc_misc_language">Language: %1$s</string>
-    <string name="kc_misc_file_type">Type</string>
-    <string name="kc_misc_file_size">Size</string>
     <string name="kc_misc_geohash">Region</string>
     <string name="kc_misc_deletion_title">Deletion request</string>
-    <plurals name="kc_misc_deletion_count">
-        <item quantity="one">Asks to delete %1$d event</item>
-        <item quantity="other">Asks to delete %1$d events</item>
-    </plurals>
     <string name="kc_misc_vanish_title">Request to vanish</string>
     <string name="kc_misc_vanish_everywhere">Asks every relay to erase this account</string>
     <plurals name="kc_misc_vanish_relays">
@@ -7994,14 +7915,9 @@
     <string name="kc_misc_p2p_sell">Selling bitcoin</string>
     <string name="kc_misc_p2p_fiat">%1$s %2$s</string>
     <string name="kc_misc_p2p_fiat_range">%1$s – %2$s %3$s</string>
-    <string name="kc_misc_p2p_amount">Amount</string>
     <string name="kc_misc_p2p_sats">%1$s sats</string>
     <string name="kc_misc_p2p_market_price">At market price</string>
-    <string name="kc_misc_p2p_premium">Premium</string>
     <string name="kc_misc_p2p_maker">Maker</string>
-    <string name="kc_misc_p2p_platform">Exchange</string>
-    <string name="kc_misc_p2p_network">Network</string>
-    <string name="kc_misc_p2p_expires">Expires</string>
     <string name="kc_misc_p2p_order_id">Order</string>
     <string name="kc_misc_p2p_destination">Destination</string>
     <string name="kc_misc_p2p_payment_hash">Payment hash</string>
@@ -8011,9 +7927,7 @@
     <string name="kc_misc_p2p_status_success">Completed</string>
     <string name="kc_misc_p2p_status_expired">Expired</string>
     <string name="kc_misc_mostro_rating_title">Trader reputation</string>
-    <string name="kc_misc_mostro_rating_out_of">%1$s / %2$s</string>
     <string name="kc_misc_mostro_rating_reviews">Reviews</string>
-    <string name="kc_misc_mostro_rating_last">Last rating</string>
     <string name="kc_misc_mostro_rating_since">Trading since</string>
     <string name="kc_misc_mostro_dispute_title">Trade dispute</string>
     <string name="kc_misc_mostro_dispute_initiator">Opened by</string>
@@ -8023,23 +7937,152 @@
     <string name="kc_misc_robosats_rating_title">Coordinator rating</string>
     <string name="kc_misc_poll_response_title">Voted in a poll</string>
     <string name="kc_misc_monitor_every">Checks relays every %1$s</string>
-    <string name="kc_misc_monitor_timeouts">Timeouts</string>
-    <string name="kc_misc_monitor_timeout_all">all</string>
-    <string name="kc_misc_monitor_timeout_value">%1$s: %2$s ms</string>
     <string name="kc_misc_text_track_title">Caption track</string>
     <string name="kc_misc_video_view_title">Watched a video</string>
     <string name="kc_misc_video_view_started">Started watching a video</string>
     <string name="kc_misc_video_view_watched">Watched</string>
     <string name="kc_misc_video_view_loops">Plays</string>
     <string name="kc_misc_workout_template_title">Workout template</string>
-    <string name="kc_misc_workout_rounds">Rounds</string>
     <string name="kc_misc_workout_duration">Duration</string>
-    <string name="kc_misc_workout_interval">Interval</string>
-    <string name="kc_misc_workout_rest_rounds">Rest between rounds</string>
-    <string name="kc_misc_workout_rest_sets">Rest between sets</string>
     <string name="kc_misc_workout_difficulty">Difficulty</string>
     <plurals name="kc_misc_workout_sets">
         <item quantity="one">%1$d set</item>
         <item quantity="other">%1$d sets</item>
+    </plurals>
+    <string name="kc_agent_who_can_add">Who can add</string>
+    <string name="kc_agent_pill_shared">Shared</string>
+    <plurals name="kc_agent_parallel_sessions">
+        <item quantity="one">%1$d session at a time</item>
+        <item quantity="other">%1$d sessions at a time</item>
+    </plurals>
+    <string name="kc_agent_capability_title">Agent capability</string>
+    <string name="kc_agent_capability_workers">Served by</string>
+    <string name="kc_agent_wf_task">Task</string>
+    <string name="kc_agent_wf_approver">Approver</string>
+    <string name="kc_agent_ext_release_title">Extension release</string>
+    <string name="kc_dev_ci_run_passed">CI run passed</string>
+    <string name="kc_dev_ci_run_failed">CI run failed</string>
+    <string name="kc_dev_ci_run_cancelled">CI run cancelled</string>
+    <string name="kc_dev_ci_run_finished">CI run finished</string>
+    <string name="kc_dev_ci_run_queued">CI run queued</string>
+    <string name="kc_dev_ci_run_in_progress">CI run in progress</string>
+    <string name="kc_dev_ci_job_passed">CI job passed</string>
+    <string name="kc_dev_ci_job_failed">CI job failed</string>
+    <string name="kc_dev_ci_job_cancelled">CI job cancelled</string>
+    <string name="kc_dev_ci_job_finished">CI job finished</string>
+    <string name="kc_dev_ci_artifacts">Artifacts</string>
+    <string name="kc_dev_ci_coordinator">Coordinator</string>
+    <string name="kc_dev_ci_maintainers">Maintainers</string>
+    <string name="kc_dev_ci_online">Online</string>
+    <string name="kc_dev_ci_until">Until %1$s</string>
+    <string name="kc_dev_ci_service_active">CI service active</string>
+    <string name="kc_dev_ci_service_status">CI service status</string>
+    <string name="kc_dev_feed_authors">Authors</string>
+    <string name="kc_dev_repo_state">Repository state</string>
+    <string name="kc_dev_repo_state_archived">Archived</string>
+    <string name="kc_dvm_encrypted_pill">Encrypted</string>
+    <string name="kc_dvm_clean_pill">Clean</string>
+    <string name="kc_dvm_flagged_pill">Flagged</string>
+    <string name="kc_dvm_param_pair">%1$s: %2$s</string>
+    <string name="kc_dvm_publishes_at">Publishes %1$s</string>
+    <plurals name="kc_dvm_more">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <plurals name="kc_dvm_results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
+    <plurals name="kc_dvm_people_count">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+    <plurals name="kc_dvm_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <string name="kc_group_teleported_pill">Teleported</string>
+    <plurals name="kc_list_server_count">
+        <item quantity="one">%1$d server</item>
+        <item quantity="other">%1$d servers</item>
+    </plurals>
+    <plurals name="kc_list_relay_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
+    <plurals name="kc_list_emoji_pack_count">
+        <item quantity="one">%1$d emoji pack</item>
+        <item quantity="other">%1$d emoji packs</item>
+    </plurals>
+    <plurals name="kc_list_community_count">
+        <item quantity="one">%1$d community</item>
+        <item quantity="other">%1$d communities</item>
+    </plurals>
+    <plurals name="kc_list_podcast_count">
+        <item quantity="one">%1$d podcast</item>
+        <item quantity="other">%1$d podcasts</item>
+    </plurals>
+    <plurals name="kc_list_follow_set_count">
+        <item quantity="one">%1$d follow set</item>
+        <item quantity="other">%1$d follow sets</item>
+    </plurals>
+    <string name="kc_list_streak_pill_live">Live</string>
+    <string name="kc_list_streak_pill_ended">Ended</string>
+    <string name="kc_list_status_expired_pill">Expired</string>
+    <plurals name="kc_misc_deletion_posts">
+        <item quantity="one">Deleted %1$d post</item>
+        <item quantity="other">Deleted %1$d posts</item>
+    </plurals>
+    <string name="kc_misc_rating_stars">%1$s ★</string>
+    <string name="kc_misc_p2p_premium_meta">%1$s premium</string>
+    <string name="kc_misc_p2p_expires_on">Expires %1$s</string>
+    <string name="kc_misc_dispute_resolved">Resolved</string>
+    <string name="kc_misc_dispute_outcome">Outcome</string>
+    <plurals name="kc_misc_workout_rounds_count">
+        <item quantity="one">%1$d round</item>
+        <item quantity="other">%1$d rounds</item>
+    </plurals>
+    <plurals name="kc_misc_workout_exercises">
+        <item quantity="one">%1$d exercise</item>
+        <item quantity="other">%1$d exercises</item>
+    </plurals>
+    <string name="kc_misc_workout_interval_meta">%1$s intervals</string>
+    <string name="kc_misc_workout_rest_sets_meta">%1$s rest between sets</string>
+    <string name="kc_misc_workout_rest_rounds_meta">%1$s rest between rounds</string>
+    <string name="kc_proto_zap_request_title">Zap request</string>
+    <string name="kc_proto_zap_to">To</string>
+    <string name="kc_proto_bolt12_zap_title">Zap via BOLT12 offer</string>
+    <string name="kc_proto_nwc_title">Wallet service</string>
+    <plurals name="kc_proto_nwc_method_count">
+        <item quantity="one">Supports %1$d method</item>
+        <item quantity="other">Supports %1$d methods</item>
+    </plurals>
+    <string name="kc_proto_keypackage_title">Group chat key package</string>
+    <string name="kc_proto_keypackage_legacy">Legacy</string>
+    <string name="kc_proto_mls_version_meta">MLS %1$s</string>
+    <string name="kc_proto_cashu_mint_quote_title">Cashu deposit quote</string>
+    <string name="kc_proto_cashu_history_title">Cashu wallet activity</string>
+    <plurals name="kc_proto_cashu_redeemed_count">
+        <item quantity="one">Redeemed %1$d nutzap</item>
+        <item quantity="other">Redeemed %1$d nutzaps</item>
+    </plurals>
+    <string name="kc_proto_encryption_keys_title">Encryption key</string>
+    <string name="kc_proto_encryption_current">Current key</string>
+    <plurals name="kc_proto_encryption_older_count">
+        <item quantity="one">%1$d older key kept</item>
+        <item quantity="other">%1$d older keys kept</item>
+    </plurals>
+    <string name="kc_proto_key_request_title">Encryption key request</string>
+    <string name="kc_proto_key_request_code">Check code</string>
+    <string name="kc_buzz_system_message">System message</string>
+    <string name="kc_buzz_huddle_reaction_plain">Reacted in a huddle</string>
+    <string name="kc_buzz_live">Live</string>
+    <string name="kc_buzz_open">Open</string>
+    <string name="kc_buzz_file">File</string>
+    <string name="kc_buzz_pr_number">PR #%1$s</string>
+    <string name="kc_buzz_consent_self">Self</string>
+    <plurals name="kc_buzz_message_count">
+        <item quantity="one">%1$d message</item>
+        <item quantity="other">%1$d messages</item>
     </plurals>
 </resources>

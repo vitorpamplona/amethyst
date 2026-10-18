@@ -20,58 +20,57 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_amount_sats
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_app_components
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_cashu_mint
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_client
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_encryption_key
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_mls_ciphersuite
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_mls_extensions
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_mls_proposals
-import com.vitorpamplona.amethyst.commons.resources.kc_proto_mls_version
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_bolt12_zap_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_cashu_history_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_cashu_mint_quote_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_cashu_redeemed_count
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_encryption_current
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_encryption_keys_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_encryption_older_count
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_key_request_code
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_key_request_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_keypackage_legacy
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_keypackage_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_mls_version_meta
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_nutzap_senders
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_encryption
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_extensions
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_method_count
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_methods
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_notifications
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_nwc_title
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_offer
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_relays
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_zap_request_title
+import com.vitorpamplona.amethyst.commons.resources.kc_proto_zap_to
 import com.vitorpamplona.amethyst.commons.resources.keypackage_section
-import com.vitorpamplona.amethyst.commons.resources.kind_card_private_payload
+import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
 import com.vitorpamplona.amethyst.commons.resources.zap_type_private
-import com.vitorpamplona.amethyst.commons.resources.zap_type_public
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -84,7 +83,7 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
  * only ciphertext are drawn by [RenderPrivateKindCard] straight from the dispatch.
  */
 
-/** NIP-57 zap request (kind 9734): who is zapped, how much, what, and the public comment. */
+/** NIP-57 zap request (kind 9734): the amount, who is zapped, the public comment and the target. */
 @Composable
 fun RenderZapRequest(
     baseNote: Note,
@@ -112,21 +111,23 @@ fun RenderZapRequest(
             )
         }
 
+    // A public zap is the default, so only the private and anonymous kinds earn a pill.
     val typeLabel =
         when {
             card.isPrivate -> stringRes(Res.string.zap_type_private)
             card.isAnonymous -> stringRes(Res.string.zap_type_anonymous)
-            else -> stringRes(Res.string.zap_type_public)
+            else -> null
         }
 
     KindCard(
         icon = MaterialSymbols.Bolt,
-        title = kindName(event.kind),
-        subtitle = card.amountSats?.let { stringRes(Res.string.kc_proto_amount_sats, PlatformNumberFormatter().format(it)) },
-        iconTint = MaterialTheme.colorScheme.bitcoinColor,
+        title = stringRes(Res.string.kc_proto_zap_request_title),
+        tone = KindTone.Money,
+        status = typeLabel,
+        statusTone = KindTone.Neutral,
     ) {
-        KindCardChips(listOf(typeLabel))
-        KindCardUsers(card.recipients, accountViewModel, nav)
+        ZapAmount(card.amountSats)
+        ZapRecipients(card.recipients, accountViewModel, nav)
         // A private zap keeps its message encrypted in the `anon` tag; content is not the comment.
         if (!card.isPrivate) {
             KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
@@ -144,7 +145,7 @@ private class ZapRequestCard(
     val isAnonymous: Boolean,
 )
 
-/** NIP-B1 BOLT12 zap intent (kind 9737): recipient, amount, offer, target and comment. */
+/** NIP-B1 BOLT12 zap intent (kind 9737): the amount, recipient, offer, comment and target. */
 @Composable
 fun RenderBolt12ZapIntent(
     baseNote: Note,
@@ -155,22 +156,42 @@ fun RenderBolt12ZapIntent(
 ) {
     val event = baseNote.event as? Bolt12ZapIntentEvent ?: return
     val amountSats = remember(event) { event.amount()?.div(1000)?.takeIf { it > 0 } }
-    val offer = remember(event) { event.offer() }
-    val recipient = remember(event) { event.recipient() }
+    val offer = remember(event) { event.offer()?.toShortDisplay() }
+    val recipients = remember(event) { listOfNotNull(event.recipient()) }
     val zappedEvent = remember(event) { event.zappedEvent() }
     val zappedAddress = remember(event) { event.zappedAddress()?.let { Address.parse(it) } }
 
     KindCard(
         icon = MaterialSymbols.Bolt,
-        title = kindName(event.kind),
-        subtitle = amountSats?.let { stringRes(Res.string.kc_proto_amount_sats, PlatformNumberFormatter().format(it)) },
-        iconTint = MaterialTheme.colorScheme.bitcoinColor,
+        title = stringRes(Res.string.kc_proto_bolt12_zap_title),
+        tone = KindTone.Money,
     ) {
-        recipient?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
-        KindCardField(stringRes(Res.string.kc_proto_offer), offer?.toShortDisplay(), monospace = true, maxLines = 1)
+        ZapAmount(amountSats)
+        ZapRecipients(recipients, accountViewModel, nav)
+        KindCardField(stringRes(Res.string.kc_proto_offer), offer, monospace = true, maxLines = 1)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         ZapTarget(zappedEvent, zappedAddress, quotesLeft, backgroundColor, accountViewModel, nav)
     }
+}
+
+/** The zap's amount in the big type of the zap receipts, so a request reads like the payment it asks for. */
+@Composable
+private fun ZapAmount(amountSats: Long?) {
+    if (amountSats == null) return
+    val formatted = remember(amountSats) { PlatformNumberFormatter().format(amountSats) }
+    ActivityAmountRow(formatted, KindTone.Money.color())
+}
+
+/** The people a zap pays, under a "To" heading. */
+@Composable
+private fun ZapRecipients(
+    recipients: List<HexKey>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (recipients.isEmpty()) return
+    KindCardSection(stringRes(Res.string.kc_proto_zap_to))
+    KindCardUsers(recipients, accountViewModel, nav)
 }
 
 /** Quotes the event a zap points at: the `e` event first, else the `a` address. */
@@ -190,57 +211,72 @@ private fun ZapTarget(
     }
 }
 
-/** NIP-47 wallet service info (kind 13194): the methods, encryptions and notifications it supports. */
+/** NIP-47 wallet service info (kind 13194): the methods, notifications and encryptions it supports. */
 @Composable
 fun RenderNwcInfo(baseNote: Note) {
     val event = baseNote.event as? NwcInfoEvent ?: return
-    val methods = remember(event) { event.capabilities() }
-    val encryptions = remember(event) { event.encryptionSchemes() }
-    val notifications = remember(event) { event.notificationTypes() }
+    val methods = remember(event) { event.capabilities().map(::humanizeIdentifier) }
+    val notifications = remember(event) { event.notificationTypes().map(::humanizeIdentifier) }
+    val encryptions = remember(event) { event.encryptionSchemes().joinToString(", ").ifBlank { null } }
     val extensions = remember(event) { event.extensions() }
 
     KindCard(
         icon = MaterialSymbols.AccountBalanceWallet,
-        title = kindName(event.kind),
+        title = stringRes(Res.string.kc_proto_nwc_title),
+        subtitle = methods.size.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.kc_proto_nwc_method_count, it, it) },
+        tone = KindTone.Money,
     ) {
-        LabeledChips(stringRes(Res.string.kc_proto_nwc_methods), methods)
-        LabeledChips(stringRes(Res.string.kc_proto_nwc_notifications), notifications)
-        LabeledChips(stringRes(Res.string.kc_proto_nwc_encryption), encryptions)
-        LabeledChips(stringRes(Res.string.kc_proto_nwc_extensions), extensions)
+        SectionChips(stringRes(Res.string.kc_proto_nwc_methods), methods)
+        SectionChips(stringRes(Res.string.kc_proto_nwc_notifications), notifications)
+        SectionChips(stringRes(Res.string.kc_proto_nwc_extensions), extensions)
+        KindCardField(stringRes(Res.string.kc_proto_nwc_encryption), encryptions, monospace = true, maxLines = 1)
     }
 }
 
+/** `pay_invoice` reads as "pay invoice": the wire names are snake case, the card is for people. */
+private fun humanizeIdentifier(id: String): String = id.replace('_', ' ')
+
 /**
- * Marmot MLS KeyPackage, both the addressable kind 30443 and the legacy kind 443: the MLS
- * parameters it advertises. The content is the serialized KeyPackage and is not shown.
+ * Marmot MLS KeyPackage, both the addressable kind 30443 and the legacy kind 443: the
+ * ciphersuite it offers, the app that made it and where it can be fetched. The content is the
+ * serialized KeyPackage and the extension codes are for software, so neither is shown.
  */
 @Composable
 fun RenderMarmotKeyPackage(baseNote: Note) {
     val event = baseNote.event as? PublishedKeyPackage ?: return
-    val ciphersuite =
-        remember(event) {
-            event.mlsCiphersuite()?.let { code -> MlsCiphersuite.fromCode(code)?.let { "${it.name} ($code)" } ?: code }
-        }
+    val ciphersuite = remember(event) { event.mlsCiphersuite()?.let(::ciphersuiteShortName) }
     val version = remember(event) { event.mlsProtocolVersion() }
-    val extensions = remember(event) { event.mlsExtensions() ?: emptyList() }
-    val proposals = remember(event) { event.mlsProposals() ?: emptyList() }
-    val components = remember(event) { event.appComponents() ?: emptyList() }
     val relays = remember(event) { event.relays()?.map { it.displayUrl() } ?: emptyList() }
     val client = remember(event) { event.clientName() }
+    val isLegacy = event is LegacyKeyPackageEvent
 
     KindCard(
         icon = MaterialSymbols.Key,
-        title = kindName(event.kind),
-        subtitle = client,
+        title = stringRes(Res.string.kc_proto_keypackage_title),
+        subtitle = ciphersuite,
+        tone = if (isLegacy) KindTone.Neutral else KindTone.Primary,
+        status = if (isLegacy) stringRes(Res.string.kc_proto_keypackage_legacy) else null,
     ) {
-        KindCardField(stringRes(Res.string.kc_proto_mls_ciphersuite), ciphersuite, monospace = true)
-        KindCardField(stringRes(Res.string.kc_proto_mls_version), version)
-        LabeledChips(stringRes(Res.string.kc_proto_mls_extensions), extensions)
-        LabeledChips(stringRes(Res.string.kc_proto_mls_proposals), proposals)
-        LabeledChips(stringRes(Res.string.kc_proto_app_components), components)
-        LabeledChips(stringRes(Res.string.kc_proto_relays), relays)
+        KindCardMeta(listOf(client, version?.let { stringRes(Res.string.kc_proto_mls_version_meta, it) }))
+        SectionChips(stringRes(Res.string.kc_proto_relays), relays)
     }
 }
+
+/**
+ * The ciphersuite as its key exchange, cipher and signature ("X25519 · AES-128-GCM · Ed25519")
+ * instead of the RFC 9420 constant. An unknown code is shown as it came.
+ */
+private fun ciphersuiteShortName(code: String): String =
+    when (MlsCiphersuite.fromCode(code)) {
+        MlsCiphersuite.MLS_128_DHKEMX25519_AES128GCM_SHA256_ED25519 -> "X25519 · AES-128-GCM · Ed25519"
+        MlsCiphersuite.MLS_128_DHKEMP256_AES128GCM_SHA256_P256 -> "P-256 · AES-128-GCM · P-256"
+        MlsCiphersuite.MLS_128_DHKEMX25519_CHACHA20POLY1305_SHA256_ED25519 -> "X25519 · ChaCha20-Poly1305 · Ed25519"
+        MlsCiphersuite.MLS_256_DHKEMX448_AES256GCM_SHA512_ED448 -> "X448 · AES-256-GCM · Ed448"
+        MlsCiphersuite.MLS_256_DHKEMP521_AES256GCM_SHA512_P521 -> "P-521 · AES-256-GCM · P-521"
+        MlsCiphersuite.MLS_256_DHKEMX448_CHACHA20POLY1305_SHA512_ED448 -> "X448 · ChaCha20-Poly1305 · Ed448"
+        MlsCiphersuite.MLS_256_DHKEMP384_AES256GCM_SHA384_P384 -> "P-384 · AES-256-GCM · P-384"
+        null -> code
+    }
 
 /** Marmot KeyPackage relay list (kind 10051), drawn like the other relay lists. */
 @Composable
@@ -267,14 +303,30 @@ fun RenderKeyPackageRelayList(
 @Composable
 fun RenderCashuMintQuote(baseNote: Note) {
     val event = baseNote.event as? CashuMintQuoteEvent ?: return
-    val mint = remember(event) { event.mint() }
+    val mint = remember(event) { event.mint()?.let(::mintDisplayName) }
 
-    PrivateCardWithBody(baseNote, MaterialSymbols.Paid) {
-        KindCardField(stringRes(Res.string.kc_proto_cashu_mint), mint)
-    }
+    KindCard(
+        icon = MaterialSymbols.Paid,
+        title = stringRes(Res.string.kc_proto_cashu_mint_quote_title),
+        subtitle = mint,
+        tone = KindTone.Money,
+        status = stringRes(Res.string.kind_card_private_pill),
+        statusTone = KindTone.Neutral,
+    )
 }
 
-/** NIP-60 spending history (kind 7376): the amounts are encrypted, the redeemed nutzaps' senders are public. */
+/** A mint URL without its scheme or trailing slash: `mint.cashu.chat`. */
+private fun mintDisplayName(url: String): String =
+    url
+        .trim()
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .trimEnd('/')
+
+/**
+ * NIP-60 spending history (kind 7376): the amount and direction are encrypted; the redeemed
+ * nutzaps and their senders are public.
+ */
 @Composable
 fun RenderCashuSpendingHistory(
     baseNote: Note,
@@ -283,77 +335,83 @@ fun RenderCashuSpendingHistory(
 ) {
     val event = baseNote.event as? CashuSpendingHistoryEvent ?: return
     val senders = remember(event) { event.nutzapSenders().distinct() }
+    val redeemed = remember(event) { event.redeemedReferences().size }
 
-    PrivateCardWithBody(baseNote, MaterialSymbols.History) {
+    KindCard(
+        icon = MaterialSymbols.History,
+        title = stringRes(Res.string.kc_proto_cashu_history_title),
+        subtitle = redeemed.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.kc_proto_cashu_redeemed_count, it, it) },
+        tone = KindTone.Money,
+        status = stringRes(Res.string.kind_card_private_pill),
+        statusTone = KindTone.Neutral,
+    ) {
         if (senders.isNotEmpty()) {
-            SectionLabel(stringRes(Res.string.kc_proto_nutzap_senders))
+            KindCardSection(stringRes(Res.string.kc_proto_nutzap_senders))
             KindCardUsers(senders, accountViewModel, nav)
         }
     }
 }
 
-/** Key decoupling: the encryption keys an account announces (kind 10044). */
+/**
+ * NIP-4E encryption key list (kind 10044): the key peers encrypt to. The first `n` is the current
+ * key; any others are older ones kept for decrypting past messages, shown only as a count.
+ */
 @Composable
 fun RenderEncryptionKeyList(baseNote: Note) {
     val event = baseNote.event as? EncryptionKeyListEvent ?: return
-    val keys = remember(event) { event.keys().map { it.pubkey.toShortDisplay() } }
+    val keys = remember(event) { event.keys().map { it.pubkey } }
+    val current = remember(keys) { keys.firstOrNull()?.toShortDisplay() }
+    val older = keys.size - 1
 
     KindCard(
         icon = MaterialSymbols.Key,
-        title = kindName(event.kind),
-    ) {
-        keys.forEach { KindCardField(stringRes(Res.string.kc_proto_encryption_key), it, monospace = true, maxLines = 1) }
-    }
+        title = stringRes(Res.string.kc_proto_encryption_keys_title),
+        tone = KindTone.Neutral,
+        body =
+            if (current == null) {
+                null
+            } else {
+                {
+                    KindCardField(stringRes(Res.string.kc_proto_encryption_current), current, monospace = true, maxLines = 1)
+                    if (older > 0) {
+                        KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_proto_encryption_older_count, older, older)))
+                    }
+                }
+            },
+    )
 }
 
-/** Key decoupling: a device asking for the account's encryption key (kind 4454). */
+/**
+ * NIP-4E encryption key request (kind 4454): a new device of this account asking for the
+ * encryption key. The device's name and the code to compare before approving are what matter.
+ */
 @Composable
 fun RenderEncryptionKeyRequest(baseNote: Note) {
     val event = baseNote.event as? EncryptionKeyRequestEvent ?: return
     val client = remember(event) { event.clientName() }
+    val code = remember(event) { event.authorizationCode() }
 
-    PrivateCardWithBody(baseNote, MaterialSymbols.Key) {
-        KindCardField(stringRes(Res.string.kc_proto_client), client)
-    }
-}
-
-/** [RenderPrivateKindCard]'s title and alt subtitle, plus the few public fields a kind carries. */
-@Composable
-private fun PrivateCardWithBody(
-    note: Note,
-    icon: MaterialSymbol,
-    body: @Composable () -> Unit,
-) {
-    val event = note.event ?: return
-    val alt = remember(event) { event.alt() }
     KindCard(
-        icon = icon,
-        title = kindName(event.kind),
-        subtitle = alt ?: stringRes(Res.string.kind_card_private_payload),
-    ) {
-        body()
-    }
-}
-
-@Composable
-private fun SectionLabel(label: String) {
-    Text(
-        text = label,
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        icon = MaterialSymbols.PhonelinkLock,
+        title = stringRes(Res.string.kc_proto_key_request_title),
+        subtitle = client,
+        tone = KindTone.Neutral,
+        body =
+            if (code == null) {
+                null
+            } else {
+                { KindCardField(stringRes(Res.string.kc_proto_key_request_code), code, monospace = true, maxLines = 1) }
+            },
     )
 }
 
-/** A small label over a row of chips; nothing when [labels] is empty. */
+/** A section heading over a row of chips; nothing when [labels] is empty. */
 @Composable
-private fun LabeledChips(
+private fun SectionChips(
     label: String,
     labels: List<String>,
 ) {
     if (labels.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        SectionLabel(label)
-        KindCardChips(labels)
-    }
+    KindCardSection(label)
+    KindCardChips(labels)
 }

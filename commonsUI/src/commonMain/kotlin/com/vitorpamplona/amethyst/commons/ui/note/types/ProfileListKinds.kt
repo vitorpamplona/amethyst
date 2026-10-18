@@ -24,7 +24,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -61,37 +60,40 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
+import com.vitorpamplona.amethyst.commons.resources.cashu_mints
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.kc_list_and_more
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_sets
-import com.vitorpamplona.amethyst.commons.resources.kc_list_empty
+import com.vitorpamplona.amethyst.commons.resources.kc_list_community_count
+import com.vitorpamplona.amethyst.commons.resources.kc_list_emoji_pack_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_entry_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_expires
 import com.vitorpamplona.amethyst.commons.resources.kc_list_external_identities
 import com.vitorpamplona.amethyst.commons.resources.kc_list_favorite_follow_sets
+import com.vitorpamplona.amethyst.commons.resources.kc_list_follow_set_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_gallery_entry
 import com.vitorpamplona.amethyst.commons.resources.kc_list_geocache_hunt
 import com.vitorpamplona.amethyst.commons.resources.kc_list_link
-import com.vitorpamplona.amethyst.commons.resources.kc_list_mint
-import com.vitorpamplona.amethyst.commons.resources.kc_list_nests_auth
 import com.vitorpamplona.amethyst.commons.resources.kc_list_nutzap_info_off
 import com.vitorpamplona.amethyst.commons.resources.kc_list_nutzap_info_on
 import com.vitorpamplona.amethyst.commons.resources.kc_list_p2pk_key
-import com.vitorpamplona.amethyst.commons.resources.kc_list_public_count_plus_private
+import com.vitorpamplona.amethyst.commons.resources.kc_list_podcast_count
+import com.vitorpamplona.amethyst.commons.resources.kc_list_relay_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_relays
+import com.vitorpamplona.amethyst.commons.resources.kc_list_server_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_status_cleared
+import com.vitorpamplona.amethyst.commons.resources.kc_list_status_expired_pill
 import com.vitorpamplona.amethyst.commons.resources.kc_list_status_general
 import com.vitorpamplona.amethyst.commons.resources.kc_list_status_music
-import com.vitorpamplona.amethyst.commons.resources.kc_list_status_other
 import com.vitorpamplona.amethyst.commons.resources.kc_list_sticker_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_sticker_pack
 import com.vitorpamplona.amethyst.commons.resources.kc_list_stickers_sensitive_hidden
 import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_days
-import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_ended
-import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_ends
 import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_invalid
 import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_last_post
-import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_live
+import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_pill_ended
+import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_pill_live
 import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_started
 import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_title
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_active
@@ -105,24 +107,22 @@ import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_definition
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_incomplete
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_title_font
 import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight
-import com.vitorpamplona.amethyst.commons.resources.nip51_list_has_private_members
+import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.AddressMemberRow
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.LabelMemberRow
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.LinkMemberRow
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.PagedMemberColumn
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.UserMemberRow
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.GeocacheHuntRow
@@ -136,6 +136,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.getI
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.amethyst.commons.util.isWebLink
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
@@ -160,7 +161,6 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.UnsupportedIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
-import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServer
 import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
@@ -178,6 +178,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.PluralStringResource
 
 /*
  * Cards for the replaceable lists and profile extras a user keeps about themselves: the servers
@@ -191,6 +192,9 @@ import kotlinx.collections.immutable.toImmutableList
 
 private const val MAX_BADGE_THUMBS = 16
 private const val MAX_STICKERS = 24
+private const val MAX_QUOTES = 2
+private const val MAX_NAME_CHIPS = 6
+private const val MAX_IDENTITIES = 6
 private val StickerSize = 64.dp
 
 // ---------------------------------------------------------------------------------------------
@@ -198,55 +202,71 @@ private val StickerSize = 64.dp
 // ---------------------------------------------------------------------------------------------
 
 /**
- * A [KindCard] whose body is a paged column of members: the icon and the list's name on top, how
- * many public entries it holds under it, then the first few members with a "Show more".
+ * A [KindCard] for a list: its name, how many public entries it holds (nothing when it holds
+ * none), and a "Private" pill when part of it is encrypted for its author. The [body] shows a
+ * short sample of the entries, never all of them: a feed card is a glance, the list screen pages.
  */
 @Composable
-private fun <T> ListKindCard(
+private fun ListKindCard(
     icon: MaterialSymbol,
     title: String,
-    items: List<T>,
-    hasPrivateItems: Boolean,
-    backgroundColor: MutableState<Color>,
-    header: (@Composable ColumnScope.() -> Unit)? = null,
-    itemContent: @Composable (T) -> Unit,
+    subtitle: String?,
+    hasEntries: Boolean,
+    hasPrivateItems: Boolean = false,
+    tone: KindTone = KindTone.Primary,
+    body: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     KindCard(
         icon = icon,
         title = title,
-        subtitle = listCountLine(items.size, hasPrivateItems),
-    ) {
-        header?.invoke(this)
-
-        if (items.isEmpty() && hasPrivateItems) {
-            Text(
-                text = stringRes(Res.string.nip51_list_has_private_members),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        PagedMemberColumn(items, backgroundColor, Modifier.fillMaxWidth(), itemContent = itemContent)
-    }
+        subtitle = subtitle,
+        tone = tone,
+        status = if (hasPrivateItems) stringRes(Res.string.kind_card_private_pill) else null,
+        statusTone = if (hasPrivateItems) KindTone.Neutral else null,
+        // An empty body still takes the frame's gap, so an empty list draws no body at all.
+        body = if (hasEntries) body else null,
+    )
 }
 
+/** "3 servers", "1 entry", or nothing for an empty list: an empty list says so by having no body. */
 @Composable
-private fun listCountLine(
+private fun countLine(
+    plural: PluralStringResource,
     count: Int,
-    hasPrivateItems: Boolean,
-): String? =
-    when {
-        count == 0 && hasPrivateItems -> null
-        count == 0 -> stringRes(Res.string.kc_list_empty)
-        hasPrivateItems -> pluralStringRes(Res.plurals.kc_list_public_count_plus_private, count, count)
-        else -> pluralStringRes(Res.plurals.kc_list_entry_count, count, count)
+): String? = if (count == 0) null else pluralStringRes(plural, count, count)
+
+/**
+ * The first [MAX_QUOTES] events at [addresses] as compact quotes (a missing one degrades to a
+ * one-line reference), then a "+N more" line for the rest.
+ */
+@Composable
+private fun QuotedAddresses(
+    addresses: List<Address>,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (quotesLeft <= 0 || addresses.isEmpty()) return
+    addresses.take(MAX_QUOTES).forEach { address ->
+        key(address.toValue()) {
+            KindCardQuoteAddress(address, quotesLeft, backgroundColor, accountViewModel, nav)
+        }
     }
+    val rest = addresses.size - MAX_QUOTES
+    if (rest > 0) {
+        KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, rest, rest)))
+    }
+}
 
 // ---------------------------------------------------------------------------------------------
 // Emoji and stickers
 // ---------------------------------------------------------------------------------------------
 
-/** NIP-51 kind 10030: the emoji packs this user picked, each drawn as the pack it points at. */
+/**
+ * NIP-51 kind 10030: the emoji packs this user picked. A pack's d-tag is its name, so the packs
+ * show as name chips without loading nine pack events for one feed card.
+ */
 @Composable
 fun RenderEmojiList(
     baseNote: Note,
@@ -257,11 +277,15 @@ fun RenderEmojiList(
 ) {
     val event = baseNote.event as? EmojiListEvent ?: return
     val packs = remember(event) { event.emojiPacks() }
+    val names = remember(packs) { packs.mapNotNull { it.dTag.ifBlank { null } } }
 
-    ListKindCard(MaterialSymbols.EmojiEmotions, kindName(event.kind), packs, false, backgroundColor) { address ->
-        key(address.toValue()) {
-            AddressMemberRow(address, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+    ListKindCard(
+        icon = MaterialSymbols.EmojiEmotions,
+        title = kindName(event.kind),
+        subtitle = countLine(Res.plurals.kc_list_emoji_pack_count, packs.size),
+        hasEntries = names.isNotEmpty(),
+    ) {
+        KindCardChips(names, max = MAX_NAME_CHIPS)
     }
 }
 
@@ -283,7 +307,7 @@ fun RenderStickerPack(
     KindCard(
         icon = MaterialSymbols.AddReaction,
         title = event.title()?.ifBlank { null } ?: event.dTag().ifBlank { null } ?: stringRes(Res.string.kc_list_sticker_pack),
-        subtitle = pluralStringRes(Res.plurals.kc_list_sticker_count, stickers.size, stickers.size),
+        subtitle = countLine(Res.plurals.kc_list_sticker_count, stickers.size),
     ) {
         KindCardText(baseNote, description, backgroundColor, accountViewModel, nav)
 
@@ -309,11 +333,7 @@ fun RenderStickerPack(
         }
 
         if (hiddenCount > 0) {
-            Text(
-                text = pluralStringRes(Res.plurals.kc_list_stickers_sensitive_hidden, hiddenCount, hiddenCount),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_list_stickers_sensitive_hidden, hiddenCount, hiddenCount)))
         }
     }
 }
@@ -356,14 +376,16 @@ fun RenderProfileBadges(
     val definitions = remember(event) { event.badgeAwardDefinitions() }
     val sets = remember(event) { event.badgeSets().map { it.dTag } }
 
-    KindCard(
+    ListKindCard(
         icon = MaterialSymbols.MilitaryTech,
         title = kindName(event.kind),
-        subtitle = pluralStringRes(Res.plurals.kc_list_badge_count, definitions.size, definitions.size),
+        subtitle = countLine(Res.plurals.kc_list_badge_count, definitions.size),
+        hasEntries = definitions.isNotEmpty() || sets.isNotEmpty(),
     ) {
         BadgeThumbStrip(definitions, accountViewModel, nav)
         if (sets.isNotEmpty()) {
-            KindCardField(stringRes(Res.string.kc_list_badge_sets), sets.joinToString(", "))
+            KindCardSection(stringRes(Res.string.kc_list_badge_sets))
+            KindCardChips(sets.filter { it.isNotBlank() }, max = MAX_NAME_CHIPS)
         }
     }
 }
@@ -392,7 +414,7 @@ fun RenderAcceptedBadgeSet(
     KindCard(
         icon = MaterialSymbols.MilitaryTech,
         title = title,
-        subtitle = pluralStringRes(Res.plurals.kc_list_badge_count, definitions.size, definitions.size),
+        subtitle = countLine(Res.plurals.kc_list_badge_count, definitions.size),
     ) {
         if (!event.isLegacyProfileBadges()) {
             KindCardText(baseNote, event.description(), backgroundColor, accountViewModel, nav)
@@ -442,8 +464,8 @@ fun RenderBlossomServers(
     backgroundColor: MutableState<Color>,
 ) {
     val event = baseNote.event as? BlossomServersEvent ?: return
-    val servers = remember(event) { event.servers() }
-    ServerListCard(MaterialSymbols.CloudUpload, kindName(event.kind), servers, backgroundColor)
+    val servers = remember(event) { event.servers().map { HttpUrlFormatter.displayUrl(it) } }
+    ServerListCard(MaterialSymbols.CloudUpload, kindName(event.kind), servers)
 }
 
 /** NIP-96 kind 10096: the HTTP file storage servers this user uploads to. */
@@ -453,19 +475,33 @@ fun RenderFileServers(
     backgroundColor: MutableState<Color>,
 ) {
     val event = baseNote.event as? FileServersEvent ?: return
-    val servers = remember(event) { event.servers() }
-    ServerListCard(MaterialSymbols.Storage, kindName(event.kind), servers, backgroundColor)
+    val servers = remember(event) { event.servers().map { HttpUrlFormatter.displayUrl(it) } }
+    ServerListCard(MaterialSymbols.Storage, kindName(event.kind), servers)
 }
 
+/**
+ * The shape every server and relay list shares: the count under the title and the hosts as chips.
+ * These lists are settings the author's apps read, so they sit in the neutral tone.
+ */
 @Composable
 private fun ServerListCard(
     icon: MaterialSymbol,
     title: String,
     servers: List<String>,
-    backgroundColor: MutableState<Color>,
+    countPlural: PluralStringResource = Res.plurals.kc_list_server_count,
+    hasPrivateItems: Boolean = false,
+    extra: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    ListKindCard(icon, title, servers, false, backgroundColor) { server ->
-        key(server) { LabelMemberRow(HttpUrlFormatter.displayUrl(server)) }
+    ListKindCard(
+        icon = icon,
+        title = title,
+        subtitle = countLine(countPlural, servers.size),
+        hasEntries = servers.isNotEmpty(),
+        hasPrivateItems = hasPrivateItems,
+        tone = KindTone.Neutral,
+    ) {
+        KindCardChips(servers)
+        extra?.invoke(this)
     }
 }
 
@@ -477,28 +513,11 @@ fun RenderNestsServers(
 ) {
     val event = baseNote.event as? NestsServersEvent ?: return
     val servers = remember(event) { event.servers() }
+    val hosts = remember(servers) { servers.map { HttpUrlFormatter.displayUrl(it.relay) } }
+    val authHosts = remember(servers) { servers.map { HttpUrlFormatter.displayUrl(it.auth) }.filter { it.isNotBlank() }.distinct() }
 
-    ListKindCard(MaterialSymbols.Mic, kindName(event.kind), servers, false, backgroundColor) { server ->
-        key(server.relay) { NestsServerRow(server) }
-    }
-}
-
-@Composable
-private fun NestsServerRow(server: NestsServer) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp)) {
-        Text(
-            text = HttpUrlFormatter.displayUrl(server.relay),
-            style = MaterialTheme.typography.bodyLarge,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Text(
-            text = stringRes(Res.string.kc_list_nests_auth, HttpUrlFormatter.displayUrl(server.auth)),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+    ServerListCard(MaterialSymbols.Mic, kindName(event.kind), hosts) {
+        KindCardField(stringRes(Res.string.nests_servers_auth_label), authHosts.joinToString(", "), maxLines = 2)
     }
 }
 
@@ -509,11 +528,15 @@ fun RenderPrivateOutboxRelays(
     backgroundColor: MutableState<Color>,
 ) {
     val event = baseNote.event as? PrivateOutboxRelayListEvent ?: return
-    val relays = remember(event) { event.publicRelays() }
+    val relays = remember(event) { event.publicRelays().map { it.displayUrl() } }
 
-    ListKindCard(MaterialSymbols.Drafts, kindName(event.kind), relays, event.content.isNotEmpty(), backgroundColor) { relay ->
-        key(relay.url) { LabelMemberRow(relay.displayUrl()) }
-    }
+    ServerListCard(
+        icon = MaterialSymbols.Drafts,
+        title = kindName(event.kind),
+        servers = relays,
+        countPlural = Res.plurals.kc_list_relay_count,
+        hasPrivateItems = event.content.isNotEmpty(),
+    )
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -526,6 +549,13 @@ fun RenderNutzapInfo(baseNote: Note) {
     val event = baseNote.event as? NutzapInfoEvent ?: return
 
     val mints = remember(event) { event.mints() }
+    val mintLabels =
+        remember(mints) {
+            mints.map { mint ->
+                val host = HttpUrlFormatter.displayUrl(mint.mintUrl)
+                if (mint.units.isEmpty()) host else "$host · ${mint.units.joinToString(", ")}"
+            }
+        }
     val relays = remember(event) { event.relays().map { it.displayUrl() } }
     val p2pk = remember(event) { event.p2pkPubkey() }
     val accepts = mints.isNotEmpty() && p2pk != null
@@ -533,14 +563,15 @@ fun RenderNutzapInfo(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Paid,
         title = stringRes(if (accepts) Res.string.kc_list_nutzap_info_on else Res.string.kc_list_nutzap_info_off),
-        iconTint = if (accepts) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        tone = if (accepts) KindTone.Money else KindTone.Neutral,
     ) {
-        mints.forEach { mint ->
-            val units = if (mint.units.isEmpty()) "" else " (${mint.units.joinToString(", ")})"
-            KindCardField(stringRes(Res.string.kc_list_mint), HttpUrlFormatter.displayUrl(mint.mintUrl) + units, maxLines = 1)
+        if (mints.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.cashu_mints))
+            KindCardChips(mintLabels)
         }
         if (relays.isNotEmpty()) {
-            KindCardField(stringRes(Res.string.kc_list_relays), relays.joinToString(", "))
+            KindCardSection(stringRes(Res.string.kc_list_relays))
+            KindCardChips(relays)
         }
         KindCardField(stringRes(Res.string.kc_list_p2pk_key), p2pk?.toShortDisplay(), monospace = true, maxLines = 1)
     }
@@ -557,10 +588,12 @@ fun RenderPaymentTargets(
     val author = baseNote.author ?: return
     val targets = remember(event) { event.paymentTargets() }
 
-    KindCard(
+    ListKindCard(
         icon = MaterialSymbols.Payment,
         title = kindName(event.kind),
-        subtitle = listCountLine(targets.size, false),
+        subtitle = countLine(Res.plurals.kc_list_entry_count, targets.size),
+        hasEntries = targets.isNotEmpty(),
+        tone = KindTone.Money,
     ) {
         if (targets.isNotEmpty()) {
             FlowRow(
@@ -583,11 +616,12 @@ fun RenderBolt12OfferList(
     val offers = remember(event) { event.offers() }
     var dialogOffer by remember { mutableStateOf<String?>(null) }
 
-    KindCard(
+    ListKindCard(
         icon = MaterialSymbols.Bolt,
         title = stringRes(Res.string.bolt12_offers),
-        subtitle = listCountLine(offers.size, false),
-        iconTint = BitcoinOrange,
+        subtitle = countLine(Res.plurals.kc_list_entry_count, offers.size),
+        hasEntries = offers.isNotEmpty(),
+        tone = KindTone.Money,
     ) {
         if (offers.isNotEmpty()) {
             FlowRow(
@@ -665,10 +699,16 @@ private fun PodcastListCard(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    ListKindCard(MaterialSymbols.Podcasts, title, podcastKeys, hasPrivateItems, backgroundColor) { podcast ->
-        key(podcast) {
-            AddressMemberRow(PodcastMetadataEvent.createAddress(podcast), quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+    val addresses = remember(podcastKeys) { podcastKeys.map { PodcastMetadataEvent.createAddress(it) } }
+
+    ListKindCard(
+        icon = MaterialSymbols.Podcasts,
+        title = title,
+        subtitle = countLine(Res.plurals.kc_list_podcast_count, podcastKeys.size),
+        hasEntries = podcastKeys.isNotEmpty() && quotesLeft > 0,
+        hasPrivateItems = hasPrivateItems,
+    ) {
+        QuotedAddresses(addresses, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -682,22 +722,23 @@ fun RenderFavoriteFollowSets(
     nav: INav,
 ) {
     val event = baseNote.event as? FavoriteFollowSetsListEvent ?: return
-    val sets = remember(event) { event.publicFavoriteFollowSets() }
+    val sets = remember(event) { event.publicFavoriteFollowSets().map { it.address } }
 
     ListKindCard(
-        MaterialSymbols.Groups,
-        stringRes(Res.string.kc_list_favorite_follow_sets),
-        sets,
-        event.content.isNotEmpty(),
-        backgroundColor,
-    ) { set ->
-        key(set.address.toValue()) {
-            AddressMemberRow(set.address, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+        icon = MaterialSymbols.Groups,
+        title = stringRes(Res.string.kc_list_favorite_follow_sets),
+        subtitle = countLine(Res.plurals.kc_list_follow_set_count, sets.size),
+        hasEntries = sets.isNotEmpty() && quotesLeft > 0,
+        hasPrivateItems = event.content.isNotEmpty(),
+    ) {
+        QuotedAddresses(sets, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
-/** NIP-72 kind 10004: the moderated communities this user follows. */
+/**
+ * NIP-72 kind 10004: the moderated communities this user follows. A community's d-tag is its
+ * name, so they show as name chips without loading every community definition for a feed card.
+ */
 @Composable
 fun RenderCommunityList(
     baseNote: Note,
@@ -708,15 +749,20 @@ fun RenderCommunityList(
 ) {
     val event = baseNote.event as? CommunityListEvent ?: return
     val communities = remember(event) { event.publicCommunities() }
+    val names = remember(communities) { communities.mapNotNull { it.address.dTag.ifBlank { null } } }
 
-    ListKindCard(MaterialSymbols.Forum, kindName(event.kind), communities, event.content.isNotEmpty(), backgroundColor) { community ->
-        key(community.address.toValue()) {
-            AddressMemberRow(community.address, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+    ListKindCard(
+        icon = MaterialSymbols.Forum,
+        title = kindName(event.kind),
+        subtitle = countLine(Res.plurals.kc_list_community_count, communities.size),
+        hasEntries = names.isNotEmpty(),
+        hasPrivateItems = event.content.isNotEmpty(),
+    ) {
+        KindCardChips(names, max = MAX_NAME_CHIPS)
     }
 }
 
-/** Kind 18678: the eight people this user ranks first on their profile, in order. */
+/** Kind 18678: the eight people this user ranks first on their profile, as chips in rank order. */
 @Composable
 fun RenderTopEight(
     baseNote: Note,
@@ -725,21 +771,15 @@ fun RenderTopEight(
     nav: INav,
 ) {
     val event = baseNote.event as? TopEightEvent ?: return
-    val ranked = remember(event) { event.rankedKeys().withIndex().toList() }
+    val ranked = remember(event) { event.rankedKeys() }
 
-    ListKindCard(MaterialSymbols.Star, stringRes(Res.string.kc_list_top_eight), ranked, false, backgroundColor) { entry ->
-        key(entry.value) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = (entry.index + 1).toString(),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.width(24.dp),
-                )
-                Box(Modifier.weight(1f)) { UserMemberRow(entry.value, accountViewModel, nav) }
-            }
-        }
+    ListKindCard(
+        icon = MaterialSymbols.Star,
+        title = stringRes(Res.string.kc_list_top_eight),
+        subtitle = null,
+        hasEntries = ranked.isNotEmpty(),
+    ) {
+        KindCardUsers(ranked, accountViewModel, nav, max = 8)
     }
 }
 
@@ -753,32 +793,38 @@ fun RenderExternalIdentities(baseNote: Note) {
     val event = baseNote.event as? ExternalIdentitiesEvent ?: return
     val claims = remember(event) { event.identityClaims() }
 
-    KindCard(
+    ListKindCard(
         icon = MaterialSymbols.AlternateEmail,
         title = stringRes(Res.string.kc_list_external_identities),
-        subtitle = listCountLine(claims.size, false),
+        subtitle = countLine(Res.plurals.kc_list_entry_count, claims.size),
+        hasEntries = claims.isNotEmpty(),
     ) {
-        claims.forEach { claim -> IdentityClaimRow(claim) }
+        claims.take(MAX_IDENTITIES).forEach { claim -> IdentityClaimRow(claim) }
+        val rest = claims.size - MAX_IDENTITIES
+        if (rest > 0) {
+            KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, rest, rest)))
+        }
     }
 }
 
+/** One claimed account: the platform's logo and the handle, opening the proof; long-press copies. */
 @Composable
 private fun IdentityClaimRow(claim: IdentityClaimTag) {
     val uri = LocalUriHandler.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         if (claim is UnsupportedIdentity) {
             Icon(
                 symbol = MaterialSymbols.Link,
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
                 text = claim.platformIdentity(),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -787,12 +833,13 @@ private fun IdentityClaimRow(claim: IdentityClaimTag) {
                 painter = painterRes(getIdentityClaimIcon(claim), 0),
                 contentDescription = stringRes(getIdentityClaimDescription(claim)),
                 tint = Color.Unspecified,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(16.dp),
             )
             LongPressCopyText(
                 displayText = claim.identity,
                 copyValue = claim.identity,
                 onClick = { runCatching { uri.openUri(claim.toProofUrl()) } },
+                style = MaterialTheme.typography.bodySmall,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,
             )
@@ -831,26 +878,35 @@ fun RenderUserStatus(
     val eventId = remember(event) { event.referencedEventId() }
     val address = remember(event) { event.referencedAddressId()?.let { Address.parse(it) } }
 
+    val isExpired = remember(event) { expiration != null && expiration < TimeUtils.now() }
+    val isMusic = type == UserStatusEvent.MUSIC
+
     val title =
         when {
             isCleared -> stringRes(Res.string.kc_list_status_cleared)
-            type == UserStatusEvent.MUSIC -> stringRes(Res.string.kc_list_status_music)
-            type == UserStatusEvent.GENERAL || type.isBlank() -> stringRes(Res.string.kc_list_status_general)
-            else -> stringRes(Res.string.kc_list_status_other, type)
+            isMusic -> stringRes(Res.string.kc_list_status_music)
+            else -> stringRes(Res.string.kc_list_status_general)
         }
+    // A custom status type (an app's own d-tag) names the subject, so it goes under the title.
+    val subtitle = type.takeIf { it.isNotBlank() && it != UserStatusEvent.GENERAL && !isMusic }
 
     KindCard(
-        icon = if (type == UserStatusEvent.MUSIC) MaterialSymbols.MusicNote else MaterialSymbols.Face,
+        icon = if (isMusic) MaterialSymbols.MusicNote else MaterialSymbols.Face,
         title = title,
+        subtitle = subtitle,
+        tone = if (isCleared || isExpired) KindTone.Neutral else KindTone.Primary,
+        status = if (isExpired && !isCleared) stringRes(Res.string.kc_list_status_expired_pill) else null,
     ) {
         if (!isCleared) {
             KindCardText(baseNote, text, backgroundColor, accountViewModel, nav)
         }
         KindCardField(stringRes(Res.string.kc_list_link), url, maxLines = 1)
-        KindCardField(
-            stringRes(Res.string.kc_list_expires),
-            expiration?.let { formatDateTime(it * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT) },
-        )
+        if (!isExpired) {
+            KindCardField(
+                stringRes(Res.string.kc_list_expires),
+                expiration?.let { formatDateTime(it * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT) },
+            )
+        }
         profile?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
         when {
             eventId != null -> KindCardQuoteEvent(eventId, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -872,7 +928,7 @@ fun RenderPostingStreak(baseNote: Note) {
             icon = MaterialSymbols.LocalFireDepartment,
             title = stringRes(Res.string.kc_list_streak_title),
             subtitle = stringRes(Res.string.kc_list_streak_invalid),
-            iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tone = KindTone.Neutral,
         )
         return
     }
@@ -883,8 +939,10 @@ fun RenderPostingStreak(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.LocalFireDepartment,
         title = pluralStringRes(Res.plurals.kc_list_streak_days, days, days),
-        subtitle = stringRes(if (isLive) Res.string.kc_list_streak_live else Res.string.kc_list_streak_ended),
-        iconTint = if (isLive) BitcoinOrange else MaterialTheme.colorScheme.onSurfaceVariant,
+        // The flame stays orange while the streak burns; an ended one goes quiet.
+        iconTint = if (isLive) BitcoinOrange else null,
+        tone = if (isLive) KindTone.Primary else KindTone.Neutral,
+        status = stringRes(if (isLive) Res.string.kc_list_streak_pill_live else Res.string.kc_list_streak_pill_ended),
     ) {
         KindCardField(
             stringRes(Res.string.kc_list_streak_started),
@@ -896,7 +954,7 @@ fun RenderPostingStreak(baseNote: Note) {
         )
         if (isLive) {
             KindCardField(
-                stringRes(Res.string.kc_list_streak_ends),
+                stringRes(Res.string.kc_list_expires),
                 formatDateTime(streak.expiresAt() * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT),
             )
         }
@@ -967,15 +1025,9 @@ private fun ThemeCard(
 
     KindCard(
         icon = MaterialSymbols.BrightnessMedium,
-        title = themeTitle ?: kindLabel,
-        subtitle =
-            if (info.colors == null) {
-                stringRes(Res.string.kc_list_theme_incomplete)
-            } else if (themeTitle != null) {
-                kindLabel
-            } else {
-                null
-            },
+        title = kindLabel,
+        // The swatch already draws the theme's name large, so the header only needs to say which.
+        subtitle = if (info.colors == null) stringRes(Res.string.kc_list_theme_incomplete) else themeTitle,
     ) {
         info.colors?.let { ThemeSwatch(it, themeTitle ?: kindLabel) }
         KindCardText(baseNote, info.description, backgroundColor, accountViewModel, nav)
@@ -996,12 +1048,7 @@ private fun ThemeCard(
             )
         }
         if (creator != null) {
-            Text(
-                text = stringRes(Res.string.kc_list_theme_created_by),
-                style = MaterialTheme.typography.bodySmall,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            KindCardSection(stringRes(Res.string.kc_list_theme_created_by))
             KindCardUsers(listOf(creator), accountViewModel, nav)
         }
     }
@@ -1134,15 +1181,22 @@ fun RenderWebBookmark(
     val event = baseNote.event as? WebBookmarkEvent ?: return
 
     val url = remember(event) { event.url() }
-    val title = remember(event) { event.title()?.ifBlank { null } ?: HttpUrlFormatter.displayUrl(url) }
+    val shownUrl = remember(url) { HttpUrlFormatter.displayUrl(url) }
+    val pageTitle = remember(event) { event.title()?.ifBlank { null } }
     val hashtags = remember(event) { event.hashtags().map { "#$it" } }
 
     KindCard(
         icon = MaterialSymbols.Bookmark,
-        title = title,
-        subtitle = kindName(event.kind),
+        title = pageTitle ?: shownUrl.ifBlank { null } ?: kindName(event.kind),
+        subtitle = if (pageTitle != null) shownUrl else null,
     ) {
-        LinkMemberRow(url, accountViewModel, nav)
+        if (url.isNotBlank()) {
+            if (isWebLink(url) && accountViewModel.settings.showUrlPreview()) {
+                LoadUrlPreview(url, shownUrl, null, accountViewModel, nav)
+            } else {
+                ClickableUrl(url = url, displayText = shownUrl, style = MaterialTheme.typography.bodySmall)
+            }
+        }
         KindCardText(baseNote, event.description(), backgroundColor, accountViewModel, nav)
         KindCardChips(hashtags)
     }

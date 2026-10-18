@@ -24,8 +24,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -33,7 +31,6 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -44,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat
 import com.vitorpamplona.amethyst.commons.resources.kc_group_admin_count
@@ -69,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_delete_event
 import com.vitorpamplona.amethyst.commons.resources.kc_group_delete_group
 import com.vitorpamplona.amethyst.commons.resources.kc_group_deleted_events
 import com.vitorpamplona.amethyst.commons.resources.kc_group_edit_metadata
-import com.vitorpamplona.amethyst.commons.resources.kc_group_field_group
 import com.vitorpamplona.amethyst.commons.resources.kc_group_field_nickname
 import com.vitorpamplona.amethyst.commons.resources.kc_group_field_version
 import com.vitorpamplona.amethyst.commons.resources.kc_group_geohash_presence
@@ -98,11 +95,10 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_bytes
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_max_size
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_wot
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_wot_depth
-import com.vitorpamplona.amethyst.commons.resources.kc_group_teleported
+import com.vitorpamplona.amethyst.commons.resources.kc_group_teleported_pill
 import com.vitorpamplona.amethyst.commons.resources.kc_group_update_pins
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_about
 import com.vitorpamplona.amethyst.commons.resources.relay_group_field_name
-import com.vitorpamplona.amethyst.commons.resources.relay_group_field_topics
 import com.vitorpamplona.amethyst.commons.resources.relay_group_join_code_label
 import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
 import com.vitorpamplona.amethyst.commons.resources.relay_group_parent_label
@@ -112,7 +108,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadPublicChatChannel
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.LabelMemberRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.ListCard
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.UserMemberRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.hidesPrivateMembers
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.loadPrivateItems
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.rememberAllMembers
@@ -121,7 +116,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.PublicChatChannelHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.concord.cord04Roles.ControlEntityKind
@@ -135,6 +129,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.list.rooms
 import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
 import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
@@ -179,29 +174,13 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
 
 /**
  * The group a NIP-29 event belongs to. A group id is only unique within its host relay, and these
- * events never name it: the host is the relay that served the note. With one, the card shows the
- * same tappable group header a group message wears; without one, just the id.
+ * events never name it: the host is the relay that served the note. Null when no relay is known.
  */
 @Composable
-private fun RelayGroupContext(
+private fun rememberRelayGroup(
     baseNote: Note,
     groupId: String?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    if (groupId.isNullOrBlank()) return
-    val channel = remember(baseNote, groupId) { relayGroupChannelOf(baseNote, groupId) }
-    if (channel != null) {
-        RelayGroupChannelHeader(
-            channel = channel,
-            modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
-            accountViewModel = accountViewModel,
-            nav = nav,
-        )
-    } else {
-        KindCardField(stringRes(Res.string.kc_group_field_group), groupId, monospace = true)
-    }
-}
+): RelayGroupChannel? = remember(baseNote, groupId) { groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) } }
 
 private fun relayGroupChannelOf(
     note: Note,
@@ -209,6 +188,32 @@ private fun relayGroupChannelOf(
 ): RelayGroupChannel? =
     note.inGatherers?.firstNotNullOfOrNull { gatherer -> (gatherer as? RelayGroupChannel)?.takeIf { it.groupId.id == groupId } }
         ?: note.relays.firstOrNull()?.let { LocalCache.getOrCreateRelayGroupChannel(GroupId(groupId, it)) }
+
+/**
+ * A card's subtitle: [lead] (a count) and, when there is no [channel] header to name the group, the
+ * group's id, shortened. Null when there is neither.
+ */
+private fun groupSubtitle(
+    groupId: String?,
+    channel: RelayGroupChannel?,
+    lead: String? = null,
+): String? {
+    val id = if (channel == null) groupId?.takeIf { it.isNotBlank() }?.let(::shortGroupId) else null
+    return listOfNotNull(lead, id).joinToString(" · ").ifEmpty { null }
+}
+
+private fun shortGroupId(id: String): String = if (id.length > 24) id.take(20) + "…" else id
+
+/** The group's small, tappable header (picture, name, host relay), when the host relay is known. */
+@Composable
+private fun RelayGroupHeader(
+    channel: RelayGroupChannel?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (channel == null) return
+    RelayGroupChannelHeader(channel = channel, accountViewModel = accountViewModel, nav = nav)
+}
 
 /** Quotes a pinned event or address of a group pin list. */
 @Composable
@@ -223,6 +228,19 @@ private fun GroupPinQuote(
         is EventPin -> KindCardQuoteEvent(pin.eventId, quotesLeft, backgroundColor, accountViewModel, nav)
         is AddressPin -> KindCardQuoteAddress(pin.address, quotesLeft, backgroundColor, accountViewModel, nav)
     }
+}
+
+/** The first pin of a pin list, then how many more there are. */
+@Composable
+private fun GroupPinsBody(
+    pins: List<GroupPin>,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    pins.firstOrNull()?.let { GroupPinQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+    if (pins.size > 1) KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, pins.size - 1, pins.size - 1)))
 }
 
 /** NIP-29 kind 9000: users added to a group, or given roles in it. */
@@ -242,12 +260,16 @@ fun RenderGroupPutUser(
                 .flatMap { it.roles }
                 .distinct()
         }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.PersonAdd,
         title = stringRes(if (roles.isEmpty()) Res.string.kc_group_put_user else Res.string.kc_group_put_user_roles),
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Positive,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardUsers(users, accountViewModel, nav)
         KindCardChips(roles)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
@@ -264,13 +286,16 @@ fun RenderGroupRemoveUser(
 ) {
     val event = baseNote.event as? GroupRemoveUserEvent ?: return
     val users = remember(event) { event.userPubKeys() }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.PersonRemove,
         title = stringRes(Res.string.kc_group_remove_user),
-        iconTint = MaterialTheme.colorScheme.error,
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Negative,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardUsers(users, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
     }
@@ -284,17 +309,21 @@ fun RenderGroupEditMetadata(
     nav: INav,
 ) {
     val event = baseNote.event as? GroupEditMetadataEvent ?: return
-    val topics = remember(event) { event.hashtags().joinToString(", ") { "#$it" } }
+    val topics = remember(event) { event.hashtags().map { "#$it" } }
+    val parent = remember(event) { event.parent()?.let(::shortGroupId) }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.Edit,
         title = stringRes(Res.string.kc_group_edit_metadata),
+        subtitle = groupSubtitle(groupId, channel),
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_field_name), event.name())
         KindCardField(stringRes(Res.string.relay_group_field_about), event.about(), maxLines = 4)
-        KindCardField(stringRes(Res.string.relay_group_field_topics), topics)
-        KindCardField(stringRes(Res.string.relay_group_parent_label), event.parent(), monospace = true)
+        KindCardField(stringRes(Res.string.relay_group_parent_label), parent, monospace = true)
+        KindCardChips(topics, max = 8)
     }
 }
 
@@ -309,14 +338,17 @@ fun RenderGroupDeleteEvent(
 ) {
     val event = baseNote.event as? GroupDeleteEventEvent ?: return
     val deleted = remember(event) { event.deletedEventIds() }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (deleted.size > 1) pluralStringRes(Res.plurals.kc_group_deleted_events, deleted.size, deleted.size) else null
 
     KindCard(
         icon = MaterialSymbols.Delete,
         title = stringRes(Res.string.kc_group_delete_event),
-        subtitle = if (deleted.size > 1) pluralStringRes(Res.plurals.kc_group_deleted_events, deleted.size, deleted.size) else null,
-        iconTint = MaterialTheme.colorScheme.error,
+        subtitle = groupSubtitle(groupId, channel, count),
+        tone = KindTone.Negative,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
         deleted.firstOrNull()?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
@@ -330,12 +362,16 @@ fun RenderCreateGroup(
     nav: INav,
 ) {
     val event = baseNote.event as? CreateGroupEvent ?: return
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.GroupAdd,
         title = stringRes(Res.string.kc_group_create),
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Positive,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_field_name), event.name())
         KindCardField(stringRes(Res.string.relay_group_field_about), event.about(), maxLines = 4)
     }
@@ -350,13 +386,16 @@ fun RenderDeleteGroup(
     nav: INav,
 ) {
     val event = baseNote.event as? DeleteGroupEvent ?: return
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.DeleteForever,
         title = stringRes(Res.string.kc_group_delete_group),
-        iconTint = MaterialTheme.colorScheme.error,
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Negative,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
     }
 }
@@ -369,12 +408,16 @@ fun RenderGroupCreateInvite(
     nav: INav,
 ) {
     val event = baseNote.event as? GroupCreateInviteEvent ?: return
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.Key,
         title = stringRes(Res.string.kc_group_create_invite),
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Positive,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_join_code_label), event.code(), monospace = true)
     }
 }
@@ -390,14 +433,17 @@ fun RenderGroupUpdatePinList(
 ) {
     val event = baseNote.event as? GroupUpdatePinListEvent ?: return
     val pins = remember(event) { event.pins() }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (pins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size) else null
 
     KindCard(
         icon = MaterialSymbols.PushPin,
         title = stringRes(Res.string.kc_group_update_pins),
-        subtitle = pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size),
+        subtitle = groupSubtitle(groupId, channel, count),
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
-        pins.firstOrNull()?.let { GroupPinQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+        RelayGroupHeader(channel, accountViewModel, nav)
+        GroupPinsBody(pins, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -410,12 +456,16 @@ fun RenderGroupJoinRequest(
     nav: INav,
 ) {
     val event = baseNote.event as? GroupJoinRequestEvent ?: return
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.GroupAdd,
         title = stringRes(Res.string.kc_group_join_request),
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Warning,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_join_code_label), event.inviteCode(), monospace = true)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
     }
@@ -430,17 +480,24 @@ fun RenderGroupLeaveRequest(
     nav: INav,
 ) {
     val event = baseNote.event as? GroupLeaveRequestEvent ?: return
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
 
     KindCard(
         icon = MaterialSymbols.AutoMirrored.ExitToApp,
         title = stringRes(Res.string.kc_group_leave_request),
+        subtitle = groupSubtitle(groupId, channel),
+        tone = KindTone.Warning,
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
+        RelayGroupHeader(channel, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
     }
 }
 
-/** NIP-29 kind 39001: the relay's list of the group's admins and their roles. */
+/**
+ * NIP-29 kind 39001: the relay's list of the group's admins. A small team with two or three roles
+ * is shown by role ("admin", "moderator"), each with its people; anything bigger is just the people.
+ */
 @Composable
 fun RenderGroupAdmins(
     baseNote: Note,
@@ -449,18 +506,35 @@ fun RenderGroupAdmins(
 ) {
     val event = baseNote.event as? GroupAdminsEvent ?: return
     val admins = remember(event) { event.admins() }
+    val pubKeys = remember(admins) { admins.map { it.pubKey } }
+    val byRole =
+        remember(admins) {
+            val roles = admins.flatMap { it.roles }.distinct()
+            if (admins.size <= 6 && roles.size in 2..3 && admins.all { it.roles.isNotEmpty() }) {
+                roles.map { role -> role to admins.filter { role in it.roles }.map { it.pubKey } }
+            } else {
+                null
+            }
+        }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (admins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_admin_count, admins.size, admins.size) else null
 
     KindCard(
         icon = MaterialSymbols.Shield,
         title = stringRes(Res.string.kc_group_admins),
-        subtitle = pluralStringRes(Res.plurals.kc_group_admin_count, admins.size, admins.size),
+        subtitle = groupSubtitle(groupId, channel, count),
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
-        admins.take(5).forEach { admin ->
-            key(admin.pubKey) {
-                UserMemberRow(admin.pubKey, accountViewModel, nav)
-                KindCardChips(admin.roles)
+        RelayGroupHeader(channel, accountViewModel, nav)
+        if (byRole != null) {
+            byRole.forEach { (role, people) ->
+                key(role) {
+                    KindCardSection(role)
+                    KindCardUsers(people, accountViewModel, nav)
+                }
             }
+        } else {
+            KindCardUsers(pubKeys, accountViewModel, nav)
         }
     }
 }
@@ -480,7 +554,7 @@ fun RenderGroupMembers(
         groupId = event.groupId(),
         icon = MaterialSymbols.Group,
         title = stringRes(Res.string.kc_group_members),
-        subtitle = pluralStringRes(Res.plurals.relay_group_member_count, members.size, members.size),
+        count = if (members.isNotEmpty()) pluralStringRes(Res.plurals.relay_group_member_count, members.size, members.size) else null,
         people = members,
         accountViewModel = accountViewModel,
         nav = nav,
@@ -502,33 +576,36 @@ fun RenderGroupParticipants(
         groupId = event.groupId(),
         icon = MaterialSymbols.Groups,
         title = stringRes(Res.string.kc_group_participants),
-        subtitle = pluralStringRes(Res.plurals.kc_group_participant_count, participants.size, participants.size),
+        count = if (participants.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_participant_count, participants.size, participants.size) else null,
         people = participants,
         accountViewModel = accountViewModel,
         nav = nav,
     )
 }
 
+/** A roster: its size in the subtitle and the first few people as chips, "+N" for the rest. */
 @Composable
 private fun RosterCard(
     baseNote: Note,
     groupId: String,
     icon: MaterialSymbol,
     title: String,
-    subtitle: String,
+    count: String?,
     people: List<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // A roster can hold thousands: only the first few are drawn.
-    val shown = remember(people) { people.take(5) }
-    KindCard(icon = icon, title = title, subtitle = subtitle) {
-        RelayGroupContext(baseNote, groupId, accountViewModel, nav)
-        KindCardUsers(shown, accountViewModel, nav)
+    val channel = rememberRelayGroup(baseNote, groupId)
+    KindCard(icon = icon, title = title, subtitle = groupSubtitle(groupId, channel, count)) {
+        RelayGroupHeader(channel, accountViewModel, nav)
+        KindCardUsers(people, accountViewModel, nav)
     }
 }
 
-/** NIP-29 kind 39003: the roles the group's relay supports, with their descriptions. */
+/**
+ * NIP-29 kind 39003: the roles the group's relay supports. The first few that carry a description
+ * get a row each; the rest are chips.
+ */
 @Composable
 fun RenderGroupRoles(
     baseNote: Note,
@@ -537,16 +614,20 @@ fun RenderGroupRoles(
 ) {
     val event = baseNote.event as? GroupRolesEvent ?: return
     val roles = remember(event) { event.roles() }
-    val names = remember(roles) { roles.map { it.name } }
+    val described = remember(roles) { roles.filter { !it.description.isNullOrBlank() }.take(4) }
+    val others = remember(roles, described) { roles.filter { it !in described }.map { it.name } }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (roles.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_role_count, roles.size, roles.size) else null
 
     KindCard(
         icon = MaterialSymbols.Shield,
         title = stringRes(Res.string.kc_group_roles),
-        subtitle = pluralStringRes(Res.plurals.kc_group_role_count, roles.size, roles.size),
+        subtitle = groupSubtitle(groupId, channel, count),
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
-        KindCardChips(names)
-        roles.take(8).forEach { KindCardField(it.name, it.description) }
+        RelayGroupHeader(channel, accountViewModel, nav)
+        described.forEach { KindCardField(it.name, it.description, maxLines = 2) }
+        KindCardChips(others, max = 8)
     }
 }
 
@@ -561,14 +642,17 @@ fun RenderGroupPinned(
 ) {
     val event = baseNote.event as? GroupPinnedEvent ?: return
     val pins = remember(event) { event.pins() }
+    val groupId = remember(event) { event.groupId() }
+    val channel = rememberRelayGroup(baseNote, groupId)
+    val count = if (pins.isNotEmpty()) pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size) else null
 
     KindCard(
         icon = MaterialSymbols.PushPin,
         title = stringRes(Res.string.kc_group_pinned),
-        subtitle = pluralStringRes(Res.plurals.kc_group_pin_count, pins.size, pins.size),
+        subtitle = groupSubtitle(groupId, channel, count),
     ) {
-        RelayGroupContext(baseNote, event.groupId(), accountViewModel, nav)
-        pins.firstOrNull()?.let { GroupPinQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+        RelayGroupHeader(channel, accountViewModel, nav)
+        GroupPinsBody(pins, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -576,6 +660,7 @@ fun RenderGroupPinned(
 // NIP-28 public chats
 // ---------------------------------------------------------------------------------------------
 
+/** The channel a NIP-28 moderation event acts in, as its compact, tappable header. */
 @Composable
 private fun PublicChatContext(
     channelId: HexKey?,
@@ -586,7 +671,7 @@ private fun PublicChatContext(
     PublicChatChannelHeader(
         channelHex = channelId,
         sendToChannel = true,
-        modifier = MaterialTheme.colorScheme.replyModifier.padding(10.dp),
+        modifier = Modifier,
         accountViewModel = accountViewModel,
         nav = nav,
     )
@@ -609,6 +694,7 @@ fun RenderChannelHideMessage(
         icon = MaterialSymbols.VisibilityOff,
         title = stringRes(Res.string.kc_group_channel_hide),
         subtitle = if (hidden.size > 1) pluralStringRes(Res.plurals.kc_group_hidden_count, hidden.size, hidden.size) else null,
+        tone = KindTone.Negative,
     ) {
         PublicChatContext(channelId, accountViewModel, nav)
         KindCardText(baseNote, event.reason(), backgroundColor, accountViewModel, nav)
@@ -631,6 +717,7 @@ fun RenderChannelMuteUser(
     KindCard(
         icon = MaterialSymbols.PersonOff,
         title = stringRes(Res.string.kc_group_channel_mute),
+        tone = KindTone.Negative,
     ) {
         PublicChatContext(channelId, accountViewModel, nav)
         KindCardUsers(users, accountViewModel, nav)
@@ -711,14 +798,17 @@ fun RenderEphemeralChat(
 ) {
     val event = baseNote.event as? EphemeralChatEvent ?: return
     val roomId = remember(event) { event.roomId() }
-    val title = roomId?.toDisplayKey() ?: event.room()
+    val room = remember(event) { event.room().takeIf { it.isNotBlank() && it != EphemeralChatEvent.DEFAULT_ROOM } }
+    val relay = remember(roomId) { roomId?.relayUrl?.displayUrl() }
+    val chatLabel = stringRes(Res.string.ephemeral_relay_chat)
 
     Column {
         Box(modifier = if (roomId != null) Modifier.clickable { nav.nav(routeFor(roomId)) } else Modifier) {
+            // The default room has no name of its own: the kind of chat and its relay say it all.
             KindCard(
                 icon = MaterialSymbols.Chat,
-                title = title,
-                subtitle = stringRes(Res.string.ephemeral_relay_chat),
+                title = room?.let { "#$it" } ?: chatLabel,
+                subtitle = if (room != null) listOfNotNull(chatLabel, relay).joinToString(" · ") else relay,
             )
         }
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
@@ -739,9 +829,13 @@ fun RenderGeohashChat(
     val teleported = remember(event) { event.isTeleported() }
 
     Column {
-        GeohashRoomHeader(geohash, stringRes(Res.string.geohash_chat), nav) {
+        GeohashRoomHeader(
+            geohash = geohash,
+            subtitle = stringRes(Res.string.geohash_chat),
+            status = if (teleported) stringRes(Res.string.kc_group_teleported_pill) else null,
+            nav = nav,
+        ) {
             KindCardField(stringRes(Res.string.kc_group_field_nickname), nickname)
-            if (teleported) KindCardChips(listOf(stringRes(Res.string.kc_group_teleported)))
         }
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
     }
@@ -757,7 +851,7 @@ fun RenderGeohashPresence(
     val geohash = remember(event) { event.geohash() }
     val nickname = remember(event) { event.nickname() }
 
-    GeohashRoomHeader(geohash, stringRes(Res.string.kc_group_geohash_presence), nav) {
+    GeohashRoomHeader(geohash, stringRes(Res.string.kc_group_geohash_presence), status = null, nav = nav) {
         KindCardField(stringRes(Res.string.kc_group_field_nickname), nickname)
     }
 }
@@ -767,26 +861,44 @@ fun RenderGeohashPresence(
 private fun GeohashRoomHeader(
     geohash: String?,
     subtitle: String,
+    status: String?,
     nav: INav,
     body: @Composable ColumnScope.() -> Unit,
 ) {
     if (geohash.isNullOrBlank()) {
-        KindCard(icon = MaterialSymbols.LocationOn, title = subtitle, body = body)
+        KindCard(icon = MaterialSymbols.LocationOn, title = subtitle, status = status, statusTone = KindTone.Neutral, body = body)
         return
     }
 
     Box(modifier = Modifier.clickable { nav.nav(Route.GeohashChat(geohash)) }) {
         LoadCityName(
             geohashStr = geohash,
-            onLoading = { KindCard(icon = MaterialSymbols.LocationOn, title = "#$geohash", subtitle = subtitle, body = body) },
+            onLoading = { GeohashCard("#$geohash", subtitle, status, body) },
         ) { city ->
             if (city == geohash) {
-                KindCard(icon = MaterialSymbols.LocationOn, title = "#$geohash", subtitle = subtitle, body = body)
+                GeohashCard("#$geohash", subtitle, status, body)
             } else {
-                KindCard(icon = MaterialSymbols.LocationOn, title = city, subtitle = "$subtitle · #$geohash", body = body)
+                GeohashCard(city, "$subtitle · #$geohash", status, body)
             }
         }
     }
+}
+
+@Composable
+private fun GeohashCard(
+    title: String,
+    subtitle: String,
+    status: String?,
+    body: @Composable ColumnScope.() -> Unit,
+) {
+    KindCard(
+        icon = MaterialSymbols.LocationOn,
+        title = title,
+        subtitle = subtitle,
+        status = status,
+        statusTone = KindTone.Neutral,
+        body = body,
+    )
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -820,8 +932,9 @@ fun RenderNestsAdminCommand(
             null -> stringRes(Res.string.kc_group_nests_command)
         }
 
-    KindCard(icon = icon, title = title) {
-        target?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
+    // A kick or a forced mute acts against someone; an unknown command only asks for attention.
+    KindCard(icon = icon, title = title, tone = if (action == null) KindTone.Warning else KindTone.Negative) {
+        target?.let { KindCardPerson(it, accountViewModel, nav) }
         room?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
@@ -844,14 +957,12 @@ fun RenderCommunityRules(
     val wotRoots = remember(wot) { wot.map { it.rootPubkey } }
     val maxSize = remember(event) { event.maxEventSize() }
     val community = remember(event) { event.communityAddress()?.let { Address.parse(it) } }
+    val kindNames = kinds.map { kindName(it) }
 
     KindCard(
         icon = MaterialSymbols.Gavel,
         title = stringRes(Res.string.kc_group_community_rules),
     ) {
-        if (kinds.isNotEmpty()) {
-            KindCardField(stringRes(Res.string.kc_group_rules_allowed_kinds), kinds.map { kindName(it) }.joinToString(", "), maxLines = 4)
-        }
         KindCardField(stringRes(Res.string.kc_group_rules_allowed_people), allowed.takeIf { it > 0 }?.toString())
         KindCardField(stringRes(Res.string.kc_group_rules_blocked_people), blocked.takeIf { it > 0 }?.toString())
         maxSize?.let { KindCardField(stringRes(Res.string.kc_group_rules_max_size), pluralStringRes(Res.plurals.kc_group_rules_bytes, it, it)) }
@@ -859,6 +970,10 @@ fun RenderCommunityRules(
             val depth = wot.maxOf { it.depth }
             KindCardField(stringRes(Res.string.kc_group_rules_wot), pluralStringRes(Res.plurals.kc_group_rules_wot_depth, depth, depth))
             KindCardUsers(wotRoots, accountViewModel, nav, max = 3)
+        }
+        if (kindNames.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.kc_group_rules_allowed_kinds))
+            KindCardChips(kindNames, max = 8)
         }
         community?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
@@ -920,11 +1035,16 @@ fun RenderConcordControlEdition(baseNote: Note) {
         icon = MaterialSymbols.Settings,
         title = stringRes(Res.string.kc_group_concord_control),
         subtitle = entity?.let { concordEntityLabel(it) },
+        tone = if (entity != null && entity in NEGATIVE_CONCORD_ENTITIES) KindTone.Negative else KindTone.Primary,
     ) {
+        // The content is the entity's machine state; the kind of entity and its version say what changed.
         KindCardField(stringRes(Res.string.kc_group_field_version), version?.toString())
-        KindCardCode(event.content, maxLines = 6)
     }
 }
+
+/** Entities whose new version takes something away: the ban list, a revoked invite, a dissolved community. */
+private val NEGATIVE_CONCORD_ENTITIES =
+    setOf(ControlEntityKind.BANLIST, ControlEntityKind.INVITE_REVOKED, ControlEntityKind.DISSOLVED)
 
 @Composable
 private fun concordEntityLabel(kind: ControlEntityKind): String =
@@ -953,7 +1073,7 @@ fun RenderConcordInviteBundle(baseNote: Note) {
         KindCard(
             icon = MaterialSymbols.Link,
             title = stringRes(Res.string.kc_group_concord_invite_revoked),
-            iconTint = MaterialTheme.colorScheme.error,
+            tone = KindTone.Negative,
         )
     } else {
         RenderPrivateKindCard(baseNote, MaterialSymbols.Link)
@@ -972,6 +1092,7 @@ fun RenderRelayInviteRequest(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Key,
         title = stringRes(Res.string.kc_group_relay_invite_request),
+        tone = KindTone.Warning,
     )
 }
 
@@ -984,7 +1105,8 @@ fun RenderRelayRole(
     nav: INav,
 ) {
     val event = baseNote.event as? RelayRoleEvent ?: return
-    val roles = remember(event) { listOf(event.role()) }
+    // A role without an id or a label has nothing to put on its chip.
+    val roles = remember(event) { listOf(event.role()).filter { (it.label ?: it.id).isNotBlank() } }
 
     KindCard(
         icon = MaterialSymbols.MilitaryTech,

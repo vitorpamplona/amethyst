@@ -20,21 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -48,15 +39,12 @@ import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_skipped
 import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_startup_failure
 import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_success
 import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_timed_out
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_unknown
 import com.vitorpamplona.amethyst.commons.resources.git_ci_full_log
 import com.vitorpamplona.amethyst.commons.resources.git_ci_in_progress
 import com.vitorpamplona.amethyst.commons.resources.git_ci_queued
-import com.vitorpamplona.amethyst.commons.resources.git_commit
 import com.vitorpamplona.amethyst.commons.resources.git_repo_branches
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tags
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_app_id
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_asset_bundle_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_asset_bundle_untitled
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_certificate
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_accepts_secrets
@@ -64,71 +52,71 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_admission
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_admission_maintainer
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_admission_open
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_admission_operator
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_availability
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_artifacts
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_billing
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_billing_free
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_billing_out_of_band
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_coordinator
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_coordinator_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_execution
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_execution_automatic
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_execution_request
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_exit_code
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job_cancelled
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job_failed
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job_finished
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job_passed
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_jobs
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_maintainers
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_manual_trigger_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_offline
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_online_until
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_online
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_policy_unknown
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_readiness_title
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_ref
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_repo_status
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_repo_status_active
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_repositories
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_repository
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_id
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_cancelled
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_failed
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_finished
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_in_progress
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_passed
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_run_queued
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_runners
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_running_jobs
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_runs_on
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_secrets
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_service_active
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_service_request_title
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_service_status
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_service_stop_title
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_trigger
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_trigger_manual
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_trigger_pull_request
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_trigger_push
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_trigger_schedule
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_workflow
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_workflow_run
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_until
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_workflows
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_expired
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_expires
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_feed_authors
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_feed_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_feed_untitled
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_files
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_files_count
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_grasp_title
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_hash
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv4
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv6
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_more
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_napplet_snapshot
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_napplet_snapshot_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_nns_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_permissions
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_platform
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_reason
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_repo_state_discontinued
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_repo_state
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_repo_state_archived
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_repo_state_head
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_repo_state_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_revoked
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_servers
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_site_snapshot
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_site_snapshot_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_source
-import com.vitorpamplona.amethyst.commons.resources.kind_card_private_payload
-import com.vitorpamplona.amethyst.commons.resources.version
+import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
@@ -176,7 +164,11 @@ import org.jetbrains.compose.resources.StringResource
  * in tags and have empty or machine content, so the text fallback showed nothing useful.
  */
 
-private const val MAX_ROWS = 6
+private const val MAX_BRANCH_ROWS = 4
+private const val MAX_TAG_CHIPS = 6
+private const val MAX_SERVER_CHIPS = 4
+private const val MAX_ARTIFACTS = 3
+private const val MAX_FILE_ROWS = 4
 private const val LOG_TAIL_LINES = 6
 
 // ---------------------------------------------------------------------------------------------
@@ -199,7 +191,6 @@ fun RenderCiWorkflowProgress(
                 workflow = event.workflow()?.path,
                 repository = event.repositories().firstOrNull()?.dTag,
                 commit = event.commit(),
-                gitRef = event.gitRef(),
                 trigger = event.trigger(),
                 pullRequest = event.pullRequest()?.pullRequestId,
             )
@@ -209,28 +200,39 @@ fun RenderCiWorkflowProgress(
     val jobs = remember(event) { event.jobResults().map { it.jobId } }
     val running = remember(event) { event.inProgressJobs() }
 
-    val state =
-        when (status) {
-            CiWorkflowStatus.QUEUED, CiWorkflowStatus.IN_PROGRESS -> CiState.PENDING
-            else -> CiRollup.stateOf(conclusion)
-        }
-    val statusLabel =
-        when (status) {
-            CiWorkflowStatus.QUEUED -> stringRes(Res.string.git_ci_queued)
-            CiWorkflowStatus.IN_PROGRESS -> stringRes(Res.string.git_ci_in_progress)
-            else -> stringRes(conclusionLabel(conclusion))
+    val title: String
+    val pill: String?
+    val state: CiState
+    when (status) {
+        CiWorkflowStatus.QUEUED -> {
+            state = CiState.PENDING
+            title = stringRes(Res.string.kc_dev_ci_run_queued)
+            pill = stringRes(Res.string.git_ci_queued)
         }
 
+        CiWorkflowStatus.IN_PROGRESS -> {
+            state = CiState.PENDING
+            title = stringRes(Res.string.kc_dev_ci_run_in_progress)
+            pill = stringRes(Res.string.git_ci_in_progress)
+        }
+
+        else -> {
+            state = CiRollup.stateOf(conclusion)
+            title = stringRes(runTitle(state))
+            pill = conclusion?.let { stringRes(conclusionLabel(it)) }
+        }
+    }
+
     KindCard(
-        icon = ciSymbol(state),
-        title = info.workflow ?: stringRes(Res.string.kc_dev_ci_workflow_run),
-        subtitle = statusLabel,
-        iconTint = ciTint(state),
+        icon = if (status == CiWorkflowStatus.QUEUED) MaterialSymbols.Schedule else ciSymbol(state),
+        title = title,
+        subtitle = info.workflowName,
+        tone = ciTone(state),
+        status = pill,
     ) {
-        CiRunFields(info)
-        KindCardField(stringRes(Res.string.kc_dev_ci_run_id), event.runId(), monospace = true, maxLines = 1)
-        KindCardField(stringRes(Res.string.kc_dev_ci_jobs), jobs.joinToString(", "))
+        CiRunMeta(info)
         KindCardField(stringRes(Res.string.kc_dev_ci_running_jobs), running.joinToString(", "))
+        KindCardField(stringRes(Res.string.kc_dev_ci_jobs), jobs.joinToString(", "))
         CiPullRequestQuote(info.pullRequest, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
@@ -251,7 +253,6 @@ fun RenderCiWorkflowResult(
                 workflow = event.workflow()?.path,
                 repository = event.repositories().firstOrNull()?.dTag,
                 commit = event.commit(),
-                gitRef = event.gitRef(),
                 trigger = event.trigger(),
                 pullRequest = event.pullRequest()?.pullRequestId,
             )
@@ -262,18 +263,18 @@ fun RenderCiWorkflowResult(
 
     KindCard(
         icon = ciSymbol(state),
-        title = info.workflow ?: stringRes(Res.string.kc_dev_ci_workflow_run),
-        subtitle = stringRes(conclusionLabel(conclusion)),
-        iconTint = ciTint(state),
+        title = stringRes(runTitle(state)),
+        subtitle = info.workflowName,
+        tone = ciTone(state),
+        status = conclusion?.let { stringRes(conclusionLabel(it)) },
     ) {
-        CiRunFields(info)
-        KindCardField(stringRes(Res.string.kc_dev_ci_run_id), event.runId(), monospace = true, maxLines = 1)
+        CiRunMeta(info)
         KindCardField(stringRes(Res.string.kc_dev_ci_jobs), jobs.joinToString(", "))
         CiPullRequestQuote(info.pullRequest, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
 
-/** Kind 9841: one job of a workflow run, with its log tail, full log and artifacts. */
+/** Kind 9841: one job of a workflow run, with the log tail of a failure, the full log and artifacts. */
 @Composable
 fun RenderCiJobResult(
     baseNote: Note,
@@ -289,36 +290,28 @@ fun RenderCiJobResult(
                 workflow = event.workflow()?.path,
                 repository = event.repositories().firstOrNull()?.dTag,
                 commit = event.commit(),
-                gitRef = event.gitRef(),
                 trigger = event.trigger(),
                 pullRequest = event.pullRequest()?.pullRequestId,
             )
         }
     val conclusion = remember(event) { event.conclusion() }
-    val tail =
-        remember(event) {
-            event
-                .logTail()
-                .lines()
-                .dropWhile { it.startsWith("[log-tail omitted=") }
-                .takeLast(LOG_TAIL_LINES)
-                .joinToString("\n")
-                .trim()
-        }
-    val artifacts = remember(event) { event.artifacts() }
     val state = CiRollup.stateOf(conclusion)
+    val failed = state == CiState.FAILURE
+    val tail = remember(event, failed) { if (failed) readableLogTail(event.logTail(), LOG_TAIL_LINES) else "" }
+    val subtitle = remember(event) { listOfNotNull(event.name() ?: event.jobId(), info.workflowName).joinToString("  ·  ") }
+    val exitCode = remember(event) { event.exitCode()?.takeIf { it != 0 }?.toString() }
+    val artifacts = remember(event) { event.artifacts() }
 
     KindCard(
         icon = ciSymbol(state),
-        title = event.name() ?: event.jobId() ?: stringRes(Res.string.kc_dev_ci_job),
-        subtitle = stringRes(conclusionLabel(conclusion)),
-        iconTint = ciTint(state),
+        title = stringRes(jobTitle(state)),
+        subtitle = subtitle,
+        tone = ciTone(state),
+        status = conclusion?.let { stringRes(conclusionLabel(it)) },
     ) {
-        KindCardField(stringRes(Res.string.kc_dev_ci_workflow), info.workflow)
-        CiRunFields(info.copy(workflow = null))
-        KindCardField(stringRes(Res.string.kc_dev_ci_runs_on), event.runsOn().joinToString(", "))
-        KindCardField(stringRes(Res.string.kc_dev_ci_exit_code), event.exitCode()?.toString(), monospace = true)
-        KindCardCode(tail)
+        CiRunMeta(info)
+        KindCardField(stringRes(Res.string.kc_dev_ci_exit_code), exitCode, monospace = true, maxLines = 1)
+        KindCardCode(tail, maxLines = LOG_TAIL_LINES)
         event.logsUrl()?.let { url ->
             ClickableUrlOrBlossom(
                 urlText = stringRes(Res.string.git_ci_full_log),
@@ -326,12 +319,16 @@ fun RenderCiJobResult(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        artifacts.take(MAX_ROWS).forEach { artifact ->
-            ClickableUrlOrBlossom(
-                urlText = artifact.name ?: artifact.fileName ?: artifact.url,
-                url = artifact.url,
-                style = MaterialTheme.typography.bodySmall,
-            )
+        if (artifacts.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.kc_dev_ci_artifacts))
+            artifacts.take(MAX_ARTIFACTS).forEach { artifact ->
+                ClickableUrlOrBlossom(
+                    urlText = artifact.name ?: artifact.fileName ?: artifact.url,
+                    url = artifact.url,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            MoreLine(artifacts.size - MAX_ARTIFACTS)
         }
         CiPullRequestQuote(info.pullRequest, quotesLeft, backgroundColor, accountViewModel, nav)
     }
@@ -350,10 +347,9 @@ fun RenderCiManualTrigger(
     val info =
         remember(event) {
             CiRunInfo(
-                workflow = null,
+                workflow = event.workflow()?.path,
                 repository = event.repositories().firstOrNull()?.dTag,
                 commit = event.commit(),
-                gitRef = event.gitRef(),
                 trigger = null,
                 pullRequest = event.pullRequest()?.pullRequestId,
             )
@@ -363,10 +359,10 @@ fun RenderCiManualTrigger(
     KindCard(
         icon = MaterialSymbols.PlayArrow,
         title = stringRes(Res.string.kc_dev_ci_manual_trigger_title),
-        subtitle = event.workflow()?.path,
+        subtitle = info.workflowName,
     ) {
-        CiRunFields(info)
-        KindCardUsers(coordinator, accountViewModel, nav)
+        CiRunMeta(info)
+        CiCoordinatorChip(coordinator, accountViewModel, nav)
         CiPullRequestQuote(info.pullRequest, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
@@ -384,6 +380,7 @@ fun RenderCiServiceRequest(
     CiServiceCard(
         icon = MaterialSymbols.PlayCircle,
         title = stringRes(Res.string.kc_dev_ci_service_request_title),
+        tone = KindTone.Primary,
         repository = repository,
         coordinator = coordinator,
         accountViewModel = accountViewModel,
@@ -404,6 +401,7 @@ fun RenderCiServiceStop(
     CiServiceCard(
         icon = MaterialSymbols.Stop,
         title = stringRes(Res.string.kc_dev_ci_service_stop_title),
+        tone = KindTone.Neutral,
         repository = repository,
         coordinator = coordinator,
         accountViewModel = accountViewModel,
@@ -415,13 +413,14 @@ fun RenderCiServiceStop(
 private fun CiServiceCard(
     icon: MaterialSymbol,
     title: String,
+    tone: KindTone,
     repository: ATag?,
     coordinator: List<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    KindCard(icon = icon, title = title, subtitle = repository?.dTag) {
-        KindCardUsers(coordinator, accountViewModel, nav)
+    KindCard(icon = icon, title = title, subtitle = repository?.dTag, tone = tone) {
+        CiCoordinatorChip(coordinator, accountViewModel, nav)
     }
 }
 
@@ -444,15 +443,19 @@ fun RenderCiCoordinatorAdvertisement(baseNote: Note) {
         icon = MaterialSymbols.Dns,
         title = stringRes(Res.string.kc_dev_ci_coordinator_title),
         subtitle = software,
+        status = availabilityPill(liveUntil),
+        statusTone = availabilityTone(liveUntil),
     ) {
         KindCardField(stringRes(Res.string.kc_dev_ci_admission), admission?.let { stringRes(admissionLabel(it)) })
         KindCardField(stringRes(Res.string.kc_dev_ci_execution), execution?.let { stringRes(executionLabel(it)) })
         KindCardField(stringRes(Res.string.kc_dev_ci_billing), billing?.let { stringRes(billingLabel(it)) })
-        LabeledChips(stringRes(Res.string.kc_dev_ci_runners), runners)
-        if (acceptsSecrets) {
-            KindCardChips(listOf(stringRes(Res.string.kc_dev_ci_accepts_secrets)))
-        }
-        CiAvailability(liveUntil)
+        SectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
+        KindCardMeta(
+            listOf(
+                liveUntil?.let { stringRes(Res.string.kc_dev_ci_until, timeAbsoluteNoDot(it)) },
+                if (acceptsSecrets) stringRes(Res.string.kc_dev_ci_accepts_secrets) else null,
+            ),
+        )
     }
 }
 
@@ -471,10 +474,15 @@ fun RenderCiRequestReadinessList(
     KindCard(
         icon = MaterialSymbols.Checklist,
         title = stringRes(Res.string.kc_dev_ci_readiness_title),
+        status = availabilityPill(liveUntil),
+        statusTone = availabilityTone(liveUntil),
     ) {
-        LabeledChips(stringRes(Res.string.kc_dev_ci_repositories), repositories)
-        KindCardUsers(maintainers, accountViewModel, nav)
-        CiAvailability(liveUntil)
+        SectionChips(stringRes(Res.string.kc_dev_ci_repositories), repositories)
+        if (maintainers.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.kc_dev_ci_maintainers))
+            KindCardUsers(maintainers, accountViewModel, nav)
+        }
+        KindCardMeta(listOf(liveUntil?.let { stringRes(Res.string.kc_dev_ci_until, timeAbsoluteNoDot(it)) }))
     }
 }
 
@@ -482,7 +490,7 @@ fun RenderCiRequestReadinessList(
 @Composable
 fun RenderCiRepositoryStatus(baseNote: Note) {
     val event = baseNote.event as? CiRepositoryStatusEvent ?: return
-    val repository = remember(event) { event.selectedRepository()?.dTag ?: event.repositories().firstOrNull()?.dTag ?: "" }
+    val repository = remember(event) { event.selectedRepository()?.dTag ?: event.repositories().firstOrNull()?.dTag }
     val acting = remember(event) { event.isActing() }
     val workflows = remember(event) { event.workflowPaths() }
     val runners =
@@ -494,18 +502,16 @@ fun RenderCiRepositoryStatus(baseNote: Note) {
 
     KindCard(
         icon = MaterialSymbols.Dns,
-        title =
-            if (acting) {
-                stringRes(Res.string.kc_dev_ci_repo_status_active, repository)
-            } else {
-                stringRes(Res.string.kc_dev_ci_repo_status, repository)
-            },
-        iconTint = if (acting) ciTint(CiState.SUCCESS) else MaterialTheme.colorScheme.onSurfaceVariant,
+        title = stringRes(if (acting) Res.string.kc_dev_ci_service_active else Res.string.kc_dev_ci_service_status),
+        subtitle = repository,
+        tone = if (acting) KindTone.Positive else KindTone.Neutral,
+        status = availabilityPill(liveUntil),
+        statusTone = availabilityTone(liveUntil),
     ) {
-        LabeledChips(stringRes(Res.string.kc_dev_ci_workflows), workflows)
-        LabeledChips(stringRes(Res.string.kc_dev_ci_runners), runners)
-        LabeledChips(stringRes(Res.string.kc_dev_ci_secrets), secrets)
-        CiAvailability(liveUntil)
+        SectionChips(stringRes(Res.string.kc_dev_ci_workflows), workflows)
+        SectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
+        SectionChips(stringRes(Res.string.kc_dev_ci_secrets), secrets)
+        KindCardMeta(listOf(liveUntil?.let { stringRes(Res.string.kc_dev_ci_until, timeAbsoluteNoDot(it)) }))
     }
 }
 
@@ -514,18 +520,34 @@ private data class CiRunInfo(
     val workflow: String?,
     val repository: String?,
     val commit: String?,
-    val gitRef: String?,
     val trigger: CiTrigger?,
     val pullRequest: HexKey?,
-)
+) {
+    /** The workflow file's name, without the `.ngit/act/workflows/` folder it sits in. */
+    val workflowName: String? = workflow?.substringAfterLast('/')?.ifBlank { null }
+}
+
+/** Repository, short commit and trigger of a run, on one muted line. */
+@Composable
+private fun CiRunMeta(info: CiRunInfo) {
+    KindCardMeta(
+        listOf(
+            info.repository,
+            info.commit?.take(8),
+            info.trigger?.let { stringRes(triggerLabel(it)) },
+        ),
+    )
+}
 
 @Composable
-private fun CiRunFields(info: CiRunInfo) {
-    KindCardField(stringRes(Res.string.kc_dev_ci_workflow), info.workflow)
-    KindCardField(stringRes(Res.string.kc_dev_ci_repository), info.repository)
-    KindCardField(stringRes(Res.string.git_commit), info.commit?.take(7), monospace = true)
-    KindCardField(stringRes(Res.string.kc_dev_ci_ref), info.gitRef, monospace = true, maxLines = 1)
-    KindCardField(stringRes(Res.string.kc_dev_ci_trigger), info.trigger?.let { stringRes(triggerLabel(it)) })
+private fun CiCoordinatorChip(
+    coordinator: List<HexKey>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (coordinator.isEmpty()) return
+    KindCardSection(stringRes(Res.string.kc_dev_ci_coordinator))
+    KindCardUsers(coordinator, accountViewModel, nav)
 }
 
 @Composable
@@ -541,15 +563,74 @@ private fun CiPullRequestQuote(
 }
 
 @Composable
-private fun CiAvailability(liveUntil: Long?) {
-    KindCardField(
-        stringRes(Res.string.kc_dev_ci_availability),
-        if (liveUntil != null) {
-            stringRes(Res.string.kc_dev_ci_online_until, timeAbsoluteNoDot(liveUntil))
+private fun availabilityPill(liveUntil: Long?): String = stringRes(if (liveUntil != null) Res.string.kc_dev_ci_online else Res.string.kc_dev_ci_offline)
+
+private fun availabilityTone(liveUntil: Long?): KindTone = if (liveUntil != null) KindTone.Positive else KindTone.Neutral
+
+private val JSON_MESSAGE = Regex("\"(?:msg|message)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
+
+/**
+ * The last [maxLines] readable lines of a job's log tail. Runners like `act` log JSON lines; for
+ * those, only each line's `msg` survives, since the rest is bookkeeping. Plain logs keep their lines.
+ */
+private fun readableLogTail(
+    log: String,
+    maxLines: Int,
+): String {
+    val lines = log.lines().filter { it.isNotBlank() && !it.startsWith("[log-tail omitted=") }
+    if (lines.isEmpty()) return ""
+    val jsonLines = lines.count { it.trimStart().startsWith("{") }
+    val readable =
+        if (jsonLines * 2 >= lines.size) {
+            lines.mapNotNull { line ->
+                JSON_MESSAGE
+                    .find(line)
+                    ?.groupValues
+                    ?.get(1)
+                    ?.let(::unescapeJsonString)
+            }
         } else {
-            stringRes(Res.string.kc_dev_ci_offline)
-        },
-    )
+            lines
+        }
+    return readable
+        .flatMap { it.lines() }
+        .map { it.trimEnd() }
+        .filter { it.isNotBlank() }
+        .takeLast(maxLines)
+        .joinToString("\n")
+}
+
+private fun unescapeJsonString(value: String): String {
+    if (!value.contains('\\')) return value
+    val out = StringBuilder(value.length)
+    var i = 0
+    while (i < value.length) {
+        val c = value[i]
+        if (c != '\\' || i + 1 >= value.length) {
+            out.append(c)
+            i++
+            continue
+        }
+        when (val next = value[i + 1]) {
+            'n' -> out.append('\n')
+            't' -> out.append('\t')
+            'r' -> out.append('\r')
+            'b', 'f' -> Unit
+            'u' -> {
+                val code = value.substring(i + 2, minOf(i + 6, value.length)).toIntOrNull(16)
+                if (code != null && i + 6 <= value.length) {
+                    out.append(code.toChar())
+                    i += 6
+                    continue
+                }
+                out.append(next)
+            }
+
+            else -> out.append(next)
+        }
+        i += 2
+    }
+    return out.toString()
 }
 
 private fun ciSymbol(state: CiState): MaterialSymbol =
@@ -561,16 +642,32 @@ private fun ciSymbol(state: CiState): MaterialSymbol =
         CiState.NEUTRAL -> MaterialSymbols.RemoveCircleOutline
     }
 
-@Composable
-private fun ciTint(state: CiState): Color =
+private fun ciTone(state: CiState): KindTone =
     when (state) {
-        CiState.SUCCESS -> Color(0xFF1F883D)
-        CiState.FAILURE -> Color(0xFFCF222E)
-        CiState.PENDING -> Color(0xFF9A6700)
-        CiState.CANCELLED, CiState.NEUTRAL -> MaterialTheme.colorScheme.onSurfaceVariant
+        CiState.SUCCESS -> KindTone.Positive
+        CiState.FAILURE -> KindTone.Negative
+        CiState.PENDING -> KindTone.Warning
+        CiState.CANCELLED, CiState.NEUTRAL -> KindTone.Neutral
     }
 
-private fun conclusionLabel(conclusion: CiConclusion?): StringResource =
+private fun runTitle(state: CiState): StringResource =
+    when (state) {
+        CiState.SUCCESS -> Res.string.kc_dev_ci_run_passed
+        CiState.FAILURE -> Res.string.kc_dev_ci_run_failed
+        CiState.PENDING -> Res.string.kc_dev_ci_run_in_progress
+        CiState.CANCELLED -> Res.string.kc_dev_ci_run_cancelled
+        CiState.NEUTRAL -> Res.string.kc_dev_ci_run_finished
+    }
+
+private fun jobTitle(state: CiState): StringResource =
+    when (state) {
+        CiState.SUCCESS -> Res.string.kc_dev_ci_job_passed
+        CiState.FAILURE -> Res.string.kc_dev_ci_job_failed
+        CiState.CANCELLED -> Res.string.kc_dev_ci_job_cancelled
+        CiState.PENDING, CiState.NEUTRAL -> Res.string.kc_dev_ci_job_finished
+    }
+
+private fun conclusionLabel(conclusion: CiConclusion): StringResource =
     when (conclusion) {
         CiConclusion.SUCCESS -> Res.string.git_ci_conclusion_success
         CiConclusion.FAILURE -> Res.string.git_ci_conclusion_failure
@@ -579,7 +676,6 @@ private fun conclusionLabel(conclusion: CiConclusion?): StringResource =
         CiConclusion.SKIPPED -> Res.string.git_ci_conclusion_skipped
         CiConclusion.TIMED_OUT -> Res.string.git_ci_conclusion_timed_out
         CiConclusion.STARTUP_FAILURE -> Res.string.git_ci_conclusion_startup_failure
-        null -> Res.string.git_ci_conclusion_unknown
     }
 
 private fun triggerLabel(trigger: CiTrigger): StringResource =
@@ -620,37 +716,35 @@ private fun billingLabel(policy: CiBillingPolicy): StringResource =
 @Composable
 fun RenderGitRepositoryState(baseNote: Note) {
     val event = baseNote.event as? GitRepositoryStateEvent ?: return
-    val branches = remember(event) { event.branches() }
-    val tags = remember(event) { event.tagRefs() }
     val head = remember(event) { event.head() }
-    val discontinued = branches.isEmpty() && tags.isEmpty()
+    // The HEAD branch first, so the default branch is always among the rows shown.
+    val branches = remember(event) { event.branches().sortedByDescending { it.shortName == head } }
+    val tags = remember(event) { event.tagRefs().map { it.shortName } }
+    val archived = branches.isEmpty() && tags.isEmpty()
 
     KindCard(
         icon = MaterialSymbols.Commit,
-        title = stringRes(Res.string.kc_dev_repo_state_title, event.dTag()),
-        subtitle =
-            if (discontinued) {
-                stringRes(Res.string.kc_dev_repo_state_discontinued)
-            } else {
-                head?.let { stringRes(Res.string.kc_dev_repo_state_head, it) }
-            },
+        title = stringRes(Res.string.kc_dev_repo_state),
+        subtitle = event.dTag(),
+        tone = if (archived) KindTone.Neutral else KindTone.Primary,
+        status = if (archived) stringRes(Res.string.kc_dev_repo_state_archived) else null,
     ) {
-        RefRows(stringRes(Res.string.git_repo_branches), branches)
-        RefRows(stringRes(Res.string.git_repo_tags), tags)
+        if (!archived) {
+            KindCardMeta(listOf(head?.let { stringRes(Res.string.kc_dev_repo_state_head, it) }))
+        }
+        BranchRows(branches)
+        SectionChips(stringRes(Res.string.git_repo_tags), tags, MAX_TAG_CHIPS)
     }
 }
 
 @Composable
-private fun RefRows(
-    label: String,
-    refs: List<RefTag>,
-) {
+private fun BranchRows(refs: List<RefTag>) {
     if (refs.isEmpty()) return
-    SectionLabel(label)
-    refs.take(MAX_ROWS).forEach { ref ->
-        KindCardField(ref.shortName, ref.commit.take(7), monospace = true, maxLines = 1)
+    KindCardSection(stringRes(Res.string.git_repo_branches))
+    refs.take(MAX_BRANCH_ROWS).forEach { ref ->
+        KindCardField(ref.shortName, ref.commit.take(8), monospace = true, maxLines = 1)
     }
-    MoreRows(refs.size - MAX_ROWS)
+    MoreLine(refs.size - MAX_BRANCH_ROWS)
 }
 
 /** Kind 10317: the user's preferred grasp (git-over-nostr hosting) servers, in order. */
@@ -685,17 +779,19 @@ fun RenderIdentityProof(baseNote: Note) {
         icon = MaterialSymbols.Security,
         title = stringRes(Res.string.kc_dev_identity_proof_title),
         subtitle = stringRes(Res.string.kc_dev_identity_proof_subtitle),
-        iconTint = if (revoked || expired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+        tone = if (revoked || expired) KindTone.Negative else KindTone.Primary,
+        status =
+            when {
+                revoked -> stringRes(Res.string.kc_dev_revoked)
+                expired -> stringRes(Res.string.kc_dev_expired)
+                else -> null
+            },
     ) {
         KindCardField(stringRes(Res.string.kc_dev_certificate), certificate, monospace = true, maxLines = 1)
         if (revoked) {
-            KindCardChips(listOf(stringRes(Res.string.kc_dev_revoked)))
             KindCardField(stringRes(Res.string.kc_dev_reason), reason)
-        } else if (expiry != null) {
-            KindCardField(
-                stringRes(if (expired) Res.string.kc_dev_expired else Res.string.kc_dev_expires),
-                timeAbsoluteNoDot(expiry),
-            )
+        } else if (expiry != null && !expired) {
+            KindCardField(stringRes(Res.string.kc_dev_expires), timeAbsoluteNoDot(expiry))
         }
     }
 }
@@ -706,26 +802,28 @@ fun RenderAssetBundle(baseNote: Note) {
     val event = baseNote.event as? AssetBundleEvent ?: return
     val productId = remember(event) { event.productId() }
     val files = remember(event) { event.files() }
+    val listing =
+        remember(event) {
+            files.take(MAX_FILE_ROWS).joinToString("\n") { file ->
+                listOfNotNull(file.filename, file.hash.toShortDisplay()).joinToString("  ")
+            }
+        }
 
     KindCard(
         icon = MaterialSymbols.FolderZip,
-        title =
-            if (productId != null) {
-                stringRes(Res.string.kc_dev_asset_bundle_title, productId)
-            } else {
-                stringRes(Res.string.kc_dev_asset_bundle_untitled)
-            },
-        subtitle = event.note(),
+        title = stringRes(Res.string.kc_dev_asset_bundle_untitled),
+        subtitle = productId,
     ) {
-        KindCardField(stringRes(Res.string.version), event.version())
-        KindCardField(stringRes(Res.string.kc_dev_platform), event.platform())
-        if (files.isNotEmpty()) {
-            SectionLabel(pluralStringRes(Res.plurals.kc_dev_files_count, files.size, files.size))
-            files.take(MAX_ROWS).forEach { file ->
-                KindCardCode(listOfNotNull(file.filename, file.hash.toShortDisplay()).joinToString("  "), maxLines = 1)
-            }
-            MoreRows(files.size - MAX_ROWS)
-        }
+        KindCardMeta(
+            listOf(
+                event.version(),
+                event.platform(),
+                if (files.isNotEmpty()) pluralStringRes(Res.plurals.kc_dev_files_count, files.size, files.size) else null,
+            ),
+        )
+        KindCardMeta(listOf(event.note()))
+        KindCardCode(listing, maxLines = MAX_FILE_ROWS)
+        MoreLine(files.size - MAX_FILE_ROWS)
     }
 }
 
@@ -745,19 +843,13 @@ fun RenderSiteSnapshot(
     val event = baseNote.event as? SiteSnapshotEvent ?: return
     val site = remember(event) { event.snapshotOf() }
     val name = remember(event) { event.title() ?: site?.dTag?.ifBlank { null } }
-    val paths = remember(event) { event.paths() }
 
     KindCard(
         icon = MaterialSymbols.Language,
-        title =
-            if (name != null) {
-                stringRes(Res.string.kc_dev_site_snapshot_title, name)
-            } else {
-                stringRes(Res.string.kc_dev_site_snapshot)
-            },
-        subtitle = event.description(),
+        title = stringRes(Res.string.kc_dev_site_snapshot),
+        subtitle = name,
     ) {
-        SnapshotFields(paths, event.declaredAggregateHash(), event.source(), event.servers())
+        SnapshotFacts(event.description(), event.paths(), event.source(), event.servers())
         site?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
@@ -766,45 +858,40 @@ fun RenderSiteSnapshot(
 @Composable
 fun RenderNappletSnapshot(baseNote: Note) {
     val event = baseNote.event as? NappletSnapshotEvent ?: return
-    val name = remember(event) { event.title() }
-    val paths = remember(event) { event.paths() }
     val requires = remember(event) { event.requires() }
 
     KindCard(
         icon = MaterialSymbols.Extension,
-        title =
-            if (name != null) {
-                stringRes(Res.string.kc_dev_napplet_snapshot_title, name)
-            } else {
-                stringRes(Res.string.kc_dev_napplet_snapshot)
-            },
-        subtitle = event.description(),
+        title = stringRes(Res.string.kc_dev_napplet_snapshot),
+        subtitle = event.title(),
     ) {
-        LabeledChips(stringRes(Res.string.kc_dev_permissions), requires)
-        SnapshotFields(paths, event.declaredAggregateHash(), event.source(), event.servers())
+        SnapshotFacts(event.description(), event.paths(), event.source(), event.servers())
+        SectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }
 
 @Composable
-private fun SnapshotFields(
+private fun SnapshotFacts(
+    description: String?,
     paths: List<PathTag>,
-    aggregateHash: HexKey?,
     source: String?,
     servers: List<String>,
 ) {
-    if (paths.isNotEmpty()) {
-        KindCardField(stringRes(Res.string.kc_dev_files), pluralStringRes(Res.plurals.kc_dev_files_count, paths.size, paths.size))
-    }
-    KindCardField(stringRes(Res.string.kc_dev_hash), aggregateHash?.toShortDisplay(), monospace = true, maxLines = 1)
+    KindCardMeta(listOf(description))
+    KindCardMeta(listOf(if (paths.isNotEmpty()) pluralStringRes(Res.plurals.kc_dev_files_count, paths.size, paths.size) else null))
     KindCardField(stringRes(Res.string.kc_dev_source), source, maxLines = 1)
-    LabeledChips(stringRes(Res.string.kc_dev_servers), servers.map { it.removePrefix("https://").removeSuffix("/") })
+    SectionChips(
+        stringRes(Res.string.kc_dev_servers),
+        servers.map { it.removePrefix("https://").removeSuffix("/") },
+        MAX_SERVER_CHIPS,
+    )
 }
 
 // ---------------------------------------------------------------------------------------------
 // Feeds, app data, NNS
 // ---------------------------------------------------------------------------------------------
 
-/** Kind 31890: a shared custom feed (title, emoji, its hashtags and authors, then its config). */
+/** Kind 31890: a shared custom feed (title, emoji, its hashtags and authors). */
 @Composable
 fun RenderFeedDefinition(
     baseNote: Note,
@@ -815,16 +902,21 @@ fun RenderFeedDefinition(
     val title = remember(event) { listOfNotNull(event.emoji(), event.title()).joinToString(" ").ifBlank { null } }
     val hashtags = remember(event) { event.hashtags().map { "#$it" } }
     val authors = remember(event) { event.taggedUserIds() }
-    val config = remember(event) { event.feedConfigJson() }
+    // KindCardText draws on the card's own background; this only satisfies its parameter.
+    val textBackground = remember { mutableStateOf(Color.Transparent) }
 
     KindCard(
         icon = MaterialSymbols.AutoMirrored.Feed,
         title = title ?: stringRes(Res.string.kc_dev_feed_untitled),
-        subtitle = stringRes(Res.string.kc_dev_feed_subtitle),
+        subtitle = if (title != null) stringRes(Res.string.kc_dev_feed_subtitle) else null,
     ) {
-        KindCardChips(hashtags)
-        KindCardUsers(authors, accountViewModel, nav)
-        KindCardCode(config, maxLines = 8)
+        // The content is the feed's machine config; KindCardText skips it when it is JSON.
+        KindCardText(baseNote, event.feedConfigJson(), textBackground, accountViewModel, nav)
+        KindCardChips(hashtags, max = 8)
+        if (authors.isNotEmpty()) {
+            KindCardSection(stringRes(Res.string.kc_dev_feed_authors))
+            KindCardUsers(authors, accountViewModel, nav)
+        }
     }
 }
 
@@ -840,7 +932,8 @@ fun RenderAppData(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Settings,
         title = kindName(event.kind),
-        subtitle = stringRes(Res.string.kind_card_private_payload),
+        tone = KindTone.Neutral,
+        status = stringRes(Res.string.kind_card_private_pill),
     ) {
         KindCardField(stringRes(Res.string.kc_dev_app_id), appId, monospace = true, maxLines = 1)
     }
@@ -854,12 +947,12 @@ fun RenderNNS(baseNote: Note) {
 
     KindCard(
         icon = MaterialSymbols.Dns,
-        title = name.ifBlank { kindName(event.kind) },
-        subtitle = stringRes(Res.string.kc_dev_nns_subtitle),
+        title = stringRes(Res.string.kc_dev_nns_subtitle),
+        subtitle = name,
     ) {
         KindCardField(stringRes(Res.string.kc_dev_ipv4), event.ip4(), monospace = true, maxLines = 1)
         KindCardField(stringRes(Res.string.kc_dev_ipv6), event.ip6(), monospace = true, maxLines = 1)
-        KindCardField(stringRes(Res.string.version), event.version())
+        KindCardMeta(listOf(event.version()))
     }
 }
 
@@ -867,42 +960,21 @@ fun RenderNNS(baseNote: Note) {
 // Small helpers
 // ---------------------------------------------------------------------------------------------
 
+/** A [KindCardSection] heading over [values] as chips; nothing when there are no values. */
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-@Composable
-private fun LabeledChips(
+private fun SectionChips(
     label: String,
     values: List<String>,
+    max: Int = 12,
 ) {
     if (values.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        SectionLabel(label)
-        KindCardChips(values)
-    }
+    KindCardSection(label)
+    KindCardChips(values, max)
 }
 
+/** "and N more" under a list cut short. */
 @Composable
-private fun MoreRows(hidden: Int) {
+private fun MoreLine(hidden: Int) {
     if (hidden <= 0) return
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(
-            symbol = MaterialSymbols.MoreVert,
-            contentDescription = null,
-            modifier = Modifier.size(14.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = stringRes(Res.string.kc_dev_more, hidden),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    KindCardMeta(listOf(stringRes(Res.string.kc_dev_more, hidden)))
 }

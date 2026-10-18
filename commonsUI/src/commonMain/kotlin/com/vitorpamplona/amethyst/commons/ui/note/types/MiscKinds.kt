@@ -28,14 +28,15 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
-import com.vitorpamplona.amethyst.commons.nip69P2pOrderEvents.formatPercent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.draft
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_accept_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_black
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_color
@@ -47,10 +48,10 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_result
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_start_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_termination
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_white
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_count
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_posts
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_file_size
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_file_type
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_dispute_outcome
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_dispute_resolved
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geocache_verification_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geocache_verification_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geohash
@@ -61,17 +62,12 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_language
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_longform_draft_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_minutes
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_every
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_timeout_all
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_timeout_value
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_timeouts
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_more
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dev_fee_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_id
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_initiator
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_opened
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_rating_last
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_rating_out_of
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_rating_reviews
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_rating_since
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_rating_title
@@ -79,20 +75,17 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_ots_pending
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_ots_proven_before
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_ots_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_ots_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_amount
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_buy
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_destination
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_expires
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_expires_on
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_fiat
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_fiat_range
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_maker
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_market_price
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_network
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_order
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_order_id
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_payment_hash
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_platform
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_premium
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_premium_meta
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_sats
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_sell
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_canceled
@@ -101,11 +94,10 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_in_progre
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_pending
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_success
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_poll_response_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_rating
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_rating_stars
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_robosats_rating_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_seconds
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_source
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_status
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_story_progress_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_story_status_done
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_story_status_new
@@ -121,12 +113,14 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_video_view_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_video_view_watched
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_difficulty
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_duration
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_interval
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_rounds
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_sets
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rounds
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_exercises
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_interval_meta
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_rounds_meta
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_sets_meta
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rounds_count
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_sets
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_template_title
+import com.vitorpamplona.amethyst.commons.resources.paid
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
@@ -139,6 +133,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.symbol
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatDecimal
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.tags.DurationTag
@@ -151,6 +146,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
@@ -178,6 +174,7 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /*
@@ -187,21 +184,32 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
  * workout templates. Each one says what the event does and quotes what it acts on.
  */
 
-/** How many target events a card quotes before it just counts the rest. */
-private const val MISC_MAX_QUOTES = 3
-
 private fun Long.toIntCount(): Int = coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
 
-/** "and 4 more" under a list that was cut at [MISC_MAX_QUOTES]. */
+/** "and 4 more" under the one target a card quotes, for the targets it does not. */
 @Composable
 private fun MoreCount(count: Int) {
     if (count <= 0) return
+    KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_misc_more, count, count)))
+}
+
+/** The amount a trading card is about, in large type in the card's money color: "2,000 CUP". */
+@Composable
+private fun MiscHeroAmount(text: String?) {
+    if (text.isNullOrBlank()) return
     Text(
-        text = pluralStringRes(Res.plurals.kc_misc_more, count, count),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        text = text,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = KindTone.Money.color(),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }
+
+/** A rating on a five-star scale as a pill label: "4.8 ★". */
+@Composable
+private fun starsLabel(outOfFive: Double): String = stringRes(Res.string.kc_misc_rating_stars, formatDecimal(outOfFive.coerceIn(0.0, 5.0), 1))
 
 /** A length of time in the biggest unit that divides it evenly: "6 hours", "90 seconds". */
 @Composable
@@ -213,21 +221,6 @@ private fun durationLabel(seconds: Long): String =
     }
 
 private fun formatSeconds(epochSeconds: Long): String = formatDateTime(epochSeconds * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
-
-/** Plain human text (caption cues) that is not worth the rich-text pipeline. */
-@Composable
-private fun PlainPreview(
-    text: String?,
-    maxLines: Int = 4,
-) {
-    if (text.isNullOrBlank()) return
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-    )
-}
 
 // ---------------------------------------------------------------------------------------------
 // NIP-09 deletion request (kind 5)
@@ -267,19 +260,24 @@ fun RenderDeletionRequest(
 
     KindCard(
         icon = MaterialSymbols.Delete,
-        title = stringRes(Res.string.kc_misc_deletion_title),
-        subtitle = pluralStringRes(Res.plurals.kc_misc_deletion_count, targets.count, targets.count),
-        iconTint = MaterialTheme.colorScheme.error,
+        title =
+            if (targets.count > 0) {
+                pluralStringRes(Res.plurals.kc_misc_deletion_posts, targets.count, targets.count)
+            } else {
+                stringRes(Res.string.kc_misc_deletion_title)
+            },
+        tone = KindTone.Negative,
     ) {
-        KindCardChips(kindLabels)
+        KindCardChips(kindLabels, max = 4)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
-        targets.eventIds.take(MISC_MAX_QUOTES).forEach {
-            KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        // One deleted event stands for the request; the rest are only counted.
+        val firstId = targets.eventIds.firstOrNull()
+        val firstAddress = targets.addresses.firstOrNull()
+        when {
+            firstId != null -> KindCardQuoteEvent(firstId, quotesLeft, backgroundColor, accountViewModel, nav)
+            firstAddress != null -> KindCardQuoteAddress(firstAddress, quotesLeft, backgroundColor, accountViewModel, nav)
         }
-        targets.addresses.take(MISC_MAX_QUOTES).forEach {
-            KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        MoreCount(targets.count - MISC_MAX_QUOTES)
+        MoreCount(targets.count - 1)
     }
 }
 
@@ -308,9 +306,9 @@ fun RenderRequestToVanish(
             } else {
                 pluralStringRes(Res.plurals.kc_misc_vanish_relays, relays.size, relays.size)
             },
-        iconTint = MaterialTheme.colorScheme.error,
+        tone = KindTone.Negative,
     ) {
-        if (!everywhere) KindCardChips(relays)
+        if (!everywhere) KindCardChips(relays, max = 6)
         KindCardText(baseNote, event.reason(), backgroundColor, accountViewModel, nav)
     }
 }
@@ -331,7 +329,11 @@ private class MiscLabelInfo(
     companion object {
         fun from(event: LabelEvent): MiscLabelInfo {
             val labelTags = event.labels()
-            val namespaces = (event.namespaces().map { it.namespace } + labelTags.map { it.namespace }).distinct()
+            // The hashtag namespace says nothing a reader needs: its labels already carry the "#".
+            val namespaces =
+                (event.namespaces().map { it.namespace } + labelTags.map { it.namespace })
+                    .distinct()
+                    .filter { it != LabelEvent.HASHTAG_NAMESPACE }
             val labels =
                 labelTags
                     .map { if (it.namespace == LabelEvent.HASHTAG_NAMESPACE) "#${it.label}" else it.label }
@@ -368,14 +370,15 @@ fun RenderLabel(
         KindCardChips(info.labels)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         KindCardUsers(info.pubKeys, accountViewModel, nav)
-        KindCardChips(info.otherTargets)
-        info.eventIds.take(MISC_MAX_QUOTES).forEach {
-            KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
+        KindCardChips(info.otherTargets, max = 6)
+        // One labelled event stands for the rest, which are only counted.
+        val firstId = info.eventIds.firstOrNull()
+        val firstAddress = info.addresses.firstOrNull()
+        when {
+            firstId != null -> KindCardQuoteEvent(firstId, quotesLeft, backgroundColor, accountViewModel, nav)
+            firstAddress != null -> KindCardQuoteAddress(firstAddress, quotesLeft, backgroundColor, accountViewModel, nav)
         }
-        info.addresses.take(MISC_MAX_QUOTES).forEach {
-            KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-        MoreCount(info.eventIds.size + info.addresses.size - info.eventIds.size.coerceAtMost(MISC_MAX_QUOTES) - info.addresses.size.coerceAtMost(MISC_MAX_QUOTES))
+        MoreCount(info.eventIds.size + info.addresses.size - 1)
     }
 }
 
@@ -410,7 +413,7 @@ fun RenderOts(
                             KindCardField(stringRes(Res.string.kc_misc_ots_proven_before), formatSeconds(time))
                         },
                         whenPending = {
-                            KindCardField(stringRes(Res.string.kc_misc_status), stringRes(Res.string.kc_misc_ots_pending))
+                            KindCardMeta(listOf(stringRes(Res.string.kc_misc_ots_pending)))
                         },
                     )
                     KindCardQuote(target, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -453,10 +456,9 @@ fun RenderFileStorage(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.AutoMirrored.InsertDriveFile,
         title = kindName(event.kind),
-        subtitle = info.alt,
+        subtitle = info.alt?.takeIf { !looksLikeOpaquePayload(it) },
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_file_type), info.mimeType)
-        KindCardField(stringRes(Res.string.kc_misc_file_size), formatBytes(info.bytes))
+        KindCardMeta(listOf(info.mimeType, info.bytes.takeIf { it > 0 }?.let { formatBytes(it) }))
     }
 }
 
@@ -480,6 +482,7 @@ fun RenderGeocacheVerification(
         icon = MaterialSymbols.LocationOn,
         title = stringRes(Res.string.kc_misc_geocache_verification_title),
         subtitle = stringRes(Res.string.kc_misc_geocache_verification_subtitle),
+        tone = KindTone.Positive,
     ) {
         if (finderCache != null) {
             KindCardUsers(listOf(finderCache.finderPubKey), accountViewModel, nav)
@@ -517,7 +520,9 @@ fun RenderInteractiveStoryReadingState(
     KindCard(
         icon = MaterialSymbols.MenuBook,
         title = title ?: stringRes(Res.string.kc_misc_story_progress_title),
-        subtitle = statusLabel,
+        subtitle = if (title != null) stringRes(Res.string.kc_misc_story_progress_title) else null,
+        status = statusLabel,
+        statusTone = if (status == "done") KindTone.Positive else null,
     ) {
         scene?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
@@ -546,6 +551,8 @@ fun RenderLongFormDraft(
     KindCard(
         icon = MaterialSymbols.Drafts,
         title = stringRes(Res.string.kc_misc_longform_draft_title),
+        tone = KindTone.Warning,
+        status = stringRes(Res.string.draft),
     ) {
         LongFormHeader(asArticle, baseNote, accountViewModel)
     }
@@ -693,17 +700,33 @@ private fun orderStatusLabel(status: OrderStatus?): String? =
         null -> null
     }
 
+/** An open order waits for a taker; a taken one is under way; the rest are settled one way or another. */
+private fun orderStatusTone(status: OrderStatus?): KindTone? =
+    when (status) {
+        OrderStatus.PENDING -> KindTone.Warning
+        OrderStatus.IN_PROGRESS -> KindTone.Primary
+        OrderStatus.SUCCESS -> KindTone.Positive
+        OrderStatus.CANCELED -> KindTone.Negative
+        OrderStatus.EXPIRED -> KindTone.Neutral
+        null -> null
+    }
+
+/** True when the order names its maker by key (npub, nprofile or hex) rather than by a name. */
+private fun isMakerKey(name: String): Boolean = Hex.isHex64(name) || decodePublicKeyAsHexOrNull(name) != null
+
 /** A P2P order: buy or sell, the fiat amount, the sats, premium, payment methods and status. */
 @Composable
 fun RenderP2POrder(baseNote: Note) {
     val event = baseNote.event as? P2POrderEvent ?: return
     val type = remember(event) { event.orderType() }
+    val status = remember(event) { event.status() }
     val currency = remember(event) { event.currency() }
     val fiat = remember(event) { event.fiatAmount() }
     val sats = remember(event) { event.amount() }
     val methods = remember(event) { event.paymentMethods().orEmpty() }
-    val platform = remember(event) { event.platform() }
-    val network = remember(event) { listOfNotNull(event.network(), event.layer()).joinToString(" / ").ifBlank { null } }
+    val network = remember(event) { listOfNotNull(event.network(), event.layer()).distinct().joinToString(" / ").ifBlank { null } }
+    val makerName = remember(event) { event.makerName()?.ifBlank { null } }
+    val makerIsKey = remember(makerName) { makerName != null && isMakerKey(makerName) }
 
     val fiatText =
         fiat?.let {
@@ -723,24 +746,32 @@ fun RenderP2POrder(baseNote: Note) {
                 OrderType.SELL -> stringRes(Res.string.kc_misc_p2p_sell)
                 null -> stringRes(Res.string.kc_misc_p2p_order)
             },
-        subtitle = fiatText,
+        tone = KindTone.Money,
+        status = orderStatusLabel(status),
+        statusTone = orderStatusTone(status),
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_status), orderStatusLabel(event.status()))
-        KindCardField(
-            stringRes(Res.string.kc_misc_p2p_amount),
-            sats?.let { if (it == 0L) stringRes(Res.string.kc_misc_p2p_market_price) else stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) },
+        MiscHeroAmount(fiatText?.trim())
+        KindCardMeta(
+            listOf(
+                sats?.let { if (it == 0L) stringRes(Res.string.kc_misc_p2p_market_price) else stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) },
+                event.premium()?.let { stringRes(Res.string.kc_misc_p2p_premium_meta, "$it%") },
+                event.expiresAt()?.let { stringRes(Res.string.kc_misc_p2p_expires_on, formatSeconds(it)) },
+            ),
         )
-        KindCardField(stringRes(Res.string.kc_misc_p2p_premium), event.premium()?.let { "$it%" })
-        KindCardChips(methods)
-        KindCardField(stringRes(Res.string.kc_misc_p2p_maker), event.makerName())
-        KindCardField(stringRes(Res.string.kc_misc_p2p_platform), platform)
-        KindCardField(stringRes(Res.string.kc_misc_p2p_network), network)
-        KindCardField(stringRes(Res.string.kc_misc_p2p_expires), event.expiresAt()?.let { formatSeconds(it) })
+        KindCardChips(methods, max = 6)
+        // A key is shortened like any other id; a chosen name is shown as written.
+        KindCardField(
+            stringRes(Res.string.kc_misc_p2p_maker),
+            if (makerIsKey) makerName?.toShortDisplay(5) else makerName,
+            monospace = makerIsKey,
+            maxLines = 1,
+        )
         KindCardField(stringRes(Res.string.kc_misc_url), event.source(), maxLines = 1)
+        KindCardMeta(listOf(event.platform(), network))
     }
 }
 
-/** A Mostro instance's rating of a trader: who, the average, how many reviews, since when. */
+/** A Mostro instance's rating of a trader: who, the average as stars, how many reviews, since when. */
 @Composable
 fun RenderMostroUserRating(
     baseNote: Note,
@@ -753,38 +784,71 @@ fun RenderMostroUserRating(
     val max = remember(event) { event.maxRate() }
     val reviews = remember(event) { event.totalReviews() }
     val since = remember(event) { event.firstTradeDay() }
+    // Mostro rates on a 1..max scale (5 by default); the pill always speaks in five stars.
+    val outOfFive = remember(total, max) { total?.let { if (max != null && max > 0 && max != 5L) it * 5.0 / max else it } }
 
     KindCard(
         icon = MaterialSymbols.Star,
         title = stringRes(Res.string.kc_misc_mostro_rating_title),
-        subtitle = event.platform(),
+        subtitle = event.instanceName() ?: event.platform(),
+        tone = KindTone.Money,
+        status = outOfFive?.let { starsLabel(it) },
     ) {
-        rated?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
-        KindCardField(
-            stringRes(Res.string.kc_misc_rating),
-            total?.let { stringRes(Res.string.kc_misc_mostro_rating_out_of, formatDecimal(it, 2), (max ?: 5L).toString()) },
-        )
+        rated?.let { KindCardPerson(it, accountViewModel, nav) }
         KindCardField(stringRes(Res.string.kc_misc_mostro_rating_reviews), reviews?.let { formatGrouped(it) })
-        KindCardField(stringRes(Res.string.kc_misc_mostro_rating_last), event.lastRating()?.toString())
         KindCardField(stringRes(Res.string.kc_misc_mostro_rating_since), since?.let { formatDateTime(it * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.NONE) })
     }
 }
 
-/** A dispute on a Mostro trade: its status, who opened it and when. */
+/** Mostro's dispute statuses, from the moment one is opened to how it ended. */
+private enum class MiscDisputeState { OPEN, IN_PROGRESS, CANCELED, RESOLVED, OTHER }
+
+private fun disputeState(status: String?): MiscDisputeState? =
+    when {
+        status == null -> null
+        status == "initiated" -> MiscDisputeState.OPEN
+        status == "in-progress" || status == "in_progress" -> MiscDisputeState.IN_PROGRESS
+        status.contains("cancel") -> MiscDisputeState.CANCELED
+        status == "settled" || status == "released" || status.contains("refund") -> MiscDisputeState.RESOLVED
+        else -> MiscDisputeState.OTHER
+    }
+
+/** A dispute on a Mostro trade: its state as a pill, how it ended, who opened it and when. */
 @Composable
 fun RenderMostroDispute(baseNote: Note) {
     val event = baseNote.event as? MostroDisputeEvent ?: return
+    val raw = remember(event) { event.status() }
+    val readable = remember(raw) { raw?.replace('-', ' ')?.replace('_', ' ') }
+    val state = remember(raw) { disputeState(raw) }
 
     KindCard(
         icon = MaterialSymbols.Gavel,
         title = stringRes(Res.string.kc_misc_mostro_dispute_title),
-        subtitle = event.platform(),
-        iconTint = MaterialTheme.colorScheme.error,
+        subtitle = event.instanceName() ?: event.platform(),
+        tone = KindTone.Warning,
+        status =
+            when (state) {
+                MiscDisputeState.OPEN -> stringRes(Res.string.kc_misc_p2p_status_pending)
+                MiscDisputeState.IN_PROGRESS -> stringRes(Res.string.kc_misc_p2p_status_in_progress)
+                MiscDisputeState.CANCELED -> stringRes(Res.string.kc_misc_p2p_status_canceled)
+                MiscDisputeState.RESOLVED -> stringRes(Res.string.kc_misc_dispute_resolved)
+                MiscDisputeState.OTHER -> readable
+                null -> null
+            },
+        statusTone =
+            when (state) {
+                MiscDisputeState.RESOLVED -> KindTone.Positive
+                MiscDisputeState.CANCELED -> KindTone.Neutral
+                else -> null
+            },
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_status), event.status()?.replace('-', ' ')?.replace('_', ' '))
+        // "Resolved" alone hides who won; the raw outcome says it ("seller refunded", "released").
+        if (state == MiscDisputeState.RESOLVED || state == MiscDisputeState.CANCELED) {
+            KindCardField(stringRes(Res.string.kc_misc_dispute_outcome), readable?.takeIf { raw != "settled" })
+        }
         KindCardField(stringRes(Res.string.kc_misc_mostro_dispute_initiator), event.initiator())
         KindCardField(stringRes(Res.string.kc_misc_mostro_dispute_opened), formatSeconds(event.openedAt()))
-        KindCardField(stringRes(Res.string.kc_misc_mostro_dispute_id), event.disputeId(), monospace = true, maxLines = 1)
+        KindCardField(stringRes(Res.string.kc_misc_mostro_dispute_id), event.disputeId().ifBlank { null }?.toShortDisplay(), monospace = true, maxLines = 1)
     }
 }
 
@@ -796,17 +860,19 @@ fun RenderMostroDevFee(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Paid,
         title = stringRes(Res.string.kc_misc_mostro_dev_fee_title),
-        subtitle = event.platform(),
+        subtitle = event.instanceName() ?: event.platform(),
+        tone = KindTone.Money,
+        status = stringRes(Res.string.paid),
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_p2p_amount), event.amount()?.let { stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) })
-        KindCardField(stringRes(Res.string.kc_misc_p2p_order_id), event.orderId(), monospace = true, maxLines = 1)
-        KindCardField(stringRes(Res.string.kc_misc_p2p_network), event.network())
-        KindCardField(stringRes(Res.string.kc_misc_p2p_destination), event.destination(), monospace = true, maxLines = 1)
-        KindCardField(stringRes(Res.string.kc_misc_p2p_payment_hash), event.paymentHash(), monospace = true, maxLines = 1)
+        MiscHeroAmount(event.amount()?.let { stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) })
+        KindCardMeta(listOf(event.network()))
+        KindCardField(stringRes(Res.string.kc_misc_p2p_order_id), event.orderId()?.toShortDisplay(), monospace = true, maxLines = 1)
+        KindCardField(stringRes(Res.string.kc_misc_p2p_destination), event.destination(), maxLines = 1)
+        KindCardField(stringRes(Res.string.kc_misc_p2p_payment_hash), event.paymentHash()?.toShortDisplay(), monospace = true, maxLines = 1)
     }
 }
 
-/** A RoboSats trader's rating of the coordinator that ran their order. */
+/** A RoboSats trader's rating of the coordinator that ran their order, as stars out of five. */
 @Composable
 fun RenderRoboSatsCoordinatorRating(
     baseNote: Note,
@@ -815,15 +881,18 @@ fun RenderRoboSatsCoordinatorRating(
 ) {
     val event = baseNote.event as? RoboSatsCoordinatorRatingEvent ?: return
     val coordinator = remember(event) { event.coordinator() }
+    val rating = remember(event) { event.rating() }
 
     KindCard(
         icon = MaterialSymbols.Star,
         title = stringRes(Res.string.kc_misc_robosats_rating_title),
         subtitle = event.coordinatorAlias(),
+        tone = KindTone.Money,
+        // RoboSats stores the rating as a fraction of the best score.
+        status = rating?.let { starsLabel(it * 5.0) },
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_rating), event.rating()?.let { formatPercent(it * 100) })
-        coordinator?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
-        KindCardField(stringRes(Res.string.kc_misc_p2p_order_id), event.orderId(), monospace = true, maxLines = 1)
+        coordinator?.let { KindCardPerson(it, accountViewModel, nav) }
+        KindCardField(stringRes(Res.string.kc_misc_p2p_order_id), event.orderId()?.toShortDisplay(), monospace = true, maxLines = 1)
     }
 }
 
@@ -881,23 +950,17 @@ fun RenderPollResponse(
 fun RenderRelayMonitor(baseNote: Note) {
     val event = baseNote.event as? RelayMonitorEvent ?: return
     val frequency = remember(event) { event.frequency() }
-    val checks = remember(event) { event.checks().map { it.code } }
-    val timeouts = remember(event) { event.timeouts() }
+    val checks = remember(event) { event.checks().map { it.code }.distinct() }
     val geohash = remember(event) { event.geohashes().firstOrNull() }
 
-    val allChecks = stringRes(Res.string.kc_misc_monitor_timeout_all)
-    val timeoutText =
-        timeouts
-            .map { stringRes(Res.string.kc_misc_monitor_timeout_value, it.checkType ?: allChecks, formatGrouped(it.milliseconds)) }
-            .joinToString(", ")
-
+    // Per-check timeouts are the monitor's own tuning, not something a reader acts on, so they stay out.
     KindCard(
         icon = MaterialSymbols.Sensors,
         title = kindName(event.kind),
         subtitle = frequency?.let { stringRes(Res.string.kc_misc_monitor_every, durationLabel(it)) },
+        tone = KindTone.Neutral,
     ) {
         KindCardChips(checks)
-        KindCardField(stringRes(Res.string.kc_misc_monitor_timeouts), timeoutText)
         KindCardField(stringRes(Res.string.kc_misc_geohash), geohash, monospace = true)
     }
 }
@@ -906,7 +969,7 @@ fun RenderRelayMonitor(baseNote: Note) {
 // NIP-71 text track (39307) and video view (22236)
 // ---------------------------------------------------------------------------------------------
 
-/** A caption track: its language and file, a few cue lines, and the video it belongs to. */
+/** A caption track: its language and format, its first cue lines, and the video it belongs to. */
 @Composable
 fun RenderTextTrack(
     baseNote: Note,
@@ -921,7 +984,13 @@ fun RenderTextTrack(
     val preview =
         remember(event) {
             val text = if (WebVttText.hasCues(event.content)) WebVttText.cueText(event.content) else event.content
-            text.take(500)
+            text
+                .lineSequence()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .take(3)
+                .joinToString("\n")
+                .take(300)
         }
 
     KindCard(
@@ -929,9 +998,8 @@ fun RenderTextTrack(
         title = stringRes(Res.string.kc_misc_text_track_title),
         subtitle = language?.let { stringRes(Res.string.kc_misc_language, it) },
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_file_type), event.mimeType())
-        KindCardField(stringRes(Res.string.kc_misc_url), event.url(), maxLines = 1)
-        PlainPreview(preview)
+        KindCardMeta(listOf(event.mimeType()))
+        KindCardText(baseNote, preview, backgroundColor, accountViewModel, nav)
         video?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
@@ -1011,22 +1079,34 @@ fun RenderWorkoutTemplate(
 
     val typeLabel = type?.let { stringRes(it.labelRes()) } ?: typeRaw?.replaceFirstChar { it.uppercaseChar() }
 
+    val rounds = event.rounds()
+    val exerciseLabels =
+        exercises.map {
+            val sets = pluralStringRes(Res.plurals.kc_misc_workout_sets, it.sets, it.sets)
+            listOfNotNull(it.name, sets, it.detail).joinToString(" · ")
+        }
+
     KindCard(
         icon = type.symbol(),
         title = event.title() ?: stringRes(Res.string.kc_misc_workout_template_title),
         subtitle = listOfNotNull(typeLabel, stringRes(Res.string.kc_misc_workout_template_title).takeIf { event.title() != null }).joinToString(" · ").ifBlank { null },
     ) {
-        KindCardField(stringRes(Res.string.kc_misc_workout_rounds), event.rounds()?.toString())
+        // The plan's structure as one line: "3 rounds · 40 seconds intervals · 90 seconds rest between sets".
+        KindCardMeta(
+            listOf(
+                rounds?.let { pluralStringRes(Res.plurals.kc_misc_workout_rounds_count, it, it) },
+                event.intervalSeconds()?.let { stringRes(Res.string.kc_misc_workout_interval_meta, durationLabel(it.toLong())) },
+                event.restBetweenSetsSeconds()?.let { stringRes(Res.string.kc_misc_workout_rest_sets_meta, durationLabel(it.toLong())) },
+                event.restBetweenRoundsSeconds()?.let { stringRes(Res.string.kc_misc_workout_rest_rounds_meta, durationLabel(it.toLong())) },
+            ),
+        )
         KindCardField(stringRes(Res.string.kc_misc_workout_duration), event.durationSeconds()?.let { DurationTag.formatTime(it) })
-        KindCardField(stringRes(Res.string.kc_misc_workout_interval), event.intervalSeconds()?.let { durationLabel(it.toLong()) })
-        KindCardField(stringRes(Res.string.kc_misc_workout_rest_rounds), event.restBetweenRoundsSeconds()?.let { durationLabel(it.toLong()) })
-        KindCardField(stringRes(Res.string.kc_misc_workout_rest_sets), event.restBetweenSetsSeconds()?.let { durationLabel(it.toLong()) })
-        KindCardField(stringRes(Res.string.kc_misc_workout_difficulty), event.difficulty())
-        exercises.forEach {
-            val sets = pluralStringRes(Res.plurals.kc_misc_workout_sets, it.sets, it.sets)
-            KindCardField(it.name, listOfNotNull(sets, it.detail).joinToString(" "))
+        KindCardField(stringRes(Res.string.kc_misc_workout_difficulty), event.difficulty()?.replaceFirstChar { it.uppercaseChar() })
+        if (exerciseLabels.isNotEmpty()) {
+            KindCardSection(pluralStringRes(Res.plurals.kc_misc_workout_exercises, exerciseLabels.size, exerciseLabels.size))
+            KindCardChips(exerciseLabels, max = 4)
         }
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
-        KindCardChips(topics)
+        KindCardChips(topics, max = 6)
     }
 }

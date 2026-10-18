@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
@@ -28,15 +31,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -47,78 +56,140 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.routeForUser
+import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.kind_card_private_payload
+import com.vitorpamplona.amethyst.commons.resources.kind_card_linked_event
+import com.vitorpamplona.amethyst.commons.resources.kind_card_more
+import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityBadge
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityCardFrame
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityPill
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.UserMemberRow
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
+import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip31Alts.alt
 
 /*
  * Building blocks for the cards of the kinds that are records rather than posts: protocol
- * messages, app state, moderation actions, job requests. Each card is an icon and a title, an
- * optional subtitle, then whatever the kind has to say (fields, chips, people, the note it acts on).
- * Sharing the frame keeps the hundred-odd small renderers looking like one family.
+ * messages, app state, moderation actions, job requests. They follow the activity cards (reactions,
+ * zaps): a rounded frame washed in the card's tone, a filled badge with the kind's glyph, the title
+ * saying what happened, an optional status pill, then compact facts, people chips and the event the
+ * record acts on. Sharing the frame keeps the hundred-odd small renderers looking like one family.
  */
 
-/** The frame of a kind card: [icon] and [title] on top, [subtitle] under it, then [body]. */
+/**
+ * What a card is about, which picks its color: [Primary] for ordinary records, [Positive] for
+ * success and additions, [Negative] for failures, bans and removals, [Warning] for pending or
+ * attention, [Money] for payments, [Neutral] for private or inert data.
+ */
+enum class KindTone { Primary, Positive, Negative, Warning, Money, Neutral }
+
+private val WarningAmber = Color(0xFFE69A00)
+
+@Composable
+fun KindTone.color(): Color =
+    when (this) {
+        KindTone.Primary -> MaterialTheme.colorScheme.primary
+        KindTone.Positive -> MaterialTheme.colorScheme.allGoodColor
+        KindTone.Negative -> MaterialTheme.colorScheme.error
+        KindTone.Warning -> WarningAmber
+        KindTone.Money -> MaterialTheme.colorScheme.bitcoinColor
+        KindTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
+/**
+ * The background inner notes and rich text must draw on inside a card: transparent, so the card's
+ * wash shows through. Passing the feed's background instead would paint them a solid block.
+ */
+private val LocalKindCardBackground = staticCompositionLocalOf<MutableState<Color>?> { null }
+
+/**
+ * The frame of a kind card: a [tone]-washed rounded frame, a badge with [icon], [title] and
+ * [subtitle] beside it, an optional [status] pill on the right, then [body].
+ *
+ * [iconTint], when given, overrides the tone's color for the badge, the wash and the pill.
+ */
 @Composable
 fun KindCard(
     icon: MaterialSymbol,
     title: String,
     subtitle: String? = null,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
+    iconTint: Color? = null,
+    tone: KindTone = KindTone.Primary,
+    status: String? = null,
+    statusTone: KindTone? = null,
     body: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    val accent = iconTint ?: tone.color()
+    val pillColor = statusTone?.color() ?: accent
+    val cleanSubtitle = subtitle?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
+
+    ActivityCardFrame(tint = accent) { transparentBackground ->
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Icon(
-                symbol = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = iconTint,
-            )
+            ActivityBadge(tint = accent) {
+                Icon(
+                    symbol = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                    tint = Color.White,
+                )
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                subtitle?.let {
+                cleanSubtitle?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 3,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
+            status?.let { ActivityPill(it, pillColor) }
         }
-        body?.invoke(this)
+        if (body != null) {
+            CompositionLocalProvider(LocalKindCardBackground provides transparentBackground) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    body()
+                }
+            }
+        }
     }
 }
 
-/** One "label: value" line of a kind card. Nothing is drawn when [value] is null or blank. */
+/**
+ * One fact of a kind card: a muted label in a fixed column and its value beside it, so a card's
+ * facts line up as a table. Nothing is drawn when [value] is null or blank. [monospace] values
+ * (hashes, ids, paths) sit in a small code chip.
+ */
 @Composable
 fun KindCardField(
     label: String,
@@ -127,63 +198,121 @@ fun KindCardField(
     maxLines: Int = 3,
 ) {
     if (value.isNullOrBlank()) return
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(verticalAlignment = Alignment.Top) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodySmall,
-            fontFamily = if (monospace) FontFamily.Monospace else null,
-            maxLines = maxLines,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.width(104.dp).padding(end = 8.dp, top = 1.dp),
         )
+        if (monospace) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.labelMedium,
+                fontFamily = FontFamily.Monospace,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+            )
+        } else {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = maxLines,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
-/** Short labels (tags, roles, capabilities, relays) as a wrapping row of chips. */
+/** A small heading that groups what follows it in a card: "Servers", "Repositories", "Jobs". */
 @Composable
-fun KindCardChips(labels: List<String>) {
+fun KindCardSection(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp),
+    )
+}
+
+/** A muted line of short facts joined by dots: "3 files · 1.2 MB · mainnet". */
+@Composable
+fun KindCardMeta(parts: List<String?>) {
+    val text = remember(parts) { parts.filterNot { it.isNullOrBlank() }.joinToString("  ·  ") }
+    if (text.isEmpty()) return
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Short labels (tags, roles, capabilities, relays) as a wrapping row of chips, [max] at most. */
+@Composable
+fun KindCardChips(
+    labels: List<String>,
+    max: Int = 12,
+) {
     if (labels.isEmpty()) return
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        labels.forEach { label ->
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = MaterialTheme.colorScheme.secondaryContainer,
-            ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                )
-            }
-        }
+        labels.take(max).forEach { KindCardChip(it) }
+        if (labels.size > max) KindCardChip(stringRes(Res.string.kind_card_more, labels.size - max), muted = true)
     }
 }
 
-/** A block of machine text (JSON, a diff, a hash, an address) in a monospaced font. */
+@Composable
+private fun KindCardChip(
+    label: String,
+    muted: Boolean = false,
+) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+/** A block of machine text (a log, a diff, a filter) in a monospaced, inset box. */
 @Composable
 fun KindCardCode(
     text: String,
-    maxLines: Int = 12,
+    maxLines: Int = 8,
 ) {
     if (text.isBlank()) return
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodySmall,
-        fontFamily = FontFamily.Monospace,
-        maxLines = maxLines,
-        overflow = TextOverflow.Ellipsis,
-    )
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            maxLines = maxLines,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 /** Free text the author wrote (a reason, a description, a comment), with links and mentions. */
@@ -204,7 +333,7 @@ fun KindCardText(
         quotesLeft = quotesLeft,
         modifier = Modifier,
         tags = tags ?: return,
-        backgroundColor = backgroundColor,
+        backgroundColor = LocalKindCardBackground.current ?: backgroundColor,
         id = note.idHex,
         callbackUri = note.toNostrUri(),
         authorPubKey = note.author?.pubkeyHex,
@@ -232,18 +361,60 @@ fun looksLikeOpaquePayload(text: String): Boolean {
     }
 }
 
-/** The people a kind card is about, one row each with picture and name. */
+/**
+ * The people a kind card is about, as compact chips (picture and name) that open the profile.
+ * Past [max] people, a "+N" chip stands for the rest.
+ */
 @Composable
 fun KindCardUsers(
     pubKeys: List<HexKey>,
     accountViewModel: AccountViewModel,
     nav: INav,
-    max: Int = 5,
+    max: Int = 6,
 ) {
-    pubKeys.distinct().take(max).forEach { UserMemberRow(it, accountViewModel, nav) }
+    val people = remember(pubKeys) { pubKeys.distinct() }
+    if (people.isEmpty()) return
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        people.take(max).forEach { KindCardPerson(it, accountViewModel, nav) }
+        if (people.size > max) KindCardChip(stringRes(Res.string.kind_card_more, people.size - max), muted = true)
+    }
 }
 
-/** Quotes [note], the event a kind card acts on, as a short embedded card. */
+/** One person as a chip: their picture and name, opening their profile. */
+@Composable
+fun KindCardPerson(
+    pubKey: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                .clickable { nav.nav(routeForUser(pubKey)) }
+                .padding(start = 2.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+    ) {
+        UserPicture(pubKey, 22.dp, Modifier.clip(CircleShape), accountViewModel, nav)
+        LoadUser(pubKey) { user ->
+            if (user != null) {
+                ProvideTextStyle(MaterialTheme.typography.labelLarge) {
+                    UsernameDisplay(user, fontWeight = FontWeight.Medium, accountViewModel = accountViewModel)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Quotes [note], the event a kind card acts on, as a short embedded card. Until the event arrives
+ * (or when no relay has it) a one-line link to it stands in, not a large empty box.
+ */
 @Composable
 fun KindCardQuote(
     note: Note,
@@ -253,6 +424,11 @@ fun KindCardQuote(
     nav: INav,
 ) {
     if (quotesLeft <= 0) return
+    val event by observeNoteEvent<Event>(note, accountViewModel)
+    if (event == null) {
+        KindCardMissingReference(note, accountViewModel, nav)
+        return
+    }
     NoteCompose(
         baseNote = note,
         modifier = MaterialTheme.colorScheme.replyModifier,
@@ -260,10 +436,51 @@ fun KindCardQuote(
         unPackReply = ReplyRenderType.NONE,
         makeItShort = true,
         quotesLeft = quotesLeft - 1,
-        parentBackgroundColor = backgroundColor,
+        parentBackgroundColor = LocalKindCardBackground.current ?: backgroundColor,
         accountViewModel = accountViewModel,
         nav = nav,
     )
+}
+
+@Composable
+private fun KindCardMissingReference(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val label = remember(note) { note.idDisplayNote() }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                .clickable { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } }
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        Icon(
+            symbol = MaterialSymbols.Link,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = stringRes(Res.string.kind_card_linked_event),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
 }
 
 /** Quotes the event with id [eventId], loading it if it is not cached yet. */
@@ -297,8 +514,9 @@ fun KindCardQuoteAddress(
 }
 
 /**
- * The card for a kind whose payload is encrypted or meant only for software: the kind's name and
- * its NIP-31 `alt` description, never the raw content, which is ciphertext or JSON for a machine.
+ * The card for a kind whose payload is encrypted or meant only for software: one quiet line with
+ * the kind's name, a "Private" pill and the NIP-31 `alt` description when the author wrote one.
+ * Never the raw content, which is ciphertext or JSON for a machine.
  */
 @Composable
 fun RenderPrivateKindCard(
@@ -306,11 +524,13 @@ fun RenderPrivateKindCard(
     icon: MaterialSymbol = MaterialSymbols.Lock,
 ) {
     val event = note.event ?: return
-    val alt = remember(event) { event.alt() }
+    val alt = remember(event) { event.alt()?.takeIf { !looksLikeOpaquePayload(it) } }
     KindCard(
         icon = icon,
         title = kindName(event.kind),
-        subtitle = alt ?: stringRes(Res.string.kind_card_private_payload),
+        subtitle = alt,
+        tone = KindTone.Neutral,
+        status = stringRes(Res.string.kind_card_private_pill),
     )
 }
 
@@ -318,14 +538,26 @@ fun RenderPrivateKindCard(
 @Composable
 private fun KindCardPreview() {
     ThemeComparisonColumn {
-        KindCard(
-            icon = MaterialSymbols.Gavel,
-            title = "User removed from group",
-            subtitle = "Spamming the channel",
-        ) {
-            KindCardField("Group", "nostr-devs")
-            KindCardChips(listOf("admin", "moderator"))
-            KindCardCode("{\"status\":\"ok\"}")
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            KindCard(
+                icon = MaterialSymbols.Gavel,
+                title = "Removed from group",
+                subtitle = "Spamming the channel",
+                tone = KindTone.Negative,
+                status = "Ban",
+            ) {
+                KindCardField("Group", "nostr-devs")
+                KindCardField("Commit", "94f5288", monospace = true)
+                KindCardMeta(listOf("3 files", "1.2 MB", "mainnet"))
+                KindCardChips(listOf("admin", "moderator"))
+                KindCardCode("{\"status\":\"ok\"}")
+            }
+            KindCard(
+                icon = MaterialSymbols.Lock,
+                title = "Gift wrap",
+                tone = KindTone.Neutral,
+                status = "Private",
+            )
         }
     }
 }

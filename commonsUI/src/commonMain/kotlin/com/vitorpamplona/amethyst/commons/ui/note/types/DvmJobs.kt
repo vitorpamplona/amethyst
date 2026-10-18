@@ -20,20 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dvm_offline
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_encrypted_request
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_encrypted_result
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_clean_pill
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_encrypted_pill
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_events_count
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_flagged_pill
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_heartbeat_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_content_discovery
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_content_search
@@ -54,20 +53,11 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_translation
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_user_discovery
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_video_conversion
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_job_video_translation
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_amount
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_bid
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_count
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_customer
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_events
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_for
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_output
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_providers
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_result_relays
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_results
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_state
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_transaction
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_malware_clean
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_malware_flagged
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_more
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_online
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_group
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_length
@@ -75,30 +65,34 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_max_results
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_max_tokens
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_model
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_negative_prompt
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_pair
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_pow
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_range
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_ratio
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_relays
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_since
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_size
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_temperature
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_until
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_people_count
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_publishes_at
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_request_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_result_title
+import com.vitorpamplona.amethyst.commons.resources.kc_dvm_results_count
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_sats
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_subtitle
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.core.isValid
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
@@ -106,7 +100,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.relays
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentSearch.DvmContentSearchResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -131,7 +124,6 @@ import com.vitorpamplona.quartz.nip90Dvms.summarization.DvmSummarizationRequestE
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmInputEventIds
 import com.vitorpamplona.quartz.nip90Dvms.tags.dvmParams
 import com.vitorpamplona.quartz.nip90Dvms.tags.inputs
-import com.vitorpamplona.quartz.nip90Dvms.tags.outputMimeType
 import com.vitorpamplona.quartz.nip90Dvms.textExtraction.DvmTextExtractionRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.textGeneration.DvmTextGenerationRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.textToSpeech.DvmTextToSpeechRequestEvent
@@ -147,18 +139,25 @@ import org.jetbrains.compose.resources.StringResource
  * result (6000-6999), and one for the DVM heartbeat. The request and result cards share a frame
  * and differ only in the job's name and icon, looked up by the request kind.
  *
+ * A request leads with its input (the text, link or event the job runs on), folds its params into
+ * one line, shows the bid as a pill and the DVMs asked as chips. A result leads with its output,
+ * shows the price as a pill and quotes the request it answers once, compactly.
+ *
  * Job feedback (7000, DvmStatusEvent) and content-discovery results (6300) keep their own
  * renderers, which NoteCompose dispatches before the base-class branches that land here.
  */
 
-/** How many referenced events a card quotes at most, so one result cannot flood the feed. */
-private const val MAX_QUOTED = 3
+/** How many found events a search result quotes at most, so one result cannot flood the feed. */
+private const val MAX_QUOTED = 2
 
 private const val MAX_RESULT_USERS = 5
 
 private const val NIP90_RESULT_KIND_OFFSET = 1000
 
 private val HEX64 = Regex("[0-9a-fA-F]{64}")
+
+/** Params that only tell the DVM where to read or write, not what the job is. */
+private val PLUMBING_PARAMS = setOf("relay", "relays")
 
 private class DvmJob(
     val name: StringResource,
@@ -201,13 +200,13 @@ private class DvmRequestInfo(
     val texts: List<String>,
     val urls: List<String>,
     val eventIds: List<HexKey>,
-    val eventJsons: List<String>,
+    /** The signed events a PoW or scheduled-publishing job carries: the first one, parsed, and how many. */
+    val embedded: Event?,
+    val embeddedCount: Int,
     val filterJson: String?,
     val params: List<Pair<String, String>>,
     val users: List<HexKey>,
-    val output: String?,
     val bidSats: Long?,
-    val resultRelays: String?,
     val providers: List<HexKey>,
 )
 
@@ -233,6 +232,7 @@ private fun parseRequest(event: DvmRequestEvent): DvmRequestInfo {
         when (key) {
             "user" -> values.filterTo(users) { it.isValid() }
             "users" -> values.forEach { value -> HEX64.findAll(value).mapTo(users) { it.value.lowercase() } }
+            in PLUMBING_PARAMS -> Unit
             else -> {
                 val value =
                     when (key) {
@@ -249,17 +249,12 @@ private fun parseRequest(event: DvmRequestEvent): DvmRequestInfo {
         texts = texts,
         urls = inputs.filter { it.type == "url" }.map { it.value },
         eventIds = event.tags.dvmInputEventIds().distinct(),
-        eventJsons = eventJsons,
+        embedded = eventJsons.firstOrNull()?.let { Event.fromJsonOrNull(it) },
+        embeddedCount = eventJsons.size,
         filterJson = (event as? DvmEventCountRequestEvent)?.filterJson()?.ifBlank { null },
         params = params.map { (key, values) -> key to values.joinToString(", ") },
         users = users.distinct(),
-        output = event.tags.outputMimeType(),
         bidSats = event.tags.dvmBidSats(),
-        resultRelays =
-            event.tags
-                .relays()
-                ?.relays
-                ?.joinToString(", ") { it.displayUrl() },
         providers = event.serviceProviders(),
     )
 }
@@ -280,13 +275,12 @@ private fun dvmParamLabel(key: String): String =
         "range" -> stringRes(Res.string.kc_dvm_param_range)
         "since" -> stringRes(Res.string.kc_dvm_param_since)
         "until" -> stringRes(Res.string.kc_dvm_param_until)
-        "relay", "relays" -> stringRes(Res.string.kc_dvm_param_relays)
         "group" -> stringRes(Res.string.kc_dvm_param_group)
         // Any other param is a DVM-specific protocol word, shown as the DVM wrote it.
         else -> key
     }
 
-/** A labelled list of people (the providers asked, the customer, the user a job is for). */
+/** A group of people under a small heading: the providers asked, the customer, the user a job is for. */
 @Composable
 private fun DvmPeople(
     label: StringResource,
@@ -295,14 +289,12 @@ private fun DvmPeople(
     nav: INav,
 ) {
     if (pubKeys.isEmpty()) return
-    Text(
-        text = stringRes(label),
-        style = MaterialTheme.typography.bodySmall,
-        fontWeight = FontWeight.SemiBold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    KindCardSection(stringRes(label))
     KindCardUsers(pubKeys, accountViewModel, nav)
 }
+
+@Composable
+private fun satsLabel(sats: Long): String = stringRes(Res.string.kc_dvm_sats, sats.toString())
 
 /** A NIP-90 job request (5000-5999): the job, its inputs and params, the bid, and the DVMs asked to run it. */
 @Composable
@@ -316,15 +308,17 @@ fun RenderDvmRequest(
     val event = baseNote.event as? DvmRequestEvent ?: return
     val job = remember(event) { dvmJob(event.kind) }
     val title = job?.let { stringRes(Res.string.kc_dvm_request_title, stringRes(it.name)) } ?: kindName(event.kind)
+    val icon = job?.icon ?: MaterialSymbols.Assistant
     val encrypted = remember(event) { event.tags.isDvmEncrypted() }
 
     if (encrypted) {
         // Inputs and params are ciphertext for the chosen DVM; only who was asked is public.
         val providers = remember(event) { event.serviceProviders() }
         KindCard(
-            icon = MaterialSymbols.Lock,
+            icon = icon,
             title = title,
-            subtitle = stringRes(Res.string.kc_dvm_encrypted_request),
+            tone = KindTone.Neutral,
+            status = stringRes(Res.string.kc_dvm_encrypted_pill),
         ) {
             DvmPeople(Res.string.kc_dvm_label_providers, providers, accountViewModel, nav)
         }
@@ -334,24 +328,39 @@ fun RenderDvmRequest(
     val info = remember(event) { parseRequest(event) }
 
     KindCard(
-        icon = job?.icon ?: MaterialSymbols.Assistant,
+        icon = icon,
         title = title,
-        subtitle = stringRes(Res.string.kc_dvm_subtitle),
+        status = info.bidSats?.let { satsLabel(it) },
+        statusTone = KindTone.Money,
     ) {
+        // The input is the hero: the prompt or text, the link (media previews inline), the event.
         info.texts.forEach { KindCardText(baseNote, it, backgroundColor, accountViewModel, nav, quotesLeft) }
-        // Image and media URLs render as previews through the rich text viewer.
         info.urls.forEach { KindCardText(baseNote, it, backgroundColor, accountViewModel, nav, quotesLeft) }
-        if (info.eventJsons.isNotEmpty()) {
-            KindCardField(stringRes(Res.string.kc_dvm_label_events), info.eventJsons.size.toString())
-            KindCardCode(info.eventJsons.first(), maxLines = 4)
-        }
-        info.filterJson?.let { KindCardCode(it, maxLines = 6) }
-        info.eventIds.take(MAX_QUOTED).forEach { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
 
-        info.params.forEach { (key, value) -> KindCardField(dvmParamLabel(key), value) }
-        KindCardField(stringRes(Res.string.kc_dvm_label_output), info.output)
-        info.bidSats?.let { KindCardField(stringRes(Res.string.kc_dvm_label_bid), stringRes(Res.string.kc_dvm_sats, it.toString())) }
-        KindCardField(stringRes(Res.string.kc_dvm_label_result_relays), info.resultRelays, maxLines = 2)
+        info.embedded?.let { inner ->
+            KindCardText(baseNote, inner.content, backgroundColor, accountViewModel, nav, quotesLeft)
+            KindCardMeta(
+                listOf(
+                    kindName(inner.kind),
+                    if (event is DvmEventPublishScheduleRequestEvent) {
+                        stringRes(Res.string.kc_dvm_publishes_at, formatDateTime(inner.createdAt * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT))
+                    } else {
+                        null
+                    },
+                    if (info.embeddedCount > 1) pluralStringRes(Res.plurals.kc_dvm_events_count, info.embeddedCount, info.embeddedCount) else null,
+                ),
+            )
+        }
+
+        info.filterJson?.let { KindCardCode(it, maxLines = 6) }
+
+        info.eventIds.firstOrNull()?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+        if (info.eventIds.size > 1) {
+            val more = info.eventIds.size - 1
+            KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_dvm_more, more, more)))
+        }
+
+        KindCardMeta(info.params.map { (key, value) -> stringRes(Res.string.kc_dvm_param_pair, dvmParamLabel(key), value) })
 
         DvmPeople(Res.string.kc_dvm_label_for, info.users, accountViewModel, nav)
         DvmPeople(Res.string.kc_dvm_label_providers, info.providers, accountViewModel, nav)
@@ -360,7 +369,7 @@ fun RenderDvmRequest(
 
 /**
  * A NIP-90 job result (6000-6999): what the DVM produced (text, media links, found events or
- * people, a count, a verdict), the price it asks, and the request it answers, quoted.
+ * people, a count, a verdict), the price it asks, and the request it answers, quoted compactly.
  */
 @Composable
 fun RenderDvmResult(
@@ -373,55 +382,123 @@ fun RenderDvmResult(
     val event = baseNote.event as? DvmResponseEvent ?: return
     val job = remember(event) { dvmJob(event.kind - NIP90_RESULT_KIND_OFFSET) }
     val title = job?.let { stringRes(Res.string.kc_dvm_result_title, stringRes(it.name)) } ?: kindName(event.kind)
+    val icon = job?.icon ?: MaterialSymbols.Assistant
     val encrypted = remember(event) { event.tags.isDvmEncrypted() }
     val requestId = remember(event) { event.jobRequestId() }
     val customer = remember(event) { listOfNotNull(event.customer()) }
-
-    if (encrypted) {
-        KindCard(
-            icon = MaterialSymbols.Lock,
-            title = title,
-            subtitle = stringRes(Res.string.kc_dvm_encrypted_result),
-        ) {
-            if (requestId == null) DvmPeople(Res.string.kc_dvm_label_customer, customer, accountViewModel, nav)
-            requestId?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
-        }
-        return
-    }
-
-    val amountSats =
+    val price =
         remember(event) {
             event.tags
                 .firstAmount()
                 ?.amount
                 ?.div(1000)
+        }?.let { satsLabel(it) }
+
+    if (encrypted) {
+        KindCard(
+            icon = icon,
+            title = title,
+            tone = KindTone.Neutral,
+            status = stringRes(Res.string.kc_dvm_encrypted_pill),
+        ) {
+            KindCardMeta(listOf(price))
+            DvmRequestOrCustomer(requestId, customer, quotesLeft, backgroundColor, accountViewModel, nav)
         }
+        return
+    }
 
     if (event is DvmMalwareScanResponseEvent) {
         val clean = remember(event) { event.isClean() }
         KindCard(
             icon = if (clean) MaterialSymbols.CheckCircle else MaterialSymbols.Warning,
             title = title,
-            subtitle = if (clean) stringRes(Res.string.kc_dvm_malware_clean) else stringRes(Res.string.kc_dvm_malware_flagged, event.content),
-            iconTint = if (clean) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            tone = if (clean) KindTone.Positive else KindTone.Negative,
+            status = stringRes(if (clean) Res.string.kc_dvm_clean_pill else Res.string.kc_dvm_flagged_pill),
         ) {
-            amountSats?.let { KindCardField(stringRes(Res.string.kc_dvm_label_amount), stringRes(Res.string.kc_dvm_sats, it.toString())) }
-            requestId?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+            // A flagged verdict carries the scanner's finding as the content.
+            if (!clean) KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
+            KindCardMeta(listOf(price))
+            DvmRequestOrCustomer(requestId, customer, quotesLeft, backgroundColor, accountViewModel, nav)
         }
         return
     }
 
     KindCard(
-        icon = job?.icon ?: MaterialSymbols.Assistant,
+        icon = icon,
         title = title,
-        subtitle = stringRes(Res.string.kc_dvm_subtitle),
+        subtitle = dvmResultSubtitle(event),
+        tone = KindTone.Positive,
+        status = price,
+        statusTone = KindTone.Money,
     ) {
         DvmResultPayload(baseNote, event, quotesLeft, backgroundColor, accountViewModel, nav)
-        amountSats?.let { KindCardField(stringRes(Res.string.kc_dvm_label_amount), stringRes(Res.string.kc_dvm_sats, it.toString())) }
-        if (requestId == null) DvmPeople(Res.string.kc_dvm_label_customer, customer, accountViewModel, nav)
-        requestId?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+        DvmRequestOrCustomer(requestId, customer, quotesLeft, backgroundColor, accountViewModel, nav)
     }
 }
+
+/**
+ * The request a result answers, quoted once and compactly (its own quotes and previews folded),
+ * or the customer's chip when the result does not point at its request.
+ */
+@Composable
+private fun DvmRequestOrCustomer(
+    requestId: HexKey?,
+    customer: List<HexKey>,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (requestId != null) {
+        KindCardQuoteEvent(requestId, minOf(quotesLeft, 1), backgroundColor, accountViewModel, nav)
+    } else {
+        DvmPeople(Res.string.kc_dvm_label_customer, customer, accountViewModel, nav)
+    }
+}
+
+/** For results that are a set or a number, the count; null for the rest. */
+@Composable
+private fun dvmResultSubtitle(event: DvmResponseEvent): String? =
+    when (event) {
+        is DvmContentSearchResponseEvent -> {
+            val count = remember(event) { event.resultTags().size }
+            pluralStringRes(Res.plurals.kc_dvm_results_count, count, count)
+        }
+
+        is DvmPeopleSearchResponseEvent -> {
+            val count =
+                remember(event) {
+                    event
+                        .resultTags()
+                        .mapNotNull(PTag::parseKey)
+                        .distinct()
+                        .size
+                }
+            pluralStringRes(Res.plurals.kc_dvm_people_count, count, count)
+        }
+
+        is DvmUserDiscoveryResponseEvent -> {
+            val count =
+                remember(event) {
+                    event
+                        .resultTags()
+                        .mapNotNull(PTag::parseKey)
+                        .distinct()
+                        .size
+                }
+            pluralStringRes(Res.plurals.kc_dvm_people_count, count, count)
+        }
+
+        is DvmEventCountResponseEvent -> {
+            event.count()?.let { count ->
+                pluralStringRes(Res.plurals.kc_dvm_events_count, count.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), count)
+            }
+        }
+
+        else -> {
+            null
+        }
+    }
 
 /** What the DVM produced, drawn by what the result kind's `content` holds. */
 @Composable
@@ -436,7 +513,6 @@ private fun DvmResultPayload(
     when (event) {
         is DvmContentSearchResponseEvent -> {
             val found = remember(event) { event.resultTags() }
-            KindCardField(stringRes(Res.string.kc_dvm_label_results), found.size.toString())
             found.take(MAX_QUOTED).forEach { tag ->
                 ETag.parseId(tag)?.let {
                     KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -444,20 +520,25 @@ private fun DvmResultPayload(
                     KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
+            if (found.size > MAX_QUOTED) {
+                val more = found.size - MAX_QUOTED
+                KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_dvm_more, more, more)))
+            }
         }
 
         is DvmPeopleSearchResponseEvent -> {
             val people = remember(event) { event.resultTags().mapNotNull(PTag::parseKey).distinct() }
-            DvmFoundPeople(people, accountViewModel, nav)
+            KindCardUsers(people, accountViewModel, nav, max = MAX_RESULT_USERS)
         }
 
         is DvmUserDiscoveryResponseEvent -> {
             val people = remember(event) { event.resultTags().mapNotNull(PTag::parseKey).distinct() }
-            DvmFoundPeople(people, accountViewModel, nav)
+            KindCardUsers(people, accountViewModel, nav, max = MAX_RESULT_USERS)
         }
 
+        // The count is the subtitle; anything else the DVM wrote is shown as text.
         is DvmEventCountResponseEvent -> {
-            KindCardField(stringRes(Res.string.kc_dvm_label_count), event.count()?.toString() ?: event.content)
+            if (event.count() == null) KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         }
 
         is DvmEventTimestampingResponseEvent -> {
@@ -473,12 +554,16 @@ private fun DvmResultPayload(
         }
 
         is DvmOpReturnResponseEvent -> {
-            KindCardField(stringRes(Res.string.kc_dvm_label_transaction), event.transactionId(), monospace = true)
+            KindCardField(stringRes(Res.string.kc_dvm_label_transaction), event.transactionId()?.toShortDisplay(), monospace = true)
         }
 
-        // The mined event itself, as signed JSON: that is the whole product of the job.
+        // The mined event, as signed JSON: show what it says and what kind it is, not the JSON.
         is DvmEventPowDelegationResponseEvent -> {
-            KindCardCode(event.content, maxLines = 6)
+            val mined = remember(event) { event.content.ifBlank { null }?.let { Event.fromJsonOrNull(it) } }
+            mined?.let { inner ->
+                KindCardText(baseNote, inner.content, backgroundColor, accountViewModel, nav, quotesLeft)
+                KindCardMeta(listOf(kindName(inner.kind)))
+            }
         }
 
         // Text and media results (summaries, translations, generated text, image/video/audio URLs).
@@ -486,16 +571,6 @@ private fun DvmResultPayload(
             KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         }
     }
-}
-
-@Composable
-private fun DvmFoundPeople(
-    people: List<HexKey>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    KindCardField(stringRes(Res.string.kc_dvm_label_results), people.size.toString())
-    KindCardUsers(people, accountViewModel, nav, max = MAX_RESULT_USERS)
 }
 
 /** A DVM heartbeat (11998): the DVM's status line, whether the beat is still fresh, and its NIP-89 announcement. */
@@ -518,12 +593,9 @@ fun RenderDvmHeartbeat(
         icon = MaterialSymbols.Sensors,
         title = stringRes(Res.string.kc_dvm_heartbeat_title),
         subtitle = event.status(),
-        iconTint = if (fresh) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        tone = if (fresh) KindTone.Positive else KindTone.Neutral,
+        status = stringRes(if (fresh) Res.string.kc_dvm_online else Res.string.dvm_offline),
     ) {
-        KindCardField(
-            stringRes(Res.string.kc_dvm_label_state),
-            stringRes(if (fresh) Res.string.kc_dvm_online else Res.string.dvm_offline),
-        )
-        announcement?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
+        announcement?.let { KindCardQuoteAddress(it, minOf(quotesLeft, 1), backgroundColor, accountViewModel, nav) }
     }
 }
