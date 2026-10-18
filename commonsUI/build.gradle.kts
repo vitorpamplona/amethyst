@@ -263,3 +263,9 @@ compose.resources {
 
 // iOS purity gate — shared task, see gradle/kmp-purity.gradle.kts.
 apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))
+
+// One commonsUI compile at a time. Both targets compile in the same Kotlin daemon, and each holds
+// the whole module's IR, so with --max-workers > 1 the JVM and Android compiles ran side by side
+// and needed twice the heap: CI's 4g Kotlin daemon (build.yml, test-and-build-android) ran out of
+// memory on a cold build, and even 8g thrashed in full GCs. In sequence each one fits.
+tasks.named("compileAndroidMain") { mustRunAfter("compileKotlinJvm") }
