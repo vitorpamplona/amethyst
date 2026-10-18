@@ -29,6 +29,7 @@ import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.nio.file.Files
 import kotlin.concurrent.thread
 
 /**
@@ -143,15 +144,87 @@ object DesktopDeepLinks {
             return
         }
 
-        for (scheme in listOf("nostr", "amethyst")) {
-            val current = currentWindowsHandler(scheme)
-            if (current != null && !current.contains(exe, ignoreCase = true)) {
-                Log.i(TAG) { "Another app handles $scheme:, leaving its registration alone" }
-                continue
+        val toRegister =
+            listOf("nostr", "amethyst").filter { scheme ->
+                val current = currentWindowsHandler(scheme)
+                val ownedElsewhere = current != null && !current.contains(exe, ignoreCase = true)
+                if (ownedElsewhere) {
+                    Log.i(TAG) { "Another app handles $scheme:, leaving its registration alone" }
+                }
+                !ownedElsewhere
             }
-            runReg("add", "HKCU\\Software\\Classes\\$scheme", "/ve", "/d", "URL:Nostr URI", "/f")
-            runReg("add", "HKCU\\Software\\Classes\\$scheme", "/v", "URL Protocol", "/d", "", "/f")
-            runReg("add", "HKCU\\Software\\Classes\\$scheme\\shell\\open\\command", "/ve", "/d", "\"$exe\" \"%1\"", "/f")
+        if (toRegister.isEmpty()) return
+
+        importWindowsUrlSchemes(exe, toRegister)
+    }
+
+    /**
+     * Builds the .reg file content registering [schemes] to open with [exe]. The open command
+     * — `"<exe>" "%1"` — cannot go through `reg add`: the JVM flattens ProcessBuilder
+     * arguments into one command line and the value's embedded quotes come out mangled, so
+     * reg.exe exits with "Invalid syntax" and the scheme keys end up without their
+     * shell\open\command (observed on real Windows 11 ARM64). The .reg file format has real
+     * escaping rules — `\\` for a backslash, `\"` for a quote inside a string — so the
+     * value survives the import intact.
+     */
+    internal fun windowsUrlSchemeRegFile(
+        exe: String,
+        schemes: List<String>,
+    ): String {
+        val escapedExe = exe.replace("\\", "\\\\").replace("\"", "\\\"")
+        val body =
+            schemes.joinToString("\r\n") { scheme ->
+                """
+                |[HKEY_CURRENT_USER\Software\Classes\$scheme]
+                |@="URL:Nostr URI"
+                |"URL Protocol"=""
+                |
+                |[HKEY_CURRENT_USER\Software\Classes\$scheme\shell\open\command]
+                |@="\"$escapedExe\" \"%1\""
+                """.trimMargin()
+            }
+        return "Windows Registry Editor Version 5.00\r\n\r\n$body\r\n"
+    }
+
+    /**
+     * Writes [schemes]' registration to a temporary .reg file and imports it with reg.exe.
+     * UTF-16 LE with a BOM because that is what reg.exe's own export writes and its import
+     * reads; the file path is the only command-line argument, and a plain path (unlike the
+     * quoted open command) survives ProcessBuilder argument flattening.
+     */
+    private fun importWindowsUrlSchemes(
+        exe: String,
+        schemes: List<String>,
+    ) {
+        val file =
+            try {
+                Files.createTempFile("amethyst-url-schemes-", ".reg")
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not create the URL scheme registration file", e)
+                return
+            }
+        try {
+            val content = windowsUrlSchemeRegFile(exe, schemes)
+            Files.write(
+                file,
+                byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + content.toByteArray(Charsets.UTF_16LE),
+            )
+            val process =
+                ProcessBuilder("reg", "import", file.toString())
+                    .redirectErrorStream(true)
+                    .start()
+            val output =
+                process.inputStream
+                    .bufferedReader()
+                    .readText()
+                    .trim()
+            if (process.waitFor() != 0) {
+                Log.w(TAG, "reg import $file failed: $output")
+            }
+        } catch (e: IOException) {
+            Log.w(TAG, "Could not import the URL scheme registration", e)
+        } finally {
+            runCatching { Files.deleteIfExists(file) }
         }
     }
 
@@ -182,22 +255,6 @@ object DesktopDeepLinks {
             ?.substringAfter("REG_SZ")
             ?.trim()
             ?.takeIf { it.isNotEmpty() }
-    }
-
-    private fun runReg(vararg args: String) {
-        try {
-            val process = ProcessBuilder("reg", *args).redirectErrorStream(true).start()
-            val output =
-                process.inputStream
-                    .bufferedReader()
-                    .readText()
-                    .trim()
-            if (process.waitFor() != 0) {
-                Log.w(TAG, "reg ${args.joinToString(" ")} failed: $output")
-            }
-        } catch (e: IOException) {
-            Log.w(TAG, "Could not run reg ${args.joinToString(" ")}", e)
-        }
     }
 
     /** Asks the OS to surface the window; supported everywhere AWT is, ignored where it is not. */
