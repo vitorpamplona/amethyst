@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Retriever
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
+import com.vitorpamplona.amethyst.commons.service.BlossomServerFinder
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
@@ -110,4 +111,16 @@ class DesktopAppServices(
     override val authCoordinator: AuthCoordinator get() = modules.authCoordinator
 
     override val powPublishQueue: PoWPublishQueue get() = modules.powPublishQueue
+
+    override val blossomServerFinder: BlossomServerFinder =
+        object : BlossomServerFinder {
+            override fun cachedServerUrl(blossomUri: String): String? = modules.blossomResolver.cachedFindServer(blossomUri)?.serverUrl
+
+            override suspend fun findServerUrl(blossomUri: String): String? = modules.blossomResolver.findServers(blossomUri)?.serverUrl
+        }
+
+    // The reminder timer always runs and reads the switch each minute; turning it on scans now.
+    override fun setCalendarRemindersScheduled(enabled: Boolean) {
+        if (enabled) modules.calendarReminders.requestScan()
+    }
 }

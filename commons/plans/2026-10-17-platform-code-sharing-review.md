@@ -1,7 +1,7 @@
 ---
 title: "Review: what is left in amethyst/ and desktopApp/, and what each platform can share with the other"
 type: refactor
-status: proposed
+status: in-progress (the §1 bugs are fixed)
 date: 2026-10-17
 owner: commons
 consumers: amethyst, desktopApp, commonsUI, commons, nestsClient
@@ -31,7 +31,24 @@ platform gets the feature, and whether the other platform already has a copy tha
 Paths are relative to `amethyst/src/main/java/com/vitorpamplona/amethyst/` (Android),
 `desktopApp/src/jvmMain/kotlin/com/vitorpamplona/amethyst/desktop/` (Desktop) or the module root.
 
-## 1. Desktop bugs found on the way (fix first, each is small)
+## 1. Desktop bugs found on the way
+
+**Fixed 2026-10-18.**
+1. GIFs take `MediaHttp.imageClient`, the image role's client.
+2. `LoadCityName` defaults to the known place name, or else the geohash.
+3. The meeting slots are gone; `NoteCompose` calls the shared renderers.
+4. Desktop's `DesktopQrScannerDialog` scans a picture from a file or the clipboard, with zxing core.
+5. A shared `CalendarReminderScanner` (commons) runs from Android's worker and from a once-a-minute
+   `DesktopCalendarReminders`. On Desktop, reminders also need OS notifications on, and pause during
+   do-not-disturb.
+6. Desktop runs `syncIfStale()` for the logged-in account on login and then every hour.
+7. Payment cards, `blossom:` resolution (`BlossomUriRenderer` over `blossomServerFinder`) and the
+   secret-emoji reveal (`SecretMessageContent`) are in the shared renderer. `BlossomFetcher` moved to
+   `commonsUI/jvmAndroid`; Desktop builds a `BlossomServerResolver` and registers the fetcher.
+   LaTeX stays Android's.
+8. The Concord decryption moved to `commonsUI/jvmAndroid` (`rememberDecryptedConcordImageModel`);
+   Desktop keeps the plaintext in `concord-images/` under its data directory.
+
 
 | # | Bug | Evidence | Fix |
 |---|---|---|---|

@@ -25,13 +25,15 @@ import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.OkHttpClient
 
 /**
- * How the desktop media code (the player, video thumbnails, "save") fetches a URL. The shared-UI
- * window [install]s the app's role-based clients, which follow the user's Tor choice for media
- * and decrypt the encrypted blobs registered in [keyCache] (NIP-17 DM files, Cordn and Marmot
- * media). Until then — and in the legacy app — it is [DesktopHttpClient]'s client, no keys and no Tor.
+ * How the desktop media code (the player, video thumbnails, "save", animated GIFs) fetches a URL.
+ * The shared-UI window [install]s the app's role-based clients, which follow the user's Tor choice
+ * for media and decrypt the encrypted blobs registered in [keyCache] (NIP-17 DM files, Cordn and
+ * Marmot media). Until then it is [DesktopHttpClient]'s client, no keys and no Tor.
  */
 object MediaHttp {
     @Volatile private var clientFor: (String) -> OkHttpClient = { DesktopHttpClient.currentClient() }
+
+    @Volatile private var imageClientFor: (String) -> OkHttpClient = { DesktopHttpClient.currentClient() }
 
     @Volatile private var torFor: (String) -> Boolean = { false }
 
@@ -43,13 +45,18 @@ object MediaHttp {
         clientFor: (String) -> OkHttpClient,
         keyCache: EncryptionKeyCache,
         viaTor: (String) -> Boolean = { false },
+        imageClientFor: (String) -> OkHttpClient = clientFor,
     ) {
         this.clientFor = clientFor
+        this.imageClientFor = imageClientFor
         this.keyCache = keyCache
         this.torFor = viaTor
     }
 
     fun client(url: String): OkHttpClient = clientFor(url)
+
+    /** The client for an image Coil does not load itself (animated GIFs): the image role's. */
+    fun imageClient(url: String): OkHttpClient = imageClientFor(url)
 
     /**
      * Whether a video at [url] goes over Tor: the same rule Android's player follows (the video

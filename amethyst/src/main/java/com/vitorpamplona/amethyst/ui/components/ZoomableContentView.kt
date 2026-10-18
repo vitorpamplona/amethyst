@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
@@ -128,7 +129,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery

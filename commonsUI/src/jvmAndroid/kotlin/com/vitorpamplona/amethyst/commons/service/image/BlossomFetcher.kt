@@ -18,10 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.images
+package com.vitorpamplona.amethyst.commons.service.image
 
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
+import coil3.PlatformContext
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
 import coil3.fetch.FetchResult
@@ -33,14 +34,16 @@ import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
-import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
-import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.startsWithIgnoreCase
 import okhttp3.Call
 import kotlin.coroutines.cancellation.CancellationException
 
+/**
+ * Loads a BUD-10 `blossom:` URI: from the disk cache under the blob's sha256 when it is there,
+ * otherwise from the server [blossomServerResolver] finds for it.
+ */
 @Stable
 class BlossomFetcher(
     private val options: Options,
@@ -97,9 +100,19 @@ class BlossomFetcher(
         // all fetchers coordinate through the same instance.
         concurrentRequestStrategy: ConcurrentRequestStrategy,
         private val readAuth: BlossomReadAuthTokenProvider? = null,
+        // A platform's wrapper around each network fetch (Android re-homes the cached file
+        // for its ImageDecoder); the identity elsewhere.
+        private val wrapFetcher: (fetcher: Fetcher, diskCacheKey: String) -> Fetcher = { fetcher, _ -> fetcher },
     ) : Fetcher.Factory<Uri> {
         private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
-        private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
+
+        // One checker per context (there is one app context), not one per fetch.
+        @Volatile private var connectivity: Pair<PlatformContext, ConnectivityChecker>? = null
+
+        private fun connectivityChecker(context: PlatformContext): ConnectivityChecker =
+            connectivity?.takeIf { it.first === context }?.second
+                ?: ConnectivityChecker(context).also { connectivity = context to it }
+
         private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
         override fun create(
@@ -119,10 +132,10 @@ class BlossomFetcher(
                         networkClient = lazy { networkClient(url).asNetworkClient() },
                         diskCache = lazy { imageLoader.diskCache },
                         cacheStrategy = cacheStrategyLazy,
-                        connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
+                        connectivityChecker = lazy { connectivityChecker(options.context) },
                         concurrentRequestStrategy = concurrentRequestStrategyLazy,
                     )
-                }.onSystemFileSystem(diskCacheKey)
+                }.let { wrapFetcher(it, diskCacheKey) }
             }
         }
 

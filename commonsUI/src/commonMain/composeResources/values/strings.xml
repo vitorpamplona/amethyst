@@ -377,6 +377,8 @@
     <string name="qr_scanner_no_code_in_image">No QR code found in that picture</string>
     <string name="qr_scanner_clipboard_empty">Nothing on the clipboard to scan</string>
     <string name="qr_scanner_pick_one">Tap the code you want</string>
+    <string name="qr_scanner_desktop_title">Scan a QR code</string>
+    <string name="qr_scanner_desktop_hint">There is no camera scanner on this computer. Open a picture of the code, or copy the code (as a picture or as text) and paste it here.</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">Captured %1$s of %2$s part — keep going</item>
         <item quantity="other">Captured %1$s of %2$s parts — keep going</item>
