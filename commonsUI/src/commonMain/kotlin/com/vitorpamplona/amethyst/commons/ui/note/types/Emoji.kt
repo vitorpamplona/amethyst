@@ -131,17 +131,12 @@ fun RenderEmojiPack(
             horizontalArrangement = spacedBy(1.dp),
         ) {
             emojisToShow.forEach { emoji ->
-                Box(
+                AsyncImage(
+                    model = emoji.url,
+                    contentDescription = emoji.code,
                     modifier = Size35Modifier,
-                    contentAlignment = Alignment.Center,
-                ) {
-                    AsyncImage(
-                        model = emoji.url,
-                        contentDescription = emoji.code,
-                        modifier = Size35Modifier,
-                        contentScale = ContentScale.Crop,
-                    )
-                }
+                    contentScale = ContentScale.Crop,
+                )
             }
         }
 

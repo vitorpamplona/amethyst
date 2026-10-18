@@ -112,7 +112,8 @@ fun UpdateReactionTypeScreen(
                 .imePaddingSafe()
                 .fillMaxSize(),
         ) {
-            CurrentReactionChoices(choices) { reaction -> save { it - reaction } }
+            // Every copy: older versions could save one twice.
+            CurrentReactionChoices(choices) { reaction -> save { list -> list.filter { it != reaction } } }
 
             HorizontalDivider()
 
@@ -179,8 +180,9 @@ private fun CurrentReactionChoices(
                         .verticalScroll(rememberScrollState())
                         .animateContentSize(),
             ) {
+                val remove = stringRes(Res.string.reaction_choices_remove)
                 choices.forEach { reactionType ->
-                    ReactionChoiceChip(reactionType) { onRemove(reactionType) }
+                    ReactionChoiceChip(reactionType, remove) { onRemove(reactionType) }
                 }
             }
         }
@@ -190,9 +192,9 @@ private fun CurrentReactionChoices(
 @Composable
 private fun ReactionChoiceChip(
     reactionType: String,
+    remove: String,
     onRemove: () -> Unit,
 ) {
-    val remove = stringRes(Res.string.reaction_choices_remove)
     // A custom emoji is an image: name it by its shortcode. Text emojis are read out by themselves.
     val shortcode = remember(reactionType) { if (reactionType.customEmojiUrlOrNull() != null) reactionType.substringAfter(':').substringBefore(':') else null }
     Row(

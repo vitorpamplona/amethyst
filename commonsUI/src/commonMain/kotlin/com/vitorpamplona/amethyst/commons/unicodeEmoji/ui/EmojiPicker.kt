@@ -238,11 +238,12 @@ private sealed class PaletteItem {
         val entry: UnicodeEmoji,
     ) : PaletteItem()
 
-    /** A favorite, inserted exactly as the account saved it. */
+    /** A favorite, or the emoji typed in the search, inserted exactly as written. */
     @Immutable
     class Literal(
         val emoji: String,
-        val name: String?,
+        /** Its palette entry, for the name and to match a choice saved in another tone. */
+        val entry: UnicodeEmoji?,
     ) : PaletteItem()
 
     @Immutable
@@ -339,7 +340,7 @@ fun EmojiPicker(
         val onPick: (PaletteItem) -> Unit = { item ->
             when (item) {
                 is PaletteItem.Palette -> onPickUnicode(choosing?.savedForm(item.entry, tone) ?: item.entry.withTone(tone))
-                is PaletteItem.Literal -> onPickUnicode(choosing?.savedForm(item.emoji) ?: item.emoji)
+                is PaletteItem.Literal -> onPickUnicode(choosing?.savedForm(item.emoji, item.entry) ?: item.emoji)
                 is PaletteItem.Custom -> onPickCustom(item.media)
             }
         }
@@ -476,7 +477,7 @@ private fun rememberSections(
                 val items =
                     favorites.map {
                         when (it) {
-                            is Favorite.Unicode -> PaletteItem.Literal(it.emoji, catalog.find(it.emoji)?.name)
+                            is Favorite.Unicode -> PaletteItem.Literal(it.emoji, catalog.find(it.emoji))
                             is Favorite.Custom -> PaletteItem.Custom(it.media)
                         }
                     }
@@ -619,7 +620,7 @@ private fun SearchResults(
             // The account's own shortcodes first: a search for a shortcode means one of those.
             val custom = shortcodes.filter { it.code.contains(query, ignoreCase = true) }
             val (starts, contains) = custom.partition { it.code.startsWith(query, ignoreCase = true) }
-            val typedItem = typed?.let { listOf(PaletteItem.Literal(it, catalog.find(it)?.name)) } ?: emptyList()
+            val typedItem = typed?.let { listOf(PaletteItem.Literal(it, catalog.find(it))) } ?: emptyList()
             typedItem + (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
         }
 
@@ -677,7 +678,7 @@ private fun PaletteItem.isIn(
 ): Boolean =
     when (this) {
         is PaletteItem.Palette -> choices.savedForm(entry, tone) != null
-        is PaletteItem.Literal -> choices.savedForm(emoji) != null
+        is PaletteItem.Literal -> choices.savedForm(emoji, entry) != null
         is PaletteItem.Custom -> choices.contains(media)
     }
 
@@ -692,7 +693,7 @@ private fun PaletteCell(
     val tooltip =
         when (item) {
             is PaletteItem.Palette -> item.entry.name
-            is PaletteItem.Literal -> item.name ?: item.emoji
+            is PaletteItem.Literal -> item.entry?.name ?: item.emoji
             is PaletteItem.Custom -> ":${item.media.code}:"
         }
 

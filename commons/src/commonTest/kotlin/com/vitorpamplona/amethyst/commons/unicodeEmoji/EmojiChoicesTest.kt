@@ -28,9 +28,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class EmojiChoicesTest {
-    private val keycap = "1️⃣"
-    private val england = "🏴󠁧󠁢󠁥󠁮󠁧󠁿"
-    private val heart = "❤️"
+    private val keycap = "1\uFE0F\u20E3"
+    private val england = "🏴\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F"
+    private val heart = "❤\uFE0F"
     private val thumbs = UnicodeEmoji("👍", "thumbs up", listOf("👍🏻", "👍🏼", "👍🏽", "👍🏾", "👍🏿"))
     private val catalog =
         UnicodeEmojiCatalog(
@@ -51,6 +51,19 @@ class EmojiChoicesTest {
     }
 
     @Test
+    fun aTapRemovesEveryCopyOfADuplicatedChoice() {
+        // Older versions of the screen and other clients could save the same emoji twice.
+        assertEquals(listOf("🚀"), listOf("🔥", "🚀", "🔥").toggleEmoji("🔥"))
+    }
+
+    @Test
+    fun aTypedEmojiMatchesAChoiceSavedInAnotherTone() {
+        val choices = EmojiChoices.of(listOf("👍🏽"))
+        assertEquals("👍🏽", choices.savedForm("👍", catalog.find("👍")))
+        assertNull(choices.savedForm("👎", null))
+    }
+
+    @Test
     fun multiCharacterEmojisAreSavedWhole() {
         assertEquals(listOf(keycap, england), emptyList<String>().toggleEmoji(keycap).toggleEmoji(england))
     }
@@ -62,7 +75,7 @@ class EmojiChoicesTest {
 
         val toned = EmojiChoices.of(listOf("👍🏿"))
         assertEquals("👍🏿", toned.savedForm(thumbs, SkinTone.NONE))
-        assertNull(EmojiChoices.EMPTY.savedForm(thumbs, SkinTone.MEDIUM))
+        assertNull(EmojiChoices.of(emptyList()).savedForm(thumbs, SkinTone.MEDIUM))
     }
 
     @Test
@@ -87,7 +100,7 @@ class EmojiChoicesTest {
         assertTrue(EmojiChoices.of(bare).contains(party))
         assertEquals(listOf("🚀"), bare.toggleEmoji(party))
 
-        assertFalse(EmojiChoices.EMPTY.contains(party))
+        assertFalse(EmojiChoices.of(emptyList()).contains(party))
         assertEquals(listOf(":party:https://x.com/p.png"), emptyList<String>().toggleEmoji(party))
     }
 

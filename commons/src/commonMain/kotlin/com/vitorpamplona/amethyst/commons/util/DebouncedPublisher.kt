@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.util
 
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlin.concurrent.Volatile
 
 /**
  * Collapses a burst of edits into a single [publish], run once the edits stop.
@@ -45,14 +46,20 @@ class DebouncedPublisher(
     private val launch: (suspend () -> Unit) -> Job,
     private val publish: suspend () -> Unit,
 ) {
-    private var pending: Job? = null
-
     /**
-     * True only while [pending] is still waiting out its delay. Once [publish] has started, the
-     * job is still active but there is nothing left to hurry: flushing then would cancel a publish
-     * that may be parked on a remote signer and start a second one.
+     * One scheduled publish. [started] flips once its wait is over: from then on it is a publish in
+     * flight, which nothing here cancels or hurries, since it may be parked on a remote signer and a
+     * restart would send a second request. The flag lives on each publish, not on this class, so the
+     * late write of an older one, on its own thread, cannot mark a newer one as started.
      */
-    private var waiting = false
+    private class Pending {
+        @Volatile var job: Job? = null
+
+        @Volatile var started = false
+    }
+
+    @Volatile
+    private var pending: Pending? = null
 
     /** Records an edit: restarts the wait, so a run of edits publishes once, after the last one. */
     fun schedule() = start(debounceMs)
@@ -62,18 +69,22 @@ class DebouncedPublisher(
      * pending, so a caller can flush on every exit path without publishing the same state twice.
      */
     fun flush() {
-        if (!waiting || pending?.isActive != true) return
+        val current = pending ?: return
+        if (current.started || current.job?.isActive != true) return
         start(0)
     }
 
     private fun start(delayMs: Long) {
-        if (waiting) pending?.cancel()
-        waiting = true
-        pending =
+        // Only a publish still waiting is superseded. If one is just starting on its own thread the
+        // cancel can still land, but before it sent anything, and the publish launched below goes out.
+        pending?.let { if (!it.started) it.job?.cancel() }
+        val next = Pending()
+        next.job =
             launch {
                 delay(delayMs)
-                waiting = false
+                next.started = true
                 publish()
             }
+        pending = next
     }
 }

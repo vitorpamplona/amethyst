@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip78AppSpecific
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.commons.model.NoteState
@@ -34,9 +35,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -83,8 +82,10 @@ class AppSpecificState(
      * can land while newer toggles wait for the next. Merging it would revert those toggles, and
      * the next publish would then read and send the reverted state. So it only becomes the backup.
      * A restore re-signs an older version on purpose and is not one of these: that echo merges.
+     *
+     * An androidx LruCache, which synchronizes internally: written after signing, read by the collector.
      */
-    private val snapshotsSignedHere = MutableStateFlow<Set<HexKey>>(emptySet())
+    private val snapshotsSignedHere = LruCache<HexKey, Boolean>(MAX_TRACKED_SNAPSHOTS)
 
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val (toInternal, createdAt) =
@@ -103,7 +104,7 @@ class AppSpecificState(
                     createdAt = createdAt,
                 ),
             )
-        snapshotsSignedHere.update { (it + signed.id).toList().takeLast(MAX_TRACKED_SNAPSHOTS).toSet() }
+        snapshotsSignedHere.put(signed.id, true)
         return signed
     }
 
@@ -133,7 +134,7 @@ class AppSpecificState(
                         (it.note.event as? AppSpecificDataEvent)?.let { event ->
                             // Our own snapshot coming back: see [snapshotsSignedHere]. Nothing to
                             // decrypt either, which spares an external signer a round trip.
-                            if (event.id in snapshotsSignedHere.value) {
+                            if (snapshotsSignedHere[event.id] != null) {
                                 settings.keepOwnAppSpecificData(event)
                                 return@let
                             }

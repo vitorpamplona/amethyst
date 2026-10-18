@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 
-private const val VARIATION_SELECTOR = '️'
+private const val VARIATION_SELECTOR = '\uFE0F'
 
 private fun String.withoutVariationSelector() = if (VARIATION_SELECTOR in this) replace(VARIATION_SELECTOR.toString(), "") else this
 
@@ -39,7 +39,7 @@ private fun String.bareShortcodeOrNull(): String? = if (length > 2 && startsWith
  * is this emoji in the set, and in which form was it saved?
  *
  * The saved form matters because a choice may be stored in a form the picker does not draw: in
- * another skin tone, without the variation selector (`❤` for the palette's `❤️`), or a custom emoji
+ * another skin tone, without the variation selector (`❤` for the palette's `❤` plus U+FE0F), or a custom emoji
  * under another shortcode, or as a bare `:shortcode:`. Matching only the exact string left those
  * unmarked, and a tap added a near-duplicate instead of removing the choice.
  */
@@ -64,12 +64,19 @@ class EmojiChoices private constructor(
         return null
     }
 
+    /**
+     * The saved form of [emoji], an emoji as typed rather than drawn from the palette, trying its
+     * palette [entry] in every tone when the exact form is not chosen: a typed 👍 finds a saved 👍🏽.
+     */
+    fun savedForm(
+        emoji: String,
+        entry: UnicodeEmoji?,
+    ): String? = savedForm(emoji) ?: entry?.let { savedForm(it, SkinTone.NONE) }
+
     /** Whether [media] is chosen, by its image, or by its code when saved without one. */
     fun contains(media: EmojiMedia): Boolean = media.link in customLinks || media.code in bareShortcodes
 
     companion object {
-        val EMPTY = of(emptyList())
-
         fun of(choices: List<String>): EmojiChoices {
             val unicode = HashSet<String>()
             val byBase = HashMap<String, String>()
@@ -92,11 +99,14 @@ class EmojiChoices private constructor(
     }
 }
 
-/** These choices with [emoji] removed when present, else added. A picker hands over the saved form of a chosen one. */
+/**
+ * These choices with [emoji] removed when present (every copy, as older versions could save one
+ * twice), else added. A picker hands over the saved form of a chosen one.
+ */
 fun List<String>.toggleEmoji(emoji: String): List<String> =
     when {
         emoji.isBlank() -> this
-        emoji in this -> this - emoji
+        emoji in this -> filter { it != emoji }
         else -> this + emoji
     }
 
