@@ -447,13 +447,14 @@ Do this before considering the task complete.
   Interpolated messages use the lambda overload (`Log.d(TAG) { "…$x" }`) so they cost
   nothing below `Log.minLevel`; in a catch block pass the throwable
   (`Log.w(TAG, "…", e)`) instead of interpolating `${e.message}`.
-- **Never write fully-qualified class names inline in function bodies.** Add an
-  `import` for the class and reference it by its simple name. Write
-  `Event` (with `import com.vitorpamplona.quartz...Event`), not
-  `com.vitorpamplona.quartz...Event` in the middle of code.
-- The only acceptable inline fully-qualified names are: a genuine name
-  collision (prefer `import ... as Alias` instead), or where the language
-  requires it. Comments, KDoc, and string literals are exempt.
+- **Act on the `Boolean` from `File.delete()`, `mkdirs()`, `renameTo()` and
+  `setExecutable()`/`setWritable()`**: they fail by returning `false`, not by throwing,
+  and Sonar flags an ignored result (`kotlin:S899`). Throw if the step is required,
+  else log: `if (!f.delete() && f.exists()) Log.w(TAG) { "could not delete $f" }`.
+- **Never write fully-qualified class names inline in function bodies**: import the
+  class and use its simple name (`Event`, not `com.vitorpamplona.quartz...Event`).
+  The only exceptions are a genuine name collision (prefer `import ... as Alias`) or
+  where the language requires it; comments, KDoc and string literals are exempt.
 - **Prefer the `androidx.core` KTX extension over the raw platform Java call**
   when one exists — this is what Android Lint's `UseKtx` flags. Common swaps:
   `Bitmap.createBitmap(w, h, cfg)` → `createBitmap(w, h)`,
@@ -479,8 +480,7 @@ Do this before considering the task complete.
   This covers the bidi family Sonar's Trojan-Source rule (CVE-2021-42574)
   flags — U+202A–U+202E, the isolates U+2066–U+2069, U+200E/U+200F, U+061C —
   plus zero-width characters (U+200B–U+200D, U+FEFF, U+2060). The escape
-  compiles to the identical codepoint, so behaviour is unchanged; the point is
-  that the file on disk stays visually unambiguous. Applies even when the
+  compiles to the same codepoint; the point is a visually unambiguous file. Applies even when the
   character is *intentional* (sanitizer strip-lists, adversarial test
   payloads) — that's data, and escapes express it just as well. Exceptions:
   U+200D as part of a real emoji ZWJ sequence in test data (👩‍👧 — functional,

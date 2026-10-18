@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +60,7 @@ import java.util.concurrent.atomic.AtomicReference
  * A failed upload doesn't stop the rest: it is reported under `failed`.
  */
 object EmojiImportCommand {
+    private const val TAG = "EmojiImportCommand"
     private const val PARALLEL_UPLOADS = 4
 
     private class ImageFile(
@@ -186,7 +188,7 @@ object EmojiImportCommand {
                 EmojiCommands.emitAddResult(ctx, pack, merged, outbox, isPrivate, extra + mapOf("server" to server, "uploaded" to uploaded.size, "failed" to failed.toList()))
             }
         } finally {
-            tempFiles.forEach { it.delete() }
+            tempFiles.forEach { if (!it.delete() && it.exists()) Log.w(TAG) { "could not delete temp file $it" } }
         }
     }
 
