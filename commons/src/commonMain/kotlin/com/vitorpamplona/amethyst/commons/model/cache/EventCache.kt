@@ -180,6 +180,7 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.RoomId
 import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStorySceneEvent
@@ -198,8 +199,11 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -207,13 +211,17 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.addressables.AddressableTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.events.EventTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.externalIds.ExternalIdTrustedListEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.users.UserTrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
+import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
@@ -265,6 +273,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.isATag
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
@@ -293,8 +302,15 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
 import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
 import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
@@ -317,6 +333,7 @@ import com.vitorpamplona.quartz.nip40Expiration.isExpired
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -374,7 +391,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
@@ -395,7 +414,12 @@ import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
@@ -404,6 +428,7 @@ import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
@@ -421,6 +446,8 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryRequest.DvmContentDiscoveryRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
@@ -4162,6 +4189,25 @@ open class EventCache :
                 is KanbanBoardEvent,
                 is BuildVerificationEvent,
                 is MostroInfoEvent,
+                // Kinds that only got a feed card later; stored so the card has a note to draw.
+                is ActiveProfileThemeEvent,
+                is CiCoordinatorAdvertisementEvent,
+                is CiRepositoryStatusEvent,
+                is CiRequestReadinessListEvent,
+                is CommunityRulesEvent,
+                is FeedDefinitionEvent,
+                is IdentityProofEvent,
+                is LongFormDraftEvent,
+                is MostroDisputeEvent,
+                is MostroUserRatingEvent,
+                is P2POrderEvent,
+                is PostingStreakEvent,
+                is RelayRoleEvent,
+                is RoboSatsCoordinatorRatingEvent,
+                is StickerPackEvent,
+                is ThemeDefinitionEvent,
+                is TopEightEvent,
+                is WorkoutTemplateEvent,
                 -> consumeBaseReplaceable(event, relay, wasVerified)
 
                 is KanbanCardEvent -> consumeKanbanCard(event, relay, wasVerified)
@@ -4283,6 +4329,17 @@ open class EventCache :
                 // Legacy MIP-00 KeyPackages (kind 443): the invite lookup now asks for them,
                 // so they arrive; stored like any regular event, never rendered.
                 is LegacyKeyPackageEvent,
+                // Kinds that only got a feed card later. The DVM bases come after the DVM kinds with
+                // their own handling above, so they only pick up the remaining job requests/results.
+                is AssetBundleEvent,
+                is CiManualTriggerEvent,
+                is CiServiceRequestEvent,
+                is CiServiceStopEvent,
+                is MostroDevFeePaymentEvent,
+                is NappletSnapshotEvent,
+                is SiteSnapshotEvent,
+                is DvmRequestEvent,
+                is DvmResponseEvent,
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {

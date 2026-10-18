@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -84,13 +85,17 @@ fun RenderChatRaid(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     UserPicture(from.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
                     Spacer(StdHorzSpacer)
-                    LoadUser(baseUserHex = from.pubKeyHex) { user ->
-                        if (user != null) {
-                            UsernameDisplay(
-                                baseUser = user,
-                                fontWeight = FontWeight.Bold,
-                                accountViewModel = accountViewModel,
-                            )
+                    // Names shrink before the label does: a long one otherwise squeezes
+                    // "is raiding" into a column one letter wide.
+                    Box(Modifier.weight(1f, fill = false)) {
+                        LoadUser(baseUserHex = from.pubKeyHex) { user ->
+                            if (user != null) {
+                                UsernameDisplay(
+                                    baseUser = user,
+                                    fontWeight = FontWeight.Bold,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
                         }
                     }
 
@@ -99,18 +104,22 @@ fun RenderChatRaid(
                         text = stringRes(Res.string.chat_raid_is_raiding),
                         color = accent,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                     Spacer(StdHorzSpacer)
 
                     UserPicture(to.pubKeyHex, Size20dp, Modifier, accountViewModel, nav)
                     Spacer(StdHorzSpacer)
-                    LoadUser(baseUserHex = to.pubKeyHex) { user ->
-                        if (user != null) {
-                            UsernameDisplay(
-                                baseUser = user,
-                                fontWeight = FontWeight.Bold,
-                                accountViewModel = accountViewModel,
-                            )
+                    Box(Modifier.weight(1f, fill = false)) {
+                        LoadUser(baseUserHex = to.pubKeyHex) { user ->
+                            if (user != null) {
+                                UsernameDisplay(
+                                    baseUser = user,
+                                    fontWeight = FontWeight.Bold,
+                                    accountViewModel = accountViewModel,
+                                )
+                            }
                         }
                     }
                 }

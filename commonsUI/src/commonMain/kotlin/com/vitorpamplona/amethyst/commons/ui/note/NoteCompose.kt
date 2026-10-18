@@ -169,109 +169,289 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileMetadataDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.PictureDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAcceptedBadgeSet
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderActiveProfileTheme
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentArtifact
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentArtifactRemoval
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentAuditEntry
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentPairing
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentProfile
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentProject
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentTeam
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentTeamCatalog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentTurnMetric
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAppData
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAppDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAppRecommendation
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAssetBundle
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestationRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficiency
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAuthoredPodcasts
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomPieceIndex
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBlossomServers
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12OfferList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12Zap
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBolt12ZapIntent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBookshelfDirectory
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzArchiveRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzArchivedIdentitiesList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzCanvas
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzChannelSummary
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDiffCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmAddMember
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmCreated
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmHide
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmOpen
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzDmVisibility
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzForumComment
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzForumPost
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzForumVoteCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleEnded
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleGuidelines
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleJoined
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleLeft
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleLiveness
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleReaction
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzHuddleStarted
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzIdentityArchived
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzIdentityUnarchived
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobAccepted
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobCancel
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobError
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobProgress
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzJobResult
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzMemberRemoved
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzMessageBookmarked
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzMessageEdit
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzMessagePinned
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzMessageScheduled
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationBan
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationResolveReport
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationTimeout
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzModerationUntimeout
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzPresenceSnapshot
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzPresenceUpdate
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzProductFeedback
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzRelayAdminAddMember
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzRelayAdminChangeRole
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzRelayAdminRemoveMember
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzReminder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzSetWorkspaceProfile
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzSystemMessageCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzThreadSummary
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzTyping
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBuzzUnarchiveRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarCollectionEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarDateSlotEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarRSVPEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCalendarTimeSlotEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCapabilityDiscovery
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCashuMintQuote
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCashuSpendingHistory
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelHideMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelInvite
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMessage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChannelMuteUser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChatMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChatMessageEncryptedFile
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderChessGame
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiCoordinatorAdvertisement
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiJobResult
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiManualTrigger
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiRepositoryStatus
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiRequestReadinessList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiServiceRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiServiceStop
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowProgress
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCiWorkflowResult
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCitation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderClassifieds
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunity
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCommunityRules
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderConcordChatEdit
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderConcordControlEdition
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderConcordInviteBundle
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCreateGroup
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCvmServerAnnouncement
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCvmToolsList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCyberspaceBag
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeleteGroup
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeletionRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmResult
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmStatus
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEncryptionKeyList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEncryptionKeyRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEngram
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEntityRating
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEphemeralChat
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEphemeralChatList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEventReminder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderExtensionListing
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderExtensionRelease
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderExternalIdentities
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderExternalReaction
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFavoriteFollowSets
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFavoritePodcasts
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFeedDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFhirResource
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFileServers
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFileStorage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderFundraiser
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocache
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheCurationList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheFoundLog
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeocacheVerification
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeohashChat
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGeohashPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitCoverNoteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitStatusEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGoal
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupAdmins
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupCreateInvite
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupDeleteEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupEditMetadata
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupJoinRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupLeaveRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupMembers
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupMetadata
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupParticipants
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupPinned
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupPutUser
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupRemoveUser
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupRoles
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGroupUpdatePinList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHighlight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderHttpAuth
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderIdentityProof
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStoryReadingState
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderJesterChess
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderKeyPackageRelayList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLabel
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityRaid
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessAccept
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessChallenge
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessDrawOffer
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessGameEnd
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessMove
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormContent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormDraft
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderManagedAgent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDevFee
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroDispute
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMostroUserRating
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNNS
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNappletSnapshot
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNestsAdminCommand
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNestsServers
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNipContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzap
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNutzapInfo
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNwcInfo
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderObserverFrame
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOnchainZap
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderOts
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderP2POrder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPaymentTargets
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPersona
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPinListEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastEpisode
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPodcastMetadata
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPollResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPostApproval
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPostingStreak
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPredictionMarket
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateKindCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateMessage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateOutboxRelays
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileBadges
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileGalleryEntry
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPs1Save
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicChatList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicMessage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationIndex
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPublicationSection
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPushLease
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReaction
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAddMember
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayAuth
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayDiscovery
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayGroupMessage
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayInviteRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayJoinRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayLeaveRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayMembershipList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayMonitor
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayReview
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRole
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReport
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventReport
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoboSatsCoordinatorRating
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSiteSnapshot
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoAvatar
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoObject
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSnoShard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareApplication
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareAsset
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderSoftwareRelease
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderStickerPack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextModificationEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTextTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderThemeDefinition
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderThread
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTopEight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderUserGraspList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderUserStatus
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoCollaboration
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoCurationSet
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoView
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVoiceTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWebBookmark
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiMergeAcceptance
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiMergeRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWikiRedirect
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWorkflowApprovalDecision
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWorkflowDefinition
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWorkflowLifecycle
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWorkflowTrigger
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderWorkoutTemplate
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapReceipt
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderZapRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListHeader
@@ -301,6 +481,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedAsser
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustedList
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderChatClip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderConcordTimerNotice
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.nip28PublicChat.RenderPublicChatChannelHeader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.podcasts.PodcastTrailerListItem
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.ExerciseTemplateDisplay
@@ -326,8 +507,97 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.walletScrutiny.ui.RenderBuildVerification
+import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
+import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
+import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
+import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
+import com.vitorpamplona.quartz.buzz.dm.DmCreatedEvent
+import com.vitorpamplona.quartz.buzz.dm.DmHideEvent
+import com.vitorpamplona.quartz.buzz.dm.DmOpenEvent
+import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
+import com.vitorpamplona.quartz.buzz.erReminders.EventReminderEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumCommentEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumPostEvent
+import com.vitorpamplona.quartz.buzz.forum.ForumVoteEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleEndedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleGuidelinesEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleLivenessEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantJoinedEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleParticipantLeftEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleReactionEvent
+import com.vitorpamplona.quartz.buzz.huddles.HuddleStartedEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentitiesListEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.ArchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchiveRequestEvent
+import com.vitorpamplona.quartz.buzz.iaIdentityArchival.UnarchivedIdentityEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobAcceptedEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobCancelEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobErrorEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobProgressEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobRequestEvent
+import com.vitorpamplona.quartz.buzz.jobs.JobResultEvent
+import com.vitorpamplona.quartz.buzz.managedAgents.ManagedAgentEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationBanEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationResolveReportEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationTimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ModerationUntimeoutEvent
+import com.vitorpamplona.quartz.buzz.moderation.ProductFeedbackEvent
+import com.vitorpamplona.quartz.buzz.mpProjects.ProjectEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
+import com.vitorpamplona.quartz.buzz.notifications.MemberRemovedNotificationEvent
+import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
+import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.presence.PresenceUpdateEvent
+import com.vitorpamplona.quartz.buzz.presence.TypingIndicatorEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminAddMemberEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminChangeRoleEvent
+import com.vitorpamplona.quartz.buzz.relayAdmin.RelayAdminRemoveMemberEvent
+import com.vitorpamplona.quartz.buzz.stream.CanvasEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageBookmarkedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageDiffEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageEditEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessagePinnedEvent
+import com.vitorpamplona.quartz.buzz.stream.StreamMessageScheduledEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.buzz.stream.StreamReminderEvent
+import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.buzz.teamCatalog.TeamCatalogEvent
+import com.vitorpamplona.quartz.buzz.teams.TeamEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
+import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalDeniedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalGrantedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCancelledEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowDefEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepCompletedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepFailedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowStepStartedEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggerEvent
+import com.vitorpamplona.quartz.buzz.workflow.WorkflowTriggeredEvent
+import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
+import com.vitorpamplona.quartz.concord.cord03Channels.ConcordTimerNoticeEvent
+import com.vitorpamplona.quartz.concord.cord04Roles.control.ControlEditionEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmServerAnnouncementEvent
+import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
@@ -342,17 +612,29 @@ import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.ballots.BallotEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
+import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashPresenceEvent
 import com.vitorpamplona.quartz.experimental.bounties.bountyBaseReward
 import com.vitorpamplona.quartz.experimental.citations.CitationEvent
+import com.vitorpamplona.quartz.experimental.clink.debits.DebitEvent
+import com.vitorpamplona.quartz.experimental.clink.manage.ManageEvent
+import com.vitorpamplona.quartz.experimental.clink.offers.OfferEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.AddressableListHeaderEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.ListHeaderEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.ListItemEvent
+import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
+import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
+import com.vitorpamplona.quartz.experimental.ephemChat.list.EphemeralChatListEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.ExerciseTemplateEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
+import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.forks.IForkableEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
+import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
 import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
@@ -363,12 +645,20 @@ import com.vitorpamplona.quartz.experimental.library.LearningResourceEvent
 import com.vitorpamplona.quartz.experimental.medical.FhirResourceEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.nests.admin.AdminCommandEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.release.isNip82SoftwareRelease
+import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
 import com.vitorpamplona.quartz.experimental.ps1saves.Ps1SaveEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
@@ -376,15 +666,29 @@ import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RelayReviewEvent
 import com.vitorpamplona.quartz.experimental.roadstr.confirmation.RoadEventConfirmationEvent
 import com.vitorpamplona.quartz.experimental.roadstr.report.RoadEventReportEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.trustedLists.TrustedListEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
+import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBundleEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
+import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
+import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenListEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRemovalEvent
+import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.strongPoWOrNull
@@ -400,30 +704,74 @@ import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip25Reactions.ExternalReactionEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelHideMessageEvent
 import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
+import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMuteUserEvent
+import com.vitorpamplona.quartz.nip28PublicChat.list.PublicChatListEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupAdminsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMembersEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupParticipantsEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupPinnedEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupRolesEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.CreateGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.DeleteGroupEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupCreateInviteEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupDeleteEventEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupEditMetadataEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupPutUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupRemoveUserEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.moderation.GroupUpdatePinListEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupJoinRequestEvent
+import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
+import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
+import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
+import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
+import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
+import com.vitorpamplona.quartz.nip34Git.ci.repositoryStatus.CiRepositoryStatusEvent
+import com.vitorpamplona.quartz.nip34Git.ci.requestReadiness.CiRequestReadinessListEvent
+import com.vitorpamplona.quartz.nip34Git.ci.secretUpdate.CiSecretUpdateEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
+import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowProgress.CiWorkflowProgressEvent
+import com.vitorpamplona.quartz.nip34Git.ci.workflowResult.CiWorkflowResultEvent
 import com.vitorpamplona.quartz.nip34Git.coverNote.GitCoverNoteEvent
+import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestUpdateEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
+import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
+import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
+import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.addMember.RelayAddMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.inviteRequest.RelayInviteRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.joinRequest.RelayJoinRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.leaveRequest.RelayLeaveRequestEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.list.RelayMembershipListEvent
 import com.vitorpamplona.quartz.nip43RelayMembers.removeMember.RelayRemoveMemberEvent
+import com.vitorpamplona.quartz.nip43RelayMembers.roles.RelayRoleEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcRequestEvent
+import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
@@ -432,6 +780,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.favoriteAlgoFeedsList.FavoriteAlgoFeedsListEvent
+import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
 import com.vitorpamplona.quartz.nip51Lists.geohashList.GeohashListEvent
 import com.vitorpamplona.quartz.nip51Lists.gitAuthorList.GitAuthorListEvent
@@ -464,36 +813,70 @@ import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessa
 import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingRoomEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.nestsServers.NestsServersEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.presence.MeetingRoomPresenceEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
+import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetupBesidesAuthor
+import com.vitorpamplona.quartz.nip58Badges.accepted.AcceptedBadgeSetEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.nip58Badges.profile.ProfileBadgesEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
+import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
+import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
+import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
+import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
+import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
+import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
+import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
+import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.move.LiveChessMoveEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
+import com.vitorpamplona.quartz.nip66RelayMonitor.monitor.RelayMonitorEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.P2POrderEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.UnrecognizedKind38386Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.UnrecognizedKind38384Event
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
+import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.UnrecognizedKind31986Event
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip71Video.textTrack.TextTrackEvent
+import com.vitorpamplona.quartz.nip71Video.views.VideoViewEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.approval.CommunityPostApprovalEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.communityAddress
 import com.vitorpamplona.quartz.nip72ModCommunities.definition.CommunityDefinitionEvent
+import com.vitorpamplona.quartz.nip72ModCommunities.follow.CommunityListEvent
 import com.vitorpamplona.quartz.nip72ModCommunities.isACommunityPost
+import com.vitorpamplona.quartz.nip72ModCommunities.rules.CommunityRulesEvent
 import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
+import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
@@ -505,12 +888,18 @@ import com.vitorpamplona.quartz.nip85TrustedAssertions.users.UserAssertionEvent
 import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.fedimint.FedimintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.nip87Ecash.recommendation.UnrecognizedKind38000Event
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
+import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
+import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
+import com.vitorpamplona.quartz.nip96FileStorage.config.FileServersEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
@@ -519,19 +908,41 @@ import com.vitorpamplona.quartz.nip99Classifieds.review.ProductReviewEvent
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
+import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipA4PublicMessages.PublicMessageEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallHangupEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
+import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
+import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.foundLog.GeocacheFoundLogEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
+import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -2177,6 +2588,258 @@ internal fun RenderNoteRow(
         is GroupMetadataEvent -> {
             RenderGroupMetadata(baseNote, accountViewModel, nav)
         }
+
+        // Profile and settings lists.
+        is EmojiListEvent -> RenderEmojiList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StickerPackEvent -> RenderStickerPack(baseNote, backgroundColor, accountViewModel, nav)
+        is ProfileBadgesEvent -> RenderProfileBadges(baseNote, accountViewModel, nav)
+        is AcceptedBadgeSetEvent -> RenderAcceptedBadgeSet(baseNote, backgroundColor, accountViewModel, nav)
+        is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
+        is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
+        is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
+        is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor)
+        is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
+        is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
+        is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)
+        is FavoritePodcastsListEvent -> RenderFavoritePodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is AuthoredPodcastsEvent -> RenderAuthoredPodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is FavoriteFollowSetsListEvent -> RenderFavoriteFollowSets(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CommunityListEvent -> RenderCommunityList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is TopEightEvent -> RenderTopEight(baseNote, backgroundColor, accountViewModel, nav)
+        is ExternalIdentitiesEvent -> RenderExternalIdentities(baseNote)
+        is UserStatusEvent -> RenderUserStatus(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is PostingStreakEvent -> RenderPostingStreak(baseNote)
+        is ActiveProfileThemeEvent -> RenderActiveProfileTheme(baseNote, backgroundColor, accountViewModel, nav)
+        is ThemeDefinitionEvent -> RenderThemeDefinition(baseNote, backgroundColor, accountViewModel, nav)
+        is ProfileGalleryEntryEvent -> RenderProfileGalleryEntry(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is WebBookmarkEvent -> RenderWebBookmark(baseNote, backgroundColor, accountViewModel, nav)
+        is GeocacheCurationListEvent -> RenderGeocacheCurationList(baseNote, accountViewModel, nav)
+
+        // Deletions, labels, timestamps, chess, P2P orders and other public records.
+        is DeletionRequestEvent -> RenderDeletionRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is RequestToVanishEvent -> RenderRequestToVanish(baseNote, backgroundColor, accountViewModel, nav)
+        is LabelEvent -> RenderLabel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is OtsEvent -> RenderOts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is FileStorageEvent -> RenderFileStorage(baseNote)
+        is GeocacheVerificationEvent -> RenderGeocacheVerification(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is InteractiveStoryReadingStateEvent -> RenderInteractiveStoryReadingState(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is LongFormDraftEvent -> RenderLongFormDraft(baseNote, accountViewModel)
+        is JesterEvent -> RenderJesterChess(baseNote, accountViewModel, nav)
+        is LiveChessGameAcceptEvent -> RenderLiveChessAccept(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is LiveChessMoveEvent -> RenderLiveChessMove(baseNote, backgroundColor, accountViewModel, nav)
+        is LiveChessDrawOfferEvent -> RenderLiveChessDrawOffer(baseNote, backgroundColor, accountViewModel, nav)
+        is P2POrderEvent -> RenderP2POrder(baseNote)
+        is MostroUserRatingEvent -> RenderMostroUserRating(baseNote, accountViewModel, nav)
+        is MostroDisputeEvent -> RenderMostroDispute(baseNote)
+        is MostroDevFeePaymentEvent -> RenderMostroDevFee(baseNote)
+        is RoboSatsCoordinatorRatingEvent -> RenderRoboSatsCoordinatorRating(baseNote, accountViewModel, nav)
+        is PollResponseEvent -> RenderPollResponse(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is RelayMonitorEvent -> RenderRelayMonitor(baseNote)
+        is TextTrackEvent -> RenderTextTrack(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is VideoViewEvent -> RenderVideoView(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is WorkoutTemplateEvent -> RenderWorkoutTemplate(baseNote, backgroundColor, accountViewModel, nav)
+        // Other apps' formats on the RoboSats (31986), mint-recommendation (38000) and Mostro
+        // rating/dispute (38384/38386) kinds: nothing to draw, and their raw content must not
+        // reach the text path (EventCache keeps 38000 junk only so it supersedes older versions).
+        is UnrecognizedKind31986Event,
+        is UnrecognizedKind38000Event,
+        is UnrecognizedKind38384Event,
+        is UnrecognizedKind38386Event,
+        -> {}
+
+        // Buzz chat, huddle, job, forum, moderation and archival events.
+        is ArchiveRequestEvent -> RenderBuzzArchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is UnarchiveRequestEvent -> RenderBuzzUnarchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ArchivedIdentityEvent -> RenderBuzzIdentityArchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is UnarchivedIdentityEvent -> RenderBuzzIdentityUnarchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ArchivedIdentitiesListEvent -> RenderBuzzArchivedIdentitiesList(baseNote, accountViewModel, nav)
+        is SystemMessageEvent -> RenderBuzzSystemMessageCard(baseNote, accountViewModel, nav)
+        is CanvasEvent -> RenderBuzzCanvas(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamMessageEditEvent -> RenderBuzzMessageEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamMessagePinnedEvent -> RenderBuzzMessagePinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamMessageBookmarkedEvent -> RenderBuzzMessageBookmarked(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamMessageScheduledEvent -> RenderBuzzMessageScheduled(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamReminderEvent -> RenderBuzzReminder(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is StreamMessageDiffEvent -> RenderBuzzDiffCard(baseNote, accountViewModel, nav)
+        is ChannelSummaryEvent -> RenderBuzzChannelSummary(baseNote, accountViewModel, nav)
+        is PresenceSnapshotEvent -> RenderBuzzPresenceSnapshot(baseNote, accountViewModel, nav)
+        is ThreadSummaryEvent -> RenderBuzzThreadSummary(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ForumPostEvent -> RenderBuzzForumPost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ForumCommentEvent -> RenderBuzzForumComment(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ForumVoteEvent -> RenderBuzzForumVoteCard(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is HuddleStartedEvent -> RenderBuzzHuddleStarted(baseNote, accountViewModel, nav)
+        is HuddleParticipantJoinedEvent -> RenderBuzzHuddleJoined(baseNote, accountViewModel, nav)
+        is HuddleParticipantLeftEvent -> RenderBuzzHuddleLeft(baseNote, accountViewModel, nav)
+        is HuddleEndedEvent -> RenderBuzzHuddleEnded(baseNote, accountViewModel, nav)
+        is HuddleLivenessEvent -> RenderBuzzHuddleLiveness(baseNote, accountViewModel, nav)
+        is HuddleGuidelinesEvent -> RenderBuzzHuddleGuidelines(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is HuddleReactionEvent -> RenderBuzzHuddleReaction(baseNote)
+        is JobRequestEvent -> RenderBuzzJobRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is JobAcceptedEvent -> RenderBuzzJobAccepted(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is JobProgressEvent -> RenderBuzzJobProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is JobResultEvent -> RenderBuzzJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is JobCancelEvent -> RenderBuzzJobCancel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is JobErrorEvent -> RenderBuzzJobError(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is DmOpenEvent -> RenderBuzzDmOpen(baseNote, accountViewModel, nav)
+        is DmCreatedEvent -> RenderBuzzDmCreated(baseNote, accountViewModel, nav)
+        is DmAddMemberEvent -> RenderBuzzDmAddMember(baseNote, accountViewModel, nav)
+        is DmHideEvent -> RenderBuzzDmHide(baseNote, accountViewModel, nav)
+        is DmVisibilityEvent -> RenderBuzzDmVisibility(baseNote, accountViewModel, nav)
+        is PresenceUpdateEvent -> RenderBuzzPresenceUpdate(baseNote, accountViewModel, nav)
+        is TypingIndicatorEvent -> RenderBuzzTyping(baseNote, accountViewModel, nav)
+        is MemberRemovedNotificationEvent -> RenderBuzzMemberRemoved(baseNote, accountViewModel, nav)
+        is ModerationBanEvent -> RenderBuzzModerationBan(baseNote, accountViewModel, nav)
+        is ModerationTimeoutEvent -> RenderBuzzModerationTimeout(baseNote, accountViewModel, nav)
+        is ModerationUntimeoutEvent -> RenderBuzzModerationUntimeout(baseNote, accountViewModel, nav)
+        is ModerationResolveReportEvent -> RenderBuzzModerationResolveReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ProductFeedbackEvent -> RenderBuzzProductFeedback(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is RelayAdminAddMemberEvent -> RenderBuzzRelayAdminAddMember(baseNote, accountViewModel, nav)
+        is RelayAdminRemoveMemberEvent -> RenderBuzzRelayAdminRemoveMember(baseNote, accountViewModel, nav)
+        is RelayAdminChangeRoleEvent -> RenderBuzzRelayAdminChangeRole(baseNote, accountViewModel, nav)
+        is SetWorkspaceProfileEvent -> RenderBuzzSetWorkspaceProfile(baseNote)
+        is ThreadWindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+        is WindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+
+        // NIP-29 group moderation and metadata, NIP-28 channel moderation, Concord, location chats.
+        is GroupPutUserEvent -> RenderGroupPutUser(baseNote, backgroundColor, accountViewModel, nav)
+        is GroupRemoveUserEvent -> RenderGroupRemoveUser(baseNote, backgroundColor, accountViewModel, nav)
+        is GroupEditMetadataEvent -> RenderGroupEditMetadata(baseNote, accountViewModel, nav)
+        is GroupDeleteEventEvent -> RenderGroupDeleteEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CreateGroupEvent -> RenderCreateGroup(baseNote, accountViewModel, nav)
+        is DeleteGroupEvent -> RenderDeleteGroup(baseNote, backgroundColor, accountViewModel, nav)
+        is GroupCreateInviteEvent -> RenderGroupCreateInvite(baseNote, accountViewModel, nav)
+        is GroupUpdatePinListEvent -> RenderGroupUpdatePinList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is GroupJoinRequestEvent -> RenderGroupJoinRequest(baseNote, backgroundColor, accountViewModel, nav)
+        is GroupLeaveRequestEvent -> RenderGroupLeaveRequest(baseNote, backgroundColor, accountViewModel, nav)
+        is GroupAdminsEvent -> RenderGroupAdmins(baseNote, accountViewModel, nav)
+        is GroupMembersEvent -> RenderGroupMembers(baseNote, accountViewModel, nav)
+        is GroupRolesEvent -> RenderGroupRoles(baseNote, accountViewModel, nav)
+        is GroupParticipantsEvent -> RenderGroupParticipants(baseNote, accountViewModel, nav)
+        is GroupPinnedEvent -> RenderGroupPinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ChannelHideMessageEvent -> RenderChannelHideMessage(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ChannelMuteUserEvent -> RenderChannelMuteUser(baseNote, backgroundColor, accountViewModel, nav)
+        is PublicChatListEvent -> RenderPublicChatList(baseNote, backgroundColor, accountViewModel, nav)
+        is EphemeralChatListEvent -> RenderEphemeralChatList(baseNote, backgroundColor, accountViewModel, nav)
+        is EphemeralChatEvent -> RenderEphemeralChat(baseNote, backgroundColor, accountViewModel, nav)
+        is GeohashChatEvent -> RenderGeohashChat(baseNote, backgroundColor, accountViewModel, nav)
+        is GeohashPresenceEvent -> RenderGeohashPresence(baseNote, nav)
+        is AdminCommandEvent -> RenderNestsAdminCommand(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CommunityRulesEvent -> RenderCommunityRules(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is LiveActivitiesRaidEvent -> RenderLiveActivityRaid(baseNote, backgroundColor, accountViewModel, nav)
+        is ConcordChatEditEvent -> RenderConcordChatEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ConcordTimerNoticeEvent -> RenderConcordTimerNotice(baseNote, accountViewModel, nav)
+        is ControlEditionEvent -> RenderConcordControlEdition(baseNote)
+        is ConcordInviteBundleEvent -> RenderConcordInviteBundle(baseNote)
+        is ConcordCommunityListEvent -> RenderPrivateKindCard(baseNote)
+        is ConcordCommunityListFragmentEvent -> RenderPrivateKindCard(baseNote)
+        is ConcordInviteListEvent -> RenderPrivateKindCard(baseNote)
+        is RelayInviteRequestEvent -> RenderRelayInviteRequest(baseNote)
+        is RelayRoleEvent -> RenderRelayRole(baseNote, backgroundColor, accountViewModel, nav)
+
+        // Encrypted and protocol plumbing (MLS, gift wraps, wallet connect, calls, push): a card
+        // that names the kind, never the ciphertext; zap requests and key packages show their public fields.
+        // Zaps and payment requests
+        is ZapRequestEvent -> RenderZapRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is PrivateZapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Bolt)
+        is Bolt12ZapIntentEvent -> RenderBolt12ZapIntent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        // NIP-47 wallet connect
+        is NwcInfoEvent -> RenderNwcInfo(baseNote)
+        is NwcRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
+        is NwcResponseEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
+        is NwcNotificationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        // CLINK
+        is OfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Storefront)
+        is DebitEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
+        is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
+        // NIP-60 Cashu wallet
+        is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
+        is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
+        is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
+        is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
+        // Marmot MLS (KeyPackageEvent 30443 and LegacyKeyPackageEvent 443 share PublishedKeyPackage)
+        is PublishedKeyPackage -> RenderMarmotKeyPackage(baseNote)
+        is KeyPackageRelayListEvent -> RenderKeyPackageRelayList(baseNote, backgroundColor, accountViewModel, nav)
+        is WelcomeEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.GroupAdd)
+        is GroupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Groups)
+        is NotificationRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        is TokenRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        is TokenListEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        is TokenRemovalEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
+        // NIP-59 gift wraps and seals (EphemeralGiftWrapEvent extends GiftWrapEvent)
+        is GiftWrapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Mail)
+        is SealEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
+        is PnsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
+        // WebRTC calls
+        is CallOfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
+        is CallAnswerEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
+        is CallIceCandidateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.SettingsInputAntenna)
+        is CallRenegotiateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+        is CallHangupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
+        is CallRejectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
+        // Remote signing, push, wake-up
+        is NostrConnectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.PhonelinkLock)
+        is PushRegistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        is PushDeregistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
+        is PushPreferencesEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Tune)
+        is WakeUpEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+        // Key decoupling
+        is EncryptionKeyListEvent -> RenderEncryptionKeyList(baseNote)
+        is EncryptionKeyRequestEvent -> RenderEncryptionKeyRequest(baseNote)
+        is EncryptionKeyTransferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+
+        // NIP-90 job requests and results. After the DVM kinds above that keep their own cards.
+        // Base-class branches: they must stay AFTER the existing `is DvmContentDiscoveryResponseEvent` and
+        // `is DvmStatusEvent` branches (both DvmResponseEvent subclasses), which keep their own renderers.
+        is DvmRequestEvent -> RenderDvmRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is DvmResponseEvent -> RenderDvmResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is DvmHeartbeatEvent -> RenderDvmHeartbeat(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+
+        // Git CI, repository state and developer records.
+        is CiWorkflowProgressEvent -> RenderCiWorkflowProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CiWorkflowResultEvent -> RenderCiWorkflowResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CiJobResultEvent -> RenderCiJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CiManualTriggerEvent -> RenderCiManualTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CiServiceRequestEvent -> RenderCiServiceRequest(baseNote, accountViewModel, nav)
+        is CiServiceStopEvent -> RenderCiServiceStop(baseNote, accountViewModel, nav)
+        is CiCoordinatorAdvertisementEvent -> RenderCiCoordinatorAdvertisement(baseNote)
+        is CiRequestReadinessListEvent -> RenderCiRequestReadinessList(baseNote, accountViewModel, nav)
+        is CiRepositoryStatusEvent -> RenderCiRepositoryStatus(baseNote)
+        is CiSecretUpdateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+        is GitRepositoryStateEvent -> RenderGitRepositoryState(baseNote)
+        is UserGraspListEvent -> RenderUserGraspList(baseNote)
+        is IdentityProofEvent -> RenderIdentityProof(baseNote)
+        is AssetBundleEvent -> RenderAssetBundle(baseNote)
+        is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote)
+        is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
+        is AppDataEvent -> RenderAppData(baseNote)
+        is NNSEvent -> RenderNNS(baseNote)
+
+        // Buzz agents, workflows, teams and projects; OpenAgents capabilities; ContextVM.
+        is AgentProfileEvent -> RenderAgentProfile(baseNote)
+        is ManagedAgentEvent -> RenderManagedAgent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is PersonaEvent -> RenderPersona(baseNote)
+        is TeamEvent -> RenderAgentTeam(baseNote)
+        is TeamCatalogEvent -> RenderAgentTeamCatalog(baseNote)
+        is ProjectEvent -> RenderAgentProject(baseNote)
+        is ArtifactEvent -> RenderAgentArtifact(baseNote, backgroundColor, accountViewModel, nav)
+        is ArtifactRemovalEvent -> RenderAgentArtifactRemoval(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is AuditEntryEvent -> RenderAgentAuditEntry(baseNote, accountViewModel, nav)
+        is WorkflowDefEvent -> RenderWorkflowDefinition(baseNote)
+        is WorkflowTriggerEvent -> RenderWorkflowTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is WorkflowTriggeredEvent, is WorkflowStepStartedEvent, is WorkflowStepCompletedEvent, is WorkflowStepFailedEvent, is WorkflowCompletedEvent, is WorkflowFailedEvent, is WorkflowCancelledEvent, is WorkflowApprovalRequestedEvent, is WorkflowApprovalGrantedEvent, is WorkflowApprovalDeniedEvent -> RenderWorkflowLifecycle(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ApprovalGrantEvent, is ApprovalDenyEvent -> RenderWorkflowApprovalDecision(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is CapabilityDiscoveryEvent -> RenderCapabilityDiscovery(baseNote, accountViewModel, nav)
+        is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+        is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
+        is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote)
+        is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
+        is EventReminderEvent -> RenderEventReminder(baseNote)
+        is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)
+        is EngramEvent -> RenderEngram(baseNote)
+        is ObserverFrameEvent -> RenderObserverFrame(baseNote)
+        is PairingEvent -> RenderAgentPairing(baseNote)
+        is PushLeaseEvent -> RenderPushLease(baseNote)
 
         else -> {
             RenderTextEvent(
