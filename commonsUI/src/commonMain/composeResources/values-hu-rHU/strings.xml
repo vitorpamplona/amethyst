@@ -136,7 +136,9 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Közvetlen webcím használata</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_description">A nevük helyett ez jelenik meg. Titkosítva van, így csak Ön láthatja.</string>
     <string name="nickname_label">Becenév</string>
+    <string name="nickname_note_label">Privát jegyzet</string>
     <string name="nickname_save">Mentés</string>
     <string name="nickname_cancel">Mégse</string>
     <string name="git_status_open">Nyitva</string>
@@ -362,6 +364,8 @@
     <string name="qr_scanner_no_code_in_image">Nem található QR-kód a képen</string>
     <string name="qr_scanner_clipboard_empty">A vágólapon nincs semmi a beolvasáshoz</string>
     <string name="qr_scanner_pick_one">Érintse meg a beolvasandó kódot</string>
+    <string name="qr_scanner_desktop_title">QR-kód beolvasása</string>
+    <string name="qr_scanner_desktop_hint">Ezen a számítógépen nincs kamera. Nyissa meg a kód képét, vagy másolja ki a kódot (kép vagy szöveg formájában), és illessze be ide.</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
         <item quantity="other">%1$s darabot sikerült beolvasni a(z) %2$s darab közül, folytatás</item>
@@ -770,6 +774,7 @@
     <string name="quick_action_select">Kiválasztás</string>
     <string name="share_as_image_generating">Előnézet előállítása…</string>
     <string name="share_as_image_watermark">Megosztva az Amethysten keresztül·</string>
+    <string name="share_as_image_failed">Nem sikerült megosztani a képet</string>
     <string name="share_as_qr">Megosztás QR-kódként</string>
     <string name="share_as_qr_mode_web">Webes hivatkozás</string>
     <string name="share_as_qr_mode_nostr">Nostr hivatkozás</string>
