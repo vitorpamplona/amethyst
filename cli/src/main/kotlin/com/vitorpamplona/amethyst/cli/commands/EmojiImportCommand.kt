@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions.OnConflict
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiArchiveLimits
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiImport
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.extractEmojiArchive
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
@@ -38,7 +39,15 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * `amy emoji import PACK SOURCE` — bulk-adds emojis to one of your packs in a single new
@@ -50,6 +59,8 @@ import java.io.File
  * A failed upload doesn't stop the rest: it is reported under `failed`.
  */
 object EmojiImportCommand {
+    private const val PARALLEL_UPLOADS = 4
+
     private class ImageFile(
         val name: String,
         val file: File,
@@ -74,20 +85,28 @@ object EmojiImportCommand {
         try {
             val images: List<ImageFile>
             var listed: List<EmojiUrlTag> = emptyList()
-            var tooLarge: List<String> = emptyList()
+            val tooLarge = mutableListOf<String>()
+            var truncated = false
             var badLines: List<Int> = emptyList()
             when {
                 source.isDirectory -> {
-                    images =
+                    val found =
                         source
                             .walkTopDown()
                             .onEnter { it == source || !it.name.startsWith(".") }
                             .filter { it.isFile && !it.name.startsWith(".") && EmojiImport.isImageFileName(it.name) }
                             .sortedBy { it.relativeTo(source).path.lowercase() }
-                            .map { ImageFile(it.name, it) }
                             .toList()
+                    // The limits a .zip gets: each file is read whole into memory to hash and upload it.
+                    val (small, big) = found.partition { it.length() <= EmojiArchiveLimits.MAX_ENTRY_BYTES }
+                    big.mapTo(tooLarge) { it.name }
+                    truncated = small.size > EmojiArchiveLimits.MAX_IMAGES
+                    images = small.take(EmojiArchiveLimits.MAX_IMAGES).map { ImageFile(it.name, it) }
                 }
                 EmojiImport.isZipFileName(source.name) -> {
+                    if (source.length() > EmojiArchiveLimits.MAX_ARCHIVE_BYTES) {
+                        return Output.error("bad_args", "${source.name} is over ${EmojiArchiveLimits.MAX_ARCHIVE_BYTES / (1024 * 1024)} MB")
+                    }
                     val archive =
                         try {
                             source.inputStream().use { extractEmojiArchive(it) }
@@ -96,9 +115,15 @@ object EmojiImportCommand {
                         }
                     archive.files.forEach { tempFiles.add(it.path.toFile()) }
                     images = archive.files.map { ImageFile(it.fileName, it.path.toFile()) }
-                    tooLarge = archive.tooLarge
+                    tooLarge.addAll(archive.tooLarge)
+                    truncated = archive.truncated
                 }
-                EmojiImport.isImageFileName(source.name) -> images = listOf(ImageFile(source.name, source))
+                EmojiImport.isImageFileName(source.name) -> {
+                    if (source.length() > EmojiArchiveLimits.MAX_ENTRY_BYTES) {
+                        return Output.error("bad_args", "${source.name} is over ${EmojiArchiveLimits.MAX_ENTRY_BYTES / (1024 * 1024)} MB")
+                    }
+                    images = listOf(ImageFile(source.name, source))
+                }
                 else -> {
                     val parsed = EmojiImport.parseList(source.readText())
                     images = emptyList()
@@ -108,19 +133,19 @@ object EmojiImportCommand {
             }
             if (images.isEmpty() && listed.isEmpty()) return Output.error("bad_args", "no images or `shortcode url` lines found in $source")
 
-            val codes = EmojiImport.assignShortcodes(images.map { it.name })
-            val named = images.zip(codes).mapNotNull { (image, code) -> code?.let { it to image } }
-            val unnamed = images.zip(codes).filter { it.second == null }.map { it.first.name }
-
             return EmojiCommands.withOwnPack(dataDir, packArg, timeoutMs) { ctx, pack, outbox ->
-                val existing = existingCodes(ctx, pack, isPrivate)
-                val (toUpload, alreadyThere) = named.partition { (code, _) -> replace || code !in existing }
+                // Decrypted before any upload: failing afterwards would strand them all.
+                val existing =
+                    existingCodes(ctx, pack, isPrivate)
+                        ?: return@withOwnPack Output.error("decrypt_failed", "could not decrypt the private emojis of '${pack.dTag()}'")
+                val plan = EmojiImport.plan(images.map { it.name }, existing, replace)
 
                 val extra =
                     mapOf(
                         "source" to source.path,
-                        "unnamed" to unnamed,
+                        "unnamed" to plan.unnamed,
                         "too_large" to tooLarge,
+                        "truncated" to truncated,
                         "bad_lines" to badLines,
                     )
 
@@ -130,58 +155,88 @@ object EmojiImportCommand {
                             "d_tag" to pack.dTag(),
                             "private" to isPrivate,
                             "dry_run" to true,
-                            "to_upload" to toUpload.map { (code, image) -> mapOf("shortcode" to code, "file" to image.name) },
+                            "to_upload" to plan.toUpload.map { (index, code) -> mapOf("shortcode" to code, "file" to images[index].name) },
                             "to_add" to listed.map { mapOf("shortcode" to it.code, "url" to it.url) },
-                            "skipped" to alreadyThere.map { it.first },
+                            "skipped" to plan.skipped,
                         ) + extra,
                     )
                     return@withOwnPack 0
                 }
 
-                val uploaded = mutableListOf<EmojiUrlTag>()
-                val failed = mutableListOf<Map<String, String>>()
+                val uploads = arrayOfNulls<EmojiUrlTag>(plan.toUpload.size)
+                val failed = ConcurrentLinkedQueue<Map<String, String>>()
                 var server: String? = null
-                if (toUpload.isNotEmpty()) {
-                    server = serverFlag ?: defaultServer(ctx, timeoutMs) ?: return@withOwnPack Output.error("no_servers", "no --server given and no Blossom server in your kind:10063 list")
-                    val client = BlossomClient()
-                    toUpload.forEachIndexed { index, (code, image) ->
-                        System.err.println("[${index + 1}/${toUpload.size}] uploading ${image.name} as :$code:")
-                        try {
-                            val bytes = image.file.readBytes()
-                            val auth = BlossomAuth.createUploadAuth(sha256(bytes).toHexKey(), bytes.size.toLong(), "Upload emoji $code", ctx.signer, servers = listOf(server))
-                            val mime = EmojiImport.imageMimeTypeOf(image.name) ?: "application/octet-stream"
-                            val url = client.upload(bytes, mime, server, auth).url
-                            if (url.isNullOrBlank()) failed.add(mapOf("file" to image.name, "error" to "server returned no url")) else uploaded.add(EmojiUrlTag(code, url))
-                        } catch (e: BlossomPaymentException) {
-                            return@withOwnPack Output.error("payment_required", "server $server requires payment: ${e.payment.reason ?: "402"}")
-                        } catch (e: Exception) {
-                            if (e is CancellationException) throw e
-                            failed.add(mapOf("file" to image.name, "error" to (e.message ?: e::class.simpleName ?: "error")))
-                        }
+                if (plan.toUpload.isNotEmpty()) {
+                    val target = serverFlag ?: defaultServer(ctx, timeoutMs) ?: return@withOwnPack Output.error("no_servers", "no --server given and no Blossom server in your kind:10063 list")
+                    server = target
+                    val paymentRequired = AtomicReference<BlossomPaymentException?>(null)
+                    uploadAll(ctx, target, plan.toUpload.map { (index, code) -> code to images[index] }, uploads, failed, paymentRequired)
+                    paymentRequired.get()?.let { e ->
+                        return@withOwnPack Output.error("payment_required", "server $target requires payment: ${e.payment.reason ?: "402"}")
                     }
-                    if (uploaded.isEmpty() && listed.isEmpty()) {
-                        return@withOwnPack Output.error("upload_failed", "every upload to $server failed: ${failed.firstOrNull()?.get("error")}")
+                    if (uploads.all { it == null } && listed.isEmpty()) {
+                        return@withOwnPack Output.error("upload_failed", "every upload to $target failed: ${failed.firstOrNull()?.get("error")}")
                     }
                 }
+                val uploaded = uploads.filterNotNull()
 
                 val onConflict = if (replace) OnConflict.REPLACE else OnConflict.SKIP
                 val result = EmojiPackActions.addEmojis(ctx.signer, pack, uploaded + listed, isPrivate, onConflict)
-                val alsoSkipped = alreadyThere.map { it.first }
-                val merged = EmojiPackActions.AddResult(result.event, result.added, result.replaced, alsoSkipped + result.skipped, result.invalid)
-                EmojiCommands.emitAddResult(ctx, pack, merged, outbox, isPrivate, extra + mapOf("server" to server, "uploaded" to uploaded.size, "failed" to failed))
+                val merged = EmojiPackActions.AddResult(result.event, result.added, result.replaced, plan.skipped + result.skipped, result.invalid)
+                EmojiCommands.emitAddResult(ctx, pack, merged, outbox, isPrivate, extra + mapOf("server" to server, "uploaded" to uploaded.size, "failed" to failed.toList()))
             }
         } finally {
             tempFiles.forEach { it.delete() }
         }
     }
 
+    /**
+     * Uploads each `(shortcode, image)` of [jobs] to [server], [PARALLEL_UPLOADS] at a time, into
+     * the same index of [uploads] (so the pack keeps the batch's order). A 402 stops the rest.
+     */
+    private suspend fun uploadAll(
+        ctx: Context,
+        server: String,
+        jobs: List<Pair<String, ImageFile>>,
+        uploads: Array<EmojiUrlTag?>,
+        failed: ConcurrentLinkedQueue<Map<String, String>>,
+        paymentRequired: AtomicReference<BlossomPaymentException?>,
+    ) {
+        val client = BlossomClient()
+        val slots = Semaphore(PARALLEL_UPLOADS)
+        val started = AtomicInteger(0)
+        coroutineScope {
+            jobs.forEachIndexed { i, (code, image) ->
+                launch(Dispatchers.IO) {
+                    slots.withPermit {
+                        if (paymentRequired.get() != null) return@withPermit
+                        System.err.println("[${started.incrementAndGet()}/${jobs.size}] uploading ${image.name} as :$code:")
+                        try {
+                            val bytes = image.file.readBytes()
+                            val auth = BlossomAuth.createUploadAuth(sha256(bytes).toHexKey(), bytes.size.toLong(), "Upload emoji $code", ctx.signer, servers = listOf(server))
+                            val mime = EmojiImport.imageMimeTypeOf(image.name) ?: "application/octet-stream"
+                            val url = client.upload(bytes, mime, server, auth).url
+                            if (url.isNullOrBlank()) failed.add(mapOf("file" to image.name, "error" to "server returned no url")) else uploads[i] = EmojiUrlTag(code, url)
+                        } catch (e: BlossomPaymentException) {
+                            paymentRequired.compareAndSet(null, e)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            failed.add(mapOf("file" to image.name, "error" to (e.message ?: e::class.simpleName ?: "error")))
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** The shortcodes already in the bucket being added to; null when the private one can't be decrypted. */
     private suspend fun existingCodes(
         ctx: Context,
         pack: EmojiPackEvent,
         isPrivate: Boolean,
-    ): Set<String> =
+    ): Set<String>? =
         if (isPrivate) {
-            pack.privateEmojis(ctx.signer)?.map { it.code }?.toSet() ?: emptySet()
+            pack.privateEmojis(ctx.signer)?.mapTo(HashSet()) { it.code }
         } else {
             pack.publicEmojiCodes().toSet()
         }

@@ -765,6 +765,17 @@ class AndroidMediaUploader(
 
     override fun mimeType(uri: MediaUri): String? = appContext.contentResolver.getType(uri)
 
+    override fun fileSize(uri: MediaUri): Long? =
+        try {
+            appContext.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use {
+                val idx = it.getColumnIndex(OpenableColumns.SIZE)
+                if (idx >= 0 && it.moveToFirst() && !it.isNull(idx)) it.getLong(idx) else null
+            }
+        } catch (e: Exception) {
+            Log.w("AndroidMediaUploader", "Failed to read the size of $uri", e)
+            null
+        }
+
     override suspend fun stripMetadata(
         uri: MediaUri,
         mimeType: String?,

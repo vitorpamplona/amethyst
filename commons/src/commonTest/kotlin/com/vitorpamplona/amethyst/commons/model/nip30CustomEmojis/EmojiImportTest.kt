@@ -79,4 +79,17 @@ class EmojiImportTest {
         )
         assertEquals(listOf(7, 8), parsed.badLines)
     }
+
+    @Test
+    fun planSkipsExistingUnlessReplacing() {
+        val names = listOf("smile.png", "wave.png", "日本.png", "smile.gif")
+        val plan = EmojiImport.plan(names, existingCodes = setOf("wave"))
+        assertEquals(listOf(0 to "smile", 3 to "smile_2"), plan.toUpload)
+        assertEquals(listOf("wave"), plan.skipped)
+        assertEquals(listOf("日本.png"), plan.unnamed)
+
+        val replacing = EmojiImport.plan(names, existingCodes = setOf("wave"), replace = true)
+        assertEquals(listOf(0 to "smile", 1 to "wave", 3 to "smile_2"), replacing.toUpload)
+        assertTrue(replacing.skipped.isEmpty())
+    }
 }

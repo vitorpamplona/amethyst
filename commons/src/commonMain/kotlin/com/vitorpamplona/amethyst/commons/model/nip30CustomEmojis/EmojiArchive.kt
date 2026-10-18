@@ -33,12 +33,23 @@ class ExtractedEmojiArchive(
     val files: List<ExtractedEmojiFile>,
     /** Image entries left out for being larger than [EmojiArchiveLimits.MAX_ENTRY_BYTES]. */
     val tooLarge: List<String>,
+    /** True when reading stopped at [EmojiArchiveLimits.MAX_IMAGES] or [EmojiArchiveLimits.MAX_TOTAL_BYTES]. */
+    val truncated: Boolean = false,
 )
 
 object EmojiArchiveLimits {
-    const val MAX_IMAGES = 2_000
+    /** The largest archive read at all: it is held in memory while it is unpacked. */
+    const val MAX_ARCHIVE_BYTES = 128L * 1024 * 1024
+
+    /** The largest single image taken in, from an archive or on its own. */
     const val MAX_ENTRY_BYTES = 10L * 1024 * 1024
+
+    /** Reading stops (and the archive counts as truncated) past this many images or bytes of them. */
+    const val MAX_IMAGES = 2_000
     const val MAX_TOTAL_BYTES = 256L * 1024 * 1024
+
+    /** Everything inflated, kept or not: past this the archive is refused as a zip bomb. */
+    const val MAX_INFLATED_BYTES = 512L * 1024 * 1024
 }
 
 /**
@@ -46,7 +57,9 @@ object EmojiArchiveLimits {
  * folders, other files, and macOS metadata (`__MACOSX/`, `._*`). The caller deletes the files
  * through `platformFileSystem`. Null when this platform cannot read zip archives.
  *
- * Throws [IllegalArgumentException] for a corrupt archive or one past [EmojiArchiveLimits]
- * (a zip bomb), deleting whatever it already wrote.
+ * Stops early, flagged [ExtractedEmojiArchive.truncated], at [EmojiArchiveLimits.MAX_IMAGES] or
+ * [EmojiArchiveLimits.MAX_TOTAL_BYTES]. Throws [IllegalArgumentException] for a corrupt archive or
+ * one that inflates past [EmojiArchiveLimits.MAX_INFLATED_BYTES] (a zip bomb), deleting whatever
+ * it already wrote.
  */
 expect suspend fun extractEmojiArchive(zip: ByteArray): ExtractedEmojiArchive?

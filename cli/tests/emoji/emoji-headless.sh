@@ -12,6 +12,8 @@
 #      file (`party parrot.gif` → party_parrot, a second `smile` → smile_2),
 #      skips shortcodes already in the pack without uploading them, and from a
 #      .zip skips non-images and macOS metadata. `--dry-run` publishes nothing.
+#      A folder over the image limit stops at it (`truncated`) and an image over
+#      10 MB is reported in `too_large`.
 #      A `shortcode url` text list is added without uploads.
 #   4. Bob reads Alice's pack from the relay: public emojis only, no private
 #      count; he can `use` it in his emoji list and `unuse` it again.
@@ -140,6 +142,14 @@ DRY="$(alice emoji import cats "$IMG" --server "$BLOSSOM_URL" --dry-run)"
 check import-dry "$DRY" '.dry_run and ([.to_upload[].shortcode] | sort) == ["party_parrot","smile","smile_2"] and .skipped == ["grin"]'
 IMPORT="$(alice emoji import cats "$IMG" --server "$BLOSSOM_URL")"
 check import-folder "$IMPORT" '.uploaded == 3 and (.added | sort) == ["party_parrot","smile","smile_2"] and .skipped == ["grin"] and .failed == []'
+
+step "import limits (dry run)"
+MANY="$STATE_DIR/many"
+mkdir -p "$MANY"
+for i in $(seq 1 2003); do printf 'x' >"$MANY/e$i.png"; done
+head -c $((11 * 1024 * 1024)) /dev/zero >"$MANY/huge.png"
+LIMITS="$(alice emoji import cats "$MANY" --dry-run)"
+check import-limits "$LIMITS" '.truncated and (.to_upload | length) == 2000 and .too_large == ["huge.png"]'
 
 step "import a zip"
 python3 - "$STATE_DIR/pack.zip" <<'PY'

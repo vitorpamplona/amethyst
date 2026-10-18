@@ -31,6 +31,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiArchiveLimits
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiImport
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.extractEmojiArchive
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -39,18 +40,27 @@ import com.vitorpamplona.amethyst.commons.service.uploads.lastPathSegmentOrNull
 import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okio.Path
 import kotlin.reflect.KClass
+
+/** Uploads running at once during an import. */
+private const val PARALLEL_UPLOADS = 3
 
 @Stable
 class EmojiPackViewModel(
@@ -145,13 +155,6 @@ class EmojiPackViewModel(
         importTempFiles.clear()
     }
 
-    private fun setItemStatus(
-        index: Int,
-        status: EmojiImportItem.Status,
-    ) {
-        importItems = importItems.mapIndexed { i, item -> if (i == index) item.copy(status = status) else item }.toImmutableList()
-    }
-
     /**
      * Uploads [files] (images, and the images inside any .zip among them) to the default media
      * server and adds them to this pack in one new version of it, each named after its file.
@@ -165,19 +168,39 @@ class EmojiPackViewModel(
         clearImport()
         importRunning = true
         try {
+            // Fail before uploading anything rather than after: a pack that is gone, or a private
+            // bucket the signer cannot decrypt, would otherwise strand every upload.
+            val packEvent = account.ownedEmojiPacks.getOwnedEmojiPackEvent(packIdentifier) ?: return@withContext
+            val existing =
+                if (isPrivate) {
+                    val privateTags = packEvent.privateTags(account.signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
+                    privateTags.mapNotNullTo(HashSet(), EmojiUrlTag::parseCode)
+                } else {
+                    packEvent.publicEmojiCodes().toSet()
+                }
+
             val candidates = mutableListOf<Pair<String, SelectedMedia>>()
             val unsupported = mutableListOf<String>()
             val unreadable = mutableListOf<String>()
             val tooLarge = mutableListOf<String>()
+            val truncated = mutableListOf<String>()
 
             for (media in files) {
                 val name = uploader.displayName(media.uri) ?: media.uri.lastPathSegmentOrNull() ?: media.uri.toString()
                 val mimeType = media.mimeType ?: uploader.mimeType(media.uri)
+                val size = uploader.fileSize(media.uri)
                 if (EmojiImport.isZipFileName(name) || EmojiImport.isZipMimeType(mimeType)) {
+                    // The archive is read whole into memory, so a huge one is refused unread.
+                    if (size != null && size > EmojiArchiveLimits.MAX_ARCHIVE_BYTES) {
+                        tooLarge.add(name)
+                        continue
+                    }
                     val archive =
                         try {
                             uploader.readBytes(media.uri)?.let { extractEmojiArchive(it) }
-                        } catch (e: IllegalArgumentException) {
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.w("EmojiPackViewModel", "Could not read the archive $name", e)
                             null
                         }
                     if (archive == null) {
@@ -189,44 +212,48 @@ class EmojiPackViewModel(
                         candidates.add(extracted.fileName to SelectedMedia(mediaUriOfFile(extracted.path), EmojiImport.imageMimeTypeOf(extracted.fileName)))
                     }
                     tooLarge.addAll(archive.tooLarge)
+                    if (archive.truncated) truncated.add(name)
                 } else if (mimeType?.startsWith("image/") == true || EmojiImport.isImageFileName(name)) {
-                    candidates.add(name to SelectedMedia(media.uri, mimeType ?: EmojiImport.imageMimeTypeOf(name)))
+                    if (size != null && size > EmojiArchiveLimits.MAX_ENTRY_BYTES) {
+                        tooLarge.add(name)
+                    } else {
+                        candidates.add(name to SelectedMedia(media.uri, mimeType ?: EmojiImport.imageMimeTypeOf(name)))
+                    }
                 } else {
                     unsupported.add(name)
                 }
             }
 
-            val codes = EmojiImport.assignShortcodes(candidates.map { it.first })
-            val pack = account.ownedEmojiPacks.getPack(packIdentifier)
-            val existing = (if (isPrivate) pack?.privateEmojis else pack?.publicEmojis).orEmpty().mapTo(HashSet()) { it.code }
-
-            val unnamed = mutableListOf<String>()
-            val skipped = mutableListOf<String>()
-            val toUpload = mutableListOf<Pair<EmojiImportItem, SelectedMedia>>()
-            candidates.forEachIndexed { index, (name, media) ->
-                val code = codes[index]
-                when {
-                    code == null -> unnamed.add(name)
-                    code in existing -> skipped.add(code)
-                    else -> toUpload.add(EmojiImportItem(code, name, media.uri.toString(), EmojiImportItem.Status.WAITING) to media)
+            val plan = EmojiImport.plan(candidates.map { it.first }, existing)
+            val items =
+                plan.toUpload.map { (index, code) ->
+                    val (name, media) = candidates[index]
+                    EmojiImportItem(code, name, media.uri.toString())
                 }
-            }
-            importItems = toUpload.map { it.first }.toImmutableList()
+            importItems = items.toImmutableList()
 
-            val uploaded = mutableListOf<EmojiUrlTag>()
-            var failed = 0
+            // A few at a time: faster than one by one, without flooding the media server.
+            val uploads = arrayOfNulls<EmojiUrlTag>(items.size)
             var failureReason: String? = null
-            toUpload.forEachIndexed { index, (item, media) ->
-                setItemStatus(index, EmojiImportItem.Status.UPLOADING)
-                val url = uploadToDefaultServer(media, account, uploader, onError = { _, message -> failureReason = message })
-                if (url != null) {
-                    uploaded.add(EmojiUrlTag(item.shortcode, url))
-                    setItemStatus(index, EmojiImportItem.Status.DONE)
-                } else {
-                    failed++
-                    setItemStatus(index, EmojiImportItem.Status.FAILED)
+            val slots = Semaphore(PARALLEL_UPLOADS)
+            coroutineScope {
+                plan.toUpload.forEachIndexed { i, (index, code) ->
+                    launch {
+                        slots.withPermit {
+                            val item = items[i]
+                            item.status = EmojiImportItem.Status.UPLOADING
+                            val url = uploadToDefaultServer(candidates[index].second, account, uploader, onError = { _, message -> failureReason = message })
+                            if (url != null) {
+                                uploads[i] = EmojiUrlTag(code, url)
+                                item.status = EmojiImportItem.Status.DONE
+                            } else {
+                                item.status = EmojiImportItem.Status.FAILED
+                            }
+                        }
+                    }
                 }
             }
+            val uploaded = uploads.filterNotNull()
 
             val result =
                 if (uploaded.isNotEmpty()) {
@@ -238,13 +265,14 @@ class EmojiPackViewModel(
             importResult =
                 EmojiImportResult(
                     added = result?.added?.size ?: 0,
-                    skipped = (skipped + result?.skipped.orEmpty()).toImmutableList(),
-                    failed = failed,
+                    skipped = (plan.skipped + result?.skipped.orEmpty()).toImmutableList(),
+                    failed = items.size - uploaded.size,
                     failureReason = failureReason,
-                    unnamed = unnamed.toImmutableList(),
+                    unnamed = plan.unnamed.toImmutableList(),
                     tooLarge = tooLarge.toImmutableList(),
                     unsupported = unsupported.toImmutableList(),
                     unreadable = unreadable.toImmutableList(),
+                    truncated = truncated.toImmutableList(),
                 )
         } finally {
             importRunning = false
@@ -266,14 +294,20 @@ class EmojiPackViewModel(
     }
 }
 
-/** One image of an import: the shortcode it gets, its file, a preview Coil can load, and how its upload went. */
-@Immutable
-data class EmojiImportItem(
+/**
+ * One image of an import: the shortcode it gets, its file, a preview Coil can load, and how its
+ * upload is going. [status] is its own snapshot state, so a change redraws only this image's tile
+ * and the parallel uploads can each write theirs.
+ */
+@Stable
+class EmojiImportItem(
     val shortcode: String,
     val fileName: String,
     val preview: String,
-    val status: Status,
+    status: Status = Status.WAITING,
 ) {
+    var status by mutableStateOf(status)
+
     enum class Status { WAITING, UPLOADING, DONE, FAILED }
 }
 
@@ -290,4 +324,6 @@ data class EmojiImportResult(
     val tooLarge: ImmutableList<String>,
     val unsupported: ImmutableList<String>,
     val unreadable: ImmutableList<String>,
+    /** Archives only partly read, for being over [EmojiArchiveLimits.MAX_IMAGES] or [EmojiArchiveLimits.MAX_TOTAL_BYTES]. */
+    val truncated: ImmutableList<String> = persistentListOf(),
 )

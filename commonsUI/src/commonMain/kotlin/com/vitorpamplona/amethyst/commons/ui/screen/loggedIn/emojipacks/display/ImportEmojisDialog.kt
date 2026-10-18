@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.display
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -34,7 +35,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -42,10 +42,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -64,12 +69,14 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRowScope
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -91,6 +98,7 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiArchiveLimits
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiImport
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -113,6 +121,8 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_import_reading
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_skipped
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_too_large
+import com.vitorpamplona.amethyst.commons.resources.emoji_import_truncated
+import com.vitorpamplona.amethyst.commons.resources.emoji_import_truncated_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_unnamed
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_unnamed_hint
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_unreadable
@@ -125,7 +135,10 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableList
 import org.jetbrains.compose.resources.StringResource
 
-private val EMOJI_IMPORT_MIME_TYPES = listOf("image/*", "application/zip", "application/x-zip-compressed")
+// Providers label .zip files inconsistently, octet-stream included; the view model tells files
+// apart by name and lists anything else as unsupported.
+private val EMOJI_IMPORT_MIME_TYPES =
+    listOf("image/*", "application/zip", "application/x-zip-compressed", "application/x-zip", "application/octet-stream")
 
 /** Names shown per leftover group before the rest collapse into "+N more". */
 private const val MAX_NAMES_PER_GROUP = 12
@@ -213,7 +226,7 @@ fun ImportEmojisDialogView(
                     ImportOptions(isPrivate, onPrivateChange, onChooseFiles)
                 } else {
                     if (running) UploadProgress(items)
-                    if (items.isNotEmpty()) ImportGrid(items)
+                    if (items.isNotEmpty()) ImportGrid(items, running)
                     if (finished != null) ImportLeftovers(finished, showDivider = items.isNotEmpty())
                 }
             }
@@ -252,17 +265,18 @@ private fun HeroIcon(kind: HeroKind) {
                 HeroKind.SUCCESS -> Triple(MaterialSymbols.AutoAwesome, colors.primaryContainer, colors.onPrimaryContainer)
                 HeroKind.NOTHING_ADDED -> Triple(MaterialSymbols.ErrorOutline, colors.errorContainer, colors.onErrorContainer)
             }
-        val pop by animateFloatAsState(
-            targetValue = 1f,
-            animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        )
+        // Springs up from smaller each time the face changes (Crossfade composes it afresh).
+        val pop = remember { Animatable(0.6f) }
+        LaunchedEffect(Unit) {
+            pop.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+        }
         Box(
             modifier =
                 Modifier
                     .size(56.dp)
                     .graphicsLayer {
-                        scaleX = pop
-                        scaleY = pop
+                        scaleX = pop.value
+                        scaleY = pop.value
                     }.clip(CircleShape)
                     .background(container),
             contentAlignment = Alignment.Center,
@@ -434,7 +448,9 @@ private fun UploadProgress(items: ImmutableList<EmojiImportItem>) {
             Text(text = stringRes(Res.string.emoji_import_reading), style = MaterialTheme.typography.titleSmall)
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth(), strokeCap = StrokeCap.Round)
         } else {
-            val finished = items.count { it.status == EmojiImportItem.Status.DONE || it.status == EmojiImportItem.Status.FAILED }
+            val finished by remember(items) {
+                derivedStateOf { items.count { it.status == EmojiImportItem.Status.DONE || it.status == EmojiImportItem.Status.FAILED } }
+            }
             val fraction by animateFloatAsState(finished.toFloat() / items.size)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -457,35 +473,40 @@ private fun UploadProgress(items: ImmutableList<EmojiImportItem>) {
     }
 }
 
-private val TileMinWidth = 64.dp
-private val TileGap = 8.dp
-
-/** As many equal columns as fit, so every full row spans the dialog edge to edge. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Lazy and height-capped: an archive can hold thousands of images, and only the visible tiles
+ * should be composed and decoded. Scrolls inside the dialog's own scroll.
+ */
 @Composable
-private fun ImportGrid(items: ImmutableList<EmojiImportItem>) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        val columns = maxOf(1, ((maxWidth + TileGap) / (TileMinWidth + TileGap)).toInt())
-        val tileWidth = (maxWidth - TileGap * (columns - 1)) / columns
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(TileGap),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            maxItemsInEachRow = columns,
-        ) {
-            items.forEach { item ->
-                key(item.shortcode) { ImportTile(item, Modifier.width(tileWidth)) }
-            }
+private fun ImportGrid(
+    items: ImmutableList<EmojiImportItem>,
+    running: Boolean,
+) {
+    val gridState = rememberLazyGridState()
+    // Follows the upload in flight: past the first rows it would otherwise run out of sight.
+    if (running) {
+        LaunchedEffect(items, gridState) {
+            snapshotFlow { items.indexOfFirst { it.status == EmojiImportItem.Status.UPLOADING } }
+                .collect { if (it >= 0) gridState.animateScrollToItem(it) }
         }
+    }
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 64.dp),
+        state = gridState,
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .heightIn(max = 340.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(items, key = { it.shortcode }) { item -> ImportTile(item) }
     }
 }
 
 /** One image: dim while waiting, a ring while uploading, a check that pops in when it lands. */
 @Composable
-private fun ImportTile(
-    item: EmojiImportItem,
-    modifier: Modifier,
-) {
+private fun ImportTile(item: EmojiImportItem) {
     val colors = MaterialTheme.colorScheme
     val done = item.status == EmojiImportItem.Status.DONE
     val failed = item.status == EmojiImportItem.Status.FAILED
@@ -501,10 +522,7 @@ private fun ImportTile(
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
     )
 
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(modifier = Modifier.size(56.dp)) {
             Box(
                 modifier =
@@ -595,7 +613,8 @@ private fun ImportLeftovers(
     val colors = MaterialTheme.colorScheme
     val hasAny =
         result.failed > 0 || result.skipped.isNotEmpty() || result.unnamed.isNotEmpty() ||
-            result.tooLarge.isNotEmpty() || result.unsupported.isNotEmpty() || result.unreadable.isNotEmpty()
+            result.tooLarge.isNotEmpty() || result.unsupported.isNotEmpty() || result.unreadable.isNotEmpty() ||
+            result.truncated.isNotEmpty()
     if (!hasAny) return
 
     if (showDivider) HorizontalDivider(color = colors.outlineVariant.copy(alpha = 0.6f))
@@ -614,6 +633,13 @@ private fun ImportLeftovers(
         LeftoverGroup(MaterialSymbols.Warning, colors.onSurfaceVariant, stringRes(Res.string.emoji_import_too_large), names = result.tooLarge)
         LeftoverGroup(MaterialSymbols.Block, colors.onSurfaceVariant, stringRes(Res.string.emoji_import_unsupported), names = result.unsupported)
         LeftoverGroup(MaterialSymbols.ErrorOutline, colors.error, stringRes(Res.string.emoji_import_unreadable), names = result.unreadable)
+        LeftoverGroup(
+            MaterialSymbols.Warning,
+            colors.onSurfaceVariant,
+            stringRes(Res.string.emoji_import_truncated),
+            hint = stringRes(Res.string.emoji_import_truncated_hint, EmojiArchiveLimits.MAX_IMAGES, EmojiArchiveLimits.MAX_TOTAL_BYTES / (1024 * 1024)),
+            names = result.truncated,
+        )
     }
 }
 

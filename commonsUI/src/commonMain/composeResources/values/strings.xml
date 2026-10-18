@@ -3259,6 +3259,8 @@
     <string name="emoji_import_too_large">Too large</string>
     <string name="emoji_import_unsupported">Not an image or .zip</string>
     <string name="emoji_import_unreadable">Could not open</string>
+    <string name="emoji_import_truncated">Only partly imported</string>
+    <string name="emoji_import_truncated_hint">An archive is read up to %1$d images or %2$d MB of them.</string>
     <string name="emoji_import_more">+%1$d more</string>
     <string name="emoji_import_cta">Import images or .zip</string>
     <string name="emoji_pack_empty_title">This pack is empty</string>

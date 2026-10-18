@@ -31,6 +31,7 @@ object EmojiImport {
     val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp", "avif", "apng", "svg", "bmp")
 
     private val INVALID_SHORTCODE_CHARS = Regex("[^A-Za-z0-9_-]+")
+    private val LIST_SEPARATOR = Regex("[\\s,]+")
 
     fun extensionOf(fileName: String) = baseName(fileName).substringAfterLast('.', "").lowercase()
 
@@ -79,6 +80,38 @@ object EmojiImport {
         }
     }
 
+    /** What to do with a batch of image files, decided before anything is uploaded. */
+    class Plan(
+        /** For each file to upload: its index in the batch and the shortcode it gets. */
+        val toUpload: List<Pair<Int, String>>,
+        /** Shortcodes already in the pack, left alone (and not uploaded). */
+        val skipped: List<String>,
+        /** Files whose name leaves no usable shortcode. */
+        val unnamed: List<String>,
+    )
+
+    /**
+     * Names [fileNames] with [assignShortcodes] and sets aside the ones whose shortcode is in
+     * [existingCodes] (unless [replace]) or that have no usable name.
+     */
+    fun plan(
+        fileNames: List<String>,
+        existingCodes: Set<String>,
+        replace: Boolean = false,
+    ): Plan {
+        val toUpload = mutableListOf<Pair<Int, String>>()
+        val skipped = mutableListOf<String>()
+        val unnamed = mutableListOf<String>()
+        assignShortcodes(fileNames).forEachIndexed { index, code ->
+            when {
+                code == null -> unnamed.add(fileNames[index])
+                !replace && code in existingCodes -> skipped.add(code)
+                else -> toUpload.add(index to code)
+            }
+        }
+        return Plan(toUpload, skipped, unnamed)
+    }
+
     class ParsedList(
         val emojis: List<EmojiUrlTag>,
         /** 1-based line numbers that are neither blank, a `#` comment, nor a valid entry. */
@@ -95,7 +128,7 @@ object EmojiImport {
         text.lineSequence().forEachIndexed { index, raw ->
             val line = raw.trim()
             if (line.isEmpty() || line.startsWith("#")) return@forEachIndexed
-            val parts = line.split(Regex("[\\s,]+"), limit = 2)
+            val parts = line.split(LIST_SEPARATOR, limit = 2)
             val code = parts[0].removePrefix(":").removeSuffix(":")
             val url = parts.getOrNull(1)?.trim()
             if (url != null && EmojiUrlTag.isValidShortcode(code) && (url.startsWith("https://") || url.startsWith("http://"))) {

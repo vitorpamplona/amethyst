@@ -45,13 +45,17 @@ actual fun DocumentSelectSingle(
     LaunchedEffect(Unit) { onPicked(null) }
 }
 
-/** The file name extensions the desktop file dialog shows for [mimeTypes]. */
+/**
+ * The file name extensions the desktop file dialog shows for [mimeTypes]: the subtype before any
+ * `+suffix` (`image/svg+xml` is `svg`). Catch-alls like octet-stream name no extension.
+ */
 private fun extensionsFor(mimeTypes: List<String>): Set<String> =
     mimeTypes.flatMapTo(HashSet()) { mime ->
         when (mime) {
             "image/*" -> IMAGE_EXTENSIONS
-            "application/zip", "application/x-zip-compressed" -> setOf("zip")
-            else -> setOf(mime.substringAfter('/').substringAfter('+'))
+            "application/zip", "application/x-zip-compressed", "application/x-zip" -> setOf("zip")
+            "application/octet-stream" -> emptySet()
+            else -> setOf(mime.substringAfter('/').substringBefore('+'))
         }
     }
 

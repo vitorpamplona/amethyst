@@ -100,4 +100,72 @@ class EmojiArchiveTest {
             dir.deleteRecursively()
         }
     }
+
+    /** Streams [size] zero bytes into one entry without holding them in memory. */
+    private fun ZipOutputStream.zeros(
+        name: String,
+        size: Long,
+    ) {
+        putNextEntry(ZipEntry(name))
+        val chunk = ByteArray(1 shl 20)
+        var left = size
+        while (left > 0) {
+            val n = minOf(left, chunk.size.toLong()).toInt()
+            write(chunk, 0, n)
+            left -= n
+        }
+        closeEntry()
+    }
+
+    private fun bomb(build: ZipOutputStream.() -> Unit): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { it.build() }
+        return out.toByteArray()
+    }
+
+    @Test
+    fun aHugeNonImageEntryIsRefusedNotSilentlyInflated() {
+        val dir = Files.createTempDirectory("emoji-archive-test").toFile()
+        try {
+            val zip = bomb { zeros("padding.bin", EmojiArchiveLimits.MAX_INFLATED_BYTES + 1) }
+            assertFailsWith<IllegalArgumentException> { extractEmojiArchive(ByteArrayInputStream(zip), dir) }
+            assertEquals(0, dir.listFiles()!!.size)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun oversizedImagesCountTowardTheInflateBudget() {
+        val dir = Files.createTempDirectory("emoji-archive-test").toFile()
+        try {
+            val each = EmojiArchiveLimits.MAX_ENTRY_BYTES + 1
+            val count = (EmojiArchiveLimits.MAX_INFLATED_BYTES / each + 2).toInt()
+            val zip = bomb { repeat(count) { zeros("big$it.png", each) } }
+            assertFailsWith<IllegalArgumentException> { extractEmojiArchive(ByteArrayInputStream(zip), dir) }
+            assertEquals(0, dir.listFiles()!!.size)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun stopsAtTheImageLimitAndSaysSo() {
+        val dir = Files.createTempDirectory("emoji-archive-test").toFile()
+        try {
+            val zip =
+                bomb {
+                    repeat(EmojiArchiveLimits.MAX_IMAGES + 3) {
+                        putNextEntry(ZipEntry("e$it.png"))
+                        write(1)
+                        closeEntry()
+                    }
+                }
+            val result = extractEmojiArchive(ByteArrayInputStream(zip), dir)
+            assertEquals(EmojiArchiveLimits.MAX_IMAGES, result.files.size)
+            assertTrue(result.truncated)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }
