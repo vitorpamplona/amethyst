@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis
 
+import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -31,21 +32,9 @@ import com.vitorpamplona.amethyst.commons.model.events
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.commons.model.updateFlow
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.signers.update
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.emoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.description
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.image
-import com.vitorpamplona.quartz.nip30CustomEmoji.pack.title
-import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
-import com.vitorpamplona.quartz.nip51Lists.remove
-import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
-import com.vitorpamplona.quartz.nip51Lists.tags.ImageTag
-import com.vitorpamplona.quartz.nip51Lists.tags.NameTag
-import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -163,13 +152,7 @@ class OwnedEmojiPacksState(
         image: String? = null,
         account: Account,
     ) {
-        val template =
-            EmojiPackEvent.build(name = title) {
-                if (!description.isNullOrBlank()) description(description)
-                if (!image.isNullOrBlank()) image(image)
-            }
-        val newPack = signer.sign(template)
-        account.sendMyPublicAndPrivateOutbox(newPack)
+        account.sendMyPublicAndPrivateOutbox(EmojiPackActions.create(signer, title, description, image))
     }
 
     suspend fun updateMetadata(
@@ -180,22 +163,10 @@ class OwnedEmojiPacksState(
         account: Account,
     ) {
         val packEvent = getOwnedEmojiPackEvent(dTag) ?: return
-
-        val template =
-            packEvent.update<EmojiPackEvent> {
-                remove(NameTag.TAG_NAME)
-                remove(TitleTag.TAG_NAME)
-                remove(DescriptionTag.TAG_NAME)
-                remove(ImageTag.TAG_NAME)
-                title(newTitle)
-                if (!newDescription.isNullOrBlank()) description(newDescription)
-                if (!newImage.isNullOrBlank()) image(newImage)
-            }
-
-        val signed = signer.sign(template)
-        account.sendMyPublicAndPrivateOutbox(signed)
+        account.sendMyPublicAndPrivateOutbox(EmojiPackActions.updateMetadata(signer, packEvent, newTitle, newDescription, newImage))
     }
 
+    /** Adds one emoji, replacing the one with the same shortcode in that bucket if there is one. */
     suspend fun addEmoji(
         dTag: String,
         emojiTag: EmojiUrlTag,
@@ -203,30 +174,21 @@ class OwnedEmojiPacksState(
         account: Account,
     ) {
         require(EmojiUrlTag.isValidShortcode(emojiTag.code)) { "Invalid emoji shortcode: ${emojiTag.code}" }
+        addEmojis(dTag, listOf(emojiTag), isPrivate, EmojiPackActions.OnConflict.REPLACE, account)
+    }
 
-        val packEvent = getOwnedEmojiPackEvent(dTag) ?: return
-
-        val signed: EmojiPackEvent =
-            if (isPrivate) {
-                val privateTags = packEvent.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-                val newPrivateTags: Array<Array<String>> = privateTags.plus<Array<String>>(emojiTag.toTagArray())
-                val newContent = PrivateTagsInContent.encryptNip44(newPrivateTags, signer)
-                signer.sign(
-                    com.vitorpamplona.quartz.utils.TimeUtils
-                        .now(),
-                    packEvent.kind,
-                    packEvent.tags,
-                    newContent,
-                )
-            } else {
-                val template =
-                    packEvent.update<EmojiPackEvent> {
-                        emoji(emojiTag)
-                    }
-                signer.sign(template)
-            }
-
-        account.sendMyPublicAndPrivateOutbox(signed)
+    /** Adds many emojis in one new version of the pack; null when the pack is not in the cache. */
+    suspend fun addEmojis(
+        dTag: String,
+        emojis: List<EmojiUrlTag>,
+        isPrivate: Boolean,
+        onConflict: EmojiPackActions.OnConflict,
+        account: Account,
+    ): EmojiPackActions.AddResult? {
+        val packEvent = getOwnedEmojiPackEvent(dTag) ?: return null
+        val result = EmojiPackActions.addEmojis(signer, packEvent, emojis, isPrivate, onConflict)
+        result.event?.let { account.sendMyPublicAndPrivateOutbox(it) }
+        return result
     }
 
     suspend fun removeEmoji(
@@ -236,33 +198,9 @@ class OwnedEmojiPacksState(
         account: Account,
     ) {
         val packEvent = getOwnedEmojiPackEvent(dTag) ?: return
-
-        val signed: EmojiPackEvent =
-            if (isPrivate) {
-                val privateTags = packEvent.privateTags(signer) ?: throw SignerExceptions.UnauthorizedDecryptionException()
-                val newPrivateTags = privateTags.remove { it[0] == EmojiUrlTag.TAG_NAME && it.getOrNull(1) == shortcode }
-                if (newPrivateTags.size == privateTags.size) return
-                val newContent = PrivateTagsInContent.encryptNip44(newPrivateTags, signer)
-                signer.sign(
-                    com.vitorpamplona.quartz.utils.TimeUtils
-                        .now(),
-                    packEvent.kind,
-                    packEvent.tags,
-                    newContent,
-                )
-            } else {
-                val newPublicTags = packEvent.tags.remove { it[0] == EmojiUrlTag.TAG_NAME && it.getOrNull(1) == shortcode }
-                if (newPublicTags.size == packEvent.tags.size) return
-                signer.sign(
-                    com.vitorpamplona.quartz.utils.TimeUtils
-                        .now(),
-                    packEvent.kind,
-                    newPublicTags,
-                    packEvent.content,
-                )
-            }
-
-        account.sendMyPublicAndPrivateOutbox(signed)
+        EmojiPackActions.removeEmojis(signer, packEvent, listOf(shortcode), isPrivate).event?.let {
+            account.sendMyPublicAndPrivateOutbox(it)
+        }
     }
 
     suspend fun deletePack(

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.DeletionActions
+import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -297,6 +298,7 @@ import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -3522,9 +3524,16 @@ class Account(
 
     suspend fun addEmojiToOwnedPack(
         dTag: String,
-        emoji: com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag,
+        emoji: EmojiUrlTag,
         isPrivate: Boolean,
     ) = ownedEmojiPacks.addEmoji(dTag, emoji, isPrivate, this)
+
+    suspend fun addEmojisToOwnedPack(
+        dTag: String,
+        emojis: List<EmojiUrlTag>,
+        isPrivate: Boolean,
+        onConflict: EmojiPackActions.OnConflict,
+    ) = ownedEmojiPacks.addEmojis(dTag, emojis, isPrivate, onConflict, this)
 
     suspend fun removeEmojiFromOwnedPack(
         dTag: String,
