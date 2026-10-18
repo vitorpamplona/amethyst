@@ -69,6 +69,7 @@ import com.vitorpamplona.quartz.buzz.apPersonas.PersonaEvent
 import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
 import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactRemovalEvent
 import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadSummaryEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
 import com.vitorpamplona.quartz.buzz.dm.DmAddMemberEvent
@@ -4135,6 +4136,9 @@ open class EventCache :
                 is PushLeaseEvent,
                 is WindowBoundsEvent,
                 is ThreadWindowBoundsEvent,
+                // The thread summary sidecar shares kind 39005 with NIP-29 pins; EventFactory picks
+                // this class only for the Buzz shape.
+                is ThreadSummaryEvent,
                 is ArchivedIdentitiesListEvent,
                 is RelayDiscoveryEvent,
                 is RelayMonitorEvent,

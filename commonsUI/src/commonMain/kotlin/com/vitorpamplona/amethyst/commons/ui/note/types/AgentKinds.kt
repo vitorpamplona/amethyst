@@ -653,6 +653,9 @@ fun RenderExtensionListing(
     }
 }
 
+/** Millisats as sats, keeping a fraction instead of rounding a sub-sat fee down to "0". */
+private fun msatsAsSats(msats: Long): String = if (msats % 1000 == 0L) (msats / 1000).toString() else (msats / 1000.0).toString()
+
 /** An OpenAgents extension release (kind 3184): package, version and price. */
 @Composable
 fun RenderExtensionRelease(baseNote: Note) {
@@ -670,7 +673,7 @@ fun RenderExtensionRelease(baseNote: Note) {
         tone = if (paid) KindTone.Money else KindTone.Primary,
         status =
             if (paid) {
-                stringRes(Res.string.kc_agent_ext_price_sats, (feeMsat / 1000).toString())
+                stringRes(Res.string.kc_agent_ext_price_sats, msatsAsSats(feeMsat))
             } else {
                 stringRes(Res.string.kc_agent_ext_free)
             },

@@ -169,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileMetadataDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileStorageHeaderDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.PictureDisplay
+import com.vitorpamplona.amethyst.commons.ui.note.types.ProvideKindCardRow
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAcceptedBadgeSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderActiveProfileTheme
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAgentArtifact
@@ -1530,92 +1531,1321 @@ internal fun RenderNoteRow(
     nav: INav,
     isBoostedNote: Boolean = false,
 ) {
-    when (val noteEvent = baseNote.event) {
-        is MetadataEvent -> {
-            RenderProfileCard(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is AppDefinitionEvent -> {
-            RenderAppDefinition(baseNote, accountViewModel, nav)
-        }
-
-        is AppRecommendationEvent -> {
-            RenderAppRecommendation(baseNote, accountViewModel, nav)
-        }
-
-        is SoftwareApplicationEvent -> {
-            RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
-        }
-
-        is SoftwareAssetEvent -> {
-            RenderSoftwareAsset(baseNote, accountViewModel, nav)
-        }
-
-        is ReleaseArtifactSetEvent -> {
-            // kind 30063 is used by both NIP-51 (ReleaseArtifactSet) and NIP-82 (SoftwareRelease).
-            // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
-            // tag signature matches.
-            if (noteEvent.isNip82SoftwareRelease()) {
-                RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+    // The kind cards below read the row's quote budget and preview permission from here, so a card
+    // quoted inside another (or inside itself) never quotes deeper than the row allows.
+    ProvideKindCardRow(quotesLeft, canPreview && !makeItShort) {
+        when (val noteEvent = baseNote.event) {
+            is MetadataEvent -> {
+                RenderProfileCard(baseNote, backgroundColor, accountViewModel, nav)
             }
-        }
 
-        is AttestationEvent -> {
-            RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+            is AppDefinitionEvent -> {
+                RenderAppDefinition(baseNote, accountViewModel, nav)
+            }
 
-        is AttestationRequestEvent -> {
-            RenderAttestationRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+            is AppRecommendationEvent -> {
+                RenderAppRecommendation(baseNote, accountViewModel, nav)
+            }
 
-        is AttestorRecommendationEvent -> {
-            RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+            is SoftwareApplicationEvent -> {
+                RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
+            }
 
-        is AttestorProficiencyEvent -> {
-            RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
+            is SoftwareAssetEvent -> {
+                RenderSoftwareAsset(baseNote, accountViewModel, nav)
+            }
 
-        // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
-        // event with an audio file to play is a track. The rest fall through to the text card.
-        is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
-            RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-        }
+            is ReleaseArtifactSetEvent -> {
+                // kind 30063 is used by both NIP-51 (ReleaseArtifactSet) and NIP-82 (SoftwareRelease).
+                // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
+                // tag signature matches.
+                if (noteEvent.isNip82SoftwareRelease()) {
+                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+                }
+            }
 
-        is AudioHeaderEvent -> {
-            RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
-        }
+            is AttestationEvent -> {
+                RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
 
-        is MusicTrackEvent -> {
-            RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
+            is AttestationRequestEvent -> {
+                RenderAttestationRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
 
-        is MusicPlaylistEvent -> {
-            RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
+            is AttestorRecommendationEvent -> {
+                RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
 
-        is PodcastEpisodeEvent -> {
-            RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
+            is AttestorProficiencyEvent -> {
+                RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
 
-        is Podcasting20EpisodeEvent -> {
-            RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
+            // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
+            // event with an audio file to play is a track. The rest fall through to the text card.
+            is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
+                RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+            }
 
-        is Podcasting20TrailerEvent -> {
-            PodcastTrailerListItem(baseNote, accountViewModel, nav)
-        }
+            is AudioHeaderEvent -> {
+                RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+            }
 
-        is PodcastMetadataEvent -> {
-            RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-        }
+            is MusicTrackEvent -> {
+                RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+            }
 
-        is AppSpecificDataEvent -> {
-            // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a
-            // podcast card. Anything else (e.g. a client's own settings) keeps the text fallback.
-            if (noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
+            is MusicPlaylistEvent -> {
+                RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+            }
+
+            is PodcastEpisodeEvent -> {
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+            }
+
+            is Podcasting20EpisodeEvent -> {
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+            }
+
+            is Podcasting20TrailerEvent -> {
+                PodcastTrailerListItem(baseNote, accountViewModel, nav)
+            }
+
+            is PodcastMetadataEvent -> {
                 RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
-            } else {
+            }
+
+            is AppSpecificDataEvent -> {
+                // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a
+                // podcast card. Anything else (e.g. a client's own settings) keeps the text fallback.
+                if (noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
+                    RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                } else {
+                    RenderTextEvent(
+                        baseNote,
+                        makeItShort,
+                        canPreview,
+                        quotesLeft,
+                        unPackReply,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                        isBoostedNote = isBoostedNote,
+                    )
+                }
+            }
+
+            is DraftWrapEvent -> {
+                RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
+            }
+
+            is ReactionEvent -> {
+                RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is RepostEvent -> {
+                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is GenericRepostEvent -> {
+                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is ReportEvent -> {
+                RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is LongFormContentEvent -> {
+                RenderLongFormContent(baseNote, accountViewModel, nav)
+            }
+
+            is PublicationIndexEvent -> {
+                RenderPublicationIndex(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is ThreadEvent -> {
+                RenderThread(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    unPackReply,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is CodeSnippetEvent -> {
+                RenderCodeSnippetEvent(baseNote)
+            }
+
+            is WikiArticleEvent -> {
+                RenderWikiContent(baseNote, accountViewModel, nav)
+            }
+
+            is NipTextEvent -> {
+                RenderNipContent(baseNote, accountViewModel, nav)
+            }
+
+            is BadgeAwardEvent -> {
+                RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is MemberAddedNotificationEvent -> {
+                RenderChannelInvite(baseNote, accountViewModel, nav)
+            }
+
+            is BadgeDefinitionEvent -> {
+                BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
+            }
+
+            is ZapReceiptEvent -> {
+                RenderZapReceipt(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is NutzapEvent -> {
+                RenderNutzap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is OnchainZapEvent -> {
+                RenderOnchainZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is Bolt12ZapEvent -> {
+                RenderBolt12Zap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is LiveActivitiesClipEvent -> {
+                RenderChatClip(baseNote, accountViewModel, nav)
+            }
+
+            is FhirResourceEvent -> {
+                RenderFhirResource(baseNote, accountViewModel, nav)
+            }
+
+            is FollowSetEvent -> {
+                DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is StarterPackEvent -> {
+                DisplayStarterPack(baseNote, true, accountViewModel, nav)
+            }
+
+            is ContactListEvent -> {
+                DisplayContactList(baseNote, accountViewModel, nav)
+            }
+
+            is RelaySetEvent -> {
+                DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is DmRelayListEvent -> {
+                DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is AdvertisedRelayListEvent -> {
+                DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is SearchRelayListEvent -> {
+                DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is BlockedRelayListEvent -> {
+                DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is TrustedRelayListEvent -> {
+                DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is FavoriteRelayListEvent -> {
+                DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is IndexerRelayListEvent -> {
+                DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is ProxyRelayListEvent -> {
+                DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is BroadcastRelayListEvent -> {
+                DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is RelayDiscoveryEvent -> {
+                RenderRelayDiscovery(baseNote, accountViewModel, nav)
+            }
+
+            is RelayMembershipListEvent -> {
+                RenderRelayMembershipList(baseNote, accountViewModel, nav)
+            }
+
+            is RelayAddMemberEvent -> {
+                RenderRelayAddMember(baseNote, accountViewModel, nav)
+            }
+
+            is RelayRemoveMemberEvent -> {
+                RenderRelayRemoveMember(baseNote, accountViewModel, nav)
+            }
+
+            is RelayJoinRequestEvent -> {
+                RenderRelayJoinRequest(baseNote, accountViewModel, nav)
+            }
+
+            is RelayLeaveRequestEvent -> {
+                RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
+            }
+
+            is RelayAuthEvent -> {
+                RenderRelayAuth(baseNote, accountViewModel, nav)
+            }
+
+            is HTTPAuthorizationEvent -> {
+                RenderHttpAuth(baseNote)
+            }
+
+            is BlossomAuthorizationEvent -> {
+                RenderBlossomAuth(baseNote)
+            }
+
+            is PinListEvent -> {
+                RenderPinListEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is EmojiPackEvent -> {
+                RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
+            }
+
+            is LiveActivitiesEvent -> {
+                RenderLiveActivityEvent(baseNote, accountViewModel, nav)
+            }
+
+            is MeetingSpaceEvent -> {
+                RenderMeetingSpaceEvent(baseNote, accountViewModel, nav)
+            }
+
+            is MeetingRoomEvent -> {
+                RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
+            }
+
+            is MeetingRoomPresenceEvent -> {
+                RenderMeetingRoomPresence(baseNote, accountViewModel, nav)
+            }
+
+            is GitRepositoryEvent -> {
+                RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+            }
+
+            is RootSiteEvent -> {
+                RenderRootSiteEvent(baseNote, accountViewModel, nav)
+            }
+
+            is NamedSiteEvent -> {
+                RenderNamedSiteEvent(baseNote, accountViewModel, nav)
+            }
+
+            is RootNappletEvent -> {
+                RenderRootNappletEvent(baseNote, accountViewModel, nav)
+            }
+
+            is NamedNappletEvent -> {
+                RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+            }
+
+            is GitPatchEvent -> {
+                RenderGitPatchEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is GitIssueEvent -> {
+                RenderGitIssueEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is GitPullRequestEvent -> {
+                RenderGitPullRequestEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is GitPullRequestUpdateEvent -> {
+                RenderGitPullRequestUpdateEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is GitStatusEvent -> {
+                RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is GitCoverNoteEvent -> {
+                RenderGitCoverNoteEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is EncryptedDmEvent -> {
+                RenderPrivateMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is ChatMessageEvent -> {
+                RenderChatMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is ChatMessageEncryptedFileHeaderEvent -> {
+                RenderChatMessageEncryptedFile(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is SnoObjectEvent -> {
+                RenderSnoObject(baseNote, accountViewModel)
+            }
+
+            is SnoAvatarEvent -> {
+                RenderSnoAvatar(baseNote, accountViewModel)
+            }
+
+            is SnoShardEvent -> {
+                RenderSnoShard(baseNote, accountViewModel)
+            }
+
+            is CyberspaceBagEvent -> {
+                RenderCyberspaceBag(baseNote, accountViewModel)
+            }
+
+            is ChessGameEvent -> {
+                RenderChessGame(
+                    baseNote,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is LiveChessGameChallengeEvent -> {
+                RenderLiveChessChallenge(
+                    baseNote,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is LiveChessGameEndEvent -> {
+                RenderLiveChessGameEnd(
+                    baseNote,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is CashuMintEvent -> {
+                RenderCashuMint(noteEvent)
+            }
+
+            is FedimintEvent -> {
+                RenderFedimint(noteEvent)
+            }
+
+            is MintRecommendationEvent -> {
+                RenderMintRecommendation(noteEvent)
+            }
+
+            is MostroInfoEvent -> {
+                RenderMostroInfo(baseNote)
+            }
+
+            // Kind 30301 is shared: the board and the WalletScrutiny verdict each have a card, and
+            // the class EventFactory picked from the tags is what decides between them.
+            is KanbanBoardEvent -> {
+                RenderKanbanBoard(baseNote, makeItShort, accountViewModel)
+            }
+
+            is BuildVerificationEvent -> {
+                RenderBuildVerification(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is KanbanCardEvent -> {
+                RenderKanbanCard(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            // Other apps' formats on those shared kinds (an encrypted planner's tasks, Fieldbook
+            // memberships, Paygress revocations...). EventCache never stores them, so this only
+            // guards the fall-through below, which would print their raw content.
+            is UnrecognizedKind30301Event,
+            is UnrecognizedKind30302Event,
+            is UnrecognizedKind38385Event,
+            // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
+            is UnrecognizedKind30405Event,
+            is UnrecognizedKind30406Event,
+            -> {}
+
+            is PredictionMarketEvent -> {
+                RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
+            }
+
+            is BallotEvent -> {
+                RenderBallot(baseNote, accountViewModel)
+            }
+
+            is ClassifiedsEvent -> {
+                RenderClassifieds(
+                    noteEvent,
+                    baseNote,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            // Open Markets, around the NIP-99 listings.
+            is ProductCollectionEvent -> {
+                RenderProductCollection(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is ShippingOptionEvent -> {
+                RenderShippingOption(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is ProductReviewEvent -> {
+                RenderProductReview(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the
+            // text card below, as they always did.
+            is StallEvent if noteEvent.isWellFormed() -> {
+                RenderStall(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is ProductEvent if noteEvent.isWellFormed() -> {
+                RenderProduct(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is MarketplaceEvent if noteEvent.isWellFormed() -> {
+                RenderMarketplace(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is AuctionEvent if noteEvent.isWellFormed() -> {
+                RenderAuction(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is BidEvent if noteEvent.isWellFormed() -> {
+                RenderBid(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is BidConfirmationEvent if noteEvent.isWellFormed() -> {
+                RenderBidConfirmation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is CalendarTimeSlotEvent -> {
+                RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
+            }
+
+            is CalendarDateSlotEvent -> {
+                RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
+            }
+
+            is CalendarCollectionEvent -> {
+                RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
+            }
+
+            is CalendarRSVPEvent -> {
+                RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
+            }
+
+            is ZapGoalEvent -> {
+                RenderGoal(baseNote, accountViewModel, nav)
+            }
+
+            is FundraiserEvent -> {
+                RenderFundraiser(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is BirdexEvent -> {
+                RenderBirdex(baseNote)
+            }
+
+            is BirdDetectionEvent -> {
+                RenderBirdDetection(baseNote)
+            }
+
+            is Ps1SaveEvent -> {
+                RenderPs1Save(baseNote)
+            }
+
+            is GeocacheListingEvent -> {
+                RenderGeocache(baseNote, accountViewModel)
+            }
+
+            is GeocacheFoundLogEvent -> {
+                RenderGeocacheFoundLog(baseNote, accountViewModel)
+            }
+
+            is RoadEventReportEvent -> {
+                RenderRoadEventReport(baseNote)
+            }
+
+            is RoadEventConfirmationEvent -> {
+                RenderRoadEventConfirmation(baseNote)
+            }
+
+            is HighlightEvent -> {
+                RenderHighlight(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is DvmContentDiscoveryResponseEvent -> {
+                RenderDvmContentDiscoveryResponse(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is DvmStatusEvent -> {
+                RenderDvmStatus(
+                    baseNote,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is ZapPollEvent -> {
+                RenderZapPoll(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    unPackReply,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
+
+            is ChatEvent -> {
+                // A kind-9 that belongs to a Buzz/NIP-29 relay group (its channel is recorded as a gatherer
+                // on consume) renders as a conversation row with a group/DM header — so a Buzz DM on the
+                // Notifications tab reads like a message, not a post. A non-group kind-9 keeps the plain chat body.
+                if (baseNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } != null) {
+                    RenderRelayGroupMessage(
+                        baseNote,
+                        makeItShort,
+                        canPreview,
+                        quotesLeft,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                    )
+                } else {
+                    RenderChat(
+                        baseNote,
+                        makeItShort,
+                        canPreview,
+                        quotesLeft,
+                        unPackReply,
+                        backgroundColor,
+                        accountViewModel,
+                        nav,
+                        isBoostedNote = isBoostedNote,
+                    )
+                }
+            }
+
+            is StreamMessageV2Event -> {
+                RenderRelayGroupMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is PollEvent -> {
+                RenderPoll(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
+
+            is FileMetadataEvent -> {
+                FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+            }
+
+            // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
+            // so new video subtypes render automatically instead of falling through to text.
+            is VideoEvent -> {
+                VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+            }
+
+            is VideoCollaborationEvent -> {
+                RenderVideoCollaboration(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is VideoCurationSetEvent -> {
+                RenderVideoCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is PictureEvent -> {
+                PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+            }
+
+            is WorkoutRecordEvent -> {
+                WorkoutDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
+            }
+
+            is ExerciseTemplateEvent -> {
+                ExerciseTemplateDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
+            }
+
+            is BaseVoiceEvent -> {
+                RenderVoiceTrack(baseNote, accountViewModel, nav)
+            }
+
+            is FileStorageHeaderEvent -> {
+                FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+            }
+
+            is CommunityPostApprovalEvent -> {
+                RenderPostApproval(
+                    baseNote,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is TextNoteModificationEvent -> {
+                RenderTextModificationEvent(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is ChannelMessageEvent -> {
+                RenderChannelMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is LiveActivitiesChatMessageEvent -> {
+                RenderLiveActivityChatMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is TorrentEvent -> {
+                RenderTorrent(
+                    baseNote,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is TorrentCommentEvent -> {
+                RenderTorrentComment(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    unPackReply,
+                    backgroundColor,
+                    editState,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is InteractiveStoryBaseEvent -> {
+                RenderInteractiveStory(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            // One branch for kinds 31/32/33: they are one idea aimed at three sorts of source.
+            is CitationEvent -> {
+                RenderCitation(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is LearningResourceEvent -> {
+                RenderLearningResource(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is BookshelfDirectoryEvent -> {
+                RenderBookshelfDirectory(baseNote, accountViewModel, nav)
+            }
+
+            is BlossomPieceIndexEvent -> {
+                RenderBlossomPieceIndex(baseNote, accountViewModel)
+            }
+
+            is ExternalReactionEvent -> {
+                RenderExternalReaction(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is WikiMergeRequestEvent -> {
+                RenderWikiMergeRequest(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is WikiMergeAcceptanceEvent -> {
+                RenderWikiMergeAcceptance(baseNote, accountViewModel, nav)
+            }
+
+            is WikiRedirectEvent -> {
+                RenderWikiRedirect(baseNote, accountViewModel, nav)
+            }
+
+            is PublicationContentEvent -> {
+                RenderPublicationSection(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is RelayReviewEvent -> {
+                RenderRelayReview(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is EntityRatingEvent -> {
+                RenderEntityRating(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                )
+            }
+
+            is PublicMessageEvent -> {
+                RenderPublicMessage(
+                    baseNote,
+                    makeItShort,
+                    canPreview,
+                    quotesLeft,
+                    backgroundColor,
+                    accountViewModel,
+                    nav,
+                    isBoostedNote = isBoostedNote,
+                )
+            }
+
+            is MuteListEvent -> {
+                RenderMuteList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is BookmarkListEvent -> {
+                RenderBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is OldBookmarkListEvent -> {
+                RenderOldBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is BookmarkSetEvent -> {
+                RenderBookmarkSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is ArticleCurationSetEvent -> {
+                RenderArticleCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is PictureCurationSetEvent -> {
+                RenderPictureCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is AppCurationSetEvent -> {
+                RenderAppCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is GitRepositoryListEvent -> {
+                RenderGitRepositoryList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is FavoriteAlgoFeedsListEvent -> {
+                RenderFavoriteAlgoFeedsList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is GitAuthorListEvent -> {
+                RenderGitAuthorList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is MediaFollowListEvent -> {
+                RenderMediaFollowList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is GoodWikiAuthorListEvent -> {
+                RenderGoodWikiAuthorList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is KindMuteSetEvent -> {
+                RenderKindMuteSet(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is MediaStarterPackEvent -> {
+                RenderMediaStarterPack(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is InterestListEvent -> {
+                RenderInterestList(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is InterestSetEvent -> {
+                RenderInterestSet(baseNote, backgroundColor, accountViewModel, nav)
+            }
+
+            is GeohashListEvent -> {
+                RenderGeohashList(baseNote, backgroundColor, accountViewModel)
+            }
+
+            is SimpleGroupListEvent -> {
+                RenderSimpleGroupList(baseNote, backgroundColor, accountViewModel)
+            }
+
+            is GoodWikiRelayListEvent -> {
+                RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
+            }
+
+            // NIP-85: one card for the four assertion kinds, which differ only in what they score.
+            is UserAssertionEvent,
+            is EventAssertionEvent,
+            is AddressableAssertionEvent,
+            is ExternalIdAssertionEvent,
+            -> {
+                RenderTrustedAssertion(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is TrustProviderListEvent -> {
+                RenderTrustProviderList(baseNote, accountViewModel, nav)
+            }
+
+            // Trusted Lists, kinds 30392-30395.
+            is TrustedListEvent -> {
+                RenderTrustedList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            // Decentralized Lists. An item that declares a list (the spec's "nonstandard method") is a header.
+            is ListHeaderEvent,
+            is AddressableListHeaderEvent,
+            -> {
+                RenderDListHeader(baseNote, accountViewModel, nav)
+            }
+
+            is ListItemEvent -> {
+                if (noteEvent.declaresList()) {
+                    RenderDListHeader(baseNote, accountViewModel, nav)
+                } else {
+                    RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
+            }
+
+            is AddressableListItemEvent -> {
+                if (noteEvent.declaresList()) {
+                    RenderDListHeader(baseNote, accountViewModel, nav)
+                } else {
+                    RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
+            }
+
+            is GroupMetadataEvent -> {
+                RenderGroupMetadata(baseNote, accountViewModel, nav)
+            }
+
+            // Profile and settings lists.
+            is EmojiListEvent -> RenderEmojiList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StickerPackEvent -> RenderStickerPack(baseNote, backgroundColor, accountViewModel, nav)
+            is ProfileBadgesEvent -> RenderProfileBadges(baseNote, accountViewModel, nav)
+            is AcceptedBadgeSetEvent -> RenderAcceptedBadgeSet(baseNote, backgroundColor, accountViewModel, nav)
+            is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
+            is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
+            is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
+            is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor)
+            is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
+            is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
+            is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)
+            is FavoritePodcastsListEvent -> RenderFavoritePodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is AuthoredPodcastsEvent -> RenderAuthoredPodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is FavoriteFollowSetsListEvent -> RenderFavoriteFollowSets(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CommunityListEvent -> RenderCommunityList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is TopEightEvent -> RenderTopEight(baseNote, backgroundColor, accountViewModel, nav)
+            is ExternalIdentitiesEvent -> RenderExternalIdentities(baseNote)
+            is UserStatusEvent -> RenderUserStatus(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is PostingStreakEvent -> RenderPostingStreak(baseNote)
+            is ActiveProfileThemeEvent -> RenderActiveProfileTheme(baseNote, backgroundColor, accountViewModel, nav)
+            is ThemeDefinitionEvent -> RenderThemeDefinition(baseNote, backgroundColor, accountViewModel, nav)
+            is ProfileGalleryEntryEvent -> RenderProfileGalleryEntry(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is WebBookmarkEvent -> RenderWebBookmark(baseNote, backgroundColor, accountViewModel, nav)
+            is GeocacheCurationListEvent -> RenderGeocacheCurationList(baseNote, accountViewModel, nav)
+
+            // Deletions, labels, timestamps, chess, P2P orders and other public records.
+            is DeletionRequestEvent -> RenderDeletionRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is RequestToVanishEvent -> RenderRequestToVanish(baseNote, backgroundColor, accountViewModel, nav)
+            is LabelEvent -> RenderLabel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is OtsEvent -> RenderOts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is FileStorageEvent -> RenderFileStorage(baseNote)
+            is GeocacheVerificationEvent -> RenderGeocacheVerification(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is InteractiveStoryReadingStateEvent -> RenderInteractiveStoryReadingState(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is LongFormDraftEvent -> RenderLongFormDraft(baseNote, accountViewModel)
+            is JesterEvent -> RenderJesterChess(baseNote, accountViewModel, nav)
+            is LiveChessGameAcceptEvent -> RenderLiveChessAccept(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is LiveChessMoveEvent -> RenderLiveChessMove(baseNote, backgroundColor, accountViewModel, nav)
+            is LiveChessDrawOfferEvent -> RenderLiveChessDrawOffer(baseNote, backgroundColor, accountViewModel, nav)
+            is P2POrderEvent -> RenderP2POrder(baseNote)
+            is MostroUserRatingEvent -> RenderMostroUserRating(baseNote, accountViewModel, nav)
+            is MostroDisputeEvent -> RenderMostroDispute(baseNote)
+            is MostroDevFeePaymentEvent -> RenderMostroDevFee(baseNote)
+            is RoboSatsCoordinatorRatingEvent -> RenderRoboSatsCoordinatorRating(baseNote, accountViewModel, nav)
+            is PollResponseEvent -> RenderPollResponse(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is RelayMonitorEvent -> RenderRelayMonitor(baseNote)
+            is TextTrackEvent -> RenderTextTrack(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is VideoViewEvent -> RenderVideoView(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is WorkoutTemplateEvent -> RenderWorkoutTemplate(baseNote, backgroundColor, accountViewModel, nav)
+            // Other apps' formats on the RoboSats (31986), mint-recommendation (38000) and Mostro
+            // rating/dispute (38384/38386) kinds: nothing to draw, and their raw content must not
+            // reach the text path (EventCache keeps 38000 junk only so it supersedes older versions).
+            is UnrecognizedKind31986Event,
+            is UnrecognizedKind38000Event,
+            is UnrecognizedKind38384Event,
+            is UnrecognizedKind38386Event,
+            -> {}
+
+            // Buzz chat, huddle, job, forum, moderation and archival events.
+            is ArchiveRequestEvent -> RenderBuzzArchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is UnarchiveRequestEvent -> RenderBuzzUnarchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ArchivedIdentityEvent -> RenderBuzzIdentityArchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is UnarchivedIdentityEvent -> RenderBuzzIdentityUnarchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ArchivedIdentitiesListEvent -> RenderBuzzArchivedIdentitiesList(baseNote, accountViewModel, nav)
+            is SystemMessageEvent -> RenderBuzzSystemMessageCard(baseNote, accountViewModel, nav)
+            is CanvasEvent -> RenderBuzzCanvas(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamMessageEditEvent -> RenderBuzzMessageEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamMessagePinnedEvent -> RenderBuzzMessagePinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamMessageBookmarkedEvent -> RenderBuzzMessageBookmarked(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamMessageScheduledEvent -> RenderBuzzMessageScheduled(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamReminderEvent -> RenderBuzzReminder(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is StreamMessageDiffEvent -> RenderBuzzDiffCard(baseNote, accountViewModel, nav)
+            is ChannelSummaryEvent -> RenderBuzzChannelSummary(baseNote, accountViewModel, nav)
+            is PresenceSnapshotEvent -> RenderBuzzPresenceSnapshot(baseNote, accountViewModel, nav)
+            is ThreadSummaryEvent -> RenderBuzzThreadSummary(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ForumPostEvent -> RenderBuzzForumPost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ForumCommentEvent -> RenderBuzzForumComment(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ForumVoteEvent -> RenderBuzzForumVoteCard(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is HuddleStartedEvent -> RenderBuzzHuddleStarted(baseNote, accountViewModel, nav)
+            is HuddleParticipantJoinedEvent -> RenderBuzzHuddleJoined(baseNote, accountViewModel, nav)
+            is HuddleParticipantLeftEvent -> RenderBuzzHuddleLeft(baseNote, accountViewModel, nav)
+            is HuddleEndedEvent -> RenderBuzzHuddleEnded(baseNote, accountViewModel, nav)
+            is HuddleLivenessEvent -> RenderBuzzHuddleLiveness(baseNote, accountViewModel, nav)
+            is HuddleGuidelinesEvent -> RenderBuzzHuddleGuidelines(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is HuddleReactionEvent -> RenderBuzzHuddleReaction(baseNote)
+            is JobRequestEvent -> RenderBuzzJobRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is JobAcceptedEvent -> RenderBuzzJobAccepted(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is JobProgressEvent -> RenderBuzzJobProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is JobResultEvent -> RenderBuzzJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is JobCancelEvent -> RenderBuzzJobCancel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is JobErrorEvent -> RenderBuzzJobError(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is DmOpenEvent -> RenderBuzzDmOpen(baseNote, accountViewModel, nav)
+            is DmCreatedEvent -> RenderBuzzDmCreated(baseNote, accountViewModel, nav)
+            is DmAddMemberEvent -> RenderBuzzDmAddMember(baseNote, accountViewModel, nav)
+            is DmHideEvent -> RenderBuzzDmHide(baseNote, accountViewModel, nav)
+            is DmVisibilityEvent -> RenderBuzzDmVisibility(baseNote, accountViewModel, nav)
+            is PresenceUpdateEvent -> RenderBuzzPresenceUpdate(baseNote, accountViewModel, nav)
+            is TypingIndicatorEvent -> RenderBuzzTyping(baseNote, accountViewModel, nav)
+            is MemberRemovedNotificationEvent -> RenderBuzzMemberRemoved(baseNote, accountViewModel, nav)
+            is ModerationBanEvent -> RenderBuzzModerationBan(baseNote, accountViewModel, nav)
+            is ModerationTimeoutEvent -> RenderBuzzModerationTimeout(baseNote, accountViewModel, nav)
+            is ModerationUntimeoutEvent -> RenderBuzzModerationUntimeout(baseNote, accountViewModel, nav)
+            is ModerationResolveReportEvent -> RenderBuzzModerationResolveReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ProductFeedbackEvent -> RenderBuzzProductFeedback(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is RelayAdminAddMemberEvent -> RenderBuzzRelayAdminAddMember(baseNote, accountViewModel, nav)
+            is RelayAdminRemoveMemberEvent -> RenderBuzzRelayAdminRemoveMember(baseNote, accountViewModel, nav)
+            is RelayAdminChangeRoleEvent -> RenderBuzzRelayAdminChangeRole(baseNote, accountViewModel, nav)
+            is SetWorkspaceProfileEvent -> RenderBuzzSetWorkspaceProfile(baseNote, accountViewModel)
+            is ThreadWindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+            is WindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+
+            // NIP-29 group moderation and metadata, NIP-28 channel moderation, Concord, location chats.
+            is GroupPutUserEvent -> RenderGroupPutUser(baseNote, backgroundColor, accountViewModel, nav)
+            is GroupRemoveUserEvent -> RenderGroupRemoveUser(baseNote, backgroundColor, accountViewModel, nav)
+            is GroupEditMetadataEvent -> RenderGroupEditMetadata(baseNote, accountViewModel, nav)
+            is GroupDeleteEventEvent -> RenderGroupDeleteEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CreateGroupEvent -> RenderCreateGroup(baseNote, accountViewModel, nav)
+            is DeleteGroupEvent -> RenderDeleteGroup(baseNote, backgroundColor, accountViewModel, nav)
+            is GroupCreateInviteEvent -> RenderGroupCreateInvite(baseNote, accountViewModel, nav)
+            is GroupUpdatePinListEvent -> RenderGroupUpdatePinList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is GroupJoinRequestEvent -> RenderGroupJoinRequest(baseNote, backgroundColor, accountViewModel, nav)
+            is GroupLeaveRequestEvent -> RenderGroupLeaveRequest(baseNote, backgroundColor, accountViewModel, nav)
+            is GroupAdminsEvent -> RenderGroupAdmins(baseNote, accountViewModel, nav)
+            is GroupMembersEvent -> RenderGroupMembers(baseNote, accountViewModel, nav)
+            is GroupRolesEvent -> RenderGroupRoles(baseNote, accountViewModel, nav)
+            is GroupParticipantsEvent -> RenderGroupParticipants(baseNote, accountViewModel, nav)
+            is GroupPinnedEvent -> RenderGroupPinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ChannelHideMessageEvent -> RenderChannelHideMessage(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ChannelMuteUserEvent -> RenderChannelMuteUser(baseNote, backgroundColor, accountViewModel, nav)
+            is PublicChatListEvent -> RenderPublicChatList(baseNote, backgroundColor, accountViewModel, nav)
+            is EphemeralChatListEvent -> RenderEphemeralChatList(baseNote, backgroundColor, accountViewModel, nav)
+            is EphemeralChatEvent -> RenderEphemeralChat(baseNote, backgroundColor, accountViewModel, nav)
+            is GeohashChatEvent -> RenderGeohashChat(baseNote, backgroundColor, accountViewModel, nav)
+            is GeohashPresenceEvent -> RenderGeohashPresence(baseNote, nav)
+            is AdminCommandEvent -> RenderNestsAdminCommand(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CommunityRulesEvent -> RenderCommunityRules(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is LiveActivitiesRaidEvent -> RenderLiveActivityRaid(baseNote, backgroundColor, accountViewModel, nav)
+            is ConcordChatEditEvent -> RenderConcordChatEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ConcordTimerNoticeEvent -> RenderConcordTimerNotice(baseNote, accountViewModel, nav)
+            is ControlEditionEvent -> RenderConcordControlEdition(baseNote)
+            is ConcordInviteBundleEvent -> RenderConcordInviteBundle(baseNote)
+            is ConcordCommunityListEvent -> RenderPrivateKindCard(baseNote)
+            is ConcordCommunityListFragmentEvent -> RenderPrivateKindCard(baseNote)
+            is ConcordInviteListEvent -> RenderPrivateKindCard(baseNote)
+            is RelayInviteRequestEvent -> RenderRelayInviteRequest(baseNote)
+            is RelayRoleEvent -> RenderRelayRole(baseNote, backgroundColor, accountViewModel, nav)
+
+            // Encrypted and protocol plumbing (MLS, gift wraps, wallet connect, calls, push): a card
+            // that names the kind, never the ciphertext; zap requests and key packages show their public fields.
+            // Zaps and payment requests
+            is ZapRequestEvent -> RenderZapRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is PrivateZapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Bolt)
+            is Bolt12ZapIntentEvent -> RenderBolt12ZapIntent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            // NIP-47 wallet connect
+            is NwcInfoEvent -> RenderNwcInfo(baseNote)
+            is NwcRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
+            is NwcResponseEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
+            is NwcNotificationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            // CLINK
+            is OfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Storefront)
+            is DebitEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
+            is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
+            // NIP-60 Cashu wallet
+            is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
+            is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
+            is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
+            is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
+            // Marmot MLS (KeyPackageEvent 30443 and LegacyKeyPackageEvent 443 share PublishedKeyPackage)
+            is PublishedKeyPackage -> RenderMarmotKeyPackage(baseNote)
+            is KeyPackageRelayListEvent -> RenderKeyPackageRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            is WelcomeEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.GroupAdd)
+            is GroupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Groups)
+            is NotificationRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            is TokenRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            is TokenListEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            is TokenRemovalEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
+            // NIP-59 gift wraps and seals (EphemeralGiftWrapEvent extends GiftWrapEvent)
+            is GiftWrapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Mail)
+            is SealEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
+            is PnsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
+            // WebRTC calls
+            is CallOfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
+            is CallAnswerEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
+            is CallIceCandidateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.SettingsInputAntenna)
+            is CallRenegotiateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
+            is CallHangupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
+            is CallRejectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
+            // Remote signing, push, wake-up
+            is NostrConnectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.PhonelinkLock)
+            is PushRegistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            is PushDeregistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
+            is PushPreferencesEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Tune)
+            is WakeUpEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
+            // Key decoupling
+            is EncryptionKeyListEvent -> RenderEncryptionKeyList(baseNote)
+            is EncryptionKeyRequestEvent -> RenderEncryptionKeyRequest(baseNote)
+            is EncryptionKeyTransferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+
+            // NIP-90 job requests and results. After the DVM kinds above that keep their own cards.
+            // Base-class branches: they must stay AFTER the existing `is DvmContentDiscoveryResponseEvent` and
+            // `is DvmStatusEvent` branches (both DvmResponseEvent subclasses), which keep their own renderers.
+            is DvmRequestEvent -> RenderDvmRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is DvmResponseEvent -> RenderDvmResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is DvmHeartbeatEvent -> RenderDvmHeartbeat(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+
+            // Git CI, repository state and developer records.
+            is CiWorkflowProgressEvent -> RenderCiWorkflowProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CiWorkflowResultEvent -> RenderCiWorkflowResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CiJobResultEvent -> RenderCiJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CiManualTriggerEvent -> RenderCiManualTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CiServiceRequestEvent -> RenderCiServiceRequest(baseNote, accountViewModel, nav)
+            is CiServiceStopEvent -> RenderCiServiceStop(baseNote, accountViewModel, nav)
+            is CiCoordinatorAdvertisementEvent -> RenderCiCoordinatorAdvertisement(baseNote)
+            is CiRequestReadinessListEvent -> RenderCiRequestReadinessList(baseNote, accountViewModel, nav)
+            is CiRepositoryStatusEvent -> RenderCiRepositoryStatus(baseNote)
+            is CiSecretUpdateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
+            is GitRepositoryStateEvent -> RenderGitRepositoryState(baseNote)
+            is UserGraspListEvent -> RenderUserGraspList(baseNote)
+            is IdentityProofEvent -> RenderIdentityProof(baseNote)
+            is AssetBundleEvent -> RenderAssetBundle(baseNote)
+            is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote)
+            is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
+            is AppDataEvent -> RenderAppData(baseNote)
+            is NNSEvent -> RenderNNS(baseNote)
+
+            // Buzz agents, workflows, teams and projects; OpenAgents capabilities; ContextVM.
+            is AgentProfileEvent -> RenderAgentProfile(baseNote)
+            is ManagedAgentEvent -> RenderManagedAgent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is PersonaEvent -> RenderPersona(baseNote)
+            is TeamEvent -> RenderAgentTeam(baseNote)
+            is TeamCatalogEvent -> RenderAgentTeamCatalog(baseNote)
+            is ProjectEvent -> RenderAgentProject(baseNote)
+            is ArtifactEvent -> RenderAgentArtifact(baseNote, backgroundColor, accountViewModel, nav)
+            is ArtifactRemovalEvent -> RenderAgentArtifactRemoval(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is AuditEntryEvent -> RenderAgentAuditEntry(baseNote, accountViewModel, nav)
+            is WorkflowDefEvent -> RenderWorkflowDefinition(baseNote)
+            is WorkflowTriggerEvent -> RenderWorkflowTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is WorkflowTriggeredEvent, is WorkflowStepStartedEvent, is WorkflowStepCompletedEvent, is WorkflowStepFailedEvent, is WorkflowCompletedEvent, is WorkflowFailedEvent, is WorkflowCancelledEvent, is WorkflowApprovalRequestedEvent, is WorkflowApprovalGrantedEvent, is WorkflowApprovalDeniedEvent -> RenderWorkflowLifecycle(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ApprovalGrantEvent, is ApprovalDenyEvent -> RenderWorkflowApprovalDecision(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is CapabilityDiscoveryEvent -> RenderCapabilityDiscovery(baseNote, accountViewModel, nav)
+            is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+            is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
+            is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote)
+            is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
+            is EventReminderEvent -> RenderEventReminder(baseNote)
+            is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)
+            is EngramEvent -> RenderEngram(baseNote)
+            is ObserverFrameEvent -> RenderObserverFrame(baseNote)
+            is PairingEvent -> RenderAgentPairing(baseNote)
+            is PushLeaseEvent -> RenderPushLease(baseNote)
+
+            else -> {
                 RenderTextEvent(
                     baseNote,
                     makeItShort,
@@ -1629,1231 +2859,6 @@ internal fun RenderNoteRow(
                     isBoostedNote = isBoostedNote,
                 )
             }
-        }
-
-        is DraftWrapEvent -> {
-            RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
-        }
-
-        is ReactionEvent -> {
-            RenderReaction(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is RepostEvent -> {
-            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is GenericRepostEvent -> {
-            RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is ReportEvent -> {
-            RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is LongFormContentEvent -> {
-            RenderLongFormContent(baseNote, accountViewModel, nav)
-        }
-
-        is PublicationIndexEvent -> {
-            RenderPublicationIndex(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is ThreadEvent -> {
-            RenderThread(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is CodeSnippetEvent -> {
-            RenderCodeSnippetEvent(baseNote)
-        }
-
-        is WikiArticleEvent -> {
-            RenderWikiContent(baseNote, accountViewModel, nav)
-        }
-
-        is NipTextEvent -> {
-            RenderNipContent(baseNote, accountViewModel, nav)
-        }
-
-        is BadgeAwardEvent -> {
-            RenderBadgeAward(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is MemberAddedNotificationEvent -> {
-            RenderChannelInvite(baseNote, accountViewModel, nav)
-        }
-
-        is BadgeDefinitionEvent -> {
-            BadgeDisplay(baseNote = baseNote, accountViewModel = accountViewModel, nav = nav)
-        }
-
-        is ZapReceiptEvent -> {
-            RenderZapReceipt(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is NutzapEvent -> {
-            RenderNutzap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is OnchainZapEvent -> {
-            RenderOnchainZap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is Bolt12ZapEvent -> {
-            RenderBolt12Zap(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is LiveActivitiesClipEvent -> {
-            RenderChatClip(baseNote, accountViewModel, nav)
-        }
-
-        is FhirResourceEvent -> {
-            RenderFhirResource(baseNote, accountViewModel, nav)
-        }
-
-        is FollowSetEvent -> {
-            DisplayPeopleList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is StarterPackEvent -> {
-            DisplayStarterPack(baseNote, true, accountViewModel, nav)
-        }
-
-        is ContactListEvent -> {
-            DisplayContactList(baseNote, accountViewModel, nav)
-        }
-
-        is RelaySetEvent -> {
-            DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is DmRelayListEvent -> {
-            DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is AdvertisedRelayListEvent -> {
-            DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is SearchRelayListEvent -> {
-            DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is BlockedRelayListEvent -> {
-            DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is TrustedRelayListEvent -> {
-            DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is FavoriteRelayListEvent -> {
-            DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is IndexerRelayListEvent -> {
-            DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is ProxyRelayListEvent -> {
-            DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is BroadcastRelayListEvent -> {
-            DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is RelayDiscoveryEvent -> {
-            RenderRelayDiscovery(baseNote, accountViewModel, nav)
-        }
-
-        is RelayMembershipListEvent -> {
-            RenderRelayMembershipList(baseNote, accountViewModel, nav)
-        }
-
-        is RelayAddMemberEvent -> {
-            RenderRelayAddMember(baseNote, accountViewModel, nav)
-        }
-
-        is RelayRemoveMemberEvent -> {
-            RenderRelayRemoveMember(baseNote, accountViewModel, nav)
-        }
-
-        is RelayJoinRequestEvent -> {
-            RenderRelayJoinRequest(baseNote, accountViewModel, nav)
-        }
-
-        is RelayLeaveRequestEvent -> {
-            RenderRelayLeaveRequest(baseNote, accountViewModel, nav)
-        }
-
-        is RelayAuthEvent -> {
-            RenderRelayAuth(baseNote, accountViewModel, nav)
-        }
-
-        is HTTPAuthorizationEvent -> {
-            RenderHttpAuth(baseNote)
-        }
-
-        is BlossomAuthorizationEvent -> {
-            RenderBlossomAuth(baseNote)
-        }
-
-        is PinListEvent -> {
-            RenderPinListEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is EmojiPackEvent -> {
-            RenderEmojiPack(baseNote, true, backgroundColor, accountViewModel)
-        }
-
-        is LiveActivitiesEvent -> {
-            RenderLiveActivityEvent(baseNote, accountViewModel, nav)
-        }
-
-        is MeetingSpaceEvent -> {
-            RenderMeetingSpaceEvent(baseNote, accountViewModel, nav)
-        }
-
-        is MeetingRoomEvent -> {
-            RenderMeetingRoomEvent(baseNote, accountViewModel, nav)
-        }
-
-        is MeetingRoomPresenceEvent -> {
-            RenderMeetingRoomPresence(baseNote, accountViewModel, nav)
-        }
-
-        is GitRepositoryEvent -> {
-            RenderGitRepositoryEvent(baseNote, accountViewModel, nav)
-        }
-
-        is RootSiteEvent -> {
-            RenderRootSiteEvent(baseNote, accountViewModel, nav)
-        }
-
-        is NamedSiteEvent -> {
-            RenderNamedSiteEvent(baseNote, accountViewModel, nav)
-        }
-
-        is RootNappletEvent -> {
-            RenderRootNappletEvent(baseNote, accountViewModel, nav)
-        }
-
-        is NamedNappletEvent -> {
-            RenderNamedNappletEvent(baseNote, accountViewModel, nav)
-        }
-
-        is GitPatchEvent -> {
-            RenderGitPatchEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is GitIssueEvent -> {
-            RenderGitIssueEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is GitPullRequestEvent -> {
-            RenderGitPullRequestEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is GitPullRequestUpdateEvent -> {
-            RenderGitPullRequestUpdateEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is GitStatusEvent -> {
-            RenderGitStatusEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is GitCoverNoteEvent -> {
-            RenderGitCoverNoteEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is EncryptedDmEvent -> {
-            RenderPrivateMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is ChatMessageEvent -> {
-            RenderChatMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is ChatMessageEncryptedFileHeaderEvent -> {
-            RenderChatMessageEncryptedFile(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is SnoObjectEvent -> {
-            RenderSnoObject(baseNote, accountViewModel)
-        }
-
-        is SnoAvatarEvent -> {
-            RenderSnoAvatar(baseNote, accountViewModel)
-        }
-
-        is SnoShardEvent -> {
-            RenderSnoShard(baseNote, accountViewModel)
-        }
-
-        is CyberspaceBagEvent -> {
-            RenderCyberspaceBag(baseNote, accountViewModel)
-        }
-
-        is ChessGameEvent -> {
-            RenderChessGame(
-                baseNote,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is LiveChessGameChallengeEvent -> {
-            RenderLiveChessChallenge(
-                baseNote,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is LiveChessGameEndEvent -> {
-            RenderLiveChessGameEnd(
-                baseNote,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is CashuMintEvent -> {
-            RenderCashuMint(noteEvent)
-        }
-
-        is FedimintEvent -> {
-            RenderFedimint(noteEvent)
-        }
-
-        is MintRecommendationEvent -> {
-            RenderMintRecommendation(noteEvent)
-        }
-
-        is MostroInfoEvent -> {
-            RenderMostroInfo(baseNote)
-        }
-
-        // Kind 30301 is shared: the board and the WalletScrutiny verdict each have a card, and
-        // the class EventFactory picked from the tags is what decides between them.
-        is KanbanBoardEvent -> {
-            RenderKanbanBoard(baseNote, makeItShort, accountViewModel)
-        }
-
-        is BuildVerificationEvent -> {
-            RenderBuildVerification(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is KanbanCardEvent -> {
-            RenderKanbanCard(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        // Other apps' formats on those shared kinds (an encrypted planner's tasks, Fieldbook
-        // memberships, Paygress revocations...). EventCache never stores them, so this only
-        // guards the fall-through below, which would print their raw content.
-        is UnrecognizedKind30301Event,
-        is UnrecognizedKind30302Event,
-        is UnrecognizedKind38385Event,
-        // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
-        is UnrecognizedKind30405Event,
-        is UnrecognizedKind30406Event,
-        -> {}
-
-        is PredictionMarketEvent -> {
-            RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
-        }
-
-        is BallotEvent -> {
-            RenderBallot(baseNote, accountViewModel)
-        }
-
-        is ClassifiedsEvent -> {
-            RenderClassifieds(
-                noteEvent,
-                baseNote,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        // Open Markets, around the NIP-99 listings.
-        is ProductCollectionEvent -> {
-            RenderProductCollection(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is ShippingOptionEvent -> {
-            RenderShippingOption(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is ProductReviewEvent -> {
-            RenderProductReview(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the
-        // text card below, as they always did.
-        is StallEvent if noteEvent.isWellFormed() -> {
-            RenderStall(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is ProductEvent if noteEvent.isWellFormed() -> {
-            RenderProduct(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is MarketplaceEvent if noteEvent.isWellFormed() -> {
-            RenderMarketplace(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is AuctionEvent if noteEvent.isWellFormed() -> {
-            RenderAuction(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is BidEvent if noteEvent.isWellFormed() -> {
-            RenderBid(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is BidConfirmationEvent if noteEvent.isWellFormed() -> {
-            RenderBidConfirmation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is CalendarTimeSlotEvent -> {
-            RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
-        }
-
-        is CalendarDateSlotEvent -> {
-            RenderCalendarDateSlotEvent(baseNote, accountViewModel, nav)
-        }
-
-        is CalendarCollectionEvent -> {
-            RenderCalendarCollectionEvent(baseNote, accountViewModel, nav)
-        }
-
-        is CalendarRSVPEvent -> {
-            RenderCalendarRSVPEvent(baseNote, accountViewModel, nav)
-        }
-
-        is ZapGoalEvent -> {
-            RenderGoal(baseNote, accountViewModel, nav)
-        }
-
-        is FundraiserEvent -> {
-            RenderFundraiser(baseNote, makeItShort, accountViewModel, nav)
-        }
-
-        is BirdexEvent -> {
-            RenderBirdex(baseNote)
-        }
-
-        is BirdDetectionEvent -> {
-            RenderBirdDetection(baseNote)
-        }
-
-        is Ps1SaveEvent -> {
-            RenderPs1Save(baseNote)
-        }
-
-        is GeocacheListingEvent -> {
-            RenderGeocache(baseNote, accountViewModel)
-        }
-
-        is GeocacheFoundLogEvent -> {
-            RenderGeocacheFoundLog(baseNote, accountViewModel)
-        }
-
-        is RoadEventReportEvent -> {
-            RenderRoadEventReport(baseNote)
-        }
-
-        is RoadEventConfirmationEvent -> {
-            RenderRoadEventConfirmation(baseNote)
-        }
-
-        is HighlightEvent -> {
-            RenderHighlight(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is DvmContentDiscoveryResponseEvent -> {
-            RenderDvmContentDiscoveryResponse(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is DvmStatusEvent -> {
-            RenderDvmStatus(
-                baseNote,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is ZapPollEvent -> {
-            RenderZapPoll(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                accountViewModel,
-                nav,
-                isBoostedNote = isBoostedNote,
-            )
-        }
-
-        is ChatEvent -> {
-            // A kind-9 that belongs to a Buzz/NIP-29 relay group (its channel is recorded as a gatherer
-            // on consume) renders as a conversation row with a group/DM header — so a Buzz DM on the
-            // Notifications tab reads like a message, not a post. A non-group kind-9 keeps the plain chat body.
-            if (baseNote.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } != null) {
-                RenderRelayGroupMessage(
-                    baseNote,
-                    makeItShort,
-                    canPreview,
-                    quotesLeft,
-                    backgroundColor,
-                    editState,
-                    accountViewModel,
-                    nav,
-                )
-            } else {
-                RenderChat(
-                    baseNote,
-                    makeItShort,
-                    canPreview,
-                    quotesLeft,
-                    unPackReply,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
-                    isBoostedNote = isBoostedNote,
-                )
-            }
-        }
-
-        is StreamMessageV2Event -> {
-            RenderRelayGroupMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is PollEvent -> {
-            RenderPoll(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-                isBoostedNote = isBoostedNote,
-            )
-        }
-
-        is FileMetadataEvent -> {
-            FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
-        }
-
-        // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
-        // so new video subtypes render automatically instead of falling through to text.
-        is VideoEvent -> {
-            VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
-        }
-
-        is VideoCollaborationEvent -> {
-            RenderVideoCollaboration(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is VideoCurationSetEvent -> {
-            RenderVideoCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is PictureEvent -> {
-            PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
-        }
-
-        is WorkoutRecordEvent -> {
-            WorkoutDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
-        }
-
-        is ExerciseTemplateEvent -> {
-            ExerciseTemplateDisplay(baseNote, backgroundColor, canPreview, quotesLeft, accountViewModel, nav)
-        }
-
-        is BaseVoiceEvent -> {
-            RenderVoiceTrack(baseNote, accountViewModel, nav)
-        }
-
-        is FileStorageHeaderEvent -> {
-            FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
-        }
-
-        is CommunityPostApprovalEvent -> {
-            RenderPostApproval(
-                baseNote,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is TextNoteModificationEvent -> {
-            RenderTextModificationEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is ChannelMessageEvent -> {
-            RenderChannelMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is LiveActivitiesChatMessageEvent -> {
-            RenderLiveActivityChatMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is TorrentEvent -> {
-            RenderTorrent(
-                baseNote,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is TorrentCommentEvent -> {
-            RenderTorrentComment(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is InteractiveStoryBaseEvent -> {
-            RenderInteractiveStory(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        // One branch for kinds 31/32/33: they are one idea aimed at three sorts of source.
-        is CitationEvent -> {
-            RenderCitation(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is LearningResourceEvent -> {
-            RenderLearningResource(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is BookshelfDirectoryEvent -> {
-            RenderBookshelfDirectory(baseNote, accountViewModel, nav)
-        }
-
-        is BlossomPieceIndexEvent -> {
-            RenderBlossomPieceIndex(baseNote, accountViewModel)
-        }
-
-        is ExternalReactionEvent -> {
-            RenderExternalReaction(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is WikiMergeRequestEvent -> {
-            RenderWikiMergeRequest(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is WikiMergeAcceptanceEvent -> {
-            RenderWikiMergeAcceptance(baseNote, accountViewModel, nav)
-        }
-
-        is WikiRedirectEvent -> {
-            RenderWikiRedirect(baseNote, accountViewModel, nav)
-        }
-
-        is PublicationContentEvent -> {
-            RenderPublicationSection(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is RelayReviewEvent -> {
-            RenderRelayReview(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is EntityRatingEvent -> {
-            RenderEntityRating(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-            )
-        }
-
-        is PublicMessageEvent -> {
-            RenderPublicMessage(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                backgroundColor,
-                accountViewModel,
-                nav,
-                isBoostedNote = isBoostedNote,
-            )
-        }
-
-        is MuteListEvent -> {
-            RenderMuteList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is BookmarkListEvent -> {
-            RenderBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is OldBookmarkListEvent -> {
-            RenderOldBookmarkList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is BookmarkSetEvent -> {
-            RenderBookmarkSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is ArticleCurationSetEvent -> {
-            RenderArticleCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is PictureCurationSetEvent -> {
-            RenderPictureCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is AppCurationSetEvent -> {
-            RenderAppCurationSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is GitRepositoryListEvent -> {
-            RenderGitRepositoryList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is FavoriteAlgoFeedsListEvent -> {
-            RenderFavoriteAlgoFeedsList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is GitAuthorListEvent -> {
-            RenderGitAuthorList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is MediaFollowListEvent -> {
-            RenderMediaFollowList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is GoodWikiAuthorListEvent -> {
-            RenderGoodWikiAuthorList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is KindMuteSetEvent -> {
-            RenderKindMuteSet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is MediaStarterPackEvent -> {
-            RenderMediaStarterPack(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is InterestListEvent -> {
-            RenderInterestList(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is InterestSetEvent -> {
-            RenderInterestSet(baseNote, backgroundColor, accountViewModel, nav)
-        }
-
-        is GeohashListEvent -> {
-            RenderGeohashList(baseNote, backgroundColor, accountViewModel)
-        }
-
-        is SimpleGroupListEvent -> {
-            RenderSimpleGroupList(baseNote, backgroundColor, accountViewModel)
-        }
-
-        is GoodWikiRelayListEvent -> {
-            RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
-        }
-
-        // NIP-85: one card for the four assertion kinds, which differ only in what they score.
-        is UserAssertionEvent,
-        is EventAssertionEvent,
-        is AddressableAssertionEvent,
-        is ExternalIdAssertionEvent,
-        -> {
-            RenderTrustedAssertion(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        is TrustProviderListEvent -> {
-            RenderTrustProviderList(baseNote, accountViewModel, nav)
-        }
-
-        // Trusted Lists, kinds 30392-30395.
-        is TrustedListEvent -> {
-            RenderTrustedList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        }
-
-        // Decentralized Lists. An item that declares a list (the spec's "nonstandard method") is a header.
-        is ListHeaderEvent,
-        is AddressableListHeaderEvent,
-        -> {
-            RenderDListHeader(baseNote, accountViewModel, nav)
-        }
-
-        is ListItemEvent -> {
-            if (noteEvent.declaresList()) {
-                RenderDListHeader(baseNote, accountViewModel, nav)
-            } else {
-                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-            }
-        }
-
-        is AddressableListItemEvent -> {
-            if (noteEvent.declaresList()) {
-                RenderDListHeader(baseNote, accountViewModel, nav)
-            } else {
-                RenderDListItem(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-            }
-        }
-
-        is GroupMetadataEvent -> {
-            RenderGroupMetadata(baseNote, accountViewModel, nav)
-        }
-
-        // Profile and settings lists.
-        is EmojiListEvent -> RenderEmojiList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StickerPackEvent -> RenderStickerPack(baseNote, backgroundColor, accountViewModel, nav)
-        is ProfileBadgesEvent -> RenderProfileBadges(baseNote, accountViewModel, nav)
-        is AcceptedBadgeSetEvent -> RenderAcceptedBadgeSet(baseNote, backgroundColor, accountViewModel, nav)
-        is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
-        is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
-        is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
-        is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor)
-        is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
-        is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
-        is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)
-        is FavoritePodcastsListEvent -> RenderFavoritePodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is AuthoredPodcastsEvent -> RenderAuthoredPodcasts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is FavoriteFollowSetsListEvent -> RenderFavoriteFollowSets(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CommunityListEvent -> RenderCommunityList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is TopEightEvent -> RenderTopEight(baseNote, backgroundColor, accountViewModel, nav)
-        is ExternalIdentitiesEvent -> RenderExternalIdentities(baseNote)
-        is UserStatusEvent -> RenderUserStatus(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is PostingStreakEvent -> RenderPostingStreak(baseNote)
-        is ActiveProfileThemeEvent -> RenderActiveProfileTheme(baseNote, backgroundColor, accountViewModel, nav)
-        is ThemeDefinitionEvent -> RenderThemeDefinition(baseNote, backgroundColor, accountViewModel, nav)
-        is ProfileGalleryEntryEvent -> RenderProfileGalleryEntry(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is WebBookmarkEvent -> RenderWebBookmark(baseNote, backgroundColor, accountViewModel, nav)
-        is GeocacheCurationListEvent -> RenderGeocacheCurationList(baseNote, accountViewModel, nav)
-
-        // Deletions, labels, timestamps, chess, P2P orders and other public records.
-        is DeletionRequestEvent -> RenderDeletionRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is RequestToVanishEvent -> RenderRequestToVanish(baseNote, backgroundColor, accountViewModel, nav)
-        is LabelEvent -> RenderLabel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is OtsEvent -> RenderOts(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is FileStorageEvent -> RenderFileStorage(baseNote)
-        is GeocacheVerificationEvent -> RenderGeocacheVerification(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is InteractiveStoryReadingStateEvent -> RenderInteractiveStoryReadingState(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is LongFormDraftEvent -> RenderLongFormDraft(baseNote, accountViewModel)
-        is JesterEvent -> RenderJesterChess(baseNote, accountViewModel, nav)
-        is LiveChessGameAcceptEvent -> RenderLiveChessAccept(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is LiveChessMoveEvent -> RenderLiveChessMove(baseNote, backgroundColor, accountViewModel, nav)
-        is LiveChessDrawOfferEvent -> RenderLiveChessDrawOffer(baseNote, backgroundColor, accountViewModel, nav)
-        is P2POrderEvent -> RenderP2POrder(baseNote)
-        is MostroUserRatingEvent -> RenderMostroUserRating(baseNote, accountViewModel, nav)
-        is MostroDisputeEvent -> RenderMostroDispute(baseNote)
-        is MostroDevFeePaymentEvent -> RenderMostroDevFee(baseNote)
-        is RoboSatsCoordinatorRatingEvent -> RenderRoboSatsCoordinatorRating(baseNote, accountViewModel, nav)
-        is PollResponseEvent -> RenderPollResponse(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is RelayMonitorEvent -> RenderRelayMonitor(baseNote)
-        is TextTrackEvent -> RenderTextTrack(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is VideoViewEvent -> RenderVideoView(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is WorkoutTemplateEvent -> RenderWorkoutTemplate(baseNote, backgroundColor, accountViewModel, nav)
-        // Other apps' formats on the RoboSats (31986), mint-recommendation (38000) and Mostro
-        // rating/dispute (38384/38386) kinds: nothing to draw, and their raw content must not
-        // reach the text path (EventCache keeps 38000 junk only so it supersedes older versions).
-        is UnrecognizedKind31986Event,
-        is UnrecognizedKind38000Event,
-        is UnrecognizedKind38384Event,
-        is UnrecognizedKind38386Event,
-        -> {}
-
-        // Buzz chat, huddle, job, forum, moderation and archival events.
-        is ArchiveRequestEvent -> RenderBuzzArchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is UnarchiveRequestEvent -> RenderBuzzUnarchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ArchivedIdentityEvent -> RenderBuzzIdentityArchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is UnarchivedIdentityEvent -> RenderBuzzIdentityUnarchived(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ArchivedIdentitiesListEvent -> RenderBuzzArchivedIdentitiesList(baseNote, accountViewModel, nav)
-        is SystemMessageEvent -> RenderBuzzSystemMessageCard(baseNote, accountViewModel, nav)
-        is CanvasEvent -> RenderBuzzCanvas(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamMessageEditEvent -> RenderBuzzMessageEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamMessagePinnedEvent -> RenderBuzzMessagePinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamMessageBookmarkedEvent -> RenderBuzzMessageBookmarked(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamMessageScheduledEvent -> RenderBuzzMessageScheduled(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamReminderEvent -> RenderBuzzReminder(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is StreamMessageDiffEvent -> RenderBuzzDiffCard(baseNote, accountViewModel, nav)
-        is ChannelSummaryEvent -> RenderBuzzChannelSummary(baseNote, accountViewModel, nav)
-        is PresenceSnapshotEvent -> RenderBuzzPresenceSnapshot(baseNote, accountViewModel, nav)
-        is ThreadSummaryEvent -> RenderBuzzThreadSummary(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ForumPostEvent -> RenderBuzzForumPost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ForumCommentEvent -> RenderBuzzForumComment(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ForumVoteEvent -> RenderBuzzForumVoteCard(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is HuddleStartedEvent -> RenderBuzzHuddleStarted(baseNote, accountViewModel, nav)
-        is HuddleParticipantJoinedEvent -> RenderBuzzHuddleJoined(baseNote, accountViewModel, nav)
-        is HuddleParticipantLeftEvent -> RenderBuzzHuddleLeft(baseNote, accountViewModel, nav)
-        is HuddleEndedEvent -> RenderBuzzHuddleEnded(baseNote, accountViewModel, nav)
-        is HuddleLivenessEvent -> RenderBuzzHuddleLiveness(baseNote, accountViewModel, nav)
-        is HuddleGuidelinesEvent -> RenderBuzzHuddleGuidelines(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is HuddleReactionEvent -> RenderBuzzHuddleReaction(baseNote)
-        is JobRequestEvent -> RenderBuzzJobRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is JobAcceptedEvent -> RenderBuzzJobAccepted(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is JobProgressEvent -> RenderBuzzJobProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is JobResultEvent -> RenderBuzzJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is JobCancelEvent -> RenderBuzzJobCancel(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is JobErrorEvent -> RenderBuzzJobError(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is DmOpenEvent -> RenderBuzzDmOpen(baseNote, accountViewModel, nav)
-        is DmCreatedEvent -> RenderBuzzDmCreated(baseNote, accountViewModel, nav)
-        is DmAddMemberEvent -> RenderBuzzDmAddMember(baseNote, accountViewModel, nav)
-        is DmHideEvent -> RenderBuzzDmHide(baseNote, accountViewModel, nav)
-        is DmVisibilityEvent -> RenderBuzzDmVisibility(baseNote, accountViewModel, nav)
-        is PresenceUpdateEvent -> RenderBuzzPresenceUpdate(baseNote, accountViewModel, nav)
-        is TypingIndicatorEvent -> RenderBuzzTyping(baseNote, accountViewModel, nav)
-        is MemberRemovedNotificationEvent -> RenderBuzzMemberRemoved(baseNote, accountViewModel, nav)
-        is ModerationBanEvent -> RenderBuzzModerationBan(baseNote, accountViewModel, nav)
-        is ModerationTimeoutEvent -> RenderBuzzModerationTimeout(baseNote, accountViewModel, nav)
-        is ModerationUntimeoutEvent -> RenderBuzzModerationUntimeout(baseNote, accountViewModel, nav)
-        is ModerationResolveReportEvent -> RenderBuzzModerationResolveReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ProductFeedbackEvent -> RenderBuzzProductFeedback(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is RelayAdminAddMemberEvent -> RenderBuzzRelayAdminAddMember(baseNote, accountViewModel, nav)
-        is RelayAdminRemoveMemberEvent -> RenderBuzzRelayAdminRemoveMember(baseNote, accountViewModel, nav)
-        is RelayAdminChangeRoleEvent -> RenderBuzzRelayAdminChangeRole(baseNote, accountViewModel, nav)
-        is SetWorkspaceProfileEvent -> RenderBuzzSetWorkspaceProfile(baseNote, accountViewModel)
-        is ThreadWindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
-        is WindowBoundsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
-
-        // NIP-29 group moderation and metadata, NIP-28 channel moderation, Concord, location chats.
-        is GroupPutUserEvent -> RenderGroupPutUser(baseNote, backgroundColor, accountViewModel, nav)
-        is GroupRemoveUserEvent -> RenderGroupRemoveUser(baseNote, backgroundColor, accountViewModel, nav)
-        is GroupEditMetadataEvent -> RenderGroupEditMetadata(baseNote, accountViewModel, nav)
-        is GroupDeleteEventEvent -> RenderGroupDeleteEvent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CreateGroupEvent -> RenderCreateGroup(baseNote, accountViewModel, nav)
-        is DeleteGroupEvent -> RenderDeleteGroup(baseNote, backgroundColor, accountViewModel, nav)
-        is GroupCreateInviteEvent -> RenderGroupCreateInvite(baseNote, accountViewModel, nav)
-        is GroupUpdatePinListEvent -> RenderGroupUpdatePinList(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is GroupJoinRequestEvent -> RenderGroupJoinRequest(baseNote, backgroundColor, accountViewModel, nav)
-        is GroupLeaveRequestEvent -> RenderGroupLeaveRequest(baseNote, backgroundColor, accountViewModel, nav)
-        is GroupAdminsEvent -> RenderGroupAdmins(baseNote, accountViewModel, nav)
-        is GroupMembersEvent -> RenderGroupMembers(baseNote, accountViewModel, nav)
-        is GroupRolesEvent -> RenderGroupRoles(baseNote, accountViewModel, nav)
-        is GroupParticipantsEvent -> RenderGroupParticipants(baseNote, accountViewModel, nav)
-        is GroupPinnedEvent -> RenderGroupPinned(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ChannelHideMessageEvent -> RenderChannelHideMessage(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ChannelMuteUserEvent -> RenderChannelMuteUser(baseNote, backgroundColor, accountViewModel, nav)
-        is PublicChatListEvent -> RenderPublicChatList(baseNote, backgroundColor, accountViewModel, nav)
-        is EphemeralChatListEvent -> RenderEphemeralChatList(baseNote, backgroundColor, accountViewModel, nav)
-        is EphemeralChatEvent -> RenderEphemeralChat(baseNote, backgroundColor, accountViewModel, nav)
-        is GeohashChatEvent -> RenderGeohashChat(baseNote, backgroundColor, accountViewModel, nav)
-        is GeohashPresenceEvent -> RenderGeohashPresence(baseNote, nav)
-        is AdminCommandEvent -> RenderNestsAdminCommand(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CommunityRulesEvent -> RenderCommunityRules(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is LiveActivitiesRaidEvent -> RenderLiveActivityRaid(baseNote, backgroundColor, accountViewModel, nav)
-        is ConcordChatEditEvent -> RenderConcordChatEdit(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ConcordTimerNoticeEvent -> RenderConcordTimerNotice(baseNote, accountViewModel, nav)
-        is ControlEditionEvent -> RenderConcordControlEdition(baseNote)
-        is ConcordInviteBundleEvent -> RenderConcordInviteBundle(baseNote)
-        is ConcordCommunityListEvent -> RenderPrivateKindCard(baseNote)
-        is ConcordCommunityListFragmentEvent -> RenderPrivateKindCard(baseNote)
-        is ConcordInviteListEvent -> RenderPrivateKindCard(baseNote)
-        is RelayInviteRequestEvent -> RenderRelayInviteRequest(baseNote)
-        is RelayRoleEvent -> RenderRelayRole(baseNote, backgroundColor, accountViewModel, nav)
-
-        // Encrypted and protocol plumbing (MLS, gift wraps, wallet connect, calls, push): a card
-        // that names the kind, never the ciphertext; zap requests and key packages show their public fields.
-        // Zaps and payment requests
-        is ZapRequestEvent -> RenderZapRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is PrivateZapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Bolt)
-        is Bolt12ZapIntentEvent -> RenderBolt12ZapIntent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        // NIP-47 wallet connect
-        is NwcInfoEvent -> RenderNwcInfo(baseNote)
-        is NwcRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
-        is NwcResponseEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
-        is NwcNotificationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        // CLINK
-        is OfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Storefront)
-        is DebitEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Payment)
-        is ManageEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Settings)
-        // NIP-60 Cashu wallet
-        is CashuWalletEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.AccountBalanceWallet)
-        is CashuTokenEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Paid)
-        is CashuSpendingHistoryEvent -> RenderCashuSpendingHistory(baseNote, accountViewModel, nav)
-        is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
-        // Marmot MLS (KeyPackageEvent 30443 and LegacyKeyPackageEvent 443 share PublishedKeyPackage)
-        is PublishedKeyPackage -> RenderMarmotKeyPackage(baseNote)
-        is KeyPackageRelayListEvent -> RenderKeyPackageRelayList(baseNote, backgroundColor, accountViewModel, nav)
-        is WelcomeEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.GroupAdd)
-        is GroupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Groups)
-        is NotificationRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        is TokenRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        is TokenListEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        is TokenRemovalEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
-        // NIP-59 gift wraps and seals (EphemeralGiftWrapEvent extends GiftWrapEvent)
-        is GiftWrapEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Mail)
-        is SealEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
-        is PnsEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Lock)
-        // WebRTC calls
-        is CallOfferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
-        is CallAnswerEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Call)
-        is CallIceCandidateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.SettingsInputAntenna)
-        is CallRenegotiateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Sync)
-        is CallHangupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
-        is CallRejectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.CallEnd)
-        // Remote signing, push, wake-up
-        is NostrConnectEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.PhonelinkLock)
-        is PushRegistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        is PushDeregistrationEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.NotificationsOff)
-        is PushPreferencesEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Tune)
-        is WakeUpEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
-        // Key decoupling
-        is EncryptionKeyListEvent -> RenderEncryptionKeyList(baseNote)
-        is EncryptionKeyRequestEvent -> RenderEncryptionKeyRequest(baseNote)
-        is EncryptionKeyTransferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
-
-        // NIP-90 job requests and results. After the DVM kinds above that keep their own cards.
-        // Base-class branches: they must stay AFTER the existing `is DvmContentDiscoveryResponseEvent` and
-        // `is DvmStatusEvent` branches (both DvmResponseEvent subclasses), which keep their own renderers.
-        is DvmRequestEvent -> RenderDvmRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is DvmResponseEvent -> RenderDvmResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is DvmHeartbeatEvent -> RenderDvmHeartbeat(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-
-        // Git CI, repository state and developer records.
-        is CiWorkflowProgressEvent -> RenderCiWorkflowProgress(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CiWorkflowResultEvent -> RenderCiWorkflowResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CiJobResultEvent -> RenderCiJobResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CiManualTriggerEvent -> RenderCiManualTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CiServiceRequestEvent -> RenderCiServiceRequest(baseNote, accountViewModel, nav)
-        is CiServiceStopEvent -> RenderCiServiceStop(baseNote, accountViewModel, nav)
-        is CiCoordinatorAdvertisementEvent -> RenderCiCoordinatorAdvertisement(baseNote)
-        is CiRequestReadinessListEvent -> RenderCiRequestReadinessList(baseNote, accountViewModel, nav)
-        is CiRepositoryStatusEvent -> RenderCiRepositoryStatus(baseNote)
-        is CiSecretUpdateEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
-        is GitRepositoryStateEvent -> RenderGitRepositoryState(baseNote)
-        is UserGraspListEvent -> RenderUserGraspList(baseNote)
-        is IdentityProofEvent -> RenderIdentityProof(baseNote)
-        is AssetBundleEvent -> RenderAssetBundle(baseNote)
-        is SiteSnapshotEvent -> RenderSiteSnapshot(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is NappletSnapshotEvent -> RenderNappletSnapshot(baseNote)
-        is FeedDefinitionEvent -> RenderFeedDefinition(baseNote, accountViewModel, nav)
-        is AppDataEvent -> RenderAppData(baseNote)
-        is NNSEvent -> RenderNNS(baseNote)
-
-        // Buzz agents, workflows, teams and projects; OpenAgents capabilities; ContextVM.
-        is AgentProfileEvent -> RenderAgentProfile(baseNote)
-        is ManagedAgentEvent -> RenderManagedAgent(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is PersonaEvent -> RenderPersona(baseNote)
-        is TeamEvent -> RenderAgentTeam(baseNote)
-        is TeamCatalogEvent -> RenderAgentTeamCatalog(baseNote)
-        is ProjectEvent -> RenderAgentProject(baseNote)
-        is ArtifactEvent -> RenderAgentArtifact(baseNote, backgroundColor, accountViewModel, nav)
-        is ArtifactRemovalEvent -> RenderAgentArtifactRemoval(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is AuditEntryEvent -> RenderAgentAuditEntry(baseNote, accountViewModel, nav)
-        is WorkflowDefEvent -> RenderWorkflowDefinition(baseNote)
-        is WorkflowTriggerEvent -> RenderWorkflowTrigger(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is WorkflowTriggeredEvent, is WorkflowStepStartedEvent, is WorkflowStepCompletedEvent, is WorkflowStepFailedEvent, is WorkflowCompletedEvent, is WorkflowFailedEvent, is WorkflowCancelledEvent, is WorkflowApprovalRequestedEvent, is WorkflowApprovalGrantedEvent, is WorkflowApprovalDeniedEvent -> RenderWorkflowLifecycle(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ApprovalGrantEvent, is ApprovalDenyEvent -> RenderWorkflowApprovalDecision(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is CapabilityDiscoveryEvent -> RenderCapabilityDiscovery(baseNote, accountViewModel, nav)
-        is ExtensionListingEvent -> RenderExtensionListing(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
-        is ExtensionReleaseEvent -> RenderExtensionRelease(baseNote)
-        is CvmServerAnnouncementEvent -> RenderCvmServerAnnouncement(baseNote)
-        is CvmToolsListEvent -> RenderCvmToolsList(baseNote, accountViewModel)
-        is EventReminderEvent -> RenderEventReminder(baseNote)
-        is AgentTurnMetricEvent -> RenderAgentTurnMetric(baseNote)
-        is EngramEvent -> RenderEngram(baseNote)
-        is ObserverFrameEvent -> RenderObserverFrame(baseNote)
-        is PairingEvent -> RenderAgentPairing(baseNote)
-        is PushLeaseEvent -> RenderPushLease(baseNote)
-
-        else -> {
-            RenderTextEvent(
-                baseNote,
-                makeItShort,
-                canPreview,
-                quotesLeft,
-                unPackReply,
-                backgroundColor,
-                editState,
-                accountViewModel,
-                nav,
-                isBoostedNote = isBoostedNote,
-            )
         }
     }
 }

@@ -71,6 +71,7 @@ import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcInfoEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
@@ -226,9 +227,9 @@ fun RenderNwcInfo(baseNote: Note) {
         subtitle = methods.size.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.kc_proto_nwc_method_count, it, it) },
         tone = KindTone.Money,
     ) {
-        SectionChips(stringRes(Res.string.kc_proto_nwc_methods), methods)
-        SectionChips(stringRes(Res.string.kc_proto_nwc_notifications), notifications)
-        SectionChips(stringRes(Res.string.kc_proto_nwc_extensions), extensions)
+        KindCardSectionChips(stringRes(Res.string.kc_proto_nwc_methods), methods)
+        KindCardSectionChips(stringRes(Res.string.kc_proto_nwc_notifications), notifications)
+        KindCardSectionChips(stringRes(Res.string.kc_proto_nwc_extensions), extensions)
         KindCardField(stringRes(Res.string.kc_proto_nwc_encryption), encryptions, monospace = true, maxLines = 1)
     }
 }
@@ -258,7 +259,7 @@ fun RenderMarmotKeyPackage(baseNote: Note) {
         status = if (isLegacy) stringRes(Res.string.kc_proto_keypackage_legacy) else null,
     ) {
         KindCardMeta(listOf(client, version?.let { stringRes(Res.string.kc_proto_mls_version_meta, it) }))
-        SectionChips(stringRes(Res.string.kc_proto_relays), relays)
+        KindCardSectionChips(stringRes(Res.string.kc_proto_relays), relays)
     }
 }
 
@@ -303,7 +304,7 @@ fun RenderKeyPackageRelayList(
 @Composable
 fun RenderCashuMintQuote(baseNote: Note) {
     val event = baseNote.event as? CashuMintQuoteEvent ?: return
-    val mint = remember(event) { event.mint()?.let(::mintDisplayName) }
+    val mint = remember(event) { event.mint()?.let { HttpUrlFormatter.displayUrl(it) } }
 
     KindCard(
         icon = MaterialSymbols.Paid,
@@ -314,14 +315,6 @@ fun RenderCashuMintQuote(baseNote: Note) {
         statusTone = KindTone.Neutral,
     )
 }
-
-/** A mint URL without its scheme or trailing slash: `mint.cashu.chat`. */
-private fun mintDisplayName(url: String): String =
-    url
-        .trim()
-        .removePrefix("https://")
-        .removePrefix("http://")
-        .trimEnd('/')
 
 /**
  * NIP-60 spending history (kind 7376): the amount and direction are encrypted; the redeemed
@@ -403,15 +396,4 @@ fun RenderEncryptionKeyRequest(baseNote: Note) {
                 { KindCardField(stringRes(Res.string.kc_proto_key_request_code), code, monospace = true, maxLines = 1) }
             },
     )
-}
-
-/** A section heading over a row of chips; nothing when [labels] is empty. */
-@Composable
-private fun SectionChips(
-    label: String,
-    labels: List<String>,
-) {
-    if (labels.isEmpty()) return
-    KindCardSection(label)
-    KindCardChips(labels)
 }

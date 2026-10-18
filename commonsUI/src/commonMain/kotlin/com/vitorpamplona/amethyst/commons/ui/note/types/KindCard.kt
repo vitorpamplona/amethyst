@@ -39,6 +39,7 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.kind_card_linked_event
 import com.vitorpamplona.amethyst.commons.resources.kind_card_more
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
@@ -78,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.LocalNowSeconds
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -125,10 +128,33 @@ fun KindTone.color(): Color =
 private val LocalKindCardBackground = staticCompositionLocalOf<MutableState<Color>?> { null }
 
 /**
- * Whether card text may load link previews and inline media. False inside a quoted card, which is
- * shown short: the text path stopped previews there too (`canPreview && !makeItShort`).
+ * What the note row drawing a card allows it: how many more levels of quotes ([quotesLeft]) and
+ * whether text may load link previews and inline media ([canPreview], the text path's
+ * `canPreview && !makeItShort`). Card primitives never exceed it, so a card whose text quotes
+ * another card (or itself, through an naddr) stops where the row's budget stops.
  */
-private val LocalKindCardCanPreview = staticCompositionLocalOf { true }
+@Immutable
+class KindCardRow(
+    val quotesLeft: Int,
+    val canPreview: Boolean,
+)
+
+private val LocalKindCardRow = staticCompositionLocalOf { KindCardRow(quotesLeft = 1, canPreview = true) }
+
+/** Whether a card may load link previews and inline media here (false inside quotes and short rows). */
+@Composable
+fun kindCardCanPreview(): Boolean = LocalKindCardRow.current.canPreview
+
+/** Publishes the note row's quote budget and preview permission to the card primitives below it. */
+@Composable
+fun ProvideKindCardRow(
+    quotesLeft: Int,
+    canPreview: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val row = remember(quotesLeft, canPreview) { KindCardRow(quotesLeft, canPreview) }
+    CompositionLocalProvider(LocalKindCardRow provides row, content = content)
+}
 
 /**
  * [compute] at the app's shared coarse clock ([LocalNowSeconds], ticking every 30 s), for a card
@@ -280,6 +306,25 @@ fun KindCardMeta(parts: List<String?>) {
     )
 }
 
+/** A [KindCardSection] heading over [labels] as chips; nothing when there are none. */
+@Composable
+fun KindCardSectionChips(
+    label: String,
+    labels: List<String>,
+    max: Int = 12,
+) {
+    if (labels.isEmpty()) return
+    KindCardSection(label)
+    KindCardChips(labels, max)
+}
+
+/** "+N more" under a list a card shows only the start of; nothing when [count] is 0. */
+@Composable
+fun KindCardMore(count: Int) {
+    if (count <= 0) return
+    KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, count, count)))
+}
+
 /** Short labels (tags, roles, capabilities, relays) as a wrapping row of chips, [max] at most. */
 @Composable
 fun KindCardChips(
@@ -315,13 +360,17 @@ private fun KindCardChip(
     )
 }
 
-/** A block of machine text (a log, a diff, a filter) in a monospaced, inset box. */
+/**
+ * A block of machine text (a log, a diff, a filter) in a monospaced, inset box. Only the lines that
+ * can show are laid out: a payload can be megabytes, and Text would shape all of it to draw six lines.
+ */
 @Composable
 fun KindCardCode(
     text: String,
     maxLines: Int = 8,
 ) {
     if (text.isBlank()) return
+    val visible = remember(text, maxLines) { firstLines(text, maxLines, maxChars = maxLines * MAX_CODE_CHARS_PER_LINE) }
     Box(
         Modifier
             .fillMaxWidth()
@@ -330,7 +379,7 @@ fun KindCardCode(
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
         Text(
-            text = text,
+            text = visible,
             style = MaterialTheme.typography.labelSmall,
             fontFamily = FontFamily.Monospace,
             maxLines = maxLines,
@@ -339,7 +388,30 @@ fun KindCardCode(
     }
 }
 
-/** Free text the author wrote (a reason, a description, a comment), with links and mentions. */
+private const val MAX_CODE_CHARS_PER_LINE = 200
+
+/** The first [maxLines] lines of [text], at most [maxChars] characters, with "…" when cut. */
+private fun firstLines(
+    text: String,
+    maxLines: Int,
+    maxChars: Int,
+): String {
+    var end = 0
+    var lines = 0
+    while (end < text.length && end < maxChars) {
+        if (text[end] == '\n') {
+            lines++
+            if (lines >= maxLines) break
+        }
+        end++
+    }
+    return if (end >= text.length) text else text.substring(0, end).trimEnd() + "…"
+}
+
+/**
+ * Free text the author wrote (a reason, a description, a comment), with links and mentions, behind
+ * the note's content warning unless [gated] is false because the caller already gates the card.
+ */
 @Composable
 fun KindCardText(
     note: Note,
@@ -348,20 +420,20 @@ fun KindCardText(
     accountViewModel: AccountViewModel,
     nav: INav,
     quotesLeft: Int = 1,
+    gated: Boolean = true,
 ) {
     if (text.isNullOrBlank()) return
     val opaque = remember(text) { looksLikeOpaquePayload(text) }
     if (opaque) return
     val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() } ?: return
     val cardBackground = LocalKindCardBackground.current ?: backgroundColor
-    val canPreview = LocalKindCardCanPreview.current
+    val row = LocalKindCardRow.current
 
-    // The text path gated content warnings (NIP-36) here; a card's text is the same author text.
-    SensitivityWarning(note = note, accountViewModel = accountViewModel) {
+    val viewer: @Composable () -> Unit = {
         TranslatableRichTextViewer(
             content = text,
-            canPreview = canPreview,
-            quotesLeft = quotesLeft,
+            canPreview = row.canPreview,
+            quotesLeft = minOf(quotesLeft, row.quotesLeft),
             modifier = Modifier,
             tags = tags,
             backgroundColor = cardBackground,
@@ -372,6 +444,9 @@ fun KindCardText(
             nav = nav,
         )
     }
+    // The text path gated content warnings (NIP-36) here; a card's text is the same author text.
+    // [gated] is false only when the caller already wraps the whole card in that gate.
+    if (gated) SensitivityWarning(note = note, accountViewModel = accountViewModel, content = viewer) else viewer()
 }
 
 private val NIP04_CIPHERTEXT = Regex("[A-Za-z0-9+/=]+\\?iv=[A-Za-z0-9+/=]+")
@@ -466,7 +541,8 @@ fun KindCardQuote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (quotesLeft <= 0) return
+    val budget = minOf(quotesLeft, LocalKindCardRow.current.quotesLeft)
+    if (budget <= 0) return
     val event by observeNoteEvent<Event>(note, accountViewModel)
     if (event == null) {
         KindCardMissingReference(note, accountViewModel, nav)
@@ -474,17 +550,15 @@ fun KindCardQuote(
     }
     val parentBackground = LocalKindCardBackground.current ?: backgroundColor
     // The quoted note starts its own card tree: its cards draw on their own wash, not this one's.
-    CompositionLocalProvider(
-        LocalKindCardCanPreview provides false,
-        LocalKindCardBackground provides null,
-    ) {
+    // Its row (makeItShort) publishes its own, smaller quote budget and no previews.
+    CompositionLocalProvider(LocalKindCardBackground provides null) {
         NoteCompose(
             baseNote = note,
             modifier = MaterialTheme.colorScheme.replyModifier,
             isQuotedNote = true,
             unPackReply = ReplyRenderType.NONE,
             makeItShort = true,
-            quotesLeft = quotesLeft - 1,
+            quotesLeft = budget - 1,
             parentBackgroundColor = parentBackground,
             accountViewModel = accountViewModel,
             nav = nav,
@@ -542,7 +616,7 @@ fun KindCardQuoteEvent(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (quotesLeft <= 0) return
+    if (minOf(quotesLeft, LocalKindCardRow.current.quotesLeft) <= 0) return
     LoadNote(eventId) { note ->
         note?.let { KindCardQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
@@ -557,7 +631,7 @@ fun KindCardQuoteAddress(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    if (quotesLeft <= 0) return
+    if (minOf(quotesLeft, LocalKindCardRow.current.quotesLeft) <= 0) return
     LoadAddressableNote(address) { note ->
         note?.let { KindCardQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }

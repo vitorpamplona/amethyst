@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChann
 import com.vitorpamplona.amethyst.commons.nip43RelayMembers.ui.RelayRoleChips
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.ephemeral_relay_chat
 import com.vitorpamplona.amethyst.commons.resources.geohash_chat
 import com.vitorpamplona.amethyst.commons.resources.kc_group_admin_count
@@ -178,14 +177,14 @@ import com.vitorpamplona.quartz.nip72ModCommunities.rules.tags.PubkeyRuleTag
  * knows no such group yet.
  *
  * Only looks groups up, never creates them: a card drawn from an outbox or aggregator relay would
- * otherwise plant an empty group on the wrong relay. Not remembered, so a later recomposition finds
- * a group that arrived after the card was first drawn; the lookups are map reads.
+ * otherwise plant an empty group on the wrong relay. A group the cache learns about after the card
+ * is drawn shows when the card is composed again (scrolled back into view).
  */
 @Composable
 private fun rememberRelayGroup(
     baseNote: Note,
     groupId: String?,
-): RelayGroupChannel? = groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) }
+): RelayGroupChannel? = remember(baseNote, groupId) { groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) } }
 
 private fun relayGroupChannelOf(
     note: Note,
@@ -245,7 +244,7 @@ private fun GroupPinsBody(
     nav: INav,
 ) {
     pins.firstOrNull()?.let { GroupPinQuote(it, quotesLeft, backgroundColor, accountViewModel, nav) }
-    if (pins.size > 1) KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, pins.size - 1, pins.size - 1)))
+    if (pins.size > 1) KindCardMore(pins.size - 1)
 }
 
 /** NIP-29 kind 9000: users added to a group, or given roles in it. */

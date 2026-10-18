@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_customer
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_for
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_providers
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_transaction
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_more
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_online
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_group
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_length
@@ -357,7 +356,7 @@ fun RenderDvmRequest(
         info.eventIds.firstOrNull()?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
         if (info.eventIds.size > 1) {
             val more = info.eventIds.size - 1
-            KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_dvm_more, more, more)))
+            KindCardMore(more)
         }
 
         KindCardMeta(info.params.map { (key, value) -> stringRes(Res.string.kc_dvm_param_pair, dvmParamLabel(key), value) })
@@ -523,7 +522,7 @@ private fun DvmResultPayload(
             }
             if (found.size > MAX_QUOTED) {
                 val more = found.size - MAX_QUOTED
-                KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_dvm_more, more, more)))
+                KindCardMore(more)
             }
         }
 

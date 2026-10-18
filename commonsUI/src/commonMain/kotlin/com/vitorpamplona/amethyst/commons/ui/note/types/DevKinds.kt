@@ -104,7 +104,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_subtit
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_identity_proof_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv4
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ipv6
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_more
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_napplet_snapshot
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_nns_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_permissions
@@ -133,6 +132,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip34Git.ci.coordinatorAdvertisement.CiCoordinatorAdvertisementEvent
 import com.vitorpamplona.quartz.nip34Git.ci.jobResult.CiJobResultEvent
 import com.vitorpamplona.quartz.nip34Git.ci.manualTrigger.CiManualTriggerEvent
@@ -327,7 +327,7 @@ fun RenderCiJobResult(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            MoreLine(artifacts.size - MAX_ARTIFACTS)
+            KindCardMore(artifacts.size - MAX_ARTIFACTS)
         }
         CiPullRequestQuote(info.pullRequest, quotesLeft, backgroundColor, accountViewModel, nav)
     }
@@ -448,7 +448,7 @@ fun RenderCiCoordinatorAdvertisement(baseNote: Note) {
         KindCardField(stringRes(Res.string.kc_dev_ci_admission), admission?.let { stringRes(admissionLabel(it)) })
         KindCardField(stringRes(Res.string.kc_dev_ci_execution), execution?.let { stringRes(executionLabel(it)) })
         KindCardField(stringRes(Res.string.kc_dev_ci_billing), billing?.let { stringRes(billingLabel(it)) })
-        SectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
         KindCardMeta(
             listOf(
                 liveUntil?.let { stringRes(Res.string.kc_dev_ci_until, timeAbsoluteNoDot(it)) },
@@ -476,7 +476,7 @@ fun RenderCiRequestReadinessList(
         status = availabilityPill(liveUntil),
         statusTone = availabilityTone(liveUntil),
     ) {
-        SectionChips(stringRes(Res.string.kc_dev_ci_repositories), repositories)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_ci_repositories), repositories)
         if (maintainers.isNotEmpty()) {
             KindCardSection(stringRes(Res.string.kc_dev_ci_maintainers))
             KindCardUsers(maintainers, accountViewModel, nav)
@@ -507,9 +507,9 @@ fun RenderCiRepositoryStatus(baseNote: Note) {
         status = availabilityPill(liveUntil),
         statusTone = availabilityTone(liveUntil),
     ) {
-        SectionChips(stringRes(Res.string.kc_dev_ci_workflows), workflows)
-        SectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
-        SectionChips(stringRes(Res.string.kc_dev_ci_secrets), secrets)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_ci_workflows), workflows)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_ci_runners), runners)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_ci_secrets), secrets)
         KindCardMeta(listOf(liveUntil?.let { stringRes(Res.string.kc_dev_ci_until, timeAbsoluteNoDot(it)) }))
     }
 }
@@ -732,7 +732,7 @@ fun RenderGitRepositoryState(baseNote: Note) {
             KindCardMeta(listOf(head?.let { stringRes(Res.string.kc_dev_repo_state_head, it) }))
         }
         BranchRows(branches)
-        SectionChips(stringRes(Res.string.git_repo_tags), tags, MAX_TAG_CHIPS)
+        KindCardSectionChips(stringRes(Res.string.git_repo_tags), tags, MAX_TAG_CHIPS)
     }
 }
 
@@ -743,7 +743,7 @@ private fun BranchRows(refs: List<RefTag>) {
     refs.take(MAX_BRANCH_ROWS).forEach { ref ->
         KindCardField(ref.shortName, ref.commit.take(8), monospace = true, maxLines = 1)
     }
-    MoreLine(refs.size - MAX_BRANCH_ROWS)
+    KindCardMore(refs.size - MAX_BRANCH_ROWS)
 }
 
 /** Kind 10317: the user's preferred grasp (git-over-nostr hosting) servers, in order. */
@@ -822,7 +822,7 @@ fun RenderAssetBundle(baseNote: Note) {
         )
         KindCardMeta(listOf(event.note()))
         KindCardCode(listing, maxLines = MAX_FILE_ROWS)
-        MoreLine(files.size - MAX_FILE_ROWS)
+        KindCardMore(files.size - MAX_FILE_ROWS)
     }
 }
 
@@ -866,7 +866,7 @@ fun RenderNappletSnapshot(baseNote: Note) {
         subtitle = title,
     ) {
         SnapshotFacts(remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) })
-        SectionChips(stringRes(Res.string.kc_dev_permissions), requires)
+        KindCardSectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }
 
@@ -880,7 +880,7 @@ private class SnapshotInfo(
     val source: String?,
     serverUrls: List<String>,
 ) {
-    val servers = serverUrls.map { it.removePrefix("https://").removeSuffix("/") }
+    val servers = serverUrls.map { HttpUrlFormatter.displayUrl(it) }
 }
 
 @Composable
@@ -888,7 +888,7 @@ private fun SnapshotFacts(info: SnapshotInfo) {
     KindCardMeta(listOf(info.description))
     KindCardMeta(listOf(if (info.fileCount > 0) pluralStringRes(Res.plurals.kc_dev_files_count, info.fileCount, info.fileCount) else null))
     KindCardField(stringRes(Res.string.kc_dev_source), info.source, maxLines = 1)
-    SectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)
+    KindCardSectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -963,22 +963,3 @@ fun RenderNNS(baseNote: Note) {
 // ---------------------------------------------------------------------------------------------
 // Small helpers
 // ---------------------------------------------------------------------------------------------
-
-/** A [KindCardSection] heading over [values] as chips; nothing when there are no values. */
-@Composable
-private fun SectionChips(
-    label: String,
-    values: List<String>,
-    max: Int = 12,
-) {
-    if (values.isEmpty()) return
-    KindCardSection(label)
-    KindCardChips(values, max)
-}
-
-/** "and N more" under a list cut short. */
-@Composable
-private fun MoreLine(hidden: Int) {
-    if (hidden <= 0) return
-    KindCardMeta(listOf(stringRes(Res.string.kc_dev_more, hidden)))
-}

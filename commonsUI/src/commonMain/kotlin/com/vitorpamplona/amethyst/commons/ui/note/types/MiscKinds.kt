@@ -62,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_language
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_longform_draft_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_minutes
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_every
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_more
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dev_fee_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_id
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_initiator
@@ -115,11 +114,13 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_difficulty
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_duration
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_exercises
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_interval_meta
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_reps
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_rounds_meta
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rest_sets_meta
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_rounds_count
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_sets
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_template_title
+import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_weight_kg
 import com.vitorpamplona.amethyst.commons.resources.paid
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -185,13 +186,6 @@ import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
  */
 
 private fun Long.toIntCount(): Int = coerceIn(0L, Int.MAX_VALUE.toLong()).toInt()
-
-/** "and 4 more" under the one target a card quotes, for the targets it does not. */
-@Composable
-private fun MoreCount(count: Int) {
-    if (count <= 0) return
-    KindCardMeta(listOf(pluralStringRes(Res.plurals.kc_misc_more, count, count)))
-}
 
 /** The amount a trading card is about, in large type in the card's money color: "2,000 CUP". */
 @Composable
@@ -277,7 +271,7 @@ fun RenderDeletionRequest(
             firstId != null -> KindCardQuoteEvent(firstId, quotesLeft, backgroundColor, accountViewModel, nav)
             firstAddress != null -> KindCardQuoteAddress(firstAddress, quotesLeft, backgroundColor, accountViewModel, nav)
         }
-        MoreCount(targets.count - 1)
+        KindCardMore(targets.count - 1)
     }
 }
 
@@ -378,7 +372,7 @@ fun RenderLabel(
             firstId != null -> KindCardQuoteEvent(firstId, quotesLeft, backgroundColor, accountViewModel, nav)
             firstAddress != null -> KindCardQuoteAddress(firstAddress, quotesLeft, backgroundColor, accountViewModel, nav)
         }
-        MoreCount(info.eventIds.size + info.addresses.size - 1)
+        KindCardMore(info.eventIds.size + info.addresses.size - 1)
     }
 }
 
@@ -1047,8 +1041,50 @@ fun RenderVideoView(
 private class MiscTemplateExercise(
     val name: String,
     val sets: Int,
-    val detail: String?,
+    val reps: Int?,
+    val weightKg: Double?,
 )
+
+/** Everything a workout template card reads from the tags, parsed once per event. */
+@Immutable
+private class MiscTemplateInfo(
+    val title: String?,
+    val typeCode: String?,
+    val topics: List<String>,
+    val exercises: List<MiscTemplateExercise>,
+    val rounds: Int?,
+    val intervalSeconds: Int?,
+    val restBetweenSetsSeconds: Int?,
+    val restBetweenRoundsSeconds: Int?,
+    val durationSeconds: Long?,
+    val difficulty: String?,
+)
+
+private fun WorkoutTemplateEvent.templateInfo() =
+    MiscTemplateInfo(
+        title = title(),
+        typeCode = workoutTypeCode(),
+        topics = topics().distinct().map { "#$it" },
+        exercises =
+            exerciseGroups().map { group ->
+                MiscTemplateExercise(
+                    name = group.displayName() ?: group.reference,
+                    sets = group.sets.size,
+                    reps =
+                        group.sets
+                            .mapNotNull { it.reps }
+                            .distinct()
+                            .singleOrNull(),
+                    weightKg = group.topWeightKg(),
+                )
+            },
+        rounds = rounds(),
+        intervalSeconds = intervalSeconds(),
+        restBetweenSetsSeconds = restBetweenSetsSeconds(),
+        restBetweenRoundsSeconds = restBetweenRoundsSeconds(),
+        durationSeconds = durationSeconds(),
+        difficulty = difficulty()?.replaceFirstChar { it.uppercaseChar() },
+    )
 
 /** A workout plan: its type, structure (rounds, timing, rest), the exercises and the notes. */
 @Composable
@@ -1059,53 +1095,42 @@ fun RenderWorkoutTemplate(
     nav: INav,
 ) {
     val event = baseNote.event as? WorkoutTemplateEvent ?: return
-    val type = remember(event) { event.workoutTypeCode()?.let { ExerciseType.parse(it) } }
-    val typeRaw = remember(event) { event.workoutTypeCode() }
-    val topics = remember(event) { event.topics().distinct().map { "#$it" } }
-    val exercises =
-        remember(event) {
-            event.exerciseGroups().map { group ->
-                val reps = group.sets.mapNotNull { it.reps }.distinct()
-                val weight = group.topWeightKg()
-                val detail =
-                    listOfNotNull(
-                        reps.singleOrNull()?.let { "× $it" },
-                        weight?.let { "${formatDecimal(it, 1)} kg" },
-                    ).joinToString(" · ").ifBlank { null }
-                MiscTemplateExercise(group.displayName() ?: group.reference, group.sets.size, detail)
-            }
-        }
+    val info = remember(event) { event.templateInfo() }
+    val type = remember(info) { info.typeCode?.let { ExerciseType.parse(it) } }
 
-    val typeLabel = type?.let { stringRes(it.labelRes()) } ?: typeRaw?.replaceFirstChar { it.uppercaseChar() }
-
-    val rounds = event.rounds()
+    val typeLabel = type?.let { stringRes(it.labelRes()) } ?: info.typeCode?.replaceFirstChar { it.uppercaseChar() }
+    val templateLabel = stringRes(Res.string.kc_misc_workout_template_title)
     val exerciseLabels =
-        exercises.map {
-            val sets = pluralStringRes(Res.plurals.kc_misc_workout_sets, it.sets, it.sets)
-            listOfNotNull(it.name, sets, it.detail).joinToString(" · ")
+        info.exercises.map {
+            listOfNotNull(
+                it.name,
+                pluralStringRes(Res.plurals.kc_misc_workout_sets, it.sets, it.sets),
+                it.reps?.let { reps -> stringRes(Res.string.kc_misc_workout_reps, reps) },
+                it.weightKg?.let { kg -> stringRes(Res.string.kc_misc_workout_weight_kg, formatDecimal(kg, 1)) },
+            ).joinToString(" · ")
         }
 
     KindCard(
         icon = type.symbol(),
-        title = event.title() ?: stringRes(Res.string.kc_misc_workout_template_title),
-        subtitle = listOfNotNull(typeLabel, stringRes(Res.string.kc_misc_workout_template_title).takeIf { event.title() != null }).joinToString(" · ").ifBlank { null },
+        title = info.title ?: templateLabel,
+        subtitle = listOfNotNull(typeLabel, templateLabel.takeIf { info.title != null }).joinToString(" · ").ifBlank { null },
     ) {
         // The plan's structure as one line: "3 rounds · 40 seconds intervals · 90 seconds rest between sets".
         KindCardMeta(
             listOf(
-                rounds?.let { pluralStringRes(Res.plurals.kc_misc_workout_rounds_count, it, it) },
-                event.intervalSeconds()?.let { stringRes(Res.string.kc_misc_workout_interval_meta, durationLabel(it.toLong())) },
-                event.restBetweenSetsSeconds()?.let { stringRes(Res.string.kc_misc_workout_rest_sets_meta, durationLabel(it.toLong())) },
-                event.restBetweenRoundsSeconds()?.let { stringRes(Res.string.kc_misc_workout_rest_rounds_meta, durationLabel(it.toLong())) },
+                info.rounds?.let { pluralStringRes(Res.plurals.kc_misc_workout_rounds_count, it, it) },
+                info.intervalSeconds?.let { stringRes(Res.string.kc_misc_workout_interval_meta, durationLabel(it.toLong())) },
+                info.restBetweenSetsSeconds?.let { stringRes(Res.string.kc_misc_workout_rest_sets_meta, durationLabel(it.toLong())) },
+                info.restBetweenRoundsSeconds?.let { stringRes(Res.string.kc_misc_workout_rest_rounds_meta, durationLabel(it.toLong())) },
             ),
         )
-        KindCardField(stringRes(Res.string.kc_misc_workout_duration), event.durationSeconds()?.let { DurationTag.formatTime(it) })
-        KindCardField(stringRes(Res.string.kc_misc_workout_difficulty), event.difficulty()?.replaceFirstChar { it.uppercaseChar() })
+        KindCardField(stringRes(Res.string.kc_misc_workout_duration), info.durationSeconds?.let { DurationTag.formatTime(it) })
+        KindCardField(stringRes(Res.string.kc_misc_workout_difficulty), info.difficulty)
         if (exerciseLabels.isNotEmpty()) {
             KindCardSection(pluralStringRes(Res.plurals.kc_misc_workout_exercises, exerciseLabels.size, exerciseLabels.size))
             KindCardChips(exerciseLabels, max = 4)
         }
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
-        KindCardChips(topics, max = 6)
+        KindCardChips(info.topics, max = 6)
     }
 }

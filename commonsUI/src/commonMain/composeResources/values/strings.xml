@@ -7502,7 +7502,6 @@
     <string name="kc_dvm_heartbeat_title">DVM heartbeat</string>
     <string name="kc_dvm_online">Online</string>
     <string name="kc_dev_app_id">App</string>
-    <string name="kc_dev_more">and %1$d more</string>
     <plurals name="kc_dev_files_count">
         <item quantity="one">%1$d file</item>
         <item quantity="other">%1$d files</item>
@@ -7859,10 +7858,6 @@
     <string name="kc_list_expires">Expires</string>
     <string name="kc_list_gallery_entry">Added to profile gallery</string>
     <string name="kc_list_geocache_hunt">Geocache hunt</string>
-    <plurals name="kc_misc_more">
-        <item quantity="one">and %1$d more</item>
-        <item quantity="other">and %1$d more</item>
-    </plurals>
     <plurals name="kc_misc_hours">
         <item quantity="one">%1$d hour</item>
         <item quantity="other">%1$d hours</item>
@@ -7985,10 +7980,6 @@
     <string name="kc_dvm_flagged_pill">Flagged</string>
     <string name="kc_dvm_param_pair">%1$s: %2$s</string>
     <string name="kc_dvm_publishes_at">Publishes %1$s</string>
-    <plurals name="kc_dvm_more">
-        <item quantity="one">+%1$d more</item>
-        <item quantity="other">+%1$d more</item>
-    </plurals>
     <plurals name="kc_dvm_results_count">
         <item quantity="one">%1$d result</item>
         <item quantity="other">%1$d results</item>
@@ -8046,6 +8037,8 @@
         <item quantity="one">%1$d exercise</item>
         <item quantity="other">%1$d exercises</item>
     </plurals>
+    <string name="kc_misc_workout_reps">× %1$d</string>
+    <string name="kc_misc_workout_weight_kg">%1$s kg</string>
     <string name="kc_misc_workout_interval_meta">%1$s intervals</string>
     <string name="kc_misc_workout_rest_sets_meta">%1$s rest between sets</string>
     <string name="kc_misc_workout_rest_rounds_meta">%1$s rest between rounds</string>

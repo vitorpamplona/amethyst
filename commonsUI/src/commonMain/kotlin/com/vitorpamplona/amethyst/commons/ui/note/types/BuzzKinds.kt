@@ -206,6 +206,7 @@ import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
 import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /*
@@ -265,8 +266,10 @@ private fun findBuzzChannel(
     note: Note,
     channelId: String?,
 ): RelayGroupChannel? =
-    note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel }
-        ?: LocalCache.getRelayGroupChannelForContent(note)
+    // A note can sit in several channels' timelines; only the one its own tag names is its home.
+    note.inGatherers?.firstNotNullOfOrNull { gatherer ->
+        (gatherer as? RelayGroupChannel)?.takeIf { channelId == null || it.groupId.id == channelId }
+    } ?: LocalCache.getRelayGroupChannelForContent(note)
         ?: channelId?.let { id ->
             note.relays.firstNotNullOfOrNull { LocalCache.getRelayGroupChannelIfExists(GroupId(id, it)) }
         }
@@ -475,8 +478,7 @@ fun RenderBuzzDiffCard(
         remember(meta) {
             meta
                 ?.repoUrl
-                ?.removePrefix("https://")
-                ?.removePrefix("http://")
+                ?.let { HttpUrlFormatter.displayUrl(it) }
                 ?.removeSuffix(".git")
                 ?.ifBlank { null }
         }

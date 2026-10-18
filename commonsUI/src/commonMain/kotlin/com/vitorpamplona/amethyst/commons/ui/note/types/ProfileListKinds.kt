@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -61,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.cashu_mints
-import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.kc_list_and_more
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_badge_sets
@@ -254,7 +254,7 @@ private fun QuotedAddresses(
     }
     val rest = addresses.size - MAX_QUOTES
     if (rest > 0) {
-        KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, rest, rest)))
+        KindCardMore(rest)
     }
 }
 
@@ -801,7 +801,7 @@ fun RenderExternalIdentities(baseNote: Note) {
         claims.take(MAX_IDENTITIES).forEach { claim -> IdentityClaimRow(claim) }
         val rest = claims.size - MAX_IDENTITIES
         if (rest > 0) {
-            KindCardMeta(listOf(pluralStringRes(Res.plurals.chips_n_more, rest, rest)))
+            KindCardMore(rest)
         }
     }
 }
@@ -1118,18 +1118,21 @@ fun RenderProfileGalleryEntry(
         icon = MaterialSymbols.PhotoLibrary,
         title = stringRes(Res.string.kc_list_gallery_entry),
     ) {
-        media.firstOrNull()?.let { first ->
-            SensitivityWarning(note = baseNote, accountViewModel = accountViewModel) {
-                ZoomableContentView(
-                    content = first,
-                    images = media,
-                    roundedCorner = true,
-                    contentScale = ContentScale.FillWidth,
-                    accountViewModel = accountViewModel,
-                )
+        // One content-warning gate for the picture and its caption, so one tap reveals both.
+        SensitivityWarning(note = baseNote, accountViewModel = accountViewModel) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                media.firstOrNull()?.let { first ->
+                    ZoomableContentView(
+                        content = first,
+                        images = media,
+                        roundedCorner = true,
+                        contentScale = ContentScale.FillWidth,
+                        accountViewModel = accountViewModel,
+                    )
+                }
+                KindCardText(baseNote, summary, backgroundColor, accountViewModel, nav, gated = false)
             }
         }
-        KindCardText(baseNote, summary, backgroundColor, accountViewModel, nav)
         if (media.isEmpty() && fromEvent != null) {
             KindCardQuoteEvent(fromEvent, quotesLeft, backgroundColor, accountViewModel, nav)
         }
@@ -1189,7 +1192,7 @@ fun RenderWebBookmark(
         subtitle = if (pageTitle != null) shownUrl else null,
     ) {
         if (url.isNotBlank()) {
-            if (isWebLink(url) && accountViewModel.settings.showUrlPreview()) {
+            if (isWebLink(url) && kindCardCanPreview() && accountViewModel.settings.showUrlPreview()) {
                 LoadUrlPreview(url, shownUrl, null, accountViewModel, nav)
             } else {
                 ClickableUrl(url = url, displayText = shownUrl, style = MaterialTheme.typography.bodySmall)
