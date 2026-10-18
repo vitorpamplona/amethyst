@@ -26,7 +26,10 @@ import com.vitorpamplona.amethyst.commons.drawing.DrawingPaper
 import com.vitorpamplona.amethyst.commons.drawing.DrawingReplay
 import com.vitorpamplona.amethyst.commons.drawing.DrawingTool
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import java.io.File
 import javax.imageio.ImageIO
 import kotlin.math.abs
@@ -206,6 +209,22 @@ class DrawingExporterTest {
         } finally {
             File(path.toString()).delete()
         }
+    }
+
+    @Test
+    fun aCancelledStillLeavesNoFileBehind() {
+        val state = sampleDrawing()
+        val tempDir = File(System.getProperty("java.io.tmpdir"))
+
+        fun stills() = tempDir.list { _, name -> name.startsWith("amethyst_drawing_still_") }.orEmpty().toSet()
+        val before = stills()
+        runBlocking {
+            // The render runs to the end on Default; the cancellation lands as withContext returns.
+            val job = launch { DrawingExporter.writeStill(state.background, state.strokes.toList()) }
+            yield()
+            job.cancelAndJoin()
+        }
+        assertEquals(before, stills(), "a cancelled still must be deleted")
     }
 
     private fun xOf(fraction: Float) = (fraction * DrawingExporter.EXPORT_WIDTH).toInt()

@@ -153,7 +153,10 @@ class PaperPicker(
         state.changeBackground(DrawingBackground.Paper(paper))
     }
 
-    fun chooseUnsaved(photo: DrawingBackground.Photo) = state.changeBackground(photo)
+    fun chooseUnsaved(photo: DrawingBackground.Photo) {
+        selectedSaved = null
+        state.changeBackground(photo)
+    }
 
     suspend fun chooseSaved(item: SavedBackground) {
         val png = backgrounds?.read(item.path)
@@ -207,7 +210,13 @@ class PaperPicker(
                 null
             }
         loading = false
-        if (loaded == null) failed = true else state.changeBackground(loaded)
+        if (loaded == null) {
+            failed = true
+        } else {
+            // Whatever saved picture was on the paper is not any more; the caller marks the new one.
+            selectedSaved = null
+            state.changeBackground(loaded)
+        }
         return loaded
     }
 }

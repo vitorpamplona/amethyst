@@ -89,7 +89,14 @@ class DrawingBackgroundStore(
         }
 
     suspend fun delete(path: Path) {
-        withContext(Dispatchers.IO) { fileSystem.delete(path, mustExist = false) }
+        withContext(Dispatchers.IO) {
+            try {
+                fileSystem.delete(path, mustExist = false)
+            } catch (e: Exception) {
+                // The picture stays in the list; failing to remove it must not take the editor down.
+                Log.w(TAG, "Could not delete saved drawing background", e)
+            }
+        }
     }
 
     private fun savedAt(path: Path): Long? = path.name.substringBefore('_', "").toLongOrNull()

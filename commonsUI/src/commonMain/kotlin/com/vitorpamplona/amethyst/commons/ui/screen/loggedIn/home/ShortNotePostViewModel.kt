@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -1678,21 +1679,26 @@ open class ShortNotePostViewModel :
                 // Both files go up at once: the PNG is only a preview, so the GIF does not wait for it.
                 val url =
                     coroutineScope {
+                        // A NIP-95 post embeds the GIF itself and has no imeta to hang a preview on.
                         val stillUpload =
-                            async {
-                                try {
-                                    (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
-                                } catch (e: Exception) {
-                                    if (e is CancellationException) throw e
-                                    Log.w("ShortNotePostViewModel", "Could not upload the drawing's still", e)
-                                    null
+                            if (server.type == ServerType.NIP95) {
+                                null
+                            } else {
+                                async {
+                                    try {
+                                        (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
+                                    } catch (e: Exception) {
+                                        if (e is CancellationException) throw e
+                                        Log.w("ShortNotePostViewModel", "Could not upload the drawing's still", e)
+                                        null
+                                    }
                                 }
                             }
 
                         val gifState = uploadGeneratedFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, server, signer)
                         val gif = (gifState as? UploadingState.Finished)?.result
                         if (gif == null) {
-                            stillUpload.cancel()
+                            stillUpload?.cancel()
                             val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
                             onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
                             return@coroutineScope null
@@ -1700,14 +1706,14 @@ open class ShortNotePostViewModel :
 
                         when (gif) {
                             is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                stillUpload.cancel()
+                                stillUpload?.cancel()
                                 val nip95 = account.createNip95(gif.bytes, headerInfo = gif.fileHeader, alt, null)
                                 nip95attachments = nip95attachments + nip95
                                 account.consumeNip95(nip95.first, nip95.second)?.let { "nostr:" + it.toNEvent() }
                             }
 
                             is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                                val still = stillUpload.await()
+                                val still = stillUpload?.await()
                                 val iMeta =
                                     IMetaTagBuilder(gif.url)
                                         .apply {

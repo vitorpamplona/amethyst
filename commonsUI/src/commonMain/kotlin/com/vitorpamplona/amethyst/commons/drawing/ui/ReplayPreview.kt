@@ -29,7 +29,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -53,18 +53,22 @@ fun ReplayPreview(
     val replay = remember(strokes) { DrawingReplay(strokes) }
     val renderer = remember(painter, strokes, replay) { ReplayFrameRenderer(painter, strokes, replay) }
     val loopMs = replay.durationMs.toInt().coerceAtLeast(1)
-    val playback by rememberInfiniteTransition().animateFloat(
-        initialValue = 0f,
-        targetValue = loopMs.toFloat(),
-        animationSpec = infiniteRepeatable(tween(loopMs, easing = LinearEasing), RepeatMode.Restart),
-    )
+    val playback =
+        rememberInfiniteTransition().animateFloat(
+            initialValue = 0f,
+            targetValue = loopMs.toFloat(),
+            animationSpec = infiniteRepeatable(tween(loopMs, easing = LinearEasing), RepeatMode.Restart),
+        )
+    // The replay only moves every FRAME_MS and stands still through the lead-in and the hold:
+    // the canvas redraws when the frame changes, not on every display refresh.
+    val frameTime = remember(replay, playback) { derivedStateOf { replay.replayTimeAt(playback.value.toLong()) } }
 
     // A sticky note is shown stuck up slightly askew, the way it will look in a feed.
     val sticky = (background as? DrawingBackground.Paper)?.paper?.pattern == PaperPattern.GLUE_STRIP
     PaperFrame(background, modifier.rotate(if (sticky) STICKY_TILT else 0f)) {
         Canvas(Modifier.fillMaxSize()) {
             // Read here, in the draw phase: each animation frame redraws without recomposing.
-            with(renderer) { drawFrame(replay.replayTimeAt(playback.toLong())) }
+            with(renderer) { drawFrame(frameTime.value) }
         }
     }
 }

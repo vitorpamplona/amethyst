@@ -68,26 +68,34 @@ object DrawingExporter {
         background: DrawingBackground,
         strokes: List<DrawingStroke>,
     ): Path {
-        var written: Path? = null
+        val path = platformTempDirectory / ("amethyst_drawing_still_" + RandomInstance.randomChars(12) + ".png")
         try {
             return withContext(Dispatchers.Default) {
-                val width = EXPORT_WIDTH
                 val height = (EXPORT_WIDTH * background.aspect).roundToInt()
-                val bitmap = ImageBitmap(width, height)
-                CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
-                    drawDrawing(BackgroundPainter(background), strokes)
-                }
-                val pixels = IntArray(width * height).also { bitmap.readPixels(it) }
-                val png = encodeArgbAsPng(pixels, width, height)
-                val path = platformTempDirectory / ("amethyst_drawing_still_" + RandomInstance.randomChars(12) + ".png")
+                val png = encodeArgbAsPng(renderFinished(background, strokes, EXPORT_WIDTH, height), EXPORT_WIDTH, height)
                 platformFileSystem.write(path) { write(png) }
-                written = path
                 path
             }
-        } catch (e: CancellationException) {
-            written?.let { platformFileSystem.delete(it, mustExist = false) }
+        } catch (e: Throwable) {
+            // Cancelled (withContext throws even after the block finished) or a write that failed
+            // half way: either way the caller never gets the path, so nothing may be left there.
+            platformFileSystem.delete(path, mustExist = false)
             throw e
         }
+    }
+
+    /** The finished drawing at [width] x [height], as row-major ARGB pixels. */
+    private fun renderFinished(
+        background: DrawingBackground,
+        strokes: List<DrawingStroke>,
+        width: Int,
+        height: Int,
+    ): IntArray {
+        val bitmap = ImageBitmap(width, height)
+        CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
+            drawDrawing(BackgroundPainter(background), strokes)
+        }
+        return IntArray(width * height).also { bitmap.readPixels(it) }
     }
 
     suspend fun export(

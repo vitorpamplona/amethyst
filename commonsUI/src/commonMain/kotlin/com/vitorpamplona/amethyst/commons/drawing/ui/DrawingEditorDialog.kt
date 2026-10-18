@@ -178,8 +178,8 @@ fun DrawingEditorDialog(
     val describer = remember { appServices.createAltTextSuggester() }
     var describing by remember { mutableStateOf(false) }
     var aiSuggested by remember { mutableStateOf(false) }
-    // Which drawing was last described: going back to draw and returning unchanged must not
-    // run the model again. Strokes only change at the end, so the count and the last one tell.
+    // Which drawing was last described to the end: going back to draw and returning unchanged must
+    // not run the model again. Strokes only change at the end, so the count and the last one tell.
     var describedFor by remember { mutableStateOf<List<Any?>?>(null) }
     DisposableEffect(describer) { onDispose { describer?.close() } }
 
@@ -188,7 +188,6 @@ fun DrawingEditorDialog(
         if (describer == null || step != Step.PREVIEW || state.isEmpty || (alt.isNotEmpty() && !aiSuggested)) return@LaunchedEffect
         val drawing = listOf(state.strokes.size, state.strokes.lastOrNull(), state.background)
         if (drawing == describedFor) return@LaunchedEffect
-        describedFor = drawing
         describing = true
         try {
             val still = DrawingExporter.writeStill(state.background, state.strokes.toList())
@@ -198,9 +197,18 @@ fun DrawingEditorDialog(
                 } finally {
                     platformFileSystem.delete(still, mustExist = false)
                 }
-            if (suggestion != null && (alt.isEmpty() || aiSuggested)) {
-                alt = suggestion
-                aiSuggested = true
+            // Only a run that finished counts: one cut short by going back to draw must run again.
+            describedFor = drawing
+            // Once "Add to post" is pressed, the alt text being posted must not change under the user.
+            if (progress == null && (alt.isEmpty() || aiSuggested)) {
+                if (suggestion != null) {
+                    alt = suggestion
+                    aiSuggested = true
+                } else if (aiSuggested) {
+                    // Our earlier suggestion described a drawing that has since changed.
+                    alt = ""
+                    aiSuggested = false
+                }
             }
         } catch (e: Exception) {
             if (e is CancellationException) throw e

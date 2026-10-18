@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -176,7 +177,7 @@ private fun pressureOf(change: PointerInputChange): Float = if (change.type == P
 /**
  * Every finished stroke, on a transparent bitmap so the background shows
  * through and an eraser stroke can clear pixels in it. Adding a stroke paints
- * just that stroke onto it; undo, clear or a new size repaints from scratch.
+ * just that stroke onto it; undo or clear wipes and repaints it, a new size starts a new one.
  * Strokes only change by being appended or removed from the end, so checking
  * the last one painted is enough to know which case this is.
  */
@@ -199,13 +200,13 @@ private class FinishedStrokesLayer {
                 .roundToInt()
                 .coerceAtLeast(1)
         var image = bitmap
-        val stillValid =
-            image != null && image.width == w && image.height == h &&
-                paintedCount <= strokes.size && (paintedCount == 0 || strokes[paintedCount - 1] === painted)
-
-        if (image == null || !stillValid) {
+        if (image == null || image.width != w || image.height != h) {
             image = ImageBitmap(w, h)
             bitmap = image
+            paintedCount = 0
+        } else if (paintedCount > strokes.size || (paintedCount > 0 && strokes[paintedCount - 1] !== painted)) {
+            // Undo or clear: wipe the bitmap rather than allocate a new one on every tap.
+            draw(drawScope, image) { drawRect(Color.Black, blendMode = BlendMode.Clear) }
             paintedCount = 0
         }
 

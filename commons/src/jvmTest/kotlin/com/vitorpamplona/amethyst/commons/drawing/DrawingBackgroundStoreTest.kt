@@ -87,4 +87,17 @@ class DrawingBackgroundStoreTest {
             store.delete(path)
             assertTrue(store.list().isEmpty())
         }
+
+    @Test
+    fun aDeleteThatFailsDoesNotThrow() =
+        runBlocking {
+            val store = store()
+            val path = store.save(picture(1))
+            // A directory with something in it cannot be deleted: the store must log it, not crash the editor.
+            val stuck = path.parent!! / "stuck_dir"
+            Files.createDirectories(stuck.toNioPath())
+            Files.write((stuck / "child").toNioPath(), byteArrayOf(1))
+            store.delete(stuck)
+            assertEquals(listOf(path), store.list())
+        }
 }
