@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatu
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
 import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
@@ -368,6 +369,13 @@ class DesktopAppModules(
 
     val sources: RelaySubscriptionsCoordinator =
         RelaySubscriptionsCoordinator(cache, client, authCoordinator.receiver, failureTracker, applicationIOScope)
+
+    /** Signs the BUD-01 retry when a gated Blossom host answers an image fetch with 401. */
+    val blossomReadAuthTokens =
+        BlossomReadAuthTokenProvider(
+            signerProvider = { sessionManager.loggedInAccount()?.signer },
+            scope = applicationIOScope,
+        )
 
     /**
      * BUD-10: resolves a `blossom:` URI to a server that holds the blob, from the author's and the

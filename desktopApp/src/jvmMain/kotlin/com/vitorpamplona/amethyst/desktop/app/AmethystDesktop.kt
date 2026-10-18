@@ -157,10 +157,12 @@ fun main(args: Array<String>) {
     val modules = DesktopAppModules(filesDir, version, isDebug)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
-    // `blossom:` images resolve to the server that holds the blob, as on Android.
+    // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a
+    // signed retry, as on Android.
     DesktopImageLoaderSetup.setup(
         clientForUrl = { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) },
         blossomServerResolver = { modules.blossomResolver },
+        readAuth = modules.blossomReadAuthTokens,
     )
     // So do video thumbnails, saves and encrypted media, which those clients also decrypt, and
     // the videos Android would send over Tor: those whose video client has a proxy port now.

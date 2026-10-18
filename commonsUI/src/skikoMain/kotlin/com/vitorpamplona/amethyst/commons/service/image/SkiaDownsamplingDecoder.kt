@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.service.images
+package com.vitorpamplona.amethyst.commons.service.image
 
 import coil3.ImageLoader
 import coil3.asImage
@@ -46,7 +46,7 @@ import org.jetbrains.skia.MipmapMode
 import kotlin.math.roundToInt
 
 /**
- * Coil's own desktop decoder, with a downscale that keeps the picture.
+ * Coil's own Skia decoder (desktop and iOS), with a downscale that keeps the picture.
  *
  * Coil's `SkiaImageDecoder` shrinks each image to the size it is drawn at, as Android's decoder
  * does, but with Skia's default sampling: nearest neighbour, no mipmaps. That keeps one source
