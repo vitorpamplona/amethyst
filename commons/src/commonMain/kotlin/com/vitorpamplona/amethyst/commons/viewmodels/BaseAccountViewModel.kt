@@ -1986,12 +1986,14 @@ open class BaseAccountViewModel(
 
     fun removeTrustScoreProvider() = launchSigner { account.removeTrustScoreProvider() }
 
-    fun changeReactionTypes(
-        reactionSet: List<String>,
-        onDone: () -> Unit,
-    ) = launchSigner {
-        account.changeReactionTypes(reactionSet)
-        onDone()
+    /**
+     * Applies [reactionSet] at once, so the like popup shows it right away, and publishes it once
+     * the edits stop: the reaction choices screen saves on every tap. See [pickerPublisher].
+     */
+    fun changeReactionTypes(reactionSet: List<String>) {
+        if (account.applyReactionTypes(reactionSet)) {
+            pickerPublisher.schedule()
+        }
     }
 
     fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
@@ -2046,13 +2048,14 @@ open class BaseAccountViewModel(
     /**
      * Publishes the account's synced settings once the picker edits stop, rather than once per toggle.
      *
-     * The Side Menu and bottom-bar pickers are the only settings surfaces that write in bursts — a
-     * configuring session is a run of discrete toggles over ~50 rows, and each one signs, encrypts
-     * and publishes the whole blob to every outbox relay, which on an external signer is an IPC
-     * round trip (and possibly a prompt) per switch. One publisher for both, since they edit the same
-     * app-specific data event and a burst that crosses the two should still collapse.
+     * The Side Menu and bottom-bar pickers and the reaction choices screen are the only settings
+     * surfaces that write in bursts — a configuring session is a run of discrete toggles over ~50
+     * rows (or taps across an emoji grid), and each one signs, encrypts and publishes the whole blob
+     * to every outbox relay, which on an external signer is an IPC round trip (and possibly a prompt)
+     * per switch. One publisher for all, since they edit the same app-specific data event and a burst
+     * that crosses them should still collapse.
      *
-     * Only these two. Every other synced setting changes one at a time, and the published event is
+     * Only these. Every other synced setting changes one at a time, and the published event is
      * its only durable copy, so delaying those would buy nothing and cost durability.
      *
      * On the account's scope, NOT [viewModelScope]. A synced setting's only durable copy is the

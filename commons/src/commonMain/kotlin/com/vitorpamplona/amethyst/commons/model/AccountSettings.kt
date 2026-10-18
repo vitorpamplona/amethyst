@@ -1480,6 +1480,18 @@ class AccountSettings(
         }
     }
 
+    /**
+     * A version built from these live settings, back from the relays: kept as the backup but not
+     * merged, since the live settings may have moved on while it was out (see
+     * `AppSpecificState.snapshotsSignedHere`).
+     */
+    fun keepOwnAppSpecificData(appSettings: AppSpecificDataEvent) {
+        if (backupGuard.accept(backupAppSpecificData, appSettings, isEmpty = appSettings.content.isBlank()) { keepOwnAppSpecificData(appSettings) }) {
+            backupAppSpecificData = appSettings
+            saveAccountSettings()
+        }
+    }
+
     fun updateAppSpecificData(
         appSettings: AppSpecificDataEvent?,
         newSyncedSettings: AccountSyncedSettingsInternal,

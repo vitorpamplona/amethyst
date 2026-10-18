@@ -779,7 +779,6 @@
     <string name="show_sensitive_content_explainer">Εμφανίζει προειδοποίηση όταν ο συντάκτης της ανάρτησης την έχει επισημάνει ως ευαίσθητη</string>
     <string name="max_hashtag_limit_title">Μέγιστο hashtags ανά ανάρτηση</string>
     <string name="max_hashtag_limit_explainer">Αποκρύπτει αναρτήσεις με περισσότερα hashtags από αυτό το όριο. Ορίστε 0 για απενεργοποίηση</string>
-    <string name="new_reaction_symbol">Νέο εικονίδιο Αντίδρασης</string>
     <string name="zapraiser_explainer">Θέτει τον στόχο του ποσού σε sats (υποδιαίρεση του Bitcoin, 1 Bitcoin = 100.000.000 sats) που θέλετε να συγκεντρώσετε για αυτή τη δημοσίευση. Οι Nostr clients που υποστηρίζουν τη λειτουργία zapraiser ίσως δείχνουν μια μπάρα προόδου του στόχου σας ώστε να ενισχύσουν πιθανές δωρεές</string>
     <string name="zapraiser_target_amount_in_sats">Το ποσό του στόχου σας σε sats</string>
     <string name="sats_to_complete">Zapraiser στο %1$s. %2$s sats ως την επίτευξη του στόχου</string>

@@ -1539,11 +1539,8 @@ class Account(
         }
     }
 
-    suspend fun changeReactionTypes(reactionSet: List<String>) {
-        if (settings.changeReactionTypes(reactionSet)) {
-            sendNewAppSpecificData()
-        }
-    }
+    /** The reaction choices counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyReactionTypes(reactionSet: List<String>): Boolean = settings.changeReactionTypes(reactionSet)
 
     suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
         if (settings.changeReactionRowItems(items)) {
