@@ -34,6 +34,8 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -195,6 +197,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid
                 _hasMoreTransactions.value = lastSeenTxid != null
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 _error.value = t.message ?: "Failed to load transactions"
                 _hasMoreTransactions.value = false
             } finally {
@@ -219,6 +222,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                     lastSeenTxid = rows.lastOrNull { it.confirmations > 0 }?.txid ?: seen
                 }
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 _error.value = t.message ?: "Failed to load more transactions"
             } finally {
                 _isLoadingMore.value = false

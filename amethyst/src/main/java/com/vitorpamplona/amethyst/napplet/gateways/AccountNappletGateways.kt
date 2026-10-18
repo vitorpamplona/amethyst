@@ -69,6 +69,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceErrorResponse
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.PayInvoiceSuccessResponse
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.withTimeout
@@ -244,7 +245,7 @@ class AccountNappletGateways(
                 ?.firstOrNull() ?: return null
         val hash = sha256(bytes).toHexKey()
         val result =
-            runCatching {
+            runCatchingCancellable {
                 BlossomUploader().upload(
                     inputStream = ByteArrayInputStream(bytes),
                     hash = hash,
@@ -271,7 +272,7 @@ class AccountNappletGateways(
             if (relays.isEmpty()) {
                 emptyList()
             } else {
-                runCatching {
+                runCatchingCancellable {
                     account.client.taggedAs(SubPurpose.ADD_ONS, "Napplet").fetchAll(filters = relays.associateWith { filters }, idleTimeoutMs = QUERY_TIMEOUT.inWholeMilliseconds)
                 }.getOrDefault(emptyList())
             }

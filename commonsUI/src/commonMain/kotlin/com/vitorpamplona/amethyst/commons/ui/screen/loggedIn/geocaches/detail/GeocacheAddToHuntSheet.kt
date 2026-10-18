@@ -63,6 +63,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationRevision
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -152,7 +153,7 @@ fun GeocacheAddToHuntSheet(
                         .clickable(enabled = !already && !working) {
                             working = true
                             scope.launch {
-                                runCatching {
+                                runCatchingCancellable {
                                     accountViewModel.account.signAndComputeBroadcast(
                                         GeocacheCurationRevision.withCache(hunt, cache),
                                     )

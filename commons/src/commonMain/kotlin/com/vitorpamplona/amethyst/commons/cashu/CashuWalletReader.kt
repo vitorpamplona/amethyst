@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
  * Pure, stateless projection of a stream of NIP-60 / NIP-61 / NIP-87 events
@@ -104,7 +105,7 @@ class CashuWalletReader(
 
         val mints =
             walletEvent?.let { evt ->
-                runCatching { evt.mints(signer) }
+                runCatchingCancellable { evt.mints(signer) }
                     .onFailure { Log.w("CashuWalletReader") { "Failed to decrypt wallet mints: ${it.message}" } }
                     .getOrNull()
             } ?: emptyList()
@@ -130,7 +131,7 @@ class CashuWalletReader(
         val out = HashMap<HexKey, TokenContent>()
         events.forEach { evt ->
             val content =
-                runCatching { evt.tokenContent(signer) }
+                runCatchingCancellable { evt.tokenContent(signer) }
                     .onFailure { Log.w("CashuWalletReader") { "Failed to decrypt token ${evt.id.take(8)}: ${it.message}" } }
                     .getOrNull()
             if (content != null) out[evt.id] = content

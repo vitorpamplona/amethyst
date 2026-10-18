@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -300,7 +301,7 @@ class NestMoqLiteBroadcaster(
                             // breakage on the next live frame.
                             if (!wasMuted) {
                                 wasMuted = true
-                                runCatching { publisher.endGroup() }
+                                runCatchingCancellable { publisher.endGroup() }
                                 framesInCurrentGroup = 0
                             }
                             continue

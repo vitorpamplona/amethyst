@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -224,7 +225,7 @@ class NappletResourceFetcher(
     private suspend fun fetchOne(filter: Filter): Event? {
         val relays = account.homeRelays.flow.value
         if (relays.isEmpty()) return null
-        return runCatching {
+        return runCatchingCancellable {
             account.client.taggedAs(SubPurpose.ADD_ONS, "Napplet").fetchAll(filters = relays.associateWith { listOf(filter) }, idleTimeoutMs = NOSTR_FETCH_TIMEOUT_MS)
         }.getOrDefault(emptyList())
             .maxByOrNull { it.createdAt }

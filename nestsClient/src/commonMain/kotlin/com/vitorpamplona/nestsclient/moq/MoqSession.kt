@@ -24,6 +24,7 @@ import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.client
 import com.vitorpamplona.nestsclient.moq.MoqSession.Companion.server
 import com.vitorpamplona.nestsclient.transport.WebTransportBidiStream
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -566,7 +567,7 @@ class MoqSession private constructor(
                     reasonPhrase = "no publisher for that namespace+name",
                     trackAlias = msg.trackAlias,
                 )
-            runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(err)) } }
+            runCatchingCancellable { writeMutex.withLock { controlStream.write(MoqCodec.encode(err)) } }
             return
         }
 
@@ -577,7 +578,7 @@ class MoqSession private constructor(
                 groupOrder = 0,
                 contentExists = false,
             )
-        runCatching { writeMutex.withLock { controlStream.write(MoqCodec.encode(ok)) } }
+        runCatchingCancellable { writeMutex.withLock { controlStream.write(MoqCodec.encode(ok)) } }
     }
 
     private suspend fun handleInboundUnsubscribe(msg: Unsubscribe) {
@@ -849,7 +850,7 @@ class MoqSession private constructor(
                             payload = payload,
                         ),
                     )
-                runCatching { transport.sendDatagram(datagram) }
+                runCatchingCancellable { transport.sendDatagram(datagram) }
                     .onSuccess { anySent = true }
             }
             // Roll the objectId back if the entire fan-out failed (e.g.

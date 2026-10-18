@@ -39,9 +39,6 @@ import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETT
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -74,7 +71,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
     override fun onResume() {
         super.onResume()
         isResumed = true
@@ -101,13 +97,11 @@ class MainActivity : AppCompatActivity() {
         isResumed = false
         Log.d("ActivityLifecycle") { "MainActivity.onPause $this" }
 
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(Dispatchers.IO) {
+        Amethyst.instance.applicationIOScope.launch {
             LanguageTranslatorService.clear()
         }
 
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(Dispatchers.IO) {
+        Amethyst.instance.applicationIOScope.launch {
             debugState(applicationContext)
             Amethyst.instance.relayReqStats?.printStats()
         }
@@ -117,12 +111,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-
-        // Graph doesn't completely clear.
-        // @OptIn(DelicateCoroutinesApi::class)
-        // GlobalScope.launch(Dispatchers.IO) {
-        //    serviceManager.trimMemory()
-        // }
 
         Log.d("ActivityLifecycle") { "MainActivity.onStop $this" }
     }

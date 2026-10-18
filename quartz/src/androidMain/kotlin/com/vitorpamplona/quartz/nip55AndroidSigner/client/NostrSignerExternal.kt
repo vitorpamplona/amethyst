@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.nip55AndroidSigner.api.ZapEventDecryptionResult
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.BackgroundRequestHandler
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.handlers.ForegroundRequestHandler
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
+import com.vitorpamplona.quartz.nip57Zaps.PrivateZapRequestBuilder
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -180,7 +181,8 @@ class NostrSignerExternal(
         val result = queryInBackground { decryptZapEvent(event) } ?: foregroundQuery.decryptZapEvent(event)
 
         if (result is SignerResult.RequestAddressed.Successful<ZapEventDecryptionResult>) {
-            return result.result.privateEvent
+            // The foreground path returns whatever the signer app sent; check it like the internal signer does.
+            return PrivateZapRequestBuilder().checkDecrypted(result.result.privateEvent, event)
         }
 
         throw convertExceptions("Could not decrypt private zap", result)

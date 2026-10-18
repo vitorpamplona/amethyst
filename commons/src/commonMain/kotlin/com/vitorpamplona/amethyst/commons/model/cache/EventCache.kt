@@ -475,6 +475,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -2217,7 +2219,11 @@ open class EventCache :
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
-                    oldChannel.updateChannelInfo(author, event, note)
+                    // NIP-28: only the kind-40 author may update the channel. While the 40 is still
+                    // unknown, the update waits in the channel's notes and the 40 applies it.
+                    if (oldChannel.creator == author) {
+                        oldChannel.updateChannelInfo(event, note)
+                    }
                     true
                 } else {
                     false
@@ -2227,7 +2233,12 @@ open class EventCache :
             }
 
         if (note.event == null && (isVerified || justVerify(event))) {
-            oldChannel.addNote(note, relay)
+            // An ignored update stays out of the timeline too, or it would read as "X updated the
+            // channel". While the creator is unknown it waits here; the kind 40 drops it if it isn't theirs.
+            val creator = oldChannel.creator
+            if (creator == null || creator == author) {
+                oldChannel.addNote(note, relay)
+            }
             note.loadEvent(event, author, emptyList())
 
             refreshNewNoteObservers(note)
@@ -2947,6 +2958,7 @@ open class EventCache :
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 Log.w("ZP", "validation failed for ${event.id}", t)
             }
         }

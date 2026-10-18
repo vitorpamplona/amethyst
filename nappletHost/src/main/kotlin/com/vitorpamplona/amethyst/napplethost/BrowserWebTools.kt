@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_info_all_cleared
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -307,7 +308,7 @@ object BrowserWebTools {
         // The embedded provider is a service that never composes, so resources may not be wired up yet.
         SandboxComposeResources.ensure(appContext)
         uiScope.launch {
-            runCatching { loadStringRes(Res.string.browser_pill_info_all_cleared) }
+            runCatchingCancellable { loadStringRes(Res.string.browser_pill_info_all_cleared) }
                 .onSuccess { Toast.makeText(appContext, it, Toast.LENGTH_SHORT).show() }
                 .onFailure { Log.w(TAG, "Could not load the cleared-data toast", it) }
         }

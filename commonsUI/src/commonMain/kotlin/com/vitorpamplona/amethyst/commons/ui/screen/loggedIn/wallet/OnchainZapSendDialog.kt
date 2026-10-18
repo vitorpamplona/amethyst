@@ -141,6 +141,7 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nipBCOnchainZaps.builder.OnchainZapBuilder
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -246,7 +247,7 @@ fun OnchainZapSendDialog(
             if (fees != null) return@LaunchedEffect
             val backend = LocalCache.onchainBackend
             if (backend != null) {
-                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                val newFees = runCatchingCancellable { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
                 if (newFees != null) {
                     fees = newFees
                     return@LaunchedEffect

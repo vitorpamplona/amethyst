@@ -83,7 +83,9 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -448,6 +450,7 @@ class EventNotificationConsumer(
                         val result = ImageLoader(applicationContext).execute(request)
                         (result.image?.asDrawable(applicationContext.resources) as? BitmapDrawable)?.bitmap
                     } catch (_: Exception) {
+                        currentCoroutineContext().ensureActive()
                         null
                     }
                 }

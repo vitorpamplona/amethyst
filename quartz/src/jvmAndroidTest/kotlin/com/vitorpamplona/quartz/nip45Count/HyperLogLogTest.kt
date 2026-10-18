@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip45Count
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResultDeserializer
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -77,6 +79,20 @@ class HyperLogLogTest {
         val hll = ByteArray(256) { (it % 5).toByte() }
         val merged = HyperLogLog.merge(listOf(hll))
         assertTrue(hll.contentEquals(merged))
+    }
+
+    @Test
+    fun testMergeSkipsAShortRegisterArray() {
+        val hll = ByteArray(256) { 4 }
+        val merged = HyperLogLog.merge(listOf(byteArrayOf(9), hll))
+        assertTrue(hll.contentEquals(merged))
+    }
+
+    @Test
+    fun testShortHllInACountReplyIsDropped() {
+        val reply = CountResultDeserializer.fromJson(ObjectMapper().readTree("""{"count":1,"hll":"00"}"""))
+        assertEquals(1, reply.count)
+        assertNull(reply.hll)
     }
 
     @Test

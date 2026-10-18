@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
  * Cashu (NIP-60 / NIP-61) wiring for the CLI, split out of [Context] — shared
@@ -62,7 +63,7 @@ class CashuContext(
      */
     private suspend fun warmSeed() {
         if (cachedSeed != null) return
-        val priv = snapshot().walletEvent?.let { runCatching { it.privkey(ctx.signer) }.getOrNull() } ?: return
+        val priv = snapshot().walletEvent?.let { runCatchingCancellable { it.privkey(ctx.signer) }.getOrNull() } ?: return
         cachedSeed = CashuDeterministic.deriveWalletSeed(priv.hexToByteArray())
     }
 

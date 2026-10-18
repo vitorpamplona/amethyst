@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -89,7 +90,7 @@ fun ConcordMemberHarvest(
                 since = TimeUtils.now() - CONCORD_MEMBER_HARVEST_WINDOW_SECS,
             )
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 // Events land via the global ingest path, so onEvent is a no-op — we only drive the paging.
                 account.client.taggedAs(SubPurpose.COMMUNITY_CHATS, "Members").fetchAllPagesFromPool(relays.associateWith { listOf(filter) }) { _, _ -> }
             }

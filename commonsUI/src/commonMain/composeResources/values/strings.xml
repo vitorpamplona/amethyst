@@ -1943,6 +1943,7 @@
     <string name="relay_group_join_code_label">Invite code</string>
     <string name="relay_group_join_code_hint">This group is invite-only. Enter the code you were given.</string>
     <string name="relay_group_join_confirm">Join</string>
+    <string name="relay_group_join_invite_confirm">Join %1$s with the invite code from this link? Your list of groups is public.</string>
     <string name="relay_group_pending">Requested</string>
     <string name="relay_group_role_admin">Admin</string>
     <string name="relay_group_role_moderator">Moderator</string>
@@ -5000,6 +5001,9 @@
     <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>
     <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
     <string name="nip46_signer_connect_no_relays">That link carries no relay to connect on</string>
+    <string name="nip46_signer_connect_link_confirm">Connect %1$s (%2$s) to your signer? Amethyst will sign for it in the background, and the signer turns on. Only continue if you opened this link yourself.</string>
+    <string name="nip46_signer_connect_link_repair">%1$s (%2$s) is already paired. This link would replace the relays it uses and turn the signer on. Only continue if you opened this link yourself from that app.</string>
+    <string name="nip46_signer_connect_unnamed_app">Unnamed app</string>
     <plurals name="nip46_signer_connected_count">
         <item quantity="one">%1$d connected app</item>
         <item quantity="other">%1$d connected apps</item>

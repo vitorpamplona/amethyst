@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip60Cashu.p2pk.signP2pkWitnesses
 import com.vitorpamplona.quartz.nip60Cashu.seed.CashuDeterministic
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuProof
 import com.vitorpamplona.quartz.nip60Cashu.token.TokenContent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
  * High-level mint operations: mint-from-LN, swap, melt-to-LN, send-as-token,
@@ -567,7 +568,7 @@ class CashuMintOperations(
      * the per-id route.
      */
     private suspend fun fetchKeysetById(keysetId: String): KeysetDto {
-        runCatching { client.keysetById(keysetId) }
+        runCatchingCancellable { client.keysetById(keysetId) }
             .getOrNull()
             ?.keysets
             ?.firstOrNull { it.id == keysetId }
@@ -598,7 +599,7 @@ class CashuMintOperations(
      */
     suspend fun restorableKeysetIds(unit: String = "sat"): List<String> {
         val summaries = client.keysets().keysets.filter { it.unit == unit }
-        if (summaries.isEmpty()) return listOfNotNull(runCatching { activeKeyset().id }.getOrNull())
+        if (summaries.isEmpty()) return listOfNotNull(runCatchingCancellable { activeKeyset().id }.getOrNull())
         return summaries.sortedByDescending { it.active }.map { it.id }.distinct()
     }
 

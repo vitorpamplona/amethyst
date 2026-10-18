@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip5aStaticWebsites.tags
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.has
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.ensure
 
 @Stable
@@ -36,7 +37,9 @@ class PathTag(
             ensure(tag.has(2)) { return null }
             ensure(tag[0] == TAG_NAME) { return null }
             ensure(tag[1].isNotEmpty()) { return null }
-            ensure(tag[2].isNotEmpty()) { return null }
+            // The hash names the blob on disk and in Blossom URLs, so anything but a sha256 is refused
+            // (a `../` here would otherwise point a cache lookup outside its directory).
+            ensure(tag[2].length == 64 && Hex.isHex64(tag[2])) { return null }
             return PathTag(tag[1], tag[2])
         }
 

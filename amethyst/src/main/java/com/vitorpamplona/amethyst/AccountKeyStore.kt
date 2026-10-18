@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.keystorage.PrivateKeyVault
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Moves account private keys off `androidx.security.crypto` without ever
@@ -147,6 +149,7 @@ class AccountKeyStore(
         try {
             vault.delete(npub)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not delete the private key for $npub from the current store", e)
         }
     }

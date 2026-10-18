@@ -45,6 +45,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.sha256.sha256
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.io.encoding.Base64
@@ -331,6 +333,7 @@ class MarmotInboundProcessor(
                     }
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 GroupEventResult.Error(groupId, "Failed to process GroupEvent: ${e.message}", e)
             }
 

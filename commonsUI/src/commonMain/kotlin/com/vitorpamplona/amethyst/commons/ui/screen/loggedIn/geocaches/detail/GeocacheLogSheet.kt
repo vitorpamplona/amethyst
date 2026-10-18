@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.GeocacheLogComment
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 /**
@@ -133,7 +134,7 @@ fun GeocacheLogSheet(
                                     GeocacheLogSheetType.MAINTENANCE -> GeocacheLogComment.needsMaintenance(message.trim(), bundle)
                                 }
 
-                            runCatching { accountViewModel.account.signAndComputeBroadcast(template) }
+                            runCatchingCancellable { accountViewModel.account.signAndComputeBroadcast(template) }
                             publishing = false
                             onDismiss()
                         }

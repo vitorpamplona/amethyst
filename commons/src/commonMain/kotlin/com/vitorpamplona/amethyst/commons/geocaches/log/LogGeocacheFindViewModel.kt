@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationValidator
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -127,7 +128,7 @@ class LogGeocacheFindViewModel : ViewModel() {
 
         val signed =
             withContext(Dispatchers.Default) {
-                runCatching {
+                runCatchingCancellable {
                     // Scoped to this block so the signer — and the key inside it — becomes
                     // garbage the moment the signature exists.
                     val ephemeral = NostrSignerInternal(KeyPair(Hex.decode(privKeyHex)))
@@ -244,7 +245,7 @@ class LogGeocacheFindViewModel : ViewModel() {
 
             // The cache names where finders should log. Honouring that is what keeps the
             // thread together for someone reading the cache on a different relay set.
-            return runCatching {
+            return runCatchingCancellable {
                 account.signAndSendPrivatelyOrBroadcast(template) { listing.logRelays().ifEmpty { null } }
             }.isSuccess
         } finally {

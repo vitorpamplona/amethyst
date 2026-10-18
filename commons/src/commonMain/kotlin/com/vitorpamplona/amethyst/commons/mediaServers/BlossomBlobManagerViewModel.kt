@@ -45,6 +45,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -208,6 +210,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                                     val auth = account.createBlossomListAuth("List blobs").toAuthorizationHeader()
                                     clientFor(server).list(server, pubkey, auth)
                                 } catch (e: Exception) {
+                                    currentCoroutineContext().ensureActive()
                                     Log.w("BlossomBlobManager", "list failed on $server", e)
                                     null
                                 }
@@ -303,6 +306,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                     val auth = account.createBlossomDeleteAuth(hash, "Delete blob").toAuthorizationHeader()
                     clientFor(server).delete(hash, server, auth)
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.w("BlossomBlobManager", "delete failed on $server", e)
                     false
                 }
@@ -350,6 +354,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                     Log.w("BlossomBlobManager", "mirror to $target needs unsupported payment", e)
                 } catch (e: Exception) {
                     setServerState(row.hash, target, PresenceState.MISSING)
+                    currentCoroutineContext().ensureActive()
                     Log.w("BlossomBlobManager", "mirror to $target failed", e)
                 }
             }
@@ -431,6 +436,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                 setServerState(pending.hash, pending.target, PresenceState.PRESENT)
             } catch (e: Exception) {
                 setServerState(pending.hash, pending.target, PresenceState.MISSING)
+                currentCoroutineContext().ensureActive()
                 Log.w("BlossomBlobManager", "paid mirror to ${pending.target} failed", e)
             }
             // Continue with any remaining missing servers. Targets already prompted
@@ -457,6 +463,7 @@ class BlossomBlobManagerViewModel : ViewModel() {
                     val event = account.signer.sign(BlossomReport.build(hash, type, account.signer.pubKey, comment))
                     clientFor(server).report(server, event.toJson())
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.w("BlossomBlobManager", "report failed on $server", e)
                     false
                 }

@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecrets
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountSecretsEncryptedStores
 import com.vitorpamplona.amethyst.commons.model.preferences.GeohashIdentitySecrets
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import okio.Path.Companion.toOkioPath
 import java.util.concurrent.ConcurrentHashMap
 
@@ -173,6 +175,7 @@ class AccountSecretsStore(
         try {
             stores.removeAccount(npub)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not drop the secrets store for $npub", e)
         }
     }
