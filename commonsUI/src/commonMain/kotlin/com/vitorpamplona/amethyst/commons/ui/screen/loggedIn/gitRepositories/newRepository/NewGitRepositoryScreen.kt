@@ -51,9 +51,11 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -65,6 +67,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -75,6 +78,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip34Git.create.NewGitRepositoryViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -83,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_add_server
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_advanced_summary
+import com.vitorpamplona.amethyst.commons.resources.git_new_repository_description_placeholder
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_euc
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_euc_help
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_euc_invalid
@@ -91,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_repository_identifie
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_identifier_help
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_identifier_taken
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_invalid_server
+import com.vitorpamplona.amethyst.commons.resources.git_new_repository_name_placeholder
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_no_hosting
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_other_clone_urls
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_relays
@@ -101,9 +107,9 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_repository_section_h
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_topics
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_topics_placeholder
 import com.vitorpamplona.amethyst.commons.resources.git_new_repository_untitled
+import com.vitorpamplona.amethyst.commons.resources.git_new_repository_web_urls
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_description
 import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_name
-import com.vitorpamplona.amethyst.commons.resources.git_repo_settings_web_urls
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -367,75 +373,166 @@ private fun FormSection(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Fields: label above, a soft tonal fill with rounded corners and no outline until focus,
+// helper text below. The same look as the settings search field.
+// ---------------------------------------------------------------------------
+
+private val FieldShape = RoundedCornerShape(14.dp)
+
+@Composable
+private fun formFieldColors(): TextFieldColors {
+    val colors = MaterialTheme.colorScheme
+    val fill = colors.surfaceContainerHigh
+    val hint = colors.onSurfaceVariant.copy(alpha = 0.6f)
+    return OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = fill,
+        unfocusedContainerColor = fill,
+        errorContainerColor = fill,
+        disabledContainerColor = fill,
+        focusedBorderColor = colors.primary,
+        unfocusedBorderColor = Color.Transparent,
+        errorBorderColor = colors.error,
+        focusedPlaceholderColor = hint,
+        unfocusedPlaceholderColor = hint,
+        focusedLeadingIconColor = colors.primary,
+        unfocusedLeadingIconColor = colors.onSurfaceVariant,
+    )
+}
+
+@Composable
+private fun LabeledField(
+    label: StringResource,
+    helper: String? = null,
+    isError: Boolean = false,
+    field: @Composable () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = stringRes(label),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Medium,
+            color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        field()
+        if (helper != null) {
+            Text(
+                text = helper,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.grayText,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun FormTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    leadingIcon: MaterialSymbol? = null,
+    trailingIcon: @Composable (() -> Unit)? = null,
+    prefix: String? = null,
+    textStyle: TextStyle = MaterialTheme.typography.bodyLarge,
+    isError: Boolean = false,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    keyboardActions: KeyboardActions = KeyboardActions.Default,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth(),
+        placeholder = placeholder?.let { { Text(it, style = textStyle) } },
+        leadingIcon = leadingIcon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(20.dp)) } },
+        trailingIcon = trailingIcon,
+        prefix = prefix?.let { { Text(it, style = textStyle, color = MaterialTheme.colorScheme.grayText) } },
+        textStyle = textStyle,
+        isError = isError,
+        singleLine = singleLine,
+        minLines = minLines,
+        shape = FieldShape,
+        colors = formFieldColors(),
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+    )
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AboutFields(
     model: NewGitRepositoryViewModel,
     shortNpub: String,
 ) {
-    OutlinedTextField(
-        value = model.name,
-        onValueChange = { model.name = it },
-        label = { Text(stringRes(Res.string.git_repo_settings_name)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    OutlinedTextField(
-        value = model.identifier,
-        onValueChange = { model.updateIdentifier(it) },
-        label = { Text(stringRes(Res.string.git_new_repository_identifier)) },
-        prefix = { Text("$shortNpub/", color = MaterialTheme.colorScheme.grayText) },
-        singleLine = true,
-        textStyle = LocalMonoBody(),
-        isError = model.isIdentifierTaken,
-        supportingText = {
-            Text(
-                stringRes(
-                    if (model.isIdentifierTaken) Res.string.git_new_repository_identifier_taken else Res.string.git_new_repository_identifier_help,
-                ),
-            )
-        },
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    SpellCheckedOutlinedTextField(
-        value = model.description,
-        onValueChange = { model.description = it },
-        label = { Text(stringRes(Res.string.git_repo_settings_description)) },
-        minLines = 2,
-        maxLines = 6,
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-        modifier = Modifier.fillMaxWidth(),
-    )
-
-    if (model.topics.isNotEmpty()) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            model.topics.forEach { topic ->
-                val remove = stringRes(Res.string.git_new_repository_remove_topic, topic)
-                InputChip(
-                    selected = false,
-                    onClick = { model.removeTopic(topic) },
-                    label = { Text("#$topic") },
-                    trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
-                )
-            }
-        }
+    LabeledField(Res.string.git_repo_settings_name) {
+        FormTextField(
+            value = model.name,
+            onValueChange = { model.name = it },
+            placeholder = stringRes(Res.string.git_new_repository_name_placeholder),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+        )
     }
 
-    OutlinedTextField(
-        value = model.topicDraft,
-        onValueChange = { model.updateTopicDraft(it) },
-        label = { Text(stringRes(Res.string.git_new_repository_topics)) },
-        placeholder = { Text(stringRes(Res.string.git_new_repository_topics_placeholder)) },
-        leadingIcon = { Icon(MaterialSymbols.Tag, contentDescription = null, modifier = Modifier.size(20.dp)) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { model.commitTopicDraft() }),
-        modifier = Modifier.fillMaxWidth(),
-    )
+    LabeledField(
+        label = Res.string.git_new_repository_identifier,
+        helper = stringRes(if (model.isIdentifierTaken) Res.string.git_new_repository_identifier_taken else Res.string.git_new_repository_identifier_help),
+        isError = model.isIdentifierTaken,
+    ) {
+        FormTextField(
+            value = model.identifier,
+            onValueChange = { model.updateIdentifier(it) },
+            prefix = "$shortNpub/",
+            textStyle = monoBody(),
+            isError = model.isIdentifierTaken,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next),
+        )
+    }
+
+    LabeledField(Res.string.git_repo_settings_description) {
+        SpellCheckedOutlinedTextField(
+            value = model.description,
+            onValueChange = { model.description = it },
+            placeholder = { Text(stringRes(Res.string.git_new_repository_description_placeholder)) },
+            minLines = 3,
+            maxLines = 6,
+            shape = FieldShape,
+            colors = formFieldColors(),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    LabeledField(Res.string.git_new_repository_topics) {
+        if (model.topics.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 2.dp),
+            ) {
+                model.topics.forEach { topic ->
+                    val remove = stringRes(Res.string.git_new_repository_remove_topic, topic)
+                    InputChip(
+                        selected = true,
+                        onClick = { model.removeTopic(topic) },
+                        label = { Text("#$topic") },
+                        trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = remove, modifier = Modifier.size(16.dp)) },
+                        shape = RoundedCornerShape(50),
+                    )
+                }
+            }
+        }
+        FormTextField(
+            value = model.topicDraft,
+            onValueChange = { model.updateTopicDraft(it) },
+            placeholder = stringRes(Res.string.git_new_repository_topics_placeholder),
+            leadingIcon = MaterialSymbols.Tag,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { model.commitTopicDraft() }),
+        )
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -454,39 +551,47 @@ private fun HostingFields(model: NewGitRepositoryViewModel) {
                         modifier = Modifier.size(18.dp),
                     )
                 },
+                shape = RoundedCornerShape(50),
             )
         }
     }
 
     val canAdd = model.serverDraft.isNotBlank() && model.isServerDraftValid
-    OutlinedTextField(
-        value = model.serverDraft,
-        onValueChange = { model.serverDraft = it },
-        placeholder = { Text(stringRes(Res.string.git_new_repository_add_server)) },
-        leadingIcon = { Icon(MaterialSymbols.Dns, contentDescription = null, modifier = Modifier.size(20.dp)) },
-        trailingIcon = {
-            IconButton(onClick = { model.addServerDraft() }, enabled = canAdd) {
-                Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.git_new_repository_add_server))
-            }
-        },
-        singleLine = true,
-        isError = !model.isServerDraftValid,
-        supportingText =
-            if (!model.isServerDraftValid) {
-                { Text(stringRes(Res.string.git_new_repository_invalid_server, model.serverDraft.trim())) }
-            } else {
-                null
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FormTextField(
+            value = model.serverDraft,
+            onValueChange = { model.serverDraft = it },
+            placeholder = stringRes(Res.string.git_new_repository_add_server),
+            leadingIcon = MaterialSymbols.Dns,
+            trailingIcon = {
+                IconButton(onClick = { model.addServerDraft() }, enabled = canAdd) {
+                    Icon(
+                        MaterialSymbols.Add,
+                        contentDescription = stringRes(Res.string.git_new_repository_add_server),
+                        tint = if (canAdd) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.grayText,
+                    )
+                }
             },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { model.addServerDraft() }),
-        modifier = Modifier.fillMaxWidth(),
-    )
+            isError = !model.isServerDraftValid,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { model.addServerDraft() }),
+        )
+        if (!model.isServerDraftValid) {
+            Text(
+                text = stringRes(Res.string.git_new_repository_invalid_server, model.serverDraft.trim()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        }
+    }
 
     AnimatedVisibility(visible = model.selectedGraspServers.isEmpty() && model.cloneUrls.isBlank()) {
         Text(
             text = stringRes(Res.string.git_new_repository_no_hosting),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(horizontal = 4.dp),
         )
     }
 }
@@ -538,50 +643,59 @@ private fun AdvancedSection(model: NewGitRepositoryViewModel) {
             exit = shrinkVertically() + fadeOut(),
         ) {
             Column(
-                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                OutlinedTextField(
-                    value = model.earliestCommit,
-                    onValueChange = { model.earliestCommit = it },
-                    label = { Text(stringRes(Res.string.git_new_repository_euc)) },
-                    placeholder = { Text("3c7af0b95a53d7d9…", style = LocalMonoBody()) },
-                    textStyle = LocalMonoBody(),
-                    singleLine = true,
+                LabeledField(
+                    label = Res.string.git_new_repository_euc,
+                    helper = stringRes(if (model.isCommitValid) Res.string.git_new_repository_euc_help else Res.string.git_new_repository_euc_invalid),
                     isError = !model.isCommitValid,
-                    supportingText = {
-                        Text(stringRes(if (model.isCommitValid) Res.string.git_new_repository_euc_help else Res.string.git_new_repository_euc_invalid))
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = model.cloneUrls,
-                    onValueChange = { model.cloneUrls = it },
-                    label = { Text(stringRes(Res.string.git_new_repository_other_clone_urls)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = model.webUrls,
-                    onValueChange = { model.webUrls = it },
-                    label = { Text(stringRes(Res.string.git_repo_settings_web_urls)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ) {
+                    FormTextField(
+                        value = model.earliestCommit,
+                        onValueChange = { model.earliestCommit = it },
+                        placeholder = "3c7af0b95a53d7d9…",
+                        textStyle = monoBody(),
+                        isError = !model.isCommitValid,
+                    )
+                }
+                LabeledField(Res.string.git_new_repository_other_clone_urls) {
+                    FormTextField(
+                        value = model.cloneUrls,
+                        onValueChange = { model.cloneUrls = it },
+                        placeholder = "https://",
+                        singleLine = false,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    )
+                }
+                LabeledField(Res.string.git_new_repository_web_urls) {
+                    FormTextField(
+                        value = model.webUrls,
+                        onValueChange = { model.webUrls = it },
+                        placeholder = "https://",
+                        singleLine = false,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    )
+                }
                 val invalidRelay = model.invalidRelay
-                OutlinedTextField(
-                    value = model.relays,
-                    onValueChange = { model.relays = it },
-                    label = { Text(stringRes(Res.string.git_new_repository_relays)) },
+                LabeledField(
+                    label = Res.string.git_new_repository_relays,
+                    helper = invalidRelay?.let { stringRes(Res.string.git_new_repository_invalid_server, it) },
                     isError = invalidRelay != null,
-                    supportingText = invalidRelay?.let { { Text(stringRes(Res.string.git_new_repository_invalid_server, it)) } },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                ) {
+                    FormTextField(
+                        value = model.relays,
+                        onValueChange = { model.relays = it },
+                        placeholder = "wss://",
+                        isError = invalidRelay != null,
+                        singleLine = false,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun LocalMonoBody(): TextStyle = MaterialTheme.typography.bodyLarge.merge(Mono)
+private fun monoBody(): TextStyle = MaterialTheme.typography.bodyLarge.merge(Mono)
