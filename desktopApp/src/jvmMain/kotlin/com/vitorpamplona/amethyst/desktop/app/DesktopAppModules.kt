@@ -467,7 +467,7 @@ class DesktopAppModules(
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
     /** "Starting soon" notifications for the appointments the user is attending. */
-    val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, applicationIOScope) }
+    val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
     /** What key storage asks the user (the key-file password, a key this device does not keep). */
     private val keyPrompts = KeyStoragePrompts()

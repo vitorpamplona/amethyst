@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -194,7 +195,8 @@ fun main(args: Array<String>) {
             isDebugBuild = isDebug,
             notifications = modules.notifications,
             desktopSpellCheck = spellCheck,
-            concordImageDir = File(filesDir, "concord-images"),
+            // Decrypted pictures of private communities: owner-only, like the rest of the profile.
+            concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
         )
     val root = DesktopAppRoot(modules)
 

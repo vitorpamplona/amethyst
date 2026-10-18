@@ -233,7 +233,12 @@ object AndroidAppPlatform : AppPlatform {
     override fun rememberConcordImageModel(
         pointer: ImagePointer?,
         accountViewModel: AccountViewModel,
-    ): String? = rememberDecryptedConcordImageModel(pointer, accountViewModel, LocalContext.current.cacheDir)
+    ): String? {
+        // getCacheDir() takes a lock and stats the folder: once per call site, not per recomposition.
+        val context = LocalContext.current
+        val cacheDir = remember(context) { context.cacheDir }
+        return rememberDecryptedConcordImageModel(pointer, accountViewModel, cacheDir)
+    }
 
     @Composable
     override fun rememberNappletIconModel(coordinate: String): String? = AppRememberNappletIconModel(coordinate)

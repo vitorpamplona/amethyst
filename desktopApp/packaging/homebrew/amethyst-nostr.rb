@@ -34,7 +34,7 @@
 # `Amethyst.app`, so the two cannot coexist in /Applications.
 #
 # The `zap` paths were verified against application source, not docs:
-#   ~/.amethyst                            AccountManager.kt -> File(homeDir, ".amethyst")
+#   ~/.amethyst                            DesktopAccountStorage.kt -> File(homeDir, ".amethyst")
 #                                          (accounts + KEYS — destructive)
 #   ~/Library/Application Support/Amethyst DesktopTorManager.kt -> ".../Amethyst/tor"
 #   ~/Library/Caches/AmethystDesktop       DesktopImageLoaderSetup.kt -> cacheDir()

@@ -94,7 +94,7 @@ class BlossomFetcher(
         val blossomServerResolver: () -> BlossomServerResolver,
         val networkClient: (url: String) -> Call.Factory,
         // Shared with every other network-backed factory on this ImageLoader --
-        // see the note in ImageLoaderSetup.setup(): the de-dupe only works when
+        // see the note in buildAmethystImageLoader(): the de-dupe only works when
         // all fetchers coordinate through the same instance.
         concurrentRequestStrategy: ConcurrentRequestStrategy,
         private val readAuth: BlossomReadAuthTokenProvider? = null,

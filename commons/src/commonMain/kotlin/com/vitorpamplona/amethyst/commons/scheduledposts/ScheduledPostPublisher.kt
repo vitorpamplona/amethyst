@@ -73,8 +73,9 @@ class ScheduledPostPublisher(
 ) {
     /**
      * Claim and publish every post due at [nowSec]. When [accountPubkey] is non-null
-     * only that account's posts are drained; when null, all accounts are drained
-     * (used by the Android worker). Returns a [DrainReport] summarizing outcomes.
+     * only that account's posts are drained (the Android worker, per account, and the
+     * Desktop scheduler); when null, all accounts are drained (Desktop's headless
+     * `--publish-scheduled` run). Returns a [DrainReport] summarizing outcomes.
      */
     suspend fun drainDue(
         nowSec: Long,
@@ -128,11 +129,13 @@ class ScheduledPostPublisher(
                 val acceptedBy = results.filter { it.value }.keys.map { it.url }
 
                 if (acceptedBy.isNotEmpty()) {
+                    // Published: SENT first, so a failing callback below cannot turn a post that
+                    // went out into a FAILED one (and a "failed" notification after "sent").
+                    store.markSent(post.id)
                     // Only feed the event into the local cache (user's own timeline) once
                     // at least one relay acked — a failed publish must not appear locally.
-                    consume(event, relays, extras)
-                    store.markSent(post.id)
-                    onSent(post)
+                    runAfterSent("consume", post) { consume(event, relays, extras) }
+                    runAfterSent("notify", post) { onSent(post) }
                     published++
                     details.add(DrainDetail(post.id, event.id, ScheduledPostStatus.SENT, acceptedBy, null))
                     Log.d(TAG) { "Published ${post.id} to ${acceptedBy.size}/${relays.size} relay(s)" }
@@ -156,7 +159,7 @@ class ScheduledPostPublisher(
                 }
             } catch (e: Exception) {
                 // A cancelled drain (the worker stopped, the app quit) is not a failed post: the
-                // claim is released when the store next loads, and the post is retried then.
+                // claim expires (CLAIM_TTL) and the next drain retries it.
                 if (e is CancellationException) throw e
                 store.markFailed(post.id, e.message)
                 onFailed(post, e.message)
@@ -167,6 +170,19 @@ class ScheduledPostPublisher(
         }
 
         return DrainReport(published = published, failed = failed, skipped = skipped, details = details)
+    }
+
+    private suspend fun runAfterSent(
+        what: String,
+        post: ScheduledPost,
+        block: suspend () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w(TAG, "Post ${post.id} was published, but its $what step failed", e)
+        }
     }
 
     companion object {

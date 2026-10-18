@@ -31,6 +31,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostPublisher
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
@@ -140,10 +141,36 @@ class ScheduledPostWorker(
             val pending = all.count { it.status == ScheduledPostStatus.PENDING }
             Log.d(TAG) { "doWork() store has ${all.size} total, $pending PENDING" }
 
-            // One drain per loaded account, on that account's client and cache. The shared
-            // publisher re-checks each post's author and signature before it goes out. Posts of
-            // accounts that are not loaded stay PENDING for a later run.
-            appModules.accountsCache.accounts.value.values.forEach { account ->
+            val dueAccounts =
+                all
+                    // PUBLISHING too: a claim left by a process that died is recovered by the drain.
+                    .filter { (it.status == ScheduledPostStatus.PENDING || it.status == ScheduledPostStatus.PUBLISHING) && it.publishAtSec <= nowSec }
+                    .mapTo(HashSet()) { it.accountPubkey }
+            if (dueAccounts.isEmpty()) {
+                Log.d(TAG) { "doWork() EXIT no posts due" }
+                return Result.success()
+            }
+
+            // A process WorkManager started cold has no account loaded yet, and an account other
+            // than the default one is loaded only by the always-on notification service: load the
+            // ones that can sign, as the trust-network worker does, or nothing would go out until
+            // the user opened the app.
+            val accountsCache = appModules.accountsCache
+            if (!accountsCache.accounts.value.keys
+                    .containsAll(dueAccounts)
+            ) {
+                accountsCache.loadAllWritableAccounts(LocalPreferences)
+            }
+
+            // One drain per account with a due post, on that account's client and cache. The
+            // shared publisher re-checks each post's author and signature before it goes out. A
+            // post whose account cannot sign here stays PENDING.
+            dueAccounts.forEach { pubKey ->
+                val account = accountsCache.accounts.value[pubKey]
+                if (account == null) {
+                    Log.w(TAG) { "Account ${pubKey.take(8)} could not be loaded; its posts stay pending" }
+                    return@forEach
+                }
                 val publisher =
                     ScheduledPostPublisher(
                         store = store,
@@ -154,11 +181,9 @@ class ScheduledPostWorker(
                         onFailed = { post, error -> notifier.notifyFailed(post, error) },
                         consume = { event, relays, extras -> account.consumePostEvent(event, relays, extras) },
                     )
-                val report = publisher.drainDue(nowSec, account.pubKey)
-                if (report.details.isNotEmpty()) {
-                    Log.d(TAG) {
-                        "doWork() ${account.pubKey.take(8)}: published=${report.published} failed=${report.failed} skipped=${report.skipped}"
-                    }
+                val report = publisher.drainDue(nowSec, pubKey)
+                Log.d(TAG) {
+                    "doWork() ${pubKey.take(8)}: published=${report.published} failed=${report.failed} skipped=${report.skipped}"
                 }
             }
 

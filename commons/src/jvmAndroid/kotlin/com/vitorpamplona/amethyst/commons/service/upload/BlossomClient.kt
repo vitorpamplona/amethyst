@@ -52,7 +52,7 @@ data class BlossomPreflightResult(
 /**
  * Blossom HTTP client for JVM consumers (desktop + CLI + Android's
  * shared logic). Owns no global state — pass a configured [OkHttpClient] (e.g.
- * desktop's Tor-aware `DesktopHttpClient.currentClient()`) for proxying /
+ * desktop's per-URL role-based client) for proxying /
  * connection pooling. The default constructor uses a fresh OkHttpClient — fine
  * for one-shot uses such as the CLI.
  *

@@ -62,32 +62,61 @@ fun rememberDecryptedConcordImageModel(
     // A url-only pointer isn't encrypted media — hand the URL straight to Coil.
     if (!pointer.isResolvable()) return pointer.url.ifBlank { null }
 
+    // produceState keeps its value across key changes, so a new pointer starts from its own memo
+    // (or nothing) rather than showing the previous picture until it resolves.
     val model by produceState<String?>(resolvedByHash[pointer.hash], pointer, accountViewModel, cacheDir) {
+        value = resolvedByHash[pointer.hash]
         if (value != null) return@produceState
         value =
             withContext(Dispatchers.IO) {
-                runCatching {
-                    resolvedByHash[pointer.hash]?.let { return@runCatching it }
-
-                    val cacheFile = File(cacheDir, "concord-img-${pointer.hash}")
-                    if (!cacheFile.exists()) {
-                        val client = accountViewModel.httpClientBuilder.okHttpClientForImage(pointer.url)
-                        val ciphertext =
-                            client.newCall(Request.Builder().url(pointer.url).build()).executeAsync().use { resp ->
-                                if (!resp.isSuccessful) return@runCatching null
-                                resp.body.bytes()
-                            }
-
-                        val plaintext = pointer.decryptOrNull(ciphertext) ?: return@runCatching null
-                        cacheDir.mkdirs()
-                        cacheFile.writeBytes(plaintext)
-                    }
-                    val uri = "file://${cacheFile.absolutePath}"
-                    resolvedByHash[pointer.hash] = uri
-                    uri
-                }.onFailure { Log.w("ConcordImage", "Failed to resolve community image ${pointer.url}", it) }
+                runCatching { resolve(pointer, accountViewModel, cacheDir) }
+                    .onFailure { Log.w("ConcordImage", "Failed to resolve community image ${pointer.url}", it) }
                     .getOrNull()
             }
     }
     return model
 }
+
+/**
+ * Downloads, decrypts and verifies [pointer]'s picture into [cacheDir], unless an earlier run
+ * already did, and returns its `file://` model. Null when it cannot be fetched or does not verify.
+ */
+private suspend fun resolve(
+    pointer: ImagePointer,
+    accountViewModel: AccountViewModel,
+    cacheDir: File,
+): String? {
+    resolvedByHash[pointer.hash]?.let { return it }
+
+    // The hash names the file, so it must be one: a pointer is attacker-controlled input, and a
+    // path in it must not reach a file outside [cacheDir].
+    val hash = pointer.hash.lowercase()
+    if (!SHA256_HEX.matches(hash)) return null
+
+    val cacheFile = File(cacheDir, "concord-img-$hash")
+    if (!cacheFile.exists()) {
+        val client = accountViewModel.httpClientBuilder.okHttpClientForImage(pointer.url)
+        val ciphertext =
+            client.newCall(Request.Builder().url(pointer.url).build()).executeAsync().use { resp ->
+                if (!resp.isSuccessful) return null
+                resp.body.bytes()
+            }
+
+        val plaintext = pointer.decryptOrNull(ciphertext) ?: return null
+        cacheDir.mkdirs()
+        // Written aside and renamed into place, so neither a second screen resolving the same
+        // picture nor a crash mid-write leaves a truncated file under the final name.
+        val partial = File.createTempFile("concord-img-$hash", ".part", cacheDir)
+        try {
+            partial.writeBytes(plaintext)
+            if (!partial.renameTo(cacheFile) && !cacheFile.exists()) return null
+        } finally {
+            partial.delete()
+        }
+    }
+    val uri = "file://${cacheFile.absolutePath}"
+    resolvedByHash[pointer.hash] = uri
+    return uri
+}
+
+private val SHA256_HEX = Regex("^[0-9a-f]{64}$")
