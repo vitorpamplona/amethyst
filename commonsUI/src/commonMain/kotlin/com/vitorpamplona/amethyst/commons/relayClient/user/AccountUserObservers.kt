@@ -293,7 +293,7 @@ fun observeUserIsFollowing(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(user1) {
+        remember(note, user2) {
             note
                 .flow()
                 .metadata.stateFlow
@@ -318,7 +318,7 @@ fun observeUserIsFollowingHashtag(
 ): State<Boolean> {
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(accountViewModel) {
+        remember(accountViewModel, hashtag) {
             accountViewModel.account.interestList.flow
                 .mapLatest { hashtags ->
                     hashtag in hashtags
@@ -366,7 +366,7 @@ fun observeUserIsFollowingGeohash(
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
     val flow =
-        remember(accountViewModel) {
+        remember(accountViewModel, geohash) {
             accountViewModel.account.geohashList.flow
                 .mapLatest { geohashes ->
                     geohash in geohashes
@@ -387,7 +387,7 @@ fun observeUserIsFollowingRelay(
     accountViewModel: AccountViewModel,
 ): State<Boolean> {
     val flow =
-        remember(accountViewModel) {
+        remember(accountViewModel, relayUrl) {
             accountViewModel.account.favoriteRelayList.flowNoDefaults
                 .mapLatest { relays ->
                     relayUrl in relays
@@ -412,7 +412,7 @@ fun observeUserIsFollowingChannel(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(account) {
+        remember(account, channel) {
             account
                 .publicChatList
                 .flowSet
@@ -438,7 +438,7 @@ fun observeUserIsFollowingChannel(
 
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(account) {
+        remember(account, channel) {
             account
                 .ephemeralChatList
                 .liveEphemeralChatList
