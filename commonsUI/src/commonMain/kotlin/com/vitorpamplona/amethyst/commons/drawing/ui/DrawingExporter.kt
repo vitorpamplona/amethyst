@@ -45,6 +45,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import okio.Path
 import kotlin.math.roundToInt
 
 /**
@@ -57,6 +58,37 @@ import kotlin.math.roundToInt
 object DrawingExporter {
     /** Wide enough to stay crisp in a feed, small enough that a replay stays a light GIF. */
     const val EXPORT_WIDTH = 540
+
+    /**
+     * Writes just the finished drawing as a PNG in the temp directory, for an
+     * on-device model to describe while the user is still looking at the
+     * preview. The caller deletes it.
+     */
+    suspend fun writeStill(
+        background: DrawingBackground,
+        strokes: List<DrawingStroke>,
+    ): Path {
+        var written: Path? = null
+        try {
+            return withContext(Dispatchers.Default) {
+                val width = EXPORT_WIDTH
+                val height = (EXPORT_WIDTH * background.aspect).roundToInt()
+                val bitmap = ImageBitmap(width, height)
+                CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
+                    drawDrawing(BackgroundPainter(background), strokes)
+                }
+                val pixels = IntArray(width * height).also { bitmap.readPixels(it) }
+                val png = encodeArgbAsPng(pixels, width, height)
+                val path = platformTempDirectory / ("amethyst_drawing_still_" + RandomInstance.randomChars(12) + ".png")
+                platformFileSystem.write(path) { write(png) }
+                written = path
+                path
+            }
+        } catch (e: CancellationException) {
+            written?.let { platformFileSystem.delete(it, mustExist = false) }
+            throw e
+        }
+    }
 
     suspend fun export(
         background: DrawingBackground,

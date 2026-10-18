@@ -18,7 +18,9 @@ Draw by hand in the composer and post the drawing as a looping GIF that replays 
   kept on the device (`DrawingBackgroundStore`) and come back in the row next time, so a user can
   reuse their own "stationery".
 - An alt-text field in the preview step, since a picture of handwriting is unreadable to a screen
-  reader without it.
+  reader without it. Where the platform has an on-device describer (`AppServices.createAltTextSuggester`:
+  Gemini Nano on the Play build), the preview fills it with a description of the finished drawing,
+  marked "AI-suggested" like the upload screen; the user's own words are never overwritten.
 - **Add to post** renders the replay GIF and a PNG of the finished drawing, uploads both and puts
   the GIF's URL in the note, with an `imeta` the uploader could not have built on its own.
 

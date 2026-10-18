@@ -195,6 +195,19 @@ class DrawingExporterTest {
         }
     }
 
+    @Test
+    fun theStillForTheDescriberIsTheFinishedDrawing() {
+        val state = sampleDrawing()
+        val path = runBlocking { DrawingExporter.writeStill(state.background, state.strokes.toList()) }
+        try {
+            val still = ImageIO.read(File(path.toString()))
+            assertEquals(DrawingExporter.EXPORT_WIDTH, still.width)
+            assertTrue((0 until still.height).any { y -> still.getRGB(xOf(0.3f), y) and 0xFFFFFF == ink and 0xFFFFFF }, "the still should show the ink")
+        } finally {
+            File(path.toString()).delete()
+        }
+    }
+
     private fun xOf(fraction: Float) = (fraction * DrawingExporter.EXPORT_WIDTH).toInt()
 
     private fun brightness(rgb: Int) = ((rgb shr 16) and 0xFF) + ((rgb shr 8) and 0xFF) + (rgb and 0xFF)

@@ -38,6 +38,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,6 +52,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +73,8 @@ import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_dismiss
+import com.vitorpamplona.amethyst.commons.resources.ai_suggested_alt_text_hint
 import com.vitorpamplona.amethyst.commons.resources.drawing_add_to_post
 import com.vitorpamplona.amethyst.commons.resources.drawing_alt_text
 import com.vitorpamplona.amethyst.commons.resources.drawing_change_paper
@@ -83,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.resources.drawing_open
 import com.vitorpamplona.amethyst.commons.resources.drawing_preview
 import com.vitorpamplona.amethyst.commons.resources.drawing_preview_caption
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
+import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
@@ -90,7 +97,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperti
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -163,6 +172,44 @@ fun DrawingEditorDialog(
     var confirmDiscard by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // The on-device describer the upload screen uses (Gemini Nano where the device has it, none
+    // elsewhere): it reads the finished drawing once the user reaches the preview.
+    val appServices = LocalAppServices.current
+    val describer = remember { appServices.createAltTextSuggester() }
+    var describing by remember { mutableStateOf(false) }
+    var aiSuggested by remember { mutableStateOf(false) }
+    // Which drawing was last described: going back to draw and returning unchanged must not
+    // run the model again. Strokes only change at the end, so the count and the last one tell.
+    var describedFor by remember { mutableStateOf<List<Any?>?>(null) }
+    DisposableEffect(describer) { onDispose { describer?.close() } }
+
+    LaunchedEffect(step, state.strokes.size, state.background) {
+        // The user's own words win: describe only an empty field or replace our own suggestion.
+        if (describer == null || step != Step.PREVIEW || state.isEmpty || (alt.isNotEmpty() && !aiSuggested)) return@LaunchedEffect
+        val drawing = listOf(state.strokes.size, state.strokes.lastOrNull(), state.background)
+        if (drawing == describedFor) return@LaunchedEffect
+        describedFor = drawing
+        describing = true
+        try {
+            val still = DrawingExporter.writeStill(state.background, state.strokes.toList())
+            val suggestion =
+                try {
+                    describer.suggestAltText(mediaUriOfFile(still))
+                } finally {
+                    platformFileSystem.delete(still, mustExist = false)
+                }
+            if (suggestion != null && (alt.isEmpty() || aiSuggested)) {
+                alt = suggestion
+                aiSuggested = true
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("DrawingEditorDialog", "Could not describe the drawing", e)
+        } finally {
+            describing = false
+        }
+    }
+
     val back = {
         when {
             progress != null -> {}
@@ -234,7 +281,16 @@ fun DrawingEditorDialog(
                             state = state,
                             painter = painter,
                             alt = alt,
-                            onAltChange = { alt = it },
+                            onAltChange = {
+                                alt = it
+                                aiSuggested = false
+                            },
+                            describing = describing,
+                            aiSuggested = aiSuggested,
+                            onDismissSuggestion = {
+                                alt = ""
+                                aiSuggested = false
+                            },
                             progress = progress,
                             failed = exportFailed,
                             onBack = back,
@@ -315,6 +371,9 @@ private fun PreviewStep(
     painter: BackgroundPainter,
     alt: String,
     onAltChange: (String) -> Unit,
+    describing: Boolean,
+    aiSuggested: Boolean,
+    onDismissSuggestion: () -> Unit,
     progress: Float?,
     failed: Boolean,
     onBack: () -> Unit,
@@ -373,9 +432,28 @@ private fun PreviewStep(
                             onValueChange = onAltChange,
                             modifier = Modifier.fillMaxWidth(),
                             label = { Text(stringRes(Res.string.drawing_alt_text)) },
-                            singleLine = true,
+                            trailingIcon = {
+                                if (describing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            },
+                            maxLines = 4,
                             shape = RoundedCornerShape(16.dp),
                         )
+                        if (aiSuggested) {
+                            AssistChip(
+                                onClick = onDismissSuggestion,
+                                label = { Text(stringRes(Res.string.ai_suggested_alt_text_hint)) },
+                                leadingIcon = {
+                                    Icon(MaterialSymbols.AutoAwesome, null, Modifier.size(AssistChipDefaults.IconSize))
+                                },
+                                trailingIcon = {
+                                    Icon(
+                                        MaterialSymbols.Close,
+                                        stringRes(Res.string.ai_suggested_alt_text_dismiss),
+                                        Modifier.size(AssistChipDefaults.IconSize),
+                                    )
+                                },
+                            )
+                        }
                         Button(onClick = onAdd, enabled = progress == null, modifier = Modifier.fillMaxWidth().height(52.dp)) {
                             if (progress != null) {
                                 CircularProgressIndicator(
