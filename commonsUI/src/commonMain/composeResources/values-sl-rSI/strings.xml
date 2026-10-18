@@ -99,6 +99,7 @@
     <string name="chats_history_incomplete_sub">%1$s nedosegljivih · tapni za ogled kateri</string>
     <string name="chats_history_relays_title">%1$s · zgodovina po releju</string>
     <string name="chats_history_relay_since">že od %1$s</string>
+    <string name="chats_history_gate_loaded_to">Naložena so sporočila vse do %1$s.</string>
     <string name="action_dismiss">Prekliči</string>
     <plurals name="chats_history_relays">
         <item quantity="one">%1$d rele</item>
