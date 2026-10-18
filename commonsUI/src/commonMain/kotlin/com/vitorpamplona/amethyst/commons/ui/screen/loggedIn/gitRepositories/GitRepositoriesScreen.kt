@@ -83,7 +83,7 @@ fun GitRepositoriesScreen(
         },
         floatingButton = {
             FabBottomBarPadded(nav) {
-                NewGitRepositoryButton(accountViewModel, nav)
+                NewGitRepositoryButton(nav)
             }
         },
         accountViewModel = accountViewModel,

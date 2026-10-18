@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoExterna
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoHero
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLanguageBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoLastCommit
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoPushFirstCommit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoSocialRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoStatTiles
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.RepoTitleBar
@@ -365,6 +366,8 @@ private fun GitRepositoryHome(
                 }
             } else if (currentEvent != null && !repoHasFetchableClone(currentEvent)) {
                 RepoExternalNotice(currentEvent)
+            } else if (currentEvent != null && browserState is GitBrowseState.Error && accountViewModel.isLoggedUser(currentEvent.pubKey)) {
+                RepoPushFirstCommit(currentEvent)
             }
 
             RepoNavCards(note, openIssueCount, openPullCount, nav)

@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip34Git.grasp
 
+import com.vitorpamplona.quartz.nip34Git.repository.NostrCloneUrl
+
 /**
  * URL conventions of a GRASP (Git Relays Authorized via Signed-Nostr Proofs)
  * server: one host that is both a nostr relay and a git smart-HTTP server.
@@ -92,7 +94,7 @@ object GraspServer {
                 isOnion(normalized) -> "http://"
                 else -> "https://"
             }
-        return "$prefix$normalized/$npub/${percentEncode(identifier)}.git"
+        return "$prefix$normalized/$npub/${NostrCloneUrl.percentEncode(identifier)}.git"
     }
 
     private fun isOnion(normalized: String): Boolean =
@@ -101,23 +103,4 @@ object GraspServer {
             .substringBefore('/')
             .substringBeforeLast(':')
             .endsWith(".onion")
-
-    /** RFC 3986 percent-encoding of everything but the unreserved set, as ngit's `urlencoding::encode` does. */
-    private fun percentEncode(value: String): String {
-        val out = StringBuilder()
-        for (byte in value.encodeToByteArray()) {
-            val c = byte.toInt() and 0xFF
-            val char = c.toChar()
-            if (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char == '-' || char == '.' || char == '_' || char == '~') {
-                out.append(char)
-            } else {
-                out.append('%')
-                out.append(HEX[c shr 4])
-                out.append(HEX[c and 0x0F])
-            }
-        }
-        return out.toString()
-    }
-
-    private const val HEX = "0123456789ABCDEF"
 }
