@@ -118,7 +118,7 @@ object EmojiPackActions {
 
         val tags = current.toMutableList()
         val indexByCode = HashMap<String, Int>()
-        tags.forEachIndexed { index, tag -> EmojiUrlTag.parseCode(tag)?.let { indexByCode.putIfAbsent(it, index) } }
+        tags.forEachIndexed { index, tag -> EmojiUrlTag.parseCode(tag)?.let { indexByCode.getOrPut(it) { index } } }
 
         val added = mutableListOf<String>()
         val replaced = mutableListOf<String>()
