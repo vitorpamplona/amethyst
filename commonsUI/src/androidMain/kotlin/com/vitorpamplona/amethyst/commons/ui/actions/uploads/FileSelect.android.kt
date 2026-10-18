@@ -95,3 +95,26 @@ actual fun DocumentSelectSingle(
         }
     }
 }
+
+@Composable
+actual fun MultiDocumentSelect(
+    mimeTypes: List<String>,
+    onPicked: (ImmutableList<SelectedMedia>) -> Unit,
+) {
+    var hasLaunched by rememberSaveable { mutableStateOf(false) }
+    val resolver = LocalContext.current.contentResolver
+    val launcher =
+        rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenMultipleDocuments(),
+            onResult = { uris: List<Uri> ->
+                hasLaunched = false
+                onPicked(uris.map { SelectedMedia(it, resolver.getType(it)) }.toImmutableList())
+            },
+        )
+    LaunchedEffect(Unit) {
+        if (!hasLaunched) {
+            hasLaunched = true
+            launcher.launch(mimeTypes.toTypedArray())
+        }
+    }
+}

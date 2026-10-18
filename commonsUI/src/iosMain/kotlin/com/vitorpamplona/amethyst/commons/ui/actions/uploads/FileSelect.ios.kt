@@ -40,3 +40,12 @@ actual fun DocumentSelectSingle(
 ) {
     LaunchedEffect(Unit) { onPicked(null) }
 }
+
+/** No document picker wired yet: reports a cancel. */
+@Composable
+actual fun MultiDocumentSelect(
+    mimeTypes: List<String>,
+    onPicked: (ImmutableList<SelectedMedia>) -> Unit,
+) {
+    LaunchedEffect(Unit) { onPicked(persistentListOf()) }
+}

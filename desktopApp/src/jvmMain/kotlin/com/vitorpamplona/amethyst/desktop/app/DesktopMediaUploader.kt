@@ -595,6 +595,8 @@ class DesktopMediaUploader(
 
     override fun mimeType(uri: MediaUri): String? = runCatching { Files.probeContentType(fileOf(uri).toPath()) }.getOrNull()
 
+    override fun fileSize(uri: MediaUri): Long? = fileOf(uri).takeIf { it.isFile }?.length()
+
     // A video is remuxed without its tags when ffmpeg is at hand; otherwise the JVM pipeline's
     // EXIF strip: JPEGs lose their tags, other formats come back as they were.
     override suspend fun stripMetadata(

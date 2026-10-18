@@ -432,6 +432,26 @@ alias of `--d`; `--d` selects a named site/napplet, else the root one.
 | `amy blossom check --server URL HASH[,HASH]` | HEAD-check the server has each blob; exit 1 if any is missing. |
 | `amy blossom mirror --server URL SOURCE-URL` | Ask the server to mirror a blob from SOURCE-URL (BUD-04). |
 
+### Custom emoji packs (NIP-30)
+
+Your kind:30030 emoji packs and kind:10030 emoji list, built by the same commons
+`EmojiPackActions` the app's emoji-pack screens use. Every edit fetches the pack's
+freshest version from your outbox first. PACK is your pack's `d` tag, or for the read
+verbs and `use`/`unuse` any pack as `naddr1…` or `30030:<pubkey>:<d>`.
+
+| Command | What it does |
+|---|---|
+| `amy emoji pack list [USER]` | A user's packs (default: yours) with title, counts, `naddr`. |
+| `amy emoji pack show PACK` | One pack's metadata and emojis; your own private emojis are decrypted. |
+| `amy emoji pack create --title T [--description D] [--image URL] [--d DTAG]` | Publish a new pack (`exists` if you already have that `d` tag). |
+| `amy emoji pack edit PACK [--title T] [--description D] [--image URL]` | Change metadata; an empty value clears the field. |
+| `amy emoji pack delete PACK` | NIP-09 deletion request for your pack. |
+| `amy emoji add PACK SHORTCODE URL [--private] [--replace]` | Add one emoji (`--private`: NIP-44 encrypted in the content). A shortcode already there is skipped; `--replace` swaps its url. |
+| `amy emoji remove PACK SHORTCODE[,SHORTCODE…] [--private]` | Remove emojis by shortcode. |
+| `amy emoji import PACK SOURCE [--private] [--replace] [--server URL] [--dry-run]` | Bulk add in one new version of the pack. SOURCE is a folder of images (recursive), a `.zip` of images, one image, or a text list of `shortcode url` lines. Images upload to `--server` or the first server of your kind:10063 Blossom list and are named after the file (`party parrot.gif` → `party_parrot`, repeats get `_2`); shortcodes already in the pack are skipped before uploading. Uploads run four at a time; a failed one is reported under `failed` and doesn't stop the rest. Images over 10 MB are listed in `too_large`; a folder or `.zip` is read up to 2,000 images (256 MB of them), with `truncated: true` past that; a `.zip` over 128 MB is refused. |
+| `amy emoji list` | The packs (and loose emojis) in your kind:10030 emoji list. |
+| `amy emoji use PACK` / `amy emoji unuse PACK` | Add / remove a pack, yours or anyone's, to / from your emoji list. |
+
 ### Cashu wallet (NIP-60 / NIP-61)
 
 A NIP-60 ecash wallet + NIP-61 nutzaps, driven by the **same** shared
