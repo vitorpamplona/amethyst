@@ -43,11 +43,12 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.play
+import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isHlsMimeType
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser.Companion.isVideoUrl
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
@@ -77,35 +78,8 @@ fun GalleryThumbnail(
 
     val content =
         when {
-            noteEvent is ProfileGalleryEntryEvent -> {
-                noteEvent.urls().map { url ->
-                    if (isVideoUrl(url)) {
-                        MediaUrlVideo(
-                            url = url,
-                            description = noteEvent.content,
-                            hash = null,
-                            blurhash = noteEvent.blurhash(),
-                            dim = noteEvent.dimensions(),
-                            uri = null,
-                            mimeType = noteEvent.mimeType(),
-                            thumbhash = noteEvent.thumbhash(),
-                            artworkUri = noteEvent.image()?.imageUrl ?: noteEvent.thumb()?.imageUrl,
-                        )
-                    } else {
-                        MediaUrlImage(
-                            url = url,
-                            description = noteEvent.content,
-                            // We don't want to show the hash banner here
-                            hash = null,
-                            blurhash = noteEvent.blurhash(),
-                            dim = noteEvent.dimensions(),
-                            uri = null,
-                            mimeType = noteEvent.mimeType(),
-                            thumbhash = noteEvent.thumbhash(),
-                        )
-                    }
-                }
-            }
+            // We don't want to show the hash banner on a thumbnail.
+            noteEvent is ProfileGalleryEntryEvent -> noteEvent.toMediaContents(withHash = false, uri = null)
 
             noteEvent is PictureEvent -> {
                 noteEvent.imetaTags().map { imeta ->
@@ -354,5 +328,45 @@ private fun VideoPlaceholder(
             modifier = Size50Modifier,
             tint = if (content.blurhash != null || content.thumbhash != null) Color.White else MaterialTheme.colorScheme.onBackground,
         )
+    }
+}
+
+/**
+ * The media of a profile gallery entry: each URL as a video or an image, with the entry's hash,
+ * dimensions, blurhash and cover. Shared by the gallery grid's thumbnails and the entry's card in
+ * the feed; [withHash] shows the verification banner, which a thumbnail leaves out.
+ */
+fun ProfileGalleryEntryEvent.toMediaContents(
+    withHash: Boolean,
+    uri: String?,
+): List<MediaUrlContent> {
+    val mimeType = mimeType()
+    val description = summary() ?: content.ifBlank { null }
+    val hash = if (withHash) hash() else null
+    return urls().map { url ->
+        if (RichTextParser.classifyMedia(url, mimeType) == MediaContentKind.VIDEO) {
+            MediaUrlVideo(
+                url = url,
+                description = description,
+                hash = hash,
+                blurhash = blurhash(),
+                dim = dimensions(),
+                uri = uri,
+                mimeType = mimeType,
+                thumbhash = thumbhash(),
+                artworkUri = image()?.imageUrl ?: thumb()?.imageUrl,
+            )
+        } else {
+            MediaUrlImage(
+                url = url,
+                description = description,
+                hash = hash,
+                blurhash = blurhash(),
+                dim = dimensions(),
+                uri = uri,
+                mimeType = mimeType,
+                thumbhash = thumbhash(),
+            )
+        }
     }
 }

@@ -20,6 +20,23 @@
  */
 package com.vitorpamplona.quartz.kinds
 
+import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
+import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
+import com.vitorpamplona.quartz.buzz.aoObserver.ObserverFrameEvent
+import com.vitorpamplona.quartz.buzz.arArtifacts.ArtifactEvent
+import com.vitorpamplona.quartz.buzz.audit.AuditEntryEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.ThreadWindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.cwChannelWindow.WindowBoundsEvent
+import com.vitorpamplona.quartz.buzz.erReminders.EventReminderEvent
+import com.vitorpamplona.quartz.buzz.managedAgents.ManagedAgentEvent
+import com.vitorpamplona.quartz.buzz.pairing.PairingEvent
+import com.vitorpamplona.quartz.buzz.plPushLease.PushLeaseEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.ChannelSummaryEvent
+import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEvent
+import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListFragmentEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteListEvent
+import com.vitorpamplona.quartz.concord.cord05Invites.bundle.ConcordInviteBundleEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -355,6 +372,7 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallOfferEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRejectEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallRenegotiateEvent
 import com.vitorpamplona.quartz.nipB0WebBookmarks.WebBookmarkEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
@@ -376,6 +394,9 @@ import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.deregistration.PushDeregistrationEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.preferences.PushPreferencesEvent
 import com.vitorpamplona.quartz.nipXXPushNotifications.registration.PushRegistrationEvent
+import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
+import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
 
 /**
  * Human-readable label and defining NIP for a Nostr event kind.
@@ -761,6 +782,27 @@ object KindNames {
             GroupRolesEvent.KIND to KindName("Group Roles", "29"),
             GroupParticipantsEvent.KIND to KindName("Group Participants", "29"),
             MediaStarterPackEvent.KIND to KindName("Media Starter Pack", "51"),
+            AgentTurnMetricEvent.KIND to KindName("Agent Turn Metric", null),
+            EngramEvent.KIND to KindName("Agent Engram", null),
+            ObserverFrameEvent.KIND to KindName("Agent Observer Frame", null),
+            PairingEvent.KIND to KindName("Device Pairing", null),
+            PushLeaseEvent.KIND to KindName("Push Lease", null),
+            EventReminderEvent.KIND to KindName("Event Reminder", null),
+            ManagedAgentEvent.KIND to KindName("Managed Agent", null),
+            ThreadWindowBoundsEvent.KIND to KindName("Thread Window Bounds", null),
+            WindowBoundsEvent.KIND to KindName("Channel Window Bounds", null),
+            ConcordCommunityListEvent.KIND to KindName("Concord Community List", null),
+            ConcordCommunityListFragmentEvent.KIND to KindName("Concord Community List Fragment", null),
+            ConcordInviteListEvent.KIND to KindName("Concord Invite List", null),
+            ConcordInviteBundleEvent.KIND to KindName("Concord Invite", null),
+            Bolt12ZapIntentEvent.KIND to KindName("BOLT12 Zap Intent", null),
+            ArtifactEvent.KIND to KindName("Agent Artifact", null),
+            AuditEntryEvent.KIND to KindName("Audit Entry", null),
+            CapabilityDiscoveryEvent.KIND to KindName("Agent Capabilities", null),
+            ExtensionListingEvent.KIND to KindName("Agent Extension Listing", null),
+            ExtensionReleaseEvent.KIND to KindName("Agent Extension Release", null),
+            ChannelSummaryEvent.KIND to KindName("Channel Summary", null),
+            PresenceSnapshotEvent.KIND to KindName("Presence Snapshot", null),
         )
 
     fun infoFor(kind: Int): KindName? = names[kind]

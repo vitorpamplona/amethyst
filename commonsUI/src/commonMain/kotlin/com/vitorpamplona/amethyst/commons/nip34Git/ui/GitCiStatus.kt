@@ -129,14 +129,27 @@ private class CiStyle(
 @Composable
 private fun ciStyle(state: CiState): CiStyle =
     when (state) {
-        CiState.SUCCESS -> CiStyle(Res.string.git_ci_success, MaterialSymbols.CheckCircle, Color(0xFF1F883D), Color.White)
-        CiState.FAILURE -> CiStyle(Res.string.git_ci_failure, MaterialSymbols.Cancel, Color(0xFFCF222E), Color.White)
-        CiState.PENDING -> CiStyle(Res.string.git_ci_pending, MaterialSymbols.HourglassTop, Color(0xFF9A6700), Color.White)
-        CiState.CANCELLED -> CiStyle(Res.string.git_ci_cancelled, MaterialSymbols.Block, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
-        CiState.NEUTRAL -> CiStyle(Res.string.git_ci_neutral, MaterialSymbols.RemoveCircleOutline, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        CiState.SUCCESS -> CiStyle(Res.string.git_ci_success, ciSymbol(state), Color(0xFF1F883D), Color.White)
+        CiState.FAILURE -> CiStyle(Res.string.git_ci_failure, ciSymbol(state), Color(0xFFCF222E), Color.White)
+        CiState.PENDING -> CiStyle(Res.string.git_ci_pending, ciSymbol(state), Color(0xFF9A6700), Color.White)
+        CiState.CANCELLED -> CiStyle(Res.string.git_ci_cancelled, ciSymbol(state), MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
+        CiState.NEUTRAL -> CiStyle(Res.string.git_ci_neutral, ciSymbol(state), MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
-private fun conclusionLabel(conclusion: CiConclusion?): StringResource =
+/** The glyph of a CI state, shared by the PR badge and the CI cards in the feed. */
+internal fun ciSymbol(state: CiState): MaterialSymbol =
+    when (state) {
+        CiState.SUCCESS -> MaterialSymbols.CheckCircle
+        CiState.FAILURE -> MaterialSymbols.Cancel
+        CiState.PENDING -> MaterialSymbols.HourglassTop
+        CiState.CANCELLED -> MaterialSymbols.Block
+        CiState.NEUTRAL -> MaterialSymbols.RemoveCircleOutline
+    }
+
+/** The lines of a job's log tail without the runner's "[log-tail omitted=…]" marker. */
+internal fun ciLogTailLines(logTail: String): List<String> = logTail.lines().dropWhile { it.startsWith("[log-tail omitted=") }
+
+internal fun conclusionLabel(conclusion: CiConclusion?): StringResource =
     when (conclusion) {
         CiConclusion.SUCCESS -> Res.string.git_ci_conclusion_success
         CiConclusion.FAILURE -> Res.string.git_ci_conclusion_failure
@@ -445,10 +458,7 @@ private fun JobResultBody(
     val state = remember(job) { CiRollup.stateOf(job.conclusion()) }
     val tail =
         remember(job) {
-            job
-                .logTail()
-                .lines()
-                .dropWhile { it.startsWith("[log-tail omitted=") }
+            ciLogTailLines(job.logTail())
                 .takeLast(LOG_TAIL_LINES)
                 .joinToString("\n")
                 .trim()
