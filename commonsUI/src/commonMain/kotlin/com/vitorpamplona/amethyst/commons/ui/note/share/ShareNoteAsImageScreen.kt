@@ -18,13 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.note.share
+package com.vitorpamplona.amethyst.commons.ui.note.share
 
-import android.content.ClipData
-import android.content.Context
-import android.content.Intent
-import android.graphics.Bitmap
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -52,6 +48,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -63,30 +60,32 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
-import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVERS
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.amethyst_logo
+import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.file_server
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.resources.share_as_image
+import com.vitorpamplona.amethyst.commons.resources.share_as_image_failed
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_generating
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_url
 import com.vitorpamplona.amethyst.commons.resources.share_as_image_watermark
@@ -95,28 +94,34 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.MediaCaptureState
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberImageSharer
+import com.vitorpamplona.amethyst.commons.ui.components.rememberTextSharer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import org.jetbrains.compose.resources.painterResource
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Full-screen flow that turns [id]'s note into a shareable image: it renders the post into a
  * framed card, captures it to a bitmap, uploads the PNG to one of the user's Blossom media
- * servers, and hands the resulting URL to the Android share sheet.
+ * servers, and hands the resulting URL to the platform's share sheet (the clipboard on desktop).
  */
 @Composable
 fun ShareNoteAsImageScreen(
@@ -133,9 +138,9 @@ fun ShareNoteAsImageScreen(
 
 /**
  * Renders [id]'s note into the same framed card as [ShareNoteAsImageScreen], captures it to a
- * bitmap, writes it to the cache as a PNG and hands the local file straight to the Android share
- * sheet — no preview, no upload. The screen only shows a brief progress indicator while the card
- * is being captured.
+ * bitmap and hands it straight to the platform as a PNG (the share sheet on Android, the
+ * clipboard on desktop) — no preview, no upload. The screen only shows a brief progress
+ * indicator while the card is being captured.
  */
 @Composable
 fun ShareNoteAsImageFileScreen(
@@ -157,10 +162,10 @@ fun ShareNoteAsImageFileScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val context = LocalContext.current
+    val imageSharer = rememberImageSharer()
     val shareImageTitle = stringRes(Res.string.share_as_image)
-    val shareUrlTitle = stringRes(Res.string.share_as_image_url)
     val graphicsLayer = rememberGraphicsLayer()
+    val mediaCapture = remember { MediaCaptureState() }
 
     // Guards against capturing/sharing more than once across recompositions.
     var shared by remember { mutableStateOf(false) }
@@ -187,6 +192,7 @@ fun ShareNoteAsImageFileScreen(
             CaptureSource(
                 note = note,
                 graphicsLayer = graphicsLayer,
+                mediaCapture = mediaCapture,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -194,21 +200,30 @@ fun ShareNoteAsImageFileScreen(
             GeneratingPreview()
 
             LaunchedEffect(note) {
-                // Wait a couple of frames so the card is measured and drawn, then let network
-                // media settle before the final snapshot.
+                // Wait a couple of frames so the card is measured and drawn, then for its media
+                // to finish loading before the final snapshot.
                 withFrameNanos {}
                 withFrameNanos {}
-                graphicsLayer.toImageBitmap()
-                delay(IMAGE_SETTLE_MS)
+                mediaCapture.awaitMediaLoaded(MEDIA_LOAD_TIMEOUT_MS)
+                withFrameNanos {}
                 val bitmap = graphicsLayer.toImageBitmap()
 
                 if (!shared) {
                     shared = true
-                    val uri =
-                        withContext(Dispatchers.IO) {
-                            saveBitmapToCache(context, bitmap.asAndroidBitmap())
+                    val sent =
+                        try {
+                            imageSharer.share(bitmap, shareImageTitle)
+                        } catch (e: Exception) {
+                            // Writing the PNG (a full disk) or reaching the share sheet can fail.
+                            if (e is CancellationException) throw e
+                            Log.w("ShareNoteAsImage", "Could not share the image", e)
+                            false
                         }
-                    startShareImageFileIntent(context, uri, shareImageTitle)
+                    if (!sent) {
+                        accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.share_as_image_failed)
+                    } else if (!imageSharer.opensShareSheet) {
+                        accountViewModel.toastManager.toast(Res.string.share_as_image, Res.string.copied_to_clipboard)
+                    }
                     nav.popBack()
                 }
             }
@@ -224,11 +239,13 @@ fun ShareNoteAsImageScreen(
     nav: INav,
 ) {
     val account = accountViewModel.account
-    val context = LocalContext.current
+    val imageSharer = rememberImageSharer()
+    val textSharer = rememberTextSharer()
     val scope = rememberCoroutineScope()
     val shareUrlTitle = stringRes(Res.string.share_as_image_url)
 
     val graphicsLayer = rememberGraphicsLayer()
+    val mediaCapture = remember { MediaCaptureState() }
     val orchestrator = remember { UploadOrchestrator() }
 
     // The captured bitmap that becomes the preview and, on share, the uploaded file.
@@ -259,19 +276,27 @@ fun ShareNoteAsImageScreen(
         scope.launch {
             val server = selectedServer
             val finalState =
-                withContext(Dispatchers.IO) {
-                    val uri = saveBitmapToCache(context, image.asAndroidBitmap())
-                    orchestrator.upload(
-                        uri = uri,
-                        mimeType = PNG_MIME,
-                        alt = null,
-                        contentWarningReason = null,
-                        compressionQuality = CompressorQuality.UNCOMPRESSED,
-                        server = server,
-                        account = account,
-                        uploader = accountViewModel.host.mediaUploader,
-                        stripMetadata = false,
-                    )
+                try {
+                    withContext(Dispatchers.IO) {
+                        val uri = imageSharer.writePng(image)
+                        orchestrator.upload(
+                            uri = uri,
+                            mimeType = PNG_MIME,
+                            alt = null,
+                            contentWarningReason = null,
+                            compressionQuality = CompressorQuality.UNCOMPRESSED,
+                            server = server,
+                            account = account,
+                            uploader = accountViewModel.host.mediaUploader,
+                            stripMetadata = false,
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Writing the PNG can fail (a full disk); leave the screen usable for a retry.
+                    if (e is CancellationException) throw e
+                    isProcessing = false
+                    accountViewModel.toastManager.toast(Res.string.share_as_image_url, e.message, e)
+                    return@launch
                 }
 
             isProcessing = false
@@ -281,8 +306,17 @@ fun ShareNoteAsImageScreen(
                     val result = finalState.result
                     if (result is UploadOrchestrator.OrchestratorResult.ServerResult) {
                         account.settings.changeDefaultFileServer(server)
-                        startShareUrlIntent(context, result.url, shareUrlTitle)
-                        nav.popBack()
+                        try {
+                            textSharer.share(result.url, null, shareUrlTitle)
+                            if (!imageSharer.opensShareSheet) {
+                                accountViewModel.toastManager.toast(Res.string.share_as_image_url, Res.string.copied_to_clipboard)
+                            }
+                            nav.popBack()
+                        } catch (e: Exception) {
+                            // Desktop puts the link on a clipboard another app may hold: show it instead.
+                            if (e is CancellationException) throw e
+                            accountViewModel.toastManager.toast(Res.string.share_as_image_url, result.url, e)
+                        }
                     } else {
                         accountViewModel.toastManager.toast(
                             Res.string.failed_to_upload_media_no_details,
@@ -309,7 +343,7 @@ fun ShareNoteAsImageScreen(
                 serverName = selectedServer.name,
                 serverOptions = fileServerOptions,
                 onSelectServer = { selectedServer = fileServers[it] },
-                shareEnabled = preview != null && !isProcessing,
+                shareEnabled = captureComplete && preview != null && !isProcessing,
                 onShare = ::shareImage,
             )
         },
@@ -330,21 +364,23 @@ fun ShareNoteAsImageScreen(
             contentAlignment = Alignment.Center,
         ) {
             // Keep the note rendered (but unpainted) until the snapshot is final, so async
-            // images have a chance to load into the layer before the second capture.
+            // media has a chance to load into the layer before the second capture.
             if (!captureComplete) {
                 CaptureSource(
                     note = note,
                     graphicsLayer = graphicsLayer,
+                    mediaCapture = mediaCapture,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )
                 LaunchedEffect(note) {
                     // Wait a couple of frames so the card is measured and drawn, snapshot a
-                    // first preview, then refine once network media has had time to settle.
+                    // first preview, then refine once its media has finished loading.
                     withFrameNanos {}
                     withFrameNanos {}
                     preview = graphicsLayer.toImageBitmap()
-                    delay(IMAGE_SETTLE_MS)
+                    mediaCapture.awaitMediaLoaded(MEDIA_LOAD_TIMEOUT_MS)
+                    withFrameNanos {}
                     preview = graphicsLayer.toImageBitmap()
                     captureComplete = true
                 }
@@ -462,9 +498,52 @@ private fun ShareBottomBar(
  * The framed card that is recorded into [graphicsLayer] but not painted to the screen — the
  * visible preview is the captured [ImageBitmap] instead. The capture modifier is first in the
  * chain so the opaque background and border are part of the bitmap.
+ *
+ * [mediaCapture] makes the note's media load regardless of the data-saving settings, draws
+ * videos as still frames, and tracks what is still loading.
  */
 @Composable
 private fun CaptureSource(
+    note: Note,
+    graphicsLayer: GraphicsLayer,
+    mediaCapture: MediaCaptureState,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    CompositionLocalProvider(
+        LocalMediaCapture provides mediaCapture,
+        LocalDisplaySettings provides LocalDisplaySettings.current.copy(showProfilePictures = true),
+    ) {
+        Box {
+            CaptureCard(note, graphicsLayer, accountViewModel, nav)
+            // The card is never seen: keep taps off the links and buttons inside it.
+            Box(Modifier.matchParentSize().then(BlockPointerInput))
+        }
+    }
+}
+
+private val BlockPointerInput =
+    Modifier.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) awaitPointerEvent().changes.forEach { it.consume() }
+        }
+    }
+
+/**
+ * Measures the card at its full height, as a feed item is, so a note taller than the window
+ * isn't squeezed to fit and centred (which cut its top and bottom out of the snapshot). A
+ * runaway note is cut at [MAX_CAPTURE_PIXELS], keeping the bitmap small enough to hold and for
+ * Android's canvas to draw: it refuses bitmaps over 100 MB.
+ */
+private fun Modifier.capturedAtFullHeight() =
+    layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        val maxHeight = MAX_CAPTURE_PIXELS / placeable.width.coerceAtLeast(1)
+        layout(placeable.width, placeable.height.coerceAtMost(maxHeight)) { placeable.place(0, 0) }
+    }
+
+@Composable
+private fun CaptureCard(
     note: Note,
     graphicsLayer: GraphicsLayer,
     accountViewModel: AccountViewModel,
@@ -475,11 +554,15 @@ private fun CaptureSource(
             Modifier
                 .widthIn(max = 600.dp)
                 .fillMaxWidth()
+                // Lets the recorded size below exceed the window's height.
+                .wrapContentHeight(align = Alignment.Top, unbounded = true)
                 .drawWithContent {
                     graphicsLayer.record { this@drawWithContent.drawContent() }
                     // Intentionally no drawLayer: this source stays invisible and only feeds the
                     // snapshot; the user sees the resulting Image.
-                }.clip(PreviewShape)
+                }.clipToBounds()
+                .capturedAtFullHeight()
+                .clip(PreviewShape)
                 .background(MaterialTheme.colorScheme.surface)
                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant, PreviewShape)
                 .padding(14.dp),
@@ -503,7 +586,7 @@ private fun CaptureSource(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.amethyst),
+                painter = painterResource(Res.drawable.amethyst_logo),
                 contentDescription = null,
                 modifier = Modifier.size(16.dp),
             )
@@ -520,52 +603,11 @@ private fun CaptureSource(
 
 private const val PNG_MIME = "image/png"
 
-// Time given for async media to load into the off-screen card before the final snapshot.
-private const val IMAGE_SETTLE_MS = 900L
+// Upper bound on waiting for the off-screen card's media before the final snapshot. Video
+// frames need the file downloaded first, so this is generous.
+private const val MEDIA_LOAD_TIMEOUT_MS = 15_000L
 
 private val PreviewShape = RoundedCornerShape(18.dp)
 
-private fun saveBitmapToCache(
-    context: Context,
-    bitmap: Bitmap,
-): Uri {
-    val file = File(context.cacheDir, "amethyst_share_${System.currentTimeMillis()}.png")
-    FileOutputStream(file).use { out ->
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
-    }
-    return FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
-}
-
-private fun startShareUrlIntent(
-    context: Context,
-    url: String,
-    chooserTitle: String,
-) {
-    val sendIntent =
-        Intent().apply {
-            action = Intent.ACTION_SEND
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, url)
-        }
-    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
-    context.startActivity(shareIntent)
-}
-
-private fun startShareImageFileIntent(
-    context: Context,
-    uri: Uri,
-    chooserTitle: String,
-) {
-    val sendIntent =
-        Intent().apply {
-            action = Intent.ACTION_SEND
-            type = PNG_MIME
-            putExtra(Intent.EXTRA_STREAM, uri)
-            // Attaching the URI as ClipData (not just EXTRA_STREAM) lets the system share sheet
-            // itself read the file so it can render the image thumbnail preview at the top.
-            clipData = ClipData.newUri(context.contentResolver, "Image", uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-    val shareIntent = Intent.createChooser(sendIntent, chooserTitle)
-    context.startActivity(shareIntent)
-}
+// Largest snapshot, in pixels (48 MB as ARGB): 1080 px wide allows a card about 11,000 px tall.
+private const val MAX_CAPTURE_PIXELS = 12_000_000

@@ -70,11 +70,16 @@ class CalendarReminderWorker(
         }
         val now = TimeUtils.now()
 
-        CalendarReminderScanner.scan(settings.leadMinutes, calendarReminderLog(), now) { due ->
+        // The accounts loaded in this process; a WorkManager cold start has none, and LocalCache is
+        // empty then anyway.
+        val accounts = Amethyst.instance.accountsCache.accounts.value.keys
+
+        CalendarReminderScanner.scan(accounts, settings.leadMinutes, calendarReminderLog(), now) { due ->
             val title = due.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
             val body = loadPluralStringRes(Res.plurals.calendar_reminder_body, due.minutesAway, due.minutesAway)
             CalendarReminderNotifier.notifyReminder(applicationContext, due.eventId, title, body, due.deepLink)
             Log.d(TAG) { "Notified ${due.eventId} (starts in ${due.minutesAway}m)" }
+            true
         }
 
         // Nothing left that could ever fire → end the periodic chain instead of
@@ -88,7 +93,7 @@ class CalendarReminderWorker(
         // still exists — cancelling on the stale snapshot would kill the chain
         // with that RSVP's reminder permanently lost (observeNewEvents never
         // re-fires for an event that is already in cache).
-        if (!CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(), TimeUtils.now())) {
+        if (!CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(accounts), TimeUtils.now())) {
             Log.d(TAG) { "No accepted RSVP can still fire; ending periodic chain." }
             cancel(applicationContext)
         }

@@ -42,7 +42,7 @@ fun LoadUrlPreview(
     accountViewModel: AccountViewModel,
     nav: INav? = null,
 ) {
-    if (!accountViewModel.settings.showUrlPreview()) {
+    if (LocalMediaCapture.current == null && !accountViewModel.settings.showUrlPreview()) {
         ClickableUrlOrBlossom(urlText, url)
     } else {
         LoadUrlPreviewDirect(url, urlText, callbackUri, accountViewModel, nav)
@@ -87,6 +87,7 @@ fun LoadUrlPreviewDirect(
             }
 
             is UrlPreviewState.Loading -> {
+                ReportCaptureLoading()
                 WaitAndDisplay {
                     DisplayUrlWithLoadingSymbol(url, accountViewModel.toastManager::toast)
                 }

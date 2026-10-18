@@ -106,9 +106,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSym
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -444,10 +446,11 @@ fun LocalImageView(
     fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
+        val capture = LocalMediaCapture.current
         val showImage =
             remember {
                 mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                    alwayShowImage || capture != null || accountViewModel.settings.showImages(),
                 )
             }
 
@@ -477,6 +480,7 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
+                            ReportCaptureLoading()
                             if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
@@ -579,10 +583,11 @@ fun UrlImageView(
 ) {
     val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
 
+    val capture = LocalMediaCapture.current
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                alwayShowImage || capture != null || accountViewModel.settings.showImages(),
             )
         }
 
@@ -612,6 +617,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
+                        ReportCaptureLoading()
                         if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =

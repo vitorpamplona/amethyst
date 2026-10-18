@@ -120,25 +120,8 @@ fun NoteDropDownMenu(
 ) {
     var reportDialogShowing by remember { mutableStateOf(false) }
     var addLabelDialogShowing by remember { mutableStateOf(false) }
-    var showShareSheet by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
-
-    // Tapping "Share" hands the note's share options off to the shared Share
-    // drawer (ShareOptionsBottomSheet). We render it INSTEAD of the menu dialog
-    // — not on top of it — so the menu doesn't sit dimmed behind the sheet;
-    // dismissing the drawer closes the whole menu.
-    if (showShareSheet) {
-        ShareOptionsBottomSheet(
-            note = note,
-            nav = nav,
-            onDismiss = {
-                showShareSheet = false
-                onDismiss()
-            },
-        )
-        return
-    }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -208,7 +191,8 @@ fun NoteDropDownMenu(
 
     val handlers =
         NoteActionHandlers(
-            onShare = { showShareSheet = true },
+            // The Share options sit in the menu itself, as a submenu like Copy.
+            onShare = null,
             onEditPost = { wantsToEditPost.value = true },
             onEditDraft = { nav.nav { routeEditDraftTo(note, accountViewModel.account) } },
             onAddLabel = { addLabelDialogShowing = true },

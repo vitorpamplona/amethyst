@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -157,10 +158,12 @@ fun main(args: Array<String>) {
     val modules = DesktopAppModules(filesDir, version, isDebug)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
-    // `blossom:` images resolve to the server that holds the blob, as on Android.
+    // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a
+    // signed retry, as on Android.
     DesktopImageLoaderSetup.setup(
         clientForUrl = { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) },
         blossomServerResolver = { modules.blossomResolver },
+        readAuth = modules.blossomReadAuthTokens,
     )
     // So do video thumbnails, saves and encrypted media, which those clients also decrypt, and
     // the videos Android would send over Tor: those whose video client has a proxy port now.
@@ -192,7 +195,8 @@ fun main(args: Array<String>) {
             isDebugBuild = isDebug,
             notifications = modules.notifications,
             desktopSpellCheck = spellCheck,
-            concordImageDir = File(filesDir, "concord-images"),
+            // Decrypted pictures of private communities: owner-only, like the rest of the profile.
+            concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
         )
     val root = DesktopAppRoot(modules)
 

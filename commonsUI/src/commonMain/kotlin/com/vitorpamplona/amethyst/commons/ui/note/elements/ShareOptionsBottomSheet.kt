@@ -40,9 +40,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
- * Bottom drawer that offers the note's Share options ([ShareActionRows]).
- * Opened from the reaction-row Share button and from the note's 3-dot menu,
- * so both entry points share the exact same list.
+ * Bottom drawer that offers the note's Share options ([ShareActionRows]), opened from the
+ * chat long-press sheet. The reaction-row Share button and the 3-dot menu list the same
+ * options ([shareNoteActions]) as menus.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
