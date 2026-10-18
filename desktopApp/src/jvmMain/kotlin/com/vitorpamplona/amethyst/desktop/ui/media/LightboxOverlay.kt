@@ -86,8 +86,6 @@ import java.awt.datatransfer.StringSelection
 import java.io.File
 import java.net.URI
 
-val LocalWindowState = compositionLocalOf<androidx.compose.ui.window.WindowState?> { null }
-
 val LocalAwtWindow = compositionLocalOf<java.awt.Window?> { null }
 
 val LocalIsImmersiveFullscreen = compositionLocalOf { mutableStateOf(false) }

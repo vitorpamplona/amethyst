@@ -43,7 +43,6 @@ import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
 import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
 import java.io.File
@@ -51,7 +50,7 @@ import java.io.File
 object DesktopImageLoaderSetup {
     @OptIn(DelicateCoilApi::class)
     fun setup(
-        clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() },
+        clientForUrl: (String) -> Call.Factory,
         blossomServerResolver: (() -> BlossomServerResolver)? = null,
     ) {
         SingletonImageLoader.setUnsafe(createImageLoader(clientForUrl, blossomServerResolver))
@@ -62,7 +61,7 @@ object DesktopImageLoaderSetup {
      * [blossomServerResolver] loads `blossom:` URIs from the server that holds the blob.
      */
     fun createImageLoader(
-        clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() },
+        clientForUrl: (String) -> Call.Factory,
         blossomServerResolver: (() -> BlossomServerResolver)? = null,
     ): ImageLoader =
         ImageLoader
