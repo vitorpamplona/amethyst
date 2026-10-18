@@ -136,7 +136,9 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_description">प्रदर्शित उनके नाम के स्थान पर। रहस्यीकृत। इसलिए केवल आप उसको देख सकते हैं।</string>
     <string name="nickname_label">उपनाम</string>
+    <string name="nickname_note_label">निजी टीका</string>
     <string name="nickname_save">अभिलेखन</string>
     <string name="nickname_cancel">निरस्त</string>
     <string name="git_status_open">खुला</string>
@@ -362,6 +364,8 @@
     <string name="qr_scanner_no_code_in_image">उस चित्र में से कोई क्यूआर॰ चित्र अक्षरराशि प्राप्त नहीं</string>
     <string name="qr_scanner_clipboard_empty">टाँकाफलक में कुछ भी नहीं परखने के लिए</string>
     <string name="qr_scanner_pick_one">अक्षरराशि का चयन करें</string>
+    <string name="qr_scanner_desktop_title">क्यूआर चित्र से अक्षरराशि परखें</string>
+    <string name="qr_scanner_desktop_hint">इस संगणक में कोई चित्रग्राहक नहीं। अक्षरराशि का चित्र रूप खोलें अथवा अक्षरराशि की अनुकृति करें चित्र अथवा लेख के रूप में तथा यहाँ चिपकाएँ।</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
         <item quantity="other">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
@@ -770,6 +774,7 @@
     <string name="quick_action_select">चयन करें</string>
     <string name="share_as_image_generating">पूर्वीक्षण चित्र उत्पादन चालू…</string>
     <string name="share_as_image_watermark">अमेथिस्ट द्वारा बाँटा गया</string>
+    <string name="share_as_image_failed">चित्र बाँटने में असफल</string>
     <string name="share_as_qr">क्यूआर॰ चित्र के रूप में बाँटें</string>
     <string name="share_as_qr_mode_web">जाल योजक</string>
     <string name="share_as_qr_mode_nostr">नोस्टर योजक</string>
