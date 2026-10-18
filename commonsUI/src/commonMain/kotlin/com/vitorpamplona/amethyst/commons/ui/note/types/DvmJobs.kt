@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_customer
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_for
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_providers
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_label_transaction
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_online
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_group
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_length
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_param_max_results
@@ -77,8 +76,8 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dvm_publishes_at
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_request_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_result_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dvm_results_count
-import com.vitorpamplona.amethyst.commons.resources.kc_dvm_sats
 import com.vitorpamplona.amethyst.commons.resources.language
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_online
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
@@ -297,9 +296,6 @@ private fun DvmPeople(
     KindCardUsers(pubKeys, accountViewModel, nav)
 }
 
-@Composable
-private fun satsLabel(sats: Long): String = stringRes(Res.string.kc_dvm_sats, sats.toString())
-
 /** A NIP-90 job request (5000-5999): the job, its inputs and params, the bid, and the DVMs asked to run it. */
 @Composable
 fun RenderDvmRequest(
@@ -334,7 +330,7 @@ fun RenderDvmRequest(
     KindCard(
         icon = icon,
         title = title,
-        status = info.bidSats?.takeIf { it > 0 }?.let { satsLabel(it) },
+        status = info.bidSats?.takeIf { it > 0 }?.let { kindCardSats(it) },
         statusTone = KindTone.Money,
     ) {
         // The input is the hero: the prompt or text, the link (media previews inline), the event.
@@ -401,7 +397,7 @@ fun RenderDvmResult(
                 ?.amount
                 ?.div(1000)
                 ?.takeIf { it > 0 }
-        }?.let { satsLabel(it) }
+        }?.let { kindCardSats(it) }
 
     if (encrypted) {
         KindCard(
@@ -602,7 +598,7 @@ fun RenderDvmHeartbeat(
         icon = MaterialSymbols.Sensors,
         title = stringRes(Res.string.kc_dvm_heartbeat_title),
         tone = if (fresh) KindTone.Positive else KindTone.Neutral,
-        status = stringRes(if (fresh) Res.string.kc_dvm_online else Res.string.dvm_offline),
+        status = stringRes(if (fresh) Res.string.media_server_status_online else Res.string.dvm_offline),
     ) {
         // The DVM's own status message, in its own words.
         KindCardProse(null, baseNote, event.status(), backgroundColor, accountViewModel, nav)

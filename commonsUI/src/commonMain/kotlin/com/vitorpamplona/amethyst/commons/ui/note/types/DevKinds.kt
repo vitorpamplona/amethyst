@@ -31,14 +31,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiRollup
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiState
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.ciLogTailLines
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.ciSymbol
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.conclusionLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_cancelled
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_failure
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_neutral
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_skipped
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_startup_failure
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_success
-import com.vitorpamplona.amethyst.commons.resources.git_ci_conclusion_timed_out
 import com.vitorpamplona.amethyst.commons.resources.git_ci_full_log
 import com.vitorpamplona.amethyst.commons.resources.git_ci_in_progress
 import com.vitorpamplona.amethyst.commons.resources.git_ci_queued
@@ -69,8 +65,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_job_passed
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_jobs
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_maintainers
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_manual_trigger_title
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_offline
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_online
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_policy_unknown
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_readiness_title
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_repositories
@@ -116,12 +110,16 @@ import com.vitorpamplona.amethyst.commons.resources.kc_dev_servers
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_site_snapshot
 import com.vitorpamplona.amethyst.commons.resources.kc_dev_source
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_offline
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_online
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
+import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
@@ -129,6 +127,7 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBun
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -142,7 +141,6 @@ import com.vitorpamplona.quartz.nip34Git.ci.serviceRequest.CiServiceRequestEvent
 import com.vitorpamplona.quartz.nip34Git.ci.serviceStop.CiServiceStopEvent
 import com.vitorpamplona.quartz.nip34Git.ci.tags.CiAdmissionPolicy
 import com.vitorpamplona.quartz.nip34Git.ci.tags.CiBillingPolicy
-import com.vitorpamplona.quartz.nip34Git.ci.tags.CiConclusion
 import com.vitorpamplona.quartz.nip34Git.ci.tags.CiExecutionPolicy
 import com.vitorpamplona.quartz.nip34Git.ci.tags.CiTrigger
 import com.vitorpamplona.quartz.nip34Git.ci.tags.CiWorkflowStatus
@@ -562,11 +560,9 @@ private fun CiPullRequestQuote(
 }
 
 @Composable
-private fun availabilityPill(liveUntil: Long?): String = stringRes(if (liveUntil != null) Res.string.kc_dev_ci_online else Res.string.kc_dev_ci_offline)
+private fun availabilityPill(liveUntil: Long?): String = stringRes(if (liveUntil != null) Res.string.media_server_status_online else Res.string.media_server_status_offline)
 
 private fun availabilityTone(liveUntil: Long?): KindTone = if (liveUntil != null) KindTone.Positive else KindTone.Neutral
-
-private val JSON_MESSAGE = Regex("\"(?:msg|message)\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"")
 
 /**
  * The last [maxLines] readable lines of a job's log tail. Runners like `act` log JSON lines; for
@@ -576,17 +572,13 @@ private fun readableLogTail(
     log: String,
     maxLines: Int,
 ): String {
-    val lines = log.lines().filter { it.isNotBlank() && !it.startsWith("[log-tail omitted=") }
+    val lines = ciLogTailLines(log).filter { it.isNotBlank() }
     if (lines.isEmpty()) return ""
     val jsonLines = lines.count { it.trimStart().startsWith("{") }
     val readable =
         if (jsonLines * 2 >= lines.size) {
             lines.mapNotNull { line ->
-                JSON_MESSAGE
-                    .find(line)
-                    ?.groupValues
-                    ?.get(1)
-                    ?.let(::unescapeJsonString)
+                parseJsonObjectOrNull(line)?.let { it.stringOrNull("msg") ?: it.stringOrNull("message") }
             }
         } else {
             lines
@@ -598,48 +590,6 @@ private fun readableLogTail(
         .takeLast(maxLines)
         .joinToString("\n")
 }
-
-private fun unescapeJsonString(value: String): String {
-    if (!value.contains('\\')) return value
-    val out = StringBuilder(value.length)
-    var i = 0
-    while (i < value.length) {
-        val c = value[i]
-        if (c != '\\' || i + 1 >= value.length) {
-            out.append(c)
-            i++
-            continue
-        }
-        when (val next = value[i + 1]) {
-            'n' -> out.append('\n')
-            't' -> out.append('\t')
-            'r' -> out.append('\r')
-            'b', 'f' -> Unit
-            'u' -> {
-                val code = value.substring(i + 2, minOf(i + 6, value.length)).toIntOrNull(16)
-                if (code != null && i + 6 <= value.length) {
-                    out.append(code.toChar())
-                    i += 6
-                    continue
-                }
-                out.append(next)
-            }
-
-            else -> out.append(next)
-        }
-        i += 2
-    }
-    return out.toString()
-}
-
-private fun ciSymbol(state: CiState): MaterialSymbol =
-    when (state) {
-        CiState.SUCCESS -> MaterialSymbols.CheckCircle
-        CiState.FAILURE -> MaterialSymbols.Cancel
-        CiState.PENDING -> MaterialSymbols.HourglassTop
-        CiState.CANCELLED -> MaterialSymbols.Block
-        CiState.NEUTRAL -> MaterialSymbols.RemoveCircleOutline
-    }
 
 private fun ciTone(state: CiState): KindTone =
     when (state) {
@@ -664,17 +614,6 @@ private fun jobTitle(state: CiState): StringResource =
         CiState.FAILURE -> Res.string.kc_dev_ci_job_failed
         CiState.CANCELLED -> Res.string.kc_dev_ci_job_cancelled
         CiState.PENDING, CiState.NEUTRAL -> Res.string.kc_dev_ci_job_finished
-    }
-
-private fun conclusionLabel(conclusion: CiConclusion): StringResource =
-    when (conclusion) {
-        CiConclusion.SUCCESS -> Res.string.git_ci_conclusion_success
-        CiConclusion.FAILURE -> Res.string.git_ci_conclusion_failure
-        CiConclusion.NEUTRAL -> Res.string.git_ci_conclusion_neutral
-        CiConclusion.CANCELLED -> Res.string.git_ci_conclusion_cancelled
-        CiConclusion.SKIPPED -> Res.string.git_ci_conclusion_skipped
-        CiConclusion.TIMED_OUT -> Res.string.git_ci_conclusion_timed_out
-        CiConclusion.STARTUP_FAILURE -> Res.string.git_ci_conclusion_startup_failure
     }
 
 private fun triggerLabel(trigger: CiTrigger): StringResource =
@@ -750,7 +689,7 @@ private fun BranchRows(refs: List<RefTag>) {
 @Composable
 fun RenderUserGraspList(baseNote: Note) {
     val event = baseNote.event as? UserGraspListEvent ?: return
-    val servers = remember(event) { event.grasps().map { it.removePrefix("wss://").removePrefix("ws://").removeSuffix("/") } }
+    val servers = remember(event) { event.graspsNorm().map { it.displayUrl() } }
 
     KindCard(
         icon = MaterialSymbols.Storage,

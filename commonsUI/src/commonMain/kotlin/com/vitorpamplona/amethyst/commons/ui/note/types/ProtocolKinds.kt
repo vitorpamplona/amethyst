@@ -77,6 +77,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.intent.Bolt12ZapIntentEvent
+import com.vitorpamplona.quartz.nipB1Bolt12Zaps.tags.AmountTag
 
 /*
  * Cards for the protocol-plumbing kinds: payment requests and wallet capabilities, MLS key
@@ -99,9 +100,7 @@ fun RenderZapRequest(
             ZapRequestCard(
                 amountSats =
                     event.tags
-                        .firstOrNull { it.size > 1 && it[0] == "amount" }
-                        ?.get(1)
-                        ?.toLongOrNull()
+                        .firstNotNullOfOrNull(AmountTag::parse)
                         ?.div(1000)
                         ?.takeIf { it > 0 },
                 recipients = event.zappedAuthor(),
@@ -216,8 +215,8 @@ private fun ZapTarget(
 @Composable
 fun RenderNwcInfo(baseNote: Note) {
     val event = baseNote.event as? NwcInfoEvent ?: return
-    val methods = remember(event) { event.capabilities().map(::humanizeIdentifier) }
-    val notifications = remember(event) { event.notificationTypes().map(::humanizeIdentifier) }
+    val methods = remember(event) { event.capabilities().map { readableToken(it, capitalize = false) } }
+    val notifications = remember(event) { event.notificationTypes().map { readableToken(it, capitalize = false) } }
     val encryptions = remember(event) { event.encryptionSchemes().joinToString(", ").ifBlank { null } }
     val extensions = remember(event) { event.extensions() }
 
@@ -233,9 +232,6 @@ fun RenderNwcInfo(baseNote: Note) {
         KindCardField(stringRes(Res.string.kc_proto_nwc_encryption), encryptions, monospace = true, maxLines = 1)
     }
 }
-
-/** `pay_invoice` reads as "pay invoice": the wire names are snake case, the card is for people. */
-private fun humanizeIdentifier(id: String): String = id.replace('_', ' ')
 
 /**
  * Marmot MLS KeyPackage, both the addressable kind 30443 and the legacy kind 443: the

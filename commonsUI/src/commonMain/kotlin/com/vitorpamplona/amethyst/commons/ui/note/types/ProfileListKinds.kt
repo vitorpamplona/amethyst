@@ -33,14 +33,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,18 +46,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.bolt12_lightning_offer
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.cashu_mints
 import com.vitorpamplona.amethyst.commons.resources.kc_list_and_more
@@ -79,7 +75,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_list_nutzap_info_off
 import com.vitorpamplona.amethyst.commons.resources.kc_list_nutzap_info_on
 import com.vitorpamplona.amethyst.commons.resources.kc_list_p2pk_key
 import com.vitorpamplona.amethyst.commons.resources.kc_list_podcast_count
-import com.vitorpamplona.amethyst.commons.resources.kc_list_relay_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_relays
 import com.vitorpamplona.amethyst.commons.resources.kc_list_server_count
 import com.vitorpamplona.amethyst.commons.resources.kc_list_status_cleared
@@ -108,31 +103,24 @@ import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_incomplete
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_title_font
 import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.kind_card_private_relays_hidden
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
-import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
-import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
-import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
-import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.resources.private_outbox_section
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.commons.ui.components.util.LongPressCopyText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
-import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.GeocacheHuntRow
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.Bolt12OffersDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.gallery.toMediaContents
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.Bolt12OfferChip
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.IdentityClaimRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.PaymentTargetChip
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.ProfilePaymentChip
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.abbreviateBolt12Offer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.badges.BadgeThumb
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.getIdentityClaimDescription
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.getIdentityClaimIcon
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
@@ -156,8 +144,6 @@ import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
-import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
-import com.vitorpamplona.quartz.nip39ExtIdentities.UnsupportedIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.nip51Lists.favoriteFollowSetsList.FavoriteFollowSetsListEvent
@@ -175,7 +161,6 @@ import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEve
 import com.vitorpamplona.quartz.nipF4Podcasts.authored.AuthoredPodcastsEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.PluralStringResource
 
@@ -525,16 +510,21 @@ fun RenderNestsServers(
 fun RenderPrivateOutboxRelays(
     baseNote: Note,
     backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
 ) {
     val event = baseNote.event as? PrivateOutboxRelayListEvent ?: return
-    val relays = remember(event) { event.publicRelays().map { it.displayUrl() } }
+    val relays = remember(event) { RelayListCard(event.publicRelays()) }
+    val hasPrivateItems = remember(event) { event.content.isNotEmpty() }
 
-    ServerListCard(
-        icon = MaterialSymbols.Drafts,
-        title = kindName(event.kind),
-        servers = relays,
-        countPlural = Res.plurals.kc_list_relay_count,
-        hasPrivateItems = event.content.isNotEmpty(),
+    // Drawn like every other relay list kind; the private half stays encrypted and is only noted.
+    DisplayRelaySet(
+        relays,
+        stringRes(Res.string.private_outbox_section),
+        if (hasPrivateItems) stringRes(Res.string.kind_card_private_relays_hidden) else null,
+        backgroundColor,
+        accountViewModel,
+        nav,
     )
 }
 
@@ -613,7 +603,6 @@ fun RenderBolt12OfferList(
 ) {
     val event = baseNote.event as? Bolt12OfferListEvent ?: return
     val offers = remember(event) { event.offers() }
-    var dialogOffer by remember { mutableStateOf<String?>(null) }
 
     ListKindCard(
         icon = MaterialSymbols.Bolt,
@@ -627,32 +616,9 @@ fun RenderBolt12OfferList(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                offers.forEach { offer ->
-                    ProfilePaymentChip(
-                        color = BitcoinOrange,
-                        label = stringRes(Res.string.bolt12_lightning_offer),
-                        detail = remember(offer) { abbreviateBolt12Offer(offer) },
-                        copyValue = offer,
-                        onClick = { dialogOffer = offer },
-                    ) {
-                        Icon(
-                            symbol = MaterialSymbols.Bolt,
-                            contentDescription = null,
-                            tint = BitcoinOrange,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                }
+                offers.forEach { offer -> Bolt12OfferChip(offer, accountViewModel) }
             }
         }
-    }
-
-    dialogOffer?.let { offer ->
-        Bolt12OffersDialog(
-            offers = listOf(offer),
-            accountViewModel = accountViewModel,
-            onDismiss = { dialogOffer = null },
-        )
     }
 }
 
@@ -798,50 +764,10 @@ fun RenderExternalIdentities(baseNote: Note) {
         subtitle = countLine(Res.plurals.kc_list_entry_count, claims.size),
         hasEntries = claims.isNotEmpty(),
     ) {
-        claims.take(MAX_IDENTITIES).forEach { claim -> IdentityClaimRow(claim) }
+        claims.take(MAX_IDENTITIES).forEach { claim -> IdentityClaimRow(claim, iconSize = 16.dp, textStyle = MaterialTheme.typography.bodySmall) }
         val rest = claims.size - MAX_IDENTITIES
         if (rest > 0) {
             KindCardMore(rest)
-        }
-    }
-}
-
-/** One claimed account: the platform's logo and the handle, opening the proof; long-press copies. */
-@Composable
-private fun IdentityClaimRow(claim: IdentityClaimTag) {
-    val uri = LocalUriHandler.current
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        if (claim is UnsupportedIdentity) {
-            Icon(
-                symbol = MaterialSymbols.Link,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = claim.platformIdentity(),
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        } else {
-            Icon(
-                painter = painterRes(getIdentityClaimIcon(claim), 0),
-                contentDescription = stringRes(getIdentityClaimDescription(claim)),
-                tint = Color.Unspecified,
-                modifier = Modifier.size(16.dp),
-            )
-            LongPressCopyText(
-                displayText = claim.identity,
-                copyValue = claim.identity,
-                onClick = { runCatching { uri.openUri(claim.toProofUrl()) } },
-                style = MaterialTheme.typography.bodySmall,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1,
-            )
         }
     }
 }
@@ -1110,7 +1036,7 @@ fun RenderProfileGalleryEntry(
 ) {
     val event = baseNote.event as? ProfileGalleryEntryEvent ?: return
 
-    val media = remember(event) { event.toMediaContents(baseNote) }
+    val media = remember(event) { event.toMediaContents(withHash = true, uri = baseNote.toNostrUri()).toImmutableList() }
     val summary = remember(event) { event.summary() }
     val fromEvent = remember(event) { event.fromEvent() }
 
@@ -1137,38 +1063,6 @@ fun RenderProfileGalleryEntry(
             KindCardQuoteEvent(fromEvent, quotesLeft, backgroundColor, accountViewModel, nav)
         }
     }
-}
-
-private fun ProfileGalleryEntryEvent.toMediaContents(note: Note): ImmutableList<BaseMediaContent> {
-    val mimeType = mimeType()
-    val description = summary()
-    val uri = note.toNostrUri()
-    return urls()
-        .map { url ->
-            if (RichTextParser.classifyMedia(url, mimeType) == MediaContentKind.VIDEO) {
-                MediaUrlVideo(
-                    url = url,
-                    description = description,
-                    hash = hash(),
-                    dim = dimensions(),
-                    uri = uri,
-                    blurhash = blurhash(),
-                    mimeType = mimeType,
-                    thumbhash = thumbhash(),
-                )
-            } else {
-                MediaUrlImage(
-                    url = url,
-                    description = description,
-                    hash = hash(),
-                    blurhash = blurhash(),
-                    dim = dimensions(),
-                    uri = uri,
-                    mimeType = mimeType,
-                    thumbhash = thumbhash(),
-                )
-            }
-        }.toImmutableList()
 }
 
 /** NIP-B0 kind 39701: a saved web page — its title, the link (with a preview), the note and labels. */

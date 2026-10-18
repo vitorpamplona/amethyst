@@ -4067,6 +4067,10 @@
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
     </plurals>
+    <plurals name="duration_seconds">
+        <item quantity="one">%1$d second</item>
+        <item quantity="other">%1$d seconds</item>
+    </plurals>
     <plurals name="duration_months">
         <item quantity="one">%1$d month</item>
         <item quantity="other">%1$d months</item>
@@ -7451,6 +7455,8 @@
     <string name="open_markets_rating_communication">Communication</string>
     <string name="open_markets_product_not_found">Looking for the product…</string>
     <string name="kind_card_private_pill">Private</string>
+    <string name="kind_card_sats">%1$s sats</string>
+    <string name="kind_card_private_relays_hidden">Its relays are encrypted: only the author can see them.</string>
     <string name="kind_card_linked_event">Linked event</string>
     <string name="kind_card_more">+%1$d</string>
     <string name="kc_proto_offer">Offer</string>
@@ -7484,7 +7490,6 @@
     <string name="kc_dvm_label_providers">Asked of</string>
     <string name="kc_dvm_label_customer">Requested by</string>
     <string name="kc_dvm_label_for">For</string>
-    <string name="kc_dvm_sats">%1$s sats</string>
     <string name="kc_dvm_label_transaction">Transaction</string>
     <string name="kc_dvm_param_model">Model</string>
     <string name="kc_dvm_param_max_results">Max results</string>
@@ -7500,7 +7505,6 @@
     <string name="kc_dvm_param_until">Until</string>
     <string name="kc_dvm_param_group">Group</string>
     <string name="kc_dvm_heartbeat_title">DVM heartbeat</string>
-    <string name="kc_dvm_online">Online</string>
     <string name="kc_dev_app_id">App</string>
     <plurals name="kc_dev_files_count">
         <item quantity="one">%1$d file</item>
@@ -7537,7 +7541,6 @@
     <string name="kc_dev_ci_workflows">Workflows</string>
     <string name="kc_dev_ci_secrets">Secrets</string>
     <string name="kc_dev_ci_accepts_secrets">Accepts repository secrets</string>
-    <string name="kc_dev_ci_offline">Offline</string>
     <string name="kc_dev_ci_readiness_title">Ready for CI service</string>
     <string name="kc_dev_feed_untitled">Custom feed</string>
     <string name="kc_dev_feed_subtitle">Custom feed definition</string>
@@ -7611,7 +7614,6 @@
     <string name="kc_agent_ext_published">Published</string>
     <string name="kc_agent_ext_hidden">Hidden</string>
     <string name="kc_agent_ext_version">Version %1$s</string>
-    <string name="kc_agent_ext_price_sats">%1$s sats</string>
     <string name="kc_agent_ext_free">Free</string>
     <string name="kc_agent_ext_payout">Payout</string>
     <string name="kc_agent_wf_def">Workflow definition</string>
@@ -7700,9 +7702,7 @@
         <item quantity="one">%1$d person</item>
         <item quantity="other">%1$d people</item>
     </plurals>
-    <string name="kc_buzz_presence_online">Online</string>
     <string name="kc_buzz_presence_away">Away</string>
-    <string name="kc_buzz_presence_offline">Offline</string>
     <string name="kc_buzz_feedback">Product feedback</string>
     <string name="kc_buzz_feedback_bug">Bug report</string>
     <string name="kc_buzz_feedback_praise">Praise</string>
@@ -7710,9 +7710,6 @@
     <string name="kc_buzz_relay_add_member">Add relay member</string>
     <string name="kc_buzz_relay_change_role">Change member role</string>
     <string name="kc_buzz_relay_remove_member">Remove relay member</string>
-    <string name="kc_buzz_role_owner">Owner</string>
-    <string name="kc_buzz_role_admin">Admin</string>
-    <string name="kc_buzz_role_member">Member</string>
     <string name="kc_buzz_workspace_icon_set">Updated the workspace icon</string>
     <string name="kc_buzz_workspace_icon_cleared">Removed the workspace icon</string>
     <string name="kc_buzz_bookmarked">Bookmarked a message</string>
@@ -7783,10 +7780,6 @@
     <string name="kc_group_rules_allowed_people">Allowed people</string>
     <string name="kc_group_rules_blocked_people">Blocked people</string>
     <string name="kc_group_rules_max_size">Max event size</string>
-    <plurals name="kc_group_rules_bytes">
-        <item quantity="one">%1$d byte</item>
-        <item quantity="other">%1$d bytes</item>
-    </plurals>
     <string name="kc_group_rules_wot">Web of trust</string>
     <plurals name="kc_group_rules_wot_depth">
         <item quantity="one">Within %1$d hop of these people</item>
@@ -7858,18 +7851,6 @@
     <string name="kc_list_expires">Expires</string>
     <string name="kc_list_gallery_entry">Added to profile gallery</string>
     <string name="kc_list_geocache_hunt">Geocache hunt</string>
-    <plurals name="kc_misc_hours">
-        <item quantity="one">%1$d hour</item>
-        <item quantity="other">%1$d hours</item>
-    </plurals>
-    <plurals name="kc_misc_minutes">
-        <item quantity="one">%1$d minute</item>
-        <item quantity="other">%1$d minutes</item>
-    </plurals>
-    <plurals name="kc_misc_seconds">
-        <item quantity="one">%1$d second</item>
-        <item quantity="other">%1$d seconds</item>
-    </plurals>
     <string name="kc_misc_url">Link</string>
     <string name="kc_misc_source">Source</string>
     <string name="kc_misc_language">Language: %1$s</string>
@@ -7910,7 +7891,6 @@
     <string name="kc_misc_p2p_sell">Selling bitcoin</string>
     <string name="kc_misc_p2p_fiat">%1$s %2$s</string>
     <string name="kc_misc_p2p_fiat_range">%1$s – %2$s %3$s</string>
-    <string name="kc_misc_p2p_sats">%1$s sats</string>
     <string name="kc_misc_p2p_market_price">At market price</string>
     <string name="kc_misc_p2p_maker">Maker</string>
     <string name="kc_misc_p2p_order_id">Order</string>
@@ -7968,7 +7948,6 @@
     <string name="kc_dev_ci_artifacts">Artifacts</string>
     <string name="kc_dev_ci_coordinator">Coordinator</string>
     <string name="kc_dev_ci_maintainers">Maintainers</string>
-    <string name="kc_dev_ci_online">Online</string>
     <string name="kc_dev_ci_until">Until %1$s</string>
     <string name="kc_dev_ci_service_active">CI service active</string>
     <string name="kc_dev_ci_service_status">CI service status</string>

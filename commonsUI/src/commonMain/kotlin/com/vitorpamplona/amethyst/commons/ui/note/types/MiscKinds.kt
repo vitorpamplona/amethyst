@@ -37,6 +37,9 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.draft
+import com.vitorpamplona.amethyst.commons.resources.duration_hours
+import com.vitorpamplona.amethyst.commons.resources.duration_minutes
+import com.vitorpamplona.amethyst.commons.resources.duration_seconds
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_accept_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_black
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_color
@@ -55,12 +58,10 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_dispute_resolved
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geocache_verification_subtitle
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geocache_verification_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_geohash
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_hours
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_label_namespace
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_label_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_language
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_longform_draft_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_minutes
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_monitor_every
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dev_fee_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_mostro_dispute_id
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_order
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_order_id
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_payment_hash
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_premium_meta
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_sats
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_sell
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_canceled
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_expired
@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_p2p_status_success
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_poll_response_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_rating_stars
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_robosats_rating_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_seconds
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_source
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_story_progress_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_story_status_done
@@ -124,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.resources.kc_misc_workout_weight_kg
 import com.vitorpamplona.amethyst.commons.resources.paid
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ActivityAmountRow
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.LoadOts
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
@@ -143,6 +143,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
@@ -175,7 +176,6 @@ import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.MimeTypeTag
 import com.vitorpamplona.quartz.nipCCGeocaching.verification.GeocacheVerificationEvent
-import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /*
@@ -203,15 +203,15 @@ private fun MiscHeroAmount(text: String?) {
 
 /** A rating on a five-star scale as a pill label: "4.8 ★". */
 @Composable
-private fun starsLabel(outOfFive: Double): String = stringRes(Res.string.kc_misc_rating_stars, formatDecimal(outOfFive.coerceIn(0.0, 5.0), 1))
+private fun starsLabel(outOfFive: Double): String = stringRes(Res.string.kc_misc_rating_stars, formatStars(outOfFive.coerceIn(0.0, 5.0)))
 
 /** A length of time in the biggest unit that divides it evenly: "6 hours", "90 seconds". */
 @Composable
 private fun durationLabel(seconds: Long): String =
     when {
-        seconds > 0 && seconds % 3600 == 0L -> (seconds / 3600).toIntCount().let { pluralStringRes(Res.plurals.kc_misc_hours, it, it) }
-        seconds > 0 && seconds % 60 == 0L -> (seconds / 60).toIntCount().let { pluralStringRes(Res.plurals.kc_misc_minutes, it, it) }
-        else -> seconds.toIntCount().let { pluralStringRes(Res.plurals.kc_misc_seconds, it, it) }
+        seconds > 0 && seconds % 3600 == 0L -> (seconds / 3600).toIntCount().let { pluralStringRes(Res.plurals.duration_hours, it, it) }
+        seconds > 0 && seconds % 60 == 0L -> (seconds / 60).toIntCount().let { pluralStringRes(Res.plurals.duration_minutes, it, it) }
+        else -> seconds.toIntCount().let { pluralStringRes(Res.plurals.duration_seconds, it, it) }
     }
 
 private fun formatSeconds(epochSeconds: Long): String = formatDateTime(epochSeconds * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
@@ -706,7 +706,7 @@ private fun orderStatusTone(status: OrderStatus?): KindTone? =
     }
 
 /** True when the order names its maker by key (npub, nprofile or hex) rather than by a name. */
-private fun isMakerKey(name: String): Boolean = Hex.isHex64(name) || decodePublicKeyAsHexOrNull(name) != null
+private fun isMakerKey(name: String): Boolean = name.isValid() || decodePublicKeyAsHexOrNull(name) != null
 
 /** A P2P order: buy or sell, the fiat amount, the sats, premium, payment methods and status. */
 @Composable
@@ -747,7 +747,7 @@ fun RenderP2POrder(baseNote: Note) {
         MiscHeroAmount(fiatText?.trim())
         KindCardMeta(
             listOf(
-                sats?.let { if (it == 0L) stringRes(Res.string.kc_misc_p2p_market_price) else stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) },
+                sats?.let { if (it == 0L) stringRes(Res.string.kc_misc_p2p_market_price) else kindCardSats(it) },
                 event.premium()?.let { stringRes(Res.string.kc_misc_p2p_premium_meta, "$it%") },
                 event.expiresAt()?.let { stringRes(Res.string.kc_misc_p2p_expires_on, formatSeconds(it)) },
             ),
@@ -812,7 +812,7 @@ private fun disputeState(status: String?): MiscDisputeState? =
 fun RenderMostroDispute(baseNote: Note) {
     val event = baseNote.event as? MostroDisputeEvent ?: return
     val raw = remember(event) { event.status() }
-    val readable = remember(raw) { raw?.replace('-', ' ')?.replace('_', ' ') }
+    val readable = remember(raw) { raw?.let { readableToken(it, capitalize = false) } }
     val state = remember(raw) { disputeState(raw) }
 
     KindCard(
@@ -858,7 +858,7 @@ fun RenderMostroDevFee(baseNote: Note) {
         tone = KindTone.Money,
         status = stringRes(Res.string.paid),
     ) {
-        MiscHeroAmount(event.amount()?.let { stringRes(Res.string.kc_misc_p2p_sats, formatGrouped(it)) })
+        event.amount()?.let { ActivityAmountRow(formatGrouped(it), KindTone.Money.color()) }
         KindCardMeta(listOf(event.network()))
         KindCardField(stringRes(Res.string.kc_misc_p2p_order_id), event.orderId()?.toShortDisplay(), monospace = true, maxLines = 1)
         KindCardField(stringRes(Res.string.kc_misc_p2p_destination), event.destination(), maxLines = 1)

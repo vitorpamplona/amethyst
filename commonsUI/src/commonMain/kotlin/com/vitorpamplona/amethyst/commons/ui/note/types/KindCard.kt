@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.chips_n_more
 import com.vitorpamplona.amethyst.commons.resources.kind_card_linked_event
 import com.vitorpamplona.amethyst.commons.resources.kind_card_more
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.kind_card_sats
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -83,14 +84,17 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.LocalNowSeconds
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.StatusAmber
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
+import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip31Alts.alt
 
 /*
@@ -108,15 +112,13 @@ import com.vitorpamplona.quartz.nip31Alts.alt
  */
 enum class KindTone { Primary, Positive, Negative, Warning, Money, Neutral }
 
-private val WarningAmber = Color(0xFFE69A00)
-
 @Composable
 fun KindTone.color(): Color =
     when (this) {
         KindTone.Primary -> MaterialTheme.colorScheme.primary
         KindTone.Positive -> MaterialTheme.colorScheme.allGoodColor
         KindTone.Negative -> MaterialTheme.colorScheme.error
-        KindTone.Warning -> WarningAmber
+        KindTone.Warning -> StatusAmber
         KindTone.Money -> MaterialTheme.colorScheme.bitcoinColor
         KindTone.Neutral -> MaterialTheme.colorScheme.onSurfaceVariant
     }
@@ -506,14 +508,33 @@ fun KindCardText(
     if (gated) SensitivityWarning(note = note, accountViewModel = accountViewModel, content = viewer) else viewer()
 }
 
-private val NIP04_CIPHERTEXT = Regex("[A-Za-z0-9+/=]+\\?iv=[A-Za-z0-9+/=]+")
-
 /** A JSON array opens with a value: a string, an object, an array or a number. "[spam] links" doesn't. */
 private val JSON_ARRAY_START = Regex("^\\[\\s*[\\[{\"0-9-]")
 
 /** Long single tokens that are meant to be shown: links, invoices, ecash and bech32 entities. */
 private val READABLE_TOKEN_PREFIXES =
     listOf("nostr:", "lightning:", "lnbc", "lntb", "lnurl", "lno1", "cashu", "npub1", "nprofile1", "note1", "nevent1", "naddr1", "nrelay1")
+
+/** An amount of sats for a card's pill or line, grouped like every other amount in the app: "21,000 sats". */
+@Composable
+fun kindCardSats(sats: Long): String = stringRes(Res.string.kind_card_sats, formatGrouped(sats))
+
+/** Like [kindCardSats], from millisats, keeping a fraction instead of rounding a sub-sat fee down to "0". */
+@Composable
+fun kindCardMsats(msats: Long): String = stringRes(Res.string.kind_card_sats, if (msats % 1000 == 0L) formatGrouped(msats / 1000) else (msats / 1000.0).toString())
+
+/**
+ * A machine token made readable: `pay_invoice` and `timed-out` become "Pay invoice" and "Timed out"
+ * (or, with [capitalize] false, "pay invoice"). For protocol words a card shows when it has no
+ * translated label of its own for them.
+ */
+fun readableToken(
+    raw: String,
+    capitalize: Boolean = true,
+): String {
+    val spaced = raw.replace('_', ' ').replace('-', ' ')
+    return if (capitalize) spaced.replaceFirstChar { if (it.isLowerCase()) it.titlecaseChar() else it } else spaced
+}
 
 /**
  * True for content that is a blob rather than words: JSON, ciphertext, a base64 image. Other
@@ -527,8 +548,9 @@ fun looksLikeOpaquePayload(text: String): Boolean {
     // A JSON document is a payload for software, never prose.
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) return true
     if (trimmed.endsWith(']') && JSON_ARRAY_START.containsMatchIn(trimmed)) return true
-    // NIP-04 ciphertext: base64 with an initialization vector, short or long.
-    if (NIP04_CIPHERTEXT.matches(trimmed)) return true
+    // NIP-04 ciphertext (base64 with an initialization vector), short or long. Ciphertext has no
+    // spaces, which keeps a sentence that happens to end in "?iv=…" out.
+    if (trimmed.none { it.isWhitespace() } && EncryptedInfo.isNIP04(trimmed)) return true
     // One unbroken run of 120+ characters (line breaks allowed, as in wrapped base64) that is not
     // a link, an invoice or a nostr entity: NIP-44 ciphertext, a base64 image, a hex dump.
     if (trimmed.length < 120 || trimmed.any { it == ' ' || it == '\t' }) return false

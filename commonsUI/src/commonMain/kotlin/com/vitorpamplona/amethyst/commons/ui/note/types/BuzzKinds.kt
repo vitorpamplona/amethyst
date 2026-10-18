@@ -108,8 +108,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_buzz_pinned
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_pr_number
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_presence
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_presence_away
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_presence_offline
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_presence_online
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_purpose
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_reason
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_relay_add_member
@@ -125,9 +123,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_buzz_report_dismissed
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_report_resolved
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_repository
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_requested_by
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_role_admin
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_role_member
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_role_owner
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_scheduled
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_system_message
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_thread_summary
@@ -139,7 +134,12 @@ import com.vitorpamplona.amethyst.commons.resources.kc_buzz_untimeout
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_workspace_icon_cleared
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_workspace_icon_set
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_offline
+import com.vitorpamplona.amethyst.commons.resources.media_server_status_online
+import com.vitorpamplona.amethyst.commons.resources.owner
 import com.vitorpamplona.amethyst.commons.resources.relay_group_member_count
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_admin
+import com.vitorpamplona.amethyst.commons.resources.relay_group_role_member
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.timeAbsoluteNoDot
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -206,7 +206,6 @@ import com.vitorpamplona.quartz.buzz.stream.sidecars.PresenceSnapshotEvent
 import com.vitorpamplona.quartz.buzz.wpWorkspaceProfile.SetWorkspaceProfileEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
-import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 
 /*
  * Feed cards for the Buzz workspace kinds: chat-stream side events (edits, pins, bookmarks,
@@ -266,12 +265,11 @@ private fun findBuzzChannel(
     channelId: String?,
 ): RelayGroupChannel? =
     // A note can sit in several channels' timelines; only the one its own tag names is its home.
-    note.inGatherers?.firstNotNullOfOrNull { gatherer ->
-        (gatherer as? RelayGroupChannel)?.takeIf { channelId == null || it.groupId.id == channelId }
-    } ?: LocalCache.getRelayGroupChannelForContent(note)
-        ?: channelId?.let { id ->
-            note.relays.firstNotNullOfOrNull { LocalCache.getRelayGroupChannelIfExists(GroupId(id, it)) }
-        }
+    if (channelId != null) {
+        relayGroupChannelOf(note, channelId) ?: LocalCache.getRelayGroupChannelForContent(note)
+    } else {
+        note.inGatherers?.firstNotNullOfOrNull { it as? RelayGroupChannel } ?: LocalCache.getRelayGroupChannelForContent(note)
+    }
 
 /** A section heading followed by the people it introduces ("Requested by", "Removed by"). */
 @Composable
@@ -293,15 +291,15 @@ private fun BuzzLabeledUsers(
 private fun buzzStatusWord(raw: String?): String? {
     val trimmed = raw?.trim() ?: return null
     if (trimmed.isEmpty() || trimmed.length > 24 || looksLikeOpaquePayload(trimmed)) return null
-    return trimmed.replace('_', ' ').replace('-', ' ').replaceFirstChar { it.uppercase() }
+    return readableToken(trimmed)
 }
 
 @Composable
 private fun buzzPresenceLabel(status: String): String =
     when (PresenceStatus.fromWire(status)) {
-        PresenceStatus.ONLINE -> stringRes(Res.string.kc_buzz_presence_online)
+        PresenceStatus.ONLINE -> stringRes(Res.string.media_server_status_online)
         PresenceStatus.AWAY -> stringRes(Res.string.kc_buzz_presence_away)
-        PresenceStatus.OFFLINE -> stringRes(Res.string.kc_buzz_presence_offline)
+        PresenceStatus.OFFLINE -> stringRes(Res.string.media_server_status_offline)
         // Other apps share kind 20001 with their own payloads; name the kind rather than print those.
         null -> buzzStatusWord(status) ?: stringRes(Res.string.kc_buzz_presence)
     }
@@ -310,9 +308,9 @@ private fun buzzPresenceLabel(status: String): String =
 private fun buzzRoleLabel(role: String?): String? =
     when (role) {
         null -> null
-        RoleTag.OWNER -> stringRes(Res.string.kc_buzz_role_owner)
-        RoleTag.ADMIN -> stringRes(Res.string.kc_buzz_role_admin)
-        RoleTag.MEMBER -> stringRes(Res.string.kc_buzz_role_member)
+        RoleTag.OWNER -> stringRes(Res.string.owner)
+        RoleTag.ADMIN -> stringRes(Res.string.relay_group_role_admin)
+        RoleTag.MEMBER -> stringRes(Res.string.relay_group_role_member)
         else -> buzzStatusWord(role)
     }
 
@@ -321,8 +319,8 @@ private fun buzzConsentLabel(path: String?): String? =
     when (path) {
         null -> null
         ConsentTag.PATH_SELF -> stringRes(Res.string.kc_buzz_consent_self)
-        ConsentTag.PATH_OWNER -> stringRes(Res.string.kc_buzz_role_owner)
-        ConsentTag.PATH_ADMIN -> stringRes(Res.string.kc_buzz_role_admin)
+        ConsentTag.PATH_OWNER -> stringRes(Res.string.owner)
+        ConsentTag.PATH_ADMIN -> stringRes(Res.string.relay_group_role_admin)
         else -> buzzStatusWord(path)
     }
 

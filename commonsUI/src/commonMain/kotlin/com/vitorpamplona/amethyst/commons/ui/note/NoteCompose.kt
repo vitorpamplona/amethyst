@@ -2601,7 +2601,7 @@ internal fun RenderNoteRow(
             is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
             is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
             is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
-            is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor)
+            is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor, accountViewModel, nav)
             is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
             is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
             is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)

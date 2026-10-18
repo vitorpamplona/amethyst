@@ -27,7 +27,7 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunPayload
+import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.buzz_persona_system_prompt
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_artifact_id
@@ -66,7 +66,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_free
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_hidden
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_package
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_payout
-import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_price_sats
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_published
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_release_title
 import com.vitorpamplona.amethyst.commons.resources.kc_agent_ext_version
@@ -155,12 +154,11 @@ import com.vitorpamplona.quartz.contextvm.cep06Announcements.CvmToolsListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.release.ExtensionReleaseEvent
-import com.vitorpamplona.quartz.utils.Hex
-import kotlinx.serialization.json.Json
 import org.jetbrains.compose.resources.StringResource
 
 /*
@@ -188,7 +186,7 @@ fun RenderAgentProfile(baseNote: Note) {
         icon = MaterialSymbols.Assistant,
         title = name ?: kindTitle,
         subtitle = agentType ?: if (name != null) kindTitle else null,
-        status = status?.let { capitalizeWord(it) },
+        status = status?.let { readableToken(it) },
         statusTone = status?.let { agentStatusTone(it) },
     ) {
         KindCardField(stringRes(Res.string.kc_agent_who_can_add), profile?.channelAddPolicy?.let { channelAddPolicyLabel(it) })
@@ -482,7 +480,7 @@ fun RenderWorkflowTrigger(
     nav: INav,
 ) {
     val event = baseNote.event as? WorkflowTriggerEvent ?: return
-    val payload = remember(event) { parseRunPayload(event.content) }
+    val payload = remember(event) { WorkflowRunAggregator.payload(event.content) }
     val workflow = remember(event) { event.workflowId()?.ifBlank { null } ?: payload?.workflow?.ifBlank { null } }
     val definition =
         remember(event) {
@@ -519,7 +517,7 @@ fun RenderWorkflowLifecycle(
 ) {
     val event = baseNote.event ?: return
     val header = workflowLifecycleHeader(event) ?: return
-    val payload = remember(event) { parseRunPayload(event.content) }
+    val payload = remember(event) { WorkflowRunAggregator.payload(event.content) }
     val runId = remember(payload) { payload?.run?.let { hex64OrNull(it) } }
     val approver = remember(event) { (event as? WorkflowApprovalRequestedEvent)?.approver() }
 
@@ -679,9 +677,6 @@ fun RenderExtensionListing(
     }
 }
 
-/** Millisats as sats, keeping a fraction instead of rounding a sub-sat fee down to "0". */
-private fun msatsAsSats(msats: Long): String = if (msats % 1000 == 0L) (msats / 1000).toString() else (msats / 1000.0).toString()
-
 /** An OpenAgents extension release (kind 3184): package, version and price. */
 @Composable
 fun RenderExtensionRelease(baseNote: Note) {
@@ -699,7 +694,7 @@ fun RenderExtensionRelease(baseNote: Note) {
         tone = if (paid) KindTone.Money else KindTone.Primary,
         status =
             if (paid) {
-                stringRes(Res.string.kc_agent_ext_price_sats, msatsAsSats(feeMsat))
+                kindCardMsats(feeMsat)
             } else {
                 stringRes(Res.string.kc_agent_ext_free)
             },
@@ -826,17 +821,7 @@ fun RenderPushLease(baseNote: Note) = RenderPrivateKindCard(baseNote, MaterialSy
 /** Names (personas, members, repositories, operations) shown as chips before the "+N" chip. */
 private const val MAX_NAME_CHIPS = 6
 
-private val workflowJson = Json { ignoreUnknownKeys = true }
-
-/** The run/step JSON of a workflow event, or null when the content is not that object. */
-private fun parseRunPayload(content: String): WorkflowRunPayload? {
-    if (!content.trimStart().startsWith("{")) return null
-    return runCatching { workflowJson.decodeFromString(WorkflowRunPayload.serializer(), content) }.getOrNull()
-}
-
-private fun hex64OrNull(value: String): HexKey? = value.takeIf { it.length == 64 && Hex.isHex64(it) }
-
-private fun capitalizeWord(value: String): String = value.replace('_', ' ').replaceFirstChar { it.uppercaseChar() }
+private fun hex64OrNull(value: String): HexKey? = value.takeIf { it.isValid() }
 
 /** An agent's free-form `status` word, colored by what it most likely means. */
 private fun agentStatusTone(status: String): KindTone =

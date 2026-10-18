@@ -90,7 +90,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_group_roles
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_allowed_kinds
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_allowed_people
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_blocked_people
-import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_bytes
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_max_size
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_wot
 import com.vitorpamplona.amethyst.commons.resources.kc_group_rules_wot_depth
@@ -186,7 +185,8 @@ private fun rememberRelayGroup(
     groupId: String?,
 ): RelayGroupChannel? = remember(baseNote, groupId) { groupId?.takeIf { it.isNotBlank() }?.let { relayGroupChannelOf(baseNote, it) } }
 
-private fun relayGroupChannelOf(
+/** The cached group [groupId] that [note] belongs to, by the gatherers it sits in or the relays that served it. */
+internal fun relayGroupChannelOf(
     note: Note,
     groupId: String,
 ): RelayGroupChannel? =
@@ -972,7 +972,7 @@ fun RenderCommunityRules(
     ) {
         KindCardField(stringRes(Res.string.kc_group_rules_allowed_people), allowed.takeIf { it > 0 }?.toString())
         KindCardField(stringRes(Res.string.kc_group_rules_blocked_people), blocked.takeIf { it > 0 }?.toString())
-        maxSize?.let { KindCardField(stringRes(Res.string.kc_group_rules_max_size), pluralStringRes(Res.plurals.kc_group_rules_bytes, it, it)) }
+        KindCardField(stringRes(Res.string.kc_group_rules_max_size), maxSize?.let { formatBytes(it.toLong()) })
         if (wot.isNotEmpty()) {
             val depth = wot.maxOf { it.depth }
             KindCardField(stringRes(Res.string.kc_group_rules_wot), pluralStringRes(Res.plurals.kc_group_rules_wot_depth, depth, depth))
