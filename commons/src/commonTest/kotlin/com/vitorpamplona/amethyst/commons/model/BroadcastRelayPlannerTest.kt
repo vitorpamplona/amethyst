@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
@@ -173,5 +175,35 @@ class BroadcastRelayPlannerTest {
             val reply = bob.sign(TextNoteEvent.build("hey") { add(arrayOf("p", me.pubKey)) })
             cache.justConsume(reply, null, true)
             assertTrue(planner.computeRelayListToBroadcast(reply).containsAll(myInbox))
+        }
+
+    @Test
+    fun aRepositoryAnnouncementAndItsIssuesReachTheRepositoryRelays() =
+        runTest {
+            val (cache, _) = cacheWithBob()
+            val planner = planner(cache)
+            val repo =
+                me.sign(
+                    GitRepositoryEvent.build(
+                        name = "repo",
+                        description = null,
+                        webUrls = emptyList(),
+                        cloneUrls = emptyList(),
+                        relays = listOf("wss://grasp.example.com", "not a relay"),
+                        maintainers = emptyList(),
+                        hashtags = emptyList(),
+                        earliestUniqueCommit = null,
+                        dTag = "repo",
+                    ),
+                )
+            cache.justConsumeMyOwnEvent(repo)
+
+            val repoRelays = planner.computeRelayListToBroadcast(repo)
+            assertTrue(relay("grasp") in repoRelays, "a GRASP server only hosts what it holds: $repoRelays")
+            assertTrue(repoRelays.containsAll(myOutbox), "our outbox: $repoRelays")
+
+            val issue = bob.sign(GitIssueEvent.build("bug", "it broke", EventHintBundle(repo), emptyList(), emptyList()))
+            val issueRelays = planner.computeRelayListToBroadcast(issue)
+            assertTrue(relay("grasp") in issueRelays, "the relays the repository monitors for issues: $issueRelays")
         }
 }

@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.git.GitHttpClient
+import com.vitorpamplona.quartz.nip34Git.git.GitHttpException
 import com.vitorpamplona.quartz.nip34Git.git.GitRepoSnapshot
 import com.vitorpamplona.quartz.nip34Git.patch.ParsedPatch
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +43,15 @@ sealed interface GitBrowseState {
         val snapshot: GitRepoSnapshot,
     ) : GitBrowseState
 
+    /**
+     * Nothing could be loaded. [isEmptyRepository] is true when a clone URL answered that the
+     * repository does not exist yet (HTTP 404, as a GRASP server does before the first push) or
+     * has no branch, and no URL failed for another reason: the repository is waiting for code,
+     * rather than unreachable.
+     */
     class Error(
         val message: String,
+        val isEmptyRepository: Boolean = false,
     ) : GitBrowseState
 }
 
@@ -109,6 +117,8 @@ class GitRepositoryBrowserViewModel(
                 return@launch
             }
             val errors = StringBuilder()
+            var sawEmpty = false
+            var sawOtherFailure = false
             for (url in candidates) {
                 try {
                     val snapshot = client.open(url, currentRef)
@@ -119,6 +129,7 @@ class GitRepositoryBrowserViewModel(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
+                    if (e is GitHttpException && (e.noBranches || e.httpCode == 404)) sawEmpty = true else sawOtherFailure = true
                     errors
                         .append(url)
                         .append(" → ")
@@ -126,7 +137,7 @@ class GitRepositoryBrowserViewModel(
                         .append('\n')
                 }
             }
-            _state.value = GitBrowseState.Error(errors.toString().trim())
+            _state.value = GitBrowseState.Error(errors.toString().trim(), isEmptyRepository = sawEmpty && !sawOtherFailure)
         }
     }
 
