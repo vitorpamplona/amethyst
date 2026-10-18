@@ -5620,6 +5620,12 @@
     <string name="rating_stars_out_of_five">Ocenjeno z %1$s od 5</string>
     <string name="reaction">Odziv</string>
     <string name="reactions">Odzivi</string>
+    <string name="reaction_choices_mine">Tvoji odzivi (%1$d)</string>
+    <string name="reaction_choices_hint">Prikažejo se v tem vrstnem redu, ko tapneš gumb za všečkanje. Tapni enega, da ga odstraniš.</string>
+    <string name="reaction_choices_empty">Ni še odzivov. Izberi nekaj spodaj.</string>
+    <string name="reaction_choices_remove">Odstrani odziv</string>
+    <string name="reaction_choices_add">Dodaj odzive</string>
+    <string name="reaction_choices_manage_packs">Paketi emojijev</string>
     <string name="reactions_settings">Vrstica odzivnih ikon</string>
     <string name="read_from_relay">Beri iz releja</string>
     <string name="read_from_relay_description">Količina bajtov, ki je bila prejeta od tega releja, vključno s filtri in dogodki</string>
