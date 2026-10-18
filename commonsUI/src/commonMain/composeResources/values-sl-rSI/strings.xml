@@ -99,7 +99,12 @@
     <string name="chats_history_incomplete_sub">%1$s nedosegljivih · tapni za ogled kateri</string>
     <string name="chats_history_relays_title">%1$s · zgodovina po releju</string>
     <string name="chats_history_relay_since">že od %1$s</string>
+    <string name="chats_history_gate_auto_body">Nalagam še eno stran z vsakega tvojega releja za ZS.</string>
     <string name="chats_history_gate_loaded_to">Naložena so sporočila vse do %1$s.</string>
+    <string name="chats_history_gate_has_more">Tvoji releji za ZS imajo več zgodovine.</string>
+    <string name="chats_history_gate_none_body">Tvoji releji so preiskani do %1$s. Starejša sporočila so morda še dlje nazaj.</string>
+    <string name="chats_history_gate_incomplete_body">%1$s se ni odzval. Tvoji drugi releji nimajo nič starejšega.</string>
+    <string name="chats_history_gate_start_body">Vsi releji za ZS so preiskani do konca.</string>
     <string name="action_dismiss">Prekliči</string>
     <plurals name="chats_history_relays">
         <item quantity="one">%1$d rele</item>
@@ -123,6 +128,7 @@
     <string name="use_direct_url">Uporabi direktni URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
     <string name="nickname_label">Vzdevek</string>
+    <string name="nickname_note_label">Zasebni zapisek</string>
     <string name="nickname_save">Shrani</string>
     <string name="nickname_cancel">Prekliči</string>
     <string name="git_status_open">Odprto</string>
@@ -172,6 +178,11 @@
     <string name="road_event_traffic_jam">Zastoj</string>
     <string name="road_event_unknown">Dogodek na cesti</string>
     <!-- NIP-CC geocaching (kinds 37516 / 7516) -->
+    <string name="geocache_add_note">Dodaj zapisek</string>
+    <string name="geocache_log_type_note">Zapisek</string>
+    <string name="geocache_log_post">Objava</string>
+    <string name="geocache_new_section_relays">Releji</string>
+    <string name="geocache_publish_failed">Objavljanje ni uspelo. Preveri povezavo z relejem in poskusi znova.</string>
     <string name="podcast_value_zap_split_hint">Zapi bojo razdeljeni med:</string>
     <string name="podcast_value_split_percent">%1$d%</string>
     <string name="podcast_value_for_value">Vrednost za vrednost</string>
@@ -196,6 +207,12 @@
     </plurals>
     <string name="profile_banner">Pasica profila</string>
     <string name="point_to_the_qr_code">Usmeri v QR kodo</string>
+    <string name="qr_scanner_kind_bunker">To je naslov oddaljenega podpisnika. Amethyst jih podeljuje, da lahko druge aplikacije od njega zahtevajo podpis - z njim se ne moreš prijaviti.</string>
+    <string name="qr_scanner_kind_signer">To je aplikacija, ki se želi povezati s tvojim podpisnikom. Odpri jo na zaslonu podpisnika NIP-46.</string>
+    <string name="qr_scanner_label_note">Zapisek</string>
+    <string name="qr_scanner_label_relay">Rele</string>
+    <string name="qr_scanner_label_bunker">Naslov oddaljenega podpisnika</string>
+    <string name="qr_scanner_label_signer">Prošnja za povezavo s podpisnikom</string>
     <string name="show_qr">Pokaži QR kodo</string>
     <string name="profile_image">Slika profila</string>
     <string name="your_profile_image">Tvoja slika profila</string>
@@ -210,6 +227,7 @@
     <string name="could_not_decrypt_the_message">Dešifriranje sporočila ni uspelo</string>
     <string name="chat_preview_decrypting">Dekodiranje…</string>
     <string name="chat_preview_you_prefix">Ti: %1$s</string>
+    <string name="chat_preview_note">Deljen zapisek</string>
     <string name="group_picture">Slika skupine</string>
     <string name="explicit_content">Eksplicitna vsebina</string>
     <string name="relay_notice">Obvestilo releja</string>
@@ -400,7 +418,10 @@
     <string name="concord_open_channel">Odpri kanal</string>
     <string name="concord_edit_banner_hint">Dodaj pasico</string>
     <string name="concord_edit_relays_desc">Kjer so objavljeni in prebrani šifrirani ravninski sloji (encrypted planes) te skupnosti</string>
+    <string name="concord_timer_notice_set">%1$s je samodejni izbris sporočil nastavil na %2$s</string>
     <string name="concord_dissolved_read_only">Ta skupnost je bila razpuščena in je zdaj samo za branje. Še vedno lahko berete njeno zgodovino, vendar novih sporočil ni mogoče objaviti.</string>
+    <string name="concord_private_channel_no_key">To je zasebni kanal in nimaš njegovega ključa, zato ga ne moreš brati in tu ne moreš objavljati.</string>
+    <string name="concord_banned_notice">V tej skupnosti si prepovedan, zato tu ne moreš objavljati in tvoja sporočila so skrita pred vsemi.</string>
     <string name="concord_create_name">Ime</string>
     <string name="concord_create_about">Opis (neobvezno)</string>
     <string name="concord_ban_user">Izključi</string>
@@ -469,6 +490,23 @@
     <string name="mark_all_known_as_read">Označi vse znane kot prebrane</string>
     <string name="mark_all_new_as_read">Označi vse nove kot prebrane</string>
     <string name="mark_all_as_read">Označi vse kot prebrane</string>
+    <string name="account_backup_headline">Tvoj tajni ključ je tvoj račun</string>
+    <string name="account_backup_intro">Kdor ga ima, lahko objavlja v tvojem imenu. Če ga izgubiš, ga ne more obnoviti nihče, niti Amethyst.</string>
+    <string name="account_backup_tap_to_reveal">Tapni za prikaz</string>
+    <string name="account_backup_write_down_hint">Zapiši ga v tem vrstnem redu. Velike in male črke so enakovredne.</string>
+    <string name="account_backup_qr_code">Koda QR</string>
+    <string name="account_backup_encrypted_title">Kopija, zaščitena z geslom</string>
+    <string name="account_backup_encrypted_password">Geslo</string>
+    <string name="account_backup_encrypted_body">Ncryptsec1…, ki deluje samo s tvojim geslom.</string>
+    <string name="account_backup_encrypted_repeat_password">Ponovi geslo</string>
+    <string name="account_backup_encrypted_password_mismatch">Gesli se ne ujemata</string>
+    <string name="account_backup_encrypt">Šifriraj ključ</string>
+    <string name="account_backup_encrypting">Šifriranje…</string>
+    <string name="account_backup_encrypted_saved_hint">Varno ga je hraniti v upravitelju gesel ali v opombah v oblaku: brez gesla ga ni mogoče odpreti, pozabljenega gesla pa ni mogoče obnoviti.</string>
+    <string name="account_backup_encrypt_again">Uporabi drugo geslo</string>
+    <string name="account_backup_tip_storage">Papir hrani tam, kjer ga najdeš samo ti, ali pa shrani ključ v upravitelj gesel.</string>
+    <string name="account_backup_tip_trust">Ključa nikoli ne prilepi na spletne strani ali v aplikacije, ki jim ne zaupaš.</string>
+    <string name="account_backup_tip_developers">Razvijalci Amethysta te nikoli ne bodo prosili za ključ.</string>
     <string name="backup_keys_nudge_title">Varno shrani ključe</string>
     <string name="backup_keys_nudge_body">Vaš zasebni ključ je edini način za dostop do tega računa. Če ga izgubite, ga ne boste mogli več obnoviti. Shranite ga na varno mesto.</string>
     <string name="backup_keys_nudge_backup_now">Varno shrani zdaj</string>
@@ -502,6 +540,7 @@
     <string name="quick_action_request_deletion_gallery_alert_body_v2">Odstrani ta medij iz svoje galerije</string>
     <string name="quick_action_request_deletion_alert_title">Prošnja za izbris</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst bo poslal prošnjo za izbris zapiska vsem relejem na katere ste povezani. Nobenega jamstva ni, da bo vaš zapisek trajno izbrisan iz teh relejev ali iz drugih relejev, kjer je morda shranjen.</string>
+    <string name="quick_action_request_deletion_alert_body_private">Amethyst bo osebam v tem pogovoru poslal šifrirano prošnjo za izbris. Njihove aplikacije naj bi sporočilo odstranile, ni pa zagotovila, da bodo izbrisane vse kopije.</string>
     <string name="quick_action_block_dialog_btn">Blokiraj</string>
     <string name="quick_action_delete_dialog_btn">Izbriši</string>
     <string name="quick_action_block">Blokiraj</string>
@@ -773,6 +812,11 @@
     <string name="relay_auth_session_section">Samo zdaj</string>
     <string name="relay_auth_session_row_desc">Vpisani dokler znova ne zaženete Amethyst</string>
     <string name="relay_auth_forget_session">Pozabi zta vpis</string>
+    <string name="relay_auth_event_title">Prijava v rele</string>
+    <string name="relay_auth_event_explainer">To ni objava. Prijavi te v ta rele: kdor ga ima, lahko bere, kar ti rele pokaže samo tebi, na primer tvoja zasebna sporočila.</string>
+    <string name="relay_auth_event_unusual_relay">To ni običajen naslov releja. Preveri ga, preden podpišeš.</string>
+    <string name="http_auth_event_title">Prijava s spletno prošnjo</string>
+    <string name="blossom_auth_list">Seznam tvojih datotek</string>
     <string name="relay_auth_session_forgotten_undo">%1$s vas bo vprašal ponovno naslednjič, ko vas potrebuje.</string>
     <string name="relay_auth_session_undo_blocked">Ni obnovljeno. Vklopljena je možnost »Nikoli se ne prijavi«, zato se Amethyst ne bo prijavil v %1$s.</string>
     <string name="relay_auth_blocked_section">Blokirano s strani vašega seznama blokiranih</string>
@@ -1378,6 +1422,7 @@
     <string name="external_id_scope">Komentiraj na zunanjem viru</string>
     <string name="url_preview_open_in_browser">Odpri v brskalniku</string>
     <string name="long_form_reading_minutes">%1$d min branja</string>
+    <string name="search_waiting_on_relays">Čakam na %1$d od %2$d relejev</string>
     <plurals name="publication_section_count">
         <item quantity="one">%1$d razdelek</item>
         <item quantity="two">%1$d razdelka</item>
@@ -1463,6 +1508,8 @@
     <string name="relay_group_field_name">Ime</string>
     <string name="relay_group_field_about">Opis</string>
     <string name="relay_group_field_picture">Slika skupine</string>
+    <string name="relay_group_migration_by_admins">Njegovi skrbniki ga zdaj navajajo na %1$s</string>
+    <string name="relay_group_migration_by_friends">Ljudje, ki jim slediš, ga zdaj navajajo na %1$s</string>
     <string name="relay_group_add_photo">Dodaj fotografijo</string>
     <string name="relay_group_change_photo">Zamenjaj sliko</string>
     <string name="relay_group_section_discovery">Raziskuj</string>
@@ -1566,6 +1613,7 @@
     <string name="tor_connection_failed_body">Amethystu ni uspelo zagnati povezave Tor. Želite uporabiti običajno povezavo za nalaganje vira vsebin? To izbiro bomo ohranili eno uro, nato bomo ponovno poskusili s Torom.</string>
     <string name="tor_continue_without_for_session">Uporabi običajno povezavo</string>
     <string name="tor_keep_waiting">Nadaljuj s čakanjem</string>
+    <string name="tor_splash_explainer">Amethyst uporablja Tor, da pred releji skrije tvoj naslov IP. Zagon Tora lahko traja minuto in potrebuje dostop do interneta.</string>
     <string name="notification_settings_categories_explainer">Dotakni se kategorije, da odpreš njene nastavitve obvestil v Androidu — tam te čakajo zvok, pomembnost, značke in funkcija Ne moti.</string>
     <string name="notification_channel_status_on">Vklop</string>
     <string name="notification_channel_status_silent">Tiho</string>
@@ -2193,6 +2241,7 @@
     <string name="select_list_to_filter">Izberite seznam za filtriranje vira vsebin</string>
     <string name="add_dvm_to_favorites">Dodaj algoritem vira vsebin med priljubljene</string>
     <string name="remove_dvm_from_favorites">Odstrani iz priljubljenih</string>
+    <string name="add_follow_set_to_favorites">Dodaj nabor sledenja med priljubljene vire vsebin</string>
     <string name="favorite_dvms_explainer">Algoritmi vira vsebin, ki jih tukaj označite z zvezdico, se bodo prikazali kot filtri na začetnem zaslonu. Za nove odprite »Odkrij«.</string>
     <string name="favorite_dvms_empty_headline">Pripni svoje najljubše algoritme</string>
     <string name="favorite_dvms_empty_step1">Tapni "%1$s" spodaj za brskanje med algoritmi.</string>
@@ -3877,6 +3926,7 @@
     <string name="napplet_cap_relay_desc">Branje, podpisovanje in objavljanje dogodkov</string>
     <string name="napplet_cap_resource">Mreža</string>
     <string name="napplet_cap_resource_desc">Pridobi spletne in Blossom vire</string>
+    <string name="napplet_cap_signer">Šifriranje</string>
     <string name="napplet_cap_storage">Shramba</string>
     <string name="napplet_cap_storage_desc">Lastna zasebna shramba</string>
     <string name="napplet_cap_theme">Tema</string>
