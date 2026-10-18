@@ -33,22 +33,29 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
+import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
+import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
+import java.io.File
 import java.util.concurrent.TimeUnit
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
  * The desktop halves of the shared app's platform hooks. What is not overridden here keeps
- * [AppPlatform]'s default, which hides the feature (QR scanning, location pickers, calls).
+ * [AppPlatform]'s default, which hides the feature (location pickers, calls).
  */
 class DesktopAppPlatform(
     override val appVersionName: String,
     override val isDebugBuild: Boolean,
     private val notifications: DesktopNotifications,
+    // Decrypted community pictures, in the app's own (user-private) data directory.
+    private val concordImageDir: File,
     private val desktopSpellCheck: DesktopSpellCheck? = null,
 ) : AppPlatform {
     override val appFlavor: String get() = "desktop"
@@ -91,6 +98,19 @@ class DesktopAppPlatform(
         accountViewModel: AccountViewModel,
         onClick: (Route) -> Unit,
     ) = SharedAppBottomBar(selectedRoute, nav, accountViewModel, onClick)
+
+    @Composable
+    override fun rememberConcordImageModel(
+        pointer: ImagePointer?,
+        accountViewModel: AccountViewModel,
+    ): String? = rememberDecryptedConcordImageModel(pointer, accountViewModel, concordImageDir)
+
+    // No camera scanner: a picture of the code from a file or the clipboard.
+    @Composable
+    override fun QrCodeScannerDialog(
+        onDismiss: () -> Unit,
+        onScan: (String) -> ScanOutcome,
+    ) = DesktopQrScannerDialog(onDismiss, onScan)
 
     @Composable
     override fun rememberAppLauncher(): AppLauncher = DesktopAppLauncher

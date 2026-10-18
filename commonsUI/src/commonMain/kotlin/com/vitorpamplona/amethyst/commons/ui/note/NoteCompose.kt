@@ -145,9 +145,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingRoomPresence
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedNappletEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootNappletEvent
@@ -222,6 +219,9 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessChallenge
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormContent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomPresence
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingSpaceEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicPlaylist
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMusicTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderNipContent

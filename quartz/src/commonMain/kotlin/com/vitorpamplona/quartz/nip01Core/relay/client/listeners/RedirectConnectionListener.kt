@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.listeners
 
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
@@ -65,5 +66,14 @@ open class RedirectConnectionListener(
         errorMessage: String,
     ) {
         listener.onCannotConnect(relay, errorMessage)
+    }
+
+    // Was missing: RelayConnectionListener's default is a no-op, so a wrapped listener never
+    // heard that a publish was given up on.
+    override fun onEventGaveUp(
+        relay: IRelayClient,
+        event: Event,
+    ) {
+        listener.onEventGaveUp(relay, event)
     }
 }

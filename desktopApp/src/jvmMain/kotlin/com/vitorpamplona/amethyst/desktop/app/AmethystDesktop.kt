@@ -157,13 +157,19 @@ fun main(args: Array<String>) {
     val modules = DesktopAppModules(filesDir, version, isDebug)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
-    DesktopImageLoaderSetup.setup { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) }
+    // `blossom:` images resolve to the server that holds the blob, as on Android.
+    DesktopImageLoaderSetup.setup(
+        clientForUrl = { url -> modules.roleBasedHttpClientBuilder.okHttpClientForImage(url) },
+        blossomServerResolver = { modules.blossomResolver },
+    )
     // So do video thumbnails, saves and encrypted media, which those clients also decrypt, and
     // the videos Android would send over Tor: those whose video client has a proxy port now.
+    // Animated GIFs, which skip Coil to keep every frame, take the image role like Coil does.
     MediaHttp.install(
         clientFor = modules.roleBasedHttpClientBuilder::okHttpClientForVideo,
         keyCache = modules.keyCache,
         viaTor = { url -> modules.roleBasedHttpClientBuilder.proxyPortForVideo(url) != null },
+        imageClientFor = modules.roleBasedHttpClientBuilder::okHttpClientForImage,
     )
 
     modules.initiate()
@@ -186,6 +192,7 @@ fun main(args: Array<String>) {
             isDebugBuild = isDebug,
             notifications = modules.notifications,
             desktopSpellCheck = spellCheck,
+            concordImageDir = File(filesDir, "concord-images"),
         )
     val root = DesktopAppRoot(modules)
 

@@ -2167,8 +2167,6 @@
     <string name="git_repo_settings_web_urls">Web URL-ji (eden v vrsti)</string>
     <string name="git_repo_settings_topics">Teme (ločene z vejicami)</string>
     <string name="git_repo_settings_save">Shrani</string>
-    <string name="git_repositories_search_placeholder">Filtriraj po imenu, temi, gostitelju, upravljalcu…</string>
-    <string name="git_repositories_search_no_results">Noben repozitorij v trenutnem viru ne ustreza temu iskanju.</string>
     <string name="profile_tab_apps">Aplikacije in spletna mesta</string>
     <string name="edit_article">Uredi članek</string>
     <string name="proposal_to_edit">Prošnja za izboljšavo objave</string>
@@ -3527,8 +3525,6 @@
         <item quantity="other">%1$d elementov</item>
     </plurals>
     <string name="git_repositories">Git repozitoriji</string>
-    <string name="git_repositories_search_close">Zapri filter</string>
-    <string name="git_repositories_search_open">Filtriraj repozitorij</string>
     <string name="goal_progress">Zbranih %1$s od ciljnih %2$s satov</string>
     <string name="h">h</string>
     <string name="hash_verification_failed">Ta vsebina je bila spremenjena. Avtor morda ni videl ali dovolil spremembe</string>

@@ -2731,8 +2731,6 @@
     <string name="git_repo_settings_web_urls">Webcímek (soronként egy)</string>
     <string name="git_repo_settings_topics">Témák (vesszővel elválasztva)</string>
     <string name="git_repo_settings_save">Mentés</string>
-    <string name="git_repositories_search_placeholder">Szűrés név, téma, kiszolgáló, karbantartó szerint…</string>
-    <string name="git_repositories_search_no_results">A jelenlegi hírcsatornában nincs olyan tároló, amely megfelelne ennek a keresésnek.</string>
     <string name="profile_tab_apps">Alkalmazások és oldalak</string>
     <string name="profile_tab_repos">Tárolók</string>
     <string name="edit_article">Cikk szerkesztése</string>
@@ -4191,8 +4189,6 @@
         <item quantity="other">%1$d elem</item>
     </plurals>
     <string name="git_repositories">Git-tárolók</string>
-    <string name="git_repositories_search_close">Szűrő bezárása</string>
-    <string name="git_repositories_search_open">Tárolók szűrése</string>
     <string name="goal_progress">%1$s gyűlt össze a(z) %2$s satoshis célból</string>
     <string name="h">ó</string>
     <string name="hash_verification_failed">Ez a tartalom megváltozott. Lehet, hogy a szerző nem látta vagy nem hagyta jóvá a változtatást</string>

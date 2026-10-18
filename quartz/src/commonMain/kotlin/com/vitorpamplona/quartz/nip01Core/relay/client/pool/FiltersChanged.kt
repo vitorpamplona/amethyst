@@ -54,6 +54,7 @@ object FiltersChanged {
         if (oldFilter.authors?.size != newFilter.authors?.size ||
             oldFilter.ids?.size != newFilter.ids?.size ||
             oldFilter.tags?.size != newFilter.tags?.size ||
+            oldFilter.tagsAll?.size != newFilter.tagsAll?.size ||
             oldFilter.kinds?.size != newFilter.kinds?.size ||
             oldFilter.limit != newFilter.limit ||
             oldFilter.search?.length != newFilter.search?.length ||
@@ -66,6 +67,7 @@ object FiltersChanged {
         if (oldFilter.ids != newFilter.ids ||
             oldFilter.authors != newFilter.authors ||
             oldFilter.tags != newFilter.tags ||
+            oldFilter.tagsAll != newFilter.tagsAll ||
             oldFilter.kinds != newFilter.kinds ||
             oldFilter.search != newFilter.search
         ) {

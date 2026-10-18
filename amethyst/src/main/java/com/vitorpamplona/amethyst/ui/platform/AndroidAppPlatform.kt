@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -71,7 +72,6 @@ import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRemem
 import com.vitorpamplona.amethyst.favorites.rememberWebAppIconModel as AppRememberWebAppIconModel
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerContent as AppGeohashLocationPickerContent
 import com.vitorpamplona.amethyst.ui.note.creators.location.GeohashLocationPickerDialog as AppGeohashLocationPickerDialog
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.chats.publicChannels.concord.rememberConcordImageModel as AppRememberConcordImageModel
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.geocaches.map.GeocacheMapTab as AndroidGeocacheMapTab
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner.QrCodeScannerDialog as AppQrCodeScannerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.legalSettingsCategory as flavorLegalSettingsCategory
@@ -233,7 +233,7 @@ object AndroidAppPlatform : AppPlatform {
     override fun rememberConcordImageModel(
         pointer: ImagePointer?,
         accountViewModel: AccountViewModel,
-    ): String? = AppRememberConcordImageModel(pointer, accountViewModel)
+    ): String? = rememberDecryptedConcordImageModel(pointer, accountViewModel, LocalContext.current.cacheDir)
 
     @Composable
     override fun rememberNappletIconModel(coordinate: String): String? = AppRememberNappletIconModel(coordinate)

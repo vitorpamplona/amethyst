@@ -2019,8 +2019,6 @@
     <string name="git_repo_settings_web_urls">Web-URL's (één per regel)</string>
     <string name="git_repo_settings_topics">Onderwerpen (komma-gescheiden)</string>
     <string name="git_repo_settings_save">Opslaan</string>
-    <string name="git_repositories_search_placeholder">Filter op naam, onderwerp, host, beheerder…</string>
-    <string name="git_repositories_search_no_results">Geen repositories in de huidige feed komen overeen met deze zoekopdracht.</string>
     <string name="profile_tab_apps">Apps &amp; sites</string>
     <string name="edit_article">Artikel bewerken</string>
     <string name="proposal_to_edit">Voorstel tot verbetering</string>
@@ -3274,8 +3272,6 @@
         <item quantity="other">%1$d items</item>
     </plurals>
     <string name="git_repositories">Git-repositories</string>
-    <string name="git_repositories_search_close">Filter sluiten</string>
-    <string name="git_repositories_search_open">Repositories filteren</string>
     <string name="goal_progress">%1$s gefinancierd van %2$s sats doel</string>
     <string name="h">u</string>
     <string name="hash_verification_failed">De afbeelding is gewijzigd. De auteur heeft de wijziging mogelijk niet gezien.</string>

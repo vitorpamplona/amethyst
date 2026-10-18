@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
@@ -47,6 +48,7 @@ fun makeContentDVMsFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterContentDVMsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterContentDVMsGlobal(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterContentDVMsByRelay(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterContentDVMsByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterContentDVMsByGeohash(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterContentDVMsByAuthors(feedSettings, since, defaultSince)

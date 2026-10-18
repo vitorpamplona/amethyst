@@ -350,39 +350,6 @@ fun RenderGitPullRequestUpdateEvent(
 )
 
 @Composable
-fun RenderMeetingSpaceEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingSpaceEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderMeetingRoomEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingRoomEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderMeetingRoomPresence(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderMeetingRoomPresence(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
 fun RenderRootNappletEvent(
     baseNote: Note,
     accountViewModel: AccountViewModel,

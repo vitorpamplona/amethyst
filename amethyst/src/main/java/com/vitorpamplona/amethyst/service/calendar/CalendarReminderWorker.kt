@@ -27,18 +27,13 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarReminderScanner
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_body
 import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
-import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
-import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import java.util.concurrent.TimeUnit
@@ -74,51 +69,13 @@ class CalendarReminderWorker(
             return Result.success()
         }
         val now = TimeUtils.now()
-        val windowEnd = now + settings.leadMinutes * 60L
-        val store = calendarReminderLog()
 
-        // Walk every kind-31925 RSVP authored by an account on this device. We don't have a
-        // multi-account "all logged-in pubkeys" view here, so we accept any RSVP that's
-        // present in cache — the alternative (looking only at the foreground account) would
-        // silently break notifications for account switching during the lead window.
-        val acceptedRsvps = acceptedRsvpsInCache()
-
-        Log.d(TAG) { "Worker scanning ${acceptedRsvps.size} accepted RSVPs (now=$now, lead=${settings.leadMinutes}m)" }
-
-        acceptedRsvps.forEach { rsvp ->
-            val targetAddress = rsvp.calendarEventAddress() ?: return@forEach
-            val targetNote = LocalCache.addressables.get(targetAddress) ?: return@forEach
-            val view = targetNote.appointmentView() ?: return@forEach
-            val start = view.startSeconds ?: return@forEach
-            val eventId =
-                (targetNote.event as? CalendarTimeSlotEvent)?.id
-                    ?: (targetNote.event as? CalendarDateSlotEvent)?.id
-                    ?: return@forEach
-
-            if (start !in now..windowEnd) return@forEach
-            // Keyed on (eventId, start) so a moved appointment re-fires when the new start
-            // enters the lead window — the old notification stays valid in the system tray.
-            if (store.wasNotified(eventId, start)) return@forEach
-
-            val title = view.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
-            val minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt()
-            val body =
-                loadPluralStringRes(
-                    Res.plurals.calendar_reminder_body,
-                    minutesAway,
-                    minutesAway,
-                )
-            val deepLink =
-                "nostr:" +
-                    com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
-                        .create(targetAddress.kind, targetAddress.pubKeyHex, targetAddress.dTag, null)
-            CalendarReminderNotifier.notifyReminder(applicationContext, eventId, title, body, deepLink)
-            store.markNotified(eventId, start)
-            Log.d(TAG) { "Notified $eventId (starts in ${minutesAway}m)" }
+        CalendarReminderScanner.scan(settings.leadMinutes, calendarReminderLog(), now) { due ->
+            val title = due.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
+            val body = loadPluralStringRes(Res.plurals.calendar_reminder_body, due.minutesAway, due.minutesAway)
+            CalendarReminderNotifier.notifyReminder(applicationContext, due.eventId, title, body, due.deepLink)
+            Log.d(TAG) { "Notified ${due.eventId} (starts in ${due.minutesAway}m)" }
         }
-
-        // Prune entries for events that ended more than a day ago — they can't fire again.
-        store.forgetBefore(now - PRUNE_AGE_SECONDS)
 
         // Nothing left that could ever fire → end the periodic chain instead of
         // waking the process every 15 minutes forever. The observers in
@@ -131,7 +88,7 @@ class CalendarReminderWorker(
         // still exists — cancelling on the stale snapshot would kill the chain
         // with that RSVP's reminder permanently lost (observeNewEvents never
         // re-fires for an event that is already in cache).
-        if (!couldStillFire(acceptedRsvpsInCache(), TimeUtils.now())) {
+        if (!CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(), TimeUtils.now())) {
             Log.d(TAG) { "No accepted RSVP can still fire; ending periodic chain." }
             cancel(applicationContext)
         }
@@ -141,39 +98,6 @@ class CalendarReminderWorker(
     companion object {
         private const val TAG = "CalendarReminderWorker"
         private const val WORK_NAME = "calendar_reminder_worker"
-
-        // Don't bother remembering "I notified for this" entries for events whose start was
-        // more than a day ago; they can't fire again so the entry is pure overhead.
-        private const val PRUNE_AGE_SECONDS = 24L * 60L * 60L
-
-        /** Every ACCEPTED kind-31925 RSVP currently present in LocalCache. */
-        fun acceptedRsvpsInCache(): List<CalendarRSVPEvent> =
-            LocalCache.addressables
-                .filterIntoSet { _, note ->
-                    val e = note.event
-                    e is CalendarRSVPEvent && e.status() == RSVPStatusTag.STATUS.ACCEPTED
-                }.mapNotNull { it.event as? CalendarRSVPEvent }
-
-        /**
-         * True while at least one accepted RSVP could still produce a reminder:
-         * its target event either starts in the future, or hasn't been fetched
-         * yet (start unknown — the chain must survive until the target
-         * resolves). False means the periodic worker has nothing it could ever
-         * notify about and may cancel its own chain.
-         */
-        fun couldStillFire(
-            rsvps: Collection<CalendarRSVPEvent>,
-            now: Long,
-        ): Boolean =
-            rsvps.any { rsvp ->
-                val targetAddress = rsvp.calendarEventAddress() ?: return@any false
-                val start =
-                    LocalCache.addressables
-                        .get(targetAddress)
-                        ?.appointmentView()
-                        ?.startSeconds
-                start == null || start > now
-            }
 
         fun schedule(context: Context) {
             val request =

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSecon
 import com.vitorpamplona.amethyst.commons.moderation.notifications.sanitizeForToast
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_title
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_dm
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_follow
 import com.vitorpamplona.amethyst.commons.resources.desktop_notification_mention
@@ -274,6 +275,8 @@ class DesktopNotificationAutoDispatcher(
                 NotifKind.REPOST -> loadStringRes(Res.string.desktop_notification_repost, displayName)
                 NotifKind.REACTION -> loadStringRes(Res.string.desktop_notification_reaction, displayName)
                 NotifKind.FOLLOW -> loadStringRes(Res.string.desktop_notification_follow, displayName)
+                // Posted by DesktopCalendarReminders, never classified from an event here.
+                NotifKind.CALENDAR -> loadStringRes(Res.string.calendar_reminder_default_title)
             }
 
         // Never leak DM ciphertext into the body — decryption pipeline

@@ -37,7 +37,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -50,8 +50,6 @@ import org.jetbrains.skia.Data
 
 private const val MAX_BITMAP_MEMORY = 64L * 1024 * 1024 // 64MB per GIF
 private const val MIN_FRAME_DURATION_MS = 20
-
-private val gifHttpClient get() = DesktopHttpClient.currentClient()
 
 private class GifFrames(
     val frames: List<ImageBitmap>,
@@ -162,7 +160,7 @@ fun AnimatedGifImage(
 private suspend fun decodeGifFrames(url: String): GifFrames? =
     try {
         val request = Request.Builder().url(url).build()
-        val response = gifHttpClient.newCall(request).executeAsync()
+        val response = MediaHttp.imageClient(url).newCall(request).executeAsync()
         val bytes = response.body.bytes()
 
         val skData = Data.makeFromBytes(bytes)

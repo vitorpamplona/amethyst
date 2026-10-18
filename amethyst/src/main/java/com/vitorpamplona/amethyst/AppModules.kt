@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarReminderScanner
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
@@ -1418,7 +1419,7 @@ class AppModules(
                 ).conflate()
                 .collect {
                     if (calendarReminderSettings().load().enabled &&
-                        CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
+                        CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)
                     }
