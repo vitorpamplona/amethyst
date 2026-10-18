@@ -169,9 +169,12 @@ if (sonarEnabled) {
 val installGitHook = tasks.register<Copy>("installGitHook") {
     val dotGit = File(rootProject.rootDir, ".git")
     val hooksDir: File = if (dotGit.isFile) {
-        // Git worktree: .git is a file with "gitdir: <path>"
+        // Git worktree: .git is a file with "gitdir: <path>". Git reads hooks from the main
+        // repository's .git/hooks, which the worktree's gitdir names in its `commondir` file;
+        // a hook copied into the worktree's own gitdir never runs.
         val gitDir = File(dotGit.readText().trim().replace("gitdir: ", ""))
-        File(gitDir, "hooks")
+        val commonDir = File(gitDir, "commondir").takeIf { it.isFile }?.let { gitDir.resolve(it.readText().trim()).normalize() } ?: gitDir
+        File(commonDir, "hooks")
     } else {
         File(dotGit, "hooks")
     }

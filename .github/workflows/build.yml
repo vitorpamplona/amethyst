@@ -48,16 +48,20 @@ jobs:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
       - name: Linter (gradle)
-        # The three metadata compiles resolve commonMain against only the
+        # The metadata compiles resolve commonMain against only the
         # deps every target shares, which is the Apple classpath — a
         # dependency that reaches JVM transitively (okio via OkHttp) but is
         # missing for iOS fails here, on Linux, instead of in test-quartz-ios.
+        # skikoMain (desktop + iOS) does the same for the skiko code: a skia or
+        # okio `use` that only resolves on the JVM fails here, not in
+        # test-commonsui-ios. The .git-hooks/pre-push hook runs this same list.
         run: |
           ./gradlew spotlessCheck \
             :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
             :quartz:compileCommonMainKotlinMetadata \
             :commons:compileCommonMainKotlinMetadata \
-            :commonsUI:compileCommonMainKotlinMetadata
+            :commonsUI:compileCommonMainKotlinMetadata \
+            :commonsUI:compileSkikoMainKotlinMetadata
 
   build-desktop:
     needs: lint
