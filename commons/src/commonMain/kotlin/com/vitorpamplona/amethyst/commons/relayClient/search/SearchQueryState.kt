@@ -24,12 +24,10 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.IAccount
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.MutableQueryState
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.merge
 
 /**
  * A live search box. The [searchQuery] flow is the subscription id: every edit re-issues the
@@ -49,16 +47,10 @@ class SearchQueryState(
     val followPlusAllMineWithSearchRelays: StateFlow<Set<NormalizedRelayUrl>>,
 ) : MutableQueryState,
     AccountScopedQuery {
-    /**
-     * The `from:` author names of the current query, resolved to pubkeys — the asynchronous
-     * half of the author qualifier (the parser decodes `from:<npub>`/`from:<hex>` itself).
-     * Keyed by the query text the resolution belongs to, so a stale resolution from the
-     * previous pause can never filter the current one; `null` while no resolution has landed.
-     */
-    val resolvedSearchAuthors = MutableStateFlow<ResolvedSearchAuthors?>(null)
-
-    // Both flows re-issue the REQs: the text, and a `from:` name resolution landing after it.
-    override fun flow(): Flow<*> = merge(searchQuery, resolvedSearchAuthors)
+    // The text alone re-issues the REQs: a `from:` name the field could not decode is rewritten
+    // in place to `from:npub1…` once it resolves (see AuthorNameRewrite), which is a text change
+    // like any other and arrives through this same flow.
+    override fun flow(): Flow<*> = searchQuery
 
     /**
      * Which relays this query went to, and which have answered.
@@ -101,19 +93,4 @@ class SearchQueryState(
     fun answeredBy(relay: NormalizedRelayUrl) {
         answered.value = answered.value + relay
     }
-
-    /** The resolved `from:` author names for [query], or none when they belong to another text. */
-    fun currentResolvedAuthors(query: String): Map<String, HexKey> = resolvedSearchAuthors.value?.takeIf { it.queryText == query }?.terms ?: emptyMap()
 }
-
-/**
- * The `from:` names of one query resolved to pubkeys, keyed by the name as it was typed after
- * `from:` (a `.bit` name, a NIP-05 address). [queryText] is the text the resolution was
- * computed from: a reader holding a newer query must ignore the map rather than filter by the
- * last pause's people.
- */
-@Stable
-data class ResolvedSearchAuthors(
-    val queryText: String,
-    val terms: Map<String, HexKey>,
-)

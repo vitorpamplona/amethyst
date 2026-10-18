@@ -20,12 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
-import kotlinx.collections.immutable.toImmutableList
 
 /**
  * A [SearchQuery] as the REQ a search sends: NIP-01 filters, ORed inside one subscription.
@@ -50,22 +48,20 @@ object SearchFilterBuilder {
     private val COMMENT_SCOPE_TAGS = listOf("I", "i")
 
     /**
-     * The filters this query sends. [kinds] is the caller's kind window (null asks every kind),
-     * [limit] the page size, and [searchString] the caller's own NIP-50 builder over the leftover
+     * The filters this query sends. [kinds] is the caller’s kind window (null asks every kind),
+     * [limit] the page size, and [searchString] the caller’s own NIP-50 builder over the leftover
      * terms — that is where `language:`, `domain:` and any relay-specific extension belong.
      *
-     * [resolvedAuthors] carries the asynchronous half of the `from:` qualifier: the
-     * [SearchQuery.authorNames] a caller has already resolved to pubkeys (a `.bit` name over
-     * Namecoin, a NIP-05 address), keyed by the name as it was typed after `from:`.
+     * A `from:` name the parser could not decode stays a name here: it is not a filter field,
+     * and the field’s in-place rewrite ([AuthorNameRewrite]) turns it into the `from:npub1…`
+     * that lands in [SearchQuery.authors] once the name resolves.
      */
     fun build(
         query: SearchQuery,
         kinds: List<Int>? = null,
         limit: Int = 100,
         searchString: (SearchQuery) -> String? = ::defaultSearchString,
-        resolvedAuthors: Map<String, HexKey> = emptyMap(),
     ): List<Filter> {
-        val query = liftResolvedAuthorNames(query, resolvedAuthors)
         if (query.isEmpty) return emptyList()
 
         val tags = mutableMapOf<String, List<String>>()
@@ -169,45 +165,5 @@ object SearchFilterBuilder {
         query.language?.let { parts.add("language:$it") }
         query.domain?.let { parts.add("domain:$it") }
         return parts.joinToString(" ").takeIf { it.isNotBlank() }
-    }
-
-    /**
-     * Lifts the `from:` names a caller has resolved into the `authors` filter field — the
-     * asynchronous half of the qualifier.
-     *
-     * The parser decodes the synchronous spellings itself: `from:npub1…`, `from:nprofile1…`
-     * and `from:<64-hex>` land in [SearchQuery.authors] directly. What it cannot decode — a
-     * `.bit` name over Namecoin, a NIP-05 address, a `d/`/`id/` name — stays in
-     * [SearchQuery.authorNames] until someone looks it up. A name the caller resolved and passed
-     * in [resolvedAuthors] becomes an `authors` entry, the same filter field the decoded
-     * spellings take; an unresolved one stays a name — it is not a filter field, and the people
-     * picker (or a later resolution) still owns it.
-     *
-     * Deliberately generic over the kind window: `from:` is the explicit author qualifier of
-     * the search language, so its meaning cannot change with `kind:`. What never changes hands
-     * is the free text — a bare npub, nprofile, hex key or `.bit` name with no `from:` stays
-     * NIP-50 search text in every scope, `kind:git` included, so the posts that cite or
-     * mention a person remain searchable. (The Git Repositories screen's own search box,
-     * [GitRepositorySearchMatcher], is screen-local and keeps reading a bare npub as an author
-     * lookup — a different, deliberately narrower syntax.)
-     */
-    internal fun liftResolvedAuthorNames(
-        query: SearchQuery,
-        resolvedAuthors: Map<String, HexKey>,
-    ): SearchQuery {
-        if (query.authorNames.isEmpty() || resolvedAuthors.isEmpty()) return query
-
-        val lifted = mutableListOf<HexKey>()
-        val remaining = mutableListOf<String>()
-        query.authorNames.forEach { name ->
-            val hex = resolvedAuthors[name]
-            if (hex != null) lifted.add(hex) else remaining.add(name)
-        }
-        if (lifted.isEmpty()) return query
-
-        return query.copy(
-            authorNames = remaining.toImmutableList(),
-            authors = (query.authors + lifted).distinct().toImmutableList(),
-        )
     }
 }

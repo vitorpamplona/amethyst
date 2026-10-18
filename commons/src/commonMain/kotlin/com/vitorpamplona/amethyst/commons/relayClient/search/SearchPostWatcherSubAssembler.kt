@@ -87,7 +87,7 @@ class SearchPostWatcherSubAssembler(
 
         val searchFilters =
             key.searchRelays.value.flatMap {
-                searchPostsByText(mySearchString, it, key.currentResolvedAuthors(mySearchString))
+                searchPostsByText(mySearchString, it)
             }
 
         val filters = directFilters + searchFilters

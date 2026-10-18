@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.search
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
 /**
@@ -61,24 +60,18 @@ object SearchPipeline {
     /**
      * The REQs this query sends, or an empty list when it asks nothing a relay can answer.
      *
-     * [kinds] is the caller's kind window; when the query names its own, that wins — a `kind:`
+     * [kinds] is the caller’s kind window; when the query names its own, that wins — a `kind:`
      * chip that did not reach here is a chip claiming a filter the REQ never carried.
-     *
-     * [resolvedAuthors] is the asynchronous half of the `from:` qualifier — the
-     * `from:<name>` terms (a `.bit` name over Namecoin, a NIP-05 address) a caller resolved
-     * to pubkeys ahead of time; see [SearchFilterBuilder.liftResolvedAuthorNames].
      */
     fun filters(
         query: SearchQuery,
         kinds: List<Int>? = null,
         limit: Int = 100,
-        resolvedAuthors: Map<String, HexKey> = emptyMap(),
     ): List<Filter> =
         SearchFilterBuilder.build(
             query,
             query.kinds.takeIf { it.isNotEmpty() }?.toList() ?: kinds,
             limit,
-            resolvedAuthors = resolvedAuthors,
         )
 
     /**

@@ -25,7 +25,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.search.QueryParser
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchPipeline
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -47,7 +46,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 fun searchPostsByText(
     searchString: String,
     relay: NormalizedRelayUrl,
-    resolvedAuthors: Map<String, HexKey> = emptyMap(),
 ): List<RelayBasedFilter> {
     val query = QueryParser.parse(searchString)
     if (query.isEmpty) return emptyList()
@@ -58,7 +56,7 @@ fun searchPostsByText(
     val kindGroups = if (query.kinds.isNotEmpty()) listOf(null) else RenderableKinds.GROUPS
 
     return kindGroups.flatMap { kinds ->
-        SearchPipeline.filters(query, kinds, limit = 100, resolvedAuthors = resolvedAuthors).map { filter ->
+        SearchPipeline.filters(query, kinds, limit = 100).map { filter ->
             RelayBasedFilter(
                 relay = relay,
                 filter =

@@ -52,6 +52,13 @@ sealed interface Token {
     ) : Token
 }
 
+/** A second-pass [Token] with the half-open span [start, end) of the typed string it covers. */
+internal data class PositionedToken(
+    val token: Token,
+    val start: Int,
+    val end: Int,
+)
+
 /**
  * The typed string as a [SearchQuery], in two passes.
  *
@@ -117,8 +124,19 @@ object QueryParser {
 
     // ---- the second pass: the looser operators inside the leftover text --------------------
 
-    internal fun tokenize(input: String): List<Token> {
-        val tokens = mutableListOf<Token>()
+    internal fun tokenize(input: String): List<Token> = positionedTokens(input).map { it.token }
+
+    /**
+     * [tokenize], with the span of the typed string each token was read from.
+     *
+     * The parse itself never needs the offsets — a token carries its meaning, not where it
+     * stood. What needs them is the in-place rewrite of an author qualifier
+     * ([AuthorNameRewrite]), which splices a resolved from:npub1… over exactly the characters
+     * the name occupied, and can only do that without re-reading the field if the same pass
+     * that recognised the token says where it was.
+     */
+    internal fun positionedTokens(input: String): List<PositionedToken> {
+        val tokens = mutableListOf<PositionedToken>()
         var i = 0
         val len = input.length
 
@@ -138,19 +156,21 @@ object QueryParser {
                     i++
                 }
                 if (i < len) i++ // skip closing quote
-                tokens.add(Token.Quoted(sb.toString(), input.substring(start, i)))
+                tokens.add(PositionedToken(Token.Quoted(sb.toString(), input.substring(start, i)), start, i))
                 continue
             }
 
             // Negation
             if (input[i] == '-' && i + 1 < len && !input[i + 1].isWhitespace()) {
+                val start = i
                 i++ // skip -
                 val word = readWord(input, i)
                 i += word.length
-                if (word.isNotEmpty()) tokens.add(Token.Negation(word))
+                if (word.isNotEmpty()) tokens.add(PositionedToken(Token.Negation(word), start, i))
                 continue
             }
 
+            val start = i
             val word = readWord(input, i)
             i += word.length
 
@@ -160,7 +180,7 @@ object QueryParser {
             }
 
             if (word == "OR") {
-                tokens.add(Token.Or)
+                tokens.add(PositionedToken(Token.Or, start, i))
                 continue
             }
 
@@ -169,13 +189,13 @@ object QueryParser {
                 val opName = word.substring(0, colonIdx).lowercase()
                 val opValue = word.substring(colonIdx + 1)
                 if (opName in KNOWN_OPERATORS && opValue.isNotEmpty()) {
-                    tokens.add(Token.Operator(opName, opValue, word))
+                    tokens.add(PositionedToken(Token.Operator(opName, opValue, word), start, i))
                     continue
                 }
                 // Malformed operator (no value or unknown) → treat as text
             }
 
-            tokens.add(Token.Text(word))
+            tokens.add(PositionedToken(Token.Text(word), start, i))
         }
 
         return tokens
