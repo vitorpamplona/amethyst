@@ -39,17 +39,25 @@ import kotlin.coroutines.cancellation.CancellationException
  * than throwing, so a single bad proof in a relay echo can't sink the
  * whole event from the cache.
  */
-fun NutzapEvent.claimedSatsTotal(): Long =
-    proofs().sumOf { proofJson ->
-        try {
-            NUTZAP_AMOUNT_JSON.decodeFromString<NutzapProofAmount>(proofJson).amount
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Throwable) {
-            Log.w("NutzapEvent") { "claimedSatsTotal: skipping unparseable proof on ${id.take(8)}: ${e.message}" }
-            0L
-        }
+fun NutzapEvent.claimedSatsTotal(): Long {
+    // The amounts are the sender's claim: a negative one would lower the note's total, and a sum past
+    // Long.MAX_VALUE would wrap. Skip the first and saturate the second.
+    var total = 0L
+    for (proofJson in proofs()) {
+        val amount =
+            try {
+                NUTZAP_AMOUNT_JSON.decodeFromString<NutzapProofAmount>(proofJson).amount
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Throwable) {
+                Log.w("NutzapEvent") { "claimedSatsTotal: skipping unparseable proof on ${id.take(8)}: ${e.message}" }
+                0L
+            }
+        if (amount <= 0L) continue
+        total = if (total > Long.MAX_VALUE - amount) Long.MAX_VALUE else total + amount
     }
+    return total
+}
 
 @Serializable
 private class NutzapProofAmount(

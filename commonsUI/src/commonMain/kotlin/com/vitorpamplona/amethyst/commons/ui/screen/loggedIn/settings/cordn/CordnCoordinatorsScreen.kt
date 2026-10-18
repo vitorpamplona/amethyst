@@ -125,6 +125,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -367,7 +370,7 @@ private fun CoordinatorCard(
         ) {
             OutlinedButton(onClick = {
                 scope.launch {
-                    info = runCatching { runtime.serverInfo(config.pubKey) }.getOrNull()
+                    info = runCatchingCancellable { runtime.serverInfo(config.pubKey) }.getOrNull()
                     infoChecked = true
                 }
             }) {
@@ -501,6 +504,7 @@ private fun DiscoverCoordinators(
                 try {
                     result = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message ?: failed
                 } finally {
                     busy = false
@@ -734,6 +738,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
                     relaysInput = ""
                     labelInput = ""
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message ?: failed
                 } finally {
                     busy = false

@@ -56,6 +56,8 @@ import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -274,6 +276,7 @@ class CallSession(
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(callType) }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to start call: ${e.message}"
                 callManager.hangup()
@@ -295,6 +298,7 @@ class CallSession(
                     }
                     successCount++
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to create PeerConnection for ${peerPubKey.take(8)}", e)
                 }
             }
@@ -319,6 +323,7 @@ class CallSession(
             try {
                 withContext(Dispatchers.IO) { mediaManager.initialize(state.callType) }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "Failed to initialize WebRTC", e)
                 _errorMessage.value = "Failed to accept call: ${e.message}"
                 callManager.rejectCall()
@@ -329,6 +334,7 @@ class CallSession(
                 try {
                     withContext(Dispatchers.IO) { createWebRtcSession(callerPubKey) }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to create PeerConnection", e)
                     _errorMessage.value = "Failed to accept call: ${e.message}"
                     callManager.rejectCall()
@@ -454,6 +460,7 @@ class CallSession(
                 try {
                     withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to create PeerConnection for mid-call offer from ${peerPubKey.take(8)}", e)
                     return@launch
                 }
@@ -568,6 +575,7 @@ class CallSession(
                         Log.e(TAG, "Failed to clean up screen share", cleanupError)
                     }
                 }
+                currentCoroutineContext().ensureActive()
                 _errorMessage.value = "Failed to share screen: ${e.message}"
                 updateForegroundServiceNotification(isScreenSharing = false)
             }
@@ -674,6 +682,7 @@ class CallSession(
                 try {
                     withContext(Dispatchers.IO) { createWebRtcSession(peerPubKey) }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     Log.e(TAG, "Failed to create PeerConnection for invite ${peerPubKey.take(8)}", e)
                     return@launch
                 }
@@ -872,6 +881,7 @@ class CallSession(
                 }
             context.startForegroundService(intent)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to start foreground service", e)
         }
     }
@@ -895,6 +905,7 @@ class CallSession(
                 }
             context.startService(intent)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Failed to update foreground service notification", e)
         }
     }

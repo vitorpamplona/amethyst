@@ -313,6 +313,10 @@ class NostrClient(
         relayPool.resetBackoff()
     }
 
+    override fun resetBackoff(url: NormalizedRelayUrl) {
+        relayPool.getRelay(url)?.resetBackoff()
+    }
+
     override fun ensureInPool(url: NormalizedRelayUrl) {
         // Membership only. Connecting is reconnect()'s job, and going through the pool's
         // own create keeps the relay client identical to the one publish would have made.
@@ -414,13 +418,20 @@ class NostrClient(
 
     override fun syncFilters(relay: IRelayClient) {
         if (isActive()) {
-            scope.launch {
-                // A back-off a relay stated outlives the socket it was stated on: a reconnect
-                // replays everything, so the replay goes through the same gate.
-                activeRequests.syncState(relay.url, relay::sendOrConnectAndSync)
-                activeCounts.syncState(relay.url, relay::sendOrConnectAndSync)
-                eventOutbox.syncState(relay.url, relay::sendOrConnectAndSync)
-            }
+            // Inline, not launched. On a fresh connection this runs from the socket's onOpen,
+            // while the relay client holds every other send until it returns, so whatever was
+            // registered while the socket was opening goes out ahead of what is sent once it is
+            // up. Launched, the replay raced those sends: a REQ registered before the connection
+            // opened could reach the relay after an EVENT sent right after it did, and kind 24133
+            // is ephemeral, so a NIP-46 request sent that way reached no bunker (measured in
+            // NostrSignerRemotePrivateZapTest on a loaded iOS simulator: the wire carried
+            // [REQ remote, EVENT] and only then the bunker's REQ).
+            //
+            // A back-off a relay stated outlives the socket it was stated on: a reconnect
+            // replays everything, so the replay goes through the same gate.
+            activeRequests.syncState(relay.url, relay::sendFromSync)
+            activeCounts.syncState(relay.url, relay::sendFromSync)
+            eventOutbox.syncState(relay.url, relay::sendFromSync)
         }
     }
 

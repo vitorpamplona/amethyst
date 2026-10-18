@@ -33,16 +33,17 @@ import kotlinx.coroutines.flow.callbackFlow
 
 /**
  * Streaming form of [negentropySync]: emits each event **individually** as it
- * arrives, then completes when the sync finishes. Nothing is accumulated, so it
- * stays O(1) in memory regardless of how many events the relay holds.
+ * arrives, then completes when the sync finishes. The flow itself accumulates
+ * nothing, but it is not O(1) in memory: events are buffered with
+ * [Channel.UNLIMITED], so a collector slower than the relay lets the buffer grow
+ * to whatever the sync downloads ahead of it.
  *
- * Events are buffered with [Channel.UNLIMITED] because [negentropySync] delivers
- * them through a non-suspending callback on the relay reader thread: a bounded
- * buffer would force the producer to drop events when the collector lags. A slow
- * collector therefore lets the buffer grow — apply your own
- * [kotlinx.coroutines.flow.buffer]/`conflate`/`collectLatest` downstream if you
- * need a different policy. Cancelling the collector cancels the sync and tears
- * down its subscriptions via [awaitClose].
+ * Unbounded on purpose: [negentropySync]'s `onEvent` runs on the relay's delivery
+ * coroutine, and holding it there for a slow collector would hold every other
+ * message from that relay too, long enough to end the sync's rounds as idle. Apply
+ * your own [kotlinx.coroutines.flow.buffer]/`conflate`/`collectLatest` downstream
+ * if you need a different policy. Cancelling the collector cancels the sync and
+ * tears down its subscriptions via [awaitClose].
  *
  * See [negentropySync] for the meaning of every parameter.
  */

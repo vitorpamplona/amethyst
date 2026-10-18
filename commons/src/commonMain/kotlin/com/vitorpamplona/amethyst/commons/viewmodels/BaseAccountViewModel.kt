@@ -1986,12 +1986,14 @@ open class BaseAccountViewModel(
 
     fun removeTrustScoreProvider() = launchSigner { account.removeTrustScoreProvider() }
 
-    fun changeReactionTypes(
-        reactionSet: List<String>,
-        onDone: () -> Unit,
-    ) = launchSigner {
-        account.changeReactionTypes(reactionSet)
-        onDone()
+    /**
+     * Applies [reactionSet] at once, so the like popup shows it right away, and publishes it once
+     * the edits stop: the reaction choices screen saves on every tap. See [pickerPublisher].
+     */
+    fun changeReactionTypes(reactionSet: List<String>) {
+        if (account.applyReactionTypes(reactionSet)) {
+            pickerPublisher.schedule()
+        }
     }
 
     fun reactionRowItemsFlow() = account.settings.syncedSettings.reactions.reactionRowItems
@@ -2046,13 +2048,14 @@ open class BaseAccountViewModel(
     /**
      * Publishes the account's synced settings once the picker edits stop, rather than once per toggle.
      *
-     * The Side Menu and bottom-bar pickers are the only settings surfaces that write in bursts — a
-     * configuring session is a run of discrete toggles over ~50 rows, and each one signs, encrypts
-     * and publishes the whole blob to every outbox relay, which on an external signer is an IPC
-     * round trip (and possibly a prompt) per switch. One publisher for both, since they edit the same
-     * app-specific data event and a burst that crosses the two should still collapse.
+     * The Side Menu and bottom-bar pickers and the reaction choices screen are the only settings
+     * surfaces that write in bursts — a configuring session is a run of discrete toggles over ~50
+     * rows (or taps across an emoji grid), and each one signs, encrypts and publishes the whole blob
+     * to every outbox relay, which on an external signer is an IPC round trip (and possibly a prompt)
+     * per switch. One publisher for all, since they edit the same app-specific data event and a burst
+     * that crosses them should still collapse.
      *
-     * Only these two. Every other synced setting changes one at a time, and the published event is
+     * Only these. Every other synced setting changes one at a time, and the published event is
      * its only durable copy, so delaying those would buy nothing and cost durability.
      *
      * On the account's scope, NOT [viewModelScope]. A synced setting's only durable copy is the
@@ -3022,55 +3025,69 @@ open class BaseAccountViewModel(
     ) : GenericBaseCache<String, LoadedBechLink>(20) {
         override suspend fun compute(key: String): LoadedBechLink? =
             withContext(Dispatchers.IO) {
-                Nip19Parser.uriToRoute(key)?.let {
-                    var returningNote: Note? = null
+                load(key) { embedded -> LocalCache.justConsume(embedded, null, false) }
+            }
 
-                    when (val parsed = it.entity) {
-                        is NSec -> {}
+        /**
+         * The cached link, or one loaded on the calling thread. For renderers that must answer
+         * synchronously inside composition: the load is in-memory cache work only, and the one
+         * expensive step, verifying an `nembed`'s event, runs in the background.
+         */
+        fun cachedOrLoad(key: String): LoadedBechLink? =
+            cached(key) ?: load(key) { embedded ->
+                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    LocalCache.justConsume(embedded, null, false)
+                }
+            }?.also { put(key, it) }
 
-                        is NPub -> {}
+        private inline fun load(
+            key: String,
+            consumeEmbedded: (Event) -> Unit,
+        ): LoadedBechLink? =
+            Nip19Parser.uriToRoute(key)?.let {
+                var returningNote: Note? = null
 
-                        is NProfile -> {}
+                when (val parsed = it.entity) {
+                    is NSec -> {}
 
-                        is NNote -> {
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
-                                returningNote = note
-                            }
+                    is NPub -> {}
+
+                    is NProfile -> {}
+
+                    is NNote -> {
+                        LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            returningNote = note
                         }
-
-                        is NEvent -> {
-                            LocalCache.consume(parsed)
-                            LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
-                                returningNote = note
-                            }
-                        }
-
-                        is NEmbed -> {
-                            withContext(Dispatchers.IO) {
-                                val baseNote = LocalCache.getOrCreateNote(parsed.event)
-                                if (baseNote.event == null) {
-                                    launch(Dispatchers.IO) {
-                                        LocalCache.justConsume(parsed.event, null, false)
-                                    }
-                                }
-
-                                returningNote = baseNote
-                            }
-                        }
-
-                        is NRelay -> {}
-
-                        is NAddress -> {
-                            LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
-                                returningNote = note
-                            }
-                        }
-
-                        else -> {}
                     }
 
-                    LoadedBechLink(returningNote, it)
+                    is NEvent -> {
+                        LocalCache.consume(parsed)
+                        LocalCache.checkGetOrCreateNote(parsed.hex)?.let { note ->
+                            returningNote = note
+                        }
+                    }
+
+                    is NEmbed -> {
+                        val baseNote = LocalCache.getOrCreateNote(parsed.event)
+                        if (baseNote.event == null) {
+                            consumeEmbedded(parsed.event)
+                        }
+
+                        returningNote = baseNote
+                    }
+
+                    is NRelay -> {}
+
+                    is NAddress -> {
+                        LocalCache.checkGetOrCreateNote(parsed.aTag())?.let { note ->
+                            returningNote = note
+                        }
+                    }
+
+                    else -> {}
                 }
+
+                LoadedBechLink(returningNote, it)
             }
     }
 }

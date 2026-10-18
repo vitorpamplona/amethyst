@@ -27,6 +27,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Collections
 
@@ -43,6 +45,11 @@ import java.util.Collections
  *  - [silentOn]: given the 1-based REQ number, whether to leave it unanswered entirely.
  *  - [dropAfter]: given the 1-based REQ number, how many events to send before the connection
  *    drops (an `onCannotConnect` instead of the EOSE), as strfry does to a slow reader.
+ *  - [dropDuring]: the same, except the connection drops WHILE the next event is in the
+ *    listener: its delivery is cancelled where it suspends, then `onCannotConnect` arrives, as
+ *    the OkHttp socket does when a relay hangs up on a reader that is still handing an event on.
+ *    With [replayAfterDrop], the page is then served again from the top to the same listener, as
+ *    the pool does when it redials and re-sends the subscription before the walk has moved on.
  *  - [answer]: given the 1-based REQ number and the honest page, return what the relay
  *    actually sends — e.g. a throttled relay's shrunken or empty page. [answerFor] does the
  *    same and also sees the REQ's filters.
@@ -60,6 +67,8 @@ class FakePagingRelay(
     private val closeWhen: (filters: List<Filter>) -> String? = { null },
     private val silentOn: (req: Int) -> Boolean = { false },
     private val dropAfter: (req: Int) -> Int? = { null },
+    private val dropDuring: (req: Int) -> Int? = { null },
+    private val replayAfterDrop: Boolean = false,
     private val answerFor: ((req: Int, filters: List<Filter>, honest: List<Event>) -> List<Event>)? = null,
     private val answer: (req: Int, honest: List<Event>) -> List<Event> = { _, honest -> honest },
 ) : INostrClient by EmptyNostrClient() {
@@ -100,6 +109,23 @@ class FakePagingRelay(
             if (dropAt != null) {
                 sent.take(dropAt).forEach { listener?.onEvent(it, false, relay, relayFilters) }
                 listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
+                return@launch
+            }
+            val dropDuringAt = dropDuring(req)
+            if (dropDuringAt != null) {
+                sent.take(dropDuringAt).forEach { listener?.onEvent(it, false, relay, relayFilters) }
+                sent.getOrNull(dropDuringAt)?.let { inFlight ->
+                    val delivery = launch { listener?.onEvent(inFlight, false, relay, relayFilters) }
+                    // Long enough for the listener to reach a suspension point downstream.
+                    delay(50)
+                    // Cancelled and gone before the drop is reported, as the socket's own job is.
+                    delivery.cancelAndJoin()
+                }
+                listener?.onCannotConnect(relay, "WebSocket Failure: EOFException", relayFilters)
+                if (replayAfterDrop) {
+                    sent.forEach { listener?.onEvent(it, false, relay, relayFilters) }
+                    listener?.onEose(relay, relayFilters)
+                }
                 return@launch
             }
             sent.forEach { listener?.onEvent(it, false, relay, relayFilters) }

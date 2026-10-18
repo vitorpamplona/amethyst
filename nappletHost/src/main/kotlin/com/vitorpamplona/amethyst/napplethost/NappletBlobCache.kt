@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplethost
 
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
@@ -39,16 +40,16 @@ import java.io.File
 class NappletBlobCache(
     private val dir: File,
 ) {
-    fun has(sha256: String): Boolean = fileFor(sha256).isFile
+    fun has(sha256: String): Boolean = fileFor(sha256)?.isFile == true
 
-    fun get(sha256: String): ByteArray? = fileFor(sha256).takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() }
+    fun get(sha256: String): ByteArray? = fileFor(sha256)?.takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() }
 
     /** Stores [bytes] under [sha256] iff they actually hash to it. No-op if already present or mismatched. */
     fun put(
         sha256: String,
         bytes: ByteArray,
     ) {
-        val target = fileFor(sha256)
+        val target = fileFor(sha256) ?: return
         if (target.isFile) return
         if (sha256(bytes).toHexKey() != sha256.lowercase()) return // verify-on-write: never cache wrong content
         runCatching {
@@ -80,7 +81,11 @@ class NappletBlobCache(
         }
     }
 
-    private fun fileFor(sha256: String) = File(dir, sha256.lowercase())
+    /**
+     * The blob's file, or null when [sha256] is not one. The name comes from a site's manifest, so it is
+     * checked here too: a `../` in it would otherwise read and write outside the cache directory.
+     */
+    private fun fileFor(sha256: String): File? = sha256.lowercase().takeIf { it.length == 64 && Hex.isHex64(it) }?.let { File(dir, it) }
 
     companion object {
         const val DEFAULT_MAX_BYTES = 256L * 1024 * 1024

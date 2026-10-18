@@ -80,6 +80,10 @@ import kotlin.coroutines.cancellation.CancellationException
  * ARRIVAL order (several relays page at once and interleave), not newest-first. Same
  * keys, same single JSON object under `--json`; `count` and `relay_errors` follow the
  * `events` array, and also close a stream that a failure cut short.
+ *
+ * A paged walk that delivered events and then gave up (refused, unreachable, silent past its
+ * re-asks) still writes what arrived and then fails `incomplete` (exit 1); a relay that never
+ * finished a plain `REQ` is reported in `relay_errors` as `timeout`.
  */
 object FetchCommand {
     /** Output/paging cap for a fetch (either path) when `--limit` is omitted. */
@@ -98,7 +102,9 @@ object FetchCommand {
         |                                                --limit caps the walk; a relay refusing
         |                                                a big page is re-asked at its max; a
         |                                                dropped connection is resumed where the
-        |                                                walk got to (reported as `resumes`).
+        |                                                walk got to (reported as `resumes`); a
+        |                                                walk that still stops partway prints
+        |                                                what arrived and exits 1 `incomplete`.
         |                                                --paginate --limit 0 streams events in
         |                                                arrival order (not newest-first);
         |                                                --out FILE writes them there, one JSON
@@ -154,30 +160,29 @@ object FetchCommand {
 
             val relayErrors = mutableMapOf<NormalizedRelayUrl, RelayError>()
             val unpaged = mutableSetOf<NormalizedRelayUrl>()
+            val incomplete = mutableMapOf<NormalizedRelayUrl, Int>()
             val resumes = Resumes()
+            val onWalkEnd = walkEnded(relayErrors, unpaged, incomplete)
 
             // Unbounded walk: there is no "newest N" to keep, so nothing needs sorting —
             // write each event out as it arrives instead of holding the whole history.
             val out = args.flag("out")
-            if (paginate && effectiveLimit == null && out != null) return streamAllPagesToFile(ctx, filter, relays, timeoutMs, relayErrors, unpaged, resumes, File(out))
+            if (paginate && effectiveLimit == null && out != null) return streamAllPagesToFile(ctx, filter, relays, timeoutMs, relayErrors, unpaged, incomplete, onWalkEnd, resumes, File(out))
             if (out != null) return Output.error("bad_args", "--out streams a whole walk: it needs --paginate --limit 0")
-            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged, resumes)
+            if (paginate && effectiveLimit == null) return streamAllPages(ctx, filter, relays, timeoutMs, relayErrors, unpaged, incomplete, onWalkEnd, resumes)
 
             val received =
                 if (paginate) {
                     ctx.drainAllPages(
                         relays.associateWith { listOf(filter) },
                         timeoutMs,
-                        onRelayResult = { relay, result ->
-                            refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-                            if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                        },
+                        onRelayResult = onWalkEnd,
                         resumeBackoff = PageRetryBackoff.RESUME,
                         onRelayResume = resumes::heard,
                     )
                 } else {
                     val result = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
-                    result.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { relayErrors[relay] = it } }
+                    relayErrors.putAll(relayErrorsOf(result))
                     result.events
                 }
             val ordered =
@@ -201,6 +206,7 @@ object FetchCommand {
                 ) + unpagedField(unpaged) + resumes.field(),
                 relays,
                 relayErrors,
+                incomplete,
             )
         }
     }
@@ -221,20 +227,21 @@ object FetchCommand {
         timeoutMs: Long,
         relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
         unpaged: MutableSet<NormalizedRelayUrl>,
+        incomplete: Map<NormalizedRelayUrl, Int>,
+        onWalkEnd: (NormalizedRelayUrl, PagedFetchResult) -> Unit,
         resumes: Resumes,
     ): Int {
         val stream = Output.listStream(mapOf("queried_relays" to relays.map { it.url }), "events")
         val count =
             try {
-                ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
-                    refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-                    if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                }, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event -> stream.item({ event.toJson() }, { eventAsMap(event) }) }
+                ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = onWalkEnd, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
+                    stream.item({ event.toJson() }, { eventAsMap(event) })
+                }
             } catch (e: Throwable) {
                 // Close the half-written object (with an `error`) before anything else reports:
                 // a second JSON object after a cut-off one is unparseable either way. The relays
                 // that refused so far are part of that answer, as on the normal path.
-                val errors = reportRelayErrors(relayErrors)
+                val errors = reportRelayErrors(relayErrors, warn = true)
                 stream.abort(e.message ?: e::class.simpleName, if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors))
                 if (e is CancellationException || !stream.started) throw e
                 return 1
@@ -246,9 +253,10 @@ object FetchCommand {
             return emitWithRelayErrors(mapOf("queried_relays" to relays.map { it.url }, "count" to 0, "events" to emptyList<Any>()) + unpagedField(unpaged), relays, relayErrors)
         }
 
-        val errors = reportRelayErrors(relayErrors)
+        // The incomplete error names every relay itself; a warning first would say each twice.
+        val errors = reportRelayErrors(relayErrors, warn = incomplete.isEmpty())
         stream.finish(mapOf("count" to count) + unpagedField(unpaged) + resumes.field() + (if (errors.isEmpty()) emptyMap() else mapOf("relay_errors" to errors)))
-        return 0
+        return if (incomplete.isEmpty()) 0 else incompleteError(mapOf("count" to count), relayErrors, incomplete)
     }
 
     /**
@@ -263,6 +271,8 @@ object FetchCommand {
         timeoutMs: Long,
         relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
         unpaged: MutableSet<NormalizedRelayUrl>,
+        incomplete: Map<NormalizedRelayUrl, Int>,
+        onWalkEnd: (NormalizedRelayUrl, PagedFetchResult) -> Unit,
         resumes: Resumes,
         file: File,
     ): Int {
@@ -278,10 +288,7 @@ object FetchCommand {
             try {
                 writer.use { w ->
                     // Not cached: an export is the one walk too large for the local store.
-                    ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = { relay, result ->
-                        refusalOf(result)?.let { synchronized(relayErrors) { relayErrors[relay] = it } }
-                        if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
-                    }, cache = false, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
+                    ctx.streamAllPages(relays.associateWith { listOf(filter) }, timeoutMs, onRelayResult = onWalkEnd, cache = false, resumeBackoff = PageRetryBackoff.RESUME, onRelayResume = resumes::heard) { _, event ->
                         synchronized(w) {
                             w.write(event.toJson())
                             w.write('\n'.code)
@@ -298,6 +305,7 @@ object FetchCommand {
             mapOf("queried_relays" to relays.map { it.url }, "count" to count, "out" to file.path) + unpagedField(unpaged) + resumes.field(),
             relays,
             relayErrors,
+            incomplete,
         )
     }
 
@@ -320,10 +328,13 @@ object FetchCommand {
         return mapOf("unpaged_relays" to sorted.map { it.url })
     }
 
-    /** Warns about each refusing relay on stderr and returns them as the `relay_errors` map. */
-    private fun reportRelayErrors(relayErrors: Map<NormalizedRelayUrl, RelayError>): Map<String, Map<String, Any?>> {
+    /** Returns the refusing relays as the `relay_errors` map, warning about each on stderr when [warn]. */
+    private fun reportRelayErrors(
+        relayErrors: Map<NormalizedRelayUrl, RelayError>,
+        warn: Boolean,
+    ): Map<String, Map<String, Any?>> {
         val sorted = synchronized(relayErrors) { relayErrors.entries.sortedBy { it.key.url }.map { it.key to it.value } }
-        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
+        if (warn) sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
         return sorted.associate { (relay, error) -> relay.url to error.toMap() }
     }
 
@@ -378,11 +389,42 @@ object FetchCommand {
                 when (reason) {
                     CLOSED -> "closed the request"
                     AUTH_REQUIRED -> "requires authentication"
+                    TIMEOUT -> "stopped answering"
                     else -> "could not be reached"
                 }
             return if (message.isEmpty()) what else "$what: $message"
         }
     }
+
+    /**
+     * The `onRelayResult` hook every paged path shares: a refusal or silence goes to
+     * [relayErrors], a walk read one page deep to [unpaged], and a walk that delivered events
+     * before it gave up to [incomplete] with how many it delivered.
+     */
+    private fun walkEnded(
+        relayErrors: MutableMap<NormalizedRelayUrl, RelayError>,
+        unpaged: MutableSet<NormalizedRelayUrl>,
+        incomplete: MutableMap<NormalizedRelayUrl, Int>,
+    ): (NormalizedRelayUrl, PagedFetchResult) -> Unit =
+        { relay, result ->
+            val refusal = refusalOf(result)
+            if (refusal != null) {
+                synchronized(relayErrors) { relayErrors[relay] = refusal }
+                if (result.downloaded > 0) synchronized(incomplete) { incomplete[relay] = result.downloaded }
+            }
+            if (result.end == PagedFetchResult.End.UNPAGEABLE) synchronized(unpaged) { unpaged.add(relay) }
+        }
+
+    /**
+     * Each relay of a single-`REQ` drain that refused it or never finished it. A relay still
+     * without EOSE when the idle window ran out ([FetchAllResult.stalled]) is a `timeout`: it
+     * came back as an empty success before, indistinguishable from a relay that holds nothing.
+     */
+    private fun relayErrorsOf(result: FetchAllResult): Map<NormalizedRelayUrl, RelayError> =
+        buildMap {
+            result.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { put(relay, it) } }
+            result.stalled.forEach { relay -> put(relay, RelayError(TIMEOUT, "no EOSE within --timeout")) }
+        }
 
     /** A [FetchAllResult.doneReasons] entry as a [RelayError]; null when the relay answered. */
     private fun refusalOf(doneReason: String): RelayError? {
@@ -396,12 +438,17 @@ object FetchCommand {
         }
     }
 
-    /** A paged walk's ending as a [RelayError]; null unless the relay refused it. */
+    /**
+     * A paged walk's ending as a [RelayError]; null unless the relay refused it or stopped
+     * answering. Silence is reported too: a walk it ended may be missing everything below its
+     * cursor, and before, a relay silent from the start came back as an empty success.
+     */
     private fun refusalOf(result: PagedFetchResult): RelayError? =
         when (result.end) {
             PagedFetchResult.End.CLOSED -> RelayError(CLOSED, result.message.orEmpty())
             PagedFetchResult.End.AUTH_REQUIRED -> RelayError(AUTH_REQUIRED, result.message.orEmpty())
             PagedFetchResult.End.CANNOT_CONNECT -> RelayError(UNREACHABLE, result.message.orEmpty())
+            PagedFetchResult.End.IDLE -> RelayError(TIMEOUT, "no answer within --timeout")
             else -> null
         }
 
@@ -409,12 +456,14 @@ object FetchCommand {
      * Emits [result] plus `relay_errors` (relay URL → `{reason, message}`) and warns on
      * stderr for each of those relays that refused while another one served. When none of the queried relays served the request
      * and nothing came back, it is an error (`no_relay_served`, exit 1) rather than an
-     * empty success.
+     * empty success. When a walk gave up after delivering events ([incomplete]), the result is
+     * still emitted, since what arrived is good, and the fetch then fails `incomplete`.
      */
     private fun emitWithRelayErrors(
         result: Map<String, Any?>,
         relays: Set<NormalizedRelayUrl>,
         relayErrors: Map<NormalizedRelayUrl, RelayError>,
+        incomplete: Map<NormalizedRelayUrl, Int> = emptyMap(),
     ): Int {
         val sorted = relayErrors.entries.sortedBy { it.key.url }
         val errors = sorted.associate { it.key.url to it.value.toMap() }
@@ -426,15 +475,46 @@ object FetchCommand {
             return Output.error("no_relay_served", detail, mapOf("relay_errors" to errors))
         }
 
-        sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
+        if (incomplete.isEmpty()) sorted.forEach { (relay, error) -> System.err.println("warning: ${relay.url} ${error.describe()}") }
 
         Output.emit(if (errors.isEmpty()) result else result + ("relay_errors" to errors))
-        return 0
+        return if (incomplete.isEmpty()) 0 else incompleteError(result, relayErrors, incomplete)
+    }
+
+    /**
+     * `incomplete` (exit 1): a paged walk delivered events and then gave up, refused or silent
+     * past its re-asks, so what was written (stdout, or `--out`) is good but not the whole
+     * answer. It used to exit 0 with only a `relay_errors` entry, and a script reading the exit
+     * code took a partial export for a full one. The payload repeats `count` (and `out`) so the
+     * caller can resume with `--until` without parsing stdout.
+     */
+    private fun incompleteError(
+        result: Map<String, Any?>,
+        relayErrors: Map<NormalizedRelayUrl, RelayError>,
+        incomplete: Map<NormalizedRelayUrl, Int>,
+    ): Int {
+        val partial = synchronized(incomplete) { incomplete.entries.sortedBy { it.key.url }.map { it.key to it.value } }
+        val errors = synchronized(relayErrors) { relayErrors.entries.sortedBy { it.key.url }.associate { it.key.url to it.value.toMap() } }
+        val detail =
+            partial.joinToString("; ") { (relay, delivered) ->
+                "${relay.url} ${relayErrors[relay]?.describe() ?: "ended the walk"} after $delivered events"
+            }
+        return Output.error(
+            "incomplete",
+            detail,
+            mapOf(
+                "count" to result["count"],
+                "out" to result["out"],
+                "incomplete_relays" to partial.associate { (relay, delivered) -> relay.url to delivered },
+                "relay_errors" to errors,
+            ),
+        )
     }
 
     private const val CLOSED = "closed"
     private const val AUTH_REQUIRED = "auth_required"
     private const val UNREACHABLE = "unreachable"
+    private const val TIMEOUT = "timeout"
 
     private fun looksLikeCode(s: String): Boolean {
         val t = s.removePrefix("nostr:")
@@ -498,7 +578,7 @@ object FetchCommand {
             val relays = (hintRelays + (author?.let { EventLocator.authorOutboxRelays(NoteSupport.access(ctx), it, timeoutMs) } ?: emptySet())).ifEmpty { ctx.bootstrapRelays() }
 
             val drained = ctx.drainResult(relays.associateWith { listOf(filter) }, timeoutMs)
-            val relayErrors = buildMap { drained.doneReasons.forEach { (relay, reason) -> refusalOf(reason)?.let { put(relay, it) } } }
+            val relayErrors = relayErrorsOf(drained)
             val events =
                 drained.events
                     .asSequence()

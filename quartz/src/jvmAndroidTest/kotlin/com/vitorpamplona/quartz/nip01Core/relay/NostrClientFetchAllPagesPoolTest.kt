@@ -33,6 +33,7 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class NostrClientFetchAllPagesPoolTest : RelayClientTest() {
     /**
@@ -76,5 +77,23 @@ class NostrClientFetchAllPagesPoolTest : RelayClientTest() {
             // onRelayComplete reports each relay's fetched total.
             assertEquals(4, completed[relayAUrl])
             assertEquals(6, completed[relayBUrl])
+        }
+
+    // The walks ran under a supervisorScope: an exception from the caller's onEvent went to the
+    // uncaught-exception handler (on Android, the end of the process) and this call returned as
+    // if every relay had finished.
+    @Test
+    fun anExceptionFromOnEventReachesTheCaller() =
+        runBlocking {
+            val relayAUrl = RelayUrlNormalizer.normalize("ws://relay-a/")
+            hub.getOrCreate(relayAUrl).preload((1..3).map { SyntheticEvents.fakeEvent(idSeed = it) })
+
+            val thrown =
+                assertFailsWith<IllegalStateException> {
+                    client.fetchAllPagesFromPool(
+                        filters = mapOf(relayAUrl to listOf(Filter(kinds = listOf(1)))),
+                    ) { _, _ -> throw IllegalStateException("caller failed") }
+                }
+            assertEquals("caller failed", thrown.message)
         }
 }

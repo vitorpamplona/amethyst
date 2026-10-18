@@ -80,15 +80,27 @@ class PublicChatChannel(
         this.updatedMetadataAt = event.createdAt
         this.creationEventNote = eventNote
 
-        updateChannelInfo()
+        // Kind 41s that landed before this kind 40 waited in [notes] until the creator was known: drop
+        // everyone else's, and apply the creator's newest.
+        notes
+            .filter { _, note -> (note.event as? ChannelMetadataEvent)?.let { it.pubKey != creator.pubkeyHex } == true }
+            .forEach { removeNote(it) }
+        val latestUpdate = latestMetadataUpdateBy(creator)
+        if (latestUpdate != null && latestUpdate.second.createdAt > updatedMetadataAt) {
+            updateChannelInfo(latestUpdate.second, latestUpdate.first)
+        } else {
+            updateChannelInfo()
+        }
     }
 
+    /**
+     * Applies a kind 41. NIP-28 honors only the kind-40 author's, so callers pass one from [creator];
+     * it never changes who the creator is.
+     */
     fun updateChannelInfo(
-        creator: User,
         event: ChannelMetadataEvent,
         eventNote: Note? = null,
     ) {
-        this.creator = creator
         this.info = event.channelInfo()
 
         this.infoTags = event.tags.toImmutableListOfLists()
@@ -97,6 +109,12 @@ class PublicChatChannel(
 
         super.updateChannelInfo()
     }
+
+    private fun latestMetadataUpdateBy(author: User): Pair<Note, ChannelMetadataEvent>? =
+        notes
+            .mapNotNull { _, note ->
+                (note.event as? ChannelMetadataEvent)?.takeIf { it.pubKey == author.pubkeyHex }?.let { note to it }
+            }.maxByOrNull { it.second.createdAt }
 
     override fun toBestDisplayName(): String = info.name ?: toNEvent().toShortDisplay()
 

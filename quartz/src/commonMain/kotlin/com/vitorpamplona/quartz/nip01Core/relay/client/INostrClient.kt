@@ -59,6 +59,14 @@ interface INostrClient : AutoCloseable {
     fun resetBackoff() { }
 
     /**
+     * [resetBackoff] for [url] alone: its next dial goes out at once, every other relay keeps
+     * its wait. For a caller that knows better than the pool's session-length rule that the
+     * relay is up — [fetchAllPages][com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllPages],
+     * whose page the relay hung up on while serving it. A no-op for a client without a pool.
+     */
+    fun resetBackoff(url: NormalizedRelayUrl) { }
+
+    /**
      * Puts [url] back in the connection pool if it is no longer there, without dialing it.
      *
      * [reconnect] can only act on relays the pool still holds, so a caller that means to

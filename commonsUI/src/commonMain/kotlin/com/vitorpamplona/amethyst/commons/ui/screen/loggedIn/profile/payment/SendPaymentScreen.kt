@@ -123,6 +123,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.FeeEstimates
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.SegwitAddress
 import com.vitorpamplona.quartz.nipBCOnchainZaps.taproot.TaprootAddress
 import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -316,7 +317,7 @@ private fun SendPaymentLoaded(
             if (fees != null) return@LaunchedEffect
             val backend = LocalCache.onchainBackend
             if (backend != null) {
-                val newFees = runCatching { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
+                val newFees = runCatchingCancellable { withContext(Dispatchers.IO) { backend.feeEstimates() } }.getOrNull()
                 if (newFees != null) {
                     fees = newFees
                     return@LaunchedEffect

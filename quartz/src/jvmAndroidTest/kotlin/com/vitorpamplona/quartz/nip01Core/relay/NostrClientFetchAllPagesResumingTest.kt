@@ -162,12 +162,36 @@ class NostrClientFetchAllPagesResumingTest {
         }
 
     @Test
-    fun aRelayDownFromTheStartIsNotWaitedOn() =
+    fun aRelayDownFromTheStartIsAskedOnceMore() =
         runBlocking {
             val client = FakePagingRelay(this, corpus, maxLimit = 500, dropAfter = { 0 })
             val (result, got) = walk(client)
 
             assertEquals(PagedFetchResult.End.CANNOT_CONNECT, result.end)
+            assertEquals(0, got.size)
+            assertEquals(listOf(2_000L), waits, "one delay, not the whole backoff")
+            assertEquals(2, client.requests.size)
+        }
+
+    @Test
+    fun aRelayThatHangsUpBeforeTheFirstEventIsReadOnTheNextConnection() =
+        runBlocking {
+            val client = FakePagingRelay(this, corpus, maxLimit = 500, dropAfter = { req -> if (req == 1) 0 else null })
+            val (result, got) = walk(client)
+
+            assertEquals(PagedFetchResult.End.DRAINED, result.end)
+            assertEquals(corpus.map { it.id }.toSet(), got.toSet())
+            assertEquals(got.size, got.toSet().size)
+            assertEquals(listOf(2_000L), waits)
+        }
+
+    @Test
+    fun aRelaySilentFromTheStartIsNotWaitedOn() =
+        runBlocking {
+            val client = FakePagingRelay(this, corpus, maxLimit = 500, silentOn = { true })
+            val (result, got) = walk(client)
+
+            assertEquals(PagedFetchResult.End.IDLE, result.end)
             assertEquals(0, got.size)
             assertEquals(emptyList(), waits)
             assertEquals(1, client.requests.size)

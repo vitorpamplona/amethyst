@@ -58,7 +58,9 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -103,6 +105,7 @@ class EventProcessor(
             try {
                 consumeEvent(event, note, note)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e("EventProcessor", "Error processing note", e)
             }
         }

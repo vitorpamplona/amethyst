@@ -84,8 +84,8 @@ class DesktopAccountStorage(
          * Alias under which the AES-256-GCM key that encrypts
          * `accounts.json.enc` is stored in [SecureKeyStorage].
          *
-         * Exposed as `internal` so [AccountManager.bootstrapConsolidatedVault]
-         * can name it in the phase-1 candidate list. The single source of truth
+         * Exposed as `internal` so [com.vitorpamplona.amethyst.desktop.app.LegacyDesktopAccountImport]
+         * can name it when it opens the consolidated vault. The single source of truth
          * for the alias string stays here where the key is actually read and
          * written.
          */

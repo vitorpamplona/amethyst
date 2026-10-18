@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
@@ -177,13 +178,18 @@ interface NotePlatform {
         zoom: Double?,
     ) {}
 
-    /** Resolves [geohashStr] to a place name for [content], showing [onLoading] meanwhile. */
+    /**
+     * Resolves [geohashStr] to a place name for [content], showing [onLoading] meanwhile. Without a
+     * geocoder, the place name the app already knows, or else the geohash itself.
+     */
     @Composable
     fun LoadCityName(
         geohashStr: String,
         onLoading: (@Composable () -> Unit)?,
         content: @Composable (String) -> Unit,
-    ) {}
+    ) {
+        content(LocalAppServices.current.cachedPlaceName(geohashStr) ?: geohashStr)
+    }
 
     // Audio
 
@@ -304,29 +310,6 @@ interface NotePlatform {
         canPreview: Boolean,
         quotesLeft: Int,
         backgroundColor: MutableState<Color>,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    // Meeting rooms (audio spaces)
-
-    @Composable
-    fun RenderMeetingSpaceEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMeetingRoomEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) {}
-
-    @Composable
-    fun RenderMeetingRoomPresence(
-        baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
     ) {}

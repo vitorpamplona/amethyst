@@ -36,9 +36,12 @@ import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
+import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -49,8 +52,6 @@ import org.jetbrains.skia.Data
 
 private const val MAX_BITMAP_MEMORY = 64L * 1024 * 1024 // 64MB per GIF
 private const val MIN_FRAME_DURATION_MS = 20
-
-private val gifHttpClient get() = DesktopHttpClient.currentClient()
 
 private class GifFrames(
     val frames: List<ImageBitmap>,
@@ -97,6 +98,7 @@ fun AnimatedGifImage(
     var gifFrames by remember(url) { mutableStateOf(GifFrameCache.get(url)) }
     var currentFrame by remember(url) { mutableIntStateOf(0) }
     var loadFailed by remember(url) { mutableStateOf(false) }
+    if (gifFrames == null && !loadFailed) ReportCaptureLoading()
 
     LaunchedEffect(url) {
         currentFrame = 0
@@ -160,7 +162,7 @@ fun AnimatedGifImage(
 private suspend fun decodeGifFrames(url: String): GifFrames? =
     try {
         val request = Request.Builder().url(url).build()
-        val response = gifHttpClient.newCall(request).executeAsync()
+        val response = MediaHttp.imageClient(url).newCall(request).executeAsync()
         val bytes = response.body.bytes()
 
         val skData = Data.makeFromBytes(bytes)
@@ -195,6 +197,7 @@ private suspend fun decodeGifFrames(url: String): GifFrames? =
 
         GifFrames(frames, durations, frameBitmapSize * decodableFrames)
     } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
         println("AnimatedGif: failed to load $url — ${e.message}")
         null
     }

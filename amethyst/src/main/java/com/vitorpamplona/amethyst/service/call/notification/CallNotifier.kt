@@ -45,6 +45,8 @@ import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -199,6 +201,7 @@ object CallNotifier {
                         val result = coil3.ImageLoader(context).execute(request)
                         (result.image?.asDrawable(context.resources) as? BitmapDrawable)?.bitmap
                     } catch (_: Exception) {
+                        currentCoroutineContext().ensureActive()
                         null
                     }
                 }

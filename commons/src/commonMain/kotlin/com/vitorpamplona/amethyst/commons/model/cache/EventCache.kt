@@ -234,8 +234,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.HintIndexer
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.relay.client.single.IRelayClient
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -477,6 +475,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -2219,7 +2219,11 @@ open class EventCache :
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
-                    oldChannel.updateChannelInfo(author, event, note)
+                    // NIP-28: only the kind-40 author may update the channel. While the 40 is still
+                    // unknown, the update waits in the channel's notes and the 40 applies it.
+                    if (oldChannel.creator == author) {
+                        oldChannel.updateChannelInfo(event, note)
+                    }
                     true
                 } else {
                     false
@@ -2229,7 +2233,12 @@ open class EventCache :
             }
 
         if (note.event == null && (isVerified || justVerify(event))) {
-            oldChannel.addNote(note, relay)
+            // An ignored update stays out of the timeline too, or it would read as "X updated the
+            // channel". While the creator is unknown it waits here; the kind 40 drops it if it isn't theirs.
+            val creator = oldChannel.creator
+            if (creator == null || creator == author) {
+                oldChannel.addNote(note, relay)
+            }
             note.loadEvent(event, author, emptyList())
 
             refreshNewNoteObservers(note)
@@ -2949,6 +2958,7 @@ open class EventCache :
                 }
                 repliesTo.forEach { it.addZap(zapRequest, note) }
             } catch (t: Throwable) {
+                currentCoroutineContext().ensureActive()
                 Log.w("ZP", "validation failed for ${event.id}", t)
             }
         }
@@ -3568,22 +3578,30 @@ open class EventCache :
         return justConsumeAndUpdateIndexes(event, null, true)
     }
 
+    /**
+     * Consumes [event], received from [relay] when known. When that relay is behind (it sent an
+     * event this cache knows was deleted, or an older version of an addressable one), the
+     * deletion or the newer version is handed to [sendBack] for that relay, once per note.
+     * [sendBack] should publish through the client, so the relay gets the outbox's retries and
+     * the client's relay filters; this cache used to write it on the relay's socket itself.
+     */
     fun justConsume(
         event: Event,
-        relay: IRelayClient?,
+        relay: NormalizedRelayUrl?,
         wasVerified: Boolean,
+        sendBack: ((Event, NormalizedRelayUrl) -> Unit)? = null,
     ): Boolean {
         if (deletionIndex.hasBeenDeleted(event)) {
             // update relay with deletion event from another.
-            if (relay != null) {
+            if (relay != null && sendBack != null) {
                 deletionIndex.hasBeenDeletedBy(event)?.let { deletionEvent ->
                     getNoteIfExists(deletionEvent.id)?.let { note ->
-                        if (!note.hasRelay(relay.url)) {
+                        if (!note.hasRelay(relay)) {
                             if (appHost.isDebug) {
-                                Log.d("LocalCache") { "Updating ${relay.url.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
+                                Log.d("LocalCache") { "Updating ${relay.url} with a Deletion Event ${event.id} ${deletionEvent.id} because of ${event.toJson()} with ${deletionEvent.toJson()}" }
                             }
-                            relay.sendIfConnected(EventCmd(deletionEvent))
-                            note.addRelay(relay.url)
+                            sendBack(deletionEvent, relay)
+                            note.addRelay(relay)
                         }
                     }
                 }
@@ -3591,24 +3609,24 @@ open class EventCache :
             return false
         }
 
-        if (event is AddressableEvent && relay != null) {
+        if (event is AddressableEvent && relay != null && sendBack != null) {
             // updates relay with a new event.
             getAddressableNoteIfExists(event.address())?.let { note ->
                 note.event?.let { existingEvent ->
-                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay.url) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
+                    if (existingEvent.createdAt > event.createdAt && !note.hasRelay(relay) && !deletionIndex.hasBeenDeleted(event) && !event.isExpired()) {
                         if (appHost.isDebug) {
-                            Log.d("LocalCache") { "Updating ${relay.url.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
+                            Log.d("LocalCache") { "Updating ${relay.url} with a new version of ${event.kind} ${event.id} to ${existingEvent.id}" }
                         }
 
-                        relay.sendIfConnected(EventCmd(existingEvent))
+                        sendBack(existingEvent, relay)
                         // only send once.
-                        note.addRelay(relay.url)
+                        note.addRelay(relay)
                     }
                 }
             }
         }
 
-        return justConsumeAndUpdateIndexes(event, relay?.url, wasVerified)
+        return justConsumeAndUpdateIndexes(event, relay, wasVerified)
     }
 
     fun checkDeletionAndConsume(

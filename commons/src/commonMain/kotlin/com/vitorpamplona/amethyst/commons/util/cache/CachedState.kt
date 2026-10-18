@@ -48,6 +48,14 @@ abstract class GenericBaseCache<K : Any, V : Any>(
         return v
     }
 
+    /** Stores [v] for subclasses that also offer a synchronous load next to [update]. */
+    protected fun put(
+        k: K,
+        v: V,
+    ) {
+        cache.put(k, v)
+    }
+
     abstract suspend fun compute(key: K): V?
 }
 

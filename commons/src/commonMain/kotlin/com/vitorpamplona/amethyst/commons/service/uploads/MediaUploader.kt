@@ -132,6 +132,9 @@ interface MediaUploader {
 
     /** The whole file at [uri], or null when it cannot be read. */
     suspend fun readBytes(uri: MediaUri): ByteArray? = null
+
+    /** The size of the file at [uri] in bytes, if the platform knows it without reading the file. */
+    fun fileSize(uri: MediaUri): Long? = null
 }
 
 /** No media pipeline on this front end yet: every upload fails with a clear message. */

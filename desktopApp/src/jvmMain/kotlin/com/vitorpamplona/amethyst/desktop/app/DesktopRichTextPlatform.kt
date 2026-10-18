@@ -33,11 +33,12 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextSegmentRenderer
+import com.vitorpamplona.amethyst.commons.ui.richtext.SecretMessageContent
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
- * Desktop rich text: the shared segment renderer, and the shared markdown renderer for long-form
- * content.
+ * Desktop rich text: the shared segment renderer (payment cards, `blossom:` URIs, secret emoji),
+ * the shared secret-message reveal, and the shared markdown renderer for long-form content.
  */
 object DesktopRichTextPlatform : RichTextPlatform {
     override fun segmentRenderer(
@@ -84,7 +85,7 @@ object DesktopRichTextPlatform : RichTextPlatform {
         backgroundColor: MutableState<Color>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = RichTextPlatform.Plain.SecretMessage(content, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
+    ) = SecretMessageContent(content, callbackUri, quotesLeft, backgroundColor, accountViewModel, nav)
 }
 
 /** The links a note may hand to the operating system. Nostr links never get here: the app opens them. */

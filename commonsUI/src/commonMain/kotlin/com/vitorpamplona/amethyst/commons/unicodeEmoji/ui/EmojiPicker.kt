@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -113,13 +114,16 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium
 import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_dark
 import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_light
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.insertAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.insertWordAtCursor
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.EmojiChoices
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.SkinTone
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmoji
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiCatalog
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiGroup
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.typedEmoji
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -163,16 +167,6 @@ fun EmojiPickerButton(
         tint = tint,
         modifier = modifier,
     )
-}
-
-/** A button that opens the Unicode emoji palette and hands the chosen emoji to [onPick]. */
-@Composable
-fun UnicodeEmojiPickerButton(
-    onPick: (String) -> Unit,
-    tint: Color = MaterialTheme.colorScheme.onBackground,
-    modifier: Modifier = Modifier,
-) {
-    EmojiPickerMenuButton(emojiPacks = null, onPickUnicode = onPick, onPickCustom = {}, tint = tint, modifier = modifier)
 }
 
 /**
@@ -244,11 +238,12 @@ private sealed class PaletteItem {
         val entry: UnicodeEmoji,
     ) : PaletteItem()
 
-    /** A favorite, inserted exactly as the account saved it. */
+    /** A favorite, or the emoji typed in the search, inserted exactly as written. */
     @Immutable
     class Literal(
         val emoji: String,
-        val name: String?,
+        /** Its palette entry, for the name and to match a choice saved in another tone. */
+        val entry: UnicodeEmoji?,
     ) : PaletteItem()
 
     @Immutable
@@ -285,6 +280,14 @@ private class PaletteSection(
  * One scrolling grid: the favorites, the Unicode groups, then one section per selected pack, with
  * a strip of section icons to jump between them, a name search across all of them, and the skin
  * tone. Without [emojiPacks] it shows only the Unicode groups.
+ *
+ * [choosing] turns it into an editor of a set of emojis, such as the reaction choices, rather than
+ * a way to type one: every chosen emoji is marked and handed back in its saved form, so a tap can
+ * remove it; the favorites section (that set itself) is left out; the search text is offered when
+ * it is an emoji itself (the system keyboard's, one the palette lacks, an EmojiCoder message); and
+ * every pack emoji is offered, since a choice keeps its image instead of resolving its shortcode
+ * against the first pack that uses it. [fillHeight] stretches the grid over the height [modifier]
+ * gives it instead of the menu's fixed one.
  */
 @Composable
 fun EmojiPicker(
@@ -293,6 +296,8 @@ fun EmojiPicker(
     onPickCustom: (EmojiMedia) -> Unit,
     modifier: Modifier = Modifier.width(PickerWidth),
     onClose: (() -> Unit)? = null,
+    choosing: EmojiChoices? = null,
+    fillHeight: Boolean = false,
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
         if (value == null) {
@@ -315,6 +320,9 @@ fun EmojiPicker(
     val tone = UnicodeEmojiPalette.skinTone
 
     Column(modifier.padding(horizontal = 8.dp)) {
+        // The grid is a direct child of this column, so it can take the height that is left.
+        val gridModifier = if (fillHeight) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(GridHeight)
+
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
@@ -323,7 +331,7 @@ fun EmojiPicker(
 
         val loaded = catalog
         if (loaded == null) {
-            Box(Modifier.fillMaxWidth().height(GridHeight), contentAlignment = Alignment.Center) {
+            Box(gridModifier, contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
             return@Column
@@ -331,23 +339,23 @@ fun EmojiPicker(
 
         val onPick: (PaletteItem) -> Unit = { item ->
             when (item) {
-                is PaletteItem.Palette -> onPickUnicode(item.entry.withTone(tone))
-                is PaletteItem.Literal -> onPickUnicode(item.emoji)
+                is PaletteItem.Palette -> onPickUnicode(choosing?.savedForm(item.entry, tone) ?: item.entry.withTone(tone))
+                is PaletteItem.Literal -> onPickUnicode(choosing?.savedForm(item.emoji, item.entry) ?: item.emoji)
                 is PaletteItem.Custom -> onPickCustom(item.media)
             }
         }
 
-        val query =
-            search.text
-                .toString()
-                .trim()
-                .removePrefix(":")
-                .removeSuffix(":")
+        // A choice keeps its image, so a pack emoji whose shortcode another pack took is still one.
+        val customEmojis = if (choosing != null) remember(packs) { packs.flatMap { it.emojis }.distinctBy { it.link } } else shortcodes
+
+        val text = search.text.toString().trim()
+        val query = text.removePrefix(":").removeSuffix(":")
         if (query.isEmpty()) {
-            val sections = rememberSections(loaded, favorites, packs, shortcodes)
-            SectionedPalette(sections, tone, onPick)
+            val sections = rememberSections(loaded, if (choosing == null) favorites else emptyList(), packs, shortcodes, everyPackEmoji = choosing != null)
+            SectionedPalette(sections, tone, choosing, gridModifier, onPick)
         } else {
-            SearchResults(loaded, shortcodes, query, tone, onPick)
+            val typed = if (choosing != null) remember(text, loaded) { typedEmoji(text, loaded) } else null
+            SearchResults(loaded, customEmojis, query, typed, tone, choosing, gridModifier, onPick)
         }
     }
 }
@@ -455,11 +463,12 @@ private fun rememberSections(
     favorites: List<Favorite>,
     packs: List<EmojiPackGroup>,
     shortcodes: List<EmojiMedia>,
+    everyPackEmoji: Boolean,
 ): List<PaletteSection> {
     val favoritesLabel = stringRes(Res.string.emoji_picker_favorites)
     val groupLabels = catalog.groups.map { it.label() }
 
-    return remember(catalog, favorites, packs, shortcodes, favoritesLabel, groupLabels) {
+    return remember(catalog, favorites, packs, shortcodes, everyPackEmoji, favoritesLabel, groupLabels) {
         // A note carries one emoji tag per shortcode, and the first pack using a code wins it, so
         // a later pack's emoji under a taken code would post the other image: leave it out.
         val imageOf = shortcodes.associate { it.code to it.link }
@@ -468,7 +477,7 @@ private fun rememberSections(
                 val items =
                     favorites.map {
                         when (it) {
-                            is Favorite.Unicode -> PaletteItem.Literal(it.emoji, catalog.find(it.emoji)?.name)
+                            is Favorite.Unicode -> PaletteItem.Literal(it.emoji, catalog.find(it.emoji))
                             is Favorite.Custom -> PaletteItem.Custom(it.media)
                         }
                     }
@@ -478,7 +487,7 @@ private fun rememberSections(
                 add(PaletteSection("group:${group.name}", groupLabels[index], SectionIcon.Glyph(GroupStyles[group.name]?.icon ?: group.emojis.first().emoji), group.emojis.map { PaletteItem.Palette(it) }))
             }
             packs.forEach { pack ->
-                val postable = pack.emojis.filter { imageOf[it.code] == it.link }
+                val postable = if (everyPackEmoji) pack.emojis.distinctBy { it.link } else pack.emojis.filter { imageOf[it.code] == it.link }
                 if (postable.isEmpty()) return@forEach
                 val title = pack.title?.ifBlank { null } ?: postable.first().code
                 add(PaletteSection("pack:${pack.address}", title, SectionIcon.Pack(pack.image ?: postable.first().link), postable.map { PaletteItem.Custom(it) }))
@@ -491,6 +500,8 @@ private fun rememberSections(
 private fun SectionedPalette(
     sections: List<PaletteSection>,
     tone: SkinTone,
+    choosing: EmojiChoices?,
+    gridModifier: Modifier,
     onPick: (PaletteItem) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
@@ -555,7 +566,7 @@ private fun SectionedPalette(
         }
     }
 
-    EmojiGrid(gridState) {
+    EmojiGrid(gridState, gridModifier) {
         sections.forEach { section ->
             item(key = "header:" + section.key, span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                 Text(
@@ -566,7 +577,7 @@ private fun SectionedPalette(
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
                 )
             }
-            paletteItems(section.key, section.items, tone, onPick)
+            paletteItems(section.key, section.items, tone, choosing, onPick)
         }
     }
 }
@@ -598,15 +609,19 @@ private fun SearchResults(
     catalog: UnicodeEmojiCatalog,
     shortcodes: List<EmojiMedia>,
     query: String,
+    typed: String?,
     tone: SkinTone,
+    choosing: EmojiChoices?,
+    gridModifier: Modifier,
     onPick: (PaletteItem) -> Unit,
 ) {
     val found =
-        remember(catalog, shortcodes, query) {
+        remember(catalog, shortcodes, query, typed) {
             // The account's own shortcodes first: a search for a shortcode means one of those.
             val custom = shortcodes.filter { it.code.contains(query, ignoreCase = true) }
             val (starts, contains) = custom.partition { it.code.startsWith(query, ignoreCase = true) }
-            (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
+            val typedItem = typed?.let { listOf(PaletteItem.Literal(it, catalog.find(it))) } ?: emptyList()
+            typedItem + (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
         }
 
     if (found.isEmpty()) {
@@ -614,27 +629,28 @@ private fun SearchResults(
             text = stringRes(Res.string.custom_emoji_picker_no_match),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().height(GridHeight).padding(16.dp),
+            modifier = gridModifier.padding(16.dp),
         )
         return
     }
 
-    EmojiGrid(rememberLazyGridState()) {
-        paletteItems("search", found, tone, onPick)
+    EmojiGrid(rememberLazyGridState(), gridModifier) {
+        paletteItems("search", found, tone, choosing, onPick)
     }
 }
 
-/** A fixed height: the menu scrolls its content, and a lazy grid needs a bounded one. */
+/** Bounded by [modifier]: the menu scrolls its content, and a lazy grid needs a bounded height. */
 @Composable
 private fun EmojiGrid(
     state: LazyGridState,
+    modifier: Modifier,
     content: LazyGridScope.() -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(CellSize),
         state = state,
         contentPadding = PaddingValues(vertical = 4.dp),
-        modifier = Modifier.fillMaxWidth().height(GridHeight),
+        modifier = modifier,
         content = content,
     )
 }
@@ -643,6 +659,7 @@ private fun LazyGridScope.paletteItems(
     sectionKey: String,
     items: List<PaletteItem>,
     tone: SkinTone,
+    choosing: EmojiChoices?,
     onPick: (PaletteItem) -> Unit,
 ) {
     // The same emoji can sit in several sections (a favorite is also in its group), so keys are per section.
@@ -651,20 +668,32 @@ private fun LazyGridScope.paletteItems(
         key = { index, _ -> "$sectionKey#$index" },
         contentType = { _, item -> if (item is PaletteItem.Custom) "custom" else "emoji" },
     ) { _, item ->
-        PaletteCell(item, tone, onPick)
+        PaletteCell(item, tone, choosing?.let { item.isIn(it, tone) }, onPick)
     }
 }
+
+private fun PaletteItem.isIn(
+    choices: EmojiChoices,
+    tone: SkinTone,
+): Boolean =
+    when (this) {
+        is PaletteItem.Palette -> choices.savedForm(entry, tone) != null
+        is PaletteItem.Literal -> choices.savedForm(emoji, entry) != null
+        is PaletteItem.Custom -> choices.contains(media)
+    }
 
 @Composable
 private fun PaletteCell(
     item: PaletteItem,
     tone: SkinTone,
+    /** Null outside [EmojiPicker]'s `choosing` mode, where nothing can be chosen. */
+    isPicked: Boolean?,
     onPick: (PaletteItem) -> Unit,
 ) {
     val tooltip =
         when (item) {
             is PaletteItem.Palette -> item.entry.name
-            is PaletteItem.Literal -> item.name ?: item.emoji
+            is PaletteItem.Literal -> item.entry?.name ?: item.emoji
             is PaletteItem.Custom -> ":${item.media.code}:"
         }
 
@@ -676,12 +705,34 @@ private fun PaletteCell(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onPick(item) },
+                    .then(
+                        if (isPicked == true) {
+                            Modifier
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                        } else {
+                            Modifier
+                        },
+                    ).clickable { onPick(item) }
+                    .then(if (isPicked != null) Modifier.semantics { selected = isPicked } else Modifier),
         ) {
             when (item) {
-                is PaletteItem.Palette -> Text(item.entry.withTone(tone), style = EmojiStyle)
-                is PaletteItem.Literal -> Text(item.emoji, style = EmojiStyle)
-                is PaletteItem.Custom -> AsyncImage(model = item.media.link, contentDescription = tooltip, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+                is PaletteItem.Palette -> {
+                    Text(item.entry.withTone(tone), style = EmojiStyle)
+                }
+
+                is PaletteItem.Literal -> {
+                    // `+` and `-` are a like and a dislike, drawn as the heart and the thumbs down everywhere else.
+                    when (item.emoji) {
+                        "+" -> LikedIcon(Modifier.size(24.dp))
+                        "-" -> Text("\uD83D\uDC4E", style = EmojiStyle)
+                        else -> Text(item.emoji, style = EmojiStyle)
+                    }
+                }
+
+                is PaletteItem.Custom -> {
+                    AsyncImage(model = item.media.link, contentDescription = tooltip, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+                }
             }
         }
     }

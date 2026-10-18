@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlin.concurrent.Volatile
 
 @Immutable
@@ -88,6 +90,7 @@ class SealEvent(
         try {
             unsealThrowing(signer)
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("RumorEvent", "Fail to decrypt or parse Rumor", e)
             null
         }

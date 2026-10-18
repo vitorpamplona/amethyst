@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -306,7 +307,7 @@ class Context(
      */
     suspend fun relayInfo(relay: NormalizedRelayUrl): Nip11RelayInformation? =
         withContext(Dispatchers.IO) {
-            runCatching {
+            runCatchingCancellable {
                 val request =
                     Request
                         .Builder()

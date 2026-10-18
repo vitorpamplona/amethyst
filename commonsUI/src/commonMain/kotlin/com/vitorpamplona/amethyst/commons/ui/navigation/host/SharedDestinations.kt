@@ -34,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PayViaIntentScreen
 import com.vitorpamplona.amethyst.commons.ui.note.UpdateReactionTypeScreen
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.ReplyCommentPostScreen
+import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsImageFileScreen
+import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.commons.ui.note.share.ShareNoteAsQrScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.apps.recommendations.ProfileAppRecommendationsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.articles.ArticlesScreen
@@ -149,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.log.LogGe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.newRepository.NewGitRepositoryScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.HighlightsScreen
@@ -310,6 +313,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
     composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+    composableFromEnd<Route.NewGitRepository> { NewGitRepositoryScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }
@@ -481,6 +485,8 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Profile> { ProfileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
+    composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
+    composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.PollResults> { PollResultsScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }

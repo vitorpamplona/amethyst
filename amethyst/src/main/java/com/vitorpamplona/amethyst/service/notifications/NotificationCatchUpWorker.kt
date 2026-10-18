@@ -33,7 +33,9 @@ import androidx.work.WorkerParameters
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
@@ -146,6 +148,7 @@ class NotificationCatchUpWorker(
             Log.d(TAG, "Notification catch-up completed")
             Result.success()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Notification catch-up failed", e)
             Result.retry()
         }

@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventVerifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
+import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarReminderScanner
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
@@ -100,7 +101,6 @@ import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
-import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.images.ImageDiskCacheReconciler
@@ -181,6 +181,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -667,7 +668,7 @@ class AppModules(
 
     // Connects the INostrClient class with okHttp
     val websocketBuilder =
-        OkHttpWebSocket.Builder(
+        BasicOkHttpWebSocket.Builder(
             httpClient = { url ->
                 val useTor = torEvaluatorFlow.shouldUseTorForRelay(url)
                 okHttpClientForRelays.getHttpClient(useTor)
@@ -1398,7 +1399,8 @@ class AppModules(
             LocalCache
                 .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
                 .collect { rsvp ->
-                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED) {
+                    // Only this device's accounts' RSVPs: the feeds load every follow's too.
+                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED && rsvp.pubKey in accountsCache.accounts.value) {
                         CalendarReminderWorker.schedule(appContext)
                     }
                 }
@@ -1418,7 +1420,7 @@ class AppModules(
                 ).conflate()
                 .collect {
                     if (calendarReminderSettings().load().enabled &&
-                        CalendarReminderWorker.couldStillFire(CalendarReminderWorker.acceptedRsvpsInCache(), TimeUtils.now())
+                        CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(accountsCache.accounts.value.keys), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)
                     }

@@ -90,4 +90,15 @@ class FiltersChangedTest {
         val new = listOf(Filter(authors = listOf("a"), since = 100), Filter(authors = listOf("b"), since = 100))
         assertTrue(FiltersChanged.needsToResendRequest(old, new))
     }
+
+    // NIP-91 AND-tags were never compared: a subscription whose only change was `tagsAll` kept
+    // the relay serving the old filter.
+    @Test
+    fun changedTagsAllNeedsResend() {
+        val old = Filter(kinds = listOf(1), tagsAll = mapOf("t" to listOf("nostr", "bitcoin")))
+        val new = Filter(kinds = listOf(1), tagsAll = mapOf("t" to listOf("nostr", "lightning")))
+        assertTrue(FiltersChanged.needsToResendRequest(listOf(old), listOf(new)))
+        assertTrue(FiltersChanged.needsToResendRequest(listOf(Filter(kinds = listOf(1))), listOf(new)))
+        assertFalse(FiltersChanged.needsToResendRequest(listOf(new), listOf(new.copy())))
+    }
 }

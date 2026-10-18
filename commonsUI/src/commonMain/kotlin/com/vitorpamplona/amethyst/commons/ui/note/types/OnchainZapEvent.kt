@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.util.PlatformNumberFormatter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.BitcoinTx
 import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
@@ -120,7 +121,7 @@ fun RenderOnchainZap(
     if (txid != null) {
         LaunchedEffect(txid) {
             val backend = LocalCache.onchainBackend ?: return@LaunchedEffect
-            runCatching {
+            runCatchingCancellable {
                 withContext(Dispatchers.IO) { backend.getTx(txid) }
             }.onSuccess { tx = it }
         }

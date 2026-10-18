@@ -33,6 +33,8 @@ cli/tests/
 │   ├── tests-extras.sh             # tests 09, 10, 12, 13
 │   ├── tests-media.sh              # tests 20-29 (avatar, edits, deletions,
 │   │                               #   media v2, retention, disband)
+├── emoji/                 # NIP-30 emoji packs: create/add/import (folder, zip,
+│   └── emoji-headless.sh  #   list) vs embedded `amy serve` + a throwaway Blossom server
 ├── notes/                 # social loop (post/show/feed/reply/react/repost/quote/
 │   └── notes-headless.sh  #   thread/notifications/delete) vs embedded `amy serve`
 ├── nests/                 # Audio-rooms interop (Amethyst ↔ nostrnests.com)
@@ -77,6 +79,15 @@ Suite notes:
 - **`cache/cache-headless.sh`** proves the local store is the source of
   truth for reads: `profile show` served from cache vs `--refresh`, and
   `store stat` reporting the right histogram, vs the embedded `amy serve` relay.
+- **`emoji/emoji-headless.sh`** drives `amy emoji` between two accounts
+  against `amy serve`, with `marmot/blossom-server.py` as the Blossom server:
+  pack create/list (and `exists` on a reused `d` tag), public and private
+  `add` with skip/`--replace`, `import` from a folder (file-name shortcodes,
+  `_2` for repeats, existing shortcodes skipped before upload, `--dry-run`),
+  from a `.zip` (non-images and `__MACOSX/` ignored, the blob really on the
+  server) and from a `shortcode url` list; the other account reads the pack
+  without its private emojis, `use`s and `unuse`s it, and can't edit it; then
+  `remove`, `pack edit` and `pack delete`.
 - **`notes/notes-headless.sh`** runs the core social loop between two
   accounts in separate `$HOME`s against `amy serve`: `notes post` (with `t`
   tagging) → `notes show` / `notes feed --hashtag` from the other account →

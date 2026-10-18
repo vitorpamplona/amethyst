@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -63,7 +64,7 @@ class AndroidCordnBlobStore(
         val hash = sha256(blob).toHexKey()
 
         return servers.filter { server ->
-            runCatching {
+            runCatchingCancellable {
                 BlossomUploader()
                     .upload(
                         inputStream = ByteArrayInputStream(blob),

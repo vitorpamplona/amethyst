@@ -377,6 +377,8 @@
     <string name="qr_scanner_no_code_in_image">No QR code found in that picture</string>
     <string name="qr_scanner_clipboard_empty">Nothing on the clipboard to scan</string>
     <string name="qr_scanner_pick_one">Tap the code you want</string>
+    <string name="qr_scanner_desktop_title">Scan a QR code</string>
+    <string name="qr_scanner_desktop_hint">There is no camera scanner on this computer. Open a picture of the code, or copy the code (as a picture or as text) and paste it here.</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">Captured %1$s of %2$s part — keep going</item>
         <item quantity="other">Captured %1$s of %2$s parts — keep going</item>
@@ -611,7 +613,7 @@
     <string name="login">Login</string>
     <string name="sign_up">Sign Up</string>
     <string name="create_account">Create Account</string>
-    <string name="how_should_we_call_you">How should we call you?</string>
+    <string name="how_should_we_call_you">What should we call you?</string>
     <string name="don_t_have_an_account">Don't have a Nostr account?</string>
     <string name="already_have_an_account">Already have a Nostr account?</string>
     <string name="loading_feed">Loading feed</string>
@@ -789,6 +791,7 @@
     <string name="quick_action_select">Select</string>
     <string name="share_as_image_generating">Generating preview…</string>
     <string name="share_as_image_watermark">Shared via Amethyst</string>
+    <string name="share_as_image_failed">Could not share the image</string>
     <string name="share_as_qr">Share as QR</string>
     <string name="share_as_qr_mode_web">Web link</string>
     <string name="share_as_qr_mode_nostr">Nostr link</string>
@@ -1767,7 +1770,6 @@
     <string name="max_hashtag_limit_title">Max hashtags per post</string>
     <string name="max_hashtag_limit_explainer">Hides posts with more hashtags than this limit. Set to 0 to disable</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">New Reaction Symbol</string>
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Adds a target amount of sats to raise for this post. Supporting clients may show this as a progress bar to incentivize donations</string>
     <string name="zapraiser_target_amount_in_sats">Target Amount in Sats</string>
@@ -1940,6 +1942,7 @@
     <string name="relay_group_join_code_label">Invite code</string>
     <string name="relay_group_join_code_hint">This group is invite-only. Enter the code you were given.</string>
     <string name="relay_group_join_confirm">Join</string>
+    <string name="relay_group_join_invite_confirm">Join %1$s with the invite code from this link? Your list of groups is public.</string>
     <string name="relay_group_pending">Requested</string>
     <string name="relay_group_role_admin">Admin</string>
     <string name="relay_group_role_moderator">Moderator</string>
@@ -2750,8 +2753,33 @@
     <string name="git_repo_settings_web_urls">Web URLs (one per line)</string>
     <string name="git_repo_settings_topics">Topics (comma separated)</string>
     <string name="git_repo_settings_save">Save</string>
-    <string name="git_repositories_search_placeholder">Filter by name, topic, host, maintainer…</string>
-    <string name="git_repositories_search_no_results">No repositories in the current feed match this search.</string>
+    <string name="git_new_repository">New repository</string>
+    <string name="git_new_repository_untitled">Untitled repository</string>
+    <string name="git_new_repository_section_about">About</string>
+    <string name="git_new_repository_name_placeholder">My project</string>
+    <string name="git_new_repository_description_placeholder">What does it do, and who is it for?</string>
+    <string name="git_new_repository_identifier">Identifier</string>
+    <string name="git_new_repository_identifier_help">Part of the repository's address. It can't be changed later.</string>
+    <string name="git_new_repository_identifier_taken">You already have a repository with this identifier. Pick another one or edit that repository instead.</string>
+    <string name="git_new_repository_topics">Topics</string>
+    <string name="git_new_repository_topics_placeholder">kotlin, nostr, cli…</string>
+    <string name="git_new_repository_remove_topic">Remove topic %1$s</string>
+    <string name="git_new_repository_section_hosting">Hosting</string>
+    <string name="git_new_repository_hosting_help">GRASP servers keep your code and relay its issues and patches. Pick two or more, so it stays up if one goes away.</string>
+    <string name="git_new_repository_add_server">Add a GRASP server</string>
+    <string name="git_new_repository_no_hosting">With no GRASP server, add the URLs where the code lives under Advanced.</string>
+    <string name="git_new_repository_section_advanced">Advanced</string>
+    <string name="git_new_repository_advanced_summary">Earliest commit, other clone URLs, web pages and relays</string>
+    <string name="git_new_repository_web_urls">Web pages</string>
+    <string name="git_new_repository_other_clone_urls">Other clone URLs</string>
+    <string name="git_new_repository_relays">Other relays for patches and issues</string>
+    <string name="git_new_repository_euc">Earliest unique commit</string>
+    <string name="git_new_repository_euc_help">The root commit id, from git rev-list --max-parents=0 HEAD. Groups this repository with its copies on other servers.</string>
+    <string name="git_new_repository_euc_invalid">Not a full commit id</string>
+    <string name="git_new_repository_invalid_server">Not a valid server address: %1$s</string>
+    <string name="git_repo_push_first_title">Push your first commit</string>
+    <string name="git_repo_push_first_body">This repository is waiting for its code. From your project folder, with ngit installed, run:</string>
+    <string name="git_repo_push_first_get_ngit">Get ngit</string>
     <string name="profile_tab_apps">Apps &amp; Sites</string>
     <string name="profile_tab_repos">Repos</string>
     <string name="edit_article">Edit Article</string>
@@ -3229,6 +3257,41 @@
     <string name="emoji_pack_actions_dialog_title">Emoji pack actions</string>
     <string name="emoji_private_toggle">Private</string>
     <string name="emoji_private_badge">Private emoji</string>
+    <string name="emoji_import_title">Import emojis</string>
+    <string name="emoji_import_pick_title">Choose images or a .zip</string>
+    <string name="emoji_import_pick_formats">PNG, GIF, WebP, SVG, or a .zip of them</string>
+    <string name="emoji_import_naming">Each file becomes an emoji named after it</string>
+    <string name="emoji_import_example_file">party parrot.gif</string>
+    <string name="emoji_import_existing_skipped">Names already in this pack are skipped.</string>
+    <string name="emoji_import_public">Public</string>
+    <string name="emoji_import_private">Private</string>
+    <string name="emoji_import_public_hint">Everyone who uses this pack can use them.</string>
+    <string name="emoji_import_private_hint">Encrypted. Only you can see and use them.</string>
+    <string name="emoji_import_choose_files">Choose files</string>
+    <string name="emoji_import_reading">Reading files…</string>
+    <string name="emoji_import_uploading">Uploading %1$d of %2$d</string>
+    <plurals name="emoji_import_added">
+        <item quantity="one">Added %1$d emoji</item>
+        <item quantity="other">Added %1$d emojis</item>
+    </plurals>
+    <string name="emoji_import_none_added">No emojis added</string>
+    <string name="emoji_import_done">Done</string>
+    <string name="emoji_import_skipped">Already in this pack</string>
+    <plurals name="emoji_import_failed">
+        <item quantity="one">%1$d could not upload</item>
+        <item quantity="other">%1$d could not upload</item>
+    </plurals>
+    <string name="emoji_import_unnamed">No usable name</string>
+    <string name="emoji_import_unnamed_hint">Names need letters, digits, - or _.</string>
+    <string name="emoji_import_too_large">Too large</string>
+    <string name="emoji_import_unsupported">Not an image or .zip</string>
+    <string name="emoji_import_unreadable">Could not open</string>
+    <string name="emoji_import_truncated">Only partly imported</string>
+    <string name="emoji_import_truncated_hint">An archive is read up to %1$d images or %2$d MB of them.</string>
+    <string name="emoji_import_more">+%1$d more</string>
+    <string name="emoji_import_cta">Import images or .zip</string>
+    <string name="emoji_pack_empty_title">This pack is empty</string>
+    <string name="emoji_pack_empty_body">Add emojis one at a time, or bring in a whole set of images or a .zip at once.</string>
     <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Community rule violation</string>
     <string name="community_rules_violation_author_denied">You are on this community's deny-list. Posts will not be accepted.</string>
@@ -4236,8 +4299,6 @@
         <item quantity="other">%1$d items</item>
     </plurals>
     <string name="git_repositories">Git Repositories</string>
-    <string name="git_repositories_search_close">Close filter</string>
-    <string name="git_repositories_search_open">Filter repositories</string>
     <string name="github" translatable="false">Github Gist w/ Proof</string>
     <string name="goal_progress">%1$s funded of %2$s sats goal</string>
     <string name="h">h</string>
@@ -5001,6 +5062,9 @@
     <string name="nip46_signer_connect_failed">Could not connect: %1$s</string>
     <string name="nip46_signer_connect_invalid">Not a valid nostrconnect:// link</string>
     <string name="nip46_signer_connect_no_relays">That link carries no relay to connect on</string>
+    <string name="nip46_signer_connect_link_confirm">Connect %1$s (%2$s) to your signer? Amethyst will sign for it in the background, and the signer turns on. Only continue if you opened this link yourself.</string>
+    <string name="nip46_signer_connect_link_repair">%1$s (%2$s) is already paired. This link would replace the relays it uses and turn the signer on. Only continue if you opened this link yourself from that app.</string>
+    <string name="nip46_signer_connect_unnamed_app">Unnamed app</string>
     <plurals name="nip46_signer_connected_count">
         <item quantity="one">%1$d connected app</item>
         <item quantity="other">%1$d connected apps</item>
@@ -5377,6 +5441,12 @@
     <string name="rating_stars_out_of_five">Rated %1$s out of 5</string>
     <string name="reaction">Reaction</string>
     <string name="reactions">Reactions</string>
+    <string name="reaction_choices_mine">Your reactions (%1$d)</string>
+    <string name="reaction_choices_hint">They show in this order when you tap the like button. Tap one to remove it.</string>
+    <string name="reaction_choices_empty">No reactions yet. Pick some below.</string>
+    <string name="reaction_choices_remove">Remove reaction</string>
+    <string name="reaction_choices_add">Add reactions</string>
+    <string name="reaction_choices_manage_packs">Emoji packs</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>

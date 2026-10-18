@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.external_id_scope
 import com.vitorpamplona.amethyst.commons.resources.external_url_scope
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewCard
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -110,7 +111,7 @@ fun DisplayUrlExternalId(
 
     // Respect the data-saver/privacy gate: fetching the preview reaches out to the
     // third-party page, so when previews are off this stays a plain link chip.
-    if (!accountViewModel.settings.showUrlPreview()) {
+    if (LocalMediaCapture.current == null && !accountViewModel.settings.showUrlPreview()) {
         chip()
         return
     }

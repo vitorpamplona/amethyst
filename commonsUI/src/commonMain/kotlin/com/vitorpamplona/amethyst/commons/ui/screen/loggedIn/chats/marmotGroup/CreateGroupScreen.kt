@@ -72,6 +72,8 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -154,6 +156,7 @@ fun CreateGroupScreen(
                 nav.popUpTo(Route.MarmotGroupChat(nostrGroupId), Route.CreateMarmotGroup::class)
             } catch (e: Exception) {
                 isCreating = false
+                currentCoroutineContext().ensureActive()
                 launch(Dispatchers.Main) {
                     longNotice.show(loadStringRes(Res.string.marmot_failed_to_create_group, e.message))
                 }

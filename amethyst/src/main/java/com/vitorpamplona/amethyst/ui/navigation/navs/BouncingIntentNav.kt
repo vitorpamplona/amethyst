@@ -37,7 +37,6 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelCreateEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.net.URLEncoder
 import kotlin.reflect.KClass
 
@@ -70,8 +69,8 @@ private const val NOSTR_URI_PREFIX = "nostr:"
  *
  * `popBack` and `popUpTo` are no-ops; the bouncing model means
  * "leaving" MainActivity is the user's job (system back). `closeDrawer`
- * / `openDrawer` operate on a local DrawerState that nothing renders;
- * implementing them is part of the [INav] contract.
+ * / `openDrawer` are no-ops too: the local DrawerState is only there for
+ * the [INav] contract, nothing renders it.
  */
 @Stable
 class BouncingIntentNav(
@@ -80,9 +79,13 @@ class BouncingIntentNav(
 ) : INav {
     override val drawerState = DrawerState(DrawerValue.Closed)
 
-    override fun closeDrawer() = runBlocking { drawerState.close() }
+    override fun closeDrawer() {
+        // no-op: nothing renders this drawer, and animating it needs a frame clock.
+    }
 
-    override fun openDrawer() = runBlocking { drawerState.open() }
+    override fun openDrawer() {
+        // no-op: nothing renders this drawer, and animating it needs a frame clock.
+    }
 
     override fun nav(route: Route) {
         val uri = routeToBouncingUri(route)

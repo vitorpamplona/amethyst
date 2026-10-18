@@ -69,6 +69,8 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 @Composable
@@ -144,6 +146,7 @@ fun EditGroupInfoScreen(
                             nav.popBack()
                         } catch (e: Exception) {
                             isSaving = false
+                            currentCoroutineContext().ensureActive()
                             launch(Dispatchers.Main) {
                                 longNotice.show(loadStringRes(Res.string.marmot_failed_to_update, e.message))
                             }

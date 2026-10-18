@@ -136,7 +136,9 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">सीधे जालपता का उपयोग करें</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_description">प्रदर्शित उनके नाम के स्थान पर। रहस्यीकृत। इसलिए केवल आप उसको देख सकते हैं।</string>
     <string name="nickname_label">उपनाम</string>
+    <string name="nickname_note_label">निजी टीका</string>
     <string name="nickname_save">अभिलेखन</string>
     <string name="nickname_cancel">निरस्त</string>
     <string name="git_status_open">खुला</string>
@@ -362,6 +364,8 @@
     <string name="qr_scanner_no_code_in_image">उस चित्र में से कोई क्यूआर॰ चित्र अक्षरराशि प्राप्त नहीं</string>
     <string name="qr_scanner_clipboard_empty">टाँकाफलक में कुछ भी नहीं परखने के लिए</string>
     <string name="qr_scanner_pick_one">अक्षरराशि का चयन करें</string>
+    <string name="qr_scanner_desktop_title">क्यूआर चित्र से अक्षरराशि परखें</string>
+    <string name="qr_scanner_desktop_hint">इस संगणक में कोई चित्रग्राहक नहीं। अक्षरराशि का चित्र रूप खोलें अथवा अक्षरराशि की अनुकृति करें चित्र अथवा लेख के रूप में तथा यहाँ चिपकाएँ।</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
         <item quantity="other">%2$s में से %1$s भाग प्राप्त। आगे बढें</item>
@@ -770,6 +774,7 @@
     <string name="quick_action_select">चयन करें</string>
     <string name="share_as_image_generating">पूर्वीक्षण चित्र उत्पादन चालू…</string>
     <string name="share_as_image_watermark">अमेथिस्ट द्वारा बाँटा गया</string>
+    <string name="share_as_image_failed">चित्र बाँटने में असफल</string>
     <string name="share_as_qr">क्यूआर॰ चित्र के रूप में बाँटें</string>
     <string name="share_as_qr_mode_web">जाल योजक</string>
     <string name="share_as_qr_mode_nostr">नोस्टर योजक</string>
@@ -1748,7 +1753,6 @@
     <string name="max_hashtag_limit_title">अधिकतम विषयसूचक प्रति पत्र</string>
     <string name="max_hashtag_limit_explainer">इससे अधिक विषयसूचक युक्त पत्रों को नहीं दिखाता। शून्य रखें अक्षम करने के लिए</string>
     <string name="security_unlimited">असीमित</string>
-    <string name="new_reaction_symbol">नया प्रतिक्रिया चिह्न</string>
     <string name="zapraiser">ज्सापोपार्जन योजना</string>
     <string name="zapraiser_explainer">इस पत्र प्रकाशन के साथ साट्स उपार्जन मात्रा का लक्ष्य जोडता है। अवलम्बन करनेवाले ग्राहक एक प्रगतिमान पट्टी के रूप में इसे दिखा सकते हैं दान प्रोत्साहन हेतु</string>
     <string name="zapraiser_target_amount_in_sats">लक्ष्य मात्रा साट्स में</string>
@@ -2731,8 +2735,6 @@
     <string name="git_repo_settings_web_urls">संचारजाल जालपते (प्रति पंक्ति पर एक)</string>
     <string name="git_repo_settings_topics">विषय (अल्पविराम विभाजित)</string>
     <string name="git_repo_settings_save">अभिलेखन</string>
-    <string name="git_repositories_search_placeholder">छालन इनके अनुसार नाम विषय निमन्त्रक परिपालक…</string>
-    <string name="git_repositories_search_no_results">कोई क्रमलेखकोश वर्तमान सूचनावली में इस खोज के अनुकूल नहीं।</string>
     <string name="profile_tab_apps">क्रमक तथा स्थान</string>
     <string name="profile_tab_repos">क्रमलेखकोष</string>
     <string name="edit_article">लेख सम्पादित करें</string>
@@ -4191,8 +4193,6 @@
         <item quantity="other">%1$d वस्तुएँ</item>
     </plurals>
     <string name="git_repositories">गिट क्रमलेखकोश</string>
-    <string name="git_repositories_search_close">छलनी आवृत</string>
-    <string name="git_repositories_search_open">क्रमलेखकोश छलनी</string>
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="h">घं॰</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>

@@ -26,11 +26,12 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
 import com.vitorpamplona.quartz.nip01Core.hints.PubKeyHintProvider
 import com.vitorpamplona.quartz.nip01Core.hints.types.PubKeyHint
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.dTag.dTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.HashtagTag
-import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
+import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip34Git.repository.tags.CloneTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip34Git.repository.tags.EucTag
@@ -101,16 +102,19 @@ class GitRepositoryEvent(
 
     /**
      * Relays the repository author monitors for patches and issues. NIP-34
-     * encodes this as a single multi-value tag, so the first matching
-     * `relays` tag wins.
+     * encodes this as one multi-value tag; repeated `relays` tags are read too,
+     * as [webs] does, so an edit republishing the list does not drop any.
      */
-    fun relays(): List<String> = tags.firstNotNullOfOrNull(RelaysTag::parse) ?: emptyList()
+    fun relays(): List<String> = tags.flatMap { RelaysTag.parse(it) ?: emptyList() }.distinct()
+
+    /** [relays], normalized; entries that are not relay URLs are dropped. */
+    fun relaysNorm(): List<NormalizedRelayUrl> = tags.flatMap { RelaysTag.parseNorm(it) ?: emptyList() }.distinct()
 
     /**
      * Accepted maintainer pubkeys. The event author is an implicit maintainer
      * and is not required to appear in this list.
      */
-    fun maintainers(): List<HexKey> = tags.firstNotNullOfOrNull(MaintainersTag::parse) ?: emptyList()
+    fun maintainers(): List<HexKey> = tags.flatMap { MaintainersTag.parse(it) ?: emptyList() }.distinct()
 
     fun hashtags(): List<String> = tags.hashtags()
 
@@ -123,9 +127,38 @@ class GitRepositoryEvent(
      */
     fun isPersonalFork(): Boolean = tags.any { HashtagTag.isTagged(it, PERSONAL_FORK) }
 
+    /**
+     * Tags [build] does not write: ngit's `M`/`m`/`o` role tags, `u` (subordinate fork),
+     * `blossoms`, `private`, plain `r` references and anything newer. An edit passes these
+     * back through `build`'s initializer so republishing does not drop them, the way ngit
+     * carries unknown tags over verbatim.
+     */
+    fun unmanagedTags(): List<Array<String>> = tags.filter { it.isNotEmpty() && it[0] !in BUILT_TAG_NAMES && EucTag.parse(it) == null }
+
     companion object {
         const val KIND = 30617
         const val PERSONAL_FORK = "personal-fork"
+
+        /** NIP-31 description, in the same words ngit uses. */
+        fun altDescription(name: String) = "git repository: $name"
+
+        /**
+         * A `d` identifier for a repository called [name]: lowercase kebab-case,
+         * every run of non-alphanumerics collapsing to one hyphen
+         * (`"My Cool Repo!"` → `"my-cool-repo"`). A name with no ASCII
+         * letters or digits is used as is.
+         */
+        fun suggestIdentifier(name: String): String =
+            name
+                .lowercase()
+                .replace(NON_ALPHANUMERIC, "-")
+                .trim('-')
+                .ifEmpty { name.trim() }
+
+        private val NON_ALPHANUMERIC = Regex("[^a-z0-9]+")
+
+        // The tag names build() rewrites from its parameters; the euc `r` tag is matched separately.
+        private val BUILT_TAG_NAMES = setOf("d", "name", "description", "web", "clone", "relays", "maintainers", "t", "alt")
 
         @OptIn(ExperimentalUuidApi::class)
         fun build(
@@ -139,6 +172,7 @@ class GitRepositoryEvent(
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(dTag)
             name(name)
+            alt(altDescription(name))
             description?.let { description(it) }
             webUrl?.let { webUrl(it) }
             cloneUrl?.let { cloneUrl(it) }
@@ -162,6 +196,7 @@ class GitRepositoryEvent(
         ) = eventTemplate(KIND, "", createdAt) {
             dTag(dTag)
             name(name)
+            alt(altDescription(name))
             description?.let { description(it) }
             if (webUrls.isNotEmpty()) webUrls(webUrls)
             if (cloneUrls.isNotEmpty()) cloneUrls(cloneUrls)
@@ -169,7 +204,7 @@ class GitRepositoryEvent(
             if (maintainers.isNotEmpty()) maintainers(maintainers)
             if (hashtags.isNotEmpty()) hashtags(hashtags)
             earliestUniqueCommit?.let { euc(it) }
-            if (personalFork) hashtag(PERSONAL_FORK)
+            if (personalFork) addUniqueValueIfNew(HashtagTag.assemble(PERSONAL_FORK))
             initializer()
         }
     }

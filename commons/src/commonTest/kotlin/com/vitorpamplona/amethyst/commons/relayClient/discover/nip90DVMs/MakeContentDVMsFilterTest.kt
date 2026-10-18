@@ -36,7 +36,7 @@ import kotlin.test.assertTrue
 /**
  * The DVM discovery list renders cached kind-31990 announcements on EVERY top-nav selection, and
  * its freshness gate needs kind-11998 heartbeats to keep flowing. A selection whose per-relay set
- * dispatches to no 31990 filter (the Relay variant; a relay whose author set is momentarily empty)
+ * dispatches to no 31990 filter (a relay whose author set is momentarily empty)
  * must still issue the heartbeat REQ — otherwise cached beats age out and the 60s staleness timer
  * drops every DVM within ~7 minutes (the "DVMs disappear after a while" bug).
  */
@@ -45,12 +45,16 @@ class MakeContentDVMsFilterTest {
     private val otherRelay = RelayUrlNormalizer.normalizeOrNull("wss://other.example/")!!
 
     @Test
-    fun relayVariantIssuesTheHeartbeatFilterEvenWithoutAnnouncementFilters() {
+    fun relayVariantAsksThePickedRelayForAnnouncementsAndHeartbeats() {
         val filters = makeContentDVMsFilter(RelayTopNavPerRelayFilterSet(relay), null, null)
 
-        assertEquals(1, filters.size, "the Relay variant has no 31990 filter but must get the heartbeat REQ")
-        assertEquals(relay, filters.first().relay)
-        assertEquals(listOf(DvmHeartbeatEvent.KIND), (filters.first().filter as? ExplainedFilter)?.kinds)
+        val byKind =
+            filters
+                .groupBy { (it.filter as? ExplainedFilter)?.kinds }
+                .mapValues { entry -> entry.value.map { it.relay } }
+
+        assertEquals(listOf(relay), byKind[listOf(AppDefinitionEvent.KIND)], "the picked relay is asked for its DVMs")
+        assertEquals(listOf(relay), byKind[listOf(DvmHeartbeatEvent.KIND)], "heartbeat REQ rides the same relay")
     }
 
     @Test

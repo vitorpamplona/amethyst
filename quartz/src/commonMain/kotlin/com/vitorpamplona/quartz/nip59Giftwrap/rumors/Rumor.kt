@@ -47,7 +47,10 @@ class Rumor(
         val newKind = kind ?: -1
         val newTags = (tags ?: emptyArray()).plus(event.tags)
         val newContent = content ?: ""
-        val newID = id?.ifBlank { null } ?: EventHasher.hashId(newPubKey, newCreatedAt, newKind, newTags, newContent)
+        // Always computed, never taken from the rumor: it is unsigned, so a claimed id could be any
+        // public event's, and the rumor would then shadow that event in the cache. Hashed over the
+        // rumor's own tags, as the sender did, not the seal's (an `expiration`) merged in above.
+        val newID = EventHasher.hashId(newPubKey, newCreatedAt, newKind, tags ?: emptyArray(), newContent)
         val sig = ""
 
         return EventFactory.create(newID, newPubKey, newCreatedAt, newKind, newTags, newContent, sig)

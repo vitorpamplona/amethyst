@@ -128,7 +128,9 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -626,6 +628,7 @@ private fun ConcordMessageComposer(
                             newMessageModel.sendPost()
                             onMessageSent()
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             launch(Dispatchers.Main) {
                                 shortNotice.show("Failed to send message: ${e.message}")
                             }

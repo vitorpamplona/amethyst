@@ -31,6 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip17Dm.base.BaseDMGroupEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
@@ -273,6 +274,13 @@ class BroadcastRelayPlanner(
                     }
                 }
             }
+        }
+
+        // NIP-34: the repository's own relays are where its patches and issues are read, and a
+        // GRASP server only hosts a repository whose announcement it holds. Issues, patches and
+        // PRs reach this through their `a` tag, which recurses into the cached announcement.
+        if (event is GitRepositoryEvent) {
+            relayList.addAll(event.relaysNorm())
         }
 
         if (event is PollEvent) {

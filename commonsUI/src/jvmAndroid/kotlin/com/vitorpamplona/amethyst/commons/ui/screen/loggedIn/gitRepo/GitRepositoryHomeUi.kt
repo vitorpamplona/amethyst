@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -55,11 +57,15 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitIconTile
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_body
 import com.vitorpamplona.amethyst.commons.resources.git_repo_external_host_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
+import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_body
+import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_get_ngit
+import com.vitorpamplona.amethyst.commons.resources.git_repo_push_first_title
 import com.vitorpamplona.amethyst.commons.resources.git_repo_recent_activity
 import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_branches
 import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_files
@@ -67,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_tags
 import com.vitorpamplona.amethyst.commons.resources.git_repo_stat_updated
 import com.vitorpamplona.amethyst.commons.resources.git_untitled
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.ReactionsRow
@@ -75,13 +82,17 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.gitSubjectO
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip34Git.git.GitCommit
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.patch.GitPatchEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip34Git.repository.NostrCloneUrl
 
 private val CardShape = RoundedCornerShape(15.dp)
 
@@ -387,6 +398,54 @@ fun RepoExternalNotice(event: GitRepositoryEvent) {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// First push — the owner's empty repository.
+// ---------------------------------------------------------------------------
+
+private val PushCardShape = RoundedCornerShape(20.dp)
+
+/**
+ * Shown to the owner when the repository's clone URLs hold no code yet, typically right after
+ * creating it in the app: the two commands that push a project to it through ngit's
+ * git-remote-nostr helper, each with a copy button.
+ */
+@Composable
+fun RepoPushFirstCommit(event: GitRepositoryEvent) {
+    val colors = MaterialTheme.colorScheme
+    val npub = remember(event) { event.pubKey.hexToByteArray().toNpub() }
+    val remote = remember(event) { NostrCloneUrl.build(npub, event.dTag(), event.relays().firstOrNull()) }
+    val shortRemote = remember(remote) { remote.replace(npub, npub.toShortDisplay(5)) }
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(PushCardShape)
+                .background(Brush.linearGradient(listOf(colors.primary.copy(alpha = 0.20f), colors.secondary.copy(alpha = 0.06f))))
+                .border(1.dp, colors.primary.copy(alpha = 0.28f), PushCardShape)
+                .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            GitIconTile(symbol = MaterialSymbols.CloudUpload, size = 40.dp)
+            Text(
+                text = stringRes(Res.string.git_repo_push_first_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        Text(
+            text = stringRes(Res.string.git_repo_push_first_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.grayText,
+        )
+        CommandLine(command = "git remote add origin $remote", display = "git remote add origin $shortRemote")
+        CommandLine("git push -u origin HEAD")
+        ClickableUrlOrBlossom(url = NGIT_URL, urlText = stringRes(Res.string.git_repo_push_first_get_ngit))
+    }
+}
+
+private const val NGIT_URL = "https://ngit.dev"
 
 // ---------------------------------------------------------------------------
 // Last-commit strip.

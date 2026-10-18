@@ -31,6 +31,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.PlatformLock
+import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlin.concurrent.Volatile
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -87,7 +89,9 @@ open class BasicRelayClient(
         const val STABLE_CONNECTION_IN_SECS = TimeUtils.ONE_MINUTE
     }
 
-    private var socket: WebSocket? = null
+    // Volatile: each socket's listener compares itself to it (MyWebsocketListener.owner) from the
+    // transport's own threads.
+    @Volatile private var socket: WebSocket? = null
 
     // True if it has received the onOpen call from the socket.
     // @Volatile: written on the serialized socket-callback thread, read from the
@@ -109,6 +113,17 @@ open class BasicRelayClient(
 
     // Makes sure only one socket is open for each url
     private var connectingMutex = AtomicBoolean(false)
+
+    // A fresh connection replays every subscription and pending EVENT from onOpen
+    // (INostrClient.syncFilters, through [sendFromSync]). Commands sent through the normal paths
+    // while that replay runs are held and sent right after it, in order: otherwise a REQ
+    // registered while the socket was opening could reach the relay after an EVENT sent once it
+    // was up, and an ephemeral answer to that EVENT (a NIP-46 reply, kind 24133) would reach
+    // nobody. [replayGate] guards only the flag and the queue; no I/O or callback runs under it.
+    private val replayGate = PlatformLock()
+
+    @Volatile private var replaying = false
+    private val heldDuringReplay = ArrayList<Command>()
 
     fun isConnectionStarted(): Boolean = socket != null
 
@@ -138,8 +153,11 @@ open class BasicRelayClient(
 
             lastConnectTentativeInSeconds = nowInSeconds()
 
-            socket = socketBuilder.build(url, MyWebsocketListener())
-            socket?.connect()
+            val listenerForSocket = MyWebsocketListener()
+            val newSocket = socketBuilder.build(url, listenerForSocket)
+            listenerForSocket.owner = newSocket
+            socket = newSocket
+            newSocket.connect()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             val typeName = e::class.simpleName
@@ -154,15 +172,36 @@ open class BasicRelayClient(
     }
 
     inner class MyWebsocketListener : WebSocketListener {
+        /**
+         * The socket this listener was built for. A socket may now deliver its last messages and
+         * its end after the relay closed it (BasicOkHttpWebSocket drains what it had received),
+         * and a reconnect pass may already have replaced it by then: what an old socket says must
+         * not reach the new session, where a late EOSE would end the new REQ's page early.
+         */
+        @Volatile var owner: WebSocket? = null
+
+        /** True while [owner] is still this relay's socket. */
+        private fun isCurrent() = owner === socket
+
+        /** True when a newer socket replaced [owner]; an end with no socket at all is still ours. */
+        private fun isReplaced() = socket != null && owner !== socket
+
         override fun onOpen(
             pingMillis: Int,
             compression: Boolean,
         ) {
-            markConnectionAsReady(compression)
-            listener.onConnected(this@BasicRelayClient, pingMillis, compression)
+            if (!isCurrent()) return
+            replayGate.withLock { replaying = true }
+            try {
+                markConnectionAsReady(compression)
+                listener.onConnected(this@BasicRelayClient, pingMillis, compression)
+            } finally {
+                releaseHeldDuringReplay()
+            }
         }
 
         override suspend fun onMessage(text: String) {
+            if (!isCurrent()) return
             try {
                 val msg = decoder.decode(text)
                 // Before the listener: a refusal's back-off must hold what the listener re-sends.
@@ -179,6 +218,7 @@ open class BasicRelayClient(
             code: Int,
             reason: String,
         ) {
+            if (isReplaced()) return
             markConnectionAsClosed()
             listener.onDisconnected(this@BasicRelayClient)
         }
@@ -190,6 +230,7 @@ open class BasicRelayClient(
         ) {
             // socket is already closed
             // socket?.disconnect()
+            if (isReplaced()) return
 
             if (socket == null) {
                 // comes from the disconnect action.
@@ -357,9 +398,53 @@ open class BasicRelayClient(
 
     override fun sendIfConnected(cmd: Command) {
         if (socket == null) return
+        if (replaying && holdDuringReplay(cmd)) return
+        sendNow(cmd)
+    }
+
+    /** [sendOrConnectAndSync] for the connection's replay: never held behind it (see [replayGate]). */
+    override fun sendFromSync(cmd: Command) {
+        if (isConnectionStarted()) {
+            if (isReady && cmd.isValid()) {
+                sendNow(cmd)
+            }
+        } else {
+            connectAndSyncFiltersIfDisconnected()
+        }
+    }
+
+    private fun sendNow(cmd: Command) {
+        if (socket == null) return
         // Held while the relay's back-off for its type runs; the gate sends it when due.
         if (rateLimits?.admit(cmd) == false) return
         write(cmd)
+    }
+
+    /** Queues [cmd] behind a replay still running; false once it is over and [cmd] may go now. */
+    private fun holdDuringReplay(cmd: Command): Boolean =
+        replayGate.withLock {
+            if (replaying) heldDuringReplay.add(cmd)
+            replaying
+        }
+
+    /**
+     * Sends what was held during the replay, batch by batch, and ends the hold only when the queue
+     * is empty under the gate: a command held while the last batch was going out is sent after it,
+     * and one sent once the hold has ended follows everything that was held.
+     */
+    private fun releaseHeldDuringReplay() {
+        while (true) {
+            val batch =
+                replayGate.withLock {
+                    if (heldDuringReplay.isEmpty()) {
+                        replaying = false
+                        null
+                    } else {
+                        ArrayList(heldDuringReplay).also { heldDuringReplay.clear() }
+                    }
+                } ?: return
+            batch.forEach(::sendNow)
+        }
     }
 
     /** Puts [cmd] on the socket. False when there is no socket to put it on. */

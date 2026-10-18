@@ -68,7 +68,7 @@ fun INostrClient.fetchAsFlow(
         val subId = RandomInstance.randomChars(10)
         val waitOnAuthRequired = hasAuthResponder()
         val eventIds = mutableSetOf<HexKey>()
-        var currentEvents = listOf<Event>()
+        val currentEvents = EventListAccumulator()
 
         val listener =
             object : SubscriptionListener {
@@ -78,10 +78,9 @@ fun INostrClient.fetchAsFlow(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    if (event.id !in eventIds) {
-                        currentEvents = currentEvents + event
-                        eventIds.add(event.id)
-                        trySend(currentEvents)
+                    if (eventIds.add(event.id)) {
+                        currentEvents.append(event)
+                        trySend(currentEvents.snapshot())
                     }
                 }
 

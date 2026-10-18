@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -292,6 +294,7 @@ private fun SendSide(
                         )
                     code = runtime.handOff(migration, accountViewModel.account.outboxRelays.flow.value).encode()
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message
                 } finally {
                     busy = false
@@ -378,6 +381,7 @@ private fun ReceiveSide(
                     done = snapshot.groups.size
                     typed = ""
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     error = e.message
                 } finally {
                     busy = false

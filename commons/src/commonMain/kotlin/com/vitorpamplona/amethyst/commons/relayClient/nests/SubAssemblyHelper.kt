@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -44,6 +45,7 @@ fun makeNestsFilter(
             is AllFollowsTopNavPerRelayFilterSet -> filterNestsByFollows(feedSettings, since, defaultSince)
             is AuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)
             is GlobalTopNavPerRelayFilterSet -> filterNestsGlobal(feedSettings, since, defaultSince)
+            is RelayTopNavPerRelayFilterSet -> filterNestsByRelay(feedSettings, since, defaultSince)
             is HashtagTopNavPerRelayFilterSet -> filterNestsByHashtag(feedSettings, since, defaultSince)
             is LocationTopNavPerRelayFilterSet -> filterNestsByGeohash(feedSettings, since, defaultSince)
             is MutedAuthorsTopNavPerRelayFilterSet -> filterNestsByAuthors(feedSettings, since, defaultSince)

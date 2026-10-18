@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedMediaUrl
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.service.image.BlossomFetcher
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
@@ -105,9 +106,11 @@ import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSym
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.components.pdf.PdfPreviewCard
@@ -128,7 +131,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.hashVerifierMark
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.images.BlossomFetcher
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
@@ -141,9 +143,7 @@ import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -446,10 +446,11 @@ fun LocalImageView(
     fullResolution: Boolean = false,
 ) {
     if (content.localFileExists()) {
+        val capture = LocalMediaCapture.current
         val showImage =
             remember {
                 mutableStateOf(
-                    if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                    alwayShowImage || capture != null || accountViewModel.settings.showImages(),
                 )
             }
 
@@ -479,6 +480,7 @@ fun LocalImageView(
                     when (state) {
                         is AsyncImagePainter.State.Loading,
                         -> {
+                            ReportCaptureLoading()
                             if (content.blurhash != null || content.thumbhash != null) {
                                 if (ratio != null) {
                                     DisplayBlurHash(
@@ -581,10 +583,11 @@ fun UrlImageView(
 ) {
     val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
 
+    val capture = LocalMediaCapture.current
     val showImage =
         remember {
             mutableStateOf(
-                if (alwayShowImage) true else accountViewModel.settings.showImages(),
+                alwayShowImage || capture != null || accountViewModel.settings.showImages(),
             )
         }
 
@@ -614,6 +617,7 @@ fun UrlImageView(
                 when (state) {
                     is AsyncImagePainter.State.Loading,
                     -> {
+                        ReportCaptureLoading()
                         if (content.blurhash != null || content.thumbhash != null) {
                             if (ratio != null) {
                                 val modifier =
@@ -963,7 +967,6 @@ private suspend fun shareImageFile(
     }
 }
 
-@OptIn(DelicateCoroutinesApi::class)
 private suspend fun shareVideoFile(
     context: Context,
     videoUrl: String,
@@ -1019,8 +1022,8 @@ private suspend fun shareVideoFile(
         }
 
         // Schedule cleanup to allow the receiving app time to copy the file.
-        // GlobalScope is intentional: cleanup must survive after share UI is dismissed.
-        GlobalScope.launch(Dispatchers.IO) {
+        // The application scope, not this one: cleanup must survive after the share UI is dismissed.
+        Amethyst.instance.applicationIOScope.launch {
             delay(SHARED_VIDEO_CLEANUP_DELAY_MS)
             sharedFile?.let { file ->
                 if (!file.delete()) {

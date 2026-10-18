@@ -21,17 +21,19 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
 import okhttp3.OkHttpClient
+import java.io.IOException
 
 /**
- * How the desktop media code (the player, video thumbnails, "save") fetches a URL. The shared-UI
- * window [install]s the app's role-based clients, which follow the user's Tor choice for media
- * and decrypt the encrypted blobs registered in [keyCache] (NIP-17 DM files, Cordn and Marmot
- * media). Until then — and in the legacy app — it is [DesktopHttpClient]'s client, no keys and no Tor.
+ * How the desktop media code (the player, video thumbnails, "save", animated GIFs) fetches a URL.
+ * The shared-UI window [install]s the app's role-based clients, which follow the user's Tor choice
+ * for media and decrypt the encrypted blobs registered in [keyCache] (NIP-17 DM files, Cordn and
+ * Marmot media). Nothing fetches before then: `main` installs them before the first window opens.
  */
 object MediaHttp {
-    @Volatile private var clientFor: (String) -> OkHttpClient = { DesktopHttpClient.currentClient() }
+    @Volatile private var clientFor: (String) -> OkHttpClient = { notInstalled() }
+
+    @Volatile private var imageClientFor: (String) -> OkHttpClient = { notInstalled() }
 
     @Volatile private var torFor: (String) -> Boolean = { false }
 
@@ -43,13 +45,18 @@ object MediaHttp {
         clientFor: (String) -> OkHttpClient,
         keyCache: EncryptionKeyCache,
         viaTor: (String) -> Boolean = { false },
+        imageClientFor: (String) -> OkHttpClient = clientFor,
     ) {
         this.clientFor = clientFor
+        this.imageClientFor = imageClientFor
         this.keyCache = keyCache
         this.torFor = viaTor
     }
 
     fun client(url: String): OkHttpClient = clientFor(url)
+
+    /** The client for an image Coil does not load itself (animated GIFs): the image role's. */
+    fun imageClient(url: String): OkHttpClient = imageClientFor(url)
 
     /**
      * Whether a video at [url] goes over Tor: the same rule Android's player follows (the video
@@ -63,4 +70,7 @@ object MediaHttp {
 
     /** The MIME type the event declared for the encrypted blob at [url], if any. */
     fun encryptedMimeType(url: String): String? = keyCache?.get(url)?.mimeType
+
+    // Fails the request rather than falling back to a direct connection that would skip Tor.
+    private fun notInstalled(): Nothing = throw IOException("MediaHttp is not installed")
 }

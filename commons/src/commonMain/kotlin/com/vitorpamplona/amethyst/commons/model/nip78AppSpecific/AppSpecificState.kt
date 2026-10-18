@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip78AppSpecific
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.AccountSyncedSettingsInternal
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.awaitCreatedAtToSupersede
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -47,6 +49,7 @@ class AppSpecificState(
 ) {
     companion object {
         const val APP_SPECIFIC_DATA_D_TAG = "AmethystSettings"
+        private const val MAX_TRACKED_SNAPSHOTS = 16
     }
 
     // Creates a long-term reference for this note so that the GC doesn't collect the note it self
@@ -71,6 +74,19 @@ class AppSpecificState(
      */
     private var lastPublishedAt = 0L
 
+    /**
+     * Ids of the versions [saveNewAppSpecificData] built from the live settings, the latest few.
+     *
+     * When one comes back through the cache its content is a snapshot the live settings already
+     * hold, or have moved past: the pickers publish after a debounce, so the echo of one publish
+     * can land while newer toggles wait for the next. Merging it would revert those toggles, and
+     * the next publish would then read and send the reverted state. So it only becomes the backup.
+     * A restore re-signs an older version on purpose and is not one of these: that echo merges.
+     *
+     * An androidx LruCache, which synchronizes internally: written after signing, read by the collector.
+     */
+    private val snapshotsSignedHere = LruCache<HexKey, Boolean>(MAX_TRACKED_SNAPSHOTS)
+
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val (toInternal, createdAt) =
             stampOrder.withLock {
@@ -80,13 +96,16 @@ class AppSpecificState(
                 snapshot to stamp
             }
 
-        return signer.sign(
-            AppSpecificDataEvent.build(
-                dTag = APP_SPECIFIC_DATA_D_TAG,
-                description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
-                createdAt = createdAt,
-            ),
-        )
+        val signed =
+            signer.sign(
+                AppSpecificDataEvent.build(
+                    dTag = APP_SPECIFIC_DATA_D_TAG,
+                    description = signer.nip44Encrypt(JsonMapper.toJson(toInternal), signer.pubKey),
+                    createdAt = createdAt,
+                ),
+            )
+        snapshotsSignedHere.put(signed.id, true)
+        return signed
     }
 
     init {
@@ -113,6 +132,13 @@ class AppSpecificState(
                     try {
                         Log.d("AccountRegisterObservers") { "Updating AppSpecificData for ${signer.pubKey}" }
                         (it.note.event as? AppSpecificDataEvent)?.let { event ->
+                            // Our own snapshot coming back: see [snapshotsSignedHere]. Nothing to
+                            // decrypt either, which spares an external signer a round trip.
+                            if (snapshotsSignedHere[event.id] != null) {
+                                settings.keepOwnAppSpecificData(event)
+                                return@let
+                            }
+
                             // A blob another app emptied has nothing to decrypt, so it used to die
                             // in the catch below — yet an empty version is exactly the wipe the
                             // backup guard exists to question, and [AccountSettings] already

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.app
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateManager
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
@@ -34,6 +35,8 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
@@ -63,8 +66,10 @@ import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClien
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderQueryState
 import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersistence
 import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
@@ -72,10 +77,10 @@ import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatu
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
 import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.amethyst.commons.service.http.OkHttpWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.OnionLocationCache
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
@@ -86,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegEncoders
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
@@ -93,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
+import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostScheduler
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.DesktopScheduledPostStore
@@ -101,6 +108,7 @@ import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
 import com.vitorpamplona.amethyst.desktop.update.InstallChannel
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
@@ -108,6 +116,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
@@ -115,6 +124,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraBackend
 import com.vitorpamplona.quartz.utils.Log
@@ -130,11 +140,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -270,7 +284,7 @@ class DesktopAppModules(
         )
 
     val websocketBuilder =
-        OkHttpWebSocket.Builder(
+        BasicOkHttpWebSocket.Builder(
             httpClient = { url -> okHttpClientForRelays.getHttpClient(torEvaluatorFlow.shouldUseTorForRelay(url)) },
             // Tor-routed relays wait for Tor's SOCKS port; RelayProxyClientConnector re-dials them
             // the moment Tor is up.
@@ -356,6 +370,56 @@ class DesktopAppModules(
     val sources: RelaySubscriptionsCoordinator =
         RelaySubscriptionsCoordinator(cache, client, authCoordinator.receiver, failureTracker, applicationIOScope)
 
+    /** Signs the BUD-01 retry when a gated Blossom host answers an image fetch with 401. */
+    val blossomReadAuthTokens =
+        BlossomReadAuthTokenProvider(
+            signerProvider = { sessionManager.loggedInAccount()?.signer },
+            scope = applicationIOScope,
+        )
+
+    /**
+     * BUD-10: resolves a `blossom:` URI to a server that holds the blob, from the author's and the
+     * user's Blossom server lists. Android's also tries the local Blossom cache, which the desktop
+     * does not probe.
+     */
+    val blossomResolver by lazy {
+        BlossomServerResolver(
+            loggedInUsers = { listOfNotNull(sessionManager.loggedInAccount()?.pubKey) },
+            blossomServers = { addresses ->
+                val account = sessionManager.loggedInAccount() ?: return@BlossomServerResolver listOf()
+                addresses.map { address ->
+                    subscribedFlow(address, account).transform {
+                        (it.note.event as? BlossomServersEvent)?.let { event -> emit(event) }
+                    }
+                }
+            },
+            httpClientBuilder = roleBasedHttpClientBuilder,
+            scope = applicationIOScope,
+        )
+    }
+
+    /** The note at [address], kept loaded from relays while the flow is collected. */
+    private fun subscribedFlow(
+        address: Address,
+        account: Account,
+    ): Flow<NoteState> {
+        val note = cache.getOrCreateAddressableNote(address)
+
+        val userSub = UserFinderQueryState(note.author ?: cache.getOrCreateUser(address.pubKeyHex), account)
+        val noteSub = EventFinderQueryState(note, account)
+
+        return note
+            .flow()
+            .metadata.stateFlow
+            .onStart {
+                sources.userFinder.subscribe(userSub)
+                sources.eventFinder.subscribe(noteSub)
+            }.onCompletion {
+                sources.eventFinder.unsubscribe(noteSub)
+                sources.userFinder.unsubscribe(userSub)
+            }
+    }
+
     val signerPermissionStore by lazy { DataStoreNostrSignerPermissionStore(appStores) }
 
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
@@ -401,6 +465,9 @@ class DesktopAppModules(
 
     /** OS notifications: the native notifier, its settings, and what is worth a notification. */
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
+
+    /** "Starting soon" notifications for the appointments the user is attending. */
+    val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
     /** What key storage asks the user (the key-file password, a key this device does not keep). */
     private val keyPrompts = KeyStoragePrompts()
@@ -623,6 +690,23 @@ class DesktopAppModules(
 
         applicationIOScope.launch { openKeysAndLogIn() }
 
+        calendarReminders.start()
+
+        // Web of Trust: Android brings the active account's network index up to date each time
+        // the app comes to the foreground, and once a day from a worker. A desktop window stays
+        // open for days, so check on login and then every hour; a no-op unless a sync is due.
+        applicationIOScope.launch {
+            sessionManager.accountContent
+                .map { (it as? AccountState.LoggedIn)?.account }
+                .distinctUntilChanged()
+                .collectLatest { account ->
+                    while (account != null) {
+                        account.trustNetwork.syncIfStale()
+                        delay(TRUST_NETWORK_CHECK_INTERVAL_MS)
+                    }
+                }
+        }
+
         applicationIOScope.launch {
             val updates =
                 DesktopAppUpdates.create(
@@ -648,6 +732,7 @@ class DesktopAppModules(
         private const val HEAP_CHECK_INTERVAL_MS = 60_000L
         private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
         private const val FLUSH_TIMEOUT_MS = 3_000L
+        private const val TRUST_NETWORK_CHECK_INTERVAL_MS = 60 * 60 * 1000L
 
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")

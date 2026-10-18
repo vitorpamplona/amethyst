@@ -76,6 +76,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Coor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
 
@@ -266,6 +268,7 @@ fun CordnLinkScreen(
                                             runtime.requestToJoin(coordinator, result.ref.gid)
                                             asked
                                         } catch (e: Exception) {
+                                            currentCoroutineContext().ensureActive()
                                             e.message ?: requestFailed
                                         }
                                     requesting = false

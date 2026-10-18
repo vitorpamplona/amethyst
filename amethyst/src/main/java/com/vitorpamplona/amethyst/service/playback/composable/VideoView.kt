@@ -39,12 +39,16 @@ import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
+import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.ImageUrlWithDownloadButton
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size75dp
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.videoGalleryModifier
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import kotlinx.collections.immutable.ImmutableList
@@ -115,7 +119,10 @@ fun VideoView(
 
     // Once the video is being shown, only honor the user's autoplay preference when it was auto-loaded.
     // If the user manually tapped the download button, they want it to play.
-    val autoplay = alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value)
+    // Never inside a share-as-image capture: audio keeps its player there, unseen and unstoppable.
+    val autoplay =
+        LocalMediaCapture.current == null &&
+            (alwaysShowVideo || (initialAutoStart && accountViewModel.settings.autoPlayVideos()) || (!initialAutoStart && automaticallyStartPlayback.value))
 
     // Resolve the aspect ratio once per composition. Prime the URL-keyed cache from the imeta
     // dim tag so the next time this video appears (PiP, dialog, list re-enter) the cache hits
@@ -138,6 +145,22 @@ fun VideoView(
                 MediaAspectRatioCache.get(videoUri)
             }
         }
+
+    // A player surface can't be recorded into a share-as-image capture: draw a still instead.
+    if (LocalMediaCapture.current != null && waveform == null && !RichTextParser.isAudioContent(mimeType, videoUri)) {
+        // Coil's VideoFrameDecoder reads the first frame of a file, which means downloading all of
+        // it: only where the user lets videos load. An HLS playlist has no frame to decode.
+        val frameFromVideo = !isLiveStream && !isHlsMedia(videoUri, mimeType) && accountViewModel.settings.startVideoPlayback()
+        VideoStillFrame(
+            model = artworkUri ?: videoUri.takeIf { frameFromVideo },
+            ratio = ratio,
+            blurhash = blurhash,
+            thumbhash = thumbhash,
+            borderModifier = borderModifier,
+            contentDescription = title,
+        )
+        return
+    }
 
     if (blurhash == null && thumbhash == null) {
         val modifier =

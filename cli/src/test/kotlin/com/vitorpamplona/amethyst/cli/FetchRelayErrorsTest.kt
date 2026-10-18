@@ -32,6 +32,13 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.policies.PolicyResult
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import kotlinx.coroutines.runBlocking
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.security.MessageDigest
+import java.util.Base64
+import java.util.Collections
+import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -119,6 +126,47 @@ class FetchRelayErrorsTest {
         assertRefusal(error["relay_errors"], refusing.url)
     }
 
+    // A relay that takes the connection and never answers came back as `count: 0`, exit 0, with no
+    // warning: indistinguishable from a relay that holds nothing.
+    @Test
+    fun aRelaySilentThroughAPaginatedWalkIsReportedAsNoRelayServed() {
+        SilentRelay().use { silent ->
+            val r = amy("--json", "fetch", "--kind", "1", "--paginate", "--limit", "0", "--relay", silent.url, "--timeout", "2")
+
+            assertEquals(1, r.exit, "silence is not an empty success: ${r.stdout} ${r.stderr}")
+            val error = jsonErrorOf(r)
+            assertEquals("no_relay_served", error["error"].asText())
+            assertEquals("timeout", error["relay_errors"][silent.url.normalized()]["reason"].asText(), "$error")
+        }
+    }
+
+    // The single-REQ fetch had the same hole: a relay that never sent EOSE was simply left out.
+    @Test
+    fun aRelaySilentThroughAPlainFetchIsReportedAsNoRelayServed() {
+        SilentRelay().use { silent ->
+            val r = amy("--json", "fetch", "--kind", "1", "--relay", silent.url, "--timeout", "2")
+
+            assertEquals(1, r.exit, "silence is not an empty success: ${r.stdout} ${r.stderr}")
+            val error = jsonErrorOf(r)
+            assertEquals("no_relay_served", error["error"].asText())
+            assertEquals("timeout", error["relay_errors"][silent.url.normalized()]["reason"].asText(), "$error")
+        }
+    }
+
+    @Test
+    fun aServingRelayStillSucceedsAndListsTheOneThatStayedSilent() {
+        SilentRelay().use { silent ->
+            val r = amy("--json", "fetch", "--kind", "1", "--relay", "${silent.url},${serving.url}", "--timeout", "2")
+
+            assertEquals(0, r.exit, r.stderr)
+            val result = Output.mapper.readTree(r.stdoutLines.single())
+            assertEquals(1, result["count"].asInt(), "$result")
+            assertEquals("timeout", result["relay_errors"][silent.url.normalized()]["reason"].asText(), "$result")
+            assertNull(result["relay_errors"][serving.url.normalized()], "the serving relay answered: $result")
+            assertTrue(r.stderr.contains("warning: ${silent.url.normalized()} stopped answering"), r.stderr)
+        }
+    }
+
     @Test
     fun aServingRelayStillSucceedsAndListsTheOneThatRefused() {
         val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", "${refusing.url},${serving.url}", "--timeout", "5")
@@ -160,6 +208,42 @@ class FetchRelayErrorsTest {
         assertTrue(entry != null, "expected ${relayUrl.normalized()} in relay_errors: $relayErrors")
         assertEquals("closed", entry["reason"].asText())
         assertEquals(REASON, entry["message"].asText())
+    }
+
+    /** Completes the WebSocket handshake of every connection, then reads and never answers. */
+    private class SilentRelay : AutoCloseable {
+        private val server = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
+        private val sockets = Collections.synchronizedList(mutableListOf<Socket>())
+        val url = "ws://127.0.0.1:${server.localPort}/"
+
+        init {
+            thread(isDaemon = true) {
+                while (!server.isClosed) {
+                    val socket = runCatching { server.accept() }.getOrNull() ?: break
+                    sockets.add(socket)
+                    thread(isDaemon = true) { serve(socket) }
+                }
+            }
+        }
+
+        private fun serve(socket: Socket) {
+            runCatching {
+                val input = socket.getInputStream().bufferedReader()
+                val key =
+                    generateSequence { input.readLine() }
+                        .takeWhile { it.isNotEmpty() }
+                        .firstNotNullOfOrNull { line -> line.takeIf { it.startsWith("Sec-WebSocket-Key:", ignoreCase = true) }?.substringAfter(':')?.trim() }
+                val accept = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest("${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11".toByteArray()))
+                socket.getOutputStream().write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $accept\r\n\r\n".toByteArray())
+                socket.getOutputStream().flush()
+                while (input.read() >= 0) Unit
+            }
+        }
+
+        override fun close() {
+            server.close()
+            synchronized(sockets) { sockets.forEach { runCatching { it.close() } } }
+        }
     }
 
     /** relay_errors is keyed by the normalized URL amy queried. */

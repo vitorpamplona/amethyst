@@ -69,7 +69,9 @@ import com.vitorpamplona.quartz.nip47WalletConnect.rpc.Response
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
@@ -459,6 +461,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 updateWalletInfo(walletId) { it.copy(error = text(Res.string.wallet_request_failed, e.message), isLoading = false) }
             }
         }
@@ -481,6 +484,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
             }
         }
     }
@@ -536,6 +540,7 @@ class WalletViewModel : ViewModel() {
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
+                currentCoroutineContext().ensureActive()
                 _error.value = text(Res.string.wallet_request_failed, e.message)
                 _isLoading.value = false
             }
@@ -561,6 +566,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (_: Exception) {
+                currentCoroutineContext().ensureActive()
             }
         }
     }
@@ -626,6 +632,7 @@ class WalletViewModel : ViewModel() {
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
+                currentCoroutineContext().ensureActive()
                 _error.value = text(Res.string.wallet_request_failed, e.message)
                 _isLoading.value = false
             }
@@ -682,6 +689,7 @@ class WalletViewModel : ViewModel() {
                     }
             } catch (e: Exception) {
                 timeoutJob.cancel()
+                currentCoroutineContext().ensureActive()
                 _error.value = text(Res.string.wallet_request_failed, e.message)
                 _isLoadingMore.value = false
             }
@@ -720,6 +728,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 _sendState.value = SendState.Error(e.message ?: text(Res.string.send_payment_failed))
             }
         }
@@ -767,6 +776,7 @@ class WalletViewModel : ViewModel() {
                     }
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 _receiveState.value = ReceiveState.Error(e.message ?: text(Res.string.wallet_invoice_creation_failed))
             }
         }

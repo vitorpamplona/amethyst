@@ -130,6 +130,32 @@ class DebouncedPublisherTest {
         }
 
     @Test
+    fun anEditDuringAnInFlightPublishQueuesAnotherInsteadOfCancellingIt() =
+        runTest {
+            // The reaction choices screen saves on every tap, so a tap can land while the previous
+            // publish waits on a remote signer. Cancelling it would drop that signing request and
+            // start over; it must finish, and the new edit publish after its own debounce.
+            var started = 0
+            var finished = 0
+            val publisher =
+                publisher {
+                    started++
+                    delay(5_000)
+                    finished++
+                }
+
+            publisher.schedule()
+            advanceTimeBy(debounce + 100)
+            assertEquals(1, started)
+
+            publisher.schedule()
+            advanceUntilIdle()
+
+            assertEquals(2, started)
+            assertEquals(2, finished)
+        }
+
+    @Test
     fun flushWithNothingPendingIsANoOp() =
         runTest {
             var published = 0

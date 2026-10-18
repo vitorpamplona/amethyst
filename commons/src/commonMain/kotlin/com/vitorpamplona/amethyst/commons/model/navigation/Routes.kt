@@ -70,6 +70,8 @@ sealed class Route {
 
     @Serializable object NewCommunity : Route()
 
+    @Serializable object NewGitRepository : Route()
+
     @Serializable data class EditCommunity(
         val kind: Int,
         val pubKeyHex: HexKey,

@@ -39,7 +39,7 @@ import java.nio.file.Files
 // The system's file dialog. It is modal, so it runs on the UI thread like any desktop dialog; the
 // window keeps painting through its nested event loop.
 
-private val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "heic", "bmp")
+internal val IMAGE_EXTENSIONS = setOf("png", "jpg", "jpeg", "gif", "webp", "svg", "avif", "heic", "bmp")
 private val MEDIA_EXTENSIONS = IMAGE_EXTENSIONS + setOf("mp4", "webm", "mov", "mkv", "m4v", "mp3", "m4a", "ogg", "opus", "wav", "flac", "aac")
 
 private fun extensionOf(file: File) = file.name.substringAfterLast('.', "").lowercase()
@@ -62,7 +62,7 @@ private fun mimeTypeOf(file: File): String? =
             else -> null
         }
 
-private fun pickFiles(
+internal fun pickFiles(
     title: String,
     multiple: Boolean,
     extensions: Set<String>,
@@ -76,7 +76,7 @@ private fun pickFiles(
     return dialog.files?.toList().orEmpty()
 }
 
-private fun File.toSelectedMedia() = SelectedMedia(StringMediaUri(absolutePath), mimeTypeOf(this))
+internal fun File.toSelectedMedia() = SelectedMedia(StringMediaUri(absolutePath), mimeTypeOf(this))
 
 @Composable
 actual fun GallerySelect(onImageUri: (ImmutableList<SelectedMedia>) -> Unit) {

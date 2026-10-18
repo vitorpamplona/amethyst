@@ -135,6 +135,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 
 /**
@@ -442,6 +444,7 @@ fun CordnCreateGroupScreen(
                             try {
                                 draft.discovered = runtime.discover(accountViewModel.account.outboxRelays.flow.value)
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 error = e.message ?: discoverFailed
                             } finally {
                                 discovering = false
@@ -598,6 +601,7 @@ fun CordnCreateGroupScreen(
                                 creation = result
                             }
                         } catch (e: Exception) {
+                            currentCoroutineContext().ensureActive()
                             error = e.message ?: failureFallback
                         } finally {
                             busy = false

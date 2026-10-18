@@ -26,6 +26,7 @@ import com.vitorpamplona.nestsclient.trace.NestsTrace
 import com.vitorpamplona.nestsclient.trace.jsonStr
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -34,6 +35,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
@@ -1140,7 +1143,7 @@ class MoqLiteSession internal constructor(
                             // of FINing without writing anything,
                             // which left the subscriber's ABR
                             // estimator with no signal.
-                            runCatching {
+                            runCatchingCancellable {
                                 bidi.write(MoqLiteCodec.encodeProbe(MoqLiteProbe(bitrate = NESTS_AUDIO_BITRATE_HINT_BPS), version))
                                 bidi.finish()
                             }
@@ -1442,7 +1445,7 @@ class MoqLiteSession internal constructor(
             // bidi pump's per-bidi coroutine if it's slow (e.g. a
             // catalog send blocked on transport backpressure).
             hookToFire?.let { hook ->
-                scope.launch { runCatching { hook.invoke() } }
+                scope.launch { runCatchingCancellable { hook.invoke() } }
             }
         }
 
@@ -1510,6 +1513,7 @@ class MoqLiteSession internal constructor(
                     // not-muted" silently masked publisher disconnects.
                     runCatching { group.uni.finish() }
                     currentGroup = null
+                    currentCoroutineContext().ensureActive()
                     return false
                 }
             }

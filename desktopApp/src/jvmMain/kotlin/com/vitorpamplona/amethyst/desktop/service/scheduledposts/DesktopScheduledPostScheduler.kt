@@ -30,10 +30,11 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 
 /**
@@ -116,7 +117,7 @@ class DesktopScheduledPostScheduler(
             // drainer will handle the due posts).
             val report =
                 ScheduledPostLock.withDrainLock {
-                    runBlocking { publisher.drainDue(TimeUtils.now(), accountPubkey) }
+                    publisher.drainDue(TimeUtils.now(), accountPubkey)
                 } ?: return
             if (report.published > 0 || report.failed > 0 || report.skipped > 0) {
                 Log.i(TAG) {
@@ -125,6 +126,7 @@ class DesktopScheduledPostScheduler(
                 }
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.e(TAG, "Scheduled post drain failed", e)
         } finally {
             drainGuard.unlock()

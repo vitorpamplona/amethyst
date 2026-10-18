@@ -44,8 +44,10 @@ class PoolEventOutbox {
      * the rate decayed as the outbox grew (45.6 -> 44.6 -> 43.2 ev/s across
      * three windows). The store fetch behind the same loop cost 1.2ms.
      *
-     * [LargeCache] is ConcurrentHashMap on JVM/Android, so put/get/remove are
-     * O(1) and cross-thread visibility no longer needs the volatile republish.
+     * [LargeCache] is a ConcurrentSkipListMap on JVM/Android (ordered, for the range
+     * scans other caches need; a striped hash map on native), so put/get/remove are
+     * O(log n), not O(n), and cross-thread visibility no longer needs the volatile
+     * republish.
      */
     private val eventOutbox = LargeCache<HexKey, PoolEventOutboxState>()
     val relays = MutableStateFlow(setOf<NormalizedRelayUrl>())
@@ -220,7 +222,7 @@ class PoolEventOutbox {
     // --------------------------
     // State management functions
     // --------------------------
-    suspend fun syncState(
+    fun syncState(
         relay: NormalizedRelayUrl,
         sync: (Command) -> Unit,
     ) {
@@ -231,7 +233,7 @@ class PoolEventOutbox {
         }
     }
 
-    suspend fun onIncomingMessage(
+    fun onIncomingMessage(
         relay: NormalizedRelayUrl,
         msg: Message,
     ) {

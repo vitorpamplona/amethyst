@@ -20,60 +20,51 @@
  */
 package com.vitorpamplona.amethyst.desktop.service.images
 
-import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import coil3.Uri
 import coil3.annotation.DelicateCoilApi
-import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
-import coil3.fetch.Fetcher
 import coil3.memory.MemoryCache
-import coil3.network.CacheStrategy
-import coil3.network.ConcurrentRequestStrategy
-import coil3.network.ConnectivityChecker
-import coil3.network.NetworkFetcher
-import coil3.network.okhttp.asNetworkClient
-import coil3.request.Options
-import coil3.size.Precision
 import coil3.svg.SvgDecoder
-import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
-import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
-import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
-import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
-import com.vitorpamplona.amethyst.desktop.network.DesktopHttpClient
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.amethyst.commons.service.image.SkiaDownsamplingDecoder
+import com.vitorpamplona.amethyst.commons.service.image.SkiaGifDecoder
+import com.vitorpamplona.amethyst.commons.service.image.buildAmethystImageLoader
+import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
 object DesktopImageLoaderSetup {
+    /**
+     * The shared image loader ([buildAmethystImageLoader]) with Skia's decoders. [clientForUrl]
+     * picks the HTTP client per image, so each URL gets its own Tor decision;
+     * [blossomServerResolver] loads `blossom:` URIs from the server that holds the blob; [readAuth]
+     * signs the retry when a gated Blossom host answers 401.
+     */
     @OptIn(DelicateCoilApi::class)
-    fun setup(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }) {
-        SingletonImageLoader.setUnsafe(createImageLoader(clientForUrl))
+    fun setup(
+        clientForUrl: (String) -> Call.Factory,
+        blossomServerResolver: (() -> BlossomServerResolver)? = null,
+        readAuth: BlossomReadAuthTokenProvider? = null,
+    ) {
+        SingletonImageLoader.setUnsafe(
+            buildAmethystImageLoader(
+                context = PlatformContext.INSTANCE,
+                diskCache = { newDiskCache() },
+                memoryCache = { newMemoryCache() },
+                callFactory = clientForUrl,
+                blossomServerResolver = blossomServerResolver,
+                readAuth = readAuth,
+                decoders = {
+                    add(SvgDecoder.Factory())
+                    add(SkiaGifDecoder.Factory())
+                    // After the SVG and GIF decoders: it takes any format, so it must come last.
+                    add(SkiaDownsamplingDecoder.Factory())
+                },
+            ),
+        )
     }
-
-    /** [clientForUrl] picks the HTTP client per image, so each URL gets its own Tor decision. */
-    fun createImageLoader(clientForUrl: (String) -> Call.Factory = { DesktopHttpClient.currentClient() }): ImageLoader =
-        ImageLoader
-            .Builder(PlatformContext.INSTANCE)
-            .memoryCache { newMemoryCache() }
-            .diskCache { newDiskCache() }
-            .precision(Precision.INEXACT)
-            .components {
-                add(TorAwareOkHttpFactory(clientForUrl))
-                add(SvgDecoder.Factory())
-                add(SkiaGifDecoder.Factory())
-                // After the SVG and GIF decoders: it takes any format, so it must come last.
-                add(SkiaDownsamplingDecoder.Factory())
-                add(Base64Fetcher.Factory)
-                add(BlurHashFetcher.Factory)
-                add(SnoFetcher.Factory)
-                add(ThumbHashFetcher.Factory)
-                add(Base64Fetcher.BKeyer)
-                add(BlurHashFetcher.BKeyer)
-                add(SnoFetcher.SKeyer)
-                add(ThumbHashFetcher.TKeyer)
-            }.build()
 
     private fun newMemoryCache(): MemoryCache {
         val maxMemory = Runtime.getRuntime().maxMemory()
@@ -113,38 +104,5 @@ object DesktopImageLoaderSetup {
                 )
             }
         }
-    }
-}
-
-/**
- * Custom Coil Fetcher.Factory that routes all image requests through the Tor-aware client.
- * Pattern ported from Android's OkHttpFactory in ImageLoaderSetup.kt.
- *
- * Each image request calls [clientProvider] to get the current OkHttpClient,
- * which returns the SOCKS proxy client when Tor is active or the direct client when off.
- */
-@OptIn(ExperimentalCoilApi::class)
-private class TorAwareOkHttpFactory(
-    val clientProvider: (url: String) -> Call.Factory,
-) : Fetcher.Factory<Uri> {
-    private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
-
-    override fun create(
-        data: Uri,
-        options: Options,
-        imageLoader: ImageLoader,
-    ): Fetcher? {
-        if (data.scheme != "http" && data.scheme != "https") return null
-
-        val url = data.toString()
-        return NetworkFetcher(
-            url = url,
-            options = options,
-            networkClient = lazy { clientProvider(url).asNetworkClient() },
-            diskCache = lazy { imageLoader.diskCache },
-            cacheStrategy = cacheStrategyLazy,
-            connectivityChecker = lazy { ConnectivityChecker(options.context) },
-            concurrentRequestStrategy = lazy { ConcurrentRequestStrategy.UNCOORDINATED },
-        )
     }
 }

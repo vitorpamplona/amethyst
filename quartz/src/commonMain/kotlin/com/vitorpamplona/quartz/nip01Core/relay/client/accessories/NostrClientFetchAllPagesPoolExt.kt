@@ -24,9 +24,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.sync.Semaphore
 
 /**
@@ -70,7 +70,10 @@ import kotlinx.coroutines.sync.Semaphore
  *                     connection ended is asked again from where it got to, on these waits.
  * @param onRelayResume optional `(relay, attempt, last)` hook fired before each such re-ask.
  * @param onEvent      called once per delivered event with its source relay. It may suspend:
- *                     a relay's walk waits for it before taking its next page.
+ *                     a relay's walk waits for it before taking its next page. An exception it
+ *                     throws ends the whole call: the other relays' walks are cancelled and it
+ *                     is rethrown here. (Relays failing are results, not exceptions: see
+ *                     [onRelayResult].)
  */
 suspend fun INostrClient.fetchAllPagesFromPool(
     filters: Map<NormalizedRelayUrl, List<Filter>>,
@@ -88,7 +91,11 @@ suspend fun INostrClient.fetchAllPagesFromPool(
 ) {
     if (filters.isEmpty()) return
     val semaphore = Semaphore(maxConcurrentRelays.coerceAtLeast(1))
-    supervisorScope {
+    // Not a supervisorScope: a walk reports its relay's failures as results, so an exception
+    // here is the caller's own onEvent (or a bug), and it belongs to the caller. Under a
+    // supervisor it went to the uncaught-exception handler instead, which on Android ends the
+    // process, and this call returned as if every relay had finished.
+    coroutineScope {
         for ((relay, filtersForRelay) in filters) {
             if (!isActive) break
             semaphore.acquire()

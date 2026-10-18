@@ -22,34 +22,17 @@ package com.vitorpamplona.amethyst.service.images
 
 import android.content.Context
 import android.os.Build
-import coil3.ImageLoader
 import coil3.SingletonImageLoader
-import coil3.Uri
 import coil3.annotation.DelicateCoilApi
-import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
-import coil3.fetch.Fetcher
 import coil3.gif.GifDecoder
 import coil3.memory.MemoryCache
-import coil3.network.CacheStrategy
-import coil3.network.ConcurrentRequestStrategy
-import coil3.network.ConnectivityChecker
-import coil3.network.DeDupeConcurrentRequestStrategy
-import coil3.network.NetworkFetcher
-import coil3.network.okhttp.asNetworkClient
-import coil3.request.Options
-import coil3.size.Precision
 import coil3.svg.SvgDecoder
 import coil3.util.Logger
 import coil3.video.VideoFrameDecoder
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
-import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
-import com.vitorpamplona.amethyst.commons.service.image.BlurHashFetcher
-import com.vitorpamplona.amethyst.commons.service.image.ThumbHashFetcher
-import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
-import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
+import com.vitorpamplona.amethyst.commons.service.image.buildAmethystImageLoader
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
-import com.vitorpamplona.amethyst.commons.sno.SnoFetcher
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -69,7 +52,7 @@ class ImageLoaderSetup {
 
         val debugLogger = if (isDebug) MyDebugLogger() else null
 
-        @OptIn(DelicateCoilApi::class, ExperimentalCoilApi::class)
+        @OptIn(DelicateCoilApi::class)
         fun setup(
             app: Context,
             diskCache: () -> DiskCache,
@@ -82,43 +65,31 @@ class ImageLoaderSetup {
             // fetch anonymous (tests, pre-configuration call sites).
             readAuth: BlossomReadAuthTokenProvider? = null,
         ) {
-            // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy
-            // coordinates through a map of in-flight fetches that it owns, so it only
-            // works when every fetcher shares the same instance -- a fresh one per
-            // request can never see anybody else's fetch and the de-dupe silently
-            // no-ops. Shared across all three network-backed factories so the same
-            // key requested through any of them (e.g. a feed image and a profile
-            // picture with the same URL) collapses onto one download. `blossom:`
-            // blobs are keyed by their sha256 instead (see BlossomFetcher.diskCacheKey).
-            val concurrentRequests = DeDupeConcurrentRequestStrategy()
-
             SingletonImageLoader.setUnsafe(
-                ImageLoader
-                    .Builder(app)
-                    .diskCache(diskCache)
-                    .memoryCache(memoryCache)
-                    .precision(Precision.INEXACT)
-                    .logger(debugLogger)
-                    .components {
+                buildAmethystImageLoader(
+                    context = app,
+                    diskCache = diskCache,
+                    memoryCache = memoryCache,
+                    callFactory = callFactory,
+                    blossomServerResolver = blossomServerResolver,
+                    readAuth = readAuth,
+                    logger = debugLogger,
+                    // Keeps the platform ImageDecoder reachable for whatever comes back; see
+                    // [SystemFileSystemFetcher].
+                    wrapNetworkFetcher = { fetcher, key -> fetcher.onSystemFileSystem(key) },
+                    decoders = {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                             add(AvifAnimatedDecoderFactory()) // handle animated AVIF that Coil's AnimatedImageDecoder misses
                         }
                         add(gifFactory)
                         add(svgFactory)
                         add(VideoFrameDecoder.Factory())
-                        add(Base64Fetcher.Factory)
-                        add(BlurHashFetcher.Factory)
-                        add(SnoFetcher.Factory)
-                        add(ThumbHashFetcher.Factory)
-                        add(BlossomFetcher.Factory(blossomServerResolver, callFactory, concurrentRequests, readAuth))
+                    },
+                    fetchers = { concurrentRequests ->
                         add(ProfilePictureFetcher.Factory(thumbnailCache, callFactory, backgroundScope, concurrentRequests, readAuth))
-                        add(Base64Fetcher.BKeyer)
-                        add(BlurHashFetcher.BKeyer)
-                        add(SnoFetcher.SKeyer)
-                        add(ThumbHashFetcher.TKeyer)
                         add(ProfilePictureFetcher.BKeyer)
-                        add(OkHttpFactory(callFactory, concurrentRequests, readAuth))
-                    }.build(),
+                    },
+                ),
             )
         }
     }
@@ -147,48 +118,6 @@ class MyDebugLogger(
             }
         }
     }
-}
-
-/**
- * Copied from Coil to allow networkClient to be a function of the url.
- * So that Tor and non Tor clients can be used.
- */
-@OptIn(ExperimentalCoilApi::class)
-class OkHttpFactory(
-    val networkClient: (url: String) -> Call.Factory,
-    concurrentRequestStrategy: ConcurrentRequestStrategy,
-    private val readAuth: BlossomReadAuthTokenProvider? = null,
-) : Fetcher.Factory<Uri> {
-    private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
-    private val connectivityCheckerLazy = singleParameterLazy(::ConnectivityChecker)
-    private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
-
-    override fun create(
-        data: Uri,
-        options: Options,
-        imageLoader: ImageLoader,
-    ): Fetcher? {
-        if (!isApplicable(data)) return null
-
-        val url = data.toString()
-
-        // onSystemFileSystem keeps the platform ImageDecoder reachable for whatever comes back
-        // -- see [SystemFileSystemFetcher]. The key it carries is the one NetworkFetcher derives
-        // for the same request (`options.diskCacheKey ?: url`).
-        return readAuthAware(url, readAuth) { authHeader ->
-            NetworkFetcher(
-                url = url,
-                options = options.withAuthHeader(authHeader),
-                networkClient = lazy { networkClient(url).asNetworkClient() },
-                diskCache = lazy { imageLoader.diskCache },
-                cacheStrategy = cacheStrategyLazy,
-                connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
-                concurrentRequestStrategy = concurrentRequestStrategyLazy,
-            )
-        }.onSystemFileSystem(options.diskCacheKey ?: url)
-    }
-
-    private fun isApplicable(data: Uri): Boolean = data.scheme == "http" || data.scheme == "https"
 }
 
 internal fun <P, T> singleParameterLazy(initializer: (P) -> T) = SingleParameterLazy(initializer)

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalTopNavP
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -40,6 +41,7 @@ fun makeCalendarsFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterCalendarsByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterCalendarsByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterCalendarsGlobal(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterCalendarsByRelay(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterCalendarsByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterCalendarsByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterCalendarsByMutedAuthors(feedSettings, since, defaultSince)

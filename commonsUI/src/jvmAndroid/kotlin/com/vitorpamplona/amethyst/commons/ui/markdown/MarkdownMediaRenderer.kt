@@ -58,7 +58,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NRelay
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import kotlinx.coroutines.runBlocking
 
 class MarkdownMediaRenderer(
     val startOfText: String,
@@ -69,6 +68,8 @@ class MarkdownMediaRenderer(
     val callbackUri: String? = null,
     val accountViewModel: AccountViewModel,
     val nav: INav,
+    /** Rendering for a share-as-image capture, which shows link previews whatever the settings say. */
+    val forCapture: Boolean = false,
 ) : MediaRenderer {
     val parser = RichTextParser()
 
@@ -139,7 +140,7 @@ class MarkdownMediaRenderer(
                     )
                 }
             } else {
-                if (!accountViewModel.settings.showUrlPreview()) {
+                if (!forCapture && !accountViewModel.settings.showUrlPreview()) {
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {
@@ -156,12 +157,7 @@ class MarkdownMediaRenderer(
         uri: String,
         richTextStringBuilder: RichTextString.Builder,
     ) {
-        // This should be fast, so it is ok.
-        val loadedLink =
-            accountViewModel.bechLinkCache.cached(uri)
-                ?: runBlocking {
-                    accountViewModel.bechLinkCache.update(uri)
-                }
+        val loadedLink = accountViewModel.bechLinkCache.cachedOrLoad(uri)
 
         val baseNote = loadedLink?.baseNote
 

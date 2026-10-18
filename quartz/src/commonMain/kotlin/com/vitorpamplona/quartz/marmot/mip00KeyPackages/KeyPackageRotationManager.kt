@@ -40,6 +40,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -135,6 +137,7 @@ class KeyPackageRotationManager(
             try {
                 store.load()
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w("KeyPackageRotationManager", "Failed to load persisted KeyPackages", e)
                 null
             } ?: return
@@ -191,6 +194,7 @@ class KeyPackageRotationManager(
                     "${decoded.retainedBundles.size} retained last-resort bundle(s)"
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("KeyPackageRotationManager", "Failed to decode persisted KeyPackages", e)
         }
     }
@@ -340,6 +344,7 @@ class KeyPackageRotationManager(
         try {
             store.save(snapshotBytesUnlocked())
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("KeyPackageRotationManager", "Failed to persist KeyPackages", e)
         }
     }

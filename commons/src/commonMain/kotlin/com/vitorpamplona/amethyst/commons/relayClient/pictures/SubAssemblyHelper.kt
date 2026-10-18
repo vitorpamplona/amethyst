@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.allcommuni
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.author.AuthorsTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.community.SingleCommunityTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.MutedAuthorsTopNavPerRelayFilterSet
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPerRelayFilterSet
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.scopedTo
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
@@ -43,6 +44,7 @@ fun makePicturesFilter(
         is AllFollowsTopNavPerRelayFilterSet -> filterPicturesByFollows(feedSettings, since, defaultSince)
         is AuthorsTopNavPerRelayFilterSet -> filterPicturesByAuthors(feedSettings, since, defaultSince)
         is GlobalTopNavPerRelayFilterSet -> filterPicturesGlobal(feedSettings, since, defaultSince)
+        is RelayTopNavPerRelayFilterSet -> filterPicturesByRelay(feedSettings, since, defaultSince)
         is HashtagTopNavPerRelayFilterSet -> filterPicturesByHashtag(feedSettings, since, defaultSince)
         is LocationTopNavPerRelayFilterSet -> filterPicturesByGeohashes(feedSettings, since, defaultSince)
         is MutedAuthorsTopNavPerRelayFilterSet -> filterPicturesByMutedAuthors(feedSettings, since, defaultSince)
