@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -83,7 +84,7 @@ fun runHeadlessPublish(): Int {
     return result
 }
 
-private fun headlessDrain(log: (String) -> Unit): Int {
+private suspend fun headlessDrain(log: (String) -> Unit): Int {
     val store = ScheduledPostStore(File(scheduledDir(), ScheduledPostStore.FILE_NAME).path)
 
     // Build a plain OkHttp client for websockets — no Tor, no proxy. Headless mode
@@ -102,7 +103,7 @@ private fun headlessDrain(log: (String) -> Unit): Int {
     val client = NostrClient(BasicOkHttpWebSocket.Builder { okHttp })
 
     return try {
-        runBlocking {
+        coroutineScope {
             val now = TimeUtils.now()
 
             // Determine the relay set: union of due (PENDING & publishAtSec<=now) rows.
@@ -116,7 +117,7 @@ private fun headlessDrain(log: (String) -> Unit): Int {
 
             if (dueRelays.isEmpty()) {
                 log("No due posts to publish")
-                return@runBlocking 0
+                return@coroutineScope 0
             }
 
             log("Connecting to ${dueRelays.size} relay(s) for due posts")

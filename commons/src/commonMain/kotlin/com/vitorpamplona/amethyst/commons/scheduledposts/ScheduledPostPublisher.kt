@@ -27,6 +27,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
 
 /**
  * A single, self-contained detail row describing what happened to one claimed post.
@@ -95,7 +99,7 @@ class ScheduledPostPublisher(
         var skipped = 0
         val details = mutableListOf<DrainDetail>()
 
-        for (post in claimed) {
+        for ((index, post) in claimed.withIndex()) {
             try {
                 val event = Event.fromJson(post.signedEventJson)
 
@@ -154,6 +158,13 @@ class ScheduledPostPublisher(
                     }
                 }
             } catch (e: Exception) {
+                if (!currentCoroutineContext().isActive) {
+                    // The drain was stopped mid-publish: hand this post and the ones not reached
+                    // yet back to PENDING instead of failing them. The events are pre-signed, so a
+                    // relay that already got one just sees the same id again on the next drain.
+                    withContext(NonCancellable) { claimed.drop(index).forEach { store.releaseClaim(it.id) } }
+                    throw e
+                }
                 store.markFailed(post.id, e.message)
                 onFailed(post, e.message)
                 failed++

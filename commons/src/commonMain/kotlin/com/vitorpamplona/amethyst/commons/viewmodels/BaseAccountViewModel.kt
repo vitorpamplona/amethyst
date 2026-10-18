@@ -3020,16 +3020,27 @@ open class BaseAccountViewModel(
     class CachedLoadedBechLink(
         val accountViewModel: BaseAccountViewModel,
     ) : GenericBaseCache<String, LoadedBechLink>(20) {
-        override suspend fun compute(key: String): LoadedBechLink? = withContext(Dispatchers.IO) { load(key) }
+        override suspend fun compute(key: String): LoadedBechLink? =
+            withContext(Dispatchers.IO) {
+                load(key) { embedded -> LocalCache.justConsume(embedded, null, false) }
+            }
 
         /**
          * The cached link, or one loaded on the calling thread. For renderers that must answer
          * synchronously inside composition: the load is in-memory cache work only, and the one
          * expensive step, verifying an `nembed`'s event, runs in the background.
          */
-        fun cachedOrLoad(key: String): LoadedBechLink? = cached(key) ?: load(key)?.also { put(key, it) }
+        fun cachedOrLoad(key: String): LoadedBechLink? =
+            cached(key) ?: load(key) { embedded ->
+                accountViewModel.viewModelScope.launch(Dispatchers.IO) {
+                    LocalCache.justConsume(embedded, null, false)
+                }
+            }?.also { put(key, it) }
 
-        private fun load(key: String): LoadedBechLink? =
+        private inline fun load(
+            key: String,
+            consumeEmbedded: (Event) -> Unit,
+        ): LoadedBechLink? =
             Nip19Parser.uriToRoute(key)?.let {
                 var returningNote: Note? = null
 
@@ -3056,9 +3067,7 @@ open class BaseAccountViewModel(
                     is NEmbed -> {
                         val baseNote = LocalCache.getOrCreateNote(parsed.event)
                         if (baseNote.event == null) {
-                            accountViewModel.viewModelScope.launch(Dispatchers.IO) {
-                                LocalCache.justConsume(parsed.event, null, false)
-                            }
+                            consumeEmbedded(parsed.event)
                         }
 
                         returningNote = baseNote

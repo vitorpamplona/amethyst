@@ -688,11 +688,11 @@ private class ReissuingBroadcastHandle(
             runCatching { handle.close() }
             return
         }
-        if (desiredMuted) {
-            runCatchingCancellable { handle.setMuted(true) }
-        }
-        liveHandle.set(handle)
         try {
+            if (desiredMuted) {
+                runCatchingCancellable { handle.setMuted(true) }
+            }
+            liveHandle.set(handle)
             awaitCancellation()
         } finally {
             if (liveHandle.get() === handle) liveHandle.set(null)
