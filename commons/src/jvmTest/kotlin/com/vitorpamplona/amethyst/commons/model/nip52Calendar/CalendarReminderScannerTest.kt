@@ -71,6 +71,7 @@ class CalendarReminderScannerTest {
     // doesn't collide with other suites running in the same JVM.
     private val organizer = "b0b0000000000000000000000000000000000000000000000000000000000001"
     private val attendee = "a11ce00000000000000000000000000000000000000000000000000000000002"
+    private val follow = "f011000000000000000000000000000000000000000000000000000000000003"
 
     private var eventSeq = 0
 
@@ -95,9 +96,10 @@ class CalendarReminderScannerTest {
         dTag: String,
         targetDTag: String?,
         status: String = "accepted",
+        author: String = attendee,
     ) = CalendarRSVPEvent(
         id = "faced%059d".format(++eventSeq),
-        pubKey = attendee,
+        pubKey = author,
         createdAt = now - 900,
         tags =
             buildList {
@@ -118,7 +120,7 @@ class CalendarReminderScannerTest {
         consumePinned(accepted)
         consumePinned(declined)
 
-        val found = CalendarReminderScanner.acceptedRsvpsInCache()
+        val found = CalendarReminderScanner.acceptedRsvpsInCache(listOf(attendee))
         assertTrue("accepted RSVP must be found", found.any { it.dTag() == "cand-accepted" })
         assertFalse("declined RSVP must be skipped", found.any { it.dTag() == "cand-declined" })
     }
@@ -190,19 +192,49 @@ class CalendarReminderScannerTest {
             val log = CalendarReminderLogStore(dataStore())
             val fired = mutableListOf<DueCalendarReminder>()
 
-            CalendarReminderScanner.scan(leadMinutes = 15, log = log, now = now) { fired.add(it) }
+            CalendarReminderScanner.scan(listOf(attendee), leadMinutes = 15, log = log, now = now) { fired.add(it) }
             val first = fired.filter { it.eventId == soon.id || it.eventId == later.id }
             assertEquals(listOf(soon.id), first.map { it.eventId })
             assertEquals(10, first.single().minutesAway)
             assertTrue(first.single().deepLink.startsWith("nostr:naddr1"))
 
             fired.clear()
-            CalendarReminderScanner.scan(leadMinutes = 15, log = log, now = now + 60) { fired.add(it) }
+            CalendarReminderScanner.scan(listOf(attendee), leadMinutes = 15, log = log, now = now + 60) { fired.add(it) }
             assertTrue("a reminder fires once per start", fired.none { it.eventId == soon.id })
         }
 
-    private fun dataStore(): DataStore<Preferences> {
-        val file = File(folder.root, "reminder_log.preferences_pb")
+    @Test
+    fun aFollowsRsvpIsNotTheUsersReminder() =
+        runTest {
+            // The home feed loads the RSVPs of everyone the user follows.
+            val slot = timeSlot("follow-going", startSeconds = now + 5 * 60)
+            consumePinned(slot)
+            consumePinned(rsvp("follow-rsvp", "follow-going", author = follow))
+
+            assertTrue(CalendarReminderScanner.acceptedRsvpsInCache(listOf(attendee)).none { it.dTag() == "follow-rsvp" })
+
+            val fired = mutableListOf<DueCalendarReminder>()
+            CalendarReminderScanner.scan(listOf(attendee), leadMinutes = 15, log = CalendarReminderLogStore(dataStore("follow")), now = now) { fired.add(it) }
+            assertTrue(fired.none { it.eventId == slot.id })
+        }
+
+    @Test
+    fun aReminderThatWasNotPostedIsTriedAgain() =
+        runTest {
+            val slot = timeSlot("retry-soon", startSeconds = now + 10 * 60)
+            consumePinned(slot)
+            consumePinned(rsvp("retry-rsvp", "retry-soon"))
+            val log = CalendarReminderLogStore(dataStore("retry"))
+
+            CalendarReminderScanner.scan(listOf(attendee), leadMinutes = 15, log = log, now = now) { false }
+
+            val fired = mutableListOf<DueCalendarReminder>()
+            CalendarReminderScanner.scan(listOf(attendee), leadMinutes = 15, log = log, now = now + 60) { fired.add(it) }
+            assertEquals(listOf(slot.id), fired.filter { it.eventId == slot.id }.map { it.eventId })
+        }
+
+    private fun dataStore(name: String = "reminder_log"): DataStore<Preferences> {
+        val file = File(folder.root, "$name.preferences_pb")
         return PreferenceDataStoreFactory.createWithPath(
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             produceFile = { file.toOkioPath() },

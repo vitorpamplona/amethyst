@@ -101,17 +101,28 @@ fun DesktopQrScannerDialog(
     var notice by remember { mutableStateOf<String?>(null) }
     var rejected by remember { mutableStateOf<ScannedPayload?>(null) }
 
+    // A pick or paste in progress: the buttons wait for it, so a double click cannot read twice.
+    var busy by remember { mutableStateOf(false) }
+
+    // Callers expect one delivery: a second paste landing before the dialog leaves must not
+    // hand them the code again.
+    var handled by remember { mutableStateOf(false) }
+
     val pickTitle = stringRes(Res.string.qr_scanner_scan_image)
     val noCodeInImage = stringRes(Res.string.qr_scanner_no_code_in_image)
     val clipboardEmpty = stringRes(Res.string.qr_scanner_clipboard_empty)
 
     // Trimmed once here, as the camera scanner does: a code ending in a newline classified fine
     // but then failed to parse downstream.
-    val submit: (String) -> Unit = { scanned ->
+    val submit: (String) -> Unit = submit@{ scanned ->
+        if (handled) return@submit
         val text = scanned.trim()
         notice = null
         when (currentOnScan(text)) {
-            ScanOutcome.Handled -> currentOnDismiss()
+            ScanOutcome.Handled -> {
+                handled = true
+                currentOnDismiss()
+            }
             ScanOutcome.NotSupported -> rejected = classifyScannedPayload(text)
         }
     }
@@ -128,27 +139,39 @@ fun DesktopQrScannerDialog(
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(
+                    enabled = !busy,
                     onClick = {
+                        busy = true
                         scope.launch {
-                            // The system dialog is modal and runs on the UI thread, like GallerySelect's.
-                            val file = pickImageFile(pickTitle) ?: return@launch
-                            val code = withContext(Dispatchers.IO) { readImageFile(file)?.let(::decodeQrCode) }
-                            if (code == null) notice = noCodeInImage else submit(code)
+                            try {
+                                // The system dialog is modal and runs on the UI thread, like GallerySelect's.
+                                val file = pickImageFile(pickTitle) ?: return@launch
+                                val code = withContext(Dispatchers.IO) { readImageFile(file)?.let(::decodeQrCode) }
+                                if (code == null) notice = noCodeInImage else submit(code)
+                            } finally {
+                                busy = false
+                            }
                         }
                     },
                 ) {
                     Text(stringRes(Res.string.qr_scanner_scan_image))
                 }
                 TextButton(
+                    enabled = !busy,
                     onClick = {
+                        busy = true
                         scope.launch {
-                            when (val clip = withContext(Dispatchers.IO) { readClipboardForQr() }) {
-                                is QrClip.Text -> submit(clip.text)
-                                is QrClip.Picture -> {
-                                    val code = withContext(Dispatchers.IO) { decodeQrCode(clip.image) }
-                                    if (code == null) notice = noCodeInImage else submit(code)
+                            try {
+                                when (val clip = withContext(Dispatchers.IO) { readClipboardForQr() }) {
+                                    is QrClip.Text -> submit(clip.text)
+                                    is QrClip.Picture -> {
+                                        val code = withContext(Dispatchers.IO) { decodeQrCode(clip.image) }
+                                        if (code == null) notice = noCodeInImage else submit(code)
+                                    }
+                                    null -> notice = clipboardEmpty
                                 }
-                                null -> notice = clipboardEmpty
+                            } finally {
+                                busy = false
                             }
                         }
                     },
@@ -195,7 +218,8 @@ private fun pickImageFile(title: String): File? {
 /** ImageIO for the formats it knows, Skia for the rest (WebP). Null when neither can read it. */
 private fun readImageFile(file: File): BufferedImage? =
     try {
-        ImageIO.read(file)
+        // ImageIO throws, rather than returning null, on some formats it half-knows (CMYK JPEGs).
+        runCatching { ImageIO.read(file) }.getOrNull()
             ?: SkiaImage.makeFromEncoded(file.readBytes()).toComposeImageBitmap().toAwtImage()
     } catch (e: Exception) {
         Log.w(TAG, "Could not read the picture to scan", e)

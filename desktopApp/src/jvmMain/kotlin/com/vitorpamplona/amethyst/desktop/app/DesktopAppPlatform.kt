@@ -54,7 +54,7 @@ class DesktopAppPlatform(
     override val appVersionName: String,
     override val isDebugBuild: Boolean,
     private val notifications: DesktopNotifications,
-    // Decrypted community pictures, in the app's own (user-private) data directory.
+    // Decrypted community pictures: an owner-only folder in the app's data directory.
     private val concordImageDir: File,
     private val desktopSpellCheck: DesktopSpellCheck? = null,
 ) : AppPlatform {

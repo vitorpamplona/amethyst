@@ -42,6 +42,7 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.size.Precision
 import com.vitorpamplona.amethyst.AvifInstrumentedTestSupport.appContext
+import com.vitorpamplona.amethyst.commons.service.image.OkHttpFactory
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.service.uploads.MediaCompressor
 import com.vitorpamplona.amethyst.service.uploads.MetadataStripper
@@ -170,7 +171,7 @@ class HdrGainmapPipelineInstrumentedTest {
                         .precision(Precision.INEXACT)
                         .components {
                             val client = OkHttpClient()
-                            add(OkHttpFactory({ client }, DeDupeConcurrentRequestStrategy()))
+                            add(OkHttpFactory({ client }, DeDupeConcurrentRequestStrategy()) { fetcher, key -> fetcher.onSystemFileSystem(key) })
                         }.build()
                 val url = "http://127.0.0.1:${server.localPort}/hdr.jpg"
                 val request =
