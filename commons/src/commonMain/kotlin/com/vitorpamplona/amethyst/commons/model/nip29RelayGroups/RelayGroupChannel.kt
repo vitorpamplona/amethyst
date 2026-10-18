@@ -322,6 +322,9 @@ class RelayGroupChannel(
     /** Number of known members (admins are members too). */
     fun memberCount(): Int = allMembers.size
 
+    /** Whether the relay-signed roster (39001/39002) has arrived, so [membershipOf] reflects the relay. */
+    fun hasRoster(): Boolean = membersUpdatedAt > 0 || adminsUpdatedAt > 0
+
     /** Every known member and admin. The set is replaced, never mutated, when the roster changes. */
     fun allMemberKeys(): Set<HexKey> = allMembers
 

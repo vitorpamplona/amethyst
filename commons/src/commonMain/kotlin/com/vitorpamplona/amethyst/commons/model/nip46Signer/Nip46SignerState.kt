@@ -353,6 +353,9 @@ class Nip46SignerState(
         return fresh.privKey!!
     }
 
+    /** Whether the app behind [clientPubKey] was approved before, so pairing it again skips the consent prompt. */
+    suspend fun isPaired(clientPubKey: HexKey): Boolean = ledger.hasPolicy(authorizer.coordinateFor(clientPubKey))
+
     /**
      * The client-initiated (`nostrconnect://`) pairing flow: parse a client's
      * offer, send the connect ack that echoes its secret (so the client learns

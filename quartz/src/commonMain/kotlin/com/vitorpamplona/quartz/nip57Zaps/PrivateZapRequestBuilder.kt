@@ -130,15 +130,19 @@ class PrivateZapRequestBuilder {
     /**
      * Returns [private] if it is a genuine private zap for [request], else throws. The inner event is
      * whatever the sender encrypted, so it must be signed by the key it names (or anyone could pin a
-     * zap on any npub) and aim at nothing the outer request does not (or a real one could be reused
-     * on another note).
+     * zap on any npub) and aim at exactly what the outer request does: the builder copies the same
+     * tags into both, and anything looser lets a real one be re-wrapped onto another target (a
+     * profile zap, with no `e`, onto any note).
      */
     fun checkDecrypted(
         private: PrivateZapEvent,
         request: ZapRequestEvent,
     ): PrivateZapEvent {
         if (!private.verify()) throw IllegalStateException("The private zap's signature is invalid.")
-        if (!request.zappedAuthor().containsAll(private.zappedAuthor()) || !request.zappedPost().containsAll(private.zappedPost())) {
+        if (private.zappedAuthor().toSet() != request.zappedAuthor().toSet() ||
+            private.zappedPost().toSet() != request.zappedPost().toSet() ||
+            private.zappedAddresses().toSet() != request.zappedAddresses().toSet()
+        ) {
             throw IllegalStateException("The private zap does not match its zap request.")
         }
         return private

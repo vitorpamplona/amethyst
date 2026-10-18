@@ -63,8 +63,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -93,7 +95,9 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_hint
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_invalid
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_label
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_link_confirm
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_link_repair
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_no_relays
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_unnamed_app
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_count
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_ok
@@ -128,7 +132,9 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import kotlinx.coroutines.launch
 
@@ -185,7 +191,7 @@ fun Nip46SignerScreen(
     // Opened from a nostrconnect:// link: ask before pairing (which also turns the signer on). Any web
     // page can fire that link, and pairing an app approved before skips the consent prompt, so pairing
     // straight away would let a link rewrite a paired app's relays and re-enable a signer turned off.
-    var linkOffer by remember(connectUri) { mutableStateOf(connectUri?.takeIf { it.isNotBlank() }) }
+    var linkOffer by rememberSaveable(connectUri) { mutableStateOf(connectUri?.takeIf { it.isNotBlank() }) }
 
     if (scanning) {
         SimpleQrCodeScanner { contents ->
@@ -279,8 +285,13 @@ fun Nip46SignerScreen(
                 onConnect(uri)
             }
         } else {
+            // A link names itself, so the name alone could be any paired app's: show the key, and say
+            // when this one is already paired (that pairing would be rewritten, without the consent prompt).
+            val alreadyPaired by produceState(false, offer.clientPubKey) { value = signer.isPaired(offer.clientPubKey) }
             ConnectFromLinkDialog(
-                appName = offer.name?.ifBlank { null } ?: offer.clientPubKey.take(8),
+                appName = offer.name?.ifBlank { null } ?: stringRes(Res.string.nip46_signer_connect_unnamed_app),
+                appKey = NPub.create(offer.clientPubKey).toShortDisplay(),
+                alreadyPaired = alreadyPaired,
                 onConfirm = {
                     linkOffer = null
                     onConnect(uri)
@@ -305,13 +316,21 @@ fun Nip46SignerScreen(
 @Composable
 private fun ConnectFromLinkDialog(
     appName: String,
+    appKey: String,
+    alreadyPaired: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringRes(Res.string.nip46_signer_connect_label)) },
-        text = { Text(stringRes(Res.string.nip46_signer_connect_link_confirm, appName)) },
+        text = {
+            if (alreadyPaired) {
+                Text(stringRes(Res.string.nip46_signer_connect_link_repair, appName, appKey))
+            } else {
+                Text(stringRes(Res.string.nip46_signer_connect_link_confirm, appName, appKey))
+            }
+        },
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(stringRes(Res.string.nip46_signer_connect_button))

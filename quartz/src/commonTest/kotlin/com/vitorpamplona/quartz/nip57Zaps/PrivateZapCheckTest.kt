@@ -52,6 +52,22 @@ class PrivateZapCheckTest {
     }
 
     @Test
+    fun rejectsAProfileZapRewrappedOntoANote() {
+        val profileZap = inner(arrayOf("p", bob))
+        assertFailsWith<IllegalStateException> {
+            PrivateZapRequestBuilder().checkDecrypted(profileZap, request(arrayOf("p", bob), arrayOf("e", note)))
+        }
+    }
+
+    @Test
+    fun rejectsAZapReusedOnAnotherAddress() {
+        val private = inner(arrayOf("p", bob), arrayOf("a", "30023:$bob:one"))
+        assertFailsWith<IllegalStateException> {
+            PrivateZapRequestBuilder().checkDecrypted(private, request(arrayOf("p", bob), arrayOf("a", "30023:$bob:two")))
+        }
+    }
+
+    @Test
     fun rejectsAnInnerEventClaimingSomeoneElsesKey() {
         val genuine = inner(arrayOf("p", bob))
         val forged = PrivateZapEvent(genuine.id, "9".repeat(64), genuine.createdAt, genuine.tags, genuine.content, genuine.sig)

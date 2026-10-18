@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip28PublicChat.admin.ChannelMetadataEvent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 /** NIP-28: clients SHOULD ignore kind 41s from pubkeys other than the kind 40 pubkey. */
 class EventCacheChannelMetadataTest {
@@ -55,6 +56,30 @@ class EventCacheChannelMetadataTest {
             val state = cache.getPublicChatChannelIfExists(channel.id)
             assertEquals("Real", state?.info?.name)
             assertEquals(alice.pubKey, state?.creator?.pubkeyHex)
+        }
+
+    @Test
+    fun updateFromAnotherAuthorStaysOutOfTheTimeline() =
+        runTest {
+            val cache = EventCache()
+            val channel = create()
+            val spam = update(mallory, channel, "Hijacked", 2_000)
+            cache.justConsume(channel, null, true)
+            cache.justConsume(spam, null, true)
+
+            assertFalse(cache.getPublicChatChannelIfExists(channel.id)!!.notes.containsKey(spam.id))
+        }
+
+    @Test
+    fun earlyUpdateFromAnotherAuthorIsDroppedWhenTheChannelArrives() =
+        runTest {
+            val cache = EventCache()
+            val channel = create()
+            val spam = update(mallory, channel, "Hijacked", 2_000)
+            cache.justConsume(spam, null, true)
+            cache.justConsume(channel, null, true)
+
+            assertFalse(cache.getPublicChatChannelIfExists(channel.id)!!.notes.containsKey(spam.id))
         }
 
     @Test

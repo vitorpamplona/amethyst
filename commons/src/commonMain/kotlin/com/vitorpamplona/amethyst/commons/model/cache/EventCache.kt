@@ -2233,7 +2233,12 @@ open class EventCache :
             }
 
         if (note.event == null && (isVerified || justVerify(event))) {
-            oldChannel.addNote(note, relay)
+            // An ignored update stays out of the timeline too, or it would read as "X updated the
+            // channel". While the creator is unknown it waits here; the kind 40 drops it if it isn't theirs.
+            val creator = oldChannel.creator
+            if (creator == null || creator == author) {
+                oldChannel.addNote(note, relay)
+            }
             note.loadEvent(event, author, emptyList())
 
             refreshNewNoteObservers(note)
