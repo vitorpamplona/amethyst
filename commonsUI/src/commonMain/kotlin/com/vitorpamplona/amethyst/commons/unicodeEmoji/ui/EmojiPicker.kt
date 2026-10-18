@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -83,6 +84,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
@@ -113,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium
 import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_dark
 import com.vitorpamplona.amethyst.commons.resources.emoji_skin_tone_medium_light
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
+import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.insertAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.insertWordAtCursor
@@ -120,6 +123,7 @@ import com.vitorpamplona.amethyst.commons.unicodeEmoji.SkinTone
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmoji
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiCatalog
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.UnicodeEmojiGroup
+import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -236,6 +240,13 @@ internal fun EmojiPickerIcon(
     }
 }
 
+/** Emojis the picker marks as already chosen: Unicode ones as written, custom ones by image link. */
+@Immutable
+class PickedEmojis(
+    val unicode: Set<String>,
+    val customLinks: Set<String>,
+)
+
 @Immutable
 private sealed class PaletteItem {
     /** A palette emoji, drawn in the picked skin tone. */
@@ -285,6 +296,12 @@ private class PaletteSection(
  * One scrolling grid: the favorites, the Unicode groups, then one section per selected pack, with
  * a strip of section icons to jump between them, a name search across all of them, and the skin
  * tone. Without [emojiPacks] it shows only the Unicode groups.
+ *
+ * For editing a set of emojis rather than typing one: [picked] marks the ones already chosen,
+ * [fillHeight] stretches the grid over the height [modifier] gives it instead of the menu's fixed
+ * one, [showFavorites] off leaves out the favorites section, and [offerTypedEmoji] offers the
+ * search text itself when it is an emoji (the system keyboard's, or one the palette lacks) or an
+ * EmojiCoder message instead of a name to look up.
  */
 @Composable
 fun EmojiPicker(
@@ -293,6 +310,10 @@ fun EmojiPicker(
     onPickCustom: (EmojiMedia) -> Unit,
     modifier: Modifier = Modifier.width(PickerWidth),
     onClose: (() -> Unit)? = null,
+    picked: PickedEmojis? = null,
+    fillHeight: Boolean = false,
+    showFavorites: Boolean = true,
+    offerTypedEmoji: Boolean = false,
 ) {
     val catalog by produceState(UnicodeEmojiPalette.cachedOrNull()) {
         if (value == null) {
@@ -315,6 +336,9 @@ fun EmojiPicker(
     val tone = UnicodeEmojiPalette.skinTone
 
     Column(modifier.padding(horizontal = 8.dp)) {
+        // The grid is a direct child of this column, so it can take the height that is left.
+        val gridModifier = if (fillHeight) Modifier.fillMaxWidth().weight(1f) else Modifier.fillMaxWidth().height(GridHeight)
+
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
             EmojiSearchField(search, Modifier.weight(1f))
             SkinToneSelector(tone) { UnicodeEmojiPalette.skinTone = it }
@@ -323,7 +347,7 @@ fun EmojiPicker(
 
         val loaded = catalog
         if (loaded == null) {
-            Box(Modifier.fillMaxWidth().height(GridHeight), contentAlignment = Alignment.Center) {
+            Box(gridModifier, contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
             return@Column
@@ -337,17 +361,14 @@ fun EmojiPicker(
             }
         }
 
-        val query =
-            search.text
-                .toString()
-                .trim()
-                .removePrefix(":")
-                .removeSuffix(":")
+        val text = search.text.toString().trim()
+        val query = text.removePrefix(":").removeSuffix(":")
         if (query.isEmpty()) {
-            val sections = rememberSections(loaded, favorites, packs, shortcodes)
-            SectionedPalette(sections, tone, onPick)
+            val sections = rememberSections(loaded, if (showFavorites) favorites else emptyList(), packs, shortcodes)
+            SectionedPalette(sections, tone, picked, gridModifier, onPick)
         } else {
-            SearchResults(loaded, shortcodes, query, tone, onPick)
+            val typed = if (offerTypedEmoji) remember(text) { typedEmoji(text) } else null
+            SearchResults(loaded, shortcodes, query, typed, tone, picked, gridModifier, onPick)
         }
     }
 }
@@ -491,6 +512,8 @@ private fun rememberSections(
 private fun SectionedPalette(
     sections: List<PaletteSection>,
     tone: SkinTone,
+    picked: PickedEmojis?,
+    gridModifier: Modifier,
     onPick: (PaletteItem) -> Unit,
 ) {
     val gridState = rememberLazyGridState()
@@ -555,7 +578,7 @@ private fun SectionedPalette(
         }
     }
 
-    EmojiGrid(gridState) {
+    EmojiGrid(gridState, gridModifier) {
         sections.forEach { section ->
             item(key = "header:" + section.key, span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
                 Text(
@@ -566,7 +589,7 @@ private fun SectionedPalette(
                     modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp),
                 )
             }
-            paletteItems(section.key, section.items, tone, onPick)
+            paletteItems(section.key, section.items, tone, picked, onPick)
         }
     }
 }
@@ -598,15 +621,19 @@ private fun SearchResults(
     catalog: UnicodeEmojiCatalog,
     shortcodes: List<EmojiMedia>,
     query: String,
+    typed: String?,
     tone: SkinTone,
+    picked: PickedEmojis?,
+    gridModifier: Modifier,
     onPick: (PaletteItem) -> Unit,
 ) {
     val found =
-        remember(catalog, shortcodes, query) {
+        remember(catalog, shortcodes, query, typed) {
             // The account's own shortcodes first: a search for a shortcode means one of those.
             val custom = shortcodes.filter { it.code.contains(query, ignoreCase = true) }
             val (starts, contains) = custom.partition { it.code.startsWith(query, ignoreCase = true) }
-            (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
+            val typedItem = typed?.let { listOf(PaletteItem.Literal(it, catalog.find(it)?.name)) } ?: emptyList()
+            typedItem + (starts + contains).map { PaletteItem.Custom(it) } + catalog.search(query).map { PaletteItem.Palette(it) }
         }
 
     if (found.isEmpty()) {
@@ -614,27 +641,39 @@ private fun SearchResults(
             text = stringRes(Res.string.custom_emoji_picker_no_match),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().height(GridHeight).padding(16.dp),
+            modifier = gridModifier.padding(16.dp),
         )
         return
     }
 
-    EmojiGrid(rememberLazyGridState()) {
-        paletteItems("search", found, tone, onPick)
+    EmojiGrid(rememberLazyGridState(), gridModifier) {
+        paletteItems("search", found, tone, picked, onPick)
     }
 }
 
-/** A fixed height: the menu scrolls its content, and a lazy grid needs a bounded one. */
+/**
+ * The search text as an emoji of its own when it is not a name to look up: an EmojiCoder message
+ * whole, else its first character unless that is a letter, a digit or a shortcode's colon.
+ */
+private fun typedEmoji(text: String): String? {
+    if (EmojiCoder.isCoded(text)) return EmojiCoder.cropToFirstMessage(text)
+    val first = text.firstFullChar()
+    if (first.isEmpty() || first[0].isLetterOrDigit() || first[0] == ':') return null
+    return first
+}
+
+/** Bounded by [modifier]: the menu scrolls its content, and a lazy grid needs a bounded height. */
 @Composable
 private fun EmojiGrid(
     state: LazyGridState,
+    modifier: Modifier,
     content: LazyGridScope.() -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Adaptive(CellSize),
         state = state,
         contentPadding = PaddingValues(vertical = 4.dp),
-        modifier = Modifier.fillMaxWidth().height(GridHeight),
+        modifier = modifier,
         content = content,
     )
 }
@@ -643,6 +682,7 @@ private fun LazyGridScope.paletteItems(
     sectionKey: String,
     items: List<PaletteItem>,
     tone: SkinTone,
+    picked: PickedEmojis?,
     onPick: (PaletteItem) -> Unit,
 ) {
     // The same emoji can sit in several sections (a favorite is also in its group), so keys are per section.
@@ -651,14 +691,25 @@ private fun LazyGridScope.paletteItems(
         key = { index, _ -> "$sectionKey#$index" },
         contentType = { _, item -> if (item is PaletteItem.Custom) "custom" else "emoji" },
     ) { _, item ->
-        PaletteCell(item, tone, onPick)
+        PaletteCell(item, tone, picked?.let { item.isIn(it, tone) } ?: false, onPick)
     }
 }
+
+private fun PaletteItem.isIn(
+    picked: PickedEmojis,
+    tone: SkinTone,
+): Boolean =
+    when (this) {
+        is PaletteItem.Palette -> entry.withTone(tone) in picked.unicode
+        is PaletteItem.Literal -> emoji in picked.unicode
+        is PaletteItem.Custom -> media.link in picked.customLinks
+    }
 
 @Composable
 private fun PaletteCell(
     item: PaletteItem,
     tone: SkinTone,
+    isPicked: Boolean,
     onPick: (PaletteItem) -> Unit,
 ) {
     val tooltip =
@@ -676,12 +727,30 @@ private fun PaletteCell(
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable { onPick(item) },
+                    .then(
+                        if (isPicked) {
+                            Modifier
+                                .background(MaterialTheme.colorScheme.primaryContainer)
+                                .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                        } else {
+                            Modifier
+                        },
+                    ).clickable { onPick(item) }
+                    .semantics { selected = isPicked },
         ) {
             when (item) {
-                is PaletteItem.Palette -> Text(item.entry.withTone(tone), style = EmojiStyle)
-                is PaletteItem.Literal -> Text(item.emoji, style = EmojiStyle)
-                is PaletteItem.Custom -> AsyncImage(model = item.media.link, contentDescription = tooltip, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+                is PaletteItem.Palette -> {
+                    Text(item.entry.withTone(tone), style = EmojiStyle)
+                }
+
+                is PaletteItem.Literal -> {
+                    // A reaction of `+` is a like, drawn as the heart everywhere else.
+                    if (item.emoji == "+") LikedIcon(Modifier.size(24.dp)) else Text(item.emoji, style = EmojiStyle)
+                }
+
+                is PaletteItem.Custom -> {
+                    AsyncImage(model = item.media.link, contentDescription = tooltip, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
+                }
             }
         }
     }

@@ -5375,6 +5375,12 @@
     <string name="rating_stars_out_of_five">Rated %1$s out of 5</string>
     <string name="reaction">Reaction</string>
     <string name="reactions">Reactions</string>
+    <string name="reaction_choices_mine">Your reactions (%1$d)</string>
+    <string name="reaction_choices_hint">They show in this order when you tap the like button. Tap one to remove it.</string>
+    <string name="reaction_choices_empty">No reactions yet. Pick some below.</string>
+    <string name="reaction_choices_remove">Remove reaction</string>
+    <string name="reaction_choices_add">Add reactions</string>
+    <string name="reaction_choices_manage_packs">Emoji packs</string>
     <string name="reactions_search_keywords" translatable="false">emoji, like, reaction</string>
     <string name="reactions_settings">Reaction Row</string>
     <string name="reactions_settings_search_keywords" translatable="false">emoji, reactions, like</string>

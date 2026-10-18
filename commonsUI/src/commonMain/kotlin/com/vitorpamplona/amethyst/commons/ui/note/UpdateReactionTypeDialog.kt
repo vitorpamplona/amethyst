@@ -21,126 +21,113 @@
 package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
-import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEventAndMapNotNull
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.add
-import com.vitorpamplona.amethyst.commons.resources.new_reaction_symbol
-import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_add
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_empty
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_hint
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_manage_packs
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_mine
+import com.vitorpamplona.amethyst.commons.resources.reaction_choices_remove
+import com.vitorpamplona.amethyst.commons.resources.reactions
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
-import com.vitorpamplona.amethyst.commons.ui.note.LikedIcon
-import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
-import com.vitorpamplona.amethyst.commons.ui.richtext.InLineIconRenderer
+import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
-import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
-import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
-import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.UnicodeEmojiPickerButton
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPicker
+import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.PickedEmojis
 import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.util.firstFullChar
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
-import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.launch
 
 @Stable
 class UpdateReactionTypeViewModel : ViewModel() {
     lateinit var accountViewModel: AccountViewModel
     lateinit var account: Account
-    var nextChoice by mutableStateOf(TextFieldValue(""))
     var reactionSet by mutableStateOf(listOf<String>())
+    private var loaded = false
+
+    /** What the picker marks as already chosen, so a tap on it removes it instead. */
+    val picked by derivedStateOf {
+        PickedEmojis(
+            unicode = reactionSet.toSet(),
+            customLinks = reactionSet.mapNotNullTo(HashSet()) { it.customEmojiUrlOrNull() },
+        )
+    }
 
     fun init(accountViewModel: AccountViewModel) {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
     }
 
+    /** Once per screen: coming back from the emoji pack screens must not drop unsaved edits. */
     fun load() {
+        if (loaded) return
+        loaded = true
         this.reactionSet = account.settings.syncedSettings.reactions.reactionChoices.value
     }
 
-    fun toListOfChoices(commaSeparatedAmounts: String): List<Long> = commaSeparatedAmounts.split(",").map { it.trim().toLongOrNull() ?: 0 }
+    /**
+     * Adds a Unicode emoji (or anything typed into the picker's search) or removes it when it is
+     * already a choice. Typed text keeps only its first character, or an EmojiCoder message whole.
+     */
+    fun toggle(emoji: String) {
+        val value = if (EmojiCoder.isCoded(emoji)) EmojiCoder.cropToFirstMessage(emoji) else emoji.trim().firstFullChar()
+        if (value.isBlank()) return
+        reactionSet = if (value in reactionSet) reactionSet - value else reactionSet + value
+    }
 
-    fun addChoice() {
-        val newValue =
-            if (EmojiCoder.isCoded(nextChoice.text)) {
-                EmojiCoder.cropToFirstMessage(nextChoice.text)
+    /** Custom emojis are matched by image, as a saved `:shortcode:url` may use another code. */
+    fun toggle(custom: EmojiMedia) {
+        reactionSet =
+            if (reactionSet.any { it.customEmojiUrlOrNull() == custom.link }) {
+                reactionSet.filter { it.customEmojiUrlOrNull() != custom.link }
             } else {
-                nextChoice.text.trim().firstFullChar()
+                reactionSet + EmojiUrlTag(custom.code, custom.link).encode()
             }
-
-        reactionSet = reactionSet + newValue
-
-        nextChoice = TextFieldValue("")
-    }
-
-    fun addChoice(emoji: String) {
-        if (emoji !in reactionSet) reactionSet = reactionSet + emoji
-    }
-
-    fun addChoice(customEmoji: EmojiUrlTag) {
-        reactionSet = reactionSet + (customEmoji.encode())
     }
 
     fun removeChoice(reaction: String) {
@@ -148,13 +135,7 @@ class UpdateReactionTypeViewModel : ViewModel() {
     }
 
     fun sendPost() {
-        accountViewModel.changeReactionTypes(reactionSet) {
-            nextChoice = TextFieldValue("")
-        }
-    }
-
-    fun cancel() {
-        nextChoice = TextFieldValue("")
+        accountViewModel.changeReactionTypes(reactionSet) {}
     }
 
     fun hasChanged(): Boolean = reactionSet != account.settings.syncedSettings.reactions.reactionChoices.value
@@ -172,10 +153,17 @@ fun UpdateReactionTypeScreen(
         postViewModel.load()
     }
 
+    // The picker reads the selected packs from the cache; this fetches them while the screen is up.
+    WatchAndLoadMyEmojiList(accountViewModel)
+
     UpdateReactionTypeScreen(postViewModel, accountViewModel, nav)
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+/**
+ * The account's reaction choices on top, removable with a tap, over the full emoji picker: one
+ * search across Unicode names and the shortcodes of the selected custom emoji packs, a section per
+ * Unicode group and per pack, and every current choice marked so a second tap takes it out.
+ */
 @Composable
 fun UpdateReactionTypeScreen(
     postViewModel: UpdateReactionTypeViewModel,
@@ -185,11 +173,9 @@ fun UpdateReactionTypeScreen(
     Scaffold(
         topBar = {
             SavingTopBar(
+                titleRes = Res.string.reactions,
                 isActive = postViewModel::hasChanged,
-                onCancel = {
-                    postViewModel.cancel()
-                    nav.popBack()
-                },
+                onCancel = { nav.popBack() },
                 onPost = {
                     postViewModel.sendPost()
                     nav.popBack()
@@ -204,158 +190,76 @@ fun UpdateReactionTypeScreen(
                     .consumeWindowInsets(pad)
                     .imePaddingSafe(),
         ) {
-            Column(
-                modifier = Modifier.padding(10.dp),
-            ) {
+            Column(Modifier.fillMaxSize()) {
+                CurrentReactionChoices(postViewModel)
+
+                HorizontalDivider()
+
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp, top = 4.dp),
                 ) {
-                    Column(
-                        modifier = Modifier.verticalScroll(rememberScrollState()),
-                    ) {
-                        Row(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.animateContentSize()) {
-                                FlowRow(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Center,
-                                ) {
-                                    postViewModel.reactionSet.forEach { reactionType ->
-                                        RenderReactionOption(reactionType, postViewModel)
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            OutlinedTextField(
-                                label = { Text(text = stringRes(Res.string.new_reaction_symbol)) },
-                                value = postViewModel.nextChoice,
-                                onValueChange = { postViewModel.nextChoice = it },
-                                keyboardOptions =
-                                    KeyboardOptions.Default.copy(
-                                        capitalization = KeyboardCapitalization.None,
-                                        keyboardType = KeyboardType.Text,
-                                    ),
-                                placeholder = {
-                                    Text(
-                                        text = "\uD83D\uDCAF, \uD83C\uDF89, \uD83D\uDC4E",
-                                        color = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                trailingIcon = {
-                                    UnicodeEmojiPickerButton(
-                                        onPick = postViewModel::addChoice,
-                                        tint = MaterialTheme.colorScheme.placeholderText,
-                                    )
-                                },
-                                singleLine = true,
-                                modifier = Modifier.padding(end = 10.dp).weight(1f),
-                            )
-
-                            Button(
-                                onClick = { postViewModel.addChoice() },
-                                shape = ButtonBorder,
-                                colors =
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                    ),
-                            ) {
-                                Text(text = stringRes(Res.string.add), color = Color.White)
-                            }
-                        }
+                    Text(
+                        text = stringRes(Res.string.reaction_choices_add),
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { nav.nav(Route.MyEmojiList) }) {
+                        Text(stringRes(Res.string.reaction_choices_manage_packs))
                     }
                 }
 
-                Spacer(StdVertSpacer)
-
-                EmojiSelector(
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                ) {
-                    postViewModel.addChoice(it)
-                }
+                EmojiPicker(
+                    emojiPacks = accountViewModel.account.emoji,
+                    onPickUnicode = postViewModel::toggle,
+                    onPickCustom = postViewModel::toggle,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    picked = postViewModel.picked,
+                    fillHeight = true,
+                    showFavorites = false,
+                    offerTypedEmoji = true,
+                )
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RenderReactionOption(
-    reactionType: String,
-    postViewModel: UpdateReactionTypeViewModel,
-) {
-    Box(
-        modifier =
-            Modifier
-                .padding(3.dp)
-                .clickable { postViewModel.removeChoice(reactionType) }
-                .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.surfaceDim,
-                    shape = RoundedCornerShape(8.dp),
-                ).padding(8.dp),
-    ) {
-        val url = remember(reactionType) { reactionType.customEmojiUrlOrNull() }
-        if (url != null) {
-            val renderable =
-                persistentListOf(
-                    CustomEmoji.ImageUrlType(url),
-                    CustomEmoji.TextType(" ✖"),
-                )
+private fun CurrentReactionChoices(postViewModel: UpdateReactionTypeViewModel) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            text = stringRes(Res.string.reaction_choices_mine, postViewModel.reactionSet.size),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            text = stringRes(Res.string.reaction_choices_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 2.dp, bottom = 8.dp),
+        )
 
-            InLineIconRenderer(
-                renderable,
-                style = SpanStyle(color = MaterialTheme.colorScheme.onBackground),
-                maxLines = 1,
+        if (postViewModel.reactionSet.isEmpty()) {
+            Text(
+                text = stringRes(Res.string.reaction_choices_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(vertical = 12.dp),
             )
         } else {
-            when (reactionType) {
-                "+" -> {
-                    Row {
-                        LikedIcon(modifier = Modifier.size(20.dp), tint = Color.Unspecified)
-
-                        Text(
-                            text = " ✖",
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                "-" -> {
-                    Text(
-                        text = "\uD83D\uDC4E ✖",
-                        color = MaterialTheme.colorScheme.onBackground,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-
-                else -> {
-                    if (EmojiCoder.isCoded(reactionType)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AnimatedBorderTextCornerRadius(
-                                reactionType,
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center,
-                            )
-                            Text(
-                                text = " ✖",
-                                color = MaterialTheme.colorScheme.onBackground,
-                                textAlign = TextAlign.Center,
-                            )
-                        }
-                    } else {
-                        Text(
-                            text = "$reactionType ✖",
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+            // A long list scrolls in place so the picker below keeps most of the screen.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 152.dp)
+                        .verticalScroll(rememberScrollState())
+                        .animateContentSize(),
+            ) {
+                postViewModel.reactionSet.forEach { reactionType ->
+                    ReactionChoiceChip(reactionType) { postViewModel.removeChoice(reactionType) }
                 }
             }
         }
@@ -363,68 +267,27 @@ private fun RenderReactionOption(
 }
 
 @Composable
-private fun EmojiSelector(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onClick: ((EmojiUrlTag) -> Unit)? = null,
+private fun ReactionChoiceChip(
+    reactionType: String,
+    onRemove: () -> Unit,
 ) {
-    LoadAddressableNote(
-        accountViewModel.account.emoji.getEmojiListAddress(),
-    ) { emptyNote ->
-        emptyNote?.let { usersEmojiList ->
-            val collections by observeNoteEventAndMapNotNull(usersEmojiList, accountViewModel) { event: EmojiListEvent ->
-                event.emojiPacks().toImmutableList()
-            }
-
-            collections?.let { EmojiCollectionGallery(it, accountViewModel, nav, onClick) }
-        }
-    }
-}
-
-@Composable
-fun EmojiCollectionGallery(
-    emojiCollections: ImmutableList<Address>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onClick: ((EmojiUrlTag) -> Unit)? = null,
-) {
-    val color = MaterialTheme.colorScheme.background
-    val bgColor = remember { mutableStateOf(color) }
-
-    val listState = rememberLazyListState()
-
-    LazyColumn(
-        state = listState,
+    val remove = stringRes(Res.string.reaction_choices_remove)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable(role = Role.Button, onClickLabel = remove, onClick = onRemove)
+                .heightIn(min = 40.dp)
+                .padding(start = 10.dp, end = 6.dp),
     ) {
-        itemsIndexed(emojiCollections, key = { _, item -> item }) { _, item ->
-            LoadAddressableNote(item) {
-                it?.let { WatchAndRenderNote(it, bgColor, accountViewModel, nav, onClick) }
-            }
-        }
-    }
-}
-
-@Composable
-private fun WatchAndRenderNote(
-    emojiPack: AddressableNote,
-    bgColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onClick: ((EmojiUrlTag) -> Unit)?,
-) {
-    val scope = rememberCoroutineScope()
-
-    Column(
-        Modifier.fillMaxWidth().clickable {
-            scope.launch { routeFor(emojiPack, accountViewModel.account)?.let { nav.nav(it) } }
-        },
-    ) {
-        RenderEmojiPack(
-            baseNote = emojiPack,
-            actionable = false,
-            backgroundColor = bgColor,
-            accountViewModel = accountViewModel,
-            onClick = onClick,
+        RenderReaction(reactionType)
+        Icon(
+            symbol = MaterialSymbols.Close,
+            contentDescription = remove,
+            modifier = Modifier.padding(start = 4.dp).size(16.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
