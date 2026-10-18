@@ -249,14 +249,7 @@ fun KindCardField(
 ) {
     if (value.isNullOrBlank()) return
     Row(verticalAlignment = Alignment.Top) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.width(104.dp).padding(end = 8.dp, top = 1.dp),
-        )
+        KindCardFieldLabel(label)
         if (monospace) {
             Text(
                 text = value,
@@ -278,6 +271,70 @@ fun KindCardField(
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+/** The label column of a card's fact rows, fixed in width so the rows line up as a table. */
+@Composable
+private fun KindCardFieldLabel(label: String) {
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.width(104.dp).padding(end = 8.dp, top = 1.dp),
+    )
+}
+
+/**
+ * A fact row like [KindCardField] whose value someone wrote in their own words (a revocation
+ * reason, a role's description, a workflow note): drawn by [KindCardText], so it can be translated
+ * and its links and mentions work. Nothing is drawn for blank text or a machine payload.
+ */
+@Composable
+fun KindCardRichField(
+    label: String,
+    note: Note,
+    text: String?,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (text.isNullOrBlank()) return
+    val readable = remember(text) { !looksLikeOpaquePayload(text) }
+    if (!readable) return
+    Row(verticalAlignment = Alignment.Top) {
+        KindCardFieldLabel(label)
+        Box(Modifier.weight(1f)) {
+            ProvideTextStyle(MaterialTheme.typography.bodySmall) {
+                KindCardText(note, text, backgroundColor, accountViewModel, nav)
+            }
+        }
+    }
+}
+
+/**
+ * Paragraph-length text someone wrote (a system prompt, a team's instructions, a description),
+ * under an optional small [label] heading and drawn by [KindCardText]: translatable, with links,
+ * mentions and the long-text expander. Nothing, not even the heading, for blank text or a payload.
+ */
+@Composable
+fun KindCardProse(
+    label: String?,
+    note: Note,
+    text: String?,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (text.isNullOrBlank()) return
+    val readable = remember(text) { !looksLikeOpaquePayload(text) }
+    if (!readable) return
+    label?.let { KindCardSection(it) }
+    // Secondary to the card's title, so one step smaller than a note's body text.
+    ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
+        KindCardText(note, text, backgroundColor, accountViewModel, nav)
     }
 }
 

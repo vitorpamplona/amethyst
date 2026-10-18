@@ -309,6 +309,7 @@ fun RenderGroupRemoveUser(
 @Composable
 fun RenderGroupEditMetadata(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -325,7 +326,7 @@ fun RenderGroupEditMetadata(
     ) {
         RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_field_name), event.name())
-        KindCardField(stringRes(Res.string.relay_group_field_about), event.about(), maxLines = 4)
+        KindCardProse(stringRes(Res.string.relay_group_field_about), baseNote, event.about(), backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_parent_label), parent, monospace = true)
         KindCardChips(topics, max = 8)
     }
@@ -362,6 +363,7 @@ fun RenderGroupDeleteEvent(
 @Composable
 fun RenderCreateGroup(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -377,7 +379,7 @@ fun RenderCreateGroup(
     ) {
         RelayGroupHeader(channel, accountViewModel, nav)
         KindCardField(stringRes(Res.string.relay_group_field_name), event.name())
-        KindCardField(stringRes(Res.string.relay_group_field_about), event.about(), maxLines = 4)
+        KindCardProse(stringRes(Res.string.relay_group_field_about), baseNote, event.about(), backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -613,6 +615,7 @@ private fun RosterCard(
 @Composable
 fun RenderGroupRoles(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -630,7 +633,7 @@ fun RenderGroupRoles(
         subtitle = groupSubtitle(groupId, channel, count),
     ) {
         RelayGroupHeader(channel, accountViewModel, nav)
-        described.forEach { KindCardField(it.name, it.description, maxLines = 2) }
+        described.forEach { KindCardRichField(it.name, baseNote, it.description, backgroundColor, accountViewModel, nav) }
         KindCardChips(others, max = 8)
     }
 }

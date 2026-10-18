@@ -766,7 +766,12 @@ fun RenderUserGraspList(baseNote: Note) {
 
 /** Kind 30509: Zapstore's proof that an APK signing certificate belongs to this Nostr key. */
 @Composable
-fun RenderIdentityProof(baseNote: Note) {
+fun RenderIdentityProof(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? IdentityProofEvent ?: return
     val certificate = remember(event) { (event.certificateHash() ?: event.dTag()).toShortDisplay() }
     val revoked = remember(event) { event.isRevoked() }
@@ -788,7 +793,7 @@ fun RenderIdentityProof(baseNote: Note) {
     ) {
         KindCardField(stringRes(Res.string.kc_dev_certificate), certificate, monospace = true, maxLines = 1)
         if (revoked) {
-            KindCardField(stringRes(Res.string.kc_dev_reason), reason)
+            KindCardRichField(stringRes(Res.string.kc_dev_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         } else if (expiry != null && !expired) {
             KindCardField(stringRes(Res.string.kc_dev_expires), timeAbsoluteNoDot(expiry))
         }
@@ -797,7 +802,12 @@ fun RenderIdentityProof(baseNote: Note) {
 
 /** Kind 9401: WalletScrutiny registers the files of one release by hash, for build verifiers. */
 @Composable
-fun RenderAssetBundle(baseNote: Note) {
+fun RenderAssetBundle(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? AssetBundleEvent ?: return
     val productId = remember(event) { event.productId() }
     val files = remember(event) { event.files() }
@@ -820,7 +830,7 @@ fun RenderAssetBundle(baseNote: Note) {
                 if (files.isNotEmpty()) pluralStringRes(Res.plurals.kc_dev_files_count, files.size, files.size) else null,
             ),
         )
-        KindCardMeta(listOf(event.note()))
+        KindCardProse(null, baseNote, event.note(), backgroundColor, accountViewModel, nav)
         KindCardCode(listing, maxLines = MAX_FILE_ROWS)
         KindCardMore(files.size - MAX_FILE_ROWS)
     }
@@ -848,14 +858,19 @@ fun RenderSiteSnapshot(
         title = stringRes(Res.string.kc_dev_site_snapshot),
         subtitle = name,
     ) {
-        SnapshotFacts(remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) })
+        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) }, backgroundColor, accountViewModel, nav)
         site?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
 
 /** Kind 5129: one immutable build of an nApplet. */
 @Composable
-fun RenderNappletSnapshot(baseNote: Note) {
+fun RenderNappletSnapshot(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? NappletSnapshotEvent ?: return
     val requires = remember(event) { event.requires() }
     val title = remember(event) { event.title() }
@@ -865,7 +880,7 @@ fun RenderNappletSnapshot(baseNote: Note) {
         title = stringRes(Res.string.kc_dev_napplet_snapshot),
         subtitle = title,
     ) {
-        SnapshotFacts(remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) })
+        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) }, backgroundColor, accountViewModel, nav)
         KindCardSectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }
@@ -884,8 +899,14 @@ private class SnapshotInfo(
 }
 
 @Composable
-private fun SnapshotFacts(info: SnapshotInfo) {
-    KindCardMeta(listOf(info.description))
+private fun SnapshotFacts(
+    baseNote: Note,
+    info: SnapshotInfo,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    KindCardProse(null, baseNote, info.description, backgroundColor, accountViewModel, nav)
     KindCardMeta(listOf(if (info.fileCount > 0) pluralStringRes(Res.plurals.kc_dev_files_count, info.fileCount, info.fileCount) else null))
     KindCardField(stringRes(Res.string.kc_dev_source), info.source, maxLines = 1)
     KindCardSectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)

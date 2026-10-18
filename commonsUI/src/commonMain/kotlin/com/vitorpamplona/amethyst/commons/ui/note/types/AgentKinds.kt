@@ -232,14 +232,19 @@ fun RenderManagedAgent(
             ),
         )
         KindCardField(stringRes(Res.string.kc_agent_respond_to), respondToLabel(agent.respondTo))
-        KindCardField(stringRes(Res.string.buzz_persona_system_prompt), agent.systemPrompt)
+        KindCardProse(stringRes(Res.string.buzz_persona_system_prompt), baseNote, agent.systemPrompt, backgroundColor, accountViewModel, nav)
         personaAddress?.let { KindCardQuoteAddress(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
 
 /** A Buzz agent persona (kind 30175): name, description, model and system prompt. */
 @Composable
-fun RenderPersona(baseNote: Note) {
+fun RenderPersona(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? PersonaEvent ?: return
     val persona = remember(event) { event.personaOrNull() }
     val shared = remember(event) { event.isShared() }
@@ -249,10 +254,11 @@ fun RenderPersona(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Face,
         title = name ?: kindTitle,
-        subtitle = persona?.description?.ifBlank { null } ?: if (name != null) kindTitle else null,
+        subtitle = if (name != null) kindTitle else null,
         status = if (shared) stringRes(Res.string.kc_agent_pill_shared) else null,
     ) {
         if (persona != null) {
+            KindCardProse(null, baseNote, persona.description, backgroundColor, accountViewModel, nav)
             KindCardMeta(
                 listOf(
                     persona.model,
@@ -262,14 +268,19 @@ fun RenderPersona(baseNote: Note) {
                 ),
             )
             KindCardField(stringRes(Res.string.kc_agent_respond_to), persona.respondTo?.ifBlank { null }?.let { respondToLabel(it) })
-            KindCardField(stringRes(Res.string.buzz_persona_system_prompt), persona.systemPrompt)
+            KindCardProse(stringRes(Res.string.buzz_persona_system_prompt), baseNote, persona.systemPrompt, backgroundColor, accountViewModel, nav)
         }
     }
 }
 
 /** A Buzz agent team (kind 30176): its name, description, instructions and personas. */
 @Composable
-fun RenderAgentTeam(baseNote: Note) {
+fun RenderAgentTeam(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? TeamEvent ?: return
     val team = remember(event) { event.teamOrNull() }
     val personas = remember(team) { team?.personaIds.orEmpty().filter { it.isNotBlank() } }
@@ -279,9 +290,10 @@ fun RenderAgentTeam(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Groups,
         title = name ?: kindTitle,
-        subtitle = team?.description?.ifBlank { null } ?: if (name != null) kindTitle else null,
+        subtitle = if (name != null) kindTitle else null,
     ) {
-        KindCardField(stringRes(Res.string.kc_agent_instructions), team?.instructions)
+        KindCardProse(null, baseNote, team?.description, backgroundColor, accountViewModel, nav)
+        KindCardProse(stringRes(Res.string.kc_agent_instructions), baseNote, team?.instructions, backgroundColor, accountViewModel, nav)
         if (personas.isNotEmpty()) {
             KindCardSection(stringRes(Res.string.kc_agent_personas))
             KindCardChips(personas, max = MAX_NAME_CHIPS)
@@ -291,7 +303,12 @@ fun RenderAgentTeam(baseNote: Note) {
 
 /** A Buzz team template (kind 30178): the team and the agents it is made of. */
 @Composable
-fun RenderAgentTeamCatalog(baseNote: Note) {
+fun RenderAgentTeamCatalog(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? TeamCatalogEvent ?: return
     val catalog = remember(event) { event.catalogOrNull() }
     val shared = remember(event) { event.isShared() }
@@ -309,10 +326,11 @@ fun RenderAgentTeamCatalog(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Groups,
         title = name ?: kindTitle,
-        subtitle = catalog?.description?.ifBlank { null } ?: if (name != null) kindTitle else null,
+        subtitle = if (name != null) kindTitle else null,
         status = if (shared) stringRes(Res.string.kc_agent_pill_shared) else null,
     ) {
-        KindCardField(stringRes(Res.string.kc_agent_instructions), catalog?.instructions)
+        KindCardProse(null, baseNote, catalog?.description, backgroundColor, accountViewModel, nav)
+        KindCardProse(stringRes(Res.string.kc_agent_instructions), baseNote, catalog?.instructions, backgroundColor, accountViewModel, nav)
         if (members.isNotEmpty()) {
             KindCardSection(stringRes(Res.string.members))
             KindCardChips(members, max = MAX_NAME_CHIPS)
@@ -322,7 +340,12 @@ fun RenderAgentTeamCatalog(baseNote: Note) {
 
 /** A Buzz project (kind 30621): a named group of git repositories. */
 @Composable
-fun RenderAgentProject(baseNote: Note) {
+fun RenderAgentProject(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? ProjectEvent ?: return
     val repos = remember(event) { event.members().map { it.address.dTag }.filter { it.isNotBlank() } }
     val unlisted = remember(event) { event.visibility() == ProjectVisibility.UNLISTED }
@@ -332,10 +355,11 @@ fun RenderAgentProject(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Folder,
         title = name ?: kindTitle,
-        subtitle = event.description()?.ifBlank { null } ?: if (name != null) kindTitle else null,
+        subtitle = if (name != null) kindTitle else null,
         status = if (unlisted) stringRes(Res.string.kc_agent_visibility_unlisted) else null,
         statusTone = KindTone.Neutral,
     ) {
+        KindCardProse(null, baseNote, event.description(), backgroundColor, accountViewModel, nav)
         if (repos.isNotEmpty()) {
             KindCardSection(stringRes(Res.string.kc_agent_repositories))
             KindCardChips(repos, max = MAX_NAME_CHIPS)
@@ -502,7 +526,8 @@ fun RenderWorkflowLifecycle(
     val step = payload?.step?.ifBlank { null }
     val workflow = payload?.workflow?.ifBlank { null }
     val task = payload?.task?.ifBlank { null }
-    val subtitle = (if (header.isStep) step else null) ?: workflow ?: task
+    // The task is prose someone wrote, so it goes in the body (translatable), not the subtitle.
+    val subtitle = (if (header.isStep) step else null) ?: workflow
 
     KindCard(
         icon = header.icon,
@@ -511,9 +536,9 @@ fun RenderWorkflowLifecycle(
         tone = header.tone,
     ) {
         if (payload != null) {
-            if (task != subtitle) KindCardField(stringRes(Res.string.kc_agent_wf_task), task)
-            KindCardField(stringRes(Res.string.kc_agent_wf_error), payload.error)
-            KindCardField(stringRes(Res.string.kc_agent_wf_note), payload.note)
+            KindCardProse(stringRes(Res.string.kc_agent_wf_task), baseNote, task, backgroundColor, accountViewModel, nav)
+            KindCardRichField(stringRes(Res.string.kc_agent_wf_error), baseNote, payload.error, backgroundColor, accountViewModel, nav)
+            KindCardRichField(stringRes(Res.string.kc_agent_wf_note), baseNote, payload.note, backgroundColor, accountViewModel, nav)
             KindCardField(stringRes(Res.string.kc_agent_wf_pr), payload.pr, maxLines = 1)
         } else {
             KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav)
@@ -571,6 +596,7 @@ fun RenderWorkflowApprovalDecision(
 @Composable
 fun RenderCapabilityDiscovery(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -589,7 +615,7 @@ fun RenderCapabilityDiscovery(
             },
         statusTone = KindTone.Warning,
     ) {
-        KindCardMeta(listOf(data.summary))
+        KindCardProse(null, baseNote, data.summary, backgroundColor, accountViewModel, nav)
         KindCardMeta(data.transports + listOfNotNull(if (data.isHead) stringRes(Res.string.kc_agent_capability_head) else null))
         KindCardField(stringRes(Res.string.kc_agent_capability_profile), data.profile)
         KindCardField(stringRes(Res.string.kc_agent_capability_interface), data.interfaceId, monospace = true, maxLines = 1)
@@ -639,7 +665,6 @@ fun RenderExtensionListing(
     KindCard(
         icon = MaterialSymbols.Extension,
         title = title ?: slug ?: kindName(event.kind),
-        subtitle = description,
         status =
             when {
                 hidden -> stringRes(Res.string.kc_agent_ext_hidden)
@@ -648,6 +673,7 @@ fun RenderExtensionListing(
             },
         statusTone = if (hidden) KindTone.Neutral else KindTone.Positive,
     ) {
+        KindCardProse(null, baseNote, description, backgroundColor, accountViewModel, nav)
         if (title != null) KindCardField(stringRes(Res.string.kc_agent_ext_package), slug, monospace = true, maxLines = 1)
         releaseId?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
@@ -699,7 +725,12 @@ fun RenderExtensionRelease(baseNote: Note) {
 
 /** A ContextVM server announcement (CEP-6): the server's name, blurb and what it supports. */
 @Composable
-fun RenderCvmServerAnnouncement(baseNote: Note) {
+fun RenderCvmServerAnnouncement(
+    baseNote: Note,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val event = baseNote.event as? CvmServerAnnouncementEvent ?: return
     val surface = remember(event) { event.discovery() }
     val name = surface.name?.ifBlank { null }
@@ -707,8 +738,9 @@ fun RenderCvmServerAnnouncement(baseNote: Note) {
     KindCard(
         icon = MaterialSymbols.Dns,
         title = name ?: kindName(event.kind),
-        subtitle = surface.about?.ifBlank { null } ?: if (name != null) kindName(event.kind) else null,
+        subtitle = if (name != null) kindName(event.kind) else null,
     ) {
+        KindCardProse(null, baseNote, surface.about, backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.website), surface.website, maxLines = 1)
         KindCardChips(
             listOfNotNull(

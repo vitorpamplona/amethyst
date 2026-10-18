@@ -73,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_buzz_feedback
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_feedback_bug
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_feedback_needs_work
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_feedback_praise
-import com.vitorpamplona.amethyst.commons.resources.kc_buzz_file
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_forum_downvote
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_forum_post
 import com.vitorpamplona.amethyst.commons.resources.kc_buzz_forum_reply
@@ -467,6 +466,7 @@ fun RenderBuzzReminder(
 @Composable
 fun RenderBuzzDiffCard(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -486,11 +486,11 @@ fun RenderBuzzDiffCard(
     KindCard(
         icon = MaterialSymbols.Code,
         title = stringRes(Res.string.kc_buzz_diff),
-        // The description says what changed; without one, the file is the subject.
-        subtitle = description ?: filePath,
+        // The file is the subject; the description, someone's own words, reads below.
+        subtitle = filePath,
     ) {
         BuzzChannel(baseNote, channelId, accountViewModel, nav)
-        if (description != null) KindCardField(stringRes(Res.string.kc_buzz_file), filePath, maxLines = 2)
+        KindCardProse(null, baseNote, description, backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_repository), repo, maxLines = 1)
         KindCardField(stringRes(Res.string.kc_buzz_branch), meta?.branch?.let { "${it.source} → ${it.target}" }, maxLines = 1)
         KindCardField(stringRes(Res.string.kc_buzz_commit), meta?.commitSha?.take(8), monospace = true)
@@ -509,6 +509,7 @@ fun RenderBuzzDiffCard(
 @Composable
 fun RenderBuzzChannelSummary(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -532,13 +533,13 @@ fun RenderBuzzChannelSummary(
     KindCard(
         icon = MaterialSymbols.Info,
         title = summary.name?.ifBlank { null } ?: stringRes(Res.string.kc_buzz_channel_summary),
-        subtitle = summary.about?.ifBlank { null },
         tone = if (summary.archived == true) KindTone.Neutral else KindTone.Primary,
         status = pill,
     ) {
         BuzzChannel(baseNote, channelId, accountViewModel, nav)
-        KindCardField(stringRes(Res.string.kc_buzz_topic), summary.topic)
-        KindCardField(stringRes(Res.string.kc_buzz_purpose), summary.purpose)
+        KindCardProse(null, baseNote, summary.about, backgroundColor, accountViewModel, nav)
+        KindCardRichField(stringRes(Res.string.kc_buzz_topic), baseNote, summary.topic, backgroundColor, accountViewModel, nav)
+        KindCardRichField(stringRes(Res.string.kc_buzz_purpose), baseNote, summary.purpose, backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_last_activity), summary.lastActivityAt?.let { timeAbsoluteNoDot(it) })
         KindCardMeta(
             listOf(
@@ -1126,6 +1127,7 @@ fun RenderBuzzMemberRemoved(
 @Composable
 fun RenderBuzzModerationBan(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -1141,7 +1143,7 @@ fun RenderBuzzModerationBan(
     ) {
         KindCardUsers(target, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_until), expiresAt?.let { timeAbsoluteNoDot(it) })
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -1149,6 +1151,7 @@ fun RenderBuzzModerationBan(
 @Composable
 fun RenderBuzzModerationTimeout(
     baseNote: Note,
+    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -1164,7 +1167,7 @@ fun RenderBuzzModerationTimeout(
     ) {
         KindCardUsers(target, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_until), expiresAt?.let { timeAbsoluteNoDot(it) })
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -1221,7 +1224,7 @@ fun RenderBuzzModerationResolveReport(
         }
     KindCard(icon = MaterialSymbols.Gavel, title = title, tone = tone) {
         KindCardField(stringRes(Res.string.kc_buzz_action), actionText)
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         report?.let { KindCardQuoteEvent(it, quotesLeft, backgroundColor, accountViewModel, nav) }
     }
 }
@@ -1363,7 +1366,7 @@ fun RenderBuzzArchiveRequest(
     val reason = remember(event) { event.reason() }
     KindCard(icon = MaterialSymbols.PersonOff, title = stringRes(Res.string.kc_buzz_archive_request), tone = KindTone.Warning) {
         KindCardUsers(target, accountViewModel, nav)
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         BuzzLabeledUsers(stringRes(Res.string.kc_buzz_replaced_by), replacedBy, accountViewModel, nav)
     }
@@ -1383,7 +1386,7 @@ fun RenderBuzzUnarchiveRequest(
     val reason = remember(event) { event.reason() }
     KindCard(icon = MaterialSymbols.Person, title = stringRes(Res.string.kc_buzz_unarchive_request), tone = KindTone.Warning) {
         KindCardUsers(target, accountViewModel, nav)
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
     }
 }
@@ -1405,7 +1408,7 @@ fun RenderBuzzIdentityArchived(
     val requester = remember(consent, target) { listOfNotNull(consent?.actorPubKey?.takeIf { it != target }) }
     KindCard(icon = MaterialSymbols.PersonOff, title = stringRes(Res.string.kc_buzz_identity_archived), tone = KindTone.Negative) {
         KindCardUsers(listOfNotNull(target), accountViewModel, nav)
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_consent), buzzConsentLabel(consent?.path))
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         BuzzLabeledUsers(stringRes(Res.string.kc_buzz_requested_by), requester, accountViewModel, nav)
@@ -1429,7 +1432,7 @@ fun RenderBuzzIdentityUnarchived(
     val requester = remember(consent, target) { listOfNotNull(consent?.actorPubKey?.takeIf { it != target }) }
     KindCard(icon = MaterialSymbols.Person, title = stringRes(Res.string.kc_buzz_identity_unarchived), tone = KindTone.Positive) {
         KindCardUsers(listOfNotNull(target), accountViewModel, nav)
-        KindCardField(stringRes(Res.string.kc_buzz_reason), reason)
+        KindCardRichField(stringRes(Res.string.kc_buzz_reason), baseNote, reason, backgroundColor, accountViewModel, nav)
         KindCardField(stringRes(Res.string.kc_buzz_consent), buzzConsentLabel(consent?.path))
         KindCardText(baseNote, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
         BuzzLabeledUsers(stringRes(Res.string.kc_buzz_requested_by), requester, accountViewModel, nav)

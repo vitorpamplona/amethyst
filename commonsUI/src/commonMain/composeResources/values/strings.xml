@@ -8071,7 +8071,6 @@
     <string name="kc_buzz_huddle_reaction_plain">Reacted in a huddle</string>
     <string name="kc_buzz_live">Live</string>
     <string name="kc_buzz_open">Open</string>
-    <string name="kc_buzz_file">File</string>
     <string name="kc_buzz_pr_number">PR #%1$s</string>
     <string name="kc_buzz_consent_self">Self</string>
     <plurals name="kc_buzz_message_count">

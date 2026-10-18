@@ -158,6 +158,9 @@ private val HEX64 = Regex("[0-9a-fA-F]{64}")
 /** Params that only tell the DVM where to read or write, not what the job is. */
 private val PLUMBING_PARAMS = setOf("relay", "relays")
 
+/** Params whose values are prose someone wrote, shown as translatable text rather than meta facts. */
+private val PROSE_PARAMS = setOf("prompt", "negative_prompt", "instructions", "system_prompt", "description", "context")
+
 private class DvmJob(
     val name: StringResource,
     val icon: MaterialSymbol,
@@ -204,6 +207,7 @@ private class DvmRequestInfo(
     val embeddedCount: Int,
     val filterJson: String?,
     val params: List<Pair<String, String>>,
+    val proseParams: List<Pair<String, String>>,
     val users: List<HexKey>,
     val bidSats: Long?,
     val providers: List<HexKey>,
@@ -251,7 +255,8 @@ private fun parseRequest(event: DvmRequestEvent): DvmRequestInfo {
         embedded = eventJsons.firstOrNull()?.let { Event.fromJsonOrNull(it) },
         embeddedCount = eventJsons.size,
         filterJson = (event as? DvmEventCountRequestEvent)?.filterJson()?.ifBlank { null },
-        params = params.map { (key, values) -> key to values.joinToString(", ") },
+        params = params.filterKeys { it !in PROSE_PARAMS }.map { (key, values) -> key to values.joinToString(", ") },
+        proseParams = params.filterKeys { it in PROSE_PARAMS }.map { (key, values) -> key to values.joinToString("\n") },
         users = users.distinct(),
         bidSats = event.tags.dvmBidSats(),
         providers = event.serviceProviders(),
@@ -360,6 +365,10 @@ fun RenderDvmRequest(
         }
 
         KindCardMeta(info.params.map { (key, value) -> stringRes(Res.string.kc_dvm_param_pair, dvmParamLabel(key), value) })
+        // Params someone wrote in their own words read as text, with translation and links.
+        info.proseParams.forEach { (key, value) ->
+            KindCardRichField(dvmParamLabel(key), baseNote, value, backgroundColor, accountViewModel, nav)
+        }
 
         DvmPeople(Res.string.kc_dvm_label_for, info.users, accountViewModel, nav)
         DvmPeople(Res.string.kc_dvm_label_providers, info.providers, accountViewModel, nav)
@@ -592,10 +601,11 @@ fun RenderDvmHeartbeat(
     KindCard(
         icon = MaterialSymbols.Sensors,
         title = stringRes(Res.string.kc_dvm_heartbeat_title),
-        subtitle = event.status(),
         tone = if (fresh) KindTone.Positive else KindTone.Neutral,
         status = stringRes(if (fresh) Res.string.kc_dvm_online else Res.string.dvm_offline),
     ) {
+        // The DVM's own status message, in its own words.
+        KindCardProse(null, baseNote, event.status(), backgroundColor, accountViewModel, nav)
         announcement?.let { KindCardQuoteAddress(it, minOf(quotesLeft, 1), backgroundColor, accountViewModel, nav) }
     }
 }
