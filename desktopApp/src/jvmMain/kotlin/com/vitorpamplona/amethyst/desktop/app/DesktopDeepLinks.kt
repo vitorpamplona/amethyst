@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.app
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.awt.Desktop
 import java.io.File
 import java.io.IOException
 import java.net.InetAddress
@@ -41,13 +42,15 @@ import kotlin.concurrent.thread
  *    desktop entries (AppImage, Flatpak, and the jpackage-generated .deb/.rpm entries via
  *    `scripts/fix-deb-desktop-entry.sh` and the rpm repackaging in `desktopApp/build.gradle.kts`).
  *  - Windows: `HKCU\Software\Classes\<scheme>` self-registration on startup
- *    ([registerWindowsUrlSchemes]) — per-user, no admin, no installer change.
+ *    ([registerWindowsUrlSchemes]) — per-user, no admin, no installer change, off the startup
+ *    path, and only for schemes that are unclaimed or already point at this app.
  *
  * Delivery differs by OS, so there are two paths into [pending]:
  *  - macOS hands the URI to the running process directly ([installMacOsOpenUriHandler]).
  *  - Linux and Windows start a *new* process with the URI as argv. [forwardToRunningInstance]
  *    passes it to the already-running instance over the loopback instance bus and the new
- *    process exits; on a cold start there is no instance, so main() offers the argv URI itself.
+ *    process exits once the instance acknowledges the link; on a cold start there is no
+ *    instance, so main() offers the argv URI itself.
  *
  * Consumption is in `DesktopAppRoot.NavigationEffects`: once a logged-in shell exists it
  * turns the URI into a route with the shared `uriToRoute` parser and navigates to it.
@@ -83,10 +86,17 @@ object DesktopDeepLinks {
         }
     }
 
-    /** Installs the OS-side delivery mechanisms that are runtime's job (see the class docs). */
+    /**
+     * Installs the OS-side delivery mechanisms that are runtime's job (see the class docs). The
+     * macOS handler must be in place before AWT can deliver an open-URI event, so it installs
+     * synchronously; the Windows registry writes shell out to reg.exe once per value, so they
+     * run on a daemon thread instead of delaying the first window.
+     */
     fun installOsHandlers() {
         if (PlatformInfo.isMacOS) installMacOsOpenUriHandler()
-        if (PlatformInfo.isWindows) registerWindowsUrlSchemes()
+        if (PlatformInfo.isWindows) {
+            thread(isDaemon = true, name = "win-url-schemes") { registerWindowsUrlSchemes() }
+        }
     }
 
     /**
@@ -96,8 +106,8 @@ object DesktopDeepLinks {
      */
     private fun installMacOsOpenUriHandler() {
         try {
-            val desktop = java.awt.Desktop.getDesktop()
-            if (desktop.isSupported(java.awt.Desktop.Action.APP_OPEN_URI)) {
+            val desktop = Desktop.getDesktop()
+            if (desktop.isSupported(Desktop.Action.APP_OPEN_URI)) {
                 desktop.setOpenURIHandler { event ->
                     bringToFront()
                     offer(event.uri.toString())
@@ -114,8 +124,10 @@ object DesktopDeepLinks {
      * Windows has no per-user installer hook in jpackage's MSI, so the app registers the schemes
      * itself under HKCU (per-user, no elevation): `HKCU\Software\Classes\nostr` and
      * `...\amethyst`, each pointing `shell\open\command` at the running launcher with `%1`.
-     * Idempotent and refreshed on every start, so an app update that moves the exe self-heals.
-     * Skipped on dev runs: registering `java.exe` would steal the scheme for every JVM on the box.
+     * A scheme is only written when nobody owns it or the current handler already points at this
+     * exe — a user who picked another Nostr client keeps it, because the registration would
+     * otherwise steal the scheme back on every start. Skipped on dev runs: registering
+     * `java.exe` would steal the scheme for every JVM on the box.
      */
     private fun registerWindowsUrlSchemes() {
         val exe =
@@ -132,10 +144,44 @@ object DesktopDeepLinks {
         }
 
         for (scheme in listOf("nostr", "amethyst")) {
+            val current = currentWindowsHandler(scheme)
+            if (current != null && !current.contains(exe, ignoreCase = true)) {
+                Log.i(TAG) { "Another app handles $scheme:, leaving its registration alone" }
+                continue
+            }
             runReg("add", "HKCU\\Software\\Classes\\$scheme", "/ve", "/d", "URL:Nostr URI", "/f")
             runReg("add", "HKCU\\Software\\Classes\\$scheme", "/v", "URL Protocol", "/d", "", "/f")
             runReg("add", "HKCU\\Software\\Classes\\$scheme\\shell\\open\\command", "/ve", "/d", "\"$exe\" \"%1\"", "/f")
         }
+    }
+
+    /**
+     * The open command currently registered for [scheme], or null when the scheme is unclaimed
+     * (or the query fails, in which case the adds below log their own failure). Read from HKCR,
+     * the merged view of HKLM and HKCU — an HKCU entry wins there — so this sees the handler a
+     * link click would actually launch, whichever app registered it.
+     */
+    private fun currentWindowsHandler(scheme: String): String? {
+        val output =
+            try {
+                val process =
+                    ProcessBuilder("reg", "query", "HKCR\\$scheme\\shell\\open\\command", "/ve")
+                        .redirectErrorStream(true)
+                        .start()
+                val text = process.inputStream.bufferedReader().readText()
+                if (process.waitFor() != 0) return null
+                text
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not read the current $scheme: handler", e)
+                return null
+            }
+        // The value line looks like:    (Default)    REG_SZ    "C:\...\app.exe" "%1"
+        return output
+            .lineSequence()
+            .firstOrNull { it.contains("REG_SZ") }
+            ?.substringAfter("REG_SZ")
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
     }
 
     private fun runReg(vararg args: String) {
@@ -157,8 +203,8 @@ object DesktopDeepLinks {
     /** Asks the OS to surface the window; supported everywhere AWT is, ignored where it is not. */
     private fun bringToFront() {
         runCatching {
-            val desktop = java.awt.Desktop.getDesktop()
-            if (desktop.isSupported(java.awt.Desktop.Action.APP_REQUEST_FOREGROUND)) {
+            val desktop = Desktop.getDesktop()
+            if (desktop.isSupported(Desktop.Action.APP_REQUEST_FOREGROUND)) {
                 desktop.requestForeground(true)
             }
         }
@@ -167,14 +213,21 @@ object DesktopDeepLinks {
     // --- The instance bus: how a second process hands its URI to the running app ---
 
     private const val INSTANCE_PORT_FILE = "instance.port"
-    private const val MAX_URI_BYTES = 64 * 1024
+
+    /** How long an accepted connection may take to send its line before it is dropped. */
+    private const val BUS_READ_TIMEOUT_MS = 5_000
+
+    /** The running instance's answer to a link it accepted; no answer means no live instance. */
+    private const val BUS_ACK = "ok"
 
     @Volatile
     private var server: ServerSocket? = null
 
     /**
-     * Sends [uri] to the instance that owns the bus, if one is alive. The port file going stale
-     * (a killed instance) reads as a connect failure and simply means "no running instance".
+     * Sends [uri] to the instance that owns the bus, if one is alive, and waits for its ack.
+     * The port file going stale (a killed instance) reads as a connect failure, and a port some
+     * other process now owns never answers with the ack — both simply mean "no running
+     * instance", so the caller routes the link itself instead of losing it.
      */
     fun forwardToRunningInstance(
         uri: String,
@@ -189,9 +242,10 @@ object DesktopDeepLinks {
         return try {
             Socket(InetAddress.getLoopbackAddress(), port).use { socket ->
                 socket.soTimeout = 2_000
-                socket.getOutputStream().writer().use { it.write(uri + "\n") }
+                socket.getOutputStream().write((uri + "\n").toByteArray(Charsets.UTF_8))
+                socket.getOutputStream().flush()
+                socket.getInputStream().bufferedReader().readLine() == BUS_ACK
             }
-            true
         } catch (e: IOException) {
             false
         }
@@ -200,45 +254,72 @@ object DesktopDeepLinks {
     /**
      * Starts the loopback listener other processes forward their deep links to. Loopback-only,
      * and only lines that parse as one of our schemes are accepted — a local process can do no
-     * more than ask the app to display a route, exactly what clicking a link does.
+     * more than ask the app to display a route, exactly what clicking a link does. Each accepted
+     * link is answered with the ack [forwardToRunningInstance] waits for. A failure to start
+     * (the socket, the port file) is logged and leaves the app running without deep links.
      */
     fun startInstanceBus(dataDir: File) {
         if (server != null) return
+        try {
+            bindInstanceBus(dataDir)
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not start the instance bus; deep links are off this session", e)
+        }
+    }
+
+    /** Binds the bus and starts its accept loop, cleaning up the socket and port file on failure. */
+    private fun bindInstanceBus(dataDir: File) {
         val socket = ServerSocket(0, 50, InetAddress.getLoopbackAddress())
-        server = socket
-
         val portFile = File(dataDir, INSTANCE_PORT_FILE)
-        portFile.writeText(socket.localPort.toString())
-        Runtime.getRuntime().addShutdownHook(
-            Thread {
-                runCatching { socket.close() }
-                portFile.delete()
-            },
-        )
+        try {
+            portFile.writeText(socket.localPort.toString())
+            server = socket
 
-        thread(isDaemon = true, name = "deep-link-bus") {
-            while (true) {
-                val accepted =
-                    try {
-                        socket.accept()
-                    } catch (e: IOException) {
-                        return@thread // closed on shutdown
-                    }
-                thread(isDaemon = true) {
-                    accepted.use { conn ->
-                        val line =
-                            runCatching {
-                                String(conn.getInputStream().readNBytes(MAX_URI_BYTES), Charsets.UTF_8)
-                                    .lineSequence()
-                                    .firstOrNull()
-                            }.getOrNull()
-                        if (line != null && isDeepLink(line)) {
-                            bringToFront()
-                            offer(line)
+            Runtime.getRuntime().addShutdownHook(
+                Thread {
+                    runCatching { socket.close() }
+                    portFile.delete()
+                },
+            )
+
+            thread(isDaemon = true, name = "deep-link-bus") {
+                while (true) {
+                    val accepted =
+                        try {
+                            socket.accept()
+                        } catch (e: IOException) {
+                            return@thread // closed on shutdown
                         }
-                    }
+                    thread(isDaemon = true) { handleBusConnection(accepted) }
                 }
             }
+        } catch (e: Exception) {
+            server = null
+            runCatching { socket.close() }
+            portFile.delete()
+            throw e
+        }
+    }
+
+    /**
+     * Reads a single line — bounded by a read timeout so a stalled sender cannot pin the thread
+     * — routes it if it is one of our schemes, and answers with the ack the forwarder waits for.
+     * Anything else gets no ack and is dropped when the connection closes.
+     */
+    private fun handleBusConnection(conn: Socket) {
+        try {
+            conn.soTimeout = BUS_READ_TIMEOUT_MS
+            val line = conn.getInputStream().bufferedReader().readLine()
+            if (line != null && isDeepLink(line)) {
+                bringToFront()
+                offer(line)
+                conn.getOutputStream().write("$BUS_ACK\n".toByteArray(Charsets.UTF_8))
+                conn.getOutputStream().flush()
+            }
+        } catch (e: IOException) {
+            Log.w(TAG, "Instance bus connection failed", e)
+        } finally {
+            runCatching { conn.close() }
         }
     }
 }
