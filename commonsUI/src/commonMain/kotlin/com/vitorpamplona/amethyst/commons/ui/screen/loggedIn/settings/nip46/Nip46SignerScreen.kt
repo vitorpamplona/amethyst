@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_hint
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_invalid
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_label
+import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_link_confirm
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connect_no_relays
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_count
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_connected_named
@@ -128,6 +129,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.QrCodeDrawer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import kotlinx.coroutines.launch
 
 private val LiveGreen = Color(0xFF3DDC84)
@@ -180,10 +182,10 @@ fun Nip46SignerScreen(
         }
     }
 
-    // Opened from a scanned/shared nostrconnect:// offer — pair that app on open (this also enables the signer).
-    LaunchedEffect(connectUri) {
-        if (!connectUri.isNullOrBlank()) onConnect(connectUri)
-    }
+    // Opened from a nostrconnect:// link: ask before pairing (which also turns the signer on). Any web
+    // page can fire that link, and pairing an app approved before skips the consent prompt, so pairing
+    // straight away would let a link rewrite a paired app's relays and re-enable a signer turned off.
+    var linkOffer by remember(connectUri) { mutableStateOf(connectUri?.takeIf { it.isNotBlank() }) }
 
     if (scanning) {
         SimpleQrCodeScanner { contents ->
@@ -268,6 +270,26 @@ fun Nip46SignerScreen(
         }
     }
 
+    linkOffer?.let { uri ->
+        val offer = remember(uri) { NostrConnectURI.parseNostrConnect(uri.trim()) }
+        if (offer == null) {
+            // Not a valid offer: let the connect path report it.
+            LaunchedEffect(uri) {
+                linkOffer = null
+                onConnect(uri)
+            }
+        } else {
+            ConnectFromLinkDialog(
+                appName = offer.name?.ifBlank { null } ?: offer.clientPubKey.take(8),
+                onConfirm = {
+                    linkOffer = null
+                    onConnect(uri)
+                },
+                onDismiss = { linkOffer = null },
+            )
+        }
+    }
+
     if (confirmRotate) {
         RotateAddressDialog(
             onConfirm = {
@@ -278,6 +300,29 @@ fun Nip46SignerScreen(
             onDismiss = { confirmRotate = false },
         )
     }
+}
+
+@Composable
+private fun ConnectFromLinkDialog(
+    appName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.nip46_signer_connect_label)) },
+        text = { Text(stringRes(Res.string.nip46_signer_connect_link_confirm, appName)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringRes(Res.string.nip46_signer_connect_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringRes(Res.string.nip46_signer_cancel))
+            }
+        },
+    )
 }
 
 @Composable

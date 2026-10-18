@@ -526,7 +526,7 @@ fun observeUserRelayIntoList(
 ): State<Boolean> {
     // Subscribe in the LocalCache for changes that arrive in the device
     val flow =
-        remember(accountViewModel) {
+        remember(accountViewModel, relayUrl) {
             accountViewModel.account.trustedRelays.flow
                 .mapLatest { relays ->
                     relayUrl in relays

@@ -31,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -371,23 +372,25 @@ fun DisplayRelaySet(
     Box {
         Column(modifier = Modifier.padding(top = 5.dp)) {
             toMembersShow.forEach { relay ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        text = relay.displayUrl(),
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier =
-                            Modifier
-                                .padding(start = 10.dp, bottom = 5.dp)
-                                .weight(1f),
-                    )
+                key(relay) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = relay.displayUrl(),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier =
+                                Modifier
+                                    .padding(start = 10.dp, bottom = 5.dp)
+                                    .weight(1f),
+                        )
 
-                    Column(modifier = Modifier.padding(start = 10.dp)) {
-                        RelayOptionsAction(relay, accountViewModel, nav)
+                        Column(modifier = Modifier.padding(start = 10.dp)) {
+                            RelayOptionsAction(relay, accountViewModel, nav)
+                        }
                     }
                 }
             }
@@ -420,15 +423,15 @@ private fun RelayOptionsAction(
     val scope = rememberCoroutineScope()
 
     if (isCurrentlyOnTheUsersList) {
+        RemoveRelayButton {
+            nav.nav(Route.EditRelays)
+        }
+    } else {
         AddRelayButton {
             scope.launch {
                 clipboardManager.setText(relay.url)
                 nav.nav(Route.EditRelays)
             }
-        }
-    } else {
-        RemoveRelayButton {
-            nav.nav(Route.EditRelays)
         }
     }
 }

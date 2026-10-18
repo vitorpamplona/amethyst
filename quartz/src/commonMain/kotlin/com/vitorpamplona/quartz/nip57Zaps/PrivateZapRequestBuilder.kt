@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -123,7 +124,24 @@ class PrivateZapRequestBuilder {
                 }
             }
 
-        return privateEvent
+        return checkDecrypted(privateEvent, event)
+    }
+
+    /**
+     * Returns [private] if it is a genuine private zap for [request], else throws. The inner event is
+     * whatever the sender encrypted, so it must be signed by the key it names (or anyone could pin a
+     * zap on any npub) and aim at nothing the outer request does not (or a real one could be reused
+     * on another note).
+     */
+    fun checkDecrypted(
+        private: PrivateZapEvent,
+        request: ZapRequestEvent,
+    ): PrivateZapEvent {
+        if (!private.verify()) throw IllegalStateException("The private zap's signature is invalid.")
+        if (!request.zappedAuthor().containsAll(private.zappedAuthor()) || !request.zappedPost().containsAll(private.zappedPost())) {
+            throw IllegalStateException("The private zap does not match its zap request.")
+        }
+        return private
     }
 
     /**
@@ -141,7 +159,7 @@ class PrivateZapRequestBuilder {
             } catch (e: Exception) {
                 throw IllegalStateException("Could not decrypt private zap. ${e.message}")
             }
-        return parsePrivateZap(signer.nip04Decrypt(payload, event.pubKey))
+        return checkDecrypted(parsePrivateZap(signer.nip04Decrypt(payload, event.pubKey)), event)
     }
 
     fun decryptAnonTag(

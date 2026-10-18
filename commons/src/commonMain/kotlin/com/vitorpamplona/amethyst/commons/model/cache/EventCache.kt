@@ -2219,7 +2219,11 @@ open class EventCache :
         val isVerified =
             if (event.createdAt > oldChannel.updatedMetadataAt) {
                 if (wasVerified || justVerify(event)) {
-                    oldChannel.updateChannelInfo(author, event, note)
+                    // NIP-28: only the kind-40 author may update the channel. While the 40 is still
+                    // unknown, the update waits in the channel's notes and the 40 applies it.
+                    if (oldChannel.creator == author) {
+                        oldChannel.updateChannelInfo(event, note)
+                    }
                     true
                 } else {
                     false

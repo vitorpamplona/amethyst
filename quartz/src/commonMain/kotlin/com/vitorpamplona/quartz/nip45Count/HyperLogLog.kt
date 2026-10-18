@@ -52,6 +52,8 @@ object HyperLogLog {
     fun merge(hlls: List<ByteArray>): ByteArray {
         val merged = ByteArray(NUM_REGISTERS)
         for (hll in hlls) {
+            // A relay's malformed register array is skipped, not allowed to fail the whole merge.
+            if (hll.size != NUM_REGISTERS) continue
             for (i in 0 until NUM_REGISTERS) {
                 val value = hll[i].toInt() and 0xFF
                 val current = merged[i].toInt() and 0xFF
