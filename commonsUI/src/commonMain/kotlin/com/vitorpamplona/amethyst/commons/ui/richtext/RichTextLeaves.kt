@@ -102,7 +102,7 @@ fun BlossomUriRenderer(
     } else {
         val serverUrl = rememberBlossomServerUrl(word)
         if (serverUrl != null) {
-            LoadUrlPreview(serverUrl, blossomFileName(word), callbackUri, accountViewModel, nav)
+            LoadUrlPreview(serverUrl, remember(word) { blossomFileName(word) }, callbackUri, accountViewModel, nav)
         } else {
             ClickableBlossomUri(word, accountViewModel)
         }
@@ -117,7 +117,7 @@ fun BlossomUriRendererNoPreview(
 ) {
     val serverUrl = rememberBlossomServerUrl(word)
     if (serverUrl != null) {
-        ClickableUrlOrBlossom(blossomFileName(word), serverUrl)
+        ClickableUrlOrBlossom(remember(word) { blossomFileName(word) }, serverUrl)
     } else {
         ClickableBlossomUri(word, accountViewModel)
     }

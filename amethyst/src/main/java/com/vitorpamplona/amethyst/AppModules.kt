@@ -1399,7 +1399,8 @@ class AppModules(
             LocalCache
                 .observeNewEvents<CalendarRSVPEvent>(Filter(kinds = listOf(CalendarRSVPEvent.KIND)))
                 .collect { rsvp ->
-                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED) {
+                    // Only this device's accounts' RSVPs: the feeds load every follow's too.
+                    if (rsvp.status() == RSVPStatusTag.STATUS.ACCEPTED && rsvp.pubKey in accountsCache.accounts.value) {
                         CalendarReminderWorker.schedule(appContext)
                     }
                 }
@@ -1419,7 +1420,7 @@ class AppModules(
                 ).conflate()
                 .collect {
                     if (calendarReminderSettings().load().enabled &&
-                        CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(), TimeUtils.now())
+                        CalendarReminderScanner.couldStillFire(CalendarReminderScanner.acceptedRsvpsInCache(accountsCache.accounts.value.keys), TimeUtils.now())
                     ) {
                         CalendarReminderWorker.schedule(appContext)
                     }

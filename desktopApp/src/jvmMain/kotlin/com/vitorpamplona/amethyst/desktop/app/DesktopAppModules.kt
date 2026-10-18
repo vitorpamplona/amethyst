@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatu
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
 import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
+import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManagerForRelays
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
@@ -369,6 +370,13 @@ class DesktopAppModules(
     val sources: RelaySubscriptionsCoordinator =
         RelaySubscriptionsCoordinator(cache, client, authCoordinator.receiver, failureTracker, applicationIOScope)
 
+    /** Signs the BUD-01 retry when a gated Blossom host answers an image fetch with 401. */
+    val blossomReadAuthTokens =
+        BlossomReadAuthTokenProvider(
+            signerProvider = { sessionManager.loggedInAccount()?.signer },
+            scope = applicationIOScope,
+        )
+
     /**
      * BUD-10: resolves a `blossom:` URI to a server that holds the blob, from the author's and the
      * user's Blossom server lists. Android's also tries the local Blossom cache, which the desktop
@@ -459,7 +467,7 @@ class DesktopAppModules(
     val notifications by lazy { DesktopNotifications(applicationIOScope) }
 
     /** "Starting soon" notifications for the appointments the user is attending. */
-    val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, applicationIOScope) }
+    val calendarReminders by lazy { DesktopCalendarReminders(appStores, notifications, { accountsCache.accounts.value.keys }, applicationIOScope) }
 
     /** What key storage asks the user (the key-file password, a key this device does not keep). */
     private val keyPrompts = KeyStoragePrompts()

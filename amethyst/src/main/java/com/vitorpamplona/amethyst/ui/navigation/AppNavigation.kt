@@ -64,8 +64,6 @@ import com.vitorpamplona.amethyst.service.nowPlaying.AndroidAppIcon
 import com.vitorpamplona.amethyst.service.nowPlaying.AndroidNowPlayingAccess
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.components.getActivity
-import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageFileScreen
-import com.vitorpamplona.amethyst.ui.note.share.ShareNoteAsImageScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.browser.WebAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites.NostrAppScreen
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.napplets.ConnectedAppDetailScreen
@@ -110,8 +108,6 @@ internal fun NavDestinations.androidDestinations(
         NowPlayingSettingsScreen(accountViewModel, nav, access) { appId, label -> AndroidAppIcon(appId, label) }
     }
     composableFromEnd<Route.ResourceUsage> { ResourceUsageScreen(accountViewModel, nav) }
-    composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
-    composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
 }
 
 /** True for both share flavors: a single file/text (SEND) and a multi-file selection (SEND_MULTIPLE). */

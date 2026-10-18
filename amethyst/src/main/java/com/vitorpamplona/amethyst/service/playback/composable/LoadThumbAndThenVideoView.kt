@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalResources
 import coil3.asDrawable
 import coil3.imageLoader
 import coil3.request.ImageRequest
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
@@ -81,7 +82,9 @@ fun LoadThumbAndThenVideoView(
             }
     }
 
-    if (loadingFinished.first) {
+    if (!loadingFinished.first) {
+        ReportCaptureLoading()
+    } else {
         VideoView(
             videoUri = videoUri,
             mimeType = mimeType,

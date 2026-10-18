@@ -69,6 +69,8 @@ class MarkdownMediaRenderer(
     val callbackUri: String? = null,
     val accountViewModel: AccountViewModel,
     val nav: INav,
+    /** Rendering for a share-as-image capture, which shows link previews whatever the settings say. */
+    val forCapture: Boolean = false,
 ) : MediaRenderer {
     val parser = RichTextParser()
 
@@ -139,7 +141,7 @@ class MarkdownMediaRenderer(
                     )
                 }
             } else {
-                if (!accountViewModel.settings.showUrlPreview()) {
+                if (!forCapture && !accountViewModel.settings.showUrlPreview()) {
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {

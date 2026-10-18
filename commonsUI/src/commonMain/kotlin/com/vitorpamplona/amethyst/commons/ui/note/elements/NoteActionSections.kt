@@ -109,6 +109,7 @@ enum class NoteActionGroup(
 ) {
     COPY(Res.string.copy, MaterialSymbols.ContentCopy),
     BOOKMARK(Res.string.bookmarks, MaterialSymbols.Bookmark),
+    SHARE(Res.string.quick_action_share, MaterialSymbols.Share),
 }
 
 /**
@@ -117,7 +118,12 @@ enum class NoteActionGroup(
  */
 @Immutable
 data class NoteActionHandlers(
-    val onShare: () -> Unit,
+    /**
+     * Opens the surface's own Share UI (the chat sheet's Share drawer) from a single Share
+     * action. Null lists the Share options in the menu itself, as the [NoteActionGroup.SHARE]
+     * group (a submenu in the dropdown).
+     */
+    val onShare: (() -> Unit)?,
     val onEditPost: () -> Unit,
     val onEditDraft: () -> Unit,
     val onAddLabel: () -> Unit,
@@ -254,7 +260,11 @@ fun noteActionSections(
                 )
             }
             if (!isPrivateRumor) {
-                add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
+                if (handlers.onShare != null) {
+                    add(NoteAction(MaterialSymbols.Share, stringRes(Res.string.quick_action_share), onClick = handlers.onShare))
+                } else {
+                    addAll(shareNoteActions(note, nav, handlers.onDismiss))
+                }
             }
         }
 

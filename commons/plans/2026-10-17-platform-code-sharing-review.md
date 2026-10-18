@@ -1,7 +1,7 @@
 ---
 title: "Review: what is left in amethyst/ and desktopApp/, and what each platform can share with the other"
 type: refactor
-status: in-progress (§1 and §2 done)
+status: in-progress (§1, §2 and the §5 step-2 quick wins done)
 date: 2026-10-17
 owner: commons
 consumers: amethyst, desktopApp, commonsUI, commons, nestsClient
@@ -191,14 +191,15 @@ WebRTC engine is chosen (licence gate first).
 ## 5. Suggested order
 
 1. **Bugs 1–4 and the dead code** (§1, §2). One small PR each, and no new ports needed.
-2. **Quick wins that close Desktop gaps:**
-   - A5 (WoT sync);
-   - B4 (scheduled-post publisher);
-   - A1 (rich-text leaves);
-   - A7/C5 (Blossom images and one image loader);
-   - B2 (Skia decoders to `skikoMain`);
-   - A4 (calendar reminders);
-   - A6 (Concord images).
+2. **Quick wins that close Desktop gaps.** All done 2026-10-18:
+   - A5 (WoT sync), A1 (rich-text leaves), A4 (calendar reminders) and A6 (Concord images), with
+     the §1 bugs;
+   - B4 (scheduled-post publisher): Android's worker runs `ScheduledPostPublisher` per loaded
+     account; the publisher no longer marks a post FAILED when its drain is cancelled;
+   - A7/C5 (one image loader): `buildAmethystImageLoader` in `commonsUI/jvmAndroid`, used by both
+     apps. Desktop still lacks the avatar thumbnail cache (`ProfilePictureFetcher` sits on Android's
+     `Bitmap` cache);
+   - B2 (Skia decoders to `skikoMain`).
 3. **One version of a feature where there are two today:**
    - B1 (shared tile map, osmdroid retired);
    - A13/C1 (one Tor state machine);

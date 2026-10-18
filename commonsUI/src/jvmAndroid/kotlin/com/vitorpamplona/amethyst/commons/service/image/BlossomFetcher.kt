@@ -22,14 +22,12 @@ package com.vitorpamplona.amethyst.commons.service.image
 
 import androidx.compose.runtime.Stable
 import coil3.ImageLoader
-import coil3.PlatformContext
 import coil3.Uri
 import coil3.annotation.ExperimentalCoilApi
 import coil3.fetch.FetchResult
 import coil3.fetch.Fetcher
 import coil3.network.CacheStrategy
 import coil3.network.ConcurrentRequestStrategy
-import coil3.network.ConnectivityChecker
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -96,7 +94,7 @@ class BlossomFetcher(
         val blossomServerResolver: () -> BlossomServerResolver,
         val networkClient: (url: String) -> Call.Factory,
         // Shared with every other network-backed factory on this ImageLoader --
-        // see the note in ImageLoaderSetup.setup(): the de-dupe only works when
+        // see the note in buildAmethystImageLoader(): the de-dupe only works when
         // all fetchers coordinate through the same instance.
         concurrentRequestStrategy: ConcurrentRequestStrategy,
         private val readAuth: BlossomReadAuthTokenProvider? = null,
@@ -105,13 +103,7 @@ class BlossomFetcher(
         private val wrapFetcher: (fetcher: Fetcher, diskCacheKey: String) -> Fetcher = { fetcher, _ -> fetcher },
     ) : Fetcher.Factory<Uri> {
         private val cacheStrategyLazy = lazy { CacheStrategy.DEFAULT }
-
-        // One checker per context (there is one app context), not one per fetch.
-        @Volatile private var connectivity: Pair<PlatformContext, ConnectivityChecker>? = null
-
-        private fun connectivityChecker(context: PlatformContext): ConnectivityChecker =
-            connectivity?.takeIf { it.first === context }?.second
-                ?: ConnectivityChecker(context).also { connectivity = context to it }
+        private val connectivityCheckers = ConnectivityCheckers()
 
         private val concurrentRequestStrategyLazy = lazyOf(concurrentRequestStrategy)
 
@@ -132,7 +124,7 @@ class BlossomFetcher(
                         networkClient = lazy { networkClient(url).asNetworkClient() },
                         diskCache = lazy { imageLoader.diskCache },
                         cacheStrategy = cacheStrategyLazy,
-                        connectivityChecker = lazy { connectivityChecker(options.context) },
+                        connectivityChecker = lazy { connectivityCheckers.get(options.context) },
                         concurrentRequestStrategy = concurrentRequestStrategyLazy,
                     )
                 }.let { wrapFetcher(it, diskCacheKey) }

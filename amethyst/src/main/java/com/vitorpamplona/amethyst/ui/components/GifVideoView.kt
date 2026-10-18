@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUrlWithLoadingSymbol
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -127,6 +128,7 @@ fun GifVideoView(
 
             when (state) {
                 is AsyncImagePainter.State.Loading -> {
+                    ReportCaptureLoading()
                     // When the height is unbounded (see [heightIsBounded]) this branch MUST
                     // emit something with an intrinsic height, or the box wraps nothing and the
                     // whole note collapses to zero -- no picture, no URL, no spinner, just a gap

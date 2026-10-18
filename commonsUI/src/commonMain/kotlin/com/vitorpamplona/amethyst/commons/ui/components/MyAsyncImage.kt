@@ -73,7 +73,8 @@ fun MyAsyncImage(
         )
     } else {
         val ratio = MediaAspectRatioCache.get(imageUrl)
-        val showImage = remember { mutableStateOf(accountViewModel.settings.showImages()) }
+        val capture = LocalMediaCapture.current
+        val showImage = remember { mutableStateOf(capture != null || accountViewModel.settings.showImages()) }
 
         CrossfadeIfEnabled(targetState = showImage.value, contentAlignment = Alignment.Center) {
             if (it) {
@@ -86,6 +87,7 @@ fun MyAsyncImage(
                     val state by painter.state.collectAsState()
                     when (state) {
                         is AsyncImagePainter.State.Loading -> {
+                            ReportCaptureLoading()
                             if (ratio != null) {
                                 Box(loadedImageModifier.aspectRatio(ratio), contentAlignment = Alignment.Center) {
                                     LoadingAnimation(Size40dp, Size6dp)

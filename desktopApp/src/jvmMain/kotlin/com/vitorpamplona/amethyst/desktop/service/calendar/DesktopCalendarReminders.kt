@@ -35,15 +35,18 @@ import com.vitorpamplona.amethyst.commons.resources.calendar_reminder_default_ti
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopNotifications
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * "Starting soon" notifications for appointments the user RSVP'd ACCEPTED to: the shared
@@ -57,10 +60,12 @@ import kotlinx.coroutines.sync.withLock
 class DesktopCalendarReminders(
     private val appStores: AppPreferenceStores,
     private val notifications: DesktopNotifications,
+    // The accounts loaded on this computer: their RSVPs, not their follows'.
+    private val accounts: () -> Set<HexKey>,
     private val scope: CoroutineScope,
 ) {
-    private val settings get() = CalendarReminderSettingsStore(appStores.getDataStore(CALENDAR_REMINDER_SETTINGS_STORE))
-    private val log get() = CalendarReminderLogStore(appStores.getDataStore(CALENDAR_REMINDER_LOG_STORE))
+    private val settings by lazy { CalendarReminderSettingsStore(appStores.getDataStore(CALENDAR_REMINDER_SETTINGS_STORE)) }
+    private val log by lazy { CalendarReminderLogStore(appStores.getDataStore(CALENDAR_REMINDER_LOG_STORE)) }
 
     // The timer and a scan asked for by the settings switch must not post the same reminder twice.
     private val scanning = Mutex()
@@ -74,21 +79,28 @@ class DesktopCalendarReminders(
         }
     }
 
-    /** One pass now, as when the user turns reminders on. */
+    /**
+     * One pass now, as when the user turns reminders on. The settings screen saves the switch in a
+     * coroutine of its own, so wait (briefly) for the saved value before scanning.
+     */
     fun requestScan() {
-        scope.launch { scanNow() }
+        scope.launch {
+            withTimeoutOrNull(SETTINGS_WAIT_MS) { settings.flow.first { it.enabled } }
+            scanNow()
+        }
     }
 
     private suspend fun scanNow() {
         try {
             scanning.withLock {
-                if (!settings.load().enabled) return
                 val notificationSettings = notifications.settings
                 if (!notificationSettings.enabled.value) return
                 val now = TimeUtils.now()
                 if (notificationSettings.dnd.value.isActive(now)) return
+                val reminderSettings = settings.load()
+                if (!reminderSettings.enabled) return
 
-                CalendarReminderScanner.scan(settings.load().leadMinutes, log, now) { due ->
+                CalendarReminderScanner.scan(accounts(), reminderSettings.leadMinutes, log, now) { due ->
                     val title = due.title ?: loadStringRes(Res.string.calendar_reminder_default_title)
                     val body = loadPluralStringRes(Res.plurals.calendar_reminder_body, due.minutesAway, due.minutesAway)
                     val result =
@@ -101,7 +113,9 @@ class DesktopCalendarReminders(
                                 deepLinkNoteId = due.eventId,
                             ),
                         )
+                    // Not posted: leave it unmarked, so the next scan tries again while it is due.
                     if (result is SendResult.Failed) Log.w(TAG, "Could not post the reminder for ${due.eventId}", result.error)
+                    result !is SendResult.Failed
                 }
             }
         } catch (e: Exception) {
@@ -116,5 +130,6 @@ class DesktopCalendarReminders(
 
         // The reminder screen offers lead times in minutes, so a minute is the resolution worth having.
         private const val SCAN_INTERVAL_MS = 60_000L
+        private const val SETTINGS_WAIT_MS = 2_000L
     }
 }

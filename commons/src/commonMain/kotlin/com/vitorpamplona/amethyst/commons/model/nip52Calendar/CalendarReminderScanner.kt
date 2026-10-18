@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -50,16 +51,21 @@ object CalendarReminderScanner {
     private const val PRUNE_AGE_SECONDS = 24L * 60L * 60L
 
     /**
-     * Every ACCEPTED kind-31925 RSVP currently present in LocalCache. Any RSVP in the cache counts,
-     * not only the foreground account's: looking at one account alone would silently drop the
-     * reminders of the others when the user switches accounts during the lead window.
+     * The ACCEPTED kind-31925 RSVPs that [pubKeys] (the accounts on this device) wrote, from
+     * LocalCache. Every account counts, not only the foreground one: looking at one alone would
+     * silently drop the others' reminders when the user switches accounts during the lead window.
+     *
+     * Only these authors: the home feed and the calendars load the RSVPs of everyone the user
+     * follows, and a follow going to an event is no reason to remind the user. A range lookup per
+     * author, not a walk of the whole addressable cache.
      */
-    fun acceptedRsvpsInCache(): List<CalendarRSVPEvent> =
-        LocalCache.addressables
-            .filterIntoSet { _, note ->
-                val e = note.event
-                e is CalendarRSVPEvent && e.status() == RSVPStatusTag.STATUS.ACCEPTED
-            }.mapNotNull { it.event as? CalendarRSVPEvent }
+    fun acceptedRsvpsInCache(pubKeys: Collection<HexKey>): List<CalendarRSVPEvent> =
+        pubKeys.flatMap { pubKey ->
+            LocalCache.addressables
+                .filterIntoSet(CalendarRSVPEvent.KIND, pubKey) { _, note ->
+                    (note.event as? CalendarRSVPEvent)?.status() == RSVPStatusTag.STATUS.ACCEPTED
+                }.mapNotNull { it.event as? CalendarRSVPEvent }
+        }
 
     /**
      * True while at least one accepted RSVP could still produce a reminder: its target event
@@ -81,20 +87,22 @@ object CalendarReminderScanner {
         }
 
     /**
-     * Calls [notify] once for every accepted appointment that starts between [now] and
-     * [now] + [leadMinutes] and has not been notified for at that start time, records it in [log],
-     * and prunes the log of events that ended long ago. Keyed on (event id, start), so a moved
-     * appointment fires again when its new start enters the window.
+     * Calls [notify] once for every appointment [pubKeys] accepted that starts between [now] and
+     * [now] + [leadMinutes] and has not been notified for at that start time, records the ones
+     * [notify] delivered in [log], and prunes the log of events that ended long ago. Keyed on
+     * (event id, start), so a moved appointment fires again when its new start enters the window,
+     * and one that could not be posted is tried again on the next scan.
      */
     suspend fun scan(
+        pubKeys: Collection<HexKey>,
         leadMinutes: Int,
         log: CalendarReminderLogStore,
         now: Long,
-        notify: suspend (DueCalendarReminder) -> Unit,
+        notify: suspend (DueCalendarReminder) -> Boolean,
     ) {
         val windowEnd = now + leadMinutes * 60L
 
-        acceptedRsvpsInCache().forEach { rsvp ->
+        acceptedRsvpsInCache(pubKeys).forEach { rsvp ->
             val targetAddress = rsvp.calendarEventAddress() ?: return@forEach
             val targetNote = LocalCache.addressables.get(targetAddress) ?: return@forEach
             val view = targetNote.appointmentView() ?: return@forEach
@@ -107,15 +115,16 @@ object CalendarReminderScanner {
             if (start !in now..windowEnd) return@forEach
             if (log.wasNotified(eventId, start)) return@forEach
 
-            notify(
-                DueCalendarReminder(
-                    eventId = eventId,
-                    title = view.title,
-                    minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt(),
-                    deepLink = "nostr:" + NAddress.create(targetAddress.kind, targetAddress.pubKeyHex, targetAddress.dTag, null),
-                ),
-            )
-            log.markNotified(eventId, start)
+            val delivered =
+                notify(
+                    DueCalendarReminder(
+                        eventId = eventId,
+                        title = view.title,
+                        minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt(),
+                        deepLink = "nostr:" + NAddress.create(targetAddress.kind, targetAddress.pubKeyHex, targetAddress.dTag, null),
+                    ),
+                )
+            if (delivered) log.markNotified(eventId, start)
         }
 
         log.forgetBefore(now - PRUNE_AGE_SECONDS)
