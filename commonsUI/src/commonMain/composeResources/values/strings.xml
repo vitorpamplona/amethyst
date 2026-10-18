@@ -791,6 +791,7 @@
     <string name="quick_action_select">Select</string>
     <string name="share_as_image_generating">Generating preview…</string>
     <string name="share_as_image_watermark">Shared via Amethyst</string>
+    <string name="share_as_image_failed">Could not share the image</string>
     <string name="share_as_qr">Share as QR</string>
     <string name="share_as_qr_mode_web">Web link</string>
     <string name="share_as_qr_mode_nostr">Nostr link</string>

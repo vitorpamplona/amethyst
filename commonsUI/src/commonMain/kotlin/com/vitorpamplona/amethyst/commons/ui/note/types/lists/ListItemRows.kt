@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
@@ -184,7 +185,7 @@ fun LinkMemberRow(
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        if (accountViewModel.settings.showUrlPreview()) {
+        if (LocalMediaCapture.current != null || accountViewModel.settings.showUrlPreview()) {
             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                 LoadUrlPreview(url, url, null, accountViewModel, nav)
             }

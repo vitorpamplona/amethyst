@@ -187,7 +187,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZapRail
 import com.vitorpamplona.amethyst.commons.ui.note.ZapRailIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ZappedIcon
-import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
+import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.MAX_VOICE_RECORD_SECONDS
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RecordAudioBox
@@ -399,21 +399,20 @@ fun ShareReaction(
     grayTint: Color,
     barChartModifier: Modifier = Size19Modifier,
 ) {
-    var showShareSheet by remember { mutableStateOf(false) }
+    var showShareMenu by remember { mutableStateOf(false) }
 
-    ClickableBox(
-        modifier = barChartModifier,
-        onClick = { showShareSheet = true },
-    ) {
-        ShareIcon(barChartModifier, grayTint)
-    }
+    // The Box is the anchor the menu drops down from.
+    Box {
+        ClickableBox(
+            modifier = barChartModifier,
+            onClick = { showShareMenu = true },
+        ) {
+            ShareIcon(barChartModifier, grayTint)
+        }
 
-    if (showShareSheet) {
-        ShareOptionsBottomSheet(
-            note = note,
-            nav = nav,
-            onDismiss = { showShareSheet = false },
-        )
+        if (showShareMenu) {
+            ShareDropdownMenu(note, nav, onDismiss = { showShareMenu = false })
+        }
     }
 }
 
