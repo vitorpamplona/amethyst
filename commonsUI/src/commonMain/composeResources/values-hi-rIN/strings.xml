@@ -2731,8 +2731,6 @@
     <string name="git_repo_settings_web_urls">संचारजाल जालपते (प्रति पंक्ति पर एक)</string>
     <string name="git_repo_settings_topics">विषय (अल्पविराम विभाजित)</string>
     <string name="git_repo_settings_save">अभिलेखन</string>
-    <string name="git_repositories_search_placeholder">छालन इनके अनुसार नाम विषय निमन्त्रक परिपालक…</string>
-    <string name="git_repositories_search_no_results">कोई क्रमलेखकोश वर्तमान सूचनावली में इस खोज के अनुकूल नहीं।</string>
     <string name="profile_tab_apps">क्रमक तथा स्थान</string>
     <string name="profile_tab_repos">क्रमलेखकोष</string>
     <string name="edit_article">लेख सम्पादित करें</string>
@@ -4191,8 +4189,6 @@
         <item quantity="other">%1$d वस्तुएँ</item>
     </plurals>
     <string name="git_repositories">गिट क्रमलेखकोश</string>
-    <string name="git_repositories_search_close">छलनी आवृत</string>
-    <string name="git_repositories_search_open">क्रमलेखकोश छलनी</string>
     <string name="goal_progress">%1$s वित्तपोषित %2$s साट्स उद्देश्य में से</string>
     <string name="h">घं॰</string>
     <string name="hash_verification_failed">यह विषयवस्तु परिवर्तित हुआ है। हो सकता है लेखक ने परिवर्तन देखा नहीं अथवा अनुमति दिया नहीं।</string>

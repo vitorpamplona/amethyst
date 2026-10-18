@@ -2730,8 +2730,6 @@
     <string name="git_repo_settings_web_urls">URLs web (uma por linha)</string>
     <string name="git_repo_settings_topics">Tópicos (separados por vírgula)</string>
     <string name="git_repo_settings_save">Salvar</string>
-    <string name="git_repositories_search_placeholder">Filtrar por nome, tópico, host, mantenedor…</string>
-    <string name="git_repositories_search_no_results">Nenhum repositório no feed atual corresponde a esta pesquisa.</string>
     <string name="profile_tab_apps">Apps e sites</string>
     <string name="edit_article">Editar artigo</string>
     <string name="proposal_to_edit">Proposta para melhorar sua postagem</string>
@@ -4182,8 +4180,6 @@
         <item quantity="other">%1$d itens</item>
     </plurals>
     <string name="git_repositories">Repositórios Git</string>
-    <string name="git_repositories_search_close">Fechar filtro</string>
-    <string name="git_repositories_search_open">Filtrar repositórios</string>
     <string name="goal_progress">%1$s financiado de %2$s sats da meta</string>
     <string name="h">h</string>
     <string name="hash_verification_failed">A imagem mudou. O autor pode não ter visto a mudança</string>
