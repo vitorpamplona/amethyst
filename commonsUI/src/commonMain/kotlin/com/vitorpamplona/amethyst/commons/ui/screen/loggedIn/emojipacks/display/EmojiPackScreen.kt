@@ -26,14 +26,19 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -51,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,11 +66,15 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.OwnedEmojiPack
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.add_emoji_fab
+import com.vitorpamplona.amethyst.commons.resources.emoji_import_cta
 import com.vitorpamplona.amethyst.commons.resources.emoji_import_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_long_press_hint
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_empty_body
+import com.vitorpamplona.amethyst.commons.resources.emoji_pack_empty_title
 import com.vitorpamplona.amethyst.commons.resources.emoji_private_badge
 import com.vitorpamplona.amethyst.commons.resources.emoji_remove_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_delete
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionRow
 import com.vitorpamplona.amethyst.commons.ui.components.M3ActionSection
@@ -134,11 +144,13 @@ private fun EmojiPackScreenView(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showImportDialog = true }) {
-                        Icon(
-                            symbol = MaterialSymbols.Upload,
-                            contentDescription = stringRes(Res.string.emoji_import_title),
-                        )
+                    HoverTooltip(stringRes(Res.string.emoji_import_title)) {
+                        IconButton(onClick = { showImportDialog = true }) {
+                            Icon(
+                                symbol = MaterialSymbols.Upload,
+                                contentDescription = stringRes(Res.string.emoji_import_title),
+                            )
+                        }
                     }
                 },
                 colors =
@@ -174,18 +186,20 @@ private fun EmojiPackScreenView(
                     ).consumeWindowInsets(padding),
         ) {
             pack?.let { currentPack ->
-                if (currentPack.publicEmojis.isNotEmpty() || currentPack.privateEmojis.isNotEmpty()) {
+                if (currentPack.publicEmojis.isEmpty() && currentPack.privateEmojis.isEmpty()) {
+                    EmptyEmojiPack(onImport = { showImportDialog = true })
+                } else {
                     Text(
                         text = stringRes(Res.string.emoji_long_press_hint),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+                    EmojiGrid(
+                        pack = currentPack,
+                        onLongPress = { emoji, isPrivate -> pendingDelete = EmojiDeleteTarget(emoji, isPrivate) },
+                    )
                 }
-                EmojiGrid(
-                    pack = currentPack,
-                    onLongPress = { emoji, isPrivate -> pendingDelete = EmojiDeleteTarget(emoji, isPrivate) },
-                )
             }
         }
     }
@@ -233,6 +247,68 @@ private fun EmojiPackScreenView(
                 }
             }
         }
+    }
+}
+
+/** A new pack's first screen: what it is for and the fastest way to fill it. */
+@Composable
+fun EmptyEmojiPack(onImport: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        // A soft halo around the badge.
+        Box(
+            modifier =
+                Modifier
+                    .size(136.dp)
+                    .clip(CircleShape)
+                    .background(colors.primary.copy(alpha = 0.08f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(96.dp)
+                        .clip(CircleShape)
+                        .background(colors.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.AddReaction,
+                    contentDescription = null,
+                    tint = colors.onPrimaryContainer,
+                    modifier = Modifier.size(48.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(
+            text = stringRes(Res.string.emoji_pack_empty_title),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringRes(Res.string.emoji_pack_empty_body),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.widthIn(max = 360.dp),
+        )
+        Spacer(Modifier.height(24.dp))
+        Button(onClick = onImport) {
+            Icon(symbol = MaterialSymbols.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringRes(Res.string.emoji_import_cta))
+        }
+        // Keeps the content clear of the "Add emoji" FAB below it.
+        Spacer(Modifier.height(72.dp))
     }
 }
 

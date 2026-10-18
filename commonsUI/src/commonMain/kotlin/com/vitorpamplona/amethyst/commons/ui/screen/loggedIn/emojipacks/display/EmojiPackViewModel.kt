@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -111,16 +112,44 @@ class EmojiPackViewModel(
         if (url != null) onUploaded(url)
     }
 
-    /** Where a running [importFiles] is; null when none is. */
-    var importProgress by mutableStateOf<EmojiImportProgress?>(null)
+    /** True while [importFiles] runs; with no [importItems] yet, it is still reading the files. */
+    var importRunning by mutableStateOf(false)
         private set
 
-    /** What the last [importFiles] did, until [clearImportResult]. */
+    /** The images the running or last import is uploading, in order, each with its status. */
+    var importItems by mutableStateOf<ImmutableList<EmojiImportItem>>(persistentListOf())
+        private set
+
+    /** What the last [importFiles] did, until [clearImport]. */
     var importResult by mutableStateOf<EmojiImportResult?>(null)
         private set
 
-    fun clearImportResult() {
+    // Images taken out of a .zip. They stay until the dialog closes because its grid previews them.
+    private val importTempFiles = mutableListOf<Path>()
+    private var cleared = false
+
+    fun clearImport() {
         importResult = null
+        importItems = persistentListOf()
+        deleteImportTempFiles()
+    }
+
+    override fun onCleared() {
+        cleared = true
+        deleteImportTempFiles()
+        super.onCleared()
+    }
+
+    private fun deleteImportTempFiles() {
+        importTempFiles.forEach { runCatching { platformFileSystem.delete(it, mustExist = false) } }
+        importTempFiles.clear()
+    }
+
+    private fun setItemStatus(
+        index: Int,
+        status: EmojiImportItem.Status,
+    ) {
+        importItems = importItems.mapIndexed { i, item -> if (i == index) item.copy(status = status) else item }.toImmutableList()
     }
 
     /**
@@ -133,9 +162,8 @@ class EmojiPackViewModel(
         uploader: MediaUploader,
         isPrivate: Boolean,
     ) = withContext(Dispatchers.IO) {
-        importResult = null
-        importProgress = EmojiImportProgress(0, 0)
-        val tempFiles = mutableListOf<Path>()
+        clearImport()
+        importRunning = true
         try {
             val candidates = mutableListOf<Pair<String, SelectedMedia>>()
             val unsupported = mutableListOf<String>()
@@ -157,7 +185,7 @@ class EmojiPackViewModel(
                         continue
                     }
                     archive.files.forEach { extracted ->
-                        tempFiles.add(extracted.path)
+                        importTempFiles.add(extracted.path)
                         candidates.add(extracted.fileName to SelectedMedia(mediaUriOfFile(extracted.path), EmojiImport.imageMimeTypeOf(extracted.fileName)))
                     }
                     tooLarge.addAll(archive.tooLarge)
@@ -174,25 +202,31 @@ class EmojiPackViewModel(
 
             val unnamed = mutableListOf<String>()
             val skipped = mutableListOf<String>()
-            val toUpload = mutableListOf<Triple<String, String, SelectedMedia>>()
+            val toUpload = mutableListOf<Pair<EmojiImportItem, SelectedMedia>>()
             candidates.forEachIndexed { index, (name, media) ->
                 val code = codes[index]
                 when {
                     code == null -> unnamed.add(name)
                     code in existing -> skipped.add(code)
-                    else -> toUpload.add(Triple(code, name, media))
+                    else -> toUpload.add(EmojiImportItem(code, name, media.uri.toString(), EmojiImportItem.Status.WAITING) to media)
                 }
             }
+            importItems = toUpload.map { it.first }.toImmutableList()
 
             val uploaded = mutableListOf<EmojiUrlTag>()
-            val failed = mutableListOf<String>()
+            var failed = 0
             var failureReason: String? = null
-            toUpload.forEachIndexed { index, (code, name, media) ->
-                importProgress = EmojiImportProgress(index, toUpload.size)
+            toUpload.forEachIndexed { index, (item, media) ->
+                setItemStatus(index, EmojiImportItem.Status.UPLOADING)
                 val url = uploadToDefaultServer(media, account, uploader, onError = { _, message -> failureReason = message })
-                if (url != null) uploaded.add(EmojiUrlTag(code, url)) else failed.add(name)
+                if (url != null) {
+                    uploaded.add(EmojiUrlTag(item.shortcode, url))
+                    setItemStatus(index, EmojiImportItem.Status.DONE)
+                } else {
+                    failed++
+                    setItemStatus(index, EmojiImportItem.Status.FAILED)
+                }
             }
-            importProgress = EmojiImportProgress(toUpload.size, toUpload.size)
 
             val result =
                 if (uploaded.isNotEmpty()) {
@@ -205,7 +239,7 @@ class EmojiPackViewModel(
                 EmojiImportResult(
                     added = result?.added?.size ?: 0,
                     skipped = (skipped + result?.skipped.orEmpty()).toImmutableList(),
-                    failed = failed.toImmutableList(),
+                    failed = failed,
                     failureReason = failureReason,
                     unnamed = unnamed.toImmutableList(),
                     tooLarge = tooLarge.toImmutableList(),
@@ -213,8 +247,10 @@ class EmojiPackViewModel(
                     unreadable = unreadable.toImmutableList(),
                 )
         } finally {
-            importProgress = null
-            tempFiles.forEach { runCatching { platformFileSystem.delete(it, mustExist = false) } }
+            importRunning = false
+            // Failed before a result (a signer error): back to the start, which the dialog shows.
+            if (importResult == null) importItems = persistentListOf()
+            if (cleared) deleteImportTempFiles()
         }
     }
 
@@ -230,20 +266,25 @@ class EmojiPackViewModel(
     }
 }
 
-/** [done] of [total] uploads finished; a total of 0 means the files are still being read. */
+/** One image of an import: the shortcode it gets, its file, a preview Coil can load, and how its upload went. */
 @Immutable
-data class EmojiImportProgress(
-    val done: Int,
-    val total: Int,
-)
+data class EmojiImportItem(
+    val shortcode: String,
+    val fileName: String,
+    val preview: String,
+    val status: Status,
+) {
+    enum class Status { WAITING, UPLOADING, DONE, FAILED }
+}
 
-/** What an import did, by shortcode ([skipped]) or by file name (the rest). */
+/** What an import did: shortcodes in [skipped], file names in the other lists. */
 @Immutable
 data class EmojiImportResult(
     val added: Int,
     val skipped: ImmutableList<String>,
-    val failed: ImmutableList<String>,
-    /** The upload error of the last file in [failed], as the uploader worded it. */
+    /** How many uploads failed; [importItems][EmojiPackViewModel.importItems] marks which. */
+    val failed: Int,
+    /** The error of the last failed upload, as the uploader worded it. */
     val failureReason: String?,
     val unnamed: ImmutableList<String>,
     val tooLarge: ImmutableList<String>,
