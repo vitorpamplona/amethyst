@@ -115,7 +115,8 @@ data class WorkflowRun(
 object WorkflowRunAggregator {
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun payload(content: String): WorkflowRunPayload? = runCatching { json.decodeFromString<WorkflowRunPayload>(content) }.getOrNull()
+    /** The run/step JSON of a workflow event, or null when the content is not that object. */
+    fun payload(content: String): WorkflowRunPayload? = runCatching { json.decodeFromString<WorkflowRunPayload>(content) }.getOrNull()
 
     fun aggregate(events: List<Event>): List<WorkflowRun> {
         if (events.isEmpty()) return emptyList()

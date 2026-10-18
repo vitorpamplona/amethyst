@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,8 +42,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -92,6 +95,7 @@ import com.vitorpamplona.quartz.nip39ExtIdentities.IdentityClaimTag
 import com.vitorpamplona.quartz.nip39ExtIdentities.MastodonIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TelegramIdentity
 import com.vitorpamplona.quartz.nip39ExtIdentities.TwitterIdentity
+import com.vitorpamplona.quartz.nip39ExtIdentities.UnsupportedIdentity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.flowOn
@@ -269,24 +273,7 @@ fun DrawAdditionalInfo(
 
         val displayIdentities = identities.ifEmpty { user.identities }
         if (displayIdentities.isNotEmpty()) {
-            displayIdentities.forEach { identity: IdentityClaimTag ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        tint = Color.Unspecified,
-                        painter = painterRes(getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
-                        contentDescription = stringRes(getIdentityClaimDescription(identity)),
-                        modifier = Modifier.size(18.dp),
-                    )
-
-                    LongPressCopyText(
-                        displayText = identity.identity,
-                        copyValue = identity.identity,
-                        onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 5.dp),
-                    )
-                }
-            }
+            displayIdentities.forEach { identity: IdentityClaimTag -> IdentityClaimRow(identity) }
         }
 
         val lud16 =
@@ -382,6 +369,54 @@ fun DisplayNip05ProfileStatus(
         }
 
         else -> { }
+    }
+}
+
+/**
+ * One NIP-39 claimed account: the platform's logo and the handle, which opens the proof; a
+ * long-press copies the handle. A platform this app doesn't know shows a link glyph and its name
+ * instead of a logo that would claim the wrong service. Shared by the profile header and the
+ * external-identities card in the feed.
+ */
+@Composable
+fun IdentityClaimRow(
+    identity: IdentityClaimTag,
+    iconSize: Dp = 18.dp,
+    textStyle: TextStyle = LocalTextStyle.current,
+) {
+    val uri = LocalUriHandler.current
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (identity is UnsupportedIdentity) {
+            Icon(
+                symbol = MaterialSymbols.Link,
+                contentDescription = null,
+                modifier = Modifier.size(iconSize),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = identity.platformIdentity(),
+                style = textStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 5.dp),
+            )
+        } else {
+            Icon(
+                tint = Color.Unspecified,
+                painter = painterRes(getIdentityClaimIcon(identity), IDENTITY_ICON_CACHE_KEY),
+                contentDescription = stringRes(getIdentityClaimDescription(identity)),
+                modifier = Modifier.size(iconSize),
+            )
+            LongPressCopyText(
+                displayText = identity.identity,
+                copyValue = identity.identity,
+                onClick = { runCatching { uri.openUri(identity.toProofUrl()) } },
+                style = textStyle,
+                overflow = TextOverflow.Ellipsis,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 5.dp),
+            )
+        }
     }
 }
 

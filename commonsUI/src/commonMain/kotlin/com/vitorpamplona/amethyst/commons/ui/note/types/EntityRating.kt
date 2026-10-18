@@ -460,7 +460,7 @@ private fun iconForMark(mark: String): MaterialSymbol =
     }
 
 /** "4.5" for a fractional score, "4" for a whole one. */
-private fun formatStars(stars: Double): String {
+internal fun formatStars(stars: Double): String {
     val rounded = (stars * 10).roundToInt()
     return if (rounded % 10 == 0) "${rounded / 10}" else "${rounded / 10}.${rounded % 10}"
 }
