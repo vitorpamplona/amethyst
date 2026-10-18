@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,8 +57,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -65,12 +69,15 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -639,20 +646,70 @@ private fun SearchResults(
     }
 }
 
-/** Bounded by [modifier]: the menu scrolls its content, and a lazy grid needs a bounded height. */
+/** The name of the cell under the pointer, which [EmojiGrid] shows in one label over the grid. */
+private val LocalHoveredEmoji = staticCompositionLocalOf<MutableState<String?>?> { null }
+
+/**
+ * Bounded by [modifier]: the menu scrolls its content, and a lazy grid needs a bounded height.
+ *
+ * The cells name themselves in one label drawn over the grid, not in a tooltip each. A tooltip is
+ * a popup layer, and Compose Desktop (CMP 1.12) crashes with "RootNodeOwner is already disposed"
+ * when a lazy cell scrolls away while its popup is open: the grid disposes the cell, and with it
+ * the popup, in the middle of the measure pass that is about to measure that popup.
+ */
 @Composable
 private fun EmojiGrid(
     state: LazyGridState,
     modifier: Modifier,
     content: LazyGridScope.() -> Unit,
 ) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(CellSize),
-        state = state,
-        contentPadding = PaddingValues(vertical = 4.dp),
-        modifier = modifier,
-        content = content,
-    )
+    val hovered = remember { mutableStateOf<String?>(null) }
+    Box(modifier) {
+        CompositionLocalProvider(LocalHoveredEmoji provides hovered) {
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(CellSize),
+                state = state,
+                contentPadding = PaddingValues(vertical = 4.dp),
+                modifier = Modifier.fillMaxSize(),
+                content = content,
+            )
+        }
+        hovered.value?.let { name ->
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.inverseOnSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(MaterialTheme.colorScheme.inverseSurface)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+            )
+        }
+    }
+}
+
+/** Reports the cell to [LocalHoveredEmoji] while the pointer is over it, and clears it when it leaves or the cell goes away. */
+@Composable
+private fun Modifier.namesHoveredEmoji(name: String): Modifier {
+    val hovered = LocalHoveredEmoji.current ?: return this
+    DisposableEffect(hovered, name) {
+        onDispose { if (hovered.value == name) hovered.value = null }
+    }
+    return pointerInput(hovered, name) {
+        awaitPointerEventScope {
+            while (true) {
+                when (awaitPointerEvent().type) {
+                    PointerEventType.Enter -> hovered.value = name
+                    PointerEventType.Exit -> if (hovered.value == name) hovered.value = null
+                }
+            }
+        }
+    }
 }
 
 private fun LazyGridScope.paletteItems(
@@ -690,49 +747,48 @@ private fun PaletteCell(
     isPicked: Boolean?,
     onPick: (PaletteItem) -> Unit,
 ) {
-    val tooltip =
+    val name =
         when (item) {
             is PaletteItem.Palette -> item.entry.name
             is PaletteItem.Literal -> item.entry?.name ?: item.emoji
             is PaletteItem.Custom -> ":${item.media.code}:"
         }
 
-    HoverTooltip(tooltip) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(8.dp))
-                    .then(
-                        if (isPicked == true) {
-                            Modifier
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                                .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
-                        } else {
-                            Modifier
-                        },
-                    ).clickable { onPick(item) }
-                    .then(if (isPicked != null) Modifier.semantics { selected = isPicked } else Modifier),
-        ) {
-            when (item) {
-                is PaletteItem.Palette -> {
-                    Text(item.entry.withTone(tone), style = EmojiStyle)
-                }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+            Modifier
+                .namesHoveredEmoji(name)
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(8.dp))
+                .then(
+                    if (isPicked == true) {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                            .border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                    } else {
+                        Modifier
+                    },
+                ).clickable { onPick(item) }
+                .then(if (isPicked != null) Modifier.semantics { selected = isPicked } else Modifier),
+    ) {
+        when (item) {
+            is PaletteItem.Palette -> {
+                Text(item.entry.withTone(tone), style = EmojiStyle)
+            }
 
-                is PaletteItem.Literal -> {
-                    // `+` and `-` are a like and a dislike, drawn as the heart and the thumbs down everywhere else.
-                    when (item.emoji) {
-                        "+" -> LikedIcon(Modifier.size(24.dp))
-                        "-" -> Text("\uD83D\uDC4E", style = EmojiStyle)
-                        else -> Text(item.emoji, style = EmojiStyle)
-                    }
+            is PaletteItem.Literal -> {
+                // `+` and `-` are a like and a dislike, drawn as the heart and the thumbs down everywhere else.
+                when (item.emoji) {
+                    "+" -> LikedIcon(Modifier.size(24.dp))
+                    "-" -> Text("\uD83D\uDC4E", style = EmojiStyle)
+                    else -> Text(item.emoji, style = EmojiStyle)
                 }
+            }
 
-                is PaletteItem.Custom -> {
-                    AsyncImage(model = item.media.link, contentDescription = tooltip, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
-                }
+            is PaletteItem.Custom -> {
+                AsyncImage(model = item.media.link, contentDescription = name, modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp))
             }
         }
     }

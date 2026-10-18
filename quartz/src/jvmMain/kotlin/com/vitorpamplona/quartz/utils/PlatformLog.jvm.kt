@@ -38,8 +38,13 @@ actual object PlatformLog {
         // stdout for its JSON contract, desktop apps may too) aren't corrupted
         // by log interleaving. Consumers that prefer stdout can just redirect
         // 2>&1 at the shell level.
-        if (throwable != null) {
-            System.err.println("${time()} $level: [$tag] $message. Throwable: ${throwable.message}")
+        // An error carries its whole stack: the message alone ("RootNodeOwner is already
+        // disposed") can't be traced. Lower levels keep one line, since warnings with an exception
+        // are routine (relays, media) and a stack each would bury everything else.
+        if (throwable != null && level == "ERROR") {
+            System.err.println("${time()} $level: [$tag] $message\n${throwable.stackTraceToString().trimEnd()}")
+        } else if (throwable != null) {
+            System.err.println("${time()} $level: [$tag] $message. Throwable: $throwable")
         } else {
             System.err.println("${time()} $level: [$tag] $message")
         }
