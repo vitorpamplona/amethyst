@@ -25,37 +25,29 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class UpdateReactionTypeViewModelTest {
-    private fun viewModel(vararg choices: String) = UpdateReactionTypeViewModel().apply { reactionSet = choices.toList() }
-
+class ToggleReactionTest {
     @Test
     fun unicodeTapAddsThenRemoves() {
-        val vm = viewModel("+", "🚀")
-        vm.toggle("🔥")
-        assertEquals(listOf("+", "🚀", "🔥"), vm.reactionSet)
-        assertTrue("🔥" in vm.picked.unicode)
-        vm.toggle("🔥")
-        assertEquals(listOf("+", "🚀"), vm.reactionSet)
+        val added = toggleReaction(listOf("+", "🚀"), "🔥")
+        assertEquals(listOf("+", "🚀", "🔥"), added)
+        assertTrue("🔥" in pickedEmojis(added).unicode)
+        assertEquals(listOf("+", "🚀"), toggleReaction(added, "🔥"))
     }
 
     @Test
     fun typedTextKeepsItsFirstCharacter() {
-        val vm = viewModel()
-        vm.toggle("  👍🏽 and more")
-        vm.toggle("   ")
-        assertEquals(listOf("👍🏽"), vm.reactionSet)
+        val choices = toggleReaction(toggleReaction(emptyList(), "  👍🏽 and more"), "   ")
+        assertEquals(listOf("👍🏽"), choices)
     }
 
     @Test
     fun customEmojiIsMatchedByImageNotCode() {
-        val vm = viewModel(":oldcode:https://x.com/a.png")
-        assertTrue("https://x.com/a.png" in vm.picked.customLinks)
+        val saved = listOf(":oldcode:https://x.com/a.png")
+        assertTrue("https://x.com/a.png" in pickedEmojis(saved).customLinks)
 
         // Same image under another code: already chosen, so the tap removes it instead of adding a duplicate.
-        vm.toggle(EmojiMedia("newcode", "https://x.com/a.png"))
-        assertEquals(emptyList(), vm.reactionSet)
+        assertEquals(emptyList(), toggleReaction(saved, EmojiMedia("newcode", "https://x.com/a.png")))
 
-        vm.toggle(EmojiMedia("b", "https://x.com/b.png"))
-        assertEquals(listOf(":b:https://x.com/b.png"), vm.reactionSet)
+        assertEquals(listOf(":b:https://x.com/b.png"), toggleReaction(emptyList(), EmojiMedia("b", "https://x.com/b.png")))
     }
 }
