@@ -36,6 +36,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -112,16 +113,19 @@ fun DisplayPeopleList(
     Box {
         FlowRow(modifier = Modifier.padding(top = 5.dp)) {
             toMembersShow.forEach { user ->
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    UserCompose(
-                        user,
-                        accountViewModel = accountViewModel,
-                        nav = nav,
-                    )
+                // Keyed so a row keeps its own user's follow state when a newer list shifts the members.
+                key(user.pubkeyHex) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        UserCompose(
+                            user,
+                            accountViewModel = accountViewModel,
+                            nav = nav,
+                        )
 
-                    HorizontalDivider(
-                        thickness = DividerThickness,
-                    )
+                        HorizontalDivider(
+                            thickness = DividerThickness,
+                        )
+                    }
                 }
             }
         }

@@ -63,5 +63,6 @@ internal class NestViewModelFactory(
             room = room,
             captureFactory = { AudioRecordCapture() },
             encoderFactory = { MediaCodecOpusEncoder() },
+            cleanupScope = Amethyst.instance.applicationIOScope,
         ) as T
 }

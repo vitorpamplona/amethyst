@@ -101,7 +101,7 @@ class NestActivity : AppCompatActivity() {
     /**
      * Wired by [NestActivityBody] via a DisposableEffect. Invokes
      * `viewModel.leave()` so the broadcast handle + listener close
-     * route through `cleanupScope`/GlobalScope and survive Activity
+     * route through `cleanupScope` (the application scope) and survive Activity
      * destruction. Called from PIP close paths (the overlay's Leave
      * action and a swipe-dismiss while in PIP).
      */

@@ -138,7 +138,9 @@
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Użyj bezpośredniego adresu URL</string>
     <!-- Nicknames (NIP-85 contact cards) -->
+    <string name="nickname_dialog_description">Wyświetlane zamiast ich nazwiska. Zaszyfrowane, więc widzisz je tylko ty.</string>
     <string name="nickname_label">Pseudonim</string>
+    <string name="nickname_note_label">Prywatny wpis</string>
     <string name="nickname_save">Zapisz</string>
     <string name="nickname_cancel">Anuluj</string>
     <string name="git_status_open">Otwarte</string>
@@ -376,6 +378,8 @@
     <string name="qr_scanner_no_code_in_image">Nie znaleziono kodu QR na tym obrazku</string>
     <string name="qr_scanner_clipboard_empty">Nic w schowku do skanowania</string>
     <string name="qr_scanner_pick_one">Wybierz żądany kod</string>
+    <string name="qr_scanner_desktop_title">Zeskanuj QR kod</string>
+    <string name="qr_scanner_desktop_hint">Ten komputer nie jest wyposażony w skaner. Otwórz zdjęcie kodu lub skopiuj kod (jako zdjęcie lub tekst) i wklej go tutaj.</string>
     <plurals name="qr_scanner_sequence_progress">
         <item quantity="one">Zdobyto %1$s z %2$s części — kontynuuj</item>
         <item quantity="few">Zdobyto %1$s z %2$s części — kontynuuj</item>
@@ -792,6 +796,7 @@
     <string name="quick_action_select">Wybierz</string>
     <string name="share_as_image_generating">Generowanie podglądu…</string>
     <string name="share_as_image_watermark">Udostępnione przez Ametyst</string>
+    <string name="share_as_image_failed">Nie można udostępnić obrazu</string>
     <string name="share_as_qr">Udostępnij jako QR</string>
     <string name="share_as_qr_mode_web">Link do strony internetowej</string>
     <string name="share_as_qr_mode_nostr">Nostr link</string>
@@ -1780,7 +1785,6 @@
     <string name="max_hashtag_limit_title">Maks ilość hashtagów na post</string>
     <string name="max_hashtag_limit_explainer">Ukrywa posty zawierające więcej hashtagów niż ten limit. Ustaw wartość 0, aby wyłączyć tę funkcję</string>
     <string name="security_unlimited">∞</string>
-    <string name="new_reaction_symbol">Nowy Symbol Odzewu</string>
     <string name="zapraiser">Zapraiser</string>
     <string name="zapraiser_explainer">Dodaje docelową liczbę satoszy do podniesienia dla tego wpisu. W zależności od aplikacji może być pokazywany to jako pasek postępu, aby zachęcić do darowizn</string>
     <string name="zapraiser_target_amount_in_sats">Docelowa kwota w Satoszach</string>
@@ -7419,8 +7423,11 @@
     <string name="emoji_skin_tone_medium">Średni</string>
     <string name="emoji_skin_tone_medium_dark">Średniociemny</string>
     <string name="emoji_skin_tone_dark">Ciemny</string>
+    <string name="emoji_group_smileys_emotion">Uśmieszki &amp; Emocje</string>
+    <string name="emoji_group_people_body">Osoby &amp; Ciało</string>
     <string name="emoji_group_animals_nature">Zwierzęta &amp; Natura</string>
     <string name="emoji_group_food_drink">Żywność &amp; napoje</string>
+    <string name="emoji_group_travel_places">Podróż &amp; Miejsca</string>
     <string name="emoji_group_activities">Aktywności</string>
     <string name="emoji_group_objects">Symbole</string>
     <string name="emoji_group_symbols">Symbole</string>
@@ -7735,9 +7742,18 @@
     <string name="open_markets_in_collection">W %1$s</string>
     <string name="open_markets_shipping_option">Opcja wysyłki</string>
     <string name="open_markets_priced_by_seller">Cena ustalana przez sprzedającego</string>
+    <string name="open_markets_service">Usługa</string>
+    <string name="open_markets_carrier">Przewoźnik</string>
     <string name="open_markets_ships_to">Wysyłka do</string>
     <string name="open_markets_regions">Regiony</string>
+    <string name="open_markets_takes">Zabiera</string>
+    <string name="open_markets_ships_from">Od</string>
+    <string name="open_markets_pick_up_at">Odbierz o</string>
+    <string name="open_markets_service_standard">Standard</string>
+    <string name="open_markets_service_express">Ekspresowa</string>
+    <string name="open_markets_service_overnight">Nocna</string>
     <string name="open_markets_service_pickup">Odbiór</string>
+    <string name="open_markets_service_digital">Przesyłka elektroniczna</string>
     <plurals name="open_markets_duration_hours">
         <item quantity="one">%1$s godzina</item>
         <item quantity="few">%1$s godzin</item>

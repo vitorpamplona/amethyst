@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.BaseReplaceableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * The CORD-05 **Invite List** (kind 13303): the creator's private, NIP-44 self-encrypted record of
@@ -64,6 +66,7 @@ class ConcordInviteListEvent(
         try {
             ConcordInviteList.decodeOrNull(signer.nip44Decrypt(content, signer.pubKey))
         } catch (_: Exception) {
+            currentCoroutineContext().ensureActive()
             null
         }
 

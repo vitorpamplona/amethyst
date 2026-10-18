@@ -30,14 +30,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -49,7 +46,10 @@ import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_labels_hint
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_subject
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_title
+import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalDisappearingScaffoldPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -57,11 +57,10 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TitleIconModifier
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 
 @Composable
 fun GitNewIssueScreen(
@@ -75,9 +74,9 @@ fun GitNewIssueScreen(
 }
 
 /**
- * Full-screen "New issue" composer: a subject and a markdown body. On submit it builds a
- * NIP-34 [GitIssueEvent] addressed to [repoNote], signs it with the account signer and
- * broadcasts it, then returns to the issues list.
+ * Full-screen "New issue" composer: a subject, a markdown body with attachable pictures and
+ * videos, and labels. On submit it builds a NIP-34 issue addressed to [repoNote], signs it with
+ * the account signer and broadcasts it, then returns to the issues list.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,9 +85,8 @@ private fun GitNewIssueForm(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var subject by rememberSaveable { mutableStateOf("") }
-    var body by rememberSaveable { mutableStateOf("") }
-    var labels by rememberSaveable { mutableStateOf("") }
+    val viewModel: GitNewIssueViewModel = rememberViewModel { GitNewIssueViewModel() }
+    viewModel.init(accountViewModel.account)
 
     DisappearingScaffold(
         isInvertedLayout = false,
@@ -102,9 +100,9 @@ private fun GitNewIssueForm(
                 },
                 actions = {
                     TextButton(
-                        enabled = subject.isNotBlank(),
+                        enabled = viewModel.canSend(),
                         onClick = {
-                            sendGitIssue(accountViewModel, repoNote, subject.trim(), body.trim(), parseLabels(labels))
+                            accountViewModel.launchSigner { viewModel.send(repoNote) }
                             nav.popBack()
                         },
                     ) {
@@ -125,22 +123,46 @@ private fun GitNewIssueForm(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             SpellCheckedOutlinedTextField(
-                value = subject,
-                onValueChange = { subject = it },
+                value = viewModel.subject,
+                onValueChange = { viewModel.subject = it },
                 label = { Text(stringRes(Res.string.git_new_issue_subject)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             SpellCheckedOutlinedTextField(
-                value = body,
-                onValueChange = { body = it },
+                value = viewModel.body,
+                onValueChange = { viewModel.body = it },
                 label = { Text(stringRes(Res.string.git_new_issue_body)) },
                 minLines = 6,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Pictures and videos of the problem: uploaded, linked in the body, and described by
+            // an imeta tag on the issue, as in a comment.
+            SelectFromGallery(
+                isUploading = viewModel.mediaUploadTracker.isUploadingImage,
+                enabled = !viewModel.mediaUploadTracker.isUploadingFile,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier,
+            ) {
+                viewModel.selectMedia(it)
+            }
+            viewModel.multiOrchestrator?.let {
+                ImageVideoDescription(
+                    it,
+                    accountViewModel.account.settings.defaultFileServer,
+                    isUploading = viewModel.mediaUploadTracker.isUploading,
+                    onAdd = { alt, server, sensitiveContent, mediaQuality, useH265, stripMetadata, convertGifToMp4 ->
+                        viewModel.upload(alt, if (sensitiveContent) "" else null, mediaQuality, server, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader, useH265, stripMetadata, convertGifToMp4)
+                        accountViewModel.account.settings.changeDefaultFileServer(server)
+                    },
+                    onDelete = viewModel::deleteMediaToUpload,
+                    onCancel = { viewModel.multiOrchestrator = null },
+                    accountViewModel = accountViewModel,
+                )
+            }
             OutlinedTextField(
-                value = labels,
-                onValueChange = { labels = it },
+                value = viewModel.labels,
+                onValueChange = { viewModel.labels = it },
                 label = { Text(stringRes(Res.string.git_new_issue_labels)) },
                 placeholder = { Text(stringRes(Res.string.git_new_issue_labels_hint)) },
                 singleLine = true,
@@ -148,27 +170,6 @@ private fun GitNewIssueForm(
             )
         }
     }
-}
 
-/** Splits a free-text label field on commas/whitespace, stripping any leading `#`. */
-private fun parseLabels(raw: String): List<String> =
-    raw
-        .split(',', ' ', '\n', '\t')
-        .map { it.trim().removePrefix("#") }
-        .filter { it.isNotEmpty() }
-        .distinct()
-
-private fun sendGitIssue(
-    accountViewModel: AccountViewModel,
-    repoNote: AddressableNote,
-    subject: String,
-    body: String,
-    labels: List<String>,
-) {
-    val repositoryHint = repoNote.toEventHint<GitRepositoryEvent>() ?: return
-    accountViewModel.launchSigner {
-        val template = GitIssueEvent.build(subject, body, repositoryHint, emptyList(), labels)
-        val signed = accountViewModel.account.signer.sign(template)
-        accountViewModel.account.sendAutomatic(signed)
-    }
+    StrippingFailureDialog(viewModel.strippingFailureConfirmation)
 }

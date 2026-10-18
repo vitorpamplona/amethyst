@@ -29,6 +29,8 @@ import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Outcome of routing a single inbound Nostr event through the Marmot pipeline.
@@ -171,6 +173,7 @@ private suspend fun MarmotManager.ingestGiftWrapUncached(wrap: GiftWrapEvent): M
             }
         }
     } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
         MarmotIngestResult.Failure("giftwrap unwrap failed: ${e.message}", e)
     }
 

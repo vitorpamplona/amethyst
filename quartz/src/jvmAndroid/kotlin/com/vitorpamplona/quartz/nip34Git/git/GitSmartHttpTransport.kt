@@ -134,7 +134,7 @@ class GitSmartHttpTransport(
     ): ByteArray =
         okHttpClient(url).newCall(request).executeAsync().use { response ->
             if (!response.isSuccessful) {
-                throw GitHttpException("HTTP ${response.code} from $url")
+                throw GitHttpException("HTTP ${response.code} from $url", httpCode = response.code)
             }
             response.body.bytes()
         }
@@ -146,6 +146,12 @@ class GitSmartHttpTransport(
     }
 }
 
+/**
+ * A git smart-HTTP failure. [httpCode] is the status of a failed request; [noBranches] marks a
+ * repository that answered but holds no branch yet (nothing pushed).
+ */
 class GitHttpException(
     message: String,
+    val httpCode: Int? = null,
+    val noBranches: Boolean = false,
 ) : Exception(message)

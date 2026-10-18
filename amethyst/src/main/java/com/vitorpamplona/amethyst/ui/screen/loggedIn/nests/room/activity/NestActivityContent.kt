@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.nests.datasource.NestRoomFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
@@ -338,7 +339,7 @@ private fun NestActivityBody(
     // action and a swipe-dismiss while in PIP — invoke this so the
     // speaker handle close (releases AudioRecord and clears the
     // system mic indicator) and the listener close run on
-    // cleanupScope/GlobalScope before the activity destruction
+    // cleanupScope (the application scope) before the activity destruction
     // queue eats viewModelScope.
     val activity = LocalActivity.current as? NestActivity
     DisposableEffect(activity, viewModel) {
@@ -355,6 +356,8 @@ private fun NestActivityBody(
         event = event,
         ui = ui,
         handRaised = handRaised,
+        // The leave event must outlive both this screen and the account (logout cancels its scope).
+        leaveScope = Amethyst.instance.applicationIOScope,
     )
 
     // Back gesture while connected = minimize to PIP rather than tearing

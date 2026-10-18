@@ -44,6 +44,8 @@ import com.vitorpamplona.quartz.mls.schedule.SecretTree
 import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -180,6 +182,7 @@ class MlsGroupManager(
                         Log.d(TAG) { "restoreAll(): restored ${retained.size} retained epochs for $nostrGroupId" }
                     }
                 } catch (e: Exception) {
+                    currentCoroutineContext().ensureActive()
                     // Could be genuinely corrupted state, or a transient bug
                     // (e.g. wrong cipher param spec). Skip but DO NOT delete —
                     // a future restart after a fix should still be able to

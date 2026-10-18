@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.GeocacheCurationListEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.tags.ListTheme
 import com.vitorpamplona.quartz.nipCCGeocaching.curation.tags.MapStyle
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -114,7 +115,7 @@ class NewGeocacheHuntViewModel : ViewModel() {
                     dTag = editAddress?.dTag ?: Uuid.random().toString(),
                 )
 
-            return runCatching { account.signAndComputeBroadcast(template) }.isSuccess
+            return runCatchingCancellable { account.signAndComputeBroadcast(template) }.isSuccess
         } finally {
             isPublishing.value = false
         }

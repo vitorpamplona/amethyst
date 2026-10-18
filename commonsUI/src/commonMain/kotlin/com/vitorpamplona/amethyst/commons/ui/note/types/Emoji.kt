@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Arrangement.spacedBy
 import androidx.compose.foundation.layout.Box
@@ -58,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
 import com.vitorpamplona.amethyst.commons.ui.note.getGradient
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.pack.EmojiPackEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 
@@ -68,7 +66,6 @@ fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     val noteEvent by observeNoteEvent<EmojiPackEvent>(baseNote, accountViewModel)
 
@@ -79,7 +76,6 @@ fun RenderEmojiPack(
             actionable = actionable,
             backgroundColor = backgroundColor,
             accountViewModel = accountViewModel,
-            onClick = onClick,
         )
     }
 }
@@ -92,7 +88,6 @@ fun RenderEmojiPack(
     actionable: Boolean,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
-    onClick: ((EmojiUrlTag) -> Unit)? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -136,26 +131,12 @@ fun RenderEmojiPack(
             horizontalArrangement = spacedBy(1.dp),
         ) {
             emojisToShow.forEach { emoji ->
-                if (onClick != null) {
-                    AsyncImage(
-                        model = emoji.url,
-                        contentDescription = emoji.code,
-                        modifier = Size35Modifier.clickable { onClick(emoji) },
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Box(
-                        modifier = Size35Modifier,
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        AsyncImage(
-                            model = emoji.url,
-                            contentDescription = emoji.code,
-                            modifier = Size35Modifier,
-                            contentScale = ContentScale.Crop,
-                        )
-                    }
-                }
+                AsyncImage(
+                    model = emoji.url,
+                    contentDescription = emoji.code,
+                    modifier = Size35Modifier,
+                    contentScale = ContentScale.Crop,
+                )
             }
         }
 

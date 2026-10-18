@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -102,7 +103,7 @@ class RelayMonitor(
 
     /** Re-read the reachability records, including any other monitor's that arrived. */
     suspend fun refresh() {
-        runCatching { snapshot = reachability.snapshot() }
+        runCatchingCancellable { snapshot = reachability.snapshot() }
             .onFailure { onError("could not read relay reachability: ${it.message}") }
     }
 
@@ -116,7 +117,7 @@ class RelayMonitor(
     suspend fun flush(): Int {
         val fresh = observer.collectUnreported()
         if (fresh.isEmpty()) return 0
-        return runCatching { reachability.record(fresh, TimeUtils.now()) }
+        return runCatchingCancellable { reachability.record(fresh, TimeUtils.now()) }
             .onFailure { onError("could not write relay reachability: ${it.message}") }
             .getOrDefault(0)
     }

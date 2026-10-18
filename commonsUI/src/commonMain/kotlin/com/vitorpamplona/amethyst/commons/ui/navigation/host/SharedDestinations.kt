@@ -151,6 +151,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geocaches.log.LogGe
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.geohash.GeoHashScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.GitRepositoriesScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.newRepository.NewGitRepositoryScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.hashtag.HashtagScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.highlights.HighlightsScreen
@@ -312,6 +313,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Pictures> { PicturesScreen(accountViewModel, nav, it.attachments, it.message) }
     composableFromEnd<Route.Workouts> { WorkoutsScreen(accountViewModel, nav) }
     composableFromEnd<Route.GitRepositories> { GitRepositoriesScreen(accountViewModel, nav) }
+    composableFromEnd<Route.NewGitRepository> { NewGitRepositoryScreen(accountViewModel, nav) }
     composableFromEnd<Route.Highlights> { HighlightsScreen(accountViewModel, nav) }
     composableFromEnd<Route.SoftwareApps> { SoftwareAppsScreen(accountViewModel, nav) }
     composableFromEnd<Route.Napplets> { NappletsScreen(accountViewModel, nav) }

@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.TopNavFollowListStor
 import com.vitorpamplona.amethyst.commons.model.preferences.UploadSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.readLegacyGeohashIdentity
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * How every key that can appear in a `secret_keeper_<npub>` file is accounted
@@ -234,6 +236,7 @@ class LegacyPreferenceCleanup(
             try {
                 currentStore(npub)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "Could not read the current store for $npub", e)
                 return reasons + "the current store could not be read"
             }
@@ -258,6 +261,7 @@ class LegacyPreferenceCleanup(
         try {
             if (secrets.secrets(npub) == null) reasons += "the secrets have not been copied across"
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not read the secrets store for $npub", e)
             reasons += "the secrets store could not be read"
         }
@@ -271,6 +275,7 @@ class LegacyPreferenceCleanup(
                     else -> reasons += "the stored private key differs from the legacy file"
                 }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.w(TAG, "Could not read the key store for $npub", e)
                 reasons += "the key store could not be read"
             }
@@ -307,6 +312,7 @@ class LegacyPreferenceCleanup(
                 emptyList()
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not read the location-chat identity store for $npub", e)
             listOf("the location-chat identity store could not be read")
         }
@@ -335,6 +341,7 @@ class LegacyPreferenceCleanup(
                 LegacyCleanupResult.NothingToDelete
             }
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w(TAG, "Could not delete the legacy file for $npub", e)
             LegacyCleanupResult.Kept(listOf("the legacy file could not be deleted"))
         }

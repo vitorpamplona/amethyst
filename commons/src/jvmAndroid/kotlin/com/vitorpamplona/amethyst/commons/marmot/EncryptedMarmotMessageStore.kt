@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -97,6 +99,7 @@ class EncryptedMarmotMessageStore(
                 }
                 messages
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadMessages($nostrGroupId) FAILED: ${e.message}", e)
                 emptyList()
             }
@@ -157,6 +160,7 @@ class EncryptedMarmotMessageStore(
                         parts[0] to epoch
                     }.toMap()
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadEpochs($nostrGroupId) FAILED: ${e.message}", e)
                 emptyMap()
             }
@@ -204,6 +208,7 @@ class EncryptedMarmotMessageStore(
                         parts[0] to at
                     }.toMap()
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadExpiries($nostrGroupId) FAILED: ${e.message}", e)
                 emptyMap()
             }
@@ -278,6 +283,7 @@ class EncryptedMarmotMessageStore(
                         epoch to secs
                     }.toMap()
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadEpochRetentions($nostrGroupId) FAILED: ${e.message}", e)
                 emptyMap()
             }
@@ -313,6 +319,7 @@ class EncryptedMarmotMessageStore(
             try {
                 logMutex.withLock { readAllFrom(snapshotFile(nostrGroupId)) }.firstOrNull()
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 Log.e(TAG, "loadGroupSnapshot($nostrGroupId) FAILED: ${e.message}", e)
                 null
             }

@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -91,7 +92,7 @@ fun rememberNappletIconModel(coordinate: String): String? {
             val file = File(NappletBlobCache.dirFor(context.cacheDir), icon.path.hash.lowercase())
             if (!file.isFile) {
                 val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                runCatching { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort) }
+                runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort) }
             }
             if (file.isFile) model = "file://" + file.absolutePath
         }

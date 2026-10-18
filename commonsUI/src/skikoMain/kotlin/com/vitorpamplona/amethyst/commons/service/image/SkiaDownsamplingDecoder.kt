@@ -33,6 +33,7 @@ import coil3.size.Dimension
 import coil3.size.Precision
 import coil3.size.Scale
 import coil3.size.isOriginal
+import okio.use
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Canvas
 import org.jetbrains.skia.Codec
@@ -43,6 +44,7 @@ import org.jetbrains.skia.FilterMipmap
 import org.jetbrains.skia.FilterMode
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.MipmapMode
+import org.jetbrains.skia.impl.use // with okio.use: skia and okio types are AutoCloseable only on JVM, so kotlin.use breaks iOS
 import kotlin.math.roundToInt
 
 /**

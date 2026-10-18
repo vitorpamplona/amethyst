@@ -27,6 +27,8 @@ import com.github.javakeyring.PasswordAccessException
 import com.vitorpamplona.amethyst.commons.util.appDataDir
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -180,6 +182,7 @@ actual class SecureKeyStorage private actual constructor() {
                 keyringFailed(e)
                 throw SecureStorageException("Failed to save private key", e)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 throw SecureStorageException("Failed to save private key", e)
             }
         }
@@ -201,6 +204,7 @@ actual class SecureKeyStorage private actual constructor() {
                 keyringMissing(e)
                 getPasswordFile(npub)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 throw SecureStorageException("Failed to retrieve private key", e)
             }
         }
@@ -255,6 +259,7 @@ actual class SecureKeyStorage private actual constructor() {
                 keyringMissing(e)
                 getPasswordFile(npub)
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 throw SecureStorageException("Failed to retrieve private key (strict)", e)
             }
         }
@@ -293,6 +298,7 @@ actual class SecureKeyStorage private actual constructor() {
                 keyringMissing(e)
                 passwordFile.delete(npub).also { publishPasswordFileStatus() }
             } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
                 throw SecureStorageException("Failed to delete private key", e)
             }
         }

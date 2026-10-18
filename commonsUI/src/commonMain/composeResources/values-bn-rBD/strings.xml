@@ -778,7 +778,6 @@
     <string name="show_sensitive_content_explainer">পোস্টের লেখক এটিকে সংবেদনশীল হিসেবে চিহ্নিত করলে সতর্কবার্তা দেখায়</string>
     <string name="max_hashtag_limit_title">পোস্টে সর্বোচ্চ হ্যাশট্যাগ</string>
     <string name="max_hashtag_limit_explainer">এই সীমার চেয়ে বেশি হ্যাশট্যাগ সহ পোস্ট লুকায়। অক্ষম করতে 0 সেট করুন</string>
-    <string name="new_reaction_symbol">প্রতিক্রিয়ার নতুন প্রতীক</string>
     <string name="zapraiser">জ্যাপরেইজার</string>
     <string name="zapraiser_explainer">এই পোস্টের জন্য স্যাটের একটি লক্ষ্যমাত্রা যোগ করে। সহায়তাকারী ক্লায়েন্টরা অনুদানকে উৎসাহিত করার জন্য একে একটি অগ্রগতির মানদণ্ড হিসাবে দেখাতে পারে</string>
     <string name="zapraiser_target_amount_in_sats">পরিমাণের লক্ষ্যমাত্রা স্যাট দ্বারা জানান</string>

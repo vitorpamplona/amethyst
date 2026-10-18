@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationChannels
 import com.vitorpamplona.amethyst.ui.components.PushNotificationProviderTile
 import com.vitorpamplona.amethyst.ui.components.hasPushNotificationProvider
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.launch
 
 @Composable
@@ -96,7 +97,7 @@ fun AndroidNotificationDeliverySettings(accountViewModel: AccountViewModel) {
     // Global master switch (persisted, all accounts). produceState + runCatching keeps
     // the @Preview safe when Amethyst.instance / LocalPreferences aren't available.
     val master by produceState(initialValue = true) {
-        runCatching {
+        runCatchingCancellable {
             LocalPreferences.notificationServiceEnabledFlow().collect { value = it }
         }
     }

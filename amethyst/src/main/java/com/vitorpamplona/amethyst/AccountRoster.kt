@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst
 import com.vitorpamplona.amethyst.commons.model.preferences.AccountRosterStore
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * The slice of the roster store this needs.
@@ -159,6 +161,7 @@ class AccountRoster(
         try {
             block()
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             // Never fatal: the legacy file is still written and still read.
             Log.w(TAG, "Could not write the roster store", e)
         }

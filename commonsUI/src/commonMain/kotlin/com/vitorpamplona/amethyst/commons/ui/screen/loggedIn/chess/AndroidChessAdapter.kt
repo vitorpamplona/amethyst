@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 
 /**
  * Android implementation of ChessEventPublisher using Jester protocol.
@@ -95,6 +97,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("chessdebug") { "[AndroidChessPublisher] publishStart failed: ${e.message}" }
             null
         }
@@ -121,6 +124,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             if (success) signedEvent.id else null
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("chessdebug") { "[AndroidChessPublisher] publishMove failed: ${e.message}" }
             null
         }
@@ -148,6 +152,7 @@ class AndroidChessPublisher(
             account.cache.justConsumeMyOwnEvent(signedEvent)
             success
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("chessdebug") { "[AndroidChessPublisher] publishGameEnd failed: ${e.message}" }
             false
         }

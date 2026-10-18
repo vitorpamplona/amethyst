@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.cli.commands.DecodeCommand
 import com.vitorpamplona.amethyst.cli.commands.DecryptCommand
 import com.vitorpamplona.amethyst.cli.commands.DeleteCommand
 import com.vitorpamplona.amethyst.cli.commands.DmCommands
+import com.vitorpamplona.amethyst.cli.commands.EmojiCommands
 import com.vitorpamplona.amethyst.cli.commands.EncodeCommand
 import com.vitorpamplona.amethyst.cli.commands.EncryptCommand
 import com.vitorpamplona.amethyst.cli.commands.EventCommand
@@ -332,6 +333,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "gift" -> GiftCommands.dispatch(dataDir, tail)
         "outbox" -> OutboxCommand.run(dataDir, tail)
         "blossom" -> BlossomCommands.dispatch(dataDir, tail)
+        "emoji" -> EmojiCommands.dispatch(dataDir, tail)
         "sync" -> SyncCommand.run(dataDir, tail)
         "git" -> GitCommands.dispatch(dataDir, tail)
         "admin" -> AdminCommand.run(dataDir, tail)
@@ -376,7 +378,7 @@ private fun printVerbList() {
         |  groups:      marmot relaygroup concord cordn geochat
         |  relays:      relay admin serve store
         |  trust:       trust graperank fof
-        |  media/sites: blossom nsite napplet podcast podcast20 git
+        |  media/sites: blossom emoji nsite napplet podcast podcast20 git
         |  releases:    releases
         |  payments:    cashu offer debit
         |  signing:     bunker
@@ -663,6 +665,20 @@ private fun printUsage() {
         |  blossom delete HASH --server URL             delete a blob you own
         |  blossom check --server URL HASH[,HASH]       HEAD-check blobs exist (fails if any missing)
         |  blossom mirror --server URL SOURCE-URL       ask the server to mirror a blob (BUD-04)
+        |
+        |Custom emoji packs (NIP-30, kind:30030 / 10030):
+        |  emoji pack list [USER]                       a user's emoji packs (default self)
+        |  emoji pack show PACK                         one pack and its emojis (PACK: your d tag,
+        |                                                naddr1…, or 30030:<pubkey>:<d>)
+        |  emoji pack create --title T [--description D] [--image URL] [--d DTAG]
+        |  emoji pack edit PACK [--title T] [--description D] [--image URL]
+        |  emoji pack delete PACK                       NIP-09 delete one of your packs
+        |  emoji add PACK SHORTCODE URL [--private] [--replace]
+        |  emoji remove PACK SHORTCODE[,…] [--private]
+        |  emoji import PACK SOURCE [--private]         bulk add from a folder / .zip of images
+        |      [--replace] [--server URL] [--dry-run]     (uploaded to Blossom, named by file) or a
+        |                                                 `shortcode url` text list
+        |  emoji list | use PACK | unuse PACK           your kind:10030 emoji list
         |
         |Git (NIP-34):
         |  git init [--name N] [--clone URL]            bootstrap a repo from the local git checkout

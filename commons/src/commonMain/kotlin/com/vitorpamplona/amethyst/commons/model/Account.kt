@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.actions.DeletionActions
+import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
@@ -297,6 +298,7 @@ import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
 import com.vitorpamplona.quartz.nip29RelayGroups.moderation.previous
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
@@ -378,6 +380,7 @@ import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import com.vitorpamplona.quartz.utils.ciphers.AES_GCM_NAME
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -1536,11 +1539,8 @@ class Account(
         }
     }
 
-    suspend fun changeReactionTypes(reactionSet: List<String>) {
-        if (settings.changeReactionTypes(reactionSet)) {
-            sendNewAppSpecificData()
-        }
-    }
+    /** The reaction choices counterpart of [applyBottomBarItems] — same synchronous-apply, publish-after contract. */
+    fun applyReactionTypes(reactionSet: List<String>): Boolean = settings.changeReactionTypes(reactionSet)
 
     suspend fun changeReactionRowItems(items: List<ReactionRowItem>) {
         if (settings.changeReactionRowItems(items)) {
@@ -3522,9 +3522,16 @@ class Account(
 
     suspend fun addEmojiToOwnedPack(
         dTag: String,
-        emoji: com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag,
+        emoji: EmojiUrlTag,
         isPrivate: Boolean,
     ) = ownedEmojiPacks.addEmoji(dTag, emoji, isPrivate, this)
+
+    suspend fun addEmojisToOwnedPack(
+        dTag: String,
+        emojis: List<EmojiUrlTag>,
+        isPrivate: Boolean,
+        onConflict: EmojiPackActions.OnConflict,
+    ) = ownedEmojiPacks.addEmojis(dTag, emojis, isPrivate, onConflict, this)
 
     suspend fun removeEmojiFromOwnedPack(
         dTag: String,
@@ -4436,7 +4443,7 @@ class Account(
             ) { keys, on -> keys to on }
                 .distinctUntilChanged()
                 .collect {
-                    runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                    runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 }
         }
 
@@ -4457,20 +4464,20 @@ class Account(
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             concordSessions.revision.sample(500).collect {
                 // A revision also bumps when a base-rotation rekey lands; adopt ours if present.
-                runCatching { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
+                runCatchingCancellable { concord.drainConcordRekeys() }.onFailure { Log.w("Concord", "rekey drain failed", it) }
                 // A promotion to staff delivers the Control Plane write key inside the Grant
                 // itself (CORD-04 §3), so the fold that seats the role is also when it arrives.
-                runCatching { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
+                runCatchingCancellable { concord.drainConcordStaffGrants() }.onFailure { Log.w("Concord", "staff grant drain failed", it) }
                 // A Private Channel rotation lands on its channel-rekey address (CORD-06 §2): adopt the new
                 // key, or drop the channel when it cut us.
-                runCatching { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
+                runCatchingCancellable { concord.drainConcordChannelRekeys() }.onFailure { Log.w("Concord", "channel rekey drain failed", it) }
                 // A Grant folding late turns a parked catch-up invite into one we adopt without a click.
-                runCatching { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
+                runCatchingCancellable { concord.drainConcordCatchUps() }.onFailure { Log.w("Concord", "catch-up drain failed", it) }
                 // An honored Kick naming us (CORD-04 §6): leave the community locally and say so.
-                runCatching { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
+                runCatchingCancellable { concord.drainConcordKicks() }.onFailure { Log.w("Concord", "kick drain failed", it) }
                 // A rotation we were *excluded* from produces no rekey to drain, so it can only be
                 // found by re-resolving the invite link we joined through. Rate-limited internally.
-                runCatching { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
+                runCatchingCancellable { concord.recoverStrandedConcordCommunities() }.onFailure { Log.w("Concord", "stranded recovery failed", it) }
             }
         }
 

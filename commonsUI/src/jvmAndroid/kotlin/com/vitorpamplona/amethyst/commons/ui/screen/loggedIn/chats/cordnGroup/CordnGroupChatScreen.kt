@@ -139,6 +139,8 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -261,6 +263,7 @@ private fun CordnGroupChat(
             sendError = null
             true
         } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.w("CordnGroupChat", "send failed in ${room.gid}: ${e.message}", e)
             sendError = e.message ?: sendFailed
             false
@@ -525,6 +528,7 @@ private fun CordnGroupChat(
                                 // tap rather than the picker again.
                                 uploadState.reset()
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 // A failed attachment left no trace anywhere; the
                                 // banner tells the person, this tells whoever has
                                 // to work out why.
@@ -618,6 +622,7 @@ private fun CordnGroupChat(
                             try {
                                 sendVoiceNote(accountViewModel, room, voice, text)
                             } catch (e: Exception) {
+                                currentCoroutineContext().ensureActive()
                                 Log.w("CordnGroupChat", "voice note failed in ${room.gid}: ${e.message}", e)
                                 attachError = e.message ?: uploadFailed
                             } finally {

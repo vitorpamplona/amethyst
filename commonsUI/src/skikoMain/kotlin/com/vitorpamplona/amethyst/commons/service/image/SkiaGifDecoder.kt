@@ -27,10 +27,12 @@ import coil3.decode.Decoder
 import coil3.decode.ImageSource
 import coil3.fetch.SourceFetchResult
 import coil3.request.Options
+import okio.use
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
 import org.jetbrains.skia.Image
+import org.jetbrains.skia.impl.use // with okio.use: skia and okio types are AutoCloseable only on JVM, so kotlin.use breaks iOS
 
 class SkiaGifDecoder(
     private val source: ImageSource,

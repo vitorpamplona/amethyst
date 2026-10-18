@@ -61,6 +61,7 @@ import com.vitorpamplona.quartz.nip87Ecash.cashu.CashuMintEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -1171,7 +1172,7 @@ class CashuWalletOps(
                         async {
                             semaphore.withPermit {
                                 keysetId to
-                                    runCatching {
+                                    runCatchingCancellable {
                                         mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter)
                                     }.onFailure {
                                         // One retired keyset the mint won't serve keys for must not

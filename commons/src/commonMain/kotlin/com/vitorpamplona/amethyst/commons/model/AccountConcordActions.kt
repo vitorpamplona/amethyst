@@ -116,6 +116,7 @@ import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -441,7 +442,7 @@ class AccountConcordActions(
         // and never reports acceptance — so a `runCatching { publish(); true }` is true whenever
         // local signing worked, and every caller's "did the record land?" gate becomes decorative.
         val landed =
-            runCatching {
+            runCatchingCancellable {
                 account.client.publishAndConfirm(ConcordInviteListEvent.create(account.signer, merged, TimeUtils.now()), publishTo)
             }.onFailure { Log.w("Concord", "invite list publish failed", it) }.getOrDefault(false)
         return if (landed) merged else null
@@ -530,11 +531,11 @@ class AccountConcordActions(
             byAuthor
                 .map { (author, link) ->
                     async {
-                        runCatching {
+                        runCatchingCancellable {
                             val token = link.token.hexToByteArray()
                             // Classify per coordinate, never over the pooled set: one link's newer
                             // revocation tombstone must not decide another link's status.
-                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), author, token) as? InviteBundleStatus.Live ?: return@runCatching false
+                            val current = ConcordActions.classifyInvite(wrapsByAuthor[author].orEmpty(), author, token) as? InviteBundleStatus.Live ?: return@runCatchingCancellable false
                             val moved =
                                 current.invite.copy(
                                     communityRoot = entry.root,
@@ -2423,7 +2424,7 @@ class AccountConcordActions(
                     .map { relay ->
                         async {
                             val events = ArrayList<Event>()
-                            val result = runCatching { concordClient.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
+                            val result = runCatchingCancellable { concordClient.fetchAllPages(relay, listOf(filter)) { events.add(it) } }.getOrNull()
                             if (result?.end == PagedFetchResult.End.DRAINED) events else null
                         }
                     }.awaitAll()

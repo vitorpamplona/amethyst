@@ -67,6 +67,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.zap.Bolt12ZapEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -209,7 +210,7 @@ class AmethystAppFunctions {
                 .orEmpty()
         if (claim.isEmpty()) return false
         val parsed = Nip05Id.parse(claim) ?: return false
-        return runCatching {
+        return runCatchingCancellable {
             !Amethyst.instance.nip05Client.verify(parsed, meta.pubKey)
         }.getOrElse {
             // verify() throws IllegalStateException on network / parse
@@ -1629,7 +1630,7 @@ class AmethystAppFunctions {
             requests.map { req ->
                 val shareSats = req.amountMillisats / 1000
                 val invoiceResult =
-                    runCatching {
+                    runCatchingCancellable {
                         fetchInvoiceOrThrow(
                             lnAddress = req.recipient.lnAddress,
                             sats = shareSats,

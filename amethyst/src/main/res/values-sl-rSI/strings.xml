@@ -83,6 +83,9 @@
     <string name="share_target_as_picture">Nova slika</string>
     <string name="share_target_as_short_video">Nov kratek videoposnetek</string>
     <string name="share_target_as_video">Nov video</string>
+    <string name="share_target_scan_qr">Skeniraj kodo QR</string>
+    <string name="shortcut_scan_qr_short">Skeniraj QR</string>
+    <string name="shortcut_scan_qr_long">Skeniraj kodo QR</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <!-- Onchain zap send dialog -->
@@ -117,12 +120,14 @@
     <!-- NIP-71 video credits: what a video says about the people and works it references. -->
     <string name="always_on_notif_channel_description">Ohranja aktivne povezave z vašimi releji za obvestila v realnem času</string>
     <plurals name="always_on_notif_connected_foreground">
-        <item quantity="one">Povezano z %1$d relejem</item>
-        <item quantity="two">Povezano z %1$d relejema</item>
-        <item quantity="few">Povezano z %1$d releji</item>
-        <item quantity="other">Povezano z %1$d releji</item>
+        <item quantity="one">Povezan z %1$d relejem</item>
+        <item quantity="two">Povezan z %1$d relejema</item>
+        <item quantity="few">Povezan z %1$d releji</item>
+        <item quantity="other">Povezan z %1$d releji</item>
     </plurals>
     <string name="always_on_notif_connecting">Povezovanje vhodnih relejev\u2026</string>
+    <string name="always_on_notif_hide_details">Skrij podrobnosti</string>
+    <string name="always_on_notif_show_details">Prikaži podrobnosti</string>
     <string name="always_on_notif_tile_subtitle_off">Izklop</string>
     <string name="always_on_notif_tile_subtitle_on">Vklop</string>
     <string name="always_on_notif_title">Amethyst obvestila so aktivna</string>
@@ -150,6 +155,7 @@
         <item quantity="other">Rudarjenje dokaza o delu… (%1$d objav v čakalni vrsti)</item>
     </plurals>
     <string name="pow_mining_title">Rudarjenje dokaza o delu (PoW)</string>
+    <string name="pow_notification_sending">Pošiljanje v releje…</string>
     <string name="pow_notification_cancel_all">Prekliči</string>
     <string name="pow_time_left">≈ %1$s še ostane</string>
     <string name="pow_time_left_soon">Vsak čas bo</string>
@@ -185,6 +191,7 @@
     <string name="voice_reply">Zvočni odgovor</string>
     <string name="pow_kind_report">Prijavi</string>
     <!-- Emoji packs -->
+    <string name="health_connect_rationale_activity_label">Health Connect in Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Zasebno sporočilo</string>

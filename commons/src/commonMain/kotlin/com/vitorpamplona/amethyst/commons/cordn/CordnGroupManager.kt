@@ -48,6 +48,8 @@ import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -608,6 +610,7 @@ class CordnGroupManager(
             call { coordinator.takeWelcomes(refs) }
         } catch (e: Exception) {
             pendingRetirements += refs
+            currentCoroutineContext().ensureActive()
         }
     }
 
@@ -693,6 +696,7 @@ class CordnGroupManager(
             call { coordinator.takeJoinRequests(groups.keys.toList(), refs) }
         } catch (e: Exception) {
             pendingRequestRetirements += refs
+            currentCoroutineContext().ensureActive()
         }
     }
 

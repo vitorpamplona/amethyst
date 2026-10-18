@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Rfc3986
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.startsWithAny
 import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.CancellationException
@@ -245,7 +246,7 @@ class SearchBarViewModel(
                 val nip05 = directNip05Target(term)
                 when {
                     nip05 != null -> {
-                        runCatching {
+                        runCatchingCancellable {
                             nip05Client.get(nip05)?.let { info ->
                                 val user = account.cache.checkGetOrCreateUser(info.pubkey)
                                 if (user != null) {

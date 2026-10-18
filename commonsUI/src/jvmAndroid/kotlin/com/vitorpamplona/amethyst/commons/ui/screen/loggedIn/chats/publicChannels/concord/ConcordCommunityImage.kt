@@ -26,6 +26,7 @@ import androidx.compose.runtime.produceState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -69,7 +70,7 @@ fun rememberDecryptedConcordImageModel(
         if (value != null) return@produceState
         value =
             withContext(Dispatchers.IO) {
-                runCatching { resolve(pointer, accountViewModel, cacheDir) }
+                runCatchingCancellable { resolve(pointer, accountViewModel, cacheDir) }
                     .onFailure { Log.w("ConcordImage", "Failed to resolve community image ${pointer.url}", it) }
                     .getOrNull()
             }

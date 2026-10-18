@@ -36,6 +36,8 @@ import com.vitorpamplona.quartz.nip40Expiration.ExpirationTag
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlin.concurrent.Volatile
 
 /**
@@ -103,6 +105,7 @@ open class GiftWrapEvent(
         try {
             unwrapThrowing(signer)
         } catch (_: Exception) {
+            currentCoroutineContext().ensureActive()
             Log.d("GiftWrapEvent") { "Couldn't Decrypt the content " + this.toNostrUri() }
             null
         }
