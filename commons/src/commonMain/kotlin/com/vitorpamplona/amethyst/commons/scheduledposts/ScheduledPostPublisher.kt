@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
 
 /**
  * A single, self-contained detail row describing what happened to one claimed post.
@@ -55,8 +56,8 @@ data class DrainReport(
 )
 
 /**
- * Pure, platform-agnostic drain/publish loop shared by the Android worker and the
- * (future) Desktop scheduler. Claims due posts from [store], re-verifies each
+ * Pure, platform-agnostic drain/publish loop shared by the Android worker, the Desktop
+ * scheduler and the Desktop's headless `--publish-scheduled` run. Claims due posts from [store], re-verifies each
  * signed event, publishes it via the supplied [client], and records the outcome
  * back into the store. All platform-specific concerns (notifications, cache
  * consumption) are injected as callbacks so this class stays free of any UI or
@@ -154,6 +155,9 @@ class ScheduledPostPublisher(
                     }
                 }
             } catch (e: Exception) {
+                // A cancelled drain (the worker stopped, the app quit) is not a failed post: the
+                // claim is released when the store next loads, and the post is retried then.
+                if (e is CancellationException) throw e
                 store.markFailed(post.id, e.message)
                 onFailed(post, e.message)
                 failed++

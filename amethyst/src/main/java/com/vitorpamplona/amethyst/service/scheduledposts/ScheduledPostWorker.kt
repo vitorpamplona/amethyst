@@ -34,9 +34,6 @@ import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostPublisher
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import java.util.concurrent.TimeUnit
@@ -143,61 +140,25 @@ class ScheduledPostWorker(
             val pending = all.count { it.status == ScheduledPostStatus.PENDING }
             Log.d(TAG) { "doWork() store has ${all.size} total, $pending PENDING" }
 
-            val claimed = store.claimDuePosts(nowSec)
-            if (claimed.isEmpty()) {
-                Log.d(TAG) { "doWork() EXIT no posts due" }
-                return Result.success()
-            }
-
-            Log.d(TAG) { "doWork() claimed ${claimed.size} due post(s)" }
-
-            for (post in claimed) {
-                val ageSec = nowSec - post.publishAtSec
-                Log.d(TAG) {
-                    "Publishing post id=${post.id} publishAtSec=${post.publishAtSec} ageSec=$ageSec relays=${post.relayUrls.size}"
-                }
-                val account = appModules.accountsCache.accounts.value[post.accountPubkey]
-                if (account == null) {
-                    Log.w(TAG) { "Account ${post.accountPubkey} not loaded; releasing ${post.id} for retry" }
-                    store.releaseClaim(post.id)
-                    continue
-                }
-
-                try {
-                    val event = Event.fromJson(post.signedEventJson)
-                    val relays = post.relayUrls.map { NormalizedRelayUrl(it) }.toSet()
-                    val extras = post.extraEventsJson.map { Event.fromJson(it) }
-
-                    Log.d(TAG) { "client.publish(${post.id}) starting on ${relays.size} relay(s)" }
-
-                    val results = account.client.publishAndConfirmDetailed(event, relays)
-                    val acks = results.count { it.value }
-                    if (acks > 0) {
-                        // Only feed the event into the local cache once at least one relay
-                        // acked — a failed publish must not appear in the user's timeline.
-                        account.consumePostEvent(event, relays, extras)
-                        store.markSent(post.id)
-                        notifier.notifySent(post)
-                        Log.d(TAG) { "client.publish(${post.id}) acked by $acks/${relays.size}; marked SENT" }
-                    } else {
-                        // Transient no-ack: release the claim for a later retry rather than
-                        // stranding the post as FAILED, until MAX_PUBLISH_ATTEMPTS is hit.
-                        val msg = "no relay acknowledged"
-                        if (post.attemptCount < ScheduledPostPublisher.MAX_PUBLISH_ATTEMPTS) {
-                            store.releaseClaim(post.id)
-                            Log.w(TAG) { "client.publish(${post.id}) got no ack (attempt ${post.attemptCount}); released for retry" }
-                        } else {
-                            store.markFailed(post.id, msg)
-                            notifier.notifyFailed(post, msg)
-                            Log.w(TAG) { "client.publish(${post.id}) failed after max attempts: $msg" }
-                        }
+            // One drain per loaded account, on that account's client and cache. The shared
+            // publisher re-checks each post's author and signature before it goes out. Posts of
+            // accounts that are not loaded stay PENDING for a later run.
+            appModules.accountsCache.accounts.value.values.forEach { account ->
+                val publisher =
+                    ScheduledPostPublisher(
+                        store = store,
+                        client = account.client,
+                        // Empty: publish to the relays stored with each post.
+                        resolveRelays = { emptySet() },
+                        onSent = { notifier.notifySent(it) },
+                        onFailed = { post, error -> notifier.notifyFailed(post, error) },
+                        consume = { event, relays, extras -> account.consumePostEvent(event, relays, extras) },
+                    )
+                val report = publisher.drainDue(nowSec, account.pubKey)
+                if (report.details.isNotEmpty()) {
+                    Log.d(TAG) {
+                        "doWork() ${account.pubKey.take(8)}: published=${report.published} failed=${report.failed} skipped=${report.skipped}"
                     }
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to publish scheduled post ${post.id}", e)
-                    store.markFailed(post.id, e.message)
-                    notifier.notifyFailed(post, e.message)
                 }
             }
 
