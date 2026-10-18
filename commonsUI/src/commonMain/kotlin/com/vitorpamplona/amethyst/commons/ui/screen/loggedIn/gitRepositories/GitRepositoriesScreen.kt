@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.SaveableFeedContentState
 import com.vitorpamplona.amethyst.commons.ui.feeds.ScrollStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
+import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepositories.datasource.GitRepositoriesFilterAssemblerSubscription
@@ -51,7 +52,7 @@ fun GitRepositoriesScreen(
 
 /**
  * The repositories of the selected list. Searching them is the top bar's search button, which
- * opens the full search already narrowed to `kind:git`.
+ * opens the full search already narrowed to `kind:git`; the floating button announces a new one.
  */
 @Composable
 fun GitRepositoriesScreen(
@@ -78,6 +79,11 @@ fun GitRepositoriesScreen(
                 } else {
                     nav.navBottomBar(route)
                 }
+            }
+        },
+        floatingButton = {
+            FabBottomBarPadded(nav) {
+                NewGitRepositoryButton(accountViewModel, nav)
             }
         },
         accountViewModel = accountViewModel,

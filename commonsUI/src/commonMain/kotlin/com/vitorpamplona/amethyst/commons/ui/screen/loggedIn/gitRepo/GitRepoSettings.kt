@@ -53,8 +53,9 @@ import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 /**
  * Edit form for a NIP-34 repository announcement (kind 30617). Because the event
  * is addressable, saving republishes it under the same `d` tag — preserving the
- * earliest-unique-commit, relays, maintainers and personal-fork flag while letting
- * the owner edit the name, description, web/clone URLs and topics.
+ * earliest-unique-commit, relays, maintainers, personal-fork flag and every tag the
+ * form does not manage (ngit's role tags, `u`, `blossoms`, …) while letting the owner
+ * edit the name, description, web/clone URLs and topics.
  */
 @Composable
 fun GitRepoSettingsDialog(
@@ -159,7 +160,9 @@ private fun saveRepository(
                 earliestUniqueCommit = event.earliestUniqueCommit(),
                 personalFork = event.isPersonalFork(),
                 dTag = event.dTag(),
-            )
+            ) {
+                event.unmanagedTags().forEach { add(it) }
+            }
         val signed = accountViewModel.account.signer.sign(template)
         accountViewModel.account.sendAutomatic(signed)
     }

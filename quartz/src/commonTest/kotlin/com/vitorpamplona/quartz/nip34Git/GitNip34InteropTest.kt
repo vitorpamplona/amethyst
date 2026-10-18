@@ -137,4 +137,66 @@ class GitNip34InteropTest {
             )
         assertEquals(listOf("r", "rootcommit"), tmpl.tags.first { it[0] == "r" }.toList(), "patch r tag must be plain (no euc marker)")
     }
+
+    @Test
+    fun announcementCarriesNgitsAltTag() {
+        val tmpl = GitRepositoryEvent.build(name = "demo", dTag = "demo")
+        assertEquals(listOf("alt", "git repository: demo"), tmpl.tags.first { it[0] == "alt" }.toList())
+    }
+
+    @Test
+    fun personalForkIsWrittenOnceEvenWhenItIsAlsoATopic() {
+        val tmpl =
+            GitRepositoryEvent.build(
+                name = "demo",
+                description = null,
+                webUrls = emptyList(),
+                cloneUrls = emptyList(),
+                relays = emptyList(),
+                maintainers = emptyList(),
+                hashtags = listOf("personal-fork", "kotlin"),
+                earliestUniqueCommit = null,
+                personalFork = true,
+                dTag = "demo",
+            )
+        assertEquals(1, tmpl.tags.count { it.toList() == listOf("t", "personal-fork") })
+    }
+
+    @Test
+    fun unmanagedTagsKeepNgitRoleAndForkTagsButNotTheFormFields() {
+        val r =
+            repo(
+                arrayOf(
+                    arrayOf("d", "x"),
+                    arrayOf("name", "x"),
+                    arrayOf("r", "root", "euc"),
+                    arrayOf("r", "https://example.com/spec"),
+                    arrayOf("t", "kotlin"),
+                    arrayOf("alt", "git repository: x"),
+                    arrayOf("maintainers", "bb".repeat(32)),
+                    arrayOf("M", "aa".repeat(32), "1700000000"),
+                    arrayOf("m", "bb".repeat(32), "1700000000"),
+                    arrayOf("u", "30617:${"cc".repeat(32)}:x", "wss://relay.example.com"),
+                    arrayOf("blossoms", "https://blossom.example.com"),
+                ),
+            )
+        assertEquals(
+            listOf(
+                listOf("r", "https://example.com/spec"),
+                listOf("M", "aa".repeat(32), "1700000000"),
+                listOf("m", "bb".repeat(32), "1700000000"),
+                listOf("u", "30617:${"cc".repeat(32)}:x", "wss://relay.example.com"),
+                listOf("blossoms", "https://blossom.example.com"),
+            ),
+            r.unmanagedTags().map { it.toList() },
+        )
+    }
+
+    @Test
+    fun identifierSuggestionIsLowercaseKebab() {
+        assertEquals("my-cool-repo", GitRepositoryEvent.suggestIdentifier("My Cool Repo!"))
+        assertEquals("amethyst", GitRepositoryEvent.suggestIdentifier("  Amethyst  "))
+        assertEquals("v2-0-tools", GitRepositoryEvent.suggestIdentifier("v2.0 -- tools"))
+        assertEquals("日本", GitRepositoryEvent.suggestIdentifier("日本"))
+    }
 }

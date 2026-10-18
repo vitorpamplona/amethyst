@@ -76,7 +76,7 @@ object GitInitCommand {
         val name =
             args.flag("name") ?: derivedName
                 ?: return Output.error("bad_args", "not a git repo and no --name given (run inside a repo, or pass --name)")
-        val identifier = args.flag("d") ?: args.flag("identifier") ?: kebab(name)
+        val identifier = args.flag("d") ?: args.flag("identifier") ?: GitRepositoryEvent.suggestIdentifier(name)
         val cloneUrls = GitSupport.csv(args, "clone").ifEmpty { listOfNotNull(originUrl) }
         val earliestCommit = args.flag("earliest-commit") ?: euc
         if (earliestCommit == null && toplevel != null) {
@@ -212,12 +212,4 @@ object GitInitCommand {
             }
             else -> url
         }
-
-    /** kebab-case a repo name for the `d` identifier: lowercase, non-alphanumerics collapse to single hyphens. */
-    private fun kebab(name: String): String =
-        name
-            .lowercase()
-            .replace(Regex("[^a-z0-9]+"), "-")
-            .trim('-')
-            .ifEmpty { name }
 }
