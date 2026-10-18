@@ -70,6 +70,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.drawing.DrawingEditorState
 import com.vitorpamplona.amethyst.commons.drawing.DrawingTool
@@ -181,7 +182,8 @@ private fun PenInTray(
                 .selectable(selected = selected, role = Role.RadioButton, onClick = { state.tool = tool })
                 .semantics { contentDescription = text },
         ) {
-            Canvas(Modifier.width(PEN_WIDTH).height(PEN_HEIGHT).offset(y = TRAY_HEIGHT - PEN_HEIGHT + sink + PEN_OVERHANG)) {
+            // Read in the layout phase, so the spring moves the pen without recomposing it every frame.
+            Canvas(Modifier.width(PEN_WIDTH).height(PEN_HEIGHT).offset { IntOffset(0, (TRAY_HEIGHT - PEN_HEIGHT + sink + PEN_OVERHANG).roundToPx()) }) {
                 when (tool) {
                     DrawingTool.BRUSH -> drawBrushPen(ink, outline)
                     DrawingTool.PENCIL -> drawPencil(ink, outline)

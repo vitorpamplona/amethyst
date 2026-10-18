@@ -314,28 +314,19 @@ class GifPalette private constructor(
         return best
     }
 
-    companion object {
-        const val TRANSPARENT = 255
-        private const val MAX_COLORS = 255
-        private const val BUCKETS = 1 shl 15
+    /**
+     * Counts colours across several pictures before choosing the palette. A
+     * replay needs the colours of its middle frames too: ink that is erased or
+     * painted over later never reaches the last frame, and without it those
+     * frames would show it in whichever colour happens to be nearest.
+     */
+    class Builder {
+        private val count = IntArray(BUCKETS)
+        private val sumR = LongArray(BUCKETS)
+        private val sumG = LongArray(BUCKETS)
+        private val sumB = LongArray(BUCKETS)
 
-        /** A 4x4 Bayer matrix, centred on zero and scaled to about one 5-bit bucket. */
-        private val BAYER =
-            intArrayOf(0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5).map { (it - 7.5f) * 0.6f }.map { it.toInt() }.toIntArray()
-
-        private fun bucketOf(argb: Int) = (((argb shr 19) and 0x1F) shl 10) or (((argb shr 11) and 0x1F) shl 5) or ((argb shr 3) and 0x1F)
-
-        private fun channel(
-            bucket: Int,
-            axis: Int,
-        ) = (bucket shr (10 - 5 * axis)) and 0x1F
-
-        /** The palette for [argb], normally the finished drawing: exact when it fits, median cut when it does not. */
-        fun from(argb: IntArray): GifPalette {
-            val count = IntArray(BUCKETS)
-            val sumR = LongArray(BUCKETS)
-            val sumG = LongArray(BUCKETS)
-            val sumB = LongArray(BUCKETS)
+        fun add(argb: IntArray): Builder {
             for (pixel in argb) {
                 val bucket = bucketOf(pixel)
                 count[bucket]++
@@ -343,6 +334,11 @@ class GifPalette private constructor(
                 sumG[bucket] += ((pixel shr 8) and 0xFF).toLong()
                 sumB[bucket] += (pixel and 0xFF).toLong()
             }
+            return this
+        }
+
+        /** Exact when the colours fit in 255 entries, median cut and dithered when they do not. */
+        fun build(): GifPalette {
             val used = (0 until BUCKETS).filter { count[it] > 0 }
             val groups = if (used.size <= MAX_COLORS) used.map { listOf(it) } else medianCut(used, count)
 
@@ -364,6 +360,26 @@ class GifPalette private constructor(
             }
             return GifPalette(rgb, maxOf(1, groups.size), dithers = used.size > MAX_COLORS)
         }
+    }
+
+    companion object {
+        const val TRANSPARENT = 255
+        private const val MAX_COLORS = 255
+        private const val BUCKETS = 1 shl 15
+
+        /** A 4x4 Bayer matrix, centred on zero and scaled to about one 5-bit bucket. */
+        private val BAYER =
+            intArrayOf(0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5).map { (it - 7.5f) * 0.6f }.map { it.toInt() }.toIntArray()
+
+        private fun bucketOf(argb: Int) = (((argb shr 19) and 0x1F) shl 10) or (((argb shr 11) and 0x1F) shl 5) or ((argb shr 3) and 0x1F)
+
+        private fun channel(
+            bucket: Int,
+            axis: Int,
+        ) = (bucket shr (10 - 5 * axis)) and 0x1F
+
+        /** The palette for the colours of [argb] alone: exact when they fit, median cut when they do not. */
+        fun from(argb: IntArray): GifPalette = Builder().add(argb).build()
 
         /**
          * Splits the used buckets into [MAX_COLORS] groups: each time, the group

@@ -76,7 +76,13 @@ class DrawingReplay(
      */
     val frameTimes: LongArray =
         run {
-            val drawingFrames = if (endMs <= LEAD_MS) 0 else ceil((endMs - LEAD_MS).toDouble() / frameStepMs).toInt()
+            // A drawing of single taps lands every point at LEAD_MS: it still needs one frame to show them.
+            val drawingFrames =
+                when {
+                    strokes.none { it.size > 0 } -> 0
+                    endMs <= LEAD_MS -> 1
+                    else -> ceil((endMs - LEAD_MS).toDouble() / frameStepMs).toInt()
+                }
             LongArray(drawingFrames + 1) { k -> if (k == 0) 0 else min(LEAD_MS + k * frameStepMs, endMs) }
         }
 

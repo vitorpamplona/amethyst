@@ -40,6 +40,8 @@ import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.util.platformTempDirectory
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.RandomInstance
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -60,53 +62,90 @@ object DrawingExporter {
         background: DrawingBackground,
         strokes: List<DrawingStroke>,
         onProgress: (Float) -> Unit = {},
-    ): RenderedDrawing =
-        withContext(Dispatchers.Default) {
-            val width = EXPORT_WIDTH
-            val height = (EXPORT_WIDTH * background.aspect).roundToInt()
-            val painter = BackgroundPainter(background)
-            val bitmap = ImageBitmap(width, height)
-            val canvas = Canvas(bitmap)
-            val scope = CanvasDrawScope()
-            val size = Size(width.toFloat(), height.toFloat())
-            val pixels = IntArray(width * height)
-            val replay = DrawingReplay(strokes)
+    ): RenderedDrawing {
+        // Set once the files are on disk. withContext throws if the caller was cancelled
+        // while it worked, even after the block finished: the files must not outlive that.
+        var written: RenderedDrawing? = null
+        try {
+            return withContext(Dispatchers.Default) { renderFiles(background, strokes, onProgress).also { written = it } }
+        } catch (e: CancellationException) {
+            written?.delete()
+            throw e
+        }
+    }
 
-            fun render(timeMs: Long) {
-                scope.draw(Density(1f), LayoutDirection.Ltr, canvas, size) {
-                    drawDrawing(painter, strokes, replay, timeMs)
-                }
-                bitmap.readPixels(pixels)
+    private fun CoroutineScope.renderFiles(
+        background: DrawingBackground,
+        strokes: List<DrawingStroke>,
+        onProgress: (Float) -> Unit,
+    ): RenderedDrawing {
+        val width = EXPORT_WIDTH
+        val height = (EXPORT_WIDTH * background.aspect).roundToInt()
+        val painter = BackgroundPainter(background)
+        val bitmap = ImageBitmap(width, height)
+        val canvas = Canvas(bitmap)
+        val scope = CanvasDrawScope()
+        val size = Size(width.toFloat(), height.toFloat())
+        val pixels = IntArray(width * height)
+        val replay = DrawingReplay(strokes)
+        val renderer = ReplayFrameRenderer(painter, strokes, replay)
+
+        fun render(timeMs: Long) {
+            scope.draw(Density(1f), LayoutDirection.Ltr, canvas, size) {
+                with(renderer) { drawFrame(timeMs) }
             }
+            bitmap.readPixels(pixels)
+        }
 
-            render(Long.MAX_VALUE)
-            val finished = pixels.copyOf()
+        val frames = replay.frameTimes
 
-            val encoder = AnimatedGifEncoder(width, height, GifPalette.from(finished))
-            val frames = replay.frameTimes
-            for (k in frames.indices) {
-                ensureActive()
-                render(frames[k])
-                encoder.addFrame(pixels, replay.frameDelayCs(k))
-                onProgress((k + 1f) / frames.size)
-            }
-            val gifBytes = encoder.finish()
-            val pngBytes = encodeArgbAsPng(finished, width, height)
+        // The palette sees the finished drawing and a sample of the replay: ink that is
+        // erased or painted over never reaches the last frame but must keep its colour.
+        val palette = GifPalette.Builder()
+        val sampleEvery = maxOf(1, frames.size / PALETTE_SAMPLES)
+        for (k in frames.indices step sampleEvery) {
+            ensureActive()
+            render(frames[k])
+            palette.add(pixels)
+        }
+        render(Long.MAX_VALUE)
+        val finished = pixels.copyOf()
+        palette.add(finished)
 
-            val image = PlatformImage.create(finished, width, height)
-            val blurhash = runCatching { image.toBlurhash() }.onFailure { Log.w(TAG, "Could not blurhash the drawing", it) }.getOrNull()
-            val thumbhash = runCatching { image.toThumbhash() }.onFailure { Log.w(TAG, "Could not thumbhash the drawing", it) }.getOrNull()
+        val encoder = AnimatedGifEncoder(width, height, palette.build())
+        for (k in frames.indices) {
+            ensureActive()
+            render(frames[k])
+            encoder.addFrame(pixels, replay.frameDelayCs(k))
+            onProgress((k + 1f) / frames.size)
+        }
+        val gifBytes = encoder.finish()
+        val pngBytes = encodeArgbAsPng(finished, width, height)
 
-            val name = "amethyst_drawing_" + RandomInstance.randomChars(12)
-            val gif = platformTempDirectory / "$name.gif"
-            val still = platformTempDirectory / "$name.png"
+        val image = PlatformImage.create(finished, width, height)
+        val blurhash = runCatching { image.toBlurhash() }.onFailure { Log.w(TAG, "Could not blurhash the drawing", it) }.getOrNull()
+        val thumbhash = runCatching { image.toThumbhash() }.onFailure { Log.w(TAG, "Could not thumbhash the drawing", it) }.getOrNull()
+
+        val name = "amethyst_drawing_" + RandomInstance.randomChars(12)
+        val gif = platformTempDirectory / "$name.gif"
+        val still = platformTempDirectory / "$name.png"
+        val drawing = RenderedDrawing(gif, still, width, height, blurhash, thumbhash)
+        try {
             platformFileSystem.write(gif) { write(gifBytes) }
             platformFileSystem.write(still) { write(pngBytes) }
-
-            Log.d(TAG) { "Drawing exported: ${frames.size} frames, GIF ${gifBytes.size} B, PNG ${pngBytes.size} B" }
-
-            RenderedDrawing(gif, still, width, height, blurhash, thumbhash)
+        } catch (e: Exception) {
+            // A full disk after the GIF was written must not leave it behind.
+            drawing.delete()
+            throw e
         }
+
+        Log.d(TAG) { "Drawing exported: ${frames.size} frames, GIF ${gifBytes.size} B, PNG ${pngBytes.size} B" }
+
+        return drawing
+    }
+
+    /** About how many replay frames, besides the last, the palette is built from. */
+    private const val PALETTE_SAMPLES = 12
 
     private const val TAG = "DrawingExporter"
 }

@@ -63,7 +63,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.commons.drawing.DrawingBackground
 import com.vitorpamplona.amethyst.commons.drawing.DrawingBackgroundStore
 import com.vitorpamplona.amethyst.commons.drawing.DrawingEditorState
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
@@ -151,6 +150,9 @@ fun DrawingEditorDialog(
     onDone: (drawing: RenderedDrawing, alt: String?) -> Unit,
 ) {
     val state = remember { DrawingEditorState() }
+    // One painter for the canvas, the chip and the preview: a photo becomes a bitmap once, not once per view.
+    val background = state.background
+    val painter = remember(background) { BackgroundPainter(background) }
     val picker = rememberPaperPicker(state, backgrounds)
     var step by remember { mutableStateOf(Step.DRAW) }
     var showPaper by remember { mutableStateOf(false) }
@@ -175,10 +177,10 @@ fun DrawingEditorDialog(
         exportFailed = false
         progress = 0f
         val strokes = state.strokes.toList()
-        val background = state.background
+        val exported = state.background
         scope.launch {
             try {
-                val drawing = DrawingExporter.export(background, strokes) { progress = it }
+                val drawing = DrawingExporter.export(exported, strokes) { progress = it }
                 onDone(drawing, alt.trim().ifEmpty { null })
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
@@ -193,7 +195,19 @@ fun DrawingEditorDialog(
     if (pickingPicture) {
         GallerySelectSingle(imagesOnly = true) { media ->
             pickingPicture = false
-            if (media != null) scope.launch { picker.addPicture(readMedia(media.uri)) }
+            if (media != null) {
+                scope.launch {
+                    val bytes =
+                        try {
+                            readMedia(media.uri)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            Log.w("DrawingEditorDialog", "Could not read the picked picture", e)
+                            null
+                        }
+                    picker.addPicture(bytes)
+                }
+            }
         }
     }
 
@@ -208,6 +222,7 @@ fun DrawingEditorDialog(
                     Step.DRAW -> {
                         DrawStep(
                             state = state,
+                            painter = painter,
                             onClose = back,
                             onPaper = { showPaper = true },
                             onNext = { step = Step.PREVIEW },
@@ -217,6 +232,7 @@ fun DrawingEditorDialog(
                     Step.PREVIEW -> {
                         PreviewStep(
                             state = state,
+                            painter = painter,
                             alt = alt,
                             onAltChange = { alt = it },
                             progress = progress,
@@ -260,6 +276,7 @@ fun DrawingEditorDialog(
 @Composable
 private fun DrawStep(
     state: DrawingEditorState,
+    painter: BackgroundPainter,
     onClose: () -> Unit,
     onPaper: () -> Unit,
     onNext: () -> Unit,
@@ -270,7 +287,7 @@ private fun DrawStep(
                 navigationIcon = { CloseButton(onPress = onClose, modifier = Modifier.padding(horizontal = 8.dp)) },
                 title = {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        PaperChip(state.background, onPaper)
+                        PaperChip(painter, onPaper)
                     }
                 },
                 actions = {
@@ -284,7 +301,7 @@ private fun DrawStep(
     ) { pad ->
         Surface(Modifier.padding(pad).consumeWindowInsets(pad)) {
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                DrawingCanvas(state, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp))
+                DrawingCanvas(state, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), painter)
                 DrawingDock(state, Modifier.padding(horizontal = 12.dp).padding(bottom = 12.dp))
             }
         }
@@ -295,6 +312,7 @@ private fun DrawStep(
 @Composable
 private fun PreviewStep(
     state: DrawingEditorState,
+    painter: BackgroundPainter,
     alt: String,
     onAltChange: (String) -> Unit,
     progress: Float?,
@@ -324,13 +342,14 @@ private fun PreviewStep(
                 // A snapshot of the strokes: the preview replays what will be posted.
                 val strokes = remember(state.strokes.size) { state.strokes.toList() }
                 ReplayPreview(
-                    state.background,
+                    painter.background,
                     strokes,
                     Modifier
                         .weight(1f)
                         .widthIn(max = 560.dp)
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp, vertical = 16.dp),
+                    painter,
                 )
                 Text(
                     stringRes(Res.string.drawing_preview_caption),
@@ -384,10 +403,9 @@ private fun PreviewStep(
 /** The current paper as a small sample and its name; opens the paper sheet. */
 @Composable
 private fun PaperChip(
-    background: DrawingBackground,
+    painter: BackgroundPainter,
     onClick: () -> Unit,
 ) {
-    val painter = remember(background) { BackgroundPainter(background) }
     val label = stringRes(Res.string.drawing_change_paper)
     Surface(
         onClick = onClick,
@@ -403,7 +421,7 @@ private fun PaperChip(
                 }
             }
             Spacer(Modifier.width(8.dp))
-            Text(stringRes(paperLabel(background)), style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            Text(stringRes(paperLabel(painter.background)), style = MaterialTheme.typography.labelLarge, maxLines = 1)
             Icon(MaterialSymbols.ExpandMore, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }

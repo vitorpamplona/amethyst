@@ -48,6 +48,7 @@ What was considered and set aside:
 | `DrawingReplay` | commons | Replay timing: cuts pauses (150 ms) and gaps (300 ms), fits ~3.2 s, 0.4 s lead-in, 2.5 s hold |
 | `AnimatedGifEncoder`, `GifPalette`, `GifLzw` | commons | Pure Kotlin GIF89a writer. Later frames store only the changed rectangle, with unchanged pixels transparent |
 | `DrawingRenderer` (`drawDrawing`, `BackgroundPainter`) | commonsUI | One renderer for the live canvas, every GIF frame and the PNG |
+| `ReplayFrameRenderer` | commonsUI | Replay frames in constant time: finished strokes in a layer that only grows, the background drawn once, one half-drawn stroke on top. Used by the export and the preview |
 | `DrawingExporter` | commonsUI | Renders frames offscreen (`ImageBitmap` + `CanvasDrawScope` + `readPixels`) at 540 px wide |
 | `DrawingBackgroundStore` | commons | Picked pictures as cropped PNGs, one folder per account under the host's `drawingBackgroundsDir`, newest 12 kept |
 | `PhotoBackgroundLoader` | commonsUI | Coil decode (upright on Android), centre crop to 4:3..2:3, 1080 px wide |
@@ -63,7 +64,8 @@ undo, clear or resize, and draws the stroke under the finger on top.
 
 ### Palette
 
-`GifPalette.from` takes the finished drawing. When it has at most 255 colours (5-bit buckets), the
+`GifPalette.Builder` counts the colours of the finished drawing plus about 12 frames sampled across
+the replay, because ink that is erased or painted over never reaches the last frame. When it has at most 255 colours (5-bit buckets), the
 palette is exact and nothing is dithered. Over a photo it uses median cut plus a 4x4 Bayer dither.
 The dither depends only on a pixel's position and colour, so an unchanged pixel maps to the same
 index in every frame and the per-frame patches stay small.

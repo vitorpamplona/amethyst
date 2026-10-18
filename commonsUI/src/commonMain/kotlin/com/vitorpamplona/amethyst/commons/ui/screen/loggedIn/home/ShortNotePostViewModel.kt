@@ -1675,40 +1675,56 @@ open class ShortNotePostViewModel :
                 val server = account.settings.defaultFileServer
                 val signer = if (wantsAnonymousPost) anonymousSigner() else null
 
-                val gifState = uploadGeneratedFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, server, signer)
-                val gif = (gifState as? UploadingState.Finished)?.result
-                if (gif == null) {
-                    val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
-                    onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
-                    return@launch
-                }
-
+                // Both files go up at once: the PNG is only a preview, so the GIF does not wait for it.
                 val url =
-                    when (gif) {
-                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                            val nip95 = account.createNip95(gif.bytes, headerInfo = gif.fileHeader, alt, null)
-                            nip95attachments = nip95attachments + nip95
-                            account.consumeNip95(nip95.first, nip95.second)?.let { "nostr:" + it.toNEvent() }
+                    coroutineScope {
+                        val stillUpload =
+                            async {
+                                try {
+                                    (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    Log.w("ShortNotePostViewModel", "Could not upload the drawing's still", e)
+                                    null
+                                }
+                            }
+
+                        val gifState = uploadGeneratedFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, server, signer)
+                        val gif = (gifState as? UploadingState.Finished)?.result
+                        if (gif == null) {
+                            stillUpload.cancel()
+                            val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
+                            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
+                            return@coroutineScope null
                         }
 
-                        is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                            val still = (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
-                            val iMeta =
-                                IMetaTagBuilder(gif.url)
-                                    .apply {
-                                        hash(gif.fileHeader.hash)
-                                        size(gif.fileHeader.size)
-                                        mimeType(RenderedDrawing.GIF_MIME_TYPE)
-                                        dims(DimensionTag(drawing.width, drawing.height))
-                                        drawing.blurhash?.let { blurhash(it) }
-                                        drawing.thumbhash?.let { thumbhash(it) }
-                                        (still as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { image(it.url) }
-                                        gif.magnet?.let { magnet(it) }
-                                        gif.uploadedHash?.let { originalHash(it) }
-                                        alt?.let { alt(it) }
-                                    }.build()
-                            iMetaAttachments.replace(iMeta.url, iMeta)
-                            gif.url
+                        when (gif) {
+                            is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
+                                stillUpload.cancel()
+                                val nip95 = account.createNip95(gif.bytes, headerInfo = gif.fileHeader, alt, null)
+                                nip95attachments = nip95attachments + nip95
+                                account.consumeNip95(nip95.first, nip95.second)?.let { "nostr:" + it.toNEvent() }
+                            }
+
+                            is UploadOrchestrator.OrchestratorResult.ServerResult -> {
+                                val still = stillUpload.await()
+                                val iMeta =
+                                    IMetaTagBuilder(gif.url)
+                                        .apply {
+                                            hash(gif.fileHeader.hash)
+                                            size(gif.fileHeader.size)
+                                            mimeType(RenderedDrawing.GIF_MIME_TYPE)
+                                            dims(DimensionTag(drawing.width, drawing.height))
+                                            drawing.blurhash?.let { blurhash(it) }
+                                            drawing.thumbhash?.let { thumbhash(it) }
+                                            (still as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { image(it.url) }
+                                            gif.magnet?.let { magnet(it) }
+                                            gif.uploadedHash?.let { originalHash(it) }
+                                            alt?.let { alt(it) }
+                                        }.build()
+                                iMetaAttachments.replace(iMeta.url, iMeta)
+                                gif.url
+                            }
                         }
                     }
 

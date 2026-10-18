@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.drawing.ui
 
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.translate
@@ -91,6 +92,9 @@ object PhotoBackgroundLoader {
 
             val bitmap = ImageBitmap(width, height)
             CanvasDrawScope().draw(Density(1f), LayoutDirection.Ltr, Canvas(bitmap), Size(width.toFloat(), height.toFloat())) {
+                // A picture with see-through parts sits on white paper: the background must be opaque,
+                // or the exporter's frames (drawn over the previous one) and the canvas show through it.
+                drawRect(Color.White)
                 translate((width - drawnW) / 2f, (height - drawnH) / 2f) {
                     with(painter) { draw(Size(drawnW, drawnH)) }
                 }

@@ -93,6 +93,15 @@ class DrawingReplayTest {
     }
 
     @Test
+    fun aSingleTapStillGetsAFrameThatShowsIt() {
+        val replay = DrawingReplay(listOf(stroke(1_000)))
+        assertEquals(2, replay.frameTimes.size)
+        assertEquals(0, replay.visiblePoints(0, replay.frameTimes.first()))
+        assertEquals(1, replay.visiblePoints(0, replay.frameTimes.last()))
+        assertEquals(replay.endMs, replay.replayTimeAt(replay.durationMs - 1))
+    }
+
+    @Test
     fun nothingDrawnIsOneBlankFrame() {
         val replay = DrawingReplay(emptyList())
         assertEquals(1, replay.frameTimes.size)

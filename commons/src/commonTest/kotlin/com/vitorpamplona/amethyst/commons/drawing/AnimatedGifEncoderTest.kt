@@ -135,6 +135,26 @@ class AnimatedGifEncoderTest {
     }
 
     @Test
+    fun inkThatIsLaterErasedKeepsItsColourInTheFramesThatShowIt() {
+        val w = 20
+        val h = 20
+        val blank = IntArray(w * h) { paper }
+        val withRed = blank.copyOf().also { for (x in 2..17) it[10 * w + x] = red }
+        val erased = blank.copyOf().also { it[3 * w + 3] = ink }
+        val frames = listOf(blank, withRed, erased)
+
+        // Built from the last frame alone, red would be missing and frame 1 would show it as ink or paper.
+        val palette = GifPalette.Builder().apply { frames.forEach { add(it) } }.build()
+        val encoder = AnimatedGifEncoder(w, h, palette)
+        frames.forEach { encoder.addFrame(it, 5) }
+        val gif = GifReader(encoder.finish())
+
+        frames.forEachIndexed { i, expected ->
+            assertContentEquals(expected.map { it and 0xFFFFFF }, gif.frames[i].toList(), "frame $i")
+        }
+    }
+
+    @Test
     fun inkOnPaperKeepsItsExactColoursAndIsNotDithered() {
         val picture =
             IntArray(100) {

@@ -113,10 +113,12 @@ import kotlinx.coroutines.withContext
 import okio.Path
 import org.jetbrains.compose.resources.StringResource
 
-/** A picture saved in [DrawingBackgroundStore], with its bytes for the thumbnail and for loading. */
+/**
+ * A picture saved in [DrawingBackgroundStore]. Only its path is held: the thumbnail loads the file
+ * through Coil (which caches it by path) and its bytes are read when it is picked.
+ */
 class SavedBackground(
     val path: Path,
-    val png: ByteArray,
 )
 
 /**
@@ -143,7 +145,7 @@ class PaperPicker(
 
     suspend fun reloadSaved() {
         val store = backgrounds ?: return
-        saved = store.list().mapNotNull { path -> store.read(path)?.let { SavedBackground(path, it) } }
+        saved = store.list().map { SavedBackground(it) }
     }
 
     fun choosePaper(paper: DrawingPaper) {
@@ -154,7 +156,12 @@ class PaperPicker(
     fun chooseUnsaved(photo: DrawingBackground.Photo) = state.changeBackground(photo)
 
     suspend fun chooseSaved(item: SavedBackground) {
-        if (load(item.png) != null) selectedSaved = item.path
+        val png = backgrounds?.read(item.path)
+        if (png == null) {
+            failed = true
+            return
+        }
+        if (load(png) != null) selectedSaved = item.path
     }
 
     /** A picture the user just picked: loads it onto the paper and keeps a copy for next time. */
@@ -169,9 +176,16 @@ class PaperPicker(
             unsaved = loaded
         } else {
             // Keep the cropped, scaled copy, not the original: it is what the editor needs next time.
-            val png = withContext(Dispatchers.Default) { encodeArgbAsPng(loaded.pixels, loaded.width, loaded.height) }
-            selectedSaved = store.save(png)
-            reloadSaved()
+            try {
+                val png = withContext(Dispatchers.Default) { encodeArgbAsPng(loaded.pixels, loaded.width, loaded.height) }
+                selectedSaved = store.save(png)
+                reloadSaved()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // The picture is already on the paper; it just will not come back next time.
+                Log.w("PaperPicker", "Could not save the background picture", e)
+                unsaved = loaded
+            }
         }
     }
 
@@ -403,7 +417,7 @@ private fun SavedPictureCard(
         remember(item.path) {
             ImageRequest
                 .Builder(context)
-                .data(item.png)
+                .data(item.path)
                 .size(THUMBNAIL_PX)
                 .build()
         }

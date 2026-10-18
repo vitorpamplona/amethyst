@@ -73,9 +73,9 @@ import kotlin.math.roundToInt
 fun DrawingCanvas(
     state: DrawingEditorState,
     modifier: Modifier = Modifier,
+    painter: BackgroundPainter = remember(state.background) { BackgroundPainter(state.background) },
 ) {
-    val background = state.background
-    val painter = remember(background) { BackgroundPainter(background) }
+    val background = painter.background
     val layer = remember { FinishedStrokesLayer() }
 
     PaperFrame(background, modifier) {

@@ -48,9 +48,10 @@ fun ReplayPreview(
     background: DrawingBackground,
     strokes: List<DrawingStroke>,
     modifier: Modifier = Modifier,
+    painter: BackgroundPainter = remember(background) { BackgroundPainter(background) },
 ) {
     val replay = remember(strokes) { DrawingReplay(strokes) }
-    val painter = remember(background) { BackgroundPainter(background) }
+    val renderer = remember(painter, strokes, replay) { ReplayFrameRenderer(painter, strokes, replay) }
     val loopMs = replay.durationMs.toInt().coerceAtLeast(1)
     val playback by rememberInfiniteTransition().animateFloat(
         initialValue = 0f,
@@ -62,7 +63,8 @@ fun ReplayPreview(
     val sticky = (background as? DrawingBackground.Paper)?.paper?.pattern == PaperPattern.GLUE_STRIP
     PaperFrame(background, modifier.rotate(if (sticky) STICKY_TILT else 0f)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawDrawing(painter, strokes, replay, replay.replayTimeAt(playback.toLong()))
+            // Read here, in the draw phase: each animation frame redraws without recomposing.
+            with(renderer) { drawFrame(replay.replayTimeAt(playback.toLong())) }
         }
     }
 }
