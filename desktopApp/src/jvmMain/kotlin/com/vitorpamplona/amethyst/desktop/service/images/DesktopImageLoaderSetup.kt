@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.service.image.SkiaDownsamplingDecoder
 import com.vitorpamplona.amethyst.commons.service.image.SkiaGifDecoder
 import com.vitorpamplona.amethyst.commons.service.image.buildAmethystImageLoader
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import okhttp3.Call
 import okio.Path.Companion.toOkioPath
 import java.io.File
@@ -79,7 +80,8 @@ object DesktopImageLoaderSetup {
     private fun newDiskCache(): DiskCache =
         DiskCache
             .Builder()
-            .directory(cacheDir().resolve("AmethystDesktop/image_cache").toOkioPath())
+            // One process per cache: a second copy of the app gets its own (see DesktopInstance).
+            .directory(DesktopInstance.ownFolder(cacheDir().resolve("AmethystDesktop/image_cache")).toOkioPath())
             .maxSizeBytes(512L * 1024 * 1024)
             .build()
 

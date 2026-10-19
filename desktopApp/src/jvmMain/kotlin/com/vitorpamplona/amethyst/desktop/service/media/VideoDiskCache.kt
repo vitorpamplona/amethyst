@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import com.sun.net.httpserver.HttpExchange
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.io.IOException
@@ -56,7 +57,8 @@ object VideoDiskCache {
     private const val TRIM_EVERY_MILLIS = 60_000L
 
     private val dir: File by lazy {
-        File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos").also { dir ->
+        // Its index lives in memory, so a second copy of the app gets its own (see DesktopInstance).
+        DesktopInstance.ownFolder(File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos")).also { dir ->
             dir.mkdirs()
             try {
                 Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwx------"))

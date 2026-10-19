@@ -453,7 +453,9 @@ class DesktopAppModules(
             scope = applicationIOScope,
             maxConcurrent = 1,
             minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
-            persistence = powJobStore,
+            // Only the primary copy checkpoints jobs (see DesktopInstance): it alone resumes them,
+            // so a job a later copy saved would be mined and published again by the primary.
+            persistence = if (DesktopInstance.isPrimary) powJobStore else null,
         )
     }
 
@@ -681,10 +683,13 @@ class DesktopAppModules(
         }
 
         // Resumes PoW mining jobs checkpointed before the last exit, for every loaded account.
-        // Idempotent (the queue dedupes by job id), so re-emissions are safe.
-        applicationIOScope.launch {
-            accountsCache.accounts.collect { loaded ->
-                loaded.values.forEach { powJobRestorer.restore(it) }
+        // Idempotent (the queue dedupes by job id), so re-emissions are safe. Only in the primary
+        // copy: every copy logs into the same accounts, and each would publish the same post.
+        if (DesktopInstance.isPrimary) {
+            applicationIOScope.launch {
+                accountsCache.accounts.collect { loaded ->
+                    loaded.values.forEach { powJobRestorer.restore(it) }
+                }
             }
         }
 

@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
@@ -101,7 +102,8 @@ object VideoThumbnailCache {
         Executors.newSingleThreadScheduledExecutor { Thread(it, "ffmpeg-watchdog").apply { isDaemon = true } }
 
     private val diskDir: File by lazy {
-        File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs").also { dir ->
+        // A second copy of the app gets its own, as for the video cache (see DesktopInstance).
+        DesktopInstance.ownFolder(File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs")).also { dir ->
             dir.mkdirs()
             try {
                 Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwx------"))
