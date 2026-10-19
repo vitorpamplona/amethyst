@@ -413,6 +413,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayMonitor
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRole
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReleaseArtifactSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
@@ -1561,6 +1562,8 @@ internal fun RenderNoteRow(
                 // tag signature matches.
                 if (noteEvent.isNip82SoftwareRelease()) {
                     RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+                } else {
+                    RenderReleaseArtifactSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 

@@ -840,24 +840,9 @@ private fun FullBleedNoteCompose(
                 } else if (noteEvent is StarterPackEvent) {
                     // The full pack here; the feed shows the short card.
                     DisplayStarterPack(baseNote, false, accountViewModel, nav)
-                } else if (noteEvent is ReleaseArtifactSetEvent) {
-                    if (noteEvent.isNip82SoftwareRelease()) {
-                        RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav, expanded = true)
-                    } else {
-                        // The feed draws nothing for a plain NIP-51 release set; the master note
-                        // must not be blank, so it keeps the text body.
-                        RenderTextEvent(
-                            baseNote,
-                            false,
-                            canPreview,
-                            quotesLeft = 3,
-                            unPackReply = ReplyRenderType.NONE,
-                            backgroundColor,
-                            editState,
-                            accountViewModel,
-                            nav,
-                        )
-                    }
+                } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {
+                    // A plain NIP-51 release set has nothing extra to show here, so it takes the feed's list card.
+                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav, expanded = true)
                 } else if (noteEvent is ProductCollectionEvent) {
                     // The collection's page: more of its products and shipping than a feed card.
                     RenderProductCollection(baseNote, false, accountViewModel, nav, isPage = true)
