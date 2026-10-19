@@ -4604,6 +4604,7 @@
     <string name="kind_relay_discovery">Odkrivanje relejev</string>
     <string name="kind_relay_monitor">Obvestilo nadzornika relejev</string>
     <string name="kind_relay_set">Nabor relejev</string>
+    <string name="kind_release_artifact_set">Nabor artefaktov različice</string>
     <string name="kind_reports">Prijave</string>
     <string name="kind_reposts">Ponovne objave</string>
     <string name="kind_reposts_16">Ponovno preposlani (16)</string>

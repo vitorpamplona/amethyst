@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">पुनःप्रसारक खोज</string>
     <string name="kind_relay_monitor">पुनःप्रसारक परिवीक्षक घोषणा</string>
     <string name="kind_relay_set">पुनःप्रसारक समुच्चय</string>
+    <string name="kind_release_artifact_set">प्रकाशन उत्पाद समुच्चय</string>
     <string name="kind_reports">वृत्तान्त</string>
     <string name="kind_reposts">पुनःप्रकाशन</string>
     <string name="kind_reposts_16">पुनःप्रकाशन (१६)</string>
