@@ -483,7 +483,7 @@ object GlobalMediaPlayer {
     ) {
         if (isCardEngine(player)) {
             // Its card keeps it, paused where it is.
-            runCatching { player.pause() }
+            pauseAside(player)
             return
         }
         val parked =
@@ -499,21 +499,29 @@ object GlobalMediaPlayer {
                 }
         if (parked) {
             Log.d(TAG) { "park url=$url" }
-            runCatching {
-                player.volume = 0f
-                player.pause()
-            }
-            // One still loading ignores that pause and starts once loaded, unseen: pause it again
-            // then, unless it became the playing video meanwhile.
-            if (player.isLoading) {
-                scope.launch(Dispatchers.Main) {
-                    withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }
-                    val stillParked = synchronized(initLock) { warmEngines.values.any { it === player } }
-                    if (stillParked) runCatching { player.pause() }
-                }
-            }
+            pauseAside(player)
         } else {
             retireVideoPlayer(player)
+        }
+    }
+
+    /**
+     * Mutes and pauses [player], which gave the screen to another video but stays open. One still
+     * loading ignores that pause and starts once loaded, unseen (a card's video then played to its
+     * end off screen, and had nothing left to play when it got the middle back): pause it again
+     * then, unless it became the playing video meanwhile.
+     */
+    private fun pauseAside(player: VideoPlayerState) {
+        runCatching {
+            player.volume = 0f
+            player.pause()
+        }
+        if (player.isLoading) {
+            scope.launch(Dispatchers.Main) {
+                withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }
+                // Retired meanwhile: its own release pauses it, and it may be disposed by now.
+                if (player !== videoPlayer && player !in retiring) runCatching { player.pause() }
+            }
         }
     }
 
@@ -848,7 +856,7 @@ object GlobalMediaPlayer {
         // Retired rather than stopped: an open still in flight would start it again, unseen. One a
         // card holds stays with it, paused.
         val stopped = synchronized(initLock) { videoPlayer.also { videoPlayer = null } }
-        if (isCardEngine(stopped)) runCatching { stopped?.pause() } else stopped?.let(::retireVideoPlayer)
+        if (stopped != null && isCardEngine(stopped)) pauseAside(stopped) else stopped?.let(::retireVideoPlayer)
         _videoState.value = MediaPlaybackState()
         _isFullscreen.value = false
     }
