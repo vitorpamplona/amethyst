@@ -475,6 +475,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderMediaStarter
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderMuteList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderOldBookmarkList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderPictureCurationSet
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderReleaseArtifactSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProviderList
@@ -1561,6 +1562,8 @@ internal fun RenderNoteRow(
                 // tag signature matches.
                 if (noteEvent.isNip82SoftwareRelease()) {
                     RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+                } else {
+                    RenderReleaseArtifactSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 

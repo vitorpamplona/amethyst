@@ -4530,6 +4530,7 @@
     <string name="kind_relay_discovery">Relay Discovery</string>
     <string name="kind_relay_monitor">Relay Monitor Announcement</string>
     <string name="kind_relay_set">Relay Set</string>
+    <string name="kind_release_artifact_set">Release artifact set</string>
     <string name="kind_reports">Reports</string>
     <string name="kind_reposts">Reposts</string>
     <string name="kind_reposts_16">Reposts (16)</string>

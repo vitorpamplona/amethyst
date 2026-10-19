@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_article_curation_set
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_list
 import com.vitorpamplona.amethyst.commons.resources.kind_bookmark_set
 import com.vitorpamplona.amethyst.commons.resources.kind_picture_curation_set
+import com.vitorpamplona.amethyst.commons.resources.kind_release_artifact_set
 import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_hashtags
 import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_links
 import com.vitorpamplona.amethyst.commons.resources.nip51_bookmark_count_notes
@@ -54,6 +55,7 @@ import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.pictureCurationSet.PictureCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.releaseArtifactSet.ReleaseArtifactSetEvent
 import kotlinx.collections.immutable.toImmutableList
 
 /** How many hashtag chips a bookmark card shows before a "+N more" chip. */
@@ -199,7 +201,38 @@ fun RenderPictureCurationSet(
 }
 
 /**
- * The five bookmark-shaped kinds differ only in where their name comes from; what they hold is the
+ * NIP-51 kind 30063: "groups of files of a software release". NIP-82 software releases share the
+ * kind and get their own card; this is the plain set, which holds the same `e`/`a` items as a
+ * bookmark set. Quartz has no private-member decryption for this kind, so a non-empty `content`
+ * only shows as hidden members.
+ */
+@Composable
+fun RenderReleaseArtifactSet(
+    baseNote: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val noteEvent = baseNote.event as? ReleaseArtifactSetEvent ?: return
+
+    val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+
+    BookmarkCard(
+        title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_release_artifact_set),
+        description = noteEvent.description(),
+        public = public,
+        private = null,
+        hidesPrivate = noteEvent.hidesPrivateMembers(null),
+        quotesLeft = quotesLeft,
+        backgroundColor = backgroundColor,
+        accountViewModel = accountViewModel,
+        nav = nav,
+    )
+}
+
+/**
+ * The bookmark-shaped kinds differ only in where their name comes from; what they hold is the
  * same mix of notes, addressables, hashtags, links and people, so the body they draw is the same one.
  *
  * Hashtags are short, so they go in the header as a row of chips that open their feeds; the rest
