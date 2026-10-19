@@ -145,12 +145,27 @@ object CachedRichTextParser {
         // ending in `-` would be promoted to a heading underline.
         var lineIsHomogeneousSetextChar = false
 
+        // End of the URL being skipped. A URL is not markdown: `_`, `*`, `|` and `~~` are
+        // ordinary path characters (Amazon's CDN serves `71zvSJXs2KL._SL1499_.jpg`), and
+        // reading them as markers sends a bare image link to the markdown renderer, which
+        // italicises part of it and breaks the link.
+        var urlEnd = 0
+
         for (i in 0 until len) {
             val c = content[i]
             val cCode = c.code
 
             // O(1) trigger-char gate. Allocated once at object init.
-            if (cCode < 128 && IS_MARKDOWN_TRIGGER[cCode]) {
+            if (i >= urlEnd && cCode < 128 && IS_MARKDOWN_TRIGGER[cCode]) {
+                if (c == ':') {
+                    // `scheme://`: the rest of the URL runs to the next whitespace. The scheme
+                    // before the colon holds no trigger chars that could fire mid-word.
+                    if (i + 2 < len && content[i + 1] == '/' && content[i + 2] == '/') {
+                        var j = i + 3
+                        while (j < len && !content[j].isMdSpaceOrNewline()) j++
+                        urlEnd = j
+                    }
+                }
                 if (c == '`' || c == '|') return true
                 if (c == '~' && i + 1 < len && content[i + 1] == '~') return true
 
@@ -326,6 +341,7 @@ object CachedRichTextParser {
             this['+'.code] = true
             this['~'.code] = true
             this['|'.code] = true
+            this[':'.code] = true
         }
 }
 
