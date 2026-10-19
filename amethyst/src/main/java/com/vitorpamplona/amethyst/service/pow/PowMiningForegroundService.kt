@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPhase
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -154,7 +155,9 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     override fun needsClockRefresh(value: ImmutableList<PoWJobState>) = value.any { it.isMining }
 
     override fun onStarted() {
-        scope.launch { hashRate = PoWEstimator.hashesPerSecond() }
+        // The queue's own worker count, measured live once its miners run: a one-worker benchmark
+        // made the notification promise several times the real wait.
+        scope.launch { hashRate = PoWEstimator.currentHashesPerSecond(platformMinerWorkers()) }
     }
 
     override fun onEmission(value: ImmutableList<PoWJobState>) {

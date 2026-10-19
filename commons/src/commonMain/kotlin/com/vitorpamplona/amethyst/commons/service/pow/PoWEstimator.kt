@@ -26,11 +26,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -50,6 +52,10 @@ object PoWEstimator {
     private const val PAYLOAD_BYTES = 300
     private const val BATCH = 2_000
     private val BENCH_DURATION = 250.milliseconds
+
+    // Long enough to cover every worker's flush (one per ~6,000 hashes, under a millisecond) many
+    // times over and to smooth a mining pass's restamp.
+    private val LIVE_WINDOW = 1.seconds
 
     // cached per worker count; guarded by benchLock (single-flight so
     // concurrent first callers — e.g. the settings screen recomposing while
@@ -85,6 +91,40 @@ object PoWEstimator {
                 rate
             }
         }
+    }
+
+    /**
+     * The rate the miners running right now reach: [PoWMiner.hashesTried] sampled [LIVE_WINDOW]
+     * apart. Null when nothing is mining. A benchmark run then would compete with the miners for
+     * the same cores and read low (32% low against 10 desktop workers, measured), and that low
+     * rate would stay cached; the miners' own count costs nothing and is exact.
+     */
+    suspend fun liveHashesPerSecond(): Double? {
+        if (!PoWMiner.isMining()) return null
+        val start = PoWMiner.hashesTried()
+        val mark = TimeSource.Monotonic.markNow()
+        delay(LIVE_WINDOW)
+        val tried = PoWMiner.hashesTried() - start
+        if (tried <= 0L || !PoWMiner.isMining()) return null
+        return tried / mark.elapsedNow().toDouble(DurationUnit.SECONDS)
+    }
+
+    /**
+     * The rate an estimate should use: the miners' live rate while one runs, else the [workers]
+     * benchmark, kept only when nothing mined while it ran. A post usually starts mining just as
+     * its banner or notification asks, so a benchmark the miners overlapped is dropped for the
+     * live rate.
+     */
+    suspend fun currentHashesPerSecond(
+        workers: Int,
+        dispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher,
+    ): Double {
+        liveHashesPerSecond()?.let { return it }
+        val before = PoWMiner.hashesTried()
+        val benchmarked = hashesPerSecond(workers, dispatcher)
+        if (PoWMiner.hashesTried() == before) return benchmarked
+        benchLock.withLock { cachedRates.remove(workers.coerceAtLeast(1)) }
+        return liveHashesPerSecond() ?: benchmarked
     }
 
     fun estimateSeconds(

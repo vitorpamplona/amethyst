@@ -39,13 +39,13 @@ import org.jetbrains.compose.resources.PluralStringResource
 import kotlin.math.roundToLong
 
 /**
- * This device's effective mining rate: the [PoWEstimator] benchmark run with
- * the same worker count the mining queue uses ([platformMinerWorkers]: half the
- * cores on a phone, all but two on the desktop). Every UI estimate must use this
- * rate, or it would describe a miner that does not run. Cached after the first
- * call (~250 ms).
+ * This device's effective mining rate: while a post mines, the rate its miners
+ * actually reach; otherwise the [PoWEstimator] benchmark run with the worker
+ * count the mining queue uses ([platformMinerWorkers]: half the cores on a phone,
+ * all but two on the desktop), cached after the first run (~250 ms). Every UI
+ * estimate must use this rate, or it would describe a miner that does not run.
  */
-suspend fun deviceHashesPerSecond(): Double = PoWEstimator.hashesPerSecond(platformMinerWorkers())
+suspend fun deviceHashesPerSecond(): Double = PoWEstimator.currentHashesPerSecond(platformMinerWorkers())
 
 /**
  * "45 seconds" / "10 minutes" / "3 hours" — the one human-readable rendering
