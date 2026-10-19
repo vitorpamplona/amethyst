@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
+import com.vitorpamplona.amethyst.service.playback.playerPool.MemoryPressure
 import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
 import com.vitorpamplona.amethyst.service.playback.playerPool.mediaDataSourceFactory
 import com.vitorpamplona.quartz.utils.Log
@@ -46,6 +47,9 @@ import com.vitorpamplona.quartz.utils.Log
 class PlaybackService : MediaSessionService() {
     private var poolNoProxy: MediaSessionPool? = null
     private var poolWithProxy: MediaSessionPool? = null
+
+    // Shared by both pools, so the direct and Tor pools read one cached answer.
+    private val memoryPressure by lazy { MemoryPressure(applicationContext, Amethyst.instance.applicationIOScope) }
 
     @OptIn(UnstableApi::class)
     fun newPool(
@@ -67,7 +71,7 @@ class PlaybackService : MediaSessionService() {
                     ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
                     poolSize = decoderBudget,
                     requestedWarmSlots = ExoPlayerPool.warmSlotsFor(decoderBudget, totalRam),
-                    memoryIsTight = { SimultaneousPlaybackCalculator.memoryIsTight(applicationContext) },
+                    memoryIsTight = memoryPressure::isTight,
                 ),
             dataSourceFactory = resolvingDataSourceFactory,
             appContext = applicationContext,

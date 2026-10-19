@@ -54,7 +54,10 @@ import kotlinx.coroutines.runInterruptible
  */
 @OptIn(UnstableApi::class)
 class VideoPrefetcher(
-    private val videoCache: VideoCache,
+    // Read only on the download threads: opening the video cache reads its index from disk, and
+    // the prefetcher is first reached from wherever a feed first calls it (the main thread, for a
+    // feed that closes before it prefetched anything).
+    private val videoCache: () -> VideoCache,
     private val upstream: (useProxy: Boolean) -> DataSource.Factory,
     private val scope: CoroutineScope,
 ) {
@@ -133,7 +136,7 @@ class VideoPrefetcher(
 
     /** Caches the head of [video]; false when the download failed. */
     private suspend fun fetchHead(video: Video): Boolean {
-        val cache = videoCache.simpleCache
+        val cache = videoCache().simpleCache
         // Already there, from an earlier visit or a player. A partial head (a download cut short)
         // goes on: CacheWriter reads only the ranges still missing.
         val length = ContentMetadata.getContentLength(cache.getContentMetadata(video.url))

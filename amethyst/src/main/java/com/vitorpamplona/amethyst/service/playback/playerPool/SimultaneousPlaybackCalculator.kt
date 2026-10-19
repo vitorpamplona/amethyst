@@ -43,21 +43,6 @@ class SimultaneousPlaybackCalculator {
             return info.totalMem
         }
 
-        // Free memory to keep beyond the system's own low-memory threshold before a player may stay
-        // warm: room for about eight warm players at the ~30 MB each measured on an SM-T220.
-        private const val WARM_HEADROOM_BYTES = 256L * 1024 * 1024
-
-        /**
-         * Whether the device is close to the point where the system starts killing apps, so warm
-         * players (paused, but holding a decoder and its buffers) should be let go.
-         */
-        fun memoryIsTight(context: Context): Boolean {
-            val activityManager: ActivityManager = context.getSystemService() ?: return false
-            val info = ActivityManager.MemoryInfo()
-            activityManager.getMemoryInfo(info)
-            return info.lowMemory || info.availMem < info.threshold + WARM_HEADROOM_BYTES
-        }
-
         @OptIn(UnstableApi::class)
         fun max(appContext: Context): Int {
             val maxInstances =

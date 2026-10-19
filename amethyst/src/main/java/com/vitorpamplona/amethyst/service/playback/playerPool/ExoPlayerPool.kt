@@ -50,9 +50,10 @@ class ExoPlayerPool(
     // MediaCodec instance, so warm slots count against the same [poolSize] codec budget as
     // cold players (see [warmSlotsCap]). [warmSlotsFor] sizes it for the device.
     requestedWarmSlots: Int = MIN_WARM_SLOTS,
-    // Whether the device is short of memory right now. Asked each time a player would go warm: the
-    // system only trims a backgrounded app (API 34+ delivers no foreground trim level), so this is
-    // what keeps a scrolling feed from holding warm decoders while the device runs out.
+    // Whether the device is short of memory right now. Asked on the main thread each time a player
+    // would go warm, so it must not block (see MemoryPressure). The system only trims a backgrounded
+    // app (API 34+ delivers no foreground trim level), so this is what keeps a scrolling feed from
+    // holding warm decoders while the device runs out.
     private val memoryIsTight: () -> Boolean = { false },
 ) {
     // Cap warm slots at poolSize-1 so there's always at least one slot available for a cold

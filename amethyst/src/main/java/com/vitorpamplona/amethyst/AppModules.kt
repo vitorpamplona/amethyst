@@ -1229,7 +1229,7 @@ class AppModules(
     // downloads the start of the videos a feed is about to show into videoCache
     val videoPrefetcher: VideoPrefetcher by lazy {
         VideoPrefetcher(
-            videoCache = videoCache,
+            videoCache = { videoCache },
             upstream = { useProxy -> mediaDataSourceFactory(okHttpClients.getDynamicCallFactory(useProxy), blossomResolver) },
             scope = applicationIOScope,
         )
