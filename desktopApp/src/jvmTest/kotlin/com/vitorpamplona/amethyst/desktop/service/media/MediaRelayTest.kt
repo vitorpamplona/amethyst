@@ -147,6 +147,14 @@ class MediaRelayTest {
     }
 
     @Test
+    fun aPlaylistNotOverTorIsLeftToTheEngine() {
+        // HLS is never cached, so only Tor is a reason to rewrite a live stream's playlists.
+        MediaHttp.install({ client }, EncryptionKeyCache(), viaTor = { false })
+        val playlist = "$base/live/index.m3u8"
+        assertEquals(playlist, MediaRelay.streamingUrl(playlist))
+    }
+
+    @Test
     fun aVideoThatIsNotHttpIsLeftToTheEngine() {
         MediaHttp.install({ client }, EncryptionKeyCache(), viaTor = { false })
         val local = "file:///tmp/video.mp4"

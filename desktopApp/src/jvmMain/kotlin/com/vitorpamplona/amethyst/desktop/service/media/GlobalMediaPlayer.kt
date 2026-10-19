@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -62,6 +63,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.IOException
 import java.util.Collections
+import kotlin.math.abs
 
 data class MediaPlaybackState(
     val url: String? = null,
@@ -144,6 +146,9 @@ object GlobalMediaPlayer {
 
     // How long publishShape waits for an engine to read a video's size before giving up.
     private const val SHAPE_WAIT_MS = 30_000L
+
+    // The ratio an engine reports before it knows the video's.
+    private const val ENGINE_DEFAULT_RATIO = 16f / 9f
 
     // How long a seek waits for a track still opening to learn its length before it gives up.
     private const val AUDIO_OPEN_TIMEOUT_MS = 30_000L
@@ -503,11 +508,23 @@ object GlobalMediaPlayer {
         engine: VideoPlayerState,
         url: String,
     ) {
-        val known =
+        // The engine sets the size a moment before the ratio, starting from a 16:9 default: wait for
+        // a ratio that has caught up, unless the video is 16:9 itself.
+        val ratio =
             withTimeoutOrNull(SHAPE_WAIT_MS) {
-                snapshotFlow { (engine.metadata.width ?: 0) > 0 && (engine.metadata.height ?: 0) > 0 }.first { it }
+                snapshotFlow {
+                    val w = engine.metadata.width ?: 0
+                    val h = engine.metadata.height ?: 0
+                    val ratio = engine.aspectRatio
+                    when {
+                        w <= 0 || h <= 0 -> null
+                        abs(ratio - ENGINE_DEFAULT_RATIO) > 0.01f -> ratio
+                        abs(w.toFloat() / h - ENGINE_DEFAULT_RATIO) < 0.01f -> ratio
+                        else -> null
+                    }
+                }.filterNotNull().first()
             }
-        if (known != null) MediaAspectRatioCache.addRatio(url, engine.aspectRatio)
+        if (ratio != null) MediaAspectRatioCache.addRatio(url, ratio)
     }
 
     /**

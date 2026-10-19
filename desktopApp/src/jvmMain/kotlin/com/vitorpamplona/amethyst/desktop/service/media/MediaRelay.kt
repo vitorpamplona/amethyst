@@ -39,8 +39,9 @@ import java.util.concurrent.Executors
  *
  * Android's player reads video through OkHttp, so a video the user routes over Tor goes through
  * the Tor proxy. The desktop engines (GStreamer, Media Foundation, AVFoundation) fetch a URL with
- * their own HTTP stacks, which know nothing of Tor and keep nothing on disk. So every http(s)
- * video (over Tor or not, see [MediaHttp.viaTor]) is given to the engine as
+ * their own HTTP stacks, which know nothing of Tor and keep nothing on disk. So a video that goes
+ * over Tor (see [MediaHttp.viaTor]), or one whose bytes may be kept (see [VideoDiskCache.cacheable]),
+ * is given to the engine as
  * `http://127.0.0.1:<port>/<secret>/<original>/<name>`, where `<original>` is the whole original URL in base64url (so no character of it can
  * trip the server's URI parser) and `<name>` its file name, for engines that sniff the container
  * from the extension. This relay fetches the original through [MediaHttp.client], forwarding Range
@@ -96,12 +97,18 @@ object MediaRelay {
     private val hostHeader: String by lazy { "127.0.0.1:${server.address.port}" }
 
     /**
-     * What the engine should open for [url]: through this relay whenever it is http(s), so it goes
-     * over Tor when it should and its bytes land in [VideoDiskCache] when they may; else [url]
-     * itself. Null when [url] should go over Tor but cannot (not http(s)): handing it to the engine
-     * would fetch it around Tor.
+     * What the engine should open for [url]: through this relay when it goes over Tor, or when it
+     * is a plain http(s) video whose bytes may land in [VideoDiskCache]; else [url] itself. HLS that
+     * needn't go over Tor stays direct: it is never cached, so the playlist rewriting would only add
+     * risk to live streams. Null when [url] should go over Tor but cannot (not http(s)): handing it
+     * to the engine would fetch it around Tor.
      */
-    fun streamingUrl(url: String): String? = if (MediaHttp.viaTor(url)) relayUrlFor(url) else relayUrlFor(url) ?: url
+    fun streamingUrl(url: String): String? =
+        when {
+            MediaHttp.viaTor(url) -> relayUrlFor(url)
+            VideoDiskCache.cacheable(url) -> relayUrlFor(url) ?: url
+            else -> url
+        }
 
     /** [url] as a relay address, or null when it is not an http(s) URL. */
     fun relayUrlFor(url: String): String? {

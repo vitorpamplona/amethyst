@@ -88,4 +88,24 @@ class VideoDiskCacheTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun aFileNotSizedUpFrontReloadsWithWhatItHolds() {
+        val dir = Files.createTempDirectory("vdc").toFile()
+        try {
+            val data = File(dir, "c.data")
+            val entry = VideoDiskCache.Entry(data, File(dir, "c.meta"), 1000, "video/mp4")
+            // Only the head arrived: the file ends there, not at the video's full length.
+            entry.write(0, ByteArray(100) { 7 }, 100)
+            entry.persist()
+            assertEquals(100L, data.length())
+
+            val reloaded = VideoDiskCache.Entry.load(data, File(dir, "c.meta"))!!
+            assertTrue(reloaded.covers(0, 99))
+            assertFalse(reloaded.covers(0, 100))
+            assertEquals(1000L, reloaded.total)
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
 }

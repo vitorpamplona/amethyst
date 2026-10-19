@@ -144,10 +144,14 @@ fun DesktopVideoPlayer(
     var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
     var aspectRatio by remember(url) { mutableFloatStateOf(16f / 9f) }
 
-    LaunchedEffect(url, loaded) {
+    // Whether the note's poster failed to load (a dead link): then a frame is extracted instead.
+    var posterFailed by remember(url, posterUrl) { mutableStateOf(false) }
+    val poster = posterUrl?.takeUnless { posterFailed }
+
+    LaunchedEffect(url, loaded, poster) {
         // A note's own poster is drawn straight from the image loader (see VideoPoster); only a
         // video without one has a frame extracted, which downloads part of the video.
-        if (loaded && thumbnail == null && posterUrl == null) {
+        if (loaded && thumbnail == null && poster == null) {
             VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
         }
     }
@@ -240,7 +244,7 @@ fun DesktopVideoPlayer(
     // Black behind a picture, as any player letterboxes; the theme's placeholder until there is one,
     // and behind the error message, which is drawn in the theme's colors.
     val backdrop =
-        if (loaded && errorReason == null && (activePlayer != null || thumbnail != null || posterUrl != null)) {
+        if (loaded && errorReason == null && (activePlayer != null || thumbnail != null || poster != null)) {
             Color.Black
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
@@ -306,10 +310,10 @@ fun DesktopVideoPlayer(
                     label = "thumbnailOverVideo",
                 )
                 if (thumbnailAlpha > 0f) {
-                    VideoPoster(posterUrl, thumbnail, Modifier.fillMaxSize().graphicsLayer { alpha = thumbnailAlpha })
+                    VideoPoster(poster, thumbnail, Modifier.fillMaxSize().graphicsLayer { alpha = thumbnailAlpha }) { posterFailed = true }
                 }
             } else {
-                VideoPoster(posterUrl, thumbnail, Modifier.fillMaxSize())
+                VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
             }
 
             if (errorReason == null) {
@@ -317,7 +321,9 @@ fun DesktopVideoPlayer(
                 VideoControls(
                     // A Short (a short-form event, or any vertical video) that plays on its own
                     // arrives without controls.
-                    hideWhenIdle = autoPlayWhenVisible && loaded && (isShortVideo || ratio < 1f),
+                    // The target, not the animated ratio: one easing in from 16:9 would briefly count
+                    // as landscape and flash its controls.
+                    hideWhenIdle = autoPlayWhenVisible && loaded && (isShortVideo || targetRatio < 1f),
                     isPlaying = state?.isPlaying ?: false,
                     isBuffering = state?.isBuffering ?: false,
                     position = state?.position ?: 0f,
@@ -411,16 +417,17 @@ private fun PlaybackErrorMessage(
 /**
  * The picture a video shows before it plays: the note's own [posterUrl] through the shared image
  * loader, which the feed's prefetch has usually filled already, else the [thumbnail] extracted from
- * the video.
+ * the video. [onPosterFailed] reports a poster that would not load.
  */
 @Composable
 private fun VideoPoster(
     posterUrl: String?,
     thumbnail: ImageBitmap?,
     modifier: Modifier,
+    onPosterFailed: () -> Unit,
 ) {
     if (posterUrl != null) {
-        AsyncImage(model = posterUrl, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
+        AsyncImage(model = posterUrl, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit, onError = { onPosterFailed() })
     } else if (thumbnail != null) {
         Image(bitmap = thumbnail, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
     }

@@ -23,11 +23,16 @@ package com.vitorpamplona.amethyst.desktop.service.media
 import com.sun.net.httpserver.HttpExchange
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
+import java.nio.ByteBuffer
+import java.nio.channels.FileChannel
 import java.nio.file.Files
+import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.PosixFilePermissions
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * Video bytes the desktop engines have streamed, kept on disk so a video seen again (scrolled back
@@ -47,6 +52,8 @@ object VideoDiskCache {
     private const val TAG = "VideoDiskCache"
     private const val MAX_DISK_BYTES = 2L * 1024 * 1024 * 1024
     private const val MAX_FILE_BYTES = 256L * 1024 * 1024
+    private const val TRIM_EVERY_BYTES = 64L * 1024 * 1024
+    private const val TRIM_EVERY_MILLIS = 60_000L
 
     private val dir: File by lazy {
         File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos").also { dir ->
@@ -88,20 +95,27 @@ object VideoDiskCache {
         val partial = rangeHeader != null
         if (partial) exchange.responseHeaders.add("Content-Range", "bytes ${range.first}-${range.last}/$total")
         exchange.sendResponseHeaders(if (partial) 206 else 200, length)
-        RandomAccessFile(entry.data, "r").use { file ->
-            file.seek(range.first)
-            val buf = ByteArray(64 * 1024)
-            var left = length
-            exchange.responseBody.use { out ->
-                while (left > 0) {
-                    val n = file.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
-                    if (n < 0) break
-                    out.write(buf, 0, n)
-                    left -= n
+        entry.touch()
+        // From here the request is answered, however it ends: an engine hanging up mid-body (it
+        // abandons most whole-file reads) must not send the caller off to the network for bytes
+        // already on disk.
+        try {
+            RandomAccessFile(entry.data, "r").use { file ->
+                file.seek(range.first)
+                val buf = ByteArray(64 * 1024)
+                var left = length
+                exchange.responseBody.use { out ->
+                    while (left > 0) {
+                        val n = file.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                        left -= n
+                    }
                 }
             }
+        } catch (_: IOException) {
+            // The engine hung up.
         }
-        entry.touch()
         return true
     }
 
@@ -137,11 +151,12 @@ object VideoDiskCache {
             if (count <= 0) return
             entry.write(position, buf, count)
             position += count
+            writtenSinceTrim.addAndGet(count.toLong())
         }
 
         fun close() {
             entry.persist()
-            trim()
+            trimNowAndThen()
         }
     }
 
@@ -182,6 +197,20 @@ object VideoDiskCache {
         return entries.putIfAbsent(url, fresh) ?: fresh
     }
 
+    // Bytes written since the last trim, and when that was: trimming lists and stats every file, so it
+    // runs after a fair amount of writing or a while, not after each of the engine's many requests.
+    private val writtenSinceTrim = AtomicLong(0)
+    private val lastTrimMillis = AtomicLong(0)
+
+    private fun trimNowAndThen() {
+        val now = System.currentTimeMillis()
+        val last = lastTrimMillis.get()
+        if (writtenSinceTrim.get() < TRIM_EVERY_BYTES && now - last < TRIM_EVERY_MILLIS) return
+        if (!lastTrimMillis.compareAndSet(last, now)) return
+        writtenSinceTrim.set(0)
+        trim()
+    }
+
     private fun trim() {
         val metas = dir.listFiles { f -> f.name.endsWith(".meta") }?.toList() ?: return
         var used = 0L
@@ -199,8 +228,8 @@ object VideoDiskCache {
     private fun sha256Hex(s: String): String = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
     /**
-     * One video on disk: [data] is a sparse file [total] bytes long, and [meta] lists its size, type
-     * and the byte ranges written so far.
+     * One video on disk: [data] holds its bytes at their own offsets (a sparse file, up to [total]
+     * bytes long), and [meta] lists its size, type and the byte ranges written so far.
      */
     class Entry internal constructor(
         val data: File,
@@ -211,7 +240,7 @@ object VideoDiskCache {
     ) {
         // Held byte ranges, sorted and merged. Guarded by this.
         private val spans = ArrayList(initialSpans)
-        private var file: RandomAccessFile? = null
+        private var file: FileChannel? = null
 
         @Synchronized
         fun covers(
@@ -226,9 +255,21 @@ object VideoDiskCache {
             count: Int,
         ) {
             if (position + count > total) return
-            val f = file ?: RandomAccessFile(data, "rw").also { if (it.length() != total) it.setLength(total) }.also { file = it }
-            f.seek(position)
-            f.write(buf, 0, count)
+            // Not sized up front: a piece written far in (the engine reads a file's tail early) leaves
+            // a hole, which takes no disk where the file is sparse. A new file asks for that, which
+            // NTFS needs; APFS and ext4 do it anyway.
+            val f =
+                file ?: run {
+                    val path = data.toPath()
+                    if (Files.exists(path)) {
+                        FileChannel.open(path, StandardOpenOption.WRITE)
+                    } else {
+                        FileChannel.open(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE, StandardOpenOption.SPARSE)
+                    }
+                }.also { file = it }
+            val bytes = ByteBuffer.wrap(buf, 0, count)
+            var at = position
+            while (bytes.hasRemaining()) at += f.write(bytes, at)
             add(position, position + count - 1)
         }
 
@@ -296,7 +337,8 @@ object VideoDiskCache {
                             val parts = line.trim().split(' ')
                             if (parts.size == 2) parts[0].toLong()..parts[1].toLong() else null
                         }
-                    if (data.length() != total) null else Entry(data, meta, total, type, spans)
+                    // Shorter than the video is normal: the file ends where its furthest piece does.
+                    if (data.length() > total || spans.any { it.last >= data.length() }) null else Entry(data, meta, total, type, spans)
                 }.getOrNull()
             }
         }
