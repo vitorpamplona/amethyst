@@ -27,10 +27,8 @@ import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 /**
  * Kind 30063 is a NIP-51 set, so its `content` may hold private items encrypted to the author; a
@@ -104,17 +102,5 @@ class ReleaseArtifactSetPrivateItemsTest {
                 )
 
             assertNull(release.privateTags(signer))
-        }
-
-    @Test
-    fun onlyAPlainSetsNonEmptyContentIsEncoded() =
-        runTest {
-            val signer = NostrSignerInternal(KeyPair())
-            val content = PrivateTagsInContent.encryptNip44(arrayOf(arrayOf("e", hiddenAsset)), signer)
-            val nip82Tags = arrayOf(arrayOf("d", "com.example.app@1.0.0"), arrayOf("i", "com.example.app"), arrayOf("version", "1.0.0"))
-
-            assertTrue(set(signer, plainTags, content).isContentEncoded())
-            assertFalse(set(signer, plainTags, "").isContentEncoded())
-            assertFalse(set(signer, nip82Tags, "Fixes the crash on startup.").isContentEncoded())
         }
 }

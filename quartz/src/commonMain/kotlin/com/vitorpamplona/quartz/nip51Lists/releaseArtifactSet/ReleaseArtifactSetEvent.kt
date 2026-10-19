@@ -99,13 +99,6 @@ class ReleaseArtifactSetEvent(
      */
     fun searchableReleaseNotes() = if (content.isNotBlank() && isNip82SoftwareRelease()) content else null
 
-    /**
-     * A NIP-51 set's `content` holds its private items, encrypted; a NIP-82 release's holds
-     * plaintext release notes. The in-memory search reads this to keep ciphertext out of its
-     * text matching, the way it does for every other NIP-51 set.
-     */
-    override fun isContentEncoded() = content.isNotBlank() && !isNip82SoftwareRelease()
-
     override fun eventHints() = tags.mapNotNull(EventBookmark::parseAsHint)
 
     override fun linkedEventIds() = itemEventIds()
