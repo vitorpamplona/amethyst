@@ -155,7 +155,9 @@ import com.vitorpamplona.amethyst.service.nowPlaying.NowPlayingStatusCoordinator
 import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
+import com.vitorpamplona.amethyst.service.playback.playerPool.mediaDataSourceFactory
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
 import com.vitorpamplona.amethyst.service.resourceusage.ForegroundTracker
@@ -1222,6 +1224,15 @@ class AppModules(
     val videoCache: VideoCache by lazy {
         Log.d("AppModules", "VideoCache Init")
         VideoCacheFactory.new(appContext)
+    }
+
+    // downloads the start of the videos a feed is about to show into videoCache
+    val videoPrefetcher: VideoPrefetcher by lazy {
+        VideoPrefetcher(
+            videoCache = { videoCache },
+            upstream = { useProxy -> mediaDataSourceFactory(okHttpClients.getDynamicCallFactory(useProxy), blossomResolver) },
+            scope = applicationIOScope,
+        )
     }
 
     // image cache in disk for coil

@@ -156,9 +156,23 @@ interface NotePlatform {
      * whose player only opens a video once it is the one playing can open these ahead, so they start
      * at once. [owner] is the feed asking (each keeps its own list); an empty list releases its
      * videos. Not composable: feed prefetchers call it from a coroutine. Android needs none of this:
-     * every video card on its feed already prepares a player.
+     * every video card on its feed already prepares a player, and [prefetchVideos] covers what comes next.
      */
     fun warmVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {}
+
+    /**
+     * The videos below the viewport that no card shows yet, nearest first, for a platform whose
+     * players open a video as soon as its card is composed: it can download their first bytes ahead,
+     * so the player reads the start from disk. The card right below the screen is left out: the lazy
+     * list has already composed it, so its player is loading it. HLS never comes here, nor do grid
+     * feeds, whose cells show a still frame and open no player. [owner] is the feed asking; an empty
+     * list withdraws its videos. Not composable: feed prefetchers call it from a coroutine.
+     */
+    fun prefetchVideos(
         owner: Any,
         urls: List<String>,
         accountViewModel: AccountViewModel,

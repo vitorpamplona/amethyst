@@ -23,36 +23,33 @@ package com.vitorpamplona.amethyst.service.playback.service
 import android.app.ForegroundServiceStartNotAllowedException
 import android.content.ComponentCallbacks2
 import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import androidx.annotation.OptIn
-import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.datasource.DataSource
-import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.ResolvingDataSource
-import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.service.http.DynamicCallFactory
-import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerBuilder
 import com.vitorpamplona.amethyst.service.playback.playerPool.ExoPlayerPool
 import com.vitorpamplona.amethyst.service.playback.playerPool.MediaSessionPool
+import com.vitorpamplona.amethyst.service.playback.playerPool.MemoryPressure
 import com.vitorpamplona.amethyst.service.playback.playerPool.SimultaneousPlaybackCalculator
+import com.vitorpamplona.amethyst.service.playback.playerPool.mediaDataSourceFactory
 import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.runBlocking
 
 class PlaybackService : MediaSessionService() {
     private var poolNoProxy: MediaSessionPool? = null
     private var poolWithProxy: MediaSessionPool? = null
+
+    // Shared by both pools, so the direct and Tor pools read one cached answer.
+    private val memoryPressure by lazy { MemoryPressure(applicationContext, Amethyst.instance.applicationIOScope) }
 
     @OptIn(UnstableApi::class)
     fun newPool(
@@ -60,41 +57,21 @@ class PlaybackService : MediaSessionService() {
         okHttpClient: DynamicCallFactory,
         blossomServerResolver: BlossomServerResolver,
     ): MediaSessionPool {
-        // Marked as media so the local Blossom cache may serve these downloads.
-        val dataSourceFactory =
-            OkHttpDataSource
-                .Factory(okHttpClient)
-                .setDefaultRequestProperties(mapOf(LocalBlossomCacheRedirectInterceptor.MEDIA_HEADER to LocalBlossomCacheRedirectInterceptor.MEDIA))
-
-        val resolvingDataSourceFactory: DataSource.Factory =
-            ResolvingDataSource.Factory(
-                dataSourceFactory,
-                ResolvingDataSource.Resolver { dataSpec: DataSpec ->
-                    val originalUri: Uri = dataSpec.uri
-                    val scheme = originalUri.scheme
-                    if (scheme != null && blossomServerResolver.canResolve(scheme)) {
-                        val serverUrl =
-                            runBlocking {
-                                blossomServerResolver.findServers(originalUri.toString())
-                            }
-                        if (serverUrl != null) {
-                            return@Resolver dataSpec.withUri(serverUrl.serverUrl.toUri())
-                        }
-                    }
-                    dataSpec
-                },
-            )
+        val resolvingDataSourceFactory = mediaDataSourceFactory(okHttpClient, blossomServerResolver)
 
         // The device's concurrent-decoder ceiling bounds both how many players may be checked out
         // at once (the session cache) and how many the pool may retain, since a session and a warm
         // pool entry each pin one MediaCodec instance.
         val decoderBudget = SimultaneousPlaybackCalculator.max(applicationContext)
+        val totalRam = SimultaneousPlaybackCalculator.totalRamBytes(applicationContext)
 
         return MediaSessionPool(
             exoPlayerPool =
                 ExoPlayerPool(
                     ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
                     poolSize = decoderBudget,
+                    requestedWarmSlots = ExoPlayerPool.warmSlotsFor(decoderBudget, totalRam),
+                    memoryLevel = memoryPressure::level,
                 ),
             dataSourceFactory = resolvingDataSourceFactory,
             appContext = applicationContext,
