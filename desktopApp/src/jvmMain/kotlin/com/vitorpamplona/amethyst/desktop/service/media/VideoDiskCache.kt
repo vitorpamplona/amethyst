@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.service.media
 
 import com.sun.net.httpserver.HttpExchange
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
@@ -75,7 +76,7 @@ object VideoDiskCache {
         (url.startsWith("https://") || url.startsWith("http://")) &&
             !MediaHttp.viaTor(url) &&
             !MediaHttp.isEncrypted(url) &&
-            !url.substringBefore('?').endsWith(".m3u8", ignoreCase = true)
+            !isHlsMedia(url, null)
 
     /**
      * Answers a GET for [url] from disk when the whole requested range is there. Returns false,

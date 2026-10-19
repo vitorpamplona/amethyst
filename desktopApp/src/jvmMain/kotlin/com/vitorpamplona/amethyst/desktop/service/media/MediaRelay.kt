@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.media
 
 import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -276,7 +277,8 @@ object MediaRelay {
         contentType: String?,
     ): Boolean {
         val type = contentType?.lowercase().orEmpty()
-        return "mpegurl" in type || url.encodedPath.endsWith(".m3u8", ignoreCase = true)
+        // The header can carry parameters (`; charset=utf-8`) the shared mime check does not strip.
+        return "mpegurl" in type || isHlsMedia(url.toString(), null)
     }
 
     private val uriAttribute = Regex("""URI="([^"]+)"""")

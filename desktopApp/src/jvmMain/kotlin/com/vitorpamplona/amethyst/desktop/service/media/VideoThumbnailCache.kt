@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
@@ -165,7 +166,7 @@ object VideoThumbnailCache {
         }
 
         // For HLS we skip straight to ffmpeg — JCodec can't read m3u8.
-        val isHls = url.contains(".m3u8", ignoreCase = true) || url.contains("/hls/", ignoreCase = true)
+        val isHls = isHlsMedia(url, null)
 
         if (!isHls) {
             val chunk = runCatchingCancellable { downloadFirstChunk(url) }.getOrNull()
