@@ -67,6 +67,7 @@ class PlaybackService : MediaSessionService() {
                     ExoPlayerBuilder(videoCache, resolvingDataSourceFactory),
                     poolSize = decoderBudget,
                     requestedWarmSlots = ExoPlayerPool.warmSlotsFor(decoderBudget, totalRam),
+                    memoryIsTight = { SimultaneousPlaybackCalculator.memoryIsTight(applicationContext) },
                 ),
             dataSourceFactory = resolvingDataSourceFactory,
             appContext = applicationContext,

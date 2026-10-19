@@ -29,14 +29,14 @@ class WarmSlotsTest {
     @Test
     fun ramSetsTheSize() {
         assertEquals(4, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 3 * gib))
-        assertEquals(6, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 6 * gib))
-        assertEquals(8, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 12 * gib))
+        assertEquals(5, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 6 * gib))
+        assertEquals(6, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 12 * gib))
     }
 
     @Test
     fun decodersCapTheSize() {
-        // 10 decoders leave 6 once the players in use have theirs.
-        assertEquals(6, ExoPlayerPool.warmSlotsFor(poolSize = 10, totalRamBytes = 12 * gib))
+        // 8 decoders leave 4 once the players in use have theirs.
+        assertEquals(4, ExoPlayerPool.warmSlotsFor(poolSize = 8, totalRamBytes = 12 * gib))
     }
 
     @Test

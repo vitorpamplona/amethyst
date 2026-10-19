@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.feeds
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -147,31 +146,38 @@ private fun PrefetchVisibleMedia(
     val videosByNote = remember(stateKey) { mutableMapOf<String, List<String>>() }
 
     LaunchedEffect(stateKey, accountViewModel) {
-        visibleEnds.collectLatest { ends ->
-            withContext(Dispatchers.IO) {
-                currentNotes.notesAround(ends, radius).forEach { note ->
-                    if (note.idHex !in warmed) {
-                        note.warm(context, platform, accountViewModel)?.let { videosByNote[note.idHex] = it.videos.toList() }
-                        warmed.add(note.idHex)
+        // The withdrawals live in this finally, not in a DisposableEffect: the block below runs on
+        // IO and does not stop at cancellation, so its last call could land after an onDispose and
+        // register this feed again for good. Here they run after that block has returned.
+        try {
+            visibleEnds.collectLatest { ends ->
+                withContext(Dispatchers.IO) {
+                    currentNotes.notesAround(ends, radius).forEach { note ->
+                        if (note.idHex !in warmed) {
+                            note.warm(context, platform, accountViewModel)?.let { videosByNote[note.idHex] = it.videos.toList() }
+                            warmed.add(note.idHex)
+                        }
                     }
+
+                    fun List<Note>.videos() =
+                        flatMap { note ->
+                            videosByNote.getOrPut(note.idHex) { note.collectWarmTargets()?.videos?.toList() ?: emptyList() }
+                        }
+
+                    // The videos on screen and the next few below it, in feed order.
+                    val onScreen = currentNotes.notesBetween(ends).videos()
+                    val belowNotes = currentNotes.notesAfter(ends.lastKey, VIDEO_LOOKAHEAD + 1)
+                    val below = belowNotes.take(VIDEO_LOOKAHEAD).videos()
+                    platform.warmVideos(stateKey, (onScreen + below).distinct(), accountViewModel)
+
+                    // The card right below the screen is already composed by the lazy list's own
+                    // prefetch, so its player is loading it: downloading it here too would fetch the
+                    // same bytes twice. Start from the one after it.
+                    val ahead = belowNotes.drop(1).videos()
+                    platform.prefetchVideos(stateKey, ahead.distinct().filter { it !in onScreen }, accountViewModel)
                 }
-
-                fun List<Note>.videos() =
-                    flatMap { note ->
-                        videosByNote.getOrPut(note.idHex) { note.collectWarmTargets()?.videos?.toList() ?: emptyList() }
-                    }
-
-                // The videos on screen and the next few below it, in feed order.
-                val onScreen = currentNotes.notesBetween(ends).videos()
-                val below = currentNotes.notesAfter(ends.lastKey, VIDEO_LOOKAHEAD).videos()
-                platform.warmVideos(stateKey, (onScreen + below).distinct(), accountViewModel)
-                platform.prefetchVideos(stateKey, below.distinct().filter { it !in onScreen }, accountViewModel)
             }
-        }
-    }
-
-    DisposableEffect(stateKey) {
-        onDispose {
+        } finally {
             platform.warmVideos(stateKey, emptyList(), accountViewModel)
             platform.prefetchVideos(stateKey, emptyList(), accountViewModel)
         }

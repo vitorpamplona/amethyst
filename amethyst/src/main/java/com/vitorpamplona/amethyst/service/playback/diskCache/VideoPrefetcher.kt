@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.service.playback.diskCache
 
 import android.os.SystemClock
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheWriter
+import androidx.media3.datasource.cache.ContentMetadata
 import com.vitorpamplona.amethyst.service.playback.PLAYBACK_DIAG_TAG
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -67,11 +69,12 @@ class VideoPrefetcher(
     // Each feed's wanted list (feed order), keyed by the feed asking. Guarded by [lock].
     private val requests = LinkedHashMap<Any, List<Video>>()
 
-    // URLs already tried, so a failing or tiny video isn't fetched on every scroll. Bounded LRU.
+    // URLs already tried, each with the time it may be tried again: never while it is in flight or
+    // done, a few minutes after a failure (Tor still connecting, a host blip). Bounded LRU.
     // Guarded by [lock].
     private val attempted =
-        object : LinkedHashMap<String, Unit>(64, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_REMEMBERED
+        object : LinkedHashMap<String, Long>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Long>?) = size > MAX_REMEMBERED
         }
 
     // Downloads in flight. Guarded by [lock].
@@ -104,29 +107,38 @@ class VideoPrefetcher(
 
     private fun next(): Video? =
         synchronized(lock) {
-            wanted().firstOrNull { it.url !in attempted }?.also { attempted[it.url] = Unit }
+            val now = SystemClock.elapsedRealtime()
+            wanted().firstOrNull { (attempted[it.url] ?: 0L) <= now }?.also { attempted[it.url] = Long.MAX_VALUE }
         }
 
     private suspend fun work() {
         for (signal in wake) {
             while (true) {
                 val video = next() ?: break
-                val job = scope.launch { fetchHead(video) }
+                var failed = false
+                val job = scope.launch { failed = !fetchHead(video) }
                 synchronized(lock) { running.add(job) }
                 job.join()
                 synchronized(lock) {
                     running.remove(job)
-                    // Cancelled because the feed left: let a later visit retry it.
-                    if (job.isCancelled) attempted.remove(video.url)
+                    when {
+                        // Cancelled because the feed left: let a later visit retry it.
+                        job.isCancelled -> attempted.remove(video.url)
+                        failed -> attempted[video.url] = SystemClock.elapsedRealtime() + RETRY_FAILED_MS
+                    }
                 }
             }
         }
     }
 
-    private suspend fun fetchHead(video: Video) {
+    /** Caches the head of [video]; false when the download failed. */
+    private suspend fun fetchHead(video: Video): Boolean {
         val cache = videoCache.simpleCache
-        // Already there: an earlier visit, or the player of a card on screen is loading it now.
-        if (cache.getCachedBytes(video.url, 0, PREFETCH_BYTES) > 0) return
+        // Already there, from an earlier visit or a player. A partial head (a download cut short)
+        // goes on: CacheWriter reads only the ranges still missing.
+        val length = ContentMetadata.getContentLength(cache.getContentMetadata(video.url))
+        val head = if (length == C.LENGTH_UNSET.toLong()) PREFETCH_BYTES else minOf(PREFETCH_BYTES, length)
+        if (cache.getCachedBytes(video.url, 0, head) >= head) return true
 
         val source =
             CacheDataSource
@@ -149,11 +161,13 @@ class VideoPrefetcher(
         try {
             runInterruptible { writer.cache() }
             Log.d(PLAYBACK_DIAG_TAG) { "PREFETCH ${cache.getCachedBytes(video.url, 0, PREFETCH_BYTES)} bytes in ${SystemClock.elapsedRealtime() - start}ms ${video.url}" }
+            return true
         } catch (e: CancellationException) {
             writer.cancel()
             throw e
         } catch (e: Exception) {
             Log.d(PLAYBACK_DIAG_TAG) { "PREFETCH failed ${video.url}: ${e.message}" }
+            return false
         }
     }
 
@@ -166,5 +180,7 @@ class VideoPrefetcher(
         private const val WORKERS = 2
 
         private const val MAX_REMEMBERED = 500
+
+        private const val RETRY_FAILED_MS = 5 * 60 * 1000L
     }
 }
