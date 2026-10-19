@@ -26,8 +26,11 @@ import android.os.PowerManager
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWEventShape
+import com.vitorpamplona.amethyst.commons.service.pow.PoWHashRate
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobPhase
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.ui.pow.deviceHashRate
 import com.vitorpamplona.amethyst.service.foreground.FlowProgressForegroundService
 import com.vitorpamplona.amethyst.ui.pluralStringRes
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -96,7 +99,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
 
     // Benchmarked once per service run (~250 ms, cached by the estimator).
     @Volatile
-    private var hashRate: Double? = null
+    private var hashRate: PoWHashRate? = null
 
     private var wakeLock: PowerManager.WakeLock? = null
 
@@ -154,7 +157,7 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
     override fun needsClockRefresh(value: ImmutableList<PoWJobState>) = value.any { it.isMining }
 
     override fun onStarted() {
-        scope.launch { hashRate = PoWEstimator.hashesPerSecond() }
+        scope.launch { hashRate = deviceHashRate() }
     }
 
     override fun onEmission(value: ImmutableList<PoWJobState>) {
@@ -173,7 +176,12 @@ class PowMiningForegroundService : FlowProgressForegroundService<ImmutableList<P
         // "≈ 10 minutes left" and fill its bar toward a predictable end.
         val rate = hashRate
         val startedAt = current?.miningStartedAt
-        val expectedSec = if (current != null && rate != null) PoWEstimator.estimateSeconds(current.difficulty, rate) else null
+        val expectedSec =
+            if (current != null && rate != null) {
+                PoWEstimator.estimateSeconds(current.difficulty, rate.hashesPerSecond(current.shape ?: PoWEventShape.SHORT_NOTE))
+            } else {
+                null
+            }
         val elapsedSec = startedAt?.let { (TimeUtils.now() - it).coerceAtLeast(0) }
 
         val base =

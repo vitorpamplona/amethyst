@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.pow_estimate_seconds
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left_soon
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWHashRate
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -46,7 +47,10 @@ import kotlin.math.roundToLong
  * must use this rate, or it would describe a single-threaded miner that no
  * longer exists. Cached after the first call (~250 ms).
  */
-suspend fun deviceHashesPerSecond(): Double = PoWEstimator.hashesPerSecond(PoWPolicy.minerWorkers(availableProcessors()))
+suspend fun deviceHashRate(): PoWHashRate = PoWEstimator.hashRate(PoWPolicy.minerWorkers(availableProcessors()))
+
+/** [deviceHashRate] for a typical short note, where no event exists yet (settings, composer). */
+suspend fun deviceHashesPerSecond(): Double = deviceHashRate().hashesPerSecond()
 
 /**
  * "45 seconds" / "10 minutes" / "3 hours" — the one human-readable rendering
