@@ -61,6 +61,10 @@ lifecycleRuntimeKtx = "2.11.0"
 lightcompressor-enhanced = "2.2.3"
 jlatexmath = "1.5"
 markdown = "4d3b3dd173"
+# What richtext-commonmark parses with, and the URL finder its autolink extension uses.
+# Keep in step with what those resolve to.
+commonmark = "0.26.0"
+autolink = "0.12.0"
 highlights = "1.1.0"
 okio = "3.18.2"
 # JetBrains material3 must track Compose Multiplatform's foundation: CMP 1.12.0 changed
@@ -237,6 +241,8 @@ jlatexmath-font-cyrillic = { module = "com.github.rikkahub.jlatexmath-android:jl
 markdown-commonmark = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-commonmark", version.ref = "markdown" }
 markdown-ui = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui", version.ref = "markdown" }
 markdown-ui-material3 = { group = "com.github.vitorpamplona.compose-richtext", name = "richtext-ui-material3", version.ref = "markdown" }
+markdown-autolink = { group = "org.nibor.autolink", name = "autolink", version.ref = "autolink" }
+markdown-commonmark-core = { group = "org.commonmark", name = "commonmark", version.ref = "commonmark" }
 highlights = { group = "dev.snipme", name = "highlights", version.ref = "highlights" }
 okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
