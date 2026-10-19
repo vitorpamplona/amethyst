@@ -22,15 +22,21 @@ package com.vitorpamplona.quartz.nip13Pow
 
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip13Pow.miner.PoWHashMode
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.miner.Sha256Midstate
+import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
+import com.vitorpamplona.quartz.nip13Pow.miner.prefersMidstate
+import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class Sha256MidstateTest {
@@ -74,15 +80,40 @@ class Sha256MidstateTest {
             content,
         )
 
+    private val note = EventTemplate<TextNoteEvent>(1683596206, 1, emptyArray(), "gm")
+
     @Test
-    fun minesTheSameNonceAsTheFullHashMiner() {
-        for (template in listOf(reply("+1"), reply("a longer reply ".repeat(20)), EventTemplate<TextNoteEvent>(1683596206, 1, emptyArray(), "gm"))) {
-            val full = PoWMiner.run(template, pubKey, 14)
-            val mid = PoWMiner.run(template, pubKey, 14, useMidstate = true)
+    fun everyHashModeMinesTheSameNonce() {
+        for (template in listOf(reply("+1"), reply("a longer reply ".repeat(20)), note)) {
+            val full = PoWMiner.run(template, pubKey, 14, hashMode = PoWHashMode.FULL)
+            val mid = PoWMiner.run(template, pubKey, 14, hashMode = PoWHashMode.MIDSTATE)
+            // 16 bits so AUTO takes the timed trial, not the block-count shortcut
+            val auto = PoWMiner.run(template, pubKey, 16)
+            val fullAt16 = PoWMiner.run(template, pubKey, 16, hashMode = PoWHashMode.FULL)
 
             assertEquals(full.tags.last().toList(), mid.tags.last().toList())
+            assertEquals(fullAt16.tags.last().toList(), auto.tags.last().toList())
             val id = EventHasher.hashId(pubKey, mid.createdAt, mid.kind, mid.tags, mid.content)
             assertTrue(PoWRankEvaluator.calculatePowRankOf(id) >= 14)
         }
+    }
+
+    private fun prefers(
+        template: EventTemplate<TextNoteEvent>,
+        desiredPoW: Int,
+    ): Boolean {
+        val nonce = "00000"
+        val bytes = EventHasherSerializer.fastMakeJsonForId(pubKey, template.createdAt, template.kind, template.tags + PoWTag.assemble(nonce, desiredPoW), template.content)
+        return prefersMidstate(bytes, bytes.indexOf(nonce.encodeToByteArray()), nonce.length, desiredPoW)
+    }
+
+    @Test
+    fun lowDifficultyDecidesByBlockCount() {
+        // one block before the nonce, 34 after
+        assertFalse(prefers(EventTemplate(1683596206, 1, emptyArray(), "A long form thought. ".repeat(100)), 8))
+        // five blocks of tags before the nonce, one after
+        assertTrue(prefers(reply("+1"), 8))
+        // five before, eight after
+        assertFalse(prefers(reply("a longer reply ".repeat(30)), 8))
     }
 }

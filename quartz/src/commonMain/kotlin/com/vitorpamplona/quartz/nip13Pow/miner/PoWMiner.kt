@@ -182,6 +182,10 @@ class PoWMiner(
          * wherever created_at is meaningful — scheduled posts, NIP-59 wraps with
          * deliberately randomized timestamps — and the search stays frozen exactly
          * as before.
+         *
+         * [hashMode] picks how each candidate is hashed. The default, AUTO, times
+         * the full hash against [Sha256Midstate] on this event for ~20 ms and keeps
+         * the faster (see [prefersMidstate]); both find the same nonce.
          */
         fun <T : Event> run(
             template: EventTemplate<T>,
@@ -189,8 +193,8 @@ class PoWMiner(
             desiredPoW: Int,
             isActive: () -> Boolean = { true },
             refreshCreatedAt: (() -> Long)? = null,
-            useMidstate: Boolean = false,
-        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "", refreshCreatedAt, useMidstate)
+            hashMode: PoWHashMode = PoWHashMode.AUTO,
+        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "", refreshCreatedAt, hashMode)
 
         /**
          * [noncePrefix] is kept verbatim at the front of the nonce while only the
@@ -204,7 +208,7 @@ class PoWMiner(
             isActive: () -> Boolean,
             noncePrefix: String,
             refreshCreatedAt: (() -> Long)?,
-            useMidstate: Boolean,
+            hashMode: PoWHashMode,
         ): EventTemplate<T> {
             // sha256 ids have 256 bits; anything outside would index past the
             // hash (or never terminate) deep inside the hot loop.
@@ -212,6 +216,15 @@ class PoWMiner(
 
             var nextSize = STARTING_NONCE_SIZE
             var createdAt = template.createdAt
+
+            // AUTO is decided on the first pass and kept: restamping created_at
+            // does not change the event's block layout, so the answer holds.
+            var useMidstate =
+                when (hashMode) {
+                    PoWHashMode.FULL -> false
+                    PoWHashMode.MIDSTATE -> true
+                    PoWHashMode.AUTO -> null
+                }
 
             do {
                 // never backwards: a wall clock that steps back (or a template
@@ -232,7 +245,9 @@ class PoWMiner(
 
                 val startIndex = bytes.indexOf(initialNonce.encodeToByteArray())
 
-                val midstate = if (useMidstate) Sha256Midstate(bytes, startIndex) else null
+                val midstateThisPass =
+                    useMidstate ?: prefersMidstate(bytes, startIndex, initialNonce.length, desiredPoW).also { useMidstate = it }
+                val midstate = if (midstateThisPass) Sha256Midstate(bytes, startIndex) else null
                 val buffer =
                     if (midstate != null) {
                         val start = startIndex - midstate.prefixLength
@@ -329,10 +344,10 @@ class PoWMiner(
             workers: Int = 1,
             isActive: () -> Boolean = { true },
             refreshCreatedAt: (() -> Long)? = null,
-            useMidstate: Boolean = false,
+            hashMode: PoWHashMode = PoWHashMode.AUTO,
         ): EventTemplate<T> {
             require(workers >= 1) { "workers must be >= 1, was $workers" }
-            if (workers == 1) return withContext(MiningDispatcher) { run(template, pubKey, desiredPoW, isActive, refreshCreatedAt, useMidstate) }
+            if (workers == 1) return withContext(MiningDispatcher) { run(template, pubKey, desiredPoW, isActive, refreshCreatedAt, hashMode) }
 
             return coroutineScope {
                 val winner = CompletableDeferred<EventTemplate<T>>()
@@ -343,7 +358,7 @@ class PoWMiner(
                                 winner.complete(
                                     search(template, pubKey, desiredPoW, {
                                         isActive() && !winner.isCompleted
-                                    }, workerPrefix(worker, workers), refreshCreatedAt, useMidstate),
+                                    }, workerPrefix(worker, workers), refreshCreatedAt, hashMode),
                                 )
                             }
                         }

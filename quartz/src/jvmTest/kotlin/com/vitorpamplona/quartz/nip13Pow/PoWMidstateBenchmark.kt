@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip13Pow.miner.MiningBuffer
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.Sha256Midstate
 import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
+import com.vitorpamplona.quartz.nip13Pow.miner.prefersMidstate
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import java.security.MessageDigest
 import kotlin.test.Test
@@ -116,11 +117,17 @@ class PoWMidstateBenchmark {
         if (rounds <= 0) return
 
         println("SHA-256 provider: ${MessageDigest.getInstance("SHA-256").provider}  java ${System.getProperty("java.vm.name")} ${System.getProperty("java.version")}")
-        println(String.format("%-34s %6s %8s %8s %12s %12s %8s", "scenario", "bytes", "skipped", "hashed", "full MH/s", "midstate MH/s", "speedup"))
+        println(String.format("%-34s %6s %8s %8s %12s %12s %8s %10s", "scenario", "bytes", "skipped", "hashed", "full MH/s", "midstate MH/s", "speedup", "AUTO picks"))
         for ((name, template) in scenarios) {
             val p = prepare(template)
             val m = Sha256Midstate(p.bytes, p.nonceStart)
             val fullBlocks = (p.bytes.size + 9 + 63) / 64
+
+            // before the warm-up, as a real job would see it; the first scenario
+            // runs it on a cold JIT.
+            val trialStart = System.nanoTime()
+            val auto = if (prefersMidstate(p.bytes, p.nonceStart, p.nonceLength, 24)) "midstate" else "full"
+            val trialMs = (System.nanoTime() - trialStart) / 1e6
 
             // warm-up rounds let the JIT compile both paths before timing
             repeat(2) {
@@ -131,7 +138,7 @@ class PoWMidstateBenchmark {
             val mid = (1..rounds).map { pass(p, true) }.sorted()[rounds / 2]
             println(
                 String.format(
-                    "%-34s %6d %8d %8d %12.2f %12.2f %7.2fx",
+                    "%-34s %6d %8d %8d %12.2f %12.2f %7.2fx %10s",
                     name,
                     p.bytes.size,
                     m.prefixLength / 64,
@@ -139,7 +146,8 @@ class PoWMidstateBenchmark {
                     full / 1e6,
                     mid / 1e6,
                     mid / full,
-                ) + "   (blocks: $fullBlocks full)",
+                    auto,
+                ) + String.format("   (blocks: %d full, trial %.1f ms)", fullBlocks, trialMs),
             )
         }
     }
