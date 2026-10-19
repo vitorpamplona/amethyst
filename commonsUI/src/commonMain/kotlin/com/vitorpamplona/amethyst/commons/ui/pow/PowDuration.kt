@@ -30,23 +30,22 @@ import com.vitorpamplona.amethyst.commons.resources.pow_estimate_seconds
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left_soon
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
-import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
+import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.util.availableProcessors
 import org.jetbrains.compose.resources.PluralStringResource
 import kotlin.math.roundToLong
 
 /**
- * This device's effective mining rate: the [PoWEstimator] benchmark run with
- * the same worker count the mining queue uses (half the cores, see
- * [PoWPolicy.minerWorkers] and the app's PoW publish queue). Every UI estimate
- * must use this rate, or it would describe a single-threaded miner that no
- * longer exists. Cached after the first call (~250 ms).
+ * This device's effective mining rate: while a post mines, the rate its miners
+ * actually reach; otherwise the [PoWEstimator] benchmark run with the worker
+ * count the mining queue uses ([platformMinerWorkers]: half the cores on a phone,
+ * all but two on the desktop), cached after the first run (~250 ms). Every UI
+ * estimate must use this rate, or it would describe a miner that does not run.
  */
-suspend fun deviceHashesPerSecond(): Double = PoWEstimator.hashesPerSecond(PoWPolicy.minerWorkers(availableProcessors()))
+suspend fun deviceHashesPerSecond(): Double = PoWEstimator.currentHashesPerSecond(platformMinerWorkers())
 
 /**
  * "45 seconds" / "10 minutes" / "3 hours" — the one human-readable rendering
