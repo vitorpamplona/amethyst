@@ -35,7 +35,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
-import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.material3.RichText
@@ -90,7 +89,7 @@ fun RenderContentAsMarkdown(
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
             remember(content) {
-                CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(MarkdownBareUrls.protect(content))
+                CommonmarkAstNodeParser(AmethystMarkdownParseOptions).parse(content)
             }
 
         val forCapture = LocalMediaCapture.current != null

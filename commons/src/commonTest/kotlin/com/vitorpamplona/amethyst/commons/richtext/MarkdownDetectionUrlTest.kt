@@ -58,7 +58,21 @@ class MarkdownDetectionUrlTest {
     }
 
     @Test
+    fun anOpenerBeforeAUrlDoesNotCloseInsideIt() {
+        assertFalse(isMarkdown("so tired -_- https://m.media-amazon.com/images/I/71zvSJXs2KL._SL1499_.jpg"))
+        assertFalse(isMarkdown("5 *x https://example.com/a*b.jpg"))
+    }
+
+    @Test
+    fun aUrlEndsAtUnicodeSpaceAndPunctuation() {
+        assertTrue(isMarkdown("https://example.com/a\u3001**\u91cd\u70b9**"))
+        assertTrue(isMarkdown("https://example.com/a\u00a0**bold**"))
+    }
+
+    @Test
     fun emphasisAroundAUrlIsStillMarkdown() {
+        assertTrue(isMarkdown("_see https://example.com/x_"))
+        assertTrue(isMarkdown("*see https://example.com/x*."))
         assertTrue(isMarkdown("_see https://example.com/x_"))
         assertTrue(isMarkdown("see [the docs](https://example.com/a_b_.html)"))
     }

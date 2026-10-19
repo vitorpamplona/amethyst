@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.unit.Density
-import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.RichTextStyle
@@ -74,7 +73,7 @@ fun RenderMarkdown(
 
     val astNode =
         remember(processedContent) {
-            CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(MarkdownBareUrls.protect(processedContent))
+            CommonmarkAstNodeParser(AmethystMarkdownParseOptions).parse(processedContent)
         }
 
     val uriHandler =

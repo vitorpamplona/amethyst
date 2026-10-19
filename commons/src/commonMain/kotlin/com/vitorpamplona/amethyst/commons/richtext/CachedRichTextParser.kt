@@ -158,13 +158,10 @@ object CachedRichTextParser {
             // O(1) trigger-char gate. Allocated once at object init.
             if (i >= urlEnd && cCode < 128 && IS_MARKDOWN_TRIGGER[cCode]) {
                 if (c == ':') {
-                    // `scheme://`: the rest of the URL runs to the next whitespace. The scheme
-                    // before the colon holds no trigger chars that could fire mid-word.
-                    if (i + 2 < len && content[i + 1] == '/' && content[i + 2] == '/') {
-                        var j = i + 3
-                        while (j < len && !content[j].isMdSpaceOrNewline()) j++
-                        urlEnd = j
-                    }
+                    // `scheme://`: skip the rest of the URL. The scheme before the colon holds
+                    // no trigger chars that could fire mid-word.
+                    val end = urlEndAt(content, i)
+                    if (end > 0) urlEnd = end
                 }
                 if (c == '`' || c == '|') return true
                 if (c == '~' && i + 1 < len && content[i + 1] == '~') return true
@@ -195,6 +192,15 @@ object CachedRichTextParser {
                     if (!nextChar.isMdSpaceOrNewline()) {
                         var j = i + 1
                         while (j < len && content[j] != '\n') {
+                            if (content[j] == ':') {
+                                // A `*` inside a URL closes nothing; one ending it can (see urlEndsIn).
+                                val end = urlEndAt(content, j)
+                                if (end > 0) {
+                                    if (urlEndsIn(content, j, end, '*')) return true
+                                    j = end
+                                    continue
+                                }
+                            }
                             if (content[j] == '*' && !content[j - 1].isMdSpaceOrNewline()) return true
                             j++
                         }
@@ -229,6 +235,15 @@ object CachedRichTextParser {
                             // followed by a word char).
                             var j = i + 1
                             while (j < len && content[j] != '\n') {
+                                if (content[j] == ':') {
+                                    // As for `*`: only a `_` ending a URL can close.
+                                    val end = urlEndAt(content, j)
+                                    if (end > 0) {
+                                        if (urlEndsIn(content, j, end, '_')) return true
+                                        j = end
+                                        continue
+                                    }
+                                }
                                 if (content[j] == '_') {
                                     val nextIsWord = j + 1 < len && content[j + 1].isMdWordChar()
                                     if (!nextIsWord) return true
@@ -317,6 +332,41 @@ object CachedRichTextParser {
 
         return false
     }
+
+    /**
+     * When the `:` at [colon] starts the `://` of a URL, the index just past the URL; else -1.
+     * The URL ends at whitespace (Unicode spaces too), `<`, `>`, `"`, or a non-ASCII character
+     * that is not a letter or digit, such as the CJK comma in `…/a、**重点**`.
+     */
+    private fun urlEndAt(
+        content: String,
+        colon: Int,
+    ): Int {
+        if (colon + 2 >= content.length || content[colon + 1] != '/' || content[colon + 2] != '/') return -1
+        var j = colon + 3
+        while (j < content.length && !content[j].endsUrl()) j++
+        return j
+    }
+
+    private fun Char.endsUrl() = isWhitespace() || this == '<' || this == '>' || this == '"' || (code >= 128 && !isLetterOrDigit())
+
+    /**
+     * Whether the URL that runs to [end] ends in [marker], before any trailing punctuation. GFM
+     * leaves such a run out of a bare URL, so it can close emphasis opened before the URL
+     * (`_see https://x.com/a_`).
+     */
+    private fun urlEndsIn(
+        content: String,
+        colon: Int,
+        end: Int,
+        marker: Char,
+    ): Boolean {
+        var k = end - 1
+        while (k > colon && content[k] in TRAILING_URL_PUNCTUATION) k--
+        return content[k] == marker
+    }
+
+    private const val TRAILING_URL_PUNCTUATION = ".,!?:;)"
 
     // CommonMark "word" character for the intraword-emphasis rule:
     // ASCII letters, ASCII digits, and `_` itself. Used to fold runs of
