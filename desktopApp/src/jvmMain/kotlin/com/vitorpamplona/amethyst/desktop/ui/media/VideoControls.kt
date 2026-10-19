@@ -82,6 +82,8 @@ import com.vitorpamplona.amethyst.commons.resources.video_player_exit_fullscreen
 import com.vitorpamplona.amethyst.commons.resources.video_player_settings_action_fullscreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
+import java.awt.MouseInfo
+import java.awt.Point
 
 private const val SKIP_SECONDS = 10
 private const val SKIP_MILLIS = SKIP_SECONDS * 1000L
@@ -91,6 +93,16 @@ private const val AUTO_HIDE_MILLIS = 3000L
 
 /** How long the mute button shows on its own when a video starts, as Android does. */
 private const val MUTE_HINT_MILLIS = 2000L
+
+// A pointer must travel this far (screen points) over a video to show its controls: scrolling on a
+// mouse's surface drifts the pointer a few points.
+private const val MIN_POINTER_TRAVEL = 12.0
+
+// Pointer moves this soon after a scroll are taken as the scroll's drift.
+private const val SCROLL_QUIET_MILLIS = 500L
+
+/** Where the pointer is on screen, or null when the system won't say. */
+private fun pointerOnScreen(): Point? = runCatching { MouseInfo.getPointerInfo()?.location }.getOrNull()
 
 private val SpeedChoices = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
 
@@ -103,7 +115,9 @@ private val BottomGradient = Brush.verticalGradient(listOf(Color.Transparent, Co
  * progress bar over the time and the speed along the bottom, all over a gradient.
  *
  * They show while the video is not playing, and once it plays they hide [AUTO_HIDE_MILLIS] after
- * the mouse last moved over it. A click shows or hides them; a double click skips
+ * the mouse last moved over it. With [hideWhenIdle] (a Short, which plays on its own) a stopped
+ * video shows them only when the user paused it: one waiting to start, or coming back into view,
+ * stays a clean picture until the mouse moves over it. A click shows or hides them; a double click skips
  * [SKIP_SECONDS] back on the left half and forward on the right.
  */
 @Composable
@@ -129,11 +143,26 @@ fun VideoControls(
     speed: Float = 1f,
     onSpeedChange: ((Float) -> Unit)? = null,
     onSave: (() -> Unit)? = null,
+    hideWhenIdle: Boolean = false,
 ) {
     var shown by remember { mutableStateOf(false) }
+    // Whether the last stop was the user's own pause, the only stop a Short shows controls for.
+    var pausedByUser by remember { mutableStateOf(false) }
+    if (isPlaying && pausedByUser) pausedByUser = false
+    val trackedPlayPause = {
+        if (isPlaying) pausedByUser = true
+        onPlayPause()
+    }
+    val idleHidden = hideWhenIdle && !isPlaying && !pausedByUser
     // When the mouse last moved over the video. Kept out of snapshot state so a mouse move does
     // not recompose the controls; the hide loop below reads it.
     val lastMoveMillis = remember { longArrayOf(0L) }
+    // Where the pointer was on screen at this video's last hover event. Compose sends Enter and Move
+    // also when the content moves under a still pointer (a feed scrolling, a video's picture taking
+    // over from its preview), so only a Move that finds the pointer somewhere else shows controls.
+    val lastPointer = remember { arrayOfNulls<Point>(1) }
+    // When a scroll last went through this video: a pointer that moves then is the scroll's doing.
+    val lastScrollMillis = remember { longArrayOf(0L) }
     val widthPx = remember { intArrayOf(0) }
 
     LaunchedEffect(isPlaying, shown) {
@@ -147,13 +176,14 @@ fun VideoControls(
         shown = false
     }
 
-    var muteHint by remember { mutableStateOf(true) }
+    // A Short shows no hint: it plays as a clean picture, controls only on the mouse.
+    var muteHint by remember { mutableStateOf(!hideWhenIdle) }
     LaunchedEffect(Unit) {
         delay(MUTE_HINT_MILLIS)
         muteHint = false
     }
 
-    val visible = shown || !isPlaying
+    val visible = shown || (!isPlaying && !idleHidden)
     val canSkip = onSkip != null && !isLive
     // The double-tap gesture starts once per canSkip; it must call the latest onSkip.
     val currentOnSkip by rememberUpdatedState(onSkip)
@@ -167,9 +197,31 @@ fun VideoControls(
                     awaitPointerEventScope {
                         while (true) {
                             val event = awaitPointerEvent()
-                            if (event.type == PointerEventType.Enter || event.type == PointerEventType.Move) {
-                                lastMoveMillis[0] = System.currentTimeMillis()
-                                shown = true
+                            when (event.type) {
+                                PointerEventType.Enter -> {
+                                    lastPointer[0] = pointerOnScreen()
+                                }
+
+                                PointerEventType.Scroll -> {
+                                    lastScrollMillis[0] = System.currentTimeMillis()
+                                    // Scrolling drags the pointer along on some mice: measure from here.
+                                    lastPointer[0] = pointerOnScreen()
+                                }
+
+                                PointerEventType.Move -> {
+                                    val now = pointerOnScreen()
+                                    val from = lastPointer[0]
+                                    val scrolling = System.currentTimeMillis() - lastScrollMillis[0] < SCROLL_QUIET_MILLIS
+                                    // An unknown position counts as a move, so the controls stay reachable.
+                                    val travelled = if (now == null || from == null) Double.MAX_VALUE else now.distance(from)
+                                    if (!scrolling && (now == null || (from != null && travelled >= MIN_POINTER_TRAVEL))) {
+                                        lastMoveMillis[0] = System.currentTimeMillis()
+                                        shown = true
+                                        lastPointer[0] = now
+                                    } else if (from == null || scrolling) {
+                                        lastPointer[0] = now
+                                    }
+                                }
                             }
                         }
                     }
@@ -244,7 +296,7 @@ fun VideoControls(
                 }
             } else {
                 FadingBox(visible) {
-                    PlayPauseButton(isPlaying, onPlayPause)
+                    PlayPauseButton(isPlaying, trackedPlayPause)
                 }
             }
             if (canSkip) {

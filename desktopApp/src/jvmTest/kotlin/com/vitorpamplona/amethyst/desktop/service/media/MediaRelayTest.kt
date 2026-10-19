@@ -137,10 +137,20 @@ class MediaRelayTest {
     }
 
     @Test
-    fun aVideoNotOverTorIsLeftToTheEngine() {
+    fun aVideoNotOverTorAlsoGoesThroughTheRelay() {
+        // So its bytes can be kept on disk (VideoDiskCache): the engines' own HTTP stacks keep none.
         MediaHttp.install({ client }, EncryptionKeyCache(), viaTor = { false })
         val original = "$base/media/video.mp4"
-        assertEquals(original, MediaRelay.streamingUrl(original))
+        val relayed = MediaRelay.streamingUrl(original)!!
+        assertTrue(relayed.startsWith("http://127.0.0.1:") && !relayed.contains("127.0.0.1:${upstream.address.port}/"), relayed)
+        assertEquals(original, MediaRelay.originalFor(relayed.toHttpUrl().encodedPath.split('/', limit = 3)[2]))
+    }
+
+    @Test
+    fun aVideoThatIsNotHttpIsLeftToTheEngine() {
+        MediaHttp.install({ client }, EncryptionKeyCache(), viaTor = { false })
+        val local = "file:///tmp/video.mp4"
+        assertEquals(local, MediaRelay.streamingUrl(local))
     }
 
     @Test

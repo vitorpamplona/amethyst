@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
@@ -229,6 +230,10 @@ object DesktopNotePlatform : NotePlatform {
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
                     shape = shape,
                     pictureSource = source,
+                    declaredRatio = content.dim.ratioOrNull(),
+                    posterUrl = (content as? MediaUrlVideo)?.artworkUri,
+                    blurhash = content.blurhash,
+                    thumbhash = content.thumbhash,
                     isLive = (content as? MediaUrlVideo)?.isLiveStream == true,
                     onFullscreen = { position -> playFullscreen(url, position, source, cornerRadius) },
                     autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
@@ -256,30 +261,49 @@ object DesktopNotePlatform : NotePlatform {
                         .zoomSourceAnchor(source)
                         .clip(shape)
                         .clickable { showViewer = true }
-                if (isAnimatedGifUrl(url)) {
-                    AnimatedGifImage(url = url, contentDescription = content.description, modifier = modifier, contentScale = contentScale)
-                } else {
-                    // Null outside a share-as-image capture.
-                    val captureTracker = rememberCaptureLoadingTracker(url)
-                    AsyncImage(
-                        model = url,
-                        contentDescription = content.description,
-                        modifier = modifier,
-                        contentScale = contentScale,
-                        onState = { state ->
-                            if (state is AsyncImagePainter.State.Success) {
-                                val image = state.result.image
-                                MediaAspectRatioCache.add(url, image.width, image.height)
-                            }
-                            captureTracker?.invoke(state)
-                        },
-                    )
+                // The note's blurhash/thumbhash sits under the image from the first frame, so the card
+                // is never a blank box while the image (or a GIF's frames) loads, nor when it fails.
+                Box(modifier) {
+                    if (content.blurhash != null || content.thumbhash != null) {
+                        DisplayBlurHash(content.blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = content.thumbhash)
+                    }
+                    // With no known shape the image itself sizes the card, so it must not just match it.
+                    MediaImage(url, content.description, contentScale, if (ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth())
                 }
             }
         }
 
         if (showViewer) {
             MediaViewerDialog(content, images, source, cornerRadius) { showViewer = false }
+        }
+    }
+
+    /** An inline image, animated when it is a GIF, filling [modifier]. */
+    @Composable
+    private fun MediaImage(
+        url: String,
+        description: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+    ) {
+        if (isAnimatedGifUrl(url)) {
+            AnimatedGifImage(url = url, contentDescription = description, modifier = modifier, contentScale = contentScale)
+        } else {
+            // Null outside a share-as-image capture.
+            val captureTracker = rememberCaptureLoadingTracker(url)
+            AsyncImage(
+                model = url,
+                contentDescription = description,
+                modifier = modifier,
+                contentScale = contentScale,
+                onState = { state ->
+                    if (state is AsyncImagePainter.State.Success) {
+                        val image = state.result.image
+                        MediaAspectRatioCache.add(url, image.width, image.height)
+                    }
+                    captureTracker?.invoke(state)
+                },
+            )
         }
     }
 
@@ -354,6 +378,9 @@ object DesktopNotePlatform : NotePlatform {
             url = videoUri,
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
             shape = shape,
+            declaredRatio = dimensions.ratioOrNull(),
+            blurhash = blurhash,
+            thumbhash = thumbhash,
             onFullscreen = onDialog?.let { open -> { _ -> open() } },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
             pauseWhenHidden = true,
@@ -387,6 +414,7 @@ object DesktopNotePlatform : NotePlatform {
             modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
             shape = shape,
             pictureSource = source,
+            posterUrl = artworkUri,
             isLive = isLiveStream,
             onFullscreen = { position -> playFullscreen(videoUri, position, source, cornerRadius) },
             autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),

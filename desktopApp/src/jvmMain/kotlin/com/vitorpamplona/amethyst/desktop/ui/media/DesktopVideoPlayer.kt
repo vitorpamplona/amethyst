@@ -55,10 +55,14 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
+import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -72,6 +76,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.awt.Desktop
 import java.net.URI
+
+// Shorter than this, a video is a still image (one frame); see the poster fade below.
+private const val STILL_VIDEO_MILLIS = 300L
 
 /**
  * An inline video. Every instance draws the one [GlobalMediaPlayer] engine when its [url] is the
@@ -102,6 +109,13 @@ fun DesktopVideoPlayer(
     shape: Shape = MaterialTheme.shapes.small,
     // Where the picture itself sits in the window, for a full-screen view that grows out of it.
     pictureSource: ZoomSourceAnchor? = null,
+    // The shape the note declares for this video (its imeta `dim`), when it has one.
+    declaredRatio: Float? = null,
+    // The note's own poster for this video (its imeta `image`), shown until the video plays.
+    posterUrl: String? = null,
+    // The note's blurhash/thumbhash: drawn at once, under the poster or frame, while those load.
+    blurhash: String? = null,
+    thumbhash: String? = null,
 ) {
     // Only this video's state: every other card on screen would otherwise recompose on each tick
     // of whichever video is playing.
@@ -110,6 +124,7 @@ fun DesktopVideoPlayer(
             GlobalMediaPlayer.videoState.map { it.takeIf { state -> state.url == url } }.distinctUntilChanged()
         }
     val videoState by ownState.collectAsState(GlobalMediaPlayer.videoState.value.takeIf { it.url == url })
+    val isShortVideo = LocalShortVideo.current
     val isActiveVideo = videoState != null
     val scope = rememberCoroutineScope()
 
@@ -130,7 +145,9 @@ fun DesktopVideoPlayer(
     var aspectRatio by remember(url) { mutableFloatStateOf(16f / 9f) }
 
     LaunchedEffect(url, loaded) {
-        if (loaded && thumbnail == null) {
+        // A note's own poster is drawn straight from the image loader (see VideoPoster); only a
+        // video without one has a frame extracted, which downloads part of the video.
+        if (loaded && thumbnail == null && posterUrl == null) {
             VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
         }
     }
@@ -195,14 +212,21 @@ fun DesktopVideoPlayer(
     }
 
     videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = it }
-    // Until the engine reports its shape, the thumbnail knows it: without it a portrait video would
-    // sit in a 16:9 box until it plays.
-    val ratio =
+    // The shape before this video plays, best source first: what the playing engine reports, what
+    // the note declares (imeta `dim`), what an engine that opened it ahead or earlier recorded (read
+    // in composition, so this card resizes when that lands), what its thumbnail shows. 16:9 only
+    // when nothing knows: without these a portrait Short sat in a landscape box until it played.
+    val targetRatio =
         if (aspectRatio != 16f / 9f) {
             aspectRatio
         } else {
-            thumbnail?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height } ?: aspectRatio
+            declaredRatio
+                ?: MediaAspectRatioCache.get(url)
+                ?: thumbnail?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
+                ?: aspectRatio
         }
+    // A shape learned late (the engine's own report) eases in instead of snapping the card.
+    val ratio by animateFloatAsState(targetValue = targetRatio, animationSpec = tween(durationMillis = 200), label = "videoShape")
 
     // In full screen the overlay draws the engine; a second surface would resize it too.
     val drawsEngine = isActiveVideo && currentSurfaceOwner === surfaceOwner && !isFullscreen
@@ -216,7 +240,7 @@ fun DesktopVideoPlayer(
     // Black behind a picture, as any player letterboxes; the theme's placeholder until there is one,
     // and behind the error message, which is drawn in the theme's colors.
     val backdrop =
-        if (loaded && errorReason == null && (activePlayer != null || thumbnail != null)) {
+        if (loaded && errorReason == null && (activePlayer != null || thumbnail != null || posterUrl != null)) {
             Color.Black
         } else {
             MaterialTheme.colorScheme.surfaceContainerHigh
@@ -259,6 +283,10 @@ fun DesktopVideoPlayer(
                 return@Box
             }
 
+            if (errorReason == null && (blurhash != null || thumbhash != null)) {
+                DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.fillMaxSize(), thumbhash = thumbhash)
+            }
+
             if (errorReason != null) {
                 PlaybackErrorMessage(url = url, reason = errorReason)
             } else if (activePlayer != null) {
@@ -271,34 +299,25 @@ fun DesktopVideoPlayer(
                 // it until the video is moving, then fades, instead of the card blinking to black as
                 // it starts.
                 val thumbnailAlpha by animateFloatAsState(
-                    targetValue = if (pictureShown) 0f else 1f,
+                    // A "video" a frame or two long is a still: the engine shows nothing for it, so
+                    // its poster stays instead of fading into black.
+                    targetValue = if (pictureShown && (videoState?.duration ?: 0L) !in 1L until STILL_VIDEO_MILLIS) 0f else 1f,
                     animationSpec = tween(durationMillis = 150),
                     label = "thumbnailOverVideo",
                 )
                 if (thumbnailAlpha > 0f) {
-                    thumbnail?.let { bitmap: ImageBitmap ->
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = null,
-                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = thumbnailAlpha },
-                            contentScale = ContentScale.Fit,
-                        )
-                    }
+                    VideoPoster(posterUrl, thumbnail, Modifier.fillMaxSize().graphicsLayer { alpha = thumbnailAlpha })
                 }
             } else {
-                thumbnail?.let { bitmap: ImageBitmap ->
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = "Video thumbnail",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
-                    )
-                }
+                VideoPoster(posterUrl, thumbnail, Modifier.fillMaxSize())
             }
 
             if (errorReason == null) {
                 val state = videoState
                 VideoControls(
+                    // A Short (a short-form event, or any vertical video) that plays on its own
+                    // arrives without controls.
+                    hideWhenIdle = autoPlayWhenVisible && loaded && (isShortVideo || ratio < 1f),
                     isPlaying = state?.isPlaying ?: false,
                     isBuffering = state?.isBuffering ?: false,
                     position = state?.position ?: 0f,
@@ -386,5 +405,23 @@ private fun PlaybackErrorMessage(
                 Text("Open in default player")
             }
         }
+    }
+}
+
+/**
+ * The picture a video shows before it plays: the note's own [posterUrl] through the shared image
+ * loader, which the feed's prefetch has usually filled already, else the [thumbnail] extracted from
+ * the video.
+ */
+@Composable
+private fun VideoPoster(
+    posterUrl: String?,
+    thumbnail: ImageBitmap?,
+    modifier: Modifier,
+) {
+    if (posterUrl != null) {
+        AsyncImage(model = posterUrl, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
+    } else if (thumbnail != null) {
+        Image(bitmap = thumbnail, contentDescription = null, modifier = modifier, contentScale = ContentScale.Fit)
     }
 }

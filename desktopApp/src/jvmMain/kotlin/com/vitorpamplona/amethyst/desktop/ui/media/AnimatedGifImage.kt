@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import coil3.PlatformContext
+import coil3.SingletonImageLoader
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.ui.components.ReportCaptureLoading
@@ -159,11 +161,42 @@ fun AnimatedGifImage(
     }
 }
 
+/**
+ * The bytes of the GIF at [url]: from the image loader's disk cache when it holds them, else
+ * downloaded and kept there. GIFs decode here rather than through the image loader, so without this
+ * one would be downloaded again on every launch (and lost the day its host goes down). Kept under its
+ * own key so it never collides with the loader's own entry for the same URL, and, like the other
+ * media caches, nothing that went over Tor or was encrypted is written to disk. Null when the
+ * download fails: an error page is not a GIF.
+ */
+private suspend fun gifBytes(url: String): ByteArray? {
+    val disk = if (MediaHttp.viaTor(url) || MediaHttp.isEncrypted(url)) null else SingletonImageLoader.get(PlatformContext.INSTANCE).diskCache
+    val key = "gif:$url"
+    disk?.openSnapshot(key)?.use { snapshot ->
+        runCatching { disk.fileSystem.read(snapshot.data) { readByteArray() } }.getOrNull()?.let { return it }
+    }
+
+    val request = Request.Builder().url(url).build()
+    val bytes =
+        MediaHttp.imageClient(url).newCall(request).executeAsync().use { response ->
+            if (!response.isSuccessful) return null
+            response.body.bytes()
+        }
+
+    disk?.openEditor(key)?.let { editor ->
+        try {
+            disk.fileSystem.write(editor.data) { write(bytes) }
+            editor.commit()
+        } catch (e: Exception) {
+            editor.abort()
+        }
+    }
+    return bytes
+}
+
 private suspend fun decodeGifFrames(url: String): GifFrames? =
     try {
-        val request = Request.Builder().url(url).build()
-        val response = MediaHttp.imageClient(url).newCall(request).executeAsync()
-        val bytes = response.body.bytes()
+        val bytes = gifBytes(url) ?: return null
 
         val skData = Data.makeFromBytes(bytes)
         val codec = Codec.makeFromData(skData)

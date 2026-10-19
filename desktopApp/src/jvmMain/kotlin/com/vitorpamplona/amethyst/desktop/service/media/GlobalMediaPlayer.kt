@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
@@ -140,6 +141,9 @@ object GlobalMediaPlayer {
     private const val MAX_WARM_ENGINES = 2
 
     private const val CLOCK_POLL_MS = 250L
+
+    // How long publishShape waits for an engine to read a video's size before giving up.
+    private const val SHAPE_WAIT_MS = 30_000L
 
     // How long a seek waits for a track still opening to learn its length before it gives up.
     private const val AUDIO_OPEN_TIMEOUT_MS = 30_000L
@@ -324,6 +328,7 @@ object GlobalMediaPlayer {
         videoOpenJob =
             scope.launch(Dispatchers.IO) {
                 if (!openSource(player, url, _videoState) { videoDownloading = it }) return@launch
+                launch { publishShape(player, url) }
                 // openUri auto-plays per InitialPlayerState.PLAY default. For an
                 // initial seek we wait for the first hasMedia=true emission then
                 // stop collecting (Flow.first terminates the collector cleanly,
@@ -484,8 +489,25 @@ object GlobalMediaPlayer {
         Log.d(TAG) { "warm open url=$url" }
         scope.launch(Dispatchers.IO) {
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
+                .onSuccess { publishShape(engine, url) }
                 .onFailure { Log.w(TAG) { "Warm open failed for $url: ${it.message}" } }
         }
+    }
+
+    /**
+     * Records [url]'s shape in [MediaAspectRatioCache] once [engine] has read it. An engine reads it
+     * when it opens the video, paused or not, so a video opened ahead (see [warmVideos]) gives its
+     * card the right shape before it scrolls in, instead of a 16:9 box that changes when it plays.
+     */
+    private suspend fun publishShape(
+        engine: VideoPlayerState,
+        url: String,
+    ) {
+        val known =
+            withTimeoutOrNull(SHAPE_WAIT_MS) {
+                snapshotFlow { (engine.metadata.width ?: 0) > 0 && (engine.metadata.height ?: 0) > 0 }.first { it }
+            }
+        if (known != null) MediaAspectRatioCache.addRatio(url, engine.aspectRatio)
     }
 
     /**
