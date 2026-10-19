@@ -71,7 +71,7 @@ import kotlinx.coroutines.withContext
 /** How many notes on each side of the viewport to warm. */
 private const val PREFETCH_RADIUS = 3
 
-/** How far below the viewport to look for the videos to open ahead (see [NotePlatform.warmVideos]). */
+/** How far below the viewport to look for the videos to open or download ahead (see [NotePlatform.warmVideos]). */
 private const val VIDEO_LOOKAHEAD = 4
 
 private const val MIME_TYPE_KEY = "m"
@@ -101,11 +101,11 @@ private const val DIM_KEY = "dim"
  * visible range changes. The only main-thread cost is reading the visible item
  * keys in the snapshot flow.
  *
- * Video *bytes* are not prefetched here — they are large, often HLS (whose prefix
- * can't be cleanly pre-cached), and Android's player pool already starts fast once
- * a video is on screen. Instead the videos on screen and just below it are handed
- * to [NotePlatform.warmVideos], for a platform (the desktop) whose player only
- * opens a video when it plays to open them ahead.
+ * Video bytes are not fetched here, since a player needs them in its own cache. The
+ * videos on screen and just below it go to [NotePlatform.warmVideos], for a platform
+ * (the desktop) whose player only opens a video when it plays, to open them ahead;
+ * the ones below go to [NotePlatform.prefetchVideos], for a platform (Android) whose
+ * player opens a video when its card is composed, to download their start ahead.
  */
 @Composable
 fun PrefetchFeedMedia(
@@ -156,18 +156,25 @@ private fun PrefetchVisibleMedia(
                     }
                 }
 
-                // The videos on screen and the next few below it, in feed order.
-                val upcoming =
-                    (currentNotes.notesBetween(ends) + currentNotes.notesAfter(ends.lastKey, VIDEO_LOOKAHEAD)).flatMap { note ->
+                fun List<Note>.videos() =
+                    flatMap { note ->
                         videosByNote.getOrPut(note.idHex) { note.collectWarmTargets()?.videos?.toList() ?: emptyList() }
                     }
-                platform.warmVideos(stateKey, upcoming.distinct(), accountViewModel)
+
+                // The videos on screen and the next few below it, in feed order.
+                val onScreen = currentNotes.notesBetween(ends).videos()
+                val below = currentNotes.notesAfter(ends.lastKey, VIDEO_LOOKAHEAD).videos()
+                platform.warmVideos(stateKey, (onScreen + below).distinct(), accountViewModel)
+                platform.prefetchVideos(stateKey, below.distinct().filter { it !in onScreen }, accountViewModel)
             }
         }
     }
 
     DisposableEffect(stateKey) {
-        onDispose { platform.warmVideos(stateKey, emptyList(), accountViewModel) }
+        onDispose {
+            platform.warmVideos(stateKey, emptyList(), accountViewModel)
+            platform.prefetchVideos(stateKey, emptyList(), accountViewModel)
+        }
     }
 }
 

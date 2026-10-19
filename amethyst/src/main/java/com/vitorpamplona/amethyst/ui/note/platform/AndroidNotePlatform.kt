@@ -25,6 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -35,8 +36,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
+import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -76,6 +79,27 @@ object AndroidNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         if (UrlCachedPreviewer.cache.get(url) == null) accountViewModel.urlPreview(url) {}
+    }
+
+    /**
+     * Every video card here prepares its own player as soon as it is composed, which is only about
+     * one card before it is on screen. The videos further down get their first bytes cached ahead,
+     * unless videos load only on a tap. HLS is left to its player.
+     */
+    override fun prefetchVideos(
+        owner: Any,
+        urls: List<String>,
+        accountViewModel: AccountViewModel,
+    ) {
+        val videos =
+            if (accountViewModel.settings.startVideoPlayback()) {
+                urls
+                    .filter { !isHlsMedia(it, null) }
+                    .map { VideoPrefetcher.Video(it, useProxy = (accountViewModel.httpClientBuilder.proxyPortForVideo(it) ?: 0) > 0) }
+            } else {
+                emptyList()
+            }
+        Amethyst.instance.videoPrefetcher.prefetch(owner, videos)
     }
 
     override fun loadUrlPreview(

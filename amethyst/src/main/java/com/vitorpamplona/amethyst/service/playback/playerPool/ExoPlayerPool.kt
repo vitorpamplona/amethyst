@@ -48,9 +48,8 @@ class ExoPlayerPool(
     // Requested ceiling on paused-with-buffer players retained across releases. Each retained
     // player keeps its decoder and LoadControl buffer alive, which costs both memory and a
     // MediaCodec instance, so warm slots count against the same [poolSize] codec budget as
-    // cold players (see [warmSlotsCap]). Default 3 keeps the most recent few feed videos hot
-    // for scroll-back without monopolizing the device's decoder pool.
-    requestedWarmSlots: Int = DEFAULT_WARM_SLOTS,
+    // cold players (see [warmSlotsCap]). [warmSlotsFor] sizes it for the device.
+    requestedWarmSlots: Int = MIN_WARM_SLOTS,
 ) {
     // Cap warm slots at poolSize-1 so there's always at least one slot available for a cold
     // (cleared) player; otherwise a feed full of unique URIs would starve the cold pool and
@@ -368,7 +367,40 @@ class ExoPlayerPool(
     }
 
     companion object {
-        private const val DEFAULT_WARM_SLOTS = 3
+        // What the pool kept before it was sized by the device, and its floor.
+        private const val MIN_WARM_SLOTS = 3
+
+        // Decoders kept out of the warm cache for the players in use: the videos on screen plus
+        // the card the feed prepares ahead of the viewport.
+        private const val DECODERS_IN_USE = 4
+
+        private const val GIB = 1024L * 1024 * 1024
+
+        /**
+         * How many released players to keep paused with their buffer, for a device with [poolSize]
+         * decoders and [totalRamBytes] of RAM.
+         *
+         * A feed hands a player back as soon as its card scrolls off, and with three slots a video
+         * was dropped a few cards later: scrolling back, or a card prepared ahead that left and came
+         * back, loaded it from nothing again. Every slot more saves one of those, but a warm player
+         * keeps its decoder and that decoder's frame buffers: about 30 MB each on an SM-T220
+         * (3 GB), measured as the Graphics line of `dumpsys meminfo` climbing from 221 MB at 8
+         * decoders to ~470 MB at 16, while the device's MemAvailable fell from ~650 MB to ~260 MB.
+         * So RAM, not the decoder count, sets the size; the decoder budget only caps it.
+         */
+        fun warmSlotsFor(
+            poolSize: Int,
+            totalRamBytes: Long,
+        ): Int {
+            val byRam =
+                when {
+                    totalRamBytes <= 0L -> MIN_WARM_SLOTS
+                    totalRamBytes < 4 * GIB -> 4
+                    totalRamBytes < 8 * GIB -> 6
+                    else -> 8
+                }
+            return byRam.coerceAtMost(poolSize - DECODERS_IN_USE).coerceAtLeast(MIN_WARM_SLOTS)
+        }
 
         // MediaCodec instances are a per-process resource, but PlaybackService builds one pool for
         // direct traffic and another for Tor-proxied traffic, so a per-pool budget would let the
