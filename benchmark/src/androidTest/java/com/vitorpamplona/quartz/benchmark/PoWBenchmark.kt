@@ -25,12 +25,18 @@ import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip13Pow.miner.MiningBuffer
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
+import com.vitorpamplona.quartz.nip13Pow.miner.Sha256Midstate
+import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
+import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,6 +78,56 @@ class PoWBenchmark {
             PoWMiner.run(baseTemplate, KeyPair().pubKey.toHexKey(), 5)
         }
     }
+
+    private val replyTags = baseTemplate.tags.copyOfRange(0, 3)
+
+    /**
+     * One pass over the last two nonce bytes (78^2 = 6,084 candidates) at an
+     * unreachable difficulty: divide 6,084 by the reported time for the hash rate.
+     * The *Full* and *Midstate* pairs hash the same candidates, so their ratio is
+     * the midstate speedup on this device.
+     */
+    private fun exhaustTwoNonceBytes(
+        tags: Array<Array<String>>,
+        content: String,
+        useMidstate: Boolean,
+    ) {
+        val nonce = "0000000000"
+        val bytes = EventHasherSerializer.fastMakeJsonForId(KeyPair().pubKey.toHexKey(), 1683596206, 1, tags + PoWTag.assemble(nonce, 256), content)
+        val nonceStart = bytes.indexOf(nonce.encodeToByteArray())
+        val midstate = if (useMidstate) Sha256Midstate(bytes, nonceStart) else null
+        val buffer =
+            if (midstate != null) {
+                val start = nonceStart - midstate.prefixLength
+                MiningBuffer(midstate.tail, start, start + nonce.length)
+            } else {
+                MiningBuffer(bytes, nonceStart, nonceStart + nonce.length)
+            }
+        val miner = PoWMiner(buffer, 256, searchFrom = buffer.nonceEnds - 2, midstate = midstate)
+        benchmarkRule.measureRepeated {
+            assertFalse(miner.run())
+        }
+    }
+
+    @Test fun shortNoteFull() = exhaustTwoNonceBytes(emptyArray(), "gm", false)
+
+    @Test fun shortNoteMidstate() = exhaustTwoNonceBytes(emptyArray(), "gm", true)
+
+    @Test fun replyShortContentFull() = exhaustTwoNonceBytes(replyTags, "+1", false)
+
+    @Test fun replyShortContentMidstate() = exhaustTwoNonceBytes(replyTags, "+1", true)
+
+    @Test fun bigThreadReplyShortContentFull() = exhaustTwoNonceBytes(baseTemplate.tags, "agreed", false)
+
+    @Test fun bigThreadReplyShortContentMidstate() = exhaustTwoNonceBytes(baseTemplate.tags, "agreed", true)
+
+    @Test fun bigThreadReplyFull() = exhaustTwoNonceBytes(baseTemplate.tags, baseTemplate.content, false)
+
+    @Test fun bigThreadReplyMidstate() = exhaustTwoNonceBytes(baseTemplate.tags, baseTemplate.content, true)
+
+    @Test fun longNoteFull() = exhaustTwoNonceBytes(emptyArray(), "A long form thought. ".repeat(100), false)
+
+    @Test fun longNoteMidstate() = exhaustTwoNonceBytes(emptyArray(), "A long form thought. ".repeat(100), true)
 
     @Test
     fun setPoWCalculationHex() {

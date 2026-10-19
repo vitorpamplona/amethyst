@@ -1,0 +1,309 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.quartz.nip13Pow.miner
+
+/**
+ * SHA-256 split at a block boundary, so a miner hashes only the part of the
+ * message it changes.
+ *
+ * SHA-256 eats the message in 64-byte blocks, and the state after a block depends
+ * only on the blocks before it. When the nonce starts at [changesFrom], every
+ * block before the one holding it is the same for every candidate: they are
+ * compressed once, here, into [midstate]. A candidate then costs only the blocks
+ * from the nonce's block to the end, padding included, instead of the whole
+ * serialized event.
+ *
+ * The miner writes candidates straight into [tail], which holds the message from
+ * [prefixLength] on with the SHA-256 padding already appended: byte `i` of the
+ * message is `tail[i - prefixLength]`.
+ *
+ * Pure Kotlin on purpose: MessageDigest has no API to resume from a saved state
+ * (cloning one allocates per candidate).
+ */
+class Sha256Midstate(
+    message: ByteArray,
+    changesFrom: Int,
+) {
+    /** Bytes of the message folded into [midstate]: whole blocks before [changesFrom]. */
+    val prefixLength = (changesFrom / BLOCK) * BLOCK
+
+    /** The message from [prefixLength] to its end, plus the SHA-256 padding. */
+    val tail: ByteArray
+
+    private val midstate = IV.copyOf()
+    private val state = IntArray(8)
+    private val w = IntArray(64)
+
+    init {
+        require(changesFrom in 0..message.size) { "changesFrom must be in 0..${message.size}, was $changesFrom" }
+
+        var offset = 0
+        while (offset < prefixLength) {
+            compress(midstate, message, offset, w)
+            offset += BLOCK
+        }
+
+        val remaining = message.size - prefixLength
+        // 0x80 marker + 8-byte length, rounded up to whole blocks
+        val tailLength = ((remaining + 9 + BLOCK - 1) / BLOCK) * BLOCK
+        tail = ByteArray(tailLength)
+        message.copyInto(tail, 0, prefixLength, message.size)
+        tail[remaining] = 0x80.toByte()
+        val bitLength = message.size.toLong() * 8
+        for (i in 0 until 8) {
+            tail[tailLength - 1 - i] = (bitLength ushr (8 * i)).toByte()
+        }
+    }
+
+    /** Hashes the current [tail] and leaves the digest words in [state]. */
+    private fun hashTail() {
+        midstate.copyInto(state)
+        val bytes = tail
+        var offset = 0
+        while (offset < bytes.size) {
+            compress(state, bytes, offset, w)
+            offset += BLOCK
+        }
+    }
+
+    /**
+     * True when the digest of the current [tail] starts with at least [minBits]
+     * zero bits. Reads the state words directly: the digest is those words in
+     * big-endian order, so no 32-byte digest is ever materialized.
+     */
+    fun hasLeadingZeroBits(minBits: Int): Boolean {
+        hashTail()
+        val s = state
+        var needed = minBits
+        var i = 0
+        while (needed > 0) {
+            val word = s[i]
+            if (needed <= 32) return word.countLeadingZeroBits() >= needed
+            if (word != 0) return false
+            needed -= 32
+            i++
+        }
+        return true
+    }
+
+    /** Writes the 32-byte digest of the current [tail] into [out]. */
+    fun digestInto(out: ByteArray): ByteArray {
+        hashTail()
+        for (i in 0 until 8) {
+            val word = state[i]
+            out[4 * i] = (word ushr 24).toByte()
+            out[4 * i + 1] = (word ushr 16).toByte()
+            out[4 * i + 2] = (word ushr 8).toByte()
+            out[4 * i + 3] = word.toByte()
+        }
+        return out
+    }
+
+    companion object {
+        const val BLOCK = 64
+
+        private val IV =
+            intArrayOf(
+                0x6a09e667,
+                -0x4498517b,
+                0x3c6ef372,
+                -0x5ab00ac6,
+                0x510e527f,
+                -0x64fa9774,
+                0x1f83d9ab,
+                0x5be0cd19,
+            )
+
+        internal val K =
+            intArrayOf(
+                0x428a2f98,
+                0x71374491,
+                -0x4a3f0431,
+                -0x164a245b,
+                0x3956c25b,
+                0x59f111f1,
+                -0x6dc07d5c,
+                -0x54e3a12b,
+                -0x27f85568,
+                0x12835b01,
+                0x243185be,
+                0x550c7dc3,
+                0x72be5d74,
+                -0x7f214e02,
+                -0x6423f959,
+                -0x3e640e8c,
+                -0x1b64963f,
+                -0x1041b87a,
+                0x0fc19dc6,
+                0x240ca1cc,
+                0x2de92c6f,
+                0x4a7484aa,
+                0x5cb0a9dc,
+                0x76f988da,
+                -0x67c1aeae,
+                -0x57ce3993,
+                -0x4ffcd838,
+                -0x40a68039,
+                -0x391ff40d,
+                -0x2a586eb9,
+                0x06ca6351,
+                0x14292967,
+                0x27b70a85,
+                0x2e1b2138,
+                0x4d2c6dfc,
+                0x53380d13,
+                0x650a7354,
+                0x766a0abb,
+                -0x7e3d36d2,
+                -0x6d8dd37b,
+                -0x5d40175f,
+                -0x57e599b5,
+                -0x3db47490,
+                -0x3893ae5d,
+                -0x2e6d17e7,
+                -0x2966f9dc,
+                -0xbf1ca7b,
+                0x106aa070,
+                0x19a4c116,
+                0x1e376c08,
+                0x2748774c,
+                0x34b0bcb5,
+                0x391c0cb3,
+                0x4ed8aa4a,
+                0x5b9cca4f,
+                0x682e6ff3,
+                0x748f82ee,
+                0x78a5636f,
+                -0x7b3787ec,
+                -0x7338fdf8,
+                -0x6f410006,
+                -0x5baf9315,
+                -0x41065c09,
+                -0x398e870e,
+            )
+    }
+}
+
+private fun bigSigma0(x: Int) = x.rotateRight(2) xor x.rotateRight(13) xor x.rotateRight(22)
+
+private fun bigSigma1(x: Int) = x.rotateRight(6) xor x.rotateRight(11) xor x.rotateRight(25)
+
+private fun ch(
+    x: Int,
+    y: Int,
+    z: Int,
+) = z xor (x and (y xor z))
+
+private fun maj(
+    x: Int,
+    y: Int,
+    z: Int,
+) = (x and y) or (z and (x or y))
+
+/**
+ * One SHA-256 compression of `block[offset until offset + 64]` into [state].
+ *
+ * Eight rounds per iteration with the working variables renamed instead of
+ * shifted, so a round is just its arithmetic: no seven-way variable shuffle.
+ */
+private fun compress(
+    state: IntArray,
+    block: ByteArray,
+    offset: Int,
+    w: IntArray,
+) {
+    for (t in 0 until 16) {
+        val i = offset + 4 * t
+        w[t] = (block[i].toInt() shl 24) or
+            ((block[i + 1].toInt() and 0xff) shl 16) or
+            ((block[i + 2].toInt() and 0xff) shl 8) or
+            (block[i + 3].toInt() and 0xff)
+    }
+    for (t in 16 until 64) {
+        val w15 = w[t - 15]
+        val w2 = w[t - 2]
+        val s0 = w15.rotateRight(7) xor w15.rotateRight(18) xor (w15 ushr 3)
+        val s1 = w2.rotateRight(17) xor w2.rotateRight(19) xor (w2 ushr 10)
+        w[t] = w[t - 16] + s0 + w[t - 7] + s1
+    }
+
+    val k = Sha256Midstate.K
+    var a = state[0]
+    var b = state[1]
+    var c = state[2]
+    var d = state[3]
+    var e = state[4]
+    var f = state[5]
+    var g = state[6]
+    var h = state[7]
+
+    var t = 0
+    while (t < 64) {
+        h += bigSigma1(e) + ch(e, f, g) + k[t] + w[t]
+        d += h
+        h += bigSigma0(a) + maj(a, b, c)
+        t++
+
+        g += bigSigma1(d) + ch(d, e, f) + k[t] + w[t]
+        c += g
+        g += bigSigma0(h) + maj(h, a, b)
+        t++
+
+        f += bigSigma1(c) + ch(c, d, e) + k[t] + w[t]
+        b += f
+        f += bigSigma0(g) + maj(g, h, a)
+        t++
+
+        e += bigSigma1(b) + ch(b, c, d) + k[t] + w[t]
+        a += e
+        e += bigSigma0(f) + maj(f, g, h)
+        t++
+
+        d += bigSigma1(a) + ch(a, b, c) + k[t] + w[t]
+        h += d
+        d += bigSigma0(e) + maj(e, f, g)
+        t++
+
+        c += bigSigma1(h) + ch(h, a, b) + k[t] + w[t]
+        g += c
+        c += bigSigma0(d) + maj(d, e, f)
+        t++
+
+        b += bigSigma1(g) + ch(g, h, a) + k[t] + w[t]
+        f += b
+        b += bigSigma0(c) + maj(c, d, e)
+        t++
+
+        a += bigSigma1(f) + ch(f, g, h) + k[t] + w[t]
+        e += a
+        a += bigSigma0(b) + maj(b, c, d)
+        t++
+    }
+
+    state[0] += a
+    state[1] += b
+    state[2] += c
+    state[3] += d
+    state[4] += e
+    state[5] += f
+    state[6] += g
+    state[7] += h
+}
