@@ -81,14 +81,12 @@ object DesktopImageLoaderSetup {
         DiskCache
             .Builder()
             // One process per cache: a second copy of the app gets its own (see DesktopInstance).
-            .directory(DesktopInstance.ownFolder(imageCacheFolder()).toOkioPath())
+            .directory(DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.IMAGES).toOkioPath())
             .maxSizeBytes(512L * 1024 * 1024)
             .build()
 
-    /** The primary copy's image cache; later copies of the app use numbered siblings of it (see DesktopInstance). */
-    fun imageCacheFolder(): File = cacheDir().resolve("AmethystDesktop/image_cache")
-
-    private fun cacheDir(): File {
+    /** The OS's per-user cache folder. */
+    fun cacheDir(): File {
         val os = System.getProperty("os.name").lowercase()
         return when {
             "mac" in os -> {

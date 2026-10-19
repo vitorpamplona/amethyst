@@ -207,7 +207,7 @@ class DesktopTorManager(
 
         private fun desktopEnvironment(): TorRuntime.Environment {
             // Tor locks its data directory: a second copy of the app gets a folder of its own.
-            val appDir = DesktopInstance.ownFolder(torDataDirectory())
+            val appDir = DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.TOR)
             appDir.mkdirs()
             // Owner-only (700) — Tor state includes onion keys.
             appDir.restrictToOwner(TAG)

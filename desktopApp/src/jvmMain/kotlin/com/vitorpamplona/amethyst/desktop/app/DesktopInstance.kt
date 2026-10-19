@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
+import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.VideoDiskCache
+import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 import java.io.IOException
@@ -43,8 +46,12 @@ import java.nio.file.StandardOpenOption
  *   same post twice.
  *
  * So slot 1, the primary, keeps the usual folders and is the only one that checkpoints and resumes
- * mining jobs; every later slot puts those folders under its own name ([ownFolder]) and mines
+ * mining jobs; every later slot puts the [PerCopyFolder]s under its own name ([ownFolder]) and mines
  * without checkpoints. Scheduled posts need nothing here: their drain already takes its own lock.
+ *
+ * When no slot can be claimed (the lock folder cannot be created, every slot is taken), the copy runs
+ * as a later one, never as the primary: two primaries would each resume and publish the same post,
+ * while a copy wrongly left out only starts with cold caches.
  */
 object DesktopInstance {
     private const val TAG = "DesktopInstance"
@@ -52,24 +59,50 @@ object DesktopInstance {
     // Copies that each get their own slot; any further ones share the overflow slot past it.
     private const val MAX_SLOTS = 8
 
-    // The claim this process holds: kept reachable, since a lock is released when collected.
-    @Volatile private var held: FileLock? = null
+    /** The slot shared, without a lock, by copies that found none free: never the primary. */
+    const val OVERFLOW_SLOT = MAX_SLOTS + 1
 
-    private val slotsDir: File by lazy { File(System.getProperty("user.home"), ".amethyst/instances") }
+    /**
+     * Every folder a later copy keeps its own sibling of (`videos-2`). The one list both [ownFolder]
+     * and [removeIdleCopies] read, so a new per-copy folder cannot get its own copies without them
+     * also being cleaned up. [isCache] folders of idle slots are deleted; Tor's are kept, a few
+     * dozen MB that let a later copy connect quickly next time.
+     */
+    enum class PerCopyFolder(
+        val isCache: Boolean,
+        val primaryFolder: () -> File,
+    ) {
+        TOR(false, { DesktopTorManager.torDataDirectory() }),
+        VIDEOS(true, { File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos") }),
+        VIDEO_THUMBS(true, { File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs") }),
+        IMAGES(true, { DesktopImageLoaderSetup.cacheDir().resolve("AmethystDesktop/image_cache") }),
+    }
 
-    /** This copy's slot: 1 for the primary, 2 and up for later copies. Claimed on first use. */
-    val slot: Int by lazy { claimSlot(slotsDir) }
+    /** A slot, and the lock that holds it (null for [OVERFLOW_SLOT]). */
+    internal class Claim(
+        val slot: Int,
+        val lock: FileLock?,
+    )
+
+    // This process's claim: kept reachable for the life of the process, since a lock is released
+    // when collected.
+    private val claim: Claim by lazy { tryClaim(slotsDir) }
+
+    private val slotsDir: File get() = File(System.getProperty("user.home"), ".amethyst/instances")
+
+    /** This copy's slot: 1 for the primary, 2 and up for later copies. */
+    val slot: Int get() = claim.slot
 
     /** Whether this is the primary copy: the one that owns the usual folders and resumes mining jobs. */
     val isPrimary: Boolean get() = slot == 1
 
-    /** Claims the slot now, so it is settled before anything opens a folder. */
+    /** Claims this copy's slot. Called first thing in main, before anything opens a folder. */
     fun claim() {
-        slot
+        Log.d(TAG) { "Running as copy ${claim.slot}" }
     }
 
-    /** [dir] for the primary, and a sibling with this copy's slot appended (`videos-2`) for the rest. */
-    fun ownFolder(dir: File): File = folderFor(dir, slot)
+    /** [folder] for this copy: the usual one for the primary, a sibling with the slot appended for the rest. */
+    fun ownFolder(folder: PerCopyFolder): File = folderFor(folder.primaryFolder(), slot)
 
     internal fun folderFor(
         dir: File,
@@ -77,22 +110,24 @@ object DesktopInstance {
     ): File = if (slot == 1) dir else File(dir.parentFile, "${dir.name}-$slot")
 
     /**
-     * Deletes the copies of [folders] that belong to slots no copy holds now. A later copy's caches
-     * fill up to the same limits as the primary's (2 GB of video, 512 MB of images) and are only
-     * reused when another later copy runs, so one second copy left them on disk for good. Each slot
-     * stays locked while its folders go, so a copy starting meanwhile takes the next slot instead.
-     * Tor's folders are kept: a few dozen MB each that let a later copy connect quickly next time.
+     * Deletes the [PerCopyFolder] caches of every slot no copy holds now. A later copy's caches fill
+     * up to the same limits as the primary's (2 GB of video, 512 MB of images) and are only reused
+     * when another later copy runs, so one second copy left them on disk for good.
      */
-    fun removeIdleCopies(folders: List<File>) {
-        removeIdleCopies(slotsDir, folders)
+    fun removeIdleCopies() {
+        removeIdleCopies(slotsDir, PerCopyFolder.entries.filter { it.isCache }.map { it.primaryFolder() })
     }
 
+    /**
+     * Deletes [folders]' copies for each idle slot in [dir]. Each slot stays locked while its folders
+     * go, so a copy starting meanwhile takes the next slot instead.
+     */
     internal fun removeIdleCopies(
         dir: File,
         folders: List<File>,
     ) {
         for (slot in 2..MAX_SLOTS) {
-            val lock = tryLock(File(dir, "slot-$slot.lock")) ?: continue
+            val lock = tryLock(slotFile(dir, slot)) ?: continue
             try {
                 folders.map { folderFor(it, slot) }.filter { it.exists() }.forEach { stale ->
                     if (stale.deleteRecursively()) {
@@ -108,21 +143,28 @@ object DesktopInstance {
         }
     }
 
-    /** Takes the lowest free slot in [dir], holding its lock until the process exits. */
-    internal fun claimSlot(dir: File): Int {
+    /**
+     * Takes the lowest free slot in [dir]. Pure: the caller keeps the returned lock for as long as it
+     * holds the slot. Anything that stops a claim falls back to [OVERFLOW_SLOT], never to the primary.
+     */
+    internal fun tryClaim(dir: File): Claim {
         if (!dir.isDirectory && !dir.mkdirs()) {
-            Log.w(TAG) { "Cannot create $dir: running as the primary copy unchecked" }
-            return 1
+            Log.w(TAG) { "Cannot create $dir: running as a later copy, without mining checkpoints" }
+            return Claim(OVERFLOW_SLOT, null)
         }
         for (slot in 1..MAX_SLOTS) {
-            val lock = tryLock(File(dir, "slot-$slot.lock")) ?: continue
-            held = lock
+            val lock = tryLock(slotFile(dir, slot)) ?: continue
             if (slot > 1) Log.i(TAG) { "Another copy of Amethyst is running: this one is copy $slot, with its own Tor and caches" }
-            return slot
+            return Claim(slot, lock)
         }
-        Log.w(TAG) { "$MAX_SLOTS copies of Amethyst are running: this one shares the folders of copy ${MAX_SLOTS + 1}" }
-        return MAX_SLOTS + 1
+        Log.w(TAG) { "No free slot in $dir: running as a later copy, sharing copy $OVERFLOW_SLOT's folders" }
+        return Claim(OVERFLOW_SLOT, null)
     }
+
+    private fun slotFile(
+        dir: File,
+        slot: Int,
+    ) = File(dir, "slot-$slot.lock")
 
     private fun tryLock(file: File): FileLock? {
         val channel =

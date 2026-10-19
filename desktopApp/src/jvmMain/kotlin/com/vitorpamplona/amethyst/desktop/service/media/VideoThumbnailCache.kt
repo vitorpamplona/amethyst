@@ -101,12 +101,9 @@ object VideoThumbnailCache {
     private val ffmpegWatchdog =
         Executors.newSingleThreadScheduledExecutor { Thread(it, "ffmpeg-watchdog").apply { isDaemon = true } }
 
-    /** The primary copy's folder; later copies of the app use numbered siblings of it (see DesktopInstance). */
-    val sharedFolder: File get() = File(System.getProperty("user.home"), ".cache/amethyst-desktop/video-thumbs")
-
     private val diskDir: File by lazy {
         // A second copy of the app gets its own, as for the video cache (see DesktopInstance).
-        DesktopInstance.ownFolder(sharedFolder).also { dir ->
+        DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.VIDEO_THUMBS).also { dir ->
             dir.mkdirs()
             try {
                 Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwx------"))
