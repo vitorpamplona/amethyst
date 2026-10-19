@@ -122,6 +122,15 @@ fun main(args: Array<String>) {
     // CI runs this on each packaged build: the OS keyring must work in what ships, not only in dev.
     if (args.contains("--keyring-self-test")) exitProcess(runKeyringSelfTest())
 
+    // Which copy of the app this is, settled before anything opens Tor or a cache folder.
+    DesktopInstance.claim()
+    // The primary clears the caches of copies no longer running, off the startup path.
+    if (DesktopInstance.isPrimary) {
+        thread(isDaemon = true, name = "idle-copy-cleanup") {
+            DesktopInstance.removeIdleCopies()
+        }
+    }
+
     // Linux: native Wayland when the session has it. Like the macOS properties below, it must be
     // decided before AWT starts.
     WaylandDisplay.configure()

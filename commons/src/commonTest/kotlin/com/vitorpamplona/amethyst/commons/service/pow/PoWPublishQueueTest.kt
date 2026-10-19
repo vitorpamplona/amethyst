@@ -305,6 +305,30 @@ class PoWPublishQueueTest {
         }
 
     @Test
+    fun aQueueWithoutPersistenceNeverPromisesARetryOnRestart() =
+        runTest {
+            // A desktop copy that is not the primary one mines without checkpoints.
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+            val queue = PoWPublishQueue(scope, maxConcurrent = 1, persistence = null)
+
+            val failure = CompletableDeferred<PoWJobFailure>()
+            scope.launch { queue.failures.collect { failure.complete(it) } }
+            withContext(Dispatchers.Default) { delay(50) }
+
+            queue.enqueueStaged(
+                kind = TextNoteEvent.KIND,
+                difficulty = 10,
+                persistAs = recordFor("job-unsaved"),
+                mine = { "nonce" },
+                publish = { throw IllegalStateException("signer rejected") },
+            )
+
+            val reported = withContext(Dispatchers.Default) { withTimeout(10_000) { failure.await() } }
+            assertFalse(reported.willRetryOnRestart, "nothing was saved, so nothing retries on restart")
+            scope.cancel()
+        }
+
+    @Test
     fun checkpointSurvivesUntilPublishCompletes() =
         runTest {
             val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)

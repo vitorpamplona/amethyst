@@ -448,16 +448,25 @@ class DesktopAppModules(
 
     val powJobStore by lazy { PoWJobStore(File(filesDir, PoWJobStore.FILE_NAME), applicationIOScope) }
 
+    /**
+     * Where mining jobs are checkpointed and resumed from: only in the primary copy (see
+     * DesktopInstance). Every copy logs into the same accounts, so a job a later copy saved would be
+     * resumed and published again by the primary. The one place that decides it: the queue saves
+     * and the restorer resumes only through this.
+     */
+    private val powCheckpoints: PoWJobStore? by lazy { powJobStore.takeIf { DesktopInstance.isPrimary } }
+
     val powPublishQueue by lazy {
         PoWPublishQueue(
             scope = applicationIOScope,
             maxConcurrent = 1,
             minerThreads = platformMinerWorkers(),
-            persistence = powJobStore,
+            persistence = powCheckpoints,
         )
     }
 
-    val powJobRestorer by lazy { PowJobRestorer(powPublishQueue, powJobStore, scheduledPostStore) }
+    /** Resumes checkpointed mining jobs at login; null where nothing is checkpointed ([powCheckpoints]). */
+    val powJobRestorer: PowJobRestorer? by lazy { powCheckpoints?.let { PowJobRestorer(powPublishQueue, it, scheduledPostStore) } }
 
     fun blossomClient(serverBaseUrl: String) = BlossomClient(roleBasedHttpClientBuilder.okHttpClientForUploads(serverBaseUrl))
 
@@ -682,9 +691,11 @@ class DesktopAppModules(
 
         // Resumes PoW mining jobs checkpointed before the last exit, for every loaded account.
         // Idempotent (the queue dedupes by job id), so re-emissions are safe.
-        applicationIOScope.launch {
-            accountsCache.accounts.collect { loaded ->
-                loaded.values.forEach { powJobRestorer.restore(it) }
+        powJobRestorer?.let { restorer ->
+            applicationIOScope.launch {
+                accountsCache.accounts.collect { loaded ->
+                    loaded.values.forEach { restorer.restore(it) }
+                }
             }
         }
 
