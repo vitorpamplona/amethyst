@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
+import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.collectContentWarningReasons
 import com.vitorpamplona.amethyst.commons.ui.components.mediaSizingModifier
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -58,7 +60,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip36SensitiveContent.isSensitiveOrNSFW
+import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoEvent
+import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
 
 @Composable
 fun VideoCardCompose(
@@ -137,6 +141,8 @@ private fun VideoCardImage(
                         authorName = note.author?.toBestDisplayName(),
                         mimeType = imeta.mimeType,
                         thumbhash = imeta.thumbhash,
+                        // The poster the event names (imeta `image`), shown until the video plays.
+                        artworkUri = imeta.image.firstOrNull(),
                     )
                 },
             )
@@ -152,12 +158,14 @@ private fun VideoCardImage(
         modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
         backdrop = (imeta.thumbhash ?: imeta.blurhash)?.let { { BlurhashBackdrop(imeta.blurhash, content.description, imeta.thumbhash) } },
     ) {
-        ZoomableContentView(
-            content = content,
-            roundedCorner = false,
-            contentScale = ContentScale.FillWidth,
-            accountViewModel = accountViewModel,
-        )
+        CompositionLocalProvider(LocalShortVideo provides (videoEvent is VideoShortEvent || videoEvent is AddressableShortVideoEvent)) {
+            ZoomableContentView(
+                content = content,
+                roundedCorner = false,
+                contentScale = ContentScale.FillWidth,
+                accountViewModel = accountViewModel,
+            )
+        }
     }
 }
 

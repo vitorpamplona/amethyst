@@ -39,13 +39,15 @@ import java.util.concurrent.Executors
  *
  * Android's player reads video through OkHttp, so a video the user routes over Tor goes through
  * the Tor proxy. The desktop engines (GStreamer, Media Foundation, AVFoundation) fetch a URL with
- * their own HTTP stacks, which know nothing of Tor. When a video should go over Tor (see
- * [MediaHttp.viaTor]), the engine is given `http://127.0.0.1:<port>/<secret>/<original>/<name>`
- * instead, where `<original>` is the whole original URL in base64url (so no character of it can
+ * their own HTTP stacks, which know nothing of Tor and keep nothing on disk. So a video that goes
+ * over Tor (see [MediaHttp.viaTor]), or one whose bytes may be kept (see [VideoDiskCache.cacheable]),
+ * is given to the engine as
+ * `http://127.0.0.1:<port>/<secret>/<original>/<name>`, where `<original>` is the whole original URL in base64url (so no character of it can
  * trip the server's URI parser) and `<name>` its file name, for engines that sniff the container
  * from the extension. This relay fetches the original through [MediaHttp.client], forwarding Range
  * so seeking still works, and rewrites HLS playlists so every segment and variant comes through
- * here too.
+ * here too. The bytes of plain videos also land in [VideoDiskCache], which answers the next
+ * request for them from disk.
  *
  * It listens on loopback only, a random path prefix keeps it from being an open proxy for other
  * programs on the machine, and the Host check keeps a web page from reaching it by DNS rebinding.
@@ -95,11 +97,18 @@ object MediaRelay {
     private val hostHeader: String by lazy { "127.0.0.1:${server.address.port}" }
 
     /**
-     * What the engine should open for [url]: through this relay when it goes over Tor, else [url]
-     * itself. Null when [url] should go over Tor but cannot (not http(s)): handing it to the engine
-     * would fetch it around Tor.
+     * What the engine should open for [url]: through this relay when it goes over Tor, or when it
+     * is a plain http(s) video whose bytes may land in [VideoDiskCache]; else [url] itself. HLS that
+     * needn't go over Tor stays direct: it is never cached, so the playlist rewriting would only add
+     * risk to live streams. Null when [url] should go over Tor but cannot (not http(s)): handing it
+     * to the engine would fetch it around Tor.
      */
-    fun streamingUrl(url: String): String? = if (MediaHttp.viaTor(url)) relayUrlFor(url) else url
+    fun streamingUrl(url: String): String? =
+        when {
+            MediaHttp.viaTor(url) -> relayUrlFor(url)
+            VideoDiskCache.cacheable(url) -> relayUrlFor(url) ?: url
+            else -> url
+        }
 
     /** [url] as a relay address, or null when it is not an http(s) URL. */
     fun relayUrlFor(url: String): String? {
@@ -140,6 +149,10 @@ object MediaRelay {
             return
         }
 
+        val range = exchange.requestHeaders.getFirst("Range")
+        val keep = method == "GET" && VideoDiskCache.cacheable(original)
+        if (keep && runCatching { VideoDiskCache.serve(exchange, original, range) }.getOrDefault(false)) return
+
         val request =
             Request
                 .Builder()
@@ -170,7 +183,7 @@ object MediaRelay {
                     }
 
                     else -> {
-                        sendBody(exchange, response)
+                        sendBody(exchange, response, if (keep && response.isSuccessful) cacheWriterFor(original, response) else null)
                     }
                 }
             }
@@ -206,9 +219,30 @@ object MediaRelay {
         if (body.isNotEmpty()) exchange.responseBody.write(body)
     }
 
+    /** Where the bytes of [response] for [original] go on disk too, or null when they are not kept. */
+    private fun cacheWriterFor(
+        original: String,
+        response: Response,
+    ): VideoDiskCache.Writer? {
+        val type = response.header("Content-Type")
+        if (response.code == 206) {
+            // "bytes <first>-<last>/<total>"
+            val cr = response.header("Content-Range") ?: return null
+            val first = cr.substringAfter("bytes ", "").substringBefore('-').toLongOrNull() ?: return null
+            val total = cr.substringAfter('/', "").toLongOrNull() ?: return null
+            return VideoDiskCache.writer(original, first, total, type)
+        }
+        if (response.code == 200) {
+            val total = response.body.contentLength().takeIf { it > 0 } ?: return null
+            return VideoDiskCache.writer(original, 0, total, type)
+        }
+        return null
+    }
+
     private fun sendBody(
         exchange: HttpExchange,
         response: Response,
+        cache: VideoDiskCache.Writer? = null,
     ) {
         val length = response.body.contentLength()
         exchange.sendResponseHeaders(
@@ -220,7 +254,20 @@ object MediaRelay {
             },
         )
         if (length != 0L) {
-            response.body.byteStream().use { it.copyTo(exchange.responseBody, 64 * 1024) }
+            try {
+                response.body.byteStream().use { input ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        // Kept first: what the engine read before hanging up is worth keeping too.
+                        cache?.let { runCatching { it.write(buf, n) } }
+                        exchange.responseBody.write(buf, 0, n)
+                    }
+                }
+            } finally {
+                cache?.let { runCatching { it.close() } }
+            }
         }
     }
 

@@ -72,4 +72,12 @@ object MediaAspectRatioCache : MutableMediaAspectRatioCache {
             entry(url).value = width.toFloat() / height.toFloat()
         }
     }
+
+    /** Stores a ratio a player reported directly (it may account for non-square pixels). */
+    fun addRatio(
+        url: String,
+        ratio: Float,
+    ) {
+        if (ratio > 0f && ratio.isFinite()) entry(url).value = ratio
+    }
 }

@@ -36,6 +36,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import org.jcodec.api.FrameGrab
+import org.jcodec.common.DemuxerTrackMeta
 import org.jcodec.common.io.NIOUtils
 import org.jcodec.common.model.ColorSpace
 import org.jcodec.common.model.Picture
@@ -143,7 +144,8 @@ object VideoThumbnailCache {
 
     private suspend fun load(url: String): ImageBitmap? {
         val persistable = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
-        val diskFile = File(diskDir, sha1Hex(url) + ".jpg")
+        // v2: frames from before rotation was applied are on disk sideways; leave them behind.
+        val diskFile = File(diskDir, sha1Hex("v2:$url") + ".jpg")
         if (persistable && diskFile.length() > 0) {
             runCatching { ImageIO.read(diskFile) }.getOrNull()?.let { return it.toComposeImageBitmap() }
         }
@@ -232,12 +234,42 @@ object VideoThumbnailCache {
         runCatching {
             NIOUtils.readableChannel(mp4).use { ch ->
                 val grab = FrameGrab.createFrameGrab(ch).seekToSecondSloppy(1.0)
-                val native: Picture = grab.nativeFrame ?: return null
+                val frame = grab.nativeFrameWithMetadata ?: return null
+                val native: Picture = frame.picture ?: return null
                 val rgb = Picture.create(native.width, native.height, ColorSpace.RGB)
                 ColorUtil.getTransform(native.color, ColorSpace.RGB).transform(native, rgb)
-                scaleDown(AWTUtil.toBufferedImage(rgb))
+                // Phones store portrait video sideways with a rotation in the track header; the
+                // decoded picture ignores it, so apply it (ffmpeg already does).
+                scaleDown(rotate(AWTUtil.toBufferedImage(rgb), frame.orientation))
             }
         }.getOrNull()
+
+    /** [image] turned as the track's display [orientation] asks (clockwise degrees). */
+    private fun rotate(
+        image: BufferedImage,
+        orientation: DemuxerTrackMeta.Orientation?,
+    ): BufferedImage {
+        val quarterTurns =
+            when (orientation) {
+                DemuxerTrackMeta.Orientation.D_90 -> 1
+                DemuxerTrackMeta.Orientation.D_180 -> 2
+                DemuxerTrackMeta.Orientation.D_270 -> 3
+                else -> return image
+            }
+        val swap = quarterTurns % 2 == 1
+        val w = if (swap) image.height else image.width
+        val h = if (swap) image.width else image.height
+        val out = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
+        val g = out.createGraphics()
+        try {
+            g.translate(w / 2.0, h / 2.0)
+            g.rotate(Math.toRadians(90.0 * quarterTurns))
+            g.drawImage(image, -image.width / 2, -image.height / 2, null)
+        } finally {
+            g.dispose()
+        }
+        return out
+    }
 
     /**
      * One frame of [input] (a file or a URL) from `ffmpeg`, already scaled to the poster width,
