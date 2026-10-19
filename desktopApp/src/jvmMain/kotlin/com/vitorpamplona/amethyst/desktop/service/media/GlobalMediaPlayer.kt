@@ -142,6 +142,26 @@ object GlobalMediaPlayer {
     // How many videos to keep warm across all feeds: each is a native engine buffering a stream.
     private const val MAX_WARM_ENGINES = 2
 
+    private class CardEngine(
+        val url: String,
+        val engine: VideoPlayerState,
+    )
+
+    // One engine per video card on screen, keyed by the card (see attachCard), as Android gives each
+    // video composable its own player. The card nearest the middle plays its own; the others stay
+    // paused where they stopped, so a card that gets the middle back carries on from there with no
+    // reload or seek. Guarded by initLock.
+    private val cardEngines = HashMap<Any, CardEngine>()
+
+    private val _cardPlayers = MutableStateFlow<Map<Any, VideoPlayerState>>(emptyMap())
+
+    /** Each card's own engine, by the card's owner key, for the card to draw. */
+    val cardPlayers: StateFlow<Map<Any, VideoPlayerState>> = _cardPlayers.asStateFlow()
+
+    // A ceiling on those: more video cards than this are rarely on screen at once, and each is a
+    // native engine holding its buffer. A card past it opens its video only when it plays.
+    private const val MAX_CARD_ENGINES = 8
+
     private const val CLOCK_POLL_MS = 250L
 
     // How long publishShape waits for an engine to read a video's size before giving up.
@@ -277,8 +297,21 @@ object GlobalMediaPlayer {
             return
         }
 
-        // The video being replaced picks up where it was when it comes back.
-        rememberPosition(current)
+        // The video being replaced picks up where it was when it comes back, unless its card keeps
+        // its engine, paused right there.
+        if (!isCardEngine(loaded)) rememberPosition(current)
+
+        // The card's own engine, or, without a card (full screen, the now-playing bar), the engine
+        // of a card showing this video: the picture on screen is the one that plays.
+        val card =
+            synchronized(initLock) {
+                val own = owner?.let { cardEngines[it] }?.takeIf { it.url == url }
+                (own ?: cardEngines.values.firstOrNull { it.url == url })?.engine
+            }
+        if (card != null && card.error == null) {
+            startWarmVideo(card, url, startAt, chosen)
+            return
+        }
 
         // Opened ahead while it was coming up the feed: it takes over, already buffered.
         val warm = synchronized(initLock) { warmEngines.remove(url) }
@@ -427,7 +460,7 @@ object GlobalMediaPlayer {
         warmRequests.values
             .reversed()
             .flatMap { list -> list.nearest(playing) }
-            .filter { it != playing && !MediaHttp.isEncrypted(it) }
+            .filter { it != playing && !MediaHttp.isEncrypted(it) && cardEngines.values.none { card -> card.url == it } }
             .distinct()
             .take(MAX_WARM_ENGINES)
 
@@ -448,6 +481,11 @@ object GlobalMediaPlayer {
         url: String?,
         nowPlaying: String,
     ) {
+        if (isCardEngine(player)) {
+            // Its card keeps it, paused where it is.
+            runCatching { player.pause() }
+            return
+        }
         val parked =
             url != null &&
                 player.error == null &&
@@ -480,23 +518,90 @@ object GlobalMediaPlayer {
     }
 
     private fun openWarm(url: String) {
+        openPaused(url) { engine -> warmEngines[url] = engine }
+    }
+
+    /** Opens [url] on a new engine, paused and muted, once [keep] (called under [initLock]) has stored it. */
+    private fun openPaused(
+        url: String,
+        keep: (VideoPlayerState) -> Unit,
+    ) {
         if (shutDown) return
         val streaming = MediaRelay.streamingUrl(url) ?: return
         val engine =
             runCatching { createVideoPlayerState() }
-                .onFailure { Log.w(TAG, "Warm video engine init failed", it) }
+                .onFailure { Log.w(TAG, "Paused video engine init failed", it) }
                 .getOrNull() ?: return
         runCatching {
             engine.volume = 0f
             engine.playbackSpeed = 1f
         }
-        synchronized(initLock) { warmEngines[url] = engine }
-        Log.d(TAG) { "warm open url=$url" }
+        synchronized(initLock) { keep(engine) }
+        Log.d(TAG) { "paused open url=$url" }
         scope.launch(Dispatchers.IO) {
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
                 .onSuccess { publishShape(engine, url) }
-                .onFailure { Log.w(TAG) { "Warm open failed for $url: ${it.message}" } }
+                .onFailure { Log.w(TAG) { "Paused open failed for $url: ${it.message}" } }
         }
+    }
+
+    /**
+     * Gives the video card [owner], now on screen showing [url], its own engine: the one already
+     * playing [url] when no card holds it, one opened ahead for it, or a new one opened paused.
+     * Only feeds that play videos on their own call this; an encrypted video, which must download
+     * whole first, opens when it plays instead.
+     */
+    fun attachCard(
+        owner: Any,
+        url: String,
+    ) {
+        if (shutDown || MediaHttp.isEncrypted(url)) return
+        var stale: VideoPlayerState? = null
+        val needsOpen =
+            synchronized(initLock) {
+                val existing = cardEngines[owner]
+                if (existing?.url == url) return
+                if (existing != null) {
+                    cardEngines.remove(owner)
+                    stale = existing.engine
+                }
+                if (cardEngines.size >= MAX_CARD_ENGINES) {
+                    publishCards()
+                    false
+                } else {
+                    val playing = videoPlayer?.takeIf { _videoState.value.url == url && _videoState.value.errorReason == null && !isCardEngine(it) }
+                    val adopted = playing ?: warmEngines.remove(url)?.takeIf { it.error == null }
+                    if (adopted != null) cardEngines[owner] = CardEngine(url, adopted)
+                    publishCards()
+                    adopted == null
+                }
+            }
+        stale?.let { if (it !== videoPlayer) retireVideoPlayer(it) }
+        if (needsOpen) {
+            openPaused(url) { engine ->
+                cardEngines[owner] = CardEngine(url, engine)
+                publishCards()
+            }
+        }
+    }
+
+    /**
+     * Takes back the engine of the video card [owner], which left the screen. The playing one stays
+     * for [releaseVideo] to decide: the now-playing bar keeps a video the user chose going.
+     */
+    fun detachCard(owner: Any) {
+        val card =
+            synchronized(initLock) {
+                cardEngines.remove(owner)?.also { publishCards() }
+            } ?: return
+        if (card.engine !== videoPlayer) retireVideoPlayer(card.engine)
+    }
+
+    private fun isCardEngine(engine: VideoPlayerState?) = engine != null && synchronized(initLock) { cardEngines.values.any { it.engine === engine } }
+
+    // Callers hold [initLock].
+    private fun publishCards() {
+        _cardPlayers.value = cardEngines.mapValues { it.value.engine }
     }
 
     /**
@@ -740,8 +845,10 @@ object GlobalMediaPlayer {
     fun stopVideo() {
         videoOpenJob?.cancel()
         videoSyncJob?.cancel()
-        // Retired rather than stopped: an open still in flight would start it again, unseen.
-        synchronized(initLock) { videoPlayer.also { videoPlayer = null } }?.let(::retireVideoPlayer)
+        // Retired rather than stopped: an open still in flight would start it again, unseen. One a
+        // card holds stays with it, paused.
+        val stopped = synchronized(initLock) { videoPlayer.also { videoPlayer = null } }
+        if (isCardEngine(stopped)) runCatching { stopped?.pause() } else stopped?.let(::retireVideoPlayer)
         _videoState.value = MediaPlaybackState()
         _isFullscreen.value = false
     }
@@ -842,9 +949,12 @@ object GlobalMediaPlayer {
         // Their delayed release dies with the scope below.
         synchronized(retiring) { retiring.toList().also { retiring.clear() } }.forEach { runCatching { it.dispose() } }
         synchronized(initLock) {
-            warmEngines.values.toList().also {
+            // The playing one may be a card's, disposed above.
+            (warmEngines.values + cardEngines.values.map { it.engine }).filter { it !== videoPlayer }.also {
                 warmEngines.clear()
                 warmRequests.clear()
+                cardEngines.clear()
+                publishCards()
             }
         }.forEach { runCatching { it.dispose() } }
         videoPlayer = null
