@@ -107,9 +107,9 @@ import com.vitorpamplona.amethyst.commons.service.images.ImageDiskCacheReconcile
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
-import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
+import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.commons.service.resourceusage.BatteryDrainSampler
 import com.vitorpamplona.amethyst.commons.service.resourceusage.ForegroundTimeIntegrator
 import com.vitorpamplona.amethyst.commons.service.resourceusage.HttpUsageMeter
@@ -943,7 +943,7 @@ class AppModules(
         PoWPublishQueue(
             scope = applicationIOScope,
             maxConcurrent = 1,
-            minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
+            minerThreads = platformMinerWorkers(),
             persistence = powJobStore,
             onQueueActive = { PowMiningForegroundService.start(appContext) },
         ).also { queue ->

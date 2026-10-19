@@ -93,6 +93,12 @@ object PoWPolicy {
      */
     fun minerWorkers(availableProcessors: Int): Int = (availableProcessors / 2).coerceAtLeast(1)
 
+    /**
+     * The desktop's worker count: every core but two. A desktop has the cores to spare, and the two
+     * left free keep the window and the relay client responsive while a post mines. At least 1.
+     */
+    fun desktopMinerWorkers(availableProcessors: Int): Int = (availableProcessors - 2).coerceAtLeast(1)
+
     private const val LONG_FORM_DRAFT_KIND = 30024
 
     /** NIP-51 sets and other settings-like addressable kinds. */
