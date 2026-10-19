@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
-import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
@@ -84,7 +83,7 @@ object AndroidNotePlatform : NotePlatform {
     /**
      * Every video card here prepares its own player as soon as it is composed, which is only about
      * one card before it is on screen. The videos further down get their first bytes cached ahead,
-     * unless videos load only on a tap. HLS is left to its player.
+     * unless videos load only on a tap.
      */
     override fun prefetchVideos(
         owner: Any,
@@ -93,9 +92,7 @@ object AndroidNotePlatform : NotePlatform {
     ) {
         val videos =
             if (accountViewModel.settings.startVideoPlayback()) {
-                urls
-                    .filter { !isHlsMedia(it, null) }
-                    .map { VideoPrefetcher.Video(it, useProxy = (accountViewModel.httpClientBuilder.proxyPortForVideo(it) ?: 0) > 0) }
+                urls.map { VideoPrefetcher.Video(it, useProxy = (accountViewModel.httpClientBuilder.proxyPortForVideo(it) ?: 0) > 0) }
             } else {
                 emptyList()
             }

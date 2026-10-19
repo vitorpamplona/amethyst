@@ -29,11 +29,11 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Whether the device is close to the point where the system starts killing apps, so warm players
- * (paused, but holding a decoder and its buffers) should be let go.
+ * How close the device is to the point where the system starts killing apps, so the player pool
+ * knows how many warm players (paused, but holding a decoder and its buffers) it may keep.
  *
  * The answer comes from `ActivityManager.getMemoryInfo`, a Binder call into the system, and the
- * player pool asks on the main thread every time a card hands its player back. So [isTight] never
+ * player pool asks on the main thread every time a card hands its player back. So [level] never
  * makes that call: it returns the last answer and, when that is older than [MAX_AGE_MS], asks for a
  * fresh one on [scope]. A stale answer only means one more or one fewer warm player for a moment.
  */
@@ -43,7 +43,18 @@ class MemoryPressure(
 ) {
     private val activityManager: ActivityManager? = context.getSystemService()
 
-    @Volatile private var tight = false
+    enum class Level {
+        /** Room to spare: the pool keeps its full warm cache. */
+        NORMAL,
+
+        /** Within [WARM_HEADROOM_BYTES] of the system's low-memory threshold: the old three slots. */
+        TIGHT,
+
+        /** The system says memory is low: no warm players at all. */
+        LOW,
+    }
+
+    @Volatile private var current = Level.NORMAL
 
     @Volatile private var checkedAt = 0L
 
@@ -53,9 +64,9 @@ class MemoryPressure(
         refresh()
     }
 
-    fun isTight(): Boolean {
+    fun level(): Level {
         if (SystemClock.elapsedRealtime() - checkedAt > MAX_AGE_MS) refresh()
-        return tight
+        return current
     }
 
     private fun refresh() {
@@ -64,7 +75,12 @@ class MemoryPressure(
             try {
                 val info = ActivityManager.MemoryInfo()
                 activityManager.getMemoryInfo(info)
-                tight = info.lowMemory || info.availMem < info.threshold + WARM_HEADROOM_BYTES
+                current =
+                    when {
+                        info.lowMemory -> Level.LOW
+                        info.availMem < info.threshold + WARM_HEADROOM_BYTES -> Level.TIGHT
+                        else -> Level.NORMAL
+                    }
                 checkedAt = SystemClock.elapsedRealtime()
             } finally {
                 refreshing.set(false)

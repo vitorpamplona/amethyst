@@ -50,11 +50,11 @@ class ExoPlayerPool(
     // MediaCodec instance, so warm slots count against the same [poolSize] codec budget as
     // cold players (see [warmSlotsCap]). [warmSlotsFor] sizes it for the device.
     requestedWarmSlots: Int = MIN_WARM_SLOTS,
-    // Whether the device is short of memory right now. Asked on the main thread each time a player
+    // How short of memory the device is right now. Asked on the main thread each time a player
     // would go warm, so it must not block (see MemoryPressure). The system only trims a backgrounded
     // app (API 34+ delivers no foreground trim level), so this is what keeps a scrolling feed from
     // holding warm decoders while the device runs out.
-    private val memoryIsTight: () -> Boolean = { false },
+    private val memoryLevel: () -> MemoryPressure.Level = { MemoryPressure.Level.NORMAL },
 ) {
     // Cap warm slots at poolSize-1 so there's always at least one slot available for a cold
     // (cleared) player; otherwise a feed full of unique URIs would starve the cold pool and
@@ -251,29 +251,34 @@ class ExoPlayerPool(
                 return@withLock
             }
 
-            if (memoryIsTight()) {
-                // Each warm player holds a decoder and its frame buffers (~30 MB measured), so
-                // under pressure this one and every other warm player go cold.
-                val warm = synchronized(warmPoolLock) { warmPool.toList().also { warmPool.clear() } }
-                Log.d("PlaybackService") { "ExoPlayerPool memory tight: dropping ${warm.size + 1} warm players" }
-                warm.forEach { demoteToCold(it.player) }
-                demoteToCold(player)
-                return@withLock
-            }
+            // Each warm player holds a decoder and its frame buffers (~30 MB measured), so the cache
+            // shrinks with free memory: the old three slots when it is getting tight, none when the
+            // system says it is low. Above the new cap the oldest warm player goes cold, one per
+            // release: stop() releases a hardware decoder on this (main) thread, and dropping the
+            // whole cache at once would stall it just when the device is struggling.
+            val cap =
+                when (memoryLevel()) {
+                    MemoryPressure.Level.NORMAL -> warmSlotsCap
+                    MemoryPressure.Level.TIGHT -> warmSlotsCap.coerceAtMost(MIN_WARM_SLOTS)
+                    MemoryPressure.Level.LOW -> 0
+                }
 
             val mediaId = player.currentMediaItem?.mediaId
-            if (mediaId != null && warmSlotsCap > 0) {
+            if (mediaId != null && cap > 0) {
                 // Warm path: keep the player paused but loaded so a quick scroll-back to the
                 // same video resumes from the existing buffer instead of re-fetching from disk
                 // cache and re-priming the decoder.
                 player.pause()
-                val evicted = pushWarm(mediaId, player)
+                val evicted = pushWarm(mediaId, player, cap)
                 if (evicted != null) {
                     Log.d("PlaybackService") { "ExoPlayerPool warm evict: ${evicted.mediaId}" }
                     demoteToCold(evicted.player)
                 }
+                shedOneWarmAbove(cap)
                 return@withLock
             }
+
+            if (cap < warmSlotsCap) shedOneWarmAbove(cap)
 
             demoteToCold(player)
         }
@@ -282,6 +287,7 @@ class ExoPlayerPool(
     private fun pushWarm(
         mediaId: String,
         player: ExoPlayer,
+        cap: Int,
     ): WarmPlayer? =
         synchronized(warmPoolLock) {
             // If the same URI is already warm (rare — duplicate VideoView in another scroller),
@@ -290,7 +296,7 @@ class ExoPlayerPool(
             val displaced =
                 if (duplicate >= 0) {
                     warmPool.removeAt(duplicate)
-                } else if (warmPool.size >= warmSlotsCap) {
+                } else if (warmPool.size >= cap) {
                     warmPool.removeFirst()
                 } else {
                     null
@@ -298,6 +304,16 @@ class ExoPlayerPool(
             warmPool.addLast(WarmPlayer(mediaId, player))
             displaced
         }
+
+    /** Sends the oldest warm player cold when the cache holds more than [cap]; at most one per call. */
+    private fun shedOneWarmAbove(cap: Int) {
+        val oldest =
+            synchronized(warmPoolLock) {
+                if (warmPool.size > cap) warmPool.removeFirstOrNull() else null
+            } ?: return
+        Log.d("PlaybackService") { "ExoPlayerPool memory evict: ${oldest.mediaId} (cap $cap)" }
+        demoteToCold(oldest.player)
+    }
 
     private fun demoteToCold(player: ExoPlayer) {
         if (player.isReleased) return
@@ -402,8 +418,8 @@ class ExoPlayerPool(
          * (3 GB), measured as the Graphics line of `dumpsys meminfo` climbing from 221 MB at 8
          * decoders to ~470 MB at 16, while the device's MemAvailable fell from ~650 MB to ~260 MB.
          * So RAM, not the decoder count, sets the size; the decoder budget only caps it. Only the
-         * 3 GB tier was measured, so the larger ones stay modest, and `memoryIsTight` drops the
-         * whole warm cache when the device runs short.
+         * 3 GB tier was measured, so the larger ones stay modest, and `memoryLevel` shrinks the
+         * cache when the device runs short.
          */
         fun warmSlotsFor(
             poolSize: Int,
