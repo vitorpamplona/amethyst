@@ -8063,4 +8063,25 @@
     <string name="drawing_background_notebook">पुस्तक पृष्ठ</string>
     <string name="drawing_background_grid">जाल पत्र</string>
     <string name="drawing_background_dots">बिन्दु जाल</string>
+    <string name="drawing_background_chalkboard">खटिकाफलक</string>
+    <string name="drawing_background_photo">आपका चित्र</string>
+    <string name="drawing_background_photo_failed">उस चित्र को खोलने में असफल</string>
+    <string name="drawing_background_saved">एक चित्र जिस पर आपने चित्र बनाया पूर्वकाल में</string>
+    <string name="drawing_background_remove">इस चित्र को हटाएँ</string>
+    <string name="drawing_color_black">कृष्ण</string>
+    <string name="drawing_color_white">श्वेत</string>
+    <string name="drawing_color_red">रक्तवर्ण</string>
+    <string name="drawing_color_orange">नारंगवर्ण</string>
+    <string name="drawing_color_yellow">पीतवर्ण</string>
+    <string name="drawing_color_green">हरितवर्ण</string>
+    <string name="drawing_color_blue">नीलवर्ण</string>
+    <string name="drawing_color_purple">नीललोहितवर्ण</string>
+    <string name="drawing_alt_text">रेखाचित्र का विवरण दें उन लोगों के लिए जो उसे देख नहीं सकते</string>
+    <string name="drawing_making_gif">पुनःचालन को बनाया जा रहा है…</string>
+    <string name="drawing_export_failed">रेखाचित्र का पुनःचालन बनाने में असफल</string>
+    <string name="drawing_upload_failed">रेखाचित्र का आरोहण असफल</string>
+    <string name="drawing_discard_title">क्या इस रेखाचित्र को हटा दें।</string>
+    <string name="drawing_discard_message">इसे आपके पत्र के साथ नहीं जोडा गया अब तक।</string>
+    <string name="drawing_discard">हटा दें</string>
+    <string name="drawing_keep_drawing">रेखाचित्र करते रहें</string>
 </resources>
