@@ -54,6 +54,9 @@ class PoWMiner(
     // ends the current pass without cancelling it, so the caller can restamp
     // created_at and search a brand-new space. Polled alongside [isActive].
     val isPassOver: () -> Boolean = { false },
+    // when set, [buffer] is this midstate's tail and each candidate hashes only
+    // the blocks from the nonce on, instead of the whole serialized event.
+    val midstate: Sha256Midstate? = null,
 ) {
     val emptyBytesForDesiredPoW = desiredPoW / 8
 
@@ -86,7 +89,9 @@ class PoWMiner(
         }
     }
 
-    fun reachedDesiredPoW(byteArray: ByteArray) = PoWRankEvaluator.atLeastPowRank(sha256Into(hashOut, byteArray, byteArray.size), desiredPoW, emptyBytesForDesiredPoW)
+    fun reachedDesiredPoW(byteArray: ByteArray) =
+        midstate?.hasLeadingZeroBits(desiredPoW)
+            ?: PoWRankEvaluator.atLeastPowRank(sha256Into(hashOut, byteArray, byteArray.size), desiredPoW, emptyBytesForDesiredPoW)
 
     fun run(): Boolean {
         passedOver = false
@@ -212,6 +217,10 @@ class PoWMiner(
          * wherever created_at is meaningful — scheduled posts, NIP-59 wraps with
          * deliberately randomized timestamps — and the search stays frozen exactly
          * as before.
+         *
+         * [hashMode] picks how each candidate is hashed. The default, AUTO, times
+         * the full hash against [Sha256Midstate] on this event for ~20 ms and keeps
+         * the faster (see [prefersMidstate]); both find the same nonce.
          */
         fun <T : Event> run(
             template: EventTemplate<T>,
@@ -219,7 +228,8 @@ class PoWMiner(
             desiredPoW: Int,
             isActive: () -> Boolean = { true },
             refreshCreatedAt: (() -> Long)? = null,
-        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "", refreshCreatedAt)
+            hashMode: PoWHashMode = PoWHashMode.AUTO,
+        ): EventTemplate<T> = search(template, pubKey, desiredPoW, isActive, "", refreshCreatedAt, hashMode)
 
         /**
          * [noncePrefix] is kept verbatim at the front of the nonce while only the
@@ -233,10 +243,11 @@ class PoWMiner(
             isActive: () -> Boolean,
             noncePrefix: String,
             refreshCreatedAt: (() -> Long)?,
+            hashMode: PoWHashMode,
         ): EventTemplate<T> {
             runningSearches.incrementAndFetch()
             try {
-                return searchSpace(template, pubKey, desiredPoW, isActive, noncePrefix, refreshCreatedAt)
+                return searchSpace(template, pubKey, desiredPoW, isActive, noncePrefix, refreshCreatedAt, hashMode)
             } finally {
                 runningSearches.decrementAndFetch()
             }
@@ -249,6 +260,7 @@ class PoWMiner(
             isActive: () -> Boolean,
             noncePrefix: String,
             refreshCreatedAt: (() -> Long)?,
+            hashMode: PoWHashMode,
         ): EventTemplate<T> {
             // sha256 ids have 256 bits; anything outside would index past the
             // hash (or never terminate) deep inside the hot loop.
@@ -256,6 +268,15 @@ class PoWMiner(
 
             var nextSize = STARTING_NONCE_SIZE
             var createdAt = template.createdAt
+
+            // AUTO is decided on the first pass and kept: restamping created_at
+            // does not change the event's block layout, so the answer holds.
+            var useMidstate =
+                when (hashMode) {
+                    PoWHashMode.FULL -> false
+                    PoWHashMode.MIDSTATE -> true
+                    PoWHashMode.AUTO -> null
+                }
 
             do {
                 // never backwards: a wall clock that steps back (or a template
@@ -276,7 +297,16 @@ class PoWMiner(
 
                 val startIndex = bytes.indexOf(initialNonce.encodeToByteArray())
 
-                val buffer = MiningBuffer(bytes, startIndex, startIndex + initialNonce.length)
+                val midstateThisPass =
+                    useMidstate ?: prefersMidstate(bytes, startIndex, initialNonce.length, desiredPoW).also { useMidstate = it }
+                val midstate = if (midstateThisPass) Sha256Midstate(bytes, startIndex) else null
+                val buffer =
+                    if (midstate != null) {
+                        val start = startIndex - midstate.prefixLength
+                        MiningBuffer(midstate.tail, start, start + initialNonce.length)
+                    } else {
+                        MiningBuffer(bytes, startIndex, startIndex + initialNonce.length)
+                    }
 
                 val passStart = TimeSource.Monotonic.markNow()
                 val passCreatedAt = createdAt
@@ -298,7 +328,7 @@ class PoWMiner(
                         { false }
                     }
 
-                val miner = PoWMiner(buffer, desiredPoW, isActive, startIndex + noncePrefix.length, isPassOver)
+                val miner = PoWMiner(buffer, desiredPoW, isActive, buffer.nonceStarts + noncePrefix.length, isPassOver, midstate)
 
                 if (miner.run()) {
                     return EventTemplate(
@@ -366,9 +396,10 @@ class PoWMiner(
             workers: Int = 1,
             isActive: () -> Boolean = { true },
             refreshCreatedAt: (() -> Long)? = null,
+            hashMode: PoWHashMode = PoWHashMode.AUTO,
         ): EventTemplate<T> {
             require(workers >= 1) { "workers must be >= 1, was $workers" }
-            if (workers == 1) return withContext(MiningDispatcher) { run(template, pubKey, desiredPoW, isActive, refreshCreatedAt) }
+            if (workers == 1) return withContext(MiningDispatcher) { run(template, pubKey, desiredPoW, isActive, refreshCreatedAt, hashMode) }
 
             return coroutineScope {
                 val winner = CompletableDeferred<EventTemplate<T>>()
@@ -379,7 +410,7 @@ class PoWMiner(
                                 winner.complete(
                                     search(template, pubKey, desiredPoW, {
                                         isActive() && !winner.isCompleted
-                                    }, workerPrefix(worker, workers), refreshCreatedAt),
+                                    }, workerPrefix(worker, workers), refreshCreatedAt, hashMode),
                                 )
                             }
                         }

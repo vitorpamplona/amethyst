@@ -81,6 +81,12 @@ data class PoWJobState(
      * posts, gift wraps) have no such fallback and are false.
      */
     val canSendWithoutPow: Boolean = false,
+    /**
+     * The event's block layout, for a hash-rate estimate that matches how the
+     * miner will hash it. Known for template jobs; null for opaque work jobs,
+     * whose event only exists inside the work (estimate with a typical shape).
+     */
+    val shape: PoWEventShape? = null,
 ) {
     val isMining: Boolean get() = phase == PoWJobPhase.MINING
     val isCancellable: Boolean get() = phase != PoWJobPhase.PUBLISHING
@@ -213,6 +219,7 @@ class PoWPublishQueue(
             difficulty = difficulty,
             persistAs = persistAs,
             owner = pubKey,
+            shape = PoWEventShape.of(template, pubKey, difficulty),
             // the miner stamps the first pass from the same clock, so the job
             // picks up "now" whether it waited in the queue or was restored
             // from disk — no need to re-wrap the template here.
@@ -246,6 +253,7 @@ class PoWPublishQueue(
         persistAs: PersistedPoWJob? = null,
         dedupeKey: String? = null,
         owner: HexKey? = null,
+        shape: PoWEventShape? = null,
         mine: suspend (isActive: () -> Boolean) -> R,
         publish: suspend (R) -> Unit,
         // When non-null, produces the value [publish] would have received
@@ -262,6 +270,7 @@ class PoWPublishQueue(
             persistAs = persistAs,
             dedupeKey = dedupeKey,
             owner = owner ?: persistAs?.accountPubkey,
+            shape = shape,
             sendWithoutPow = sendWithoutPow?.let { produce -> { publish(produce()) } },
         ) { isActive ->
             val mined = mine(isActive)
@@ -289,7 +298,7 @@ class PoWPublishQueue(
         dedupeKey: String? = null,
         owner: HexKey? = null,
         work: suspend (isActive: () -> Boolean) -> Unit,
-    ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, dedupeKey = dedupeKey, owner = owner, sendWithoutPow = null, work = work)
+    ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, dedupeKey = dedupeKey, owner = owner, shape = null, sendWithoutPow = null, work = work)
 
     private fun addJob(
         id: String,
@@ -298,6 +307,7 @@ class PoWPublishQueue(
         persistAs: PersistedPoWJob?,
         dedupeKey: String?,
         owner: HexKey?,
+        shape: PoWEventShape?,
         sendWithoutPow: (suspend () -> Unit)?,
         work: suspend (isActive: () -> Boolean) -> Unit,
     ) {
@@ -314,7 +324,7 @@ class PoWPublishQueue(
         val job = MiningJob(id, kind, difficulty, persisted = persistAs != null, dedupeKey = dedupeKey, owner = owner, work = work, sendWithoutPow = sendWithoutPow)
         persistAs?.let { persistence?.save(it) }
         pending.update { it.putting(job.id, job) }
-        _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty, canSendWithoutPow = sendWithoutPow != null)).toImmutableList() }
+        _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty, canSendWithoutPow = sendWithoutPow != null, shape = shape)).toImmutableList() }
         Log.d(TAG) {
             val durability = if (persistAs != null) "persisted" else "in-memory only, lost on process death"
             "Enqueued PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty} ($durability)"

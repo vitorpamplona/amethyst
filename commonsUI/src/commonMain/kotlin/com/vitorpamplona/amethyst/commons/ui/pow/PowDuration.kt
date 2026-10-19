@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.pow_estimate_seconds
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left
 import com.vitorpamplona.amethyst.commons.resources.pow_time_left_soon
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
+import com.vitorpamplona.amethyst.commons.service.pow.PoWRateEstimate
 import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -45,7 +46,10 @@ import kotlin.math.roundToLong
  * all but two on the desktop), cached after the first run (~250 ms). Every UI
  * estimate must use this rate, or it would describe a miner that does not run.
  */
-suspend fun deviceHashesPerSecond(): Double = PoWEstimator.currentHashesPerSecond(platformMinerWorkers())
+suspend fun deviceRate(): PoWRateEstimate = PoWEstimator.currentRate(platformMinerWorkers())
+
+/** [deviceRate] for a typical short note, where no event exists yet (settings, composer). */
+suspend fun deviceHashesPerSecond(): Double = deviceRate().hashesPerSecond()
 
 /**
  * "45 seconds" / "10 minutes" / "3 hours" — the one human-readable rendering
