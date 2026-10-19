@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kind_release_artifact_set
 import com.vitorpamplona.amethyst.commons.resources.nip82_commit_label
 import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_apple_silicon
 import com.vitorpamplona.amethyst.commons.resources.nip82_cpu_arm64
@@ -97,6 +98,11 @@ import com.vitorpamplona.amethyst.commons.softwareapps.SoftwarePlatforms
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareReleases
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.BookmarkItem
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.BookmarkMemberRow
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.PagedMemberColumn
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.bookmarkItems
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.listTitle
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.formatLongDate
@@ -209,6 +215,71 @@ fun RenderSoftwareRelease(
         } else {
             ReleaseNotes(event, backgroundColor, accountViewModel, nav)
             ReleaseSummaryFooter(event, shownApp)
+        }
+    }
+}
+
+/**
+ * Kind 30063 in its NIP-51 form, a release artifact set: the shape NIP-82 releases grew out of,
+ * still published by apps that predate NIP-82. NIP-51 puts the release notes in `content` (its own
+ * example does), so they are drawn as notes, never treated as encrypted private items; the `e`/`a`
+ * tags are the artifacts. Many of these sets carry no items at all, only a version and the notes.
+ */
+@Composable
+fun RenderReleaseArtifactSet(
+    note: Note,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event as? ReleaseArtifactSetEvent ?: return
+    if (event.isNip82SoftwareRelease()) return
+
+    val artifacts = remember(event) { event.tags.bookmarkItems().filterIsInstance<BookmarkItem.NoteRef>() }
+
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = Size5dp)
+                .clip(QuoteBorder)
+                .border(1.dp, MaterialTheme.colorScheme.subtleBorder, QuoteBorder)
+                .padding(12.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = listTitle(event.title(), event.dTag(), Res.string.kind_release_artifact_set),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                event.description()?.takeIf { it.isNotBlank() }?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.grayText,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            event.version()?.let {
+                Spacer(Modifier.width(8.dp))
+                VersionChip(it)
+            }
+        }
+
+        ReleaseNotes(event, backgroundColor, accountViewModel, nav)
+
+        if (artifacts.isNotEmpty()) {
+            PagedMemberColumn(artifacts, backgroundColor, Modifier.fillMaxWidth().padding(top = 5.dp)) { item ->
+                key(item.key) {
+                    BookmarkMemberRow(item.tag, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
+            }
         }
     }
 }

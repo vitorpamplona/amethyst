@@ -413,6 +413,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayMonitor
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRemoveMember
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayReview
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRelayRole
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReleaseArtifactSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderReport
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRequestToVanish
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderRoadEventConfirmation
@@ -475,7 +476,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderMediaStarter
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderMuteList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderOldBookmarkList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderPictureCurationSet
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderReleaseArtifactSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderSimpleGroupList
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeZapSender
 import com.vitorpamplona.amethyst.commons.ui.note.types.trust.RenderTrustProviderList
