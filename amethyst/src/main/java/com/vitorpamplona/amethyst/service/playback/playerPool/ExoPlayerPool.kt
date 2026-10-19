@@ -40,6 +40,7 @@ import kotlinx.coroutines.yield
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 @OptIn(UnstableApi::class)
 class ExoPlayerPool(
@@ -73,6 +74,8 @@ class ExoPlayerPool(
     private data class WarmPlayer(
         val mediaId: String,
         val player: ExoPlayer,
+        // When it went warm, across every pool, so the oldest of both pools can be found.
+        val order: Long = warmOrder.incrementAndGet(),
     )
 
     private val warmPool = ArrayDeque<WarmPlayer>(warmSlotsCap.coerceAtLeast(1))
@@ -253,15 +256,10 @@ class ExoPlayerPool(
 
             // Each warm player holds a decoder and its frame buffers (~30 MB measured), so the cache
             // shrinks with free memory: the old three slots when it is getting tight, none when the
-            // system says it is low. Above the new cap the oldest warm player goes cold, one per
+            // system says it is low, counted across both pools. Above it the oldest warm player goes cold, one per
             // release: stop() releases a hardware decoder on this (main) thread, and dropping the
             // whole cache at once would stall it just when the device is struggling.
-            val cap =
-                when (memoryLevel()) {
-                    MemoryPressure.Level.NORMAL -> warmSlotsCap
-                    MemoryPressure.Level.TIGHT -> warmSlotsCap.coerceAtMost(MIN_WARM_SLOTS)
-                    MemoryPressure.Level.LOW -> 0
-                }
+            val cap = warmCapFor(memoryLevel(), warmSlotsCap)
 
             val mediaId = player.currentMediaItem?.mediaId
             if (mediaId != null && cap > 0) {
@@ -278,7 +276,7 @@ class ExoPlayerPool(
                 return@withLock
             }
 
-            if (cap < warmSlotsCap) shedOneWarmAbove(cap)
+            shedOneWarmAbove(cap)
 
             demoteToCold(player)
         }
@@ -305,15 +303,22 @@ class ExoPlayerPool(
             displaced
         }
 
-    /** Sends the oldest warm player cold when the cache holds more than [cap]; at most one per call. */
+    /**
+     * Sends the oldest warm player of any pool cold when all pools together hold more than [cap];
+     * at most one per call. The cap is for the whole process: the direct and Tor pools each keep a
+     * warm cache, and a feed that mixes both routes would otherwise hold twice what RAM allows.
+     */
     private fun shedOneWarmAbove(cap: Int) {
-        val oldest =
-            synchronized(warmPoolLock) {
-                if (warmPool.size > cap) warmPool.removeFirstOrNull() else null
-            } ?: return
-        Log.d("PlaybackService") { "ExoPlayerPool memory evict: ${oldest.mediaId} (cap $cap)" }
-        demoteToCold(oldest.player)
+        if (livePools.sumOf { it.warmCount() } <= cap) return
+        val pool = livePools.minByOrNull { it.oldestWarmOrder() ?: Long.MAX_VALUE } ?: return
+        val oldest = synchronized(pool.warmPoolLock) { pool.warmPool.removeFirstOrNull() } ?: return
+        Log.d("PlaybackService") { "ExoPlayerPool warm budget evict: ${oldest.mediaId} (cap $cap)" }
+        pool.demoteToCold(oldest.player)
     }
+
+    private fun warmCount() = synchronized(warmPoolLock) { warmPool.size }
+
+    private fun oldestWarmOrder() = synchronized(warmPoolLock) { warmPool.firstOrNull()?.order }
 
     private fun demoteToCold(player: ExoPlayer) {
         if (player.isReleased) return
@@ -434,6 +439,24 @@ class ExoPlayerPool(
                 }
             return byRam.coerceAtMost(poolSize - DECODERS_IN_USE).coerceAtLeast(MIN_WARM_SLOTS)
         }
+
+        /**
+         * The warm players to keep across all pools at memory [level], for a pool sized to
+         * [warmSlots]: all of them while memory is fine, the old three when it is getting tight,
+         * none when the system says it is low.
+         */
+        fun warmCapFor(
+            level: MemoryPressure.Level,
+            warmSlots: Int,
+        ): Int =
+            when (level) {
+                MemoryPressure.Level.NORMAL -> warmSlots
+                MemoryPressure.Level.TIGHT -> warmSlots.coerceAtMost(MIN_WARM_SLOTS)
+                MemoryPressure.Level.LOW -> 0
+            }
+
+        // Orders warm players across pools (see WarmPlayer.order).
+        private val warmOrder = AtomicLong(0)
 
         // MediaCodec instances are a per-process resource, but PlaybackService builds one pool for
         // direct traffic and another for Tor-proxied traffic, so a per-pool budget would let the

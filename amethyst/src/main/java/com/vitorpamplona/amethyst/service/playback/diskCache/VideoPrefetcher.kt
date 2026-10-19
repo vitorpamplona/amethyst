@@ -48,6 +48,9 @@ import kotlinx.coroutines.runInterruptible
  * many connections from the video on screen. HLS is never sent here (its playlist and segments are
  * separate requests, and a live playlist must not be cached).
  *
+ * Videos routed through Tor go one at a time even with [WORKERS] free: a Tor circuit often carries
+ * only 1-2 Mbps, and two heads at once would slow the start of the video on screen, which shares it.
+ *
  * A download keeps going when its card reaches the screen: that is when the player needs it, and
  * cancelling there would throw away the bytes just before they are read. Only a feed that leaves
  * (an empty list from every feed) stops the ones in flight.
@@ -83,6 +86,9 @@ class VideoPrefetcher(
     // Downloads in flight. Guarded by [lock].
     private val running = mutableSetOf<Job>()
 
+    // How many of those go through Tor. Guarded by [lock].
+    private var runningProxied = 0
+
     private val wake = Channel<Unit>(Channel.CONFLATED)
     private var workers: List<Job>? = null
 
@@ -111,7 +117,12 @@ class VideoPrefetcher(
     private fun next(): Video? =
         synchronized(lock) {
             val now = SystemClock.elapsedRealtime()
-            wanted().firstOrNull { (attempted[it.url] ?: 0L) <= now }?.also { attempted[it.url] = Long.MAX_VALUE }
+            wanted()
+                .firstOrNull { (attempted[it.url] ?: 0L) <= now && (!it.useProxy || runningProxied < MAX_PROXIED) }
+                ?.also {
+                    attempted[it.url] = Long.MAX_VALUE
+                    if (it.useProxy) runningProxied++
+                }
         }
 
     private suspend fun work() {
@@ -124,6 +135,7 @@ class VideoPrefetcher(
                 job.join()
                 synchronized(lock) {
                     running.remove(job)
+                    if (video.useProxy) runningProxied--
                     when {
                         // Cancelled because the feed left: let a later visit retry it.
                         job.isCancelled -> attempted.remove(video.url)
@@ -181,6 +193,9 @@ class VideoPrefetcher(
 
         // Downloads at once. One fell behind a scroll: a head took 0.5-3 s on the feed's hosts.
         private const val WORKERS = 2
+
+        // Of those, through Tor at once.
+        private const val MAX_PROXIED = 1
 
         private const val MAX_REMEMBERED = 500
 

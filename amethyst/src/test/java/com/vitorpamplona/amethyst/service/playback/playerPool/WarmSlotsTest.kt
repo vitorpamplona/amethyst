@@ -44,4 +44,18 @@ class WarmSlotsTest {
         assertEquals(3, ExoPlayerPool.warmSlotsFor(poolSize = 4, totalRamBytes = 12 * gib))
         assertEquals(3, ExoPlayerPool.warmSlotsFor(poolSize = 16, totalRamBytes = 0))
     }
+
+    @Test
+    fun memoryLevelShrinksTheCap() {
+        assertEquals(6, ExoPlayerPool.warmCapFor(MemoryPressure.Level.NORMAL, warmSlots = 6))
+        // Tight memory falls back to what the pool always kept before it was sized by RAM.
+        assertEquals(3, ExoPlayerPool.warmCapFor(MemoryPressure.Level.TIGHT, warmSlots = 6))
+        assertEquals(0, ExoPlayerPool.warmCapFor(MemoryPressure.Level.LOW, warmSlots = 6))
+    }
+
+    @Test
+    fun tightNeverRaisesASmallerCache() {
+        // A pool capped below three by its decoders stays there under pressure.
+        assertEquals(2, ExoPlayerPool.warmCapFor(MemoryPressure.Level.TIGHT, warmSlots = 2))
+    }
 }
