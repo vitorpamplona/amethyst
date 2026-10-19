@@ -76,6 +76,38 @@ object DesktopInstance {
         slot: Int,
     ): File = if (slot == 1) dir else File(dir.parentFile, "${dir.name}-$slot")
 
+    /**
+     * Deletes the copies of [folders] that belong to slots no copy holds now. A later copy's caches
+     * fill up to the same limits as the primary's (2 GB of video, 512 MB of images) and are only
+     * reused when another later copy runs, so one second copy left them on disk for good. Each slot
+     * stays locked while its folders go, so a copy starting meanwhile takes the next slot instead.
+     * Tor's folders are kept: a few dozen MB each that let a later copy connect quickly next time.
+     */
+    fun removeIdleCopies(folders: List<File>) {
+        removeIdleCopies(slotsDir, folders)
+    }
+
+    internal fun removeIdleCopies(
+        dir: File,
+        folders: List<File>,
+    ) {
+        for (slot in 2..MAX_SLOTS) {
+            val lock = tryLock(File(dir, "slot-$slot.lock")) ?: continue
+            try {
+                folders.map { folderFor(it, slot) }.filter { it.exists() }.forEach { stale ->
+                    if (stale.deleteRecursively()) {
+                        Log.d(TAG) { "Removed $stale: no copy of Amethyst uses slot $slot" }
+                    } else {
+                        Log.w(TAG) { "Could not fully remove $stale" }
+                    }
+                }
+            } finally {
+                lock.release()
+                lock.channel().close()
+            }
+        }
+    }
+
     /** Takes the lowest free slot in [dir], holding its lock until the process exits. */
     internal fun claimSlot(dir: File): Int {
         if (!dir.isDirectory && !dir.mkdirs()) {

@@ -87,6 +87,8 @@ import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
+import com.vitorpamplona.amethyst.desktop.service.media.VideoDiskCache
+import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
@@ -124,6 +126,12 @@ fun main(args: Array<String>) {
 
     // Which copy of the app this is, settled before anything opens Tor or a cache folder.
     DesktopInstance.claim()
+    // The primary clears the caches of copies no longer running, off the startup path.
+    if (DesktopInstance.isPrimary) {
+        thread(isDaemon = true, name = "idle-copy-cleanup") {
+            DesktopInstance.removeIdleCopies(listOf(VideoDiskCache.sharedFolder, VideoThumbnailCache.sharedFolder, DesktopImageLoaderSetup.imageCacheFolder()))
+        }
+    }
 
     // Linux: native Wayland when the session has it. Like the macOS properties below, it must be
     // decided before AWT starts.

@@ -56,9 +56,12 @@ object VideoDiskCache {
     private const val TRIM_EVERY_BYTES = 64L * 1024 * 1024
     private const val TRIM_EVERY_MILLIS = 60_000L
 
+    /** The primary copy's folder; later copies of the app use numbered siblings of it (see DesktopInstance). */
+    val sharedFolder: File get() = File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos")
+
     private val dir: File by lazy {
         // Its index lives in memory, so a second copy of the app gets its own (see DesktopInstance).
-        DesktopInstance.ownFolder(File(System.getProperty("user.home"), ".cache/amethyst-desktop/videos")).also { dir ->
+        DesktopInstance.ownFolder(sharedFolder).also { dir ->
             dir.mkdirs()
             try {
                 Files.setPosixFilePermissions(dir.toPath(), PosixFilePermissions.fromString("rwx------"))

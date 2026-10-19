@@ -25,6 +25,8 @@ import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DesktopInstanceTest {
     private val root: File = Files.createTempDirectory("instances").toFile()
@@ -39,6 +41,26 @@ class DesktopInstanceTest {
         // This process stands in for every copy: a slot it already holds counts as taken.
         val slots = List(3) { DesktopInstance.claimSlot(root) }
         assertEquals(listOf(1, 2, 3), slots)
+    }
+
+    @Test
+    fun removesOnlyTheCachesOfSlotsNoCopyHolds() {
+        val slots = File(root, "slots")
+        val videos = File(root, "videos").apply { mkdirs() }
+        val running = File(root, "videos-2").apply { mkdirs() }
+        val idle = File(root, "videos-3").apply { mkdirs() }
+        File(idle, "chunk").writeText("stale")
+
+        // Slots 1 and 2 are taken (this process holds them); 3 is free.
+        DesktopInstance.claimSlot(slots)
+        DesktopInstance.claimSlot(slots)
+        DesktopInstance.removeIdleCopies(slots, listOf(videos))
+
+        assertTrue(videos.isDirectory, "the primary's folder is never touched")
+        assertTrue(running.isDirectory, "a running copy keeps its folder")
+        assertFalse(idle.exists(), "an idle slot's folder goes")
+        // Its lock was given back: the next copy can still take slot 3.
+        assertEquals(3, DesktopInstance.claimSlot(slots))
     }
 
     @Test

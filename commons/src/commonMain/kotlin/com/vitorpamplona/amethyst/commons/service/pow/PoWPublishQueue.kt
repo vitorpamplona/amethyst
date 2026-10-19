@@ -269,7 +269,7 @@ class PoWPublishQueue(
             // (Amber/bunker) and broadcasting is IO, neither belongs on the
             // pool. The job entry + checkpoint survive until publish finishes.
             setPhase(id, PoWJobPhase.PUBLISHING)
-            scope.launch { finishDetached(id, kind, persisted = persistAs != null) { publish(mined) } }
+            scope.launch { finishDetached(id, kind, persisted = isCheckpointed(persistAs)) { publish(mined) } }
         }
     }
 
@@ -291,6 +291,11 @@ class PoWPublishQueue(
         work: suspend (isActive: () -> Boolean) -> Unit,
     ) = addJob(RandomInstance.randomChars(16), kind, difficulty, persistAs = null, dedupeKey = dedupeKey, owner = owner, sendWithoutPow = null, work = work)
 
+    // A record only survives a restart when there is somewhere to save it: a queue built without
+    // [persistence] (a desktop copy that is not the primary one) mines it in memory only, and must not
+    // tell the user a failed job will retry on restart.
+    private fun isCheckpointed(persistAs: PersistedPoWJob?) = persistAs != null && persistence != null
+
     private fun addJob(
         id: String,
         kind: Int,
@@ -311,12 +316,12 @@ class PoWPublishQueue(
             return
         }
 
-        val job = MiningJob(id, kind, difficulty, persisted = persistAs != null, dedupeKey = dedupeKey, owner = owner, work = work, sendWithoutPow = sendWithoutPow)
+        val job = MiningJob(id, kind, difficulty, persisted = isCheckpointed(persistAs), dedupeKey = dedupeKey, owner = owner, work = work, sendWithoutPow = sendWithoutPow)
         persistAs?.let { persistence?.save(it) }
         pending.update { it.putting(job.id, job) }
         _jobs.update { (it + PoWJobState(job.id, job.kind, job.difficulty, canSendWithoutPow = sendWithoutPow != null)).toImmutableList() }
         Log.d(TAG) {
-            val durability = if (persistAs != null) "persisted" else "in-memory only, lost on process death"
+            val durability = if (job.persisted) "persisted" else "in-memory only, lost on process death"
             "Enqueued PoW job ${job.id} kind=${job.kind} difficulty=${job.difficulty} ($durability)"
         }
         queue.trySend(job)
