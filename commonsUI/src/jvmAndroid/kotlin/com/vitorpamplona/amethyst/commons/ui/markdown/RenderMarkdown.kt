@@ -74,7 +74,7 @@ fun RenderMarkdown(
 
     val astNode =
         remember(processedContent) {
-            CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(processedContent)
+            CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(MarkdownBareUrls.protect(processedContent))
         }
 
     val uriHandler =

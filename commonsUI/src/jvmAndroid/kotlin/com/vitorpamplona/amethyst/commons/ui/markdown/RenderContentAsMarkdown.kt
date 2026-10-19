@@ -90,7 +90,7 @@ fun RenderContentAsMarkdown(
     ProvideTextStyle(MarkdownTextStyle) {
         val astNode =
             remember(content) {
-                CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
+                CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(MarkdownBareUrls.protect(content))
             }
 
         val forCapture = LocalMediaCapture.current != null

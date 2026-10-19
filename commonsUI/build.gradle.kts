@@ -168,6 +168,10 @@ kotlin {
                     implementation(libs.markdown.commonmark)
                     implementation(libs.markdown.ui)
                     implementation(libs.markdown.ui.material3)
+                    // The URL finder the markdown autolinker uses, so MarkdownBareUrls
+                    // finds the same URLs it does. Already shipped (a runtime dependency
+                    // of richtext-commonmark); declared to compile against it. MIT.
+                    implementation(libs.markdown.autolink)
 
                     // viewModel() Compose helper. AndroidX publishes this
                     // artifact for android/jvmStubs/linuxx64Stubs but not iOS,
