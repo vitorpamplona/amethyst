@@ -33,11 +33,13 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlin.math.pow
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.DurationUnit
 import kotlin.time.TimeSource
 
@@ -124,6 +126,32 @@ class PoWHashRate(
 }
 
 /**
+ * What an estimate should use right now: [live], the rate the running miners
+ * reach (null when nothing mines), and [model], the benchmarked costs (null
+ * when only the live rate is known).
+ *
+ * The live rate is exact for the event being mined, whatever its hasher. For
+ * any other event the model's ratio between the two shapes carries it over:
+ * contention and clocks scale both hashers alike, so a ratio measured while the
+ * miners ran still holds even when the model's absolute rate reads low.
+ */
+@Immutable
+class PoWRateEstimate(
+    val live: Double?,
+    val model: PoWHashRate?,
+) {
+    /** Rate for an event of [shape] while an event of [miningShape] is being mined. */
+    fun hashesPerSecond(
+        shape: PoWEventShape = PoWEventShape.SHORT_NOTE,
+        miningShape: PoWEventShape = PoWEventShape.SHORT_NOTE,
+    ): Double {
+        val model = model ?: return live ?: 1.0
+        val modeled = model.hashesPerSecond(shape)
+        return if (live == null) modeled else live * modeled / model.hashesPerSecond(miningShape)
+    }
+}
+
+/**
  * Rough on-device estimate of how long mining a given NIP-13 difficulty takes,
  * so the settings picker can say "≈ 45 s per post" instead of leaving the user
  * to guess what "24 bits" means for their phone.
@@ -149,6 +177,10 @@ object PoWEstimator {
     // warm-up plus four measurements share the old single-payload budget
     private val WARM_UP_DURATION = 50.milliseconds
     private val MEASURE_DURATION = 50.milliseconds
+
+    // Long enough to cover every worker's flush (one per ~6,000 hashes, under a millisecond) many
+    // times over and to smooth a mining pass's restamp.
+    private val LIVE_WINDOW = 1.seconds
 
     // cached per worker count; guarded by benchLock (single-flight so
     // concurrent first callers — e.g. the settings screen recomposing while
@@ -192,6 +224,48 @@ object PoWEstimator {
             }
         }
     }
+
+    /**
+     * The rate the miners running right now reach: [PoWMiner.hashesTried] sampled [LIVE_WINDOW]
+     * apart. Null when nothing is mining. A benchmark run then would compete with the miners for
+     * the same cores and read low (32% low against 10 desktop workers, measured), and that low
+     * rate would stay cached; the miners' own count costs nothing and is exact.
+     */
+    suspend fun liveHashesPerSecond(): Double? {
+        if (!PoWMiner.isMining()) return null
+        val start = PoWMiner.hashesTried()
+        val mark = TimeSource.Monotonic.markNow()
+        delay(LIVE_WINDOW)
+        val tried = PoWMiner.hashesTried() - start
+        if (tried <= 0L || !PoWMiner.isMining()) return null
+        return tried / mark.elapsedNow().toDouble(DurationUnit.SECONDS)
+    }
+
+    /**
+     * The rates an estimate should use: the miners' live rate while one runs, plus the [workers]
+     * benchmark, kept only when nothing mined while it ran. A post usually starts mining just as
+     * its banner or notification asks, so a benchmark the miners overlapped is not cached; it
+     * still serves for the ratios between shapes (see [PoWRateEstimate]). While mining, no new
+     * benchmark is started: one cached from an idle moment is used, or the live rate alone.
+     */
+    suspend fun currentRate(
+        workers: Int,
+        dispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher,
+    ): PoWRateEstimate {
+        val count = workers.coerceAtLeast(1)
+        liveHashesPerSecond()?.let { live -> return PoWRateEstimate(live, benchLock.withLock { cachedRates[count] }) }
+        val before = PoWMiner.hashesTried()
+        val benchmarked = hashRate(count, dispatcher)
+        if (PoWMiner.hashesTried() == before) return PoWRateEstimate(null, benchmarked)
+        benchLock.withLock { cachedRates.remove(count) }
+        return PoWRateEstimate(liveHashesPerSecond(), benchmarked)
+    }
+
+    /** [currentRate] for a [PoWEventShape.SHORT_NOTE]-sized event. */
+    suspend fun currentHashesPerSecond(
+        workers: Int,
+        dispatcher: CoroutineDispatcher = PoWMiner.MiningDispatcher,
+    ): Double = currentRate(workers, dispatcher).hashesPerSecond()
 
     fun estimateSeconds(
         difficulty: Int,

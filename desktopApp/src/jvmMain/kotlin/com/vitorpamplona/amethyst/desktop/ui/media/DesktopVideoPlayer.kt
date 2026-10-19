@@ -54,6 +54,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -79,6 +81,9 @@ import java.net.URI
 
 // Shorter than this, a video is a still image (one frame); see the poster fade below.
 private const val STILL_VIDEO_MILLIS = 300L
+
+// How long a card stays on screen before it opens its own engine.
+private const val CARD_ENGINE_DELAY_MS = 300L
 
 /**
  * An inline video. Every instance draws the one [GlobalMediaPlayer] engine when its [url] is the
@@ -137,10 +142,41 @@ fun DesktopVideoPlayer(
         if (isActiveVideo && currentSurfaceOwner == null) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
     }
     DisposableEffect(surfaceOwner) {
-        onDispose { GlobalMediaPlayer.releaseVideoSurface(surfaceOwner) }
+        onDispose {
+            GlobalMediaPlayer.releaseVideoSurface(surfaceOwner)
+            GlobalMediaPlayer.detachCard(surfaceOwner)
+        }
     }
 
     var loaded by remember(url) { mutableStateOf(!loadOnDemand || autoPlay) }
+
+    // A feed that plays videos on its own gives each card on screen its own engine, as Android
+    // gives each video composable its player: opened paused a moment after the card shows (so a
+    // fling past it opens nothing), released once it leaves. The card in the middle plays its own;
+    // the rest keep theirs paused where they stopped.
+    var onScreen by remember { mutableStateOf(false) }
+    val holdsEngine = autoPlayWhenVisible && loaded
+    LaunchedEffect(holdsEngine, onScreen, url) {
+        if (holdsEngine && onScreen) {
+            delay(CARD_ENGINE_DELAY_MS)
+            GlobalMediaPlayer.attachCard(surfaceOwner, url)
+        } else {
+            GlobalMediaPlayer.detachCard(surfaceOwner)
+        }
+    }
+    val onScreenModifier =
+        if (autoPlayWhenVisible) {
+            Modifier.onGloballyPositioned { coordinates ->
+                // Clipped by every ancestor: a card scrolled out of its list measures empty.
+                val shown = coordinates.boundsInWindow()
+                onScreen = coordinates.isAttached && shown.width > 0f && shown.height > 0f
+            }
+        } else {
+            Modifier
+        }
+    val cardPlayer by remember(surfaceOwner) {
+        GlobalMediaPlayer.cardPlayers.map { it[surfaceOwner] }.distinctUntilChanged()
+    }.collectAsState(null)
     var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
     var aspectRatio by remember(url) { mutableFloatStateOf(16f / 9f) }
 
@@ -239,7 +275,15 @@ fun DesktopVideoPlayer(
     // per URL, so a video scrolled back to (whose engine still holds its frame) shows it at once.
     var pictureShown by remember(url) { mutableStateOf(false) }
     if (!pictureShown && isActiveVideo && (videoState?.currentTime ?: 0L) > 0L) pictureShown = true
-    val activePlayer = if (drawsEngine) GlobalMediaPlayer.activeVideoPlayerState else null
+    // The card's own engine, playing or paused where it stopped, except in full screen, where the
+    // overlay draws the playing one; without one, the shared engine when this card draws it.
+    val ownPlayer = cardPlayer
+    val activePlayer =
+        when {
+            ownPlayer != null -> ownPlayer.takeUnless { isFullscreen && it === GlobalMediaPlayer.activeVideoPlayerState }
+            drawsEngine -> GlobalMediaPlayer.activeVideoPlayerState
+            else -> null
+        }
 
     // Black behind a picture, as any player letterboxes; the theme's placeholder until there is one,
     // and behind the error message, which is drawn in the theme's colors.
@@ -250,7 +294,7 @@ fun DesktopVideoPlayer(
             MaterialTheme.colorScheme.surfaceContainerHigh
         }
 
-    BoxWithConstraints(modifier = modifier.then(visibilityModifier), contentAlignment = Alignment.TopCenter) {
+    BoxWithConstraints(modifier = modifier.then(visibilityModifier).then(onScreenModifier), contentAlignment = Alignment.TopCenter) {
         val desiredHeight = maxWidth / ratio
         val constrainedHeight = if (constraints.hasBoundedHeight) minOf(desiredHeight, maxHeight) else desiredHeight
         // Only as wide as the picture at that height, as an image is, so the controls and their
@@ -318,6 +362,10 @@ fun DesktopVideoPlayer(
 
             if (errorReason == null) {
                 val state = videoState
+                // A card whose engine another card's video paused shows where it stopped.
+                val paused = if (state == null) ownPlayer?.takeIf { pictureShown } else null
+                val pausedMillis = paused?.let { (it.currentTime * 1000.0).toLong().coerceAtLeast(0L) } ?: 0L
+                val pausedLength = paused?.let { (it.duration * 1000.0).toLong().coerceAtLeast(0L) } ?: 0L
                 VideoControls(
                     // A Short (a short-form event, or any vertical video) that plays on its own
                     // arrives without controls.
@@ -326,9 +374,9 @@ fun DesktopVideoPlayer(
                     hideWhenIdle = autoPlayWhenVisible && loaded && (isShortVideo || targetRatio < 1f),
                     isPlaying = state?.isPlaying ?: false,
                     isBuffering = state?.isBuffering ?: false,
-                    position = state?.position ?: 0f,
-                    duration = state?.duration ?: 0L,
-                    currentTime = state?.currentTime ?: 0L,
+                    position = state?.position ?: if (pausedLength > 0L) (pausedMillis.toFloat() / pausedLength).coerceIn(0f, 1f) else 0f,
+                    duration = state?.duration ?: pausedLength,
+                    currentTime = state?.currentTime ?: pausedMillis,
                     volume = state?.volume ?: 100,
                     // Before it loads, show the state it would start in.
                     isMuted = state?.isMuted ?: GlobalMediaPlayer.defaultMuted,

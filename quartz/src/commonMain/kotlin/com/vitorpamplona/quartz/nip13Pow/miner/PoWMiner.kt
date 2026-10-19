@@ -33,11 +33,17 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
+@OptIn(ExperimentalAtomicApi::class)
 class PoWMiner(
     val buffer: MiningBuffer,
     val desiredPoW: Int,
@@ -72,19 +78,35 @@ class PoWMiner(
     var passedOver = false
         private set
 
+    // Hashes tried since the last flush into [hashesDone]: counted in the innermost level, added
+    // to the shared counter only at the cancellation checkpoint, so the hot loop never touches it.
+    private var unflushed = 0L
+
+    private fun flushHashes() {
+        if (unflushed > 0) {
+            hashesDone.addAndFetch(unflushed)
+            unflushed = 0
+        }
+    }
+
     fun reachedDesiredPoW(byteArray: ByteArray) =
         midstate?.hasLeadingZeroBits(desiredPoW)
             ?: PoWRankEvaluator.atLeastPowRank(sha256Into(hashOut, byteArray, byteArray.size), desiredPoW, emptyBytesForDesiredPoW)
 
     fun run(): Boolean {
         passedOver = false
-        return runDigit(searchFrom)
+        try {
+            return runDigit(searchFrom)
+        } finally {
+            flushHashes()
+        }
     }
 
     private fun runDigit(index: Int): Boolean {
         // checks once every VALID_BYTES.size^2 hashes: cheap enough to not slow
         // mining down, frequent enough for cancellation to feel immediate.
         if (index + 2 <= buffer.nonceEnds) {
+            flushHashes()
             if (!isActive()) throw CancellationException("PoW mining was cancelled")
 
             if (isPassOver()) {
@@ -116,12 +138,25 @@ class PoWMiner(
                 bytes[index] = alphabet[i]
                 if (reachedDesiredPoW(bytes)) return true
             }
+            unflushed += alphabet.size
         }
         return false
     }
 
     companion object {
         private const val STARTING_NONCE_SIZE = 5
+
+        // Every hash any miner in this process has tried, and how many searches are running: what a
+        // time estimate samples for the rate the miners actually reach, instead of benchmarking cores
+        // the miners are already using.
+        private val hashesDone = AtomicLong(0)
+        private val runningSearches = AtomicInt(0)
+
+        /** Hashes tried by every miner in this process so far. Two samples apart give the live rate. */
+        fun hashesTried(): Long = hashesDone.load()
+
+        /** Whether a search is running right now. */
+        fun isMining(): Boolean = runningSearches.load() > 0
 
         /**
          * How long one pass searches before it stops to restamp created_at.
@@ -202,6 +237,23 @@ class PoWMiner(
          * so their search spaces never overlap.
          */
         private fun <T : Event> search(
+            template: EventTemplate<T>,
+            pubKey: HexKey,
+            desiredPoW: Int,
+            isActive: () -> Boolean,
+            noncePrefix: String,
+            refreshCreatedAt: (() -> Long)?,
+            hashMode: PoWHashMode,
+        ): EventTemplate<T> {
+            runningSearches.incrementAndFetch()
+            try {
+                return searchSpace(template, pubKey, desiredPoW, isActive, noncePrefix, refreshCreatedAt, hashMode)
+            } finally {
+                runningSearches.decrementAndFetch()
+            }
+        }
+
+        private fun <T : Event> searchSpace(
             template: EventTemplate<T>,
             pubKey: HexKey,
             desiredPoW: Int,

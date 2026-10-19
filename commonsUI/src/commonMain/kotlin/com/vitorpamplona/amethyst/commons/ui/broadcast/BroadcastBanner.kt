@@ -102,11 +102,11 @@ import com.vitorpamplona.amethyst.commons.service.broadcast.BroadcastStatus
 import com.vitorpamplona.amethyst.commons.service.broadcast.RelayResult
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEventShape
-import com.vitorpamplona.amethyst.commons.service.pow.PoWHashRate
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
+import com.vitorpamplona.amethyst.commons.service.pow.PoWRateEstimate
 import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.pow.deviceHashRate
+import com.vitorpamplona.amethyst.commons.ui.pow.deviceRate
 import com.vitorpamplona.amethyst.commons.ui.pow.formatTimeLeft
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -269,9 +269,10 @@ private fun MiningContent(
     // difficulty and event shape into an expected duration so the bar has a
     // predictable end.
     val hashRate by
-        produceState<PoWHashRate?>(initialValue = null) {
-            value = deviceHashRate()
+        produceState<PoWRateEstimate?>(initialValue = null) {
+            value = deviceRate()
         }
+    val miningShape = miningJobs.firstOrNull { it.isMining }?.shape ?: PoWEventShape.SHORT_NOTE
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -298,7 +299,7 @@ private fun MiningContent(
 
         miningJobs.forEach { job ->
             val elapsedSec = job.miningStartedAt?.let { (nowSec - it).coerceAtLeast(0) }
-            val expectedSec = hashRate?.let { PoWEstimator.estimateSeconds(job.difficulty, it.hashesPerSecond(job.shape ?: PoWEventShape.SHORT_NOTE)) }
+            val expectedSec = hashRate?.let { PoWEstimator.estimateSeconds(job.difficulty, it.hashesPerSecond(job.shape ?: PoWEventShape.SHORT_NOTE, miningShape)) }
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,

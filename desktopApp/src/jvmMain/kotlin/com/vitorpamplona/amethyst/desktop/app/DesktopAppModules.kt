@@ -86,9 +86,9 @@ import com.vitorpamplona.amethyst.commons.service.http.RoleBasedHttpClientBuilde
 import com.vitorpamplona.amethyst.commons.service.lnurl.OkHttpLnurlEndpointResolver
 import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
-import com.vitorpamplona.amethyst.commons.service.pow.PoWPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.PowJobRestorer
+import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomServerResolver
@@ -452,7 +452,7 @@ class DesktopAppModules(
         PoWPublishQueue(
             scope = applicationIOScope,
             maxConcurrent = 1,
-            minerThreads = PoWPolicy.minerWorkers(Runtime.getRuntime().availableProcessors()),
+            minerThreads = platformMinerWorkers(),
             persistence = powJobStore,
         )
     }

@@ -86,4 +86,19 @@ class PoWEstimatorTest {
         val slower = costs.copy(midstatePerBlockNanos = 400.0)
         assertEquals(1e9 / 200 + 1e9 / 400, PoWHashRate(listOf(costs, slower)).hashesPerSecond(PoWEventShape(6, 1)), 1e-6)
     }
+
+    @Test
+    fun liveRateCarriesOverToOtherShapesByTheModelsRatio() {
+        val model = PoWHashRate(listOf(costs))
+        val reply = PoWEventShape(6, 1)
+        val longNote = PoWEventShape(35, 34)
+
+        // the event being mined gets the live rate exactly
+        assertEquals(3e6, PoWRateEstimate(3e6, model).hashesPerSecond(reply, miningShape = reply), 1e-6)
+        // another one gets it scaled: the model says the long note is 3800 / 200 = 19x slower
+        assertEquals(3e6 * 200 / 3800, PoWRateEstimate(3e6, model).hashesPerSecond(longNote, miningShape = reply), 1e-6)
+        // idle: the model alone; no model yet: the live rate alone
+        assertEquals(1e9 / 3800, PoWRateEstimate(null, model).hashesPerSecond(longNote, miningShape = reply), 1e-6)
+        assertEquals(3e6, PoWRateEstimate(3e6, null).hashesPerSecond(longNote, miningShape = reply), 1e-6)
+    }
 }
