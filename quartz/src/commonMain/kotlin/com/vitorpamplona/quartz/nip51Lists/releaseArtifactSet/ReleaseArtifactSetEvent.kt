@@ -49,10 +49,12 @@ import com.vitorpamplona.quartz.nip50Search.SearchableEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
+import com.vitorpamplona.quartz.nip51Lists.encryption.PrivateTagsInContent
 import com.vitorpamplona.quartz.nip51Lists.remove
 import com.vitorpamplona.quartz.nip51Lists.tags.DescriptionTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -110,6 +112,22 @@ class ReleaseArtifactSetEvent(
     fun description() = tags.firstNotNullOfOrNull(DescriptionTag::parse)
 
     fun items(): List<BookmarkIdTag> = tags.mapNotNull(BookmarkIdTag::parse)
+
+    /**
+     * NIP-51: the private items, encrypted to the author in `content`. Null when [signer] is not
+     * the author or the content does not decrypt, and for a NIP-82 release, whose `content` is
+     * plaintext release notes rather than private items.
+     */
+    suspend fun privateTags(signer: NostrSigner): TagArray? {
+        if (signer.pubKey != pubKey || isNip82SoftwareRelease()) return null
+
+        return try {
+            PrivateTagsInContent.decrypt(content, signer)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+    }
 
     /** The ids of the `e` items: the NIP-51 event items, which in a NIP-82 release are its [assets]. */
     fun itemEventIds(): List<HexKey> = tags.mapNotNull(EventBookmark::parseId)

@@ -203,8 +203,7 @@ fun RenderPictureCurationSet(
 /**
  * NIP-51 kind 30063: "groups of files of a software release". NIP-82 software releases share the
  * kind and get their own card; this is the plain set, which holds the same `e`/`a` items as a
- * bookmark set. Quartz has no private-member decryption for this kind, so a non-empty `content`
- * only shows as hidden members.
+ * bookmark set.
  */
 @Composable
 fun RenderReleaseArtifactSet(
@@ -217,13 +216,14 @@ fun RenderReleaseArtifactSet(
     val noteEvent = baseNote.event as? ReleaseArtifactSetEvent ?: return
 
     val public = remember(noteEvent) { noteEvent.tags.bookmarkItems() }
+    val private by loadPrivateItems(noteEvent, accountViewModel) { noteEvent.privateTags(it)?.bookmarkItems() }
 
     BookmarkCard(
         title = listTitle(noteEvent.title(), noteEvent.dTag(), Res.string.kind_release_artifact_set),
         description = noteEvent.description(),
         public = public,
-        private = null,
-        hidesPrivate = noteEvent.hidesPrivateMembers(null),
+        private = private,
+        hidesPrivate = noteEvent.hidesPrivateMembers(private),
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
         accountViewModel = accountViewModel,
