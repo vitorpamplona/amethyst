@@ -5,7 +5,7 @@ repo, [vitorpamplona/crypto-kmp](https://github.com/vitorpamplona/crypto-kmp), a
 were renamed to `com.vitorpamplona.crypto.*` (`sha2`, `digest`, `mac`, `kdf`, `aes`, `chacha`,
 `curve25519`, `random`), with every import in quartz, the apps and quic-kmp rewritten instead of
 keeping the old package names. That reverses D1 and D3 below. Phases 1 and 3 are done that way:
-crypto-kmp 1.0.0 holds the code, quartz takes it as `api(libs.crypto)`, and quic-kmp 2.0.0 depends
+crypto-kmp 1.0.0 holds the code, quartz takes it as `api(libs.crypto)`, and quic-kmp 1.0.1 depends
 on it instead of quartz. `Hex` and `Log` stayed in quartz; NIP-44's `fastExpand`/`MessageKey`
 stayed in quartz as `nip44Encryption/crypto/Nip44MessageKey.kt`. Phase 2 (a public API shaped for
 quic's hot path) and Phase 4 remain open, now in crypto-kmp. The text below is the original plan.
