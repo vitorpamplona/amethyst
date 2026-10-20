@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">Descoberta de Relays</string>
     <string name="kind_relay_monitor">Anúncio de Monitor de Relay</string>
     <string name="kind_relay_set">Conjunto de relays</string>
+    <string name="kind_release_artifact_set">Conjunto de artefatos de versão</string>
     <string name="kind_reports">Denúncias</string>
     <string name="kind_reposts">Repostagens</string>
     <string name="kind_reposts_16">Repostagens (16)</string>
@@ -8084,5 +8085,4 @@
     <string name="drawing_discard_message">Ele ainda não foi adicionado à sua publicação.</string>
     <string name="drawing_discard">Descartar</string>
     <string name="drawing_keep_drawing">Continuar desenhando</string>
-    <string name="kind_release_artifact_set">Conjunto de artefatos de versão</string>
 </resources>
