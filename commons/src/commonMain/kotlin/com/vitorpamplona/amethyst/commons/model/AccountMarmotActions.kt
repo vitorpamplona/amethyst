@@ -1127,7 +1127,7 @@ class AccountMarmotActions(
     /**
      * Revoke admin privileges from [targetPubKey]. Rejects any change that
      * would leave the group with zero admins — MIP-03's admin-depletion guard
-     * in [com.vitorpamplona.quartz.mls.group.MlsGroup] would otherwise
+     * in [com.vitorpamplona.mls.group.MlsGroup] would otherwise
      * throw at commit time.
      */
     suspend fun revokeMarmotGroupAdmin(

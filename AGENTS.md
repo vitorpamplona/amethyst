@@ -8,10 +8,11 @@ over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons
 contain implementations of Nostr specifications and utilities to help implement them — NIPs under
 `nipXX` packages, and whole non-NIP protocol families beside them: `marmot/` (MLS over Nostr,
 `mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
-`concord/` (`cordXX`), `openagents/` (OpenAgents NIP-CAP/NIP-EXT, `nipXxx`), `buzz/`, plus the
-binding-agnostic RFC 9420 engine in `mls/`. A new protocol over Nostr belongs here as a package,
-not as a Gradle module; `nestsClient`/`marmotQuic` are modules because they are transports
-with no Nostr in them. Commons stores
+`concord/` (`cordXX`), `openagents/` (OpenAgents NIP-CAP/NIP-EXT, `nipXxx`), `buzz/`. A new
+protocol over Nostr belongs here as a package, not as a Gradle module; `nestsClient`/`marmotQuic`
+are modules because they are transports with no Nostr in them. The RFC 9420 MLS engine under
+`marmot/` and `cordn/` lives in vitorpamplona/mls-kmp (`com.vitorpamplona.mls`, `libs.mls.kmp`,
+an `api` dep of `quartz`); build against a checkout with `-PmlsKmpDir=../mls-kmp`. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM

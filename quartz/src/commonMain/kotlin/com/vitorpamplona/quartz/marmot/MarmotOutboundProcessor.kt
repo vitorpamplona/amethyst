@@ -161,15 +161,15 @@ class MarmotOutboundProcessor(
      * The commit bytes are already MLS-formatted (PublicMessage envelope).
      *
      * @param nostrGroupId the Nostr group ID
-     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.quartz.mls.group.StagedCommit.framedCommitBytes]
+     * @param commitBytes the framed MLS commit bytes from [com.vitorpamplona.mls.group.StagedCommit.framedCommitBytes]
      * @param exporterKey optional explicit outer-encryption key. Callers
      *     publishing a Commit MUST pass the **pre-commit** exporter secret
-     *     (from [com.vitorpamplona.quartz.mls.group.StagedCommit.preCommitExporterSecret])
+     *     (from [com.vitorpamplona.mls.group.StagedCommit.preCommitExporterSecret])
      *     so that other existing members at epoch N can decrypt and process
      *     the commit. If null, falls back to the current epoch's exporter
      *     secret — which is only correct when the commit has *not* been
      *     applied locally yet (i.e. this call is made before
-     *     [com.vitorpamplona.quartz.mls.group.MlsGroup.mergeStagedCommit]).
+     *     [com.vitorpamplona.mls.group.MlsGroup.mergeStagedCommit]).
      * @return the signed GroupEvent ready for relay publishing
      */
     suspend fun buildCommitEvent(

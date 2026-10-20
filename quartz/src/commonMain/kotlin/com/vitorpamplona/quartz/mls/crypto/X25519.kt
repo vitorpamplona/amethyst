@@ -20,59 +20,40 @@
  */
 package com.vitorpamplona.quartz.mls.crypto
 
-/**
- * X25519 Diffie-Hellman key exchange for MLS DHKEM (RFC 9180).
- *
- * Used in TreeKEM for path secret encryption via HPKE.
- *
- * All platform actuals (jvmAndroid, apple, linux) are the SAME pure-Kotlin
- * Montgomery-ladder implementation over [Curve25519Field] (a TweetNaCl port) —
- * they intentionally do NOT delegate to a platform provider such as
- * `java.security` XDH, because Android's KeyStore/JCA integration for raw X25519
- * keys is unreliable across API levels. `dh()` rejects an all-zero shared secret
- * per RFC 7748 §6.1; note the ladder relies on branch-uniform (mask-based)
- * selection but, being pure Kotlin on the JVM/ART, carries no hardware
- * constant-time guarantee.
- */
-expect object X25519 {
-    /**
-     * Generate a new X25519 key pair.
-     * @return pair of (privateKey: 32 bytes, publicKey: 32 bytes)
-     */
-    fun generateKeyPair(): X25519KeyPair
+import com.vitorpamplona.mls.crypto.X25519 as MlsX25519
 
-    /**
-     * Perform X25519 Diffie-Hellman key agreement.
-     * @param privateKey 32-byte private key
-     * @param publicKey 32-byte public key
-     * @return 32-byte shared secret
-     */
+/*
+ * Binary-compatibility shim. The MLS engine moved to vitorpamplona/mls-kmp
+ * (`com.vitorpamplona.mls`), but the published quic-kmp 1.0.0 was compiled against
+ * Quartz when X25519 lived here, and its TLS 1.3 handshake still calls
+ * `X25519.generateKeyPair()`, `X25519.dh()` and the two `X25519KeyPair` getters
+ * under this package. The root build substitutes this checkout's :quartz for that
+ * dependency, so without these classes nests and marmotQuic would fail at runtime
+ * with NoClassDefFoundError, which no compiler would catch.
+ *
+ * Delete this file once a quic-kmp release imports `com.vitorpamplona.mls.crypto.X25519`.
+ */
+
+@Deprecated(
+    "Moved to mls-kmp; kept only for quic-kmp 1.0.0 binary compatibility.",
+    ReplaceWith("X25519", "com.vitorpamplona.mls.crypto.X25519"),
+)
+object X25519 {
+    fun generateKeyPair(): X25519KeyPair = MlsX25519.generateKeyPair().let { X25519KeyPair(it.privateKey, it.publicKey) }
+
     fun dh(
         privateKey: ByteArray,
         publicKey: ByteArray,
-    ): ByteArray
+    ): ByteArray = MlsX25519.dh(privateKey, publicKey)
 
-    /**
-     * Derive the public key from a private key.
-     * @param privateKey 32-byte private key
-     * @return 32-byte public key
-     */
-    fun publicFromPrivate(privateKey: ByteArray): ByteArray
+    fun publicFromPrivate(privateKey: ByteArray): ByteArray = MlsX25519.publicFromPrivate(privateKey)
 }
 
-data class X25519KeyPair(
+@Deprecated(
+    "Moved to mls-kmp; kept only for quic-kmp 1.0.0 binary compatibility.",
+    ReplaceWith("X25519KeyPair", "com.vitorpamplona.mls.crypto.X25519KeyPair"),
+)
+class X25519KeyPair(
     val privateKey: ByteArray,
     val publicKey: ByteArray,
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is X25519KeyPair) return false
-        return privateKey.contentEquals(other.privateKey) && publicKey.contentEquals(other.publicKey)
-    }
-
-    override fun hashCode(): Int {
-        var result = privateKey.contentHashCode()
-        result = 31 * result + publicKey.contentHashCode()
-        return result
-    }
-}
+)

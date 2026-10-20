@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.fixture
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.contextvm.cep41OpenStreams.OpenStreamFrame
 import com.vitorpamplona.quartz.contextvm.fixture.CvmRequest
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcError
@@ -31,8 +33,6 @@ import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcSuccess
 import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorFields
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorMethod
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper

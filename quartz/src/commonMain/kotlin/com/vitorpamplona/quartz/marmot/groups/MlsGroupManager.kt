@@ -20,28 +20,28 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.mls.framing.PublicMessage
+import com.vitorpamplona.mls.group.DecryptedMessage
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.group.MlsGroupState
+import com.vitorpamplona.mls.group.OwnSenderRatchet
+import com.vitorpamplona.mls.group.RetainedEpochSecrets
+import com.vitorpamplona.mls.messages.CommitResult
+import com.vitorpamplona.mls.messages.ExternalJoinResult
+import com.vitorpamplona.mls.messages.KeyPackageBundle
+import com.vitorpamplona.mls.schedule.KeySchedule
+import com.vitorpamplona.mls.schedule.SecretTree
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager.Companion.EPOCH_RETENTION_WINDOW
 import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
 import com.vitorpamplona.quartz.marmot.groups.currentNostrGroupId
 import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.components.ComponentsList
-import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.mls.framing.PublicMessage
-import com.vitorpamplona.quartz.mls.group.DecryptedMessage
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupState
-import com.vitorpamplona.quartz.mls.group.OwnSenderRatchet
-import com.vitorpamplona.quartz.mls.group.RetainedEpochSecrets
-import com.vitorpamplona.quartz.mls.messages.CommitResult
-import com.vitorpamplona.quartz.mls.messages.ExternalJoinResult
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.mls.schedule.KeySchedule
-import com.vitorpamplona.quartz.mls.schedule.SecretTree
-import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.currentCoroutineContext
@@ -300,7 +300,7 @@ class MlsGroupManager(
         nostrGroupId: HexKey,
         identity: ByteArray,
         signingKey: ByteArray? = null,
-        initialExtensions: List<com.vitorpamplona.quartz.mls.tree.Extension> = emptyList(),
+        initialExtensions: List<com.vitorpamplona.mls.tree.Extension> = emptyList(),
     ): MlsGroup =
         mutex.withLock {
             Log.d(TAG) { "createGroup($nostrGroupId): creating new MLS group" }
@@ -633,7 +633,7 @@ class MlsGroupManager(
         senderLeafIndex: Int,
         confirmationTag: ByteArray,
         signature: ByteArray = ByteArray(0),
-        wireFormat: com.vitorpamplona.quartz.mls.framing.WireFormat = com.vitorpamplona.quartz.mls.framing.WireFormat.PUBLIC_MESSAGE,
+        wireFormat: com.vitorpamplona.mls.framing.WireFormat = com.vitorpamplona.mls.framing.WireFormat.PUBLIC_MESSAGE,
     ) = mutex.withLock {
         val group = requireGroup(nostrGroupId)
 
@@ -737,7 +737,7 @@ class MlsGroupManager(
                     // command, so we MUST persist here or reloaded state
                     // silently reverts to the pre-commit extensions (including
                     // admin list).
-                    if (result.contentType == com.vitorpamplona.quartz.mls.framing.ContentType.COMMIT && group.epoch != preEpoch) {
+                    if (result.contentType == com.vitorpamplona.mls.framing.ContentType.COMMIT && group.epoch != preEpoch) {
                         pushRetainedEpoch(nostrGroupId, retainedBefore)
                         persistGroup(nostrGroupId)
                     }
@@ -1062,15 +1062,15 @@ class MlsGroupManager(
         try {
             val secretTree = SecretTree(retained.encryptionSecret, retained.leafCount)
             val mlsMsg =
-                com.vitorpamplona.quartz.mls.framing.MlsMessage
+                com.vitorpamplona.mls.framing.MlsMessage
                     .decodeTls(TlsReader(messageBytes))
 
-            if (mlsMsg.wireFormat != com.vitorpamplona.quartz.mls.framing.WireFormat.PRIVATE_MESSAGE) {
+            if (mlsMsg.wireFormat != com.vitorpamplona.mls.framing.WireFormat.PRIVATE_MESSAGE) {
                 return null
             }
 
             val privMsg =
-                com.vitorpamplona.quartz.mls.framing.PrivateMessage
+                com.vitorpamplona.mls.framing.PrivateMessage
                     .decodeTls(TlsReader(mlsMsg.payload))
             if (privMsg.epoch != retained.epoch) return null
 

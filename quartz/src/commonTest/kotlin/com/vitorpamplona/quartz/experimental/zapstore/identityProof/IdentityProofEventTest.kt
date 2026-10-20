@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.experimental.zapstore.identityProof
 
+import com.vitorpamplona.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**
@@ -65,7 +65,7 @@ class InMemoryCordnCoordinatorStore(
  * The on-disk layout of a coordinator list.
  *
  * TLS-framed like everything else that gets persisted here, for the reason
- * [com.vitorpamplona.quartz.mls.messages.KeyPackageBundleCodec] gives: a
+ * [com.vitorpamplona.mls.messages.KeyPackageBundleCodec] gives: a
  * length-prefixed format cannot silently mis-parse a label containing whatever
  * separator a line-based one picked, and a version prefix means a future layout
  * change is refused rather than guessed at.

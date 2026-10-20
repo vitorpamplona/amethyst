@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.experimental.zapstore.identityProof
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.asset.SoftwareAssetEvent
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArray

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.groups
 
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

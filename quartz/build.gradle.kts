@@ -167,6 +167,9 @@ kotlin {
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
 
+                // RFC 9420 MLS engine under Marmot and cordn (vitorpamplona/mls-kmp)
+                api(libs.mls.kmp)
+
                 implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
                 implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }

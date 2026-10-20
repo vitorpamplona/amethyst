@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import com.vitorpamplona.geode.InProcessRelays
-import com.vitorpamplona.quartz.mls.tree.Credential
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

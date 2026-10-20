@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.cordn.spec02Envelopes
 
+import com.vitorpamplona.mls.group.DecryptedMessage
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.cordn.spec03Payloads.SealedPayload
-import com.vitorpamplona.quartz.mls.group.DecryptedMessage
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

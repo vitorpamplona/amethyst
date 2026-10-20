@@ -47,12 +47,12 @@ all match the spec byte-for-byte.
 ```
 cd quartz/tools/mdk-vector-gen
 cargo run --release --bin marmot-profile-gen \
-  > ../../src/commonTest/resources/mls/marmot-current-profile.json
+  > ../../src/commonTest/resources/marmot/marmot-current-profile.json
 ```
 
 ### `mdk-vector-gen` → `mdk-welcome.json`
 
-The MLS-core vector, unchanged in intent: it proves Amethyst can parse and
+The MLS-core vector, unchanged in intent: it proves the MLS engine can parse and
 decrypt a Welcome plus application messages authored by the Rust side. It
 builds a plain OpenMLS group with no Marmot profile state, which is exactly
 what makes it a clean test of the key schedule alone.
@@ -70,8 +70,13 @@ what makes it a clean test of the key schedule alone.
 
 ```
 cargo run --release --bin mdk-vector-gen \
-  > ../../src/commonTest/resources/mls/mdk-welcome.json
+  > ../../../../mls-kmp/mls/src/commonTest/resources/mls/mdk-welcome.json
 ```
+
+The engine moved to vitorpamplona/mls-kmp, and so did this vector and the
+`MdkWelcomeInteropTest` that reads it; the path above assumes `mls-kmp` is
+checked out beside this repo. The generator stays here, in one crate with
+`marmot-profile-gen`, because both must track the same MDK OpenMLS pin.
 
 ### `emit-joiner-kp`, `verify-amethyst`
 

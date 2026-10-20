@@ -27,7 +27,7 @@ package com.vitorpamplona.quartz.experimental.zapstore.identityProof
  * - RSA: SHA-256 with PKCS#1 v1.5 (what zsp signs with), falling back to RSASSA-PSS with SHA-256,
  *   MGF1-SHA-256 and a 32-byte salt (Go's `PSSSaltLengthEqualsHash`).
  * - EC (any named curve, P-256 in practice): ECDSA over SHA-256, the signature ASN.1 DER encoded.
- * - Ed25519: the message itself (no pre-hash), 64-byte signature, via Quartz's own [com.vitorpamplona.quartz.mls.crypto.Ed25519].
+ * - Ed25519: the message itself (no pre-hash), 64-byte signature, via Quartz's own [com.vitorpamplona.mls.crypto.Ed25519].
  *
  * Returns only [IdentityProofVerification.VALID], [IdentityProofVerification.BAD_SIGNATURE],
  * [IdentityProofVerification.BAD_CERTIFICATE] or [IdentityProofVerification.UNSUPPORTED_ALGORITHM].

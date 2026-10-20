@@ -18,15 +18,18 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(InternalMlsApi::class)
+
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.InternalMlsApi
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
 import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
 import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test

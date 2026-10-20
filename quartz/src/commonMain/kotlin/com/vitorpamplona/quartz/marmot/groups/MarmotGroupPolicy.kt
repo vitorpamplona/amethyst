@@ -20,19 +20,19 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.group.GroupView
+import com.vitorpamplona.mls.group.MlsExporterLabel
+import com.vitorpamplona.mls.group.MlsGroupPolicy
+import com.vitorpamplona.mls.group.PendingProposal
+import com.vitorpamplona.mls.messages.Proposal
+import com.vitorpamplona.mls.tree.Capabilities
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.group.GroupView
-import com.vitorpamplona.quartz.mls.group.MlsExporterLabel
-import com.vitorpamplona.quartz.mls.group.MlsGroupPolicy
-import com.vitorpamplona.quartz.mls.group.PendingProposal
-import com.vitorpamplona.quartz.mls.messages.Proposal
-import com.vitorpamplona.quartz.mls.tree.Capabilities
-import com.vitorpamplona.quartz.mls.tree.Extension
 
 /**
  * Marmot's authorization rules (MIP-01 and MIP-03), as an [MlsGroupPolicy].

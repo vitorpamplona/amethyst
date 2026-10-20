@@ -24,6 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupImage
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.CommitResult
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.marmot.GroupEventResult
 import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
 import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
@@ -76,9 +79,6 @@ import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishGate
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligation
 import com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.marmot.protocolCore.PublishOutcome
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.CommitResult
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

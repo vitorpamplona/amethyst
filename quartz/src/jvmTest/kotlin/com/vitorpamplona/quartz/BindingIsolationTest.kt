@@ -31,20 +31,19 @@ import kotlin.test.fail
  * They are two bindings of RFC 9420 onto two different delivery models, they do
  * not interoperate, and neither is a layer of the other. So a change to one must
  * never force a change to the other — which holds only while neither imports the
- * other, and while the engine under both imports neither.
+ * other.
  *
- * `mls/README.md` has stated the engine half of this as a grep a human is
- * supposed to run. A grep in a README is a wish. This is the same invariant as a
- * test, so the build says no instead of a reviewer noticing.
+ * The engine under both (`com.vitorpamplona.mls`) lives in its own library,
+ * vitorpamplona/mls-kmp, which does not depend on Quartz, so it cannot import
+ * either binding or Nostr at all. This test holds the half the module graph
+ * cannot: the two bindings, which share this module.
  *
  * ## Scope: shipped code only
  *
  * Main source sets, never tests, and deliberately: an interop test that drives
  * both profiles through one engine — `cordn/interop/BothCredentialProfilesTest`
- * is exactly that — is how we *demonstrate* the two cannot collide, and the
- * `mls/components` tests decode real Marmot payloads as fixtures because the
- * point of an interop test is to run against bytes that exist. A fixture is
- * data; an import in shipped code is a dependency.
+ * is exactly that — is how we *demonstrate* the two cannot collide. A fixture
+ * is data; an import in shipped code is a dependency.
  */
 class BindingIsolationTest {
     private val quartzRoot: File by lazy {
@@ -100,16 +99,6 @@ class BindingIsolationTest {
     }
 
     @Test
-    fun `the engine knows nothing about either binding`() {
-        // The reason Stage 1 of the cordn interop plan existed at all. An engine
-        // that imports a binding is an engine only that binding can use, and
-        // :quic was already reaching into it for X25519 before the split.
-        assertNoImports("mls", "com.vitorpamplona.quartz.marmot", "it is RFC 9420, not Marmot")
-        assertNoImports("mls", "com.vitorpamplona.quartz.cordn", "it is RFC 9420, not cordn")
-        assertNoImports("mls", "com.vitorpamplona.quartz.nip01Core", "it is RFC 9420, not Nostr")
-    }
-
-    @Test
     fun `cordn does not depend on Marmot`() {
         // Everything named Marmot*, Mip* or mip0* is the wrong layer for cordn:
         // a different delivery service, a different credential encoding, a
@@ -130,7 +119,7 @@ class BindingIsolationTest {
     fun `the check is actually looking at files`() {
         // Guards the failure mode that would make every assertion above pass
         // for the wrong reason: a bad root, a renamed package, an empty walk.
-        listOf("mls", "marmot", "cordn").forEach { pkg ->
+        listOf("marmot", "cordn").forEach { pkg ->
             val files =
                 sourceSets(pkg).flatMap {
                     it.walkTopDown().filter { f -> f.isFile && f.extension == "kt" }.toList()
@@ -139,7 +128,7 @@ class BindingIsolationTest {
         }
         // And that it can see an import at all, using one every binding has.
         assertTrue(
-            offendingImports("cordn", "com.vitorpamplona.quartz.mls").isNotEmpty(),
+            offendingImports("cordn", "com.vitorpamplona.mls").isNotEmpty(),
             "the import scanner found no mls imports in cordn, so it would not find a marmot one either",
         )
     }

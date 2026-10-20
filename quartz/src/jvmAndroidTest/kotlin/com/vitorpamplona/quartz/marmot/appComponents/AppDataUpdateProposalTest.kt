@@ -18,18 +18,19 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.mls.components
+@file:OptIn(InternalMlsApi::class)
 
-import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
-import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
-import com.vitorpamplona.quartz.marmot.appComponents.GroupLifecycleV1
-import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.Proposal
-import com.vitorpamplona.quartz.mls.messages.ProposalType
-import com.vitorpamplona.quartz.mls.tree.Capabilities
+package com.vitorpamplona.quartz.marmot.appComponents
+
+import com.vitorpamplona.mls.InternalMlsApi
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentData
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.Proposal
+import com.vitorpamplona.mls.messages.ProposalType
+import com.vitorpamplona.mls.tree.Capabilities
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
