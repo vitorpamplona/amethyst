@@ -35,8 +35,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
@@ -165,11 +166,14 @@ class AccountsTorStateConnector(
             accountsCache,
             scope,
             select = { account ->
-                flowOf(
-                    account.settings.remoteSignerBunkerUri
-                        ?.let { NostrConnectURI.parseBunker(it)?.relays }
-                        ?: emptySet(),
-                )
+                // Re-read on every settings save: a signer that moves (NIP-46 switch_relays)
+                // rewrites the saved address.
+                account.settings.saveable
+                    .map {
+                        account.settings.remoteSignerBunkerUri
+                            ?.let { NostrConnectURI.parseBunker(it)?.relays }
+                            ?: emptySet()
+                    }.distinctUntilChanged()
             },
             publish = { torEvaluatorFlow.signerRelays.tryEmit(it) },
         )

@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribe
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
 import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
@@ -53,6 +55,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -137,6 +140,74 @@ class BunkerLoginUseCaseTest {
                 assertEquals(user.pubKey, result.pubKeyHex)
                 assertEquals("0c7a1e", authorizer.connectSecret, "the pairing secret reaches the signer")
             } finally {
+                scope.cancel()
+                server.close()
+            }
+        }
+
+    /**
+     * NIP-46 auth challenge, the way a web signer answers a `connect` it wants the user to confirm on
+     * its page: `auth_url` first, then the real answer under the same request id once the user
+     * has. The login shows the page's address and carries on with the answer that follows.
+     */
+    @Test
+    fun authUrlChallengeIsShownAndTheLoginWaitsForTheRealAnswer() =
+        runBlocking(Dispatchers.Default) {
+            val server = NostrServer(EventStore(null))
+            val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+            val client =
+                NostrClient(
+                    object : WebsocketBuilder {
+                        override fun build(
+                            url: NormalizedRelayUrl,
+                            out: WebSocketListener,
+                        ) = if (url == relay) InProcessWebSocket(server, out) else NeverConnects
+                    },
+                    scope,
+                )
+
+            val user = NostrSignerInternal(KeyPair())
+            val bunkerTransport = NostrSignerInternal(KeyPair())
+            val processor = BunkerRequestProcessor(user, { setOf(relay) }, AllowAuthorizer())
+            val authPage = "https://signer.example/confirm?token=abc"
+
+            // A signer that challenges every connect before answering it.
+            val bunker =
+                client.subscribe(relay, Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(bunkerTransport.pubKey)))) { event ->
+                    if (event !is NostrConnectEvent) return@subscribe
+                    scope.launch {
+                        val app = event.talkingWith(bunkerTransport.pubKey)
+                        val request = event.decryptMessage(bunkerTransport) as? BunkerRequest ?: return@launch
+                        if (request is BunkerRequestConnect) {
+                            client.publish(NostrConnectEvent.create(BunkerResponse(request.id, BunkerResponse.RESULT_AUTH_URL, authPage), app, bunkerTransport), setOf(relay))
+                            // The user confirming on the page.
+                            delay(500)
+                        }
+                        client.publish(NostrConnectEvent.create(processor.process(app, request), app, bunkerTransport), setOf(relay))
+                    }
+                }
+
+            val prompts = RemoteSignerAuthPrompts()
+            val shown = CopyOnWriteArrayList<String>()
+            val watcher = scope.launch { prompts.pending.collect { pages -> pages.forEach { if (it.url !in shown) shown.add(it.url) } } }
+            try {
+                val result =
+                    withTimeout(20_000) {
+                        BunkerLoginUseCase.execute(
+                            "bunker://${bunkerTransport.pubKey}?relay=wss://relay.example.com",
+                            NostrSignerInternal(KeyPair()),
+                            client,
+                            authPrompts = prompts,
+                        )
+                    }
+                result.signer.closeSubscription()
+
+                assertEquals(user.pubKey, result.pubKeyHex)
+                assertEquals(emptyList(), prompts.pending.value, "the page comes down once its request is answered")
+                assertEquals(listOf(authPage), shown, "the page was shown while the signer waited")
+            } finally {
+                watcher.cancel()
+                bunker.close()
                 scope.cancel()
                 server.close()
             }

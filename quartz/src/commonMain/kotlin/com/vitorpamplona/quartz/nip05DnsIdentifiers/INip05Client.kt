@@ -36,6 +36,9 @@ interface INip05Client {
 
     /** The CLINK Offers pointer advertised in the NIP-05 `.well-known/nostr.json`, if any. */
     suspend fun loadClinkOffer(nip05: Nip05Id): String? = null
+
+    /** The NIP-46 remote signer the address's domain advertises for it, if any. */
+    suspend fun loadRemoteSigner(nip05: Nip05Id): Nip05RemoteSigner? = null
 }
 
 class EmptyNip05Client : INip05Client {

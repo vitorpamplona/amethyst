@@ -292,7 +292,7 @@ to relays and renders a feed.
 
 3. **NIP-55 alternative.**
    - **There is no Amber on iOS.** Plan replacements:
-     - Push users toward NIP-46 bunkers (Nsec.app, Amber-as-bunker,
+     - Push users toward NIP-46 bunkers (Amber-as-bunker,
        remote nostr-connect URIs).
      - URL-scheme handoff to native iOS signers (`nos2x-fhe`, `Nostore`)
        *if* they expose a sign API. Track separately.

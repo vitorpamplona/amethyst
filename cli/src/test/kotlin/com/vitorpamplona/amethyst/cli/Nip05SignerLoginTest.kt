@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.cli
+
+import com.fasterxml.jackson.databind.JsonNode
+import com.vitorpamplona.amethyst.cli.commands.LoginCommand
+import com.vitorpamplona.geode.KtorRelay
+import com.vitorpamplona.geode.RelayEngine
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Fetcher
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
+import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * `amy login name@domain` through the NIP-46 signer the domain advertises: a real signer on a real
+ * relay, and the domain's `nostr.json` served from memory through [LoginCommand.nip05ClientBuilder].
+ */
+class Nip05SignerLoginTest {
+    private object AllowAll : Nip46RequestAuthorizer {
+        override suspend fun isPaired(clientPubKey: HexKey) = true
+
+        override suspend fun onConnect(
+            clientPubKey: HexKey,
+            request: BunkerRequestConnect,
+        ) = Nip46ConnectDecision.Accept(request.secret ?: "ack")
+
+        override suspend fun authorize(
+            clientPubKey: HexKey,
+            request: BunkerRequest,
+        ) = true
+
+        override suspend fun onLogout(clientPubKey: HexKey) {}
+    }
+
+    private lateinit var relay: KtorRelay
+    private lateinit var scope: CoroutineScope
+    private val user = NostrSignerInternal(KeyPair())
+    private val previousBuilder = LoginCommand.nip05ClientBuilder
+
+    /** The legacy shape: the address's own key signs, on the test relay. */
+    private var nostrJson: String = ""
+
+    @BeforeTest
+    fun setup() {
+        relay = KtorRelay(RelayEngine(url = "ws://127.0.0.1:7785/".normalizeRelayUrl()), host = "127.0.0.1", port = 0).start()
+        scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+        val http = OkHttpClient.Builder().build()
+        val client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
+        val relays = setOf(RelayUrlNormalizer.normalize(relay.url))
+        val service = NostrConnectSignerService(client, user, BunkerRequestProcessor(user, { relays }, AllowAll), relays)
+        scope.launch(start = CoroutineStart.UNDISPATCHED) { service.run() }
+
+        nostrJson = """{"names":{"bob":"${user.pubKey}"},"nip46":{"${user.pubKey}":["${relay.url}"]}}"""
+        LoginCommand.nip05ClientBuilder = {
+            Nip05Client(
+                object : Nip05Fetcher {
+                    override suspend fun fetch(url: String) = if (url.endsWith("?name=bob")) nostrJson else throw IllegalStateException("404")
+                },
+            )
+        }
+    }
+
+    @AfterTest
+    fun teardown() {
+        LoginCommand.nip05ClientBuilder = previousBuilder
+        scope.cancel()
+        relay.stop()
+    }
+
+    private fun json(r: CliResult): JsonNode = Output.mapper.readTree(r.stdoutLines.last())
+
+    @Test
+    fun anAddressWithASignerLogsInAsTheAddressAndCanSign() {
+        val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--timeout", "20")
+        assertEquals(0, r.exit, r.stderr)
+        val out = json(r)
+        assertEquals(user.pubKey, out["hex"].asText())
+        assertFalse(out["read_only"].asBoolean())
+        assertEquals("bunker", out["signer"].asText())
+        assertEquals("bob@signer.example", out["nip05"].asText())
+    }
+
+    @Test
+    fun readOnlyKeepsTheOldLogin() {
+        val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--read-only")
+        assertEquals(0, r.exit, r.stderr)
+        val out = json(r)
+        assertEquals(user.pubKey, out["hex"].asText())
+        assertTrue(out["read_only"].asBoolean())
+    }
+
+    @Test
+    fun aSignerForAnotherAccountFailsTheLogin() {
+        // The domain names bob's key, but its signer signs for someone else.
+        val someoneElse = KeyPair().pubKey.toHexKey()
+        nostrJson = """{"names":{"bob":"$someoneElse"},"nip46":{"$someoneElse":["${relay.url}"]}}"""
+        val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--timeout", "10")
+        assertEquals(1, r.exit, r.stdout + r.stderr)
+        assertTrue(r.stdout.contains("signer_error") || r.stderr.contains("signer_error"), r.stdout + r.stderr)
+    }
+}

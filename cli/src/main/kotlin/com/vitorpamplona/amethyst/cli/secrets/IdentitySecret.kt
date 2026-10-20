@@ -96,4 +96,6 @@ data class BunkerFile(
     val remotePubkey: String,
     val relays: List<String>,
     val connectSecret: String? = null,
+    /** When the signer was last asked NIP-46 `switch_relays` (unix seconds); null before the first time. */
+    val relaysCheckedAt: Long? = null,
 )

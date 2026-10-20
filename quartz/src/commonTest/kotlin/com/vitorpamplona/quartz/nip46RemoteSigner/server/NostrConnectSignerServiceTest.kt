@@ -35,11 +35,15 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSwitchRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.SignerResult
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.SwitchRelaysResponse
+import com.vitorpamplona.quartz.nip46RemoteSigner.signer.SwitchRelaysResult
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
@@ -50,6 +54,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -473,6 +478,65 @@ class NostrConnectSignerServiceTest {
             assertEquals("sw", reply.id)
             assertEquals("null", reply.result)
             assertNull(reply.error)
+        }
+
+    @Test
+    fun switchRelaysMovesAPairedClientToTheSignersRelays() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val inbox = RelayUrlNormalizer.normalizeOrNull("wss://inbox.example.com")!!
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer(), switchRelays = { setOf(inbox) })
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequestSwitchRelays(id = "sw")))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse
+            assertEquals("sw", reply.id)
+            // What the client side reads back: the signer's relays.
+            val parsed = SwitchRelaysResponse.parse(reply)
+            assertIs<SignerResult.RequestAddressed.Successful<SwitchRelaysResult>>(parsed)
+            assertEquals(setOf(inbox), parsed.result.relays)
+        }
+
+    @Test
+    fun switchRelaysTellsAStrangerToStay() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            var asked = false
+            val processor =
+                BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer(paired = { false }), switchRelays = {
+                    asked = true
+                    setOf(relay)
+                })
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay))
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequestSwitchRelays(id = "sw")))
+
+            val reply = (client.published.single() as NostrConnectEvent).decryptMessage(clientSigner()) as BunkerResponse
+            assertEquals("null", reply.result)
+            assertFalse(asked, "the account's relays are not looked up for a stranger")
+        }
+
+    @Test
+    fun eachServicedRequestReportsTheRelayItCameIn() =
+        runTest {
+            val client = LoopbackClient()
+            val signer = serverSigner()
+            val seen = mutableListOf<Pair<String, NormalizedRelayUrl>>()
+            val processor = BunkerRequestProcessor(signer, { setOf(relay) }, AllowAuthorizer())
+            val service = NostrConnectSignerService(client, signer, processor, setOf(relay), onRequestSeenOn = { c, r -> seen.add(c to r) })
+
+            backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { service.run() }
+
+            client.deliver(request(BunkerRequestPing(id = "p")))
+
+            assertEquals(listOf(clientSigner().pubKey to relay), seen)
         }
 
     @Test

@@ -189,7 +189,7 @@ class NIP17Factory {
          * Max concurrent in-flight NIP-46 RPCs when building wraps via a
          * remote signer. Empirically a sweet spot — covers parallelism
          * speedup for 2–4 recipient sends without saturating typical
-         * bunker apps (nsec.app, Amber, Keychat) that serialize requests
+         * bunker apps (Amber, Keychat) that serialize requests
          * internally past ~10 in-flight.
          */
         const val BUNKER_PARALLELISM = 4

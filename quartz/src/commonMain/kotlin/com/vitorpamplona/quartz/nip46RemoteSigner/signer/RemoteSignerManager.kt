@@ -33,13 +33,15 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 class RemoteSignerManager(
     val timeout: Long = 65_000,
     val client: INostrClient,
     val signer: NostrSignerInternal,
     val remoteKey: String,
-    val relayList: Set<NormalizedRelayUrl>,
+    /** Where requests go. Changes when the signer moves (NIP-46 `switch_relays`). */
+    @Volatile var relayList: Set<NormalizedRelayUrl>,
     val maxRetries: Int = 1,
     /**
      * Invoked with the authorization URL when the bunker answers a request with
@@ -48,6 +50,11 @@ class RemoteSignerManager(
      * for the real response on the same request id.
      */
     val onAuthUrl: ((String) -> Unit)? = null,
+    /**
+     * Invoked with each URL passed to [onAuthUrl] once the request it challenged is over
+     * (answered, timed out or cancelled), so a caller showing it can take it down.
+     */
+    val onAuthUrlSettled: ((String) -> Unit)? = null,
 ) {
     private val pending = LargeCache<String, Channel<BunkerResponse>>()
 
@@ -102,7 +109,8 @@ class RemoteSignerManager(
         val channel = Channel<BunkerResponse>(capacity = Channel.UNLIMITED)
         pending.put(request.id, channel)
 
-        var announcedAuthUrl: String? = null
+        // Every page this request announced: a signer may send a new one with the retry.
+        val announcedAuthUrls = mutableListOf<String>()
         try {
             var attempt = 0
             while (true) {
@@ -115,8 +123,8 @@ class RemoteSignerManager(
                             if (r.result == BunkerResponse.RESULT_AUTH_URL) {
                                 // Surface the auth URL once and keep waiting for the real response.
                                 val url = r.error
-                                if (url != null && url != announcedAuthUrl) {
-                                    announcedAuthUrl = url
+                                if (url != null && url !in announcedAuthUrls) {
+                                    announcedAuthUrls.add(url)
                                     onAuthUrl?.invoke(url)
                                 }
                             } else {
@@ -138,6 +146,7 @@ class RemoteSignerManager(
         } finally {
             pending.remove(request.id)
             channel.close()
+            announcedAuthUrls.forEach { onAuthUrlSettled?.invoke(it) }
         }
     }
 }
