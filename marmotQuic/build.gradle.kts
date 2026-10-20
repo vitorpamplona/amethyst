@@ -36,7 +36,7 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.coroutines.core)
                 api(project(":quartz"))
-                implementation(project(":quic"))
+                implementation(libs.quic)
             }
         }
 

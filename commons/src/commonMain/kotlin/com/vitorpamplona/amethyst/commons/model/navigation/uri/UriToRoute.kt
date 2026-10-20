@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.navigation.uri
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
+import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -218,6 +219,7 @@ fun uriToRoute(
     relayGroupInviteRoute(uri)?.let { return it }
     concordInviteRoute(uri)?.let { return it }
     buzzInviteRoute(uri)?.let { return it }
+    cordnLinkRoute(uri)?.let { return it }
 
     val parsedNip19 = Nip19Parser.uriToRoute(uri)
     val nip19 = parsedNip19?.entity
@@ -371,6 +373,18 @@ private fun relayGroupInviteRoute(uri: String): Route? {
 private fun concordInviteRoute(uri: String): Route? =
     if (uri.contains("/invite/") && uri.contains('#') && ConcordActions.parseInviteLink(uri) != null) {
         Route.ConcordInvite(uri)
+    } else {
+        null
+    }
+
+/**
+ * A cordn group link: a bare `cordn1…` or a cordn.net share link
+ * (`https://cordn.net/chat/cordn1…?m=…`). Opens the link screen, which shows
+ * the coordinator and what joining would expose before anyone asks to join.
+ */
+private fun cordnLinkRoute(uri: String): Route? =
+    if (uri.contains("cordn1", ignoreCase = true) && CordnLinkInspection.looksLikeLink(uri)) {
+        Route.CordnLink(uri)
     } else {
         null
     }

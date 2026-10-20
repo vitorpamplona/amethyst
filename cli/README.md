@@ -255,9 +255,10 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | Command | What it does |
 |---|---|
 | `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
-| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair, connects, and asks the bunker which account it signs for (`get_public_key`): the account is that key, which for most signers is not PUBKEY (their transport key). Every signing/encryption call is delegated to the remote signer. A bunker that can't answer fails the login with `signer_error` and saves nothing. Percent-encoded relay params are decoded. |
 | `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
-| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
+| `amy login name@domain [--read-only] [--timeout SECS]` | Log in from a NIP-05 address. When the domain's `nostr.json` advertises a NIP-46 signer for it (`nip46`, either the `nip46[<pubkey>]` relays or the `name=_` announcement), amy logs in through that signer: it connects with no secret, or opens the signer's `nostrconnect_url` page with a `nostrconnect://` code (printed to stderr, like any page to approve). The signer's account must be the address's key, or the login fails with `signer_error`. Without a signer, or with `--read-only`, the address logs in read-only as before. Output adds `nip05`. |
+| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--perms P] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer that answers with its secret, ask it which account it signs for (`get_public_key`), then persist a bunker account for that key. `timeout` when no signer answers, `signer_error` when one answers but won't say. |
 
 The flows were verified against the real [`nak`](https://github.com/fiatjaf/nak)
 binary during development — `amy login bunker://` ⇄ `nak bunker`, `nak event
@@ -266,7 +267,9 @@ connect` (amy signs, event authored by nak's key). A scripted nak harness
 under `cli/tests/` is still pending, so treat these as dev-verified, not
 CI-pinned.
 
-Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
+Supports `connect` (secret-checked), `get_public_key`, `get_relays`, `sign_event`, `nip04_encrypt/decrypt`, `nip44_encrypt/decrypt`, `ping`, `switch_relays` and `logout`. When a bunker answers with an `auth_url` challenge, amy prints the authorization URL to stderr and keeps waiting for the real response (open the URL in a browser to authorize).
+
+A bunker account asks its signer `switch_relays` at most once a day, right after the connect handshake (waiting at most 10 s), and saves a new relay list into `identity.json` for the next run. `amy logoff` sends the signer `logout` before deleting the account (`--offline` skips it).
 
 Example (two terminals, shared `$HOME`):
 
@@ -516,7 +519,7 @@ HTTP endpoint. Reuses quartz's `Nip86Client` and the shared `Nip86Retriever`
 | `amy whoami` | Print the active account's name + npub. |
 | `amy use NAME` / `--clear` / no-arg | Pin / clear / inspect the active account. |
 | `amy status` | Who is signed in and what each account has saved. Per account: the profile name/NIP-05 amy holds locally, the npub, how it signs (local key — keychain/passphrase/plaintext — NIP-46 bunker, or read-only), and its local footprint: follows, NIP-65 relays (with the read/write split) and NIP-17 DM inbox, own events in the store, contacts, Marmot groups + messages, a Marmot key package, Concord communities, a Cashu wallet, DM sync cursor. Warns up front when **no account is selected** (a stale `current` pin, or several accounts and no pin) — the state that makes every other command fail — and reports the machine-level GrapeRank operator key. Whatever an account doesn't have is left out, so a fresh one is four lines. Built for the returning user: no keychain prompt, no network. (Event-store size and backend: `amy store stat`.) |
-| `amy logoff [--yes] [--keep-events]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
+| `amy logoff [--yes] [--keep-events] [--offline]` | Log off an account: delete its key + backend secret, the whole `~/.amy/<account>/` directory (run-state, aliases, cashu counters, Marmot state), the `current` pin if it points here, and the account's events (authored + `#p`-addressed) in the shared store. `--keep-events` leaves the shared cache alone. A NIP-46 bunker account first sends its signer `logout` (bounded to 15 s, best effort; `signer_notified` in the output, `notify_signer` in the dry run); `--offline` skips it, and a transport key that needs a passphrase with no TTY skips it with a warning. Destructive and irreversible — requires `--yes`; without it, prints a dry run and exits 2. |
 
 ### Social
 

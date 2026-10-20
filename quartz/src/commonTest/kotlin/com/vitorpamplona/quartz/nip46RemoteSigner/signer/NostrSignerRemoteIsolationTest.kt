@@ -115,7 +115,7 @@ private class TrackingNostrClient : INostrClient {
  * the correct kind + p-tag.
  */
 class NostrSignerRemoteIsolationTest {
-    private val bunkerRelay = NormalizedRelayUrl("wss://relay.nsec.app/")
+    private val bunkerRelay = NormalizedRelayUrl("wss://relay.signer.example/")
     private val generalRelay = NormalizedRelayUrl("wss://relay.damus.io/")
     private val validHex = "a".repeat(64)
 
@@ -214,8 +214,8 @@ class NostrSignerRemoteIsolationTest {
     @Test
     fun multipleRelaysAllIncludedInFilter() {
         val trackingClient = TrackingNostrClient()
-        val relay1 = NormalizedRelayUrl("wss://relay1.nsec.app/")
-        val relay2 = NormalizedRelayUrl("wss://relay2.nsec.app/")
+        val relay1 = NormalizedRelayUrl("wss://relay1.signer.example/")
+        val relay2 = NormalizedRelayUrl("wss://relay2.signer.example/")
 
         NostrSignerRemote(
             signer = NostrSignerInternal(KeyPair()),
@@ -271,7 +271,7 @@ class NostrSignerRemoteIsolationTest {
 
         val remote =
             NostrSignerRemote.fromBunkerUri(
-                "bunker://$validHex?relay=wss://relay.nsec.app",
+                "bunker://$validHex?relay=wss://relay.signer.example",
                 ephemeralSigner,
                 trackingClient,
             )
@@ -280,7 +280,7 @@ class NostrSignerRemoteIsolationTest {
         assertEquals(1, remote.relays.size)
         val parsedRelay = remote.relays.first()
         assertTrue(
-            parsedRelay.url.contains("relay.nsec.app"),
+            parsedRelay.url.contains("relay.signer.example"),
             "Parsed relay doesn't match URI: ${parsedRelay.url}",
         )
 

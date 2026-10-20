@@ -17,14 +17,14 @@ listing (including archived plans), open that folder's `README.md`.
 
 ## Totals
 
-**142 plans** across 10 folders:
+**137 plans** across 8 folders:
 
 | Status | Count |
 | ------ | ----: |
-| shipped (archived) | 122 |
+| shipped (archived) | 118 |
 | in-progress | 9 |
 | queued | 8 |
-| abandoned | 3 |
+| abandoned | 2 |
 
 ## By module
 
@@ -36,8 +36,6 @@ listing (including archived plans), open that folder's `README.md`.
 | quartz | 10 | 7 | 0 | 3 | 0 | [quartz/plans](quartz/plans/README.md) |
 | commons | 6 | 2 | 2 | 2 | 0 | [commons/plans](commons/plans/README.md) |
 | cli | 6 | 5 | 1 | 0 | 0 | [cli/plans](cli/plans/README.md) |
-| quic | 4 | 3 | 0 | 0 | 1 | [quic/plans](quic/plans/README.md) |
-| quic/interop | 1 | 1 | 0 | 0 | 0 | [quic/interop/plans](quic/interop/plans/README.md) |
 | geode | 5 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
 | docs (frozen) | 52 | 48 | 2 | 0 | 2 | [docs/plans](docs/plans/README.md) |
 
@@ -74,10 +72,9 @@ them under each folder's `archive/` via the per-module index above.
 | nestsClient | [cross-stack-interop-ci-gating](nestsClient/plans/2026-05-07-cross-stack-interop-ci-gating.md) | CI gating for the cross-stack interop suite; infra built then removed over wallclock cost, kept as a ready revisit target. |
 | nestsClient | [framespergroup-production-rerun](nestsClient/plans/2026-05-07-framespergroup-production-rerun.md) | Re-run the two-phone field tests to settle the framesPerGroup test-pin (5) vs default (50); needs prod-rig access. |
 
-### Abandoned (3)
+### Abandoned (2)
 
 | Module | Plan | Summary |
 | ------ | ---- | ------- |
-| quic | [congestion-control](quic/plans/2026-05-05-congestion-control.md) | NewReno congestion control parked indefinitely; the real concern was solved by the smaller `SendBuffer.bestEffort` fix instead. |
 | docs | [desktop-relay-config-single-source](docs/plans/2026-04-23-feat-desktop-relay-config-single-source-plan.md) | Single `DesktopRelayConfig` class never built; relay state landed as `DesktopRelayCategories`/`LocalRelayCategories` instead. |
 | docs | [macos-vlc-bundled-discovery](docs/plans/2026-05-18-fix-macos-vlc-bundled-discovery-plan.md) | macOS bundled-VLC `setenv` discovery fix; moot after VLC/VLCJ was removed entirely in the kdroidFilter migration. |

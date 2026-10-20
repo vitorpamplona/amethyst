@@ -50,11 +50,10 @@ suspend fun resolveUserHexOrNull(
     val trimmed = input.trim()
     if (trimmed.isEmpty()) return null
 
-    // First try the bech32/hex path — it's pure and synchronous.
-    decodePublicKeyAsHexOrNull(trimmed)?.let { return it }
-
-    // NIP-05: name@domain.tld (bare `@domain` = root "_" account).
-    if (looksLikeNip05(trimmed) && nip05Client != null) {
+    // NIP-05 first: name@domain.tld (bare `@domain` = root "_" account). An `@` is never bech32 or
+    // hex, and the key path's lenient hex fallback decodes an even-length address into bogus bytes.
+    if (looksLikeNip05(trimmed)) {
+        if (nip05Client == null) return null
         try {
             val id = Nip05Id.parse(trimmed) ?: return null
             return nip05Client.get(id)?.pubkey
@@ -63,7 +62,10 @@ suspend fun resolveUserHexOrNull(
             return null
         }
     }
-    return null
+
+    // The bech32/hex path is pure and synchronous. A pubkey is 32 bytes: anything shorter that the
+    // lenient hex fallback produced is not one.
+    return decodePublicKeyAsHexOrNull(trimmed)?.takeIf { it.length == 64 }
 }
 
 /**

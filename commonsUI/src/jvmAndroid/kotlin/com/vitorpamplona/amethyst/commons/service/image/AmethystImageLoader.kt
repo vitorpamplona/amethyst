@@ -144,6 +144,7 @@ class OkHttpFactory(
 }
 
 /** One [ConnectivityChecker] per context (there is one app context), not one per fetch. */
+@OptIn(ExperimentalCoilApi::class)
 internal class ConnectivityCheckers {
     @Volatile private var last: Pair<PlatformContext, ConnectivityChecker>? = null
 

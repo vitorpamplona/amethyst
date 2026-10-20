@@ -473,7 +473,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.ManageBlossomBlobs> { BlossomBlobManagerScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ImportBlossomBlobs> { BlossomImportScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditNestsServers> { NestsServersScreen(accountViewModel, nav) }
-    composableFromEnd<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.CordnLink> { CordnLinkScreen(accountViewModel, nav, it.link) }
     composableFromEnd<Route.CordnCoordinators> { CordnCoordinatorsScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnKeyPackages> { CordnKeyPackagesScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnHub> { CordnHubScreen(accountViewModel, nav) }

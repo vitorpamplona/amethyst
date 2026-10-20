@@ -302,6 +302,23 @@
                 <data android:pathPrefix="/invite/" />
             </intent-filter>
 
+            <!-- cordn group links, as cordn.net's "Share group link" and its QR codes hand them out:
+                 https://cordn.net/chat/cordn1…?m=<preview>. Only paths that start with a cordn1 ref,
+                 so cordn.net's other pages (news, profiles, settings) stay in the browser. Not
+                 autoVerify: we don't own the domain, so Android 12+ opens these here only once the
+                 user turns cordn.net on in Amethyst's "Open by default" settings; older Android
+                 asks which app to use. -->
+            <intent-filter android:label="Amethyst">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="cordn.net" />
+                <data android:host="www.cordn.net" />
+                <data android:host="cordn.relay.tools" />
+                <data android:pathPattern="/chat/cordn1.*" />
+            </intent-filter>
+
             <!-- Buzz workspace invite links: https://<team>.communities.buzz.xyz/invite/<token> -->
             <intent-filter android:label="Amethyst">
                 <action android:name="android.intent.action.VIEW" />

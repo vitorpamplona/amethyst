@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.text
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonArray
@@ -71,6 +72,49 @@ class Nip05Parser {
         } catch (_: Exception) {
             null
         }
+
+    /**
+     * The legacy NIP-46 shape, which nostr-tools (`queryBunkerProfile`) and the signers built on it
+     * read: `nip46` maps a pubkey to its relays, and the address's own key is the signer —
+     * `{"names":{"bob":"<pk>"},"nip46":{"<pk>":["wss://…"]}}`. Null when [pubkey] has no entry.
+     */
+    fun parseLegacyNip46Relays(
+        json: String,
+        pubkey: HexKey,
+    ): List<String>? =
+        try {
+            (Json.parseToJsonElement(json).jsonObject["nip46"] as? JsonObject)
+                ?.get(pubkey)
+                ?.let { it as? JsonArray }
+                ?.mapNotNull { (it as? JsonPrimitive)?.content }
+        } catch (_: Exception) {
+            null
+        }
+
+    /**
+     * The NIP-46 appendix shape, read from the domain's `?name=_` document: the signer app's key in
+     * `names._`, and `nip46` with its `relays` and optional `nostrconnect_url` —
+     * `{"names":{"_":"<signer>"},"nip46":{"relays":["wss://…"],"nostrconnect_url":"https://…/<nostrconnect>"}}`.
+     * Null unless both the key and a relay list are there.
+     */
+    fun parseNip46Announcement(json: String): Nip46Announcement? =
+        try {
+            val root = Json.parseToJsonElement(json).jsonObject
+            val signer = (root["names"] as? JsonObject)?.get("_")?.let { (it as? JsonPrimitive)?.content }
+            val nip46 = root["nip46"] as? JsonObject
+            val relays = (nip46?.get("relays") as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.content }
+            val url = (nip46?.get("nostrconnect_url") as? JsonPrimitive)?.content
+            if (signer.isNullOrEmpty() || relays.isNullOrEmpty()) null else Nip46Announcement(signer, relays, url)
+        } catch (_: Exception) {
+            null
+        }
+
+    /** What a domain's `?name=_` document announces about its NIP-46 signer. */
+    data class Nip46Announcement(
+        val signerPubKey: HexKey,
+        val relays: List<String>,
+        val nostrConnectUrl: String?,
+    )
 
     fun parseHexKeyAndRelays(
         nip05: Nip05Id,

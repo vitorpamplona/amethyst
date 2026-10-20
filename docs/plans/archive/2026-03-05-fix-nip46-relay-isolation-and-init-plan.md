@@ -39,7 +39,7 @@ Three bugs in the NIP-46 remote signer implementation on desktop prevent account
 After successful NIP-46 login, home feed shows global notes but no followed users, profile data, or DMs. `DesktopRelaySubscriptionsCoordinator.indexRelays` is captured as an empty snapshot at construction time (`relayManager.availableRelays.value` in `Main.kt:411`), so the metadata coordinator never fetches profiles/avatars.
 
 ### Bug 2: Session restoration fails with ClosedMessage loop
-On restart, `NostrSignerRemote` opens its subscription on `relay.nsec.app` via the shared `NostrClient`. This adds `relay.nsec.app` to the general relay pool. All other subscriptions (DMs, metadata, feeds) get sent there too. `relay.nsec.app` rejects non-NIP-46 subs with `ClosedMessage`. `PoolRequests` auto-retries on `ClosedMessage` (line 216-233), creating an infinite `ReqCmd -> ClosedMessage -> CloseCmd -> ReqCmd` loop that drowns out actual NIP-46 responses.
+On restart, `NostrSignerRemote` opens its subscription on `relay.signer.example` via the shared `NostrClient`. This adds `relay.signer.example` to the general relay pool. All other subscriptions (DMs, metadata, feeds) get sent there too. `relay.signer.example` rejects non-NIP-46 subs with `ClosedMessage`. `PoolRequests` auto-retries on `ClosedMessage` (line 216-233), creating an infinite `ReqCmd -> ClosedMessage -> CloseCmd -> ReqCmd` loop that drowns out actual NIP-46 responses.
 
 ### Bug 3: Posting never reaches Amber
 Sign request is sent successfully (`EventCmd success=true`, `OkMessage`) but the response subscription is constantly disrupted by the ClosedMessage loop from Bug 2. Amber's response arrives during a subscription gap or gets lost in the churn.
@@ -221,7 +221,7 @@ Remove `relayClient: INostrClient` parameter from both composables. The `Account
 
 **File:** `desktopApp/src/jvmMain/.../desktop/network/RelayConnectionManager.kt`
 
-Remove all `nsec.app`-specific logging from relay listener callbacks (lines 180-231). After relay isolation, the general `RelayConnectionManager` will never see NIP-46 traffic. Simplify each callback to just the `updateRelayStatus()` call.
+Remove all signer-relay-specific logging from relay listener callbacks (lines 180-231). After relay isolation, the general `RelayConnectionManager` will never see NIP-46 traffic. Simplify each callback to just the `updateRelayStatus()` call.
 
 ### Phase 2: Fix Relay Pool Initialization
 
@@ -309,7 +309,7 @@ val subscription = client.req(
 | `desktopApp/.../Main.kt` | Remove `relayManager.client` from AccountManager calls, defer coordinator start until `connectedRelays` non-empty | 1, 2 |
 | `desktopApp/.../ui/LoginScreen.kt` | Remove `relayClient` param | 1 |
 | `desktopApp/.../ui/auth/LoginCard.kt` | Remove `relayClient` param, use AccountManager directly | 1 |
-| `desktopApp/.../network/RelayConnectionManager.kt` | Remove NIP-46 `nsec.app` debug logging from all callbacks | 1 |
+| `desktopApp/.../network/RelayConnectionManager.kt` | Remove NIP-46 signer-relay debug logging from all callbacks | 1 |
 | `quartz/.../nip46RemoteSigner/signer/NostrSignerRemote.kt` | Add `since = TimeUtils.now() - 60` to subscription filter | 3 |
 
 ## Acceptance Criteria
@@ -317,7 +317,7 @@ val subscription = client.req(
 - [ ] After nostrconnect login, home feed shows followed users' notes with avatars and display names
 - [ ] After nostrconnect login, DMs load (NIP-17 decryption works via remote signer)
 - [ ] On app restart with saved bunker account, session restores without ClosedMessage loop
-- [ ] `relay.nsec.app` does NOT appear in general relay pool (only in dedicated NIP-46 client)
+- [ ] `relay.signer.example` does NOT appear in general relay pool (only in dedicated NIP-46 client)
 - [ ] Posting a note via remote signer succeeds — event signed and broadcast to general relays
 - [ ] Heartbeat ping works after session restore
 - [ ] Logout disconnects the dedicated NIP-46 client (no leaked WebSocket)
@@ -328,7 +328,7 @@ val subscription = client.req(
 
 | Edge Case | Handling |
 |-----------|----------|
-| Dedicated NIP-46 client can't connect to relay.nsec.app | `loadSavedAccount()` returns failure, falls back to login screen |
+| Dedicated NIP-46 client can't connect to relay.signer.example | `loadSavedAccount()` returns failure, falls back to login screen |
 | Ephemeral key lost from secure storage | `loadBunkerAccount()` returns `Result.failure("Ephemeral key not found")`, logout + login screen |
 | In-flight sign request during brief NIP-46 disconnect | 30s timeout in `RemoteSignerManager`, user retries |
 | User logs out with pending sign request | `closeSubscription()` cancels scope, `disconnectNip46Client()` cleans up |
@@ -343,7 +343,7 @@ val subscription = client.req(
 2. **Manual: Session restore** — close and reopen app, verify auto-login without ClosedMessage loop
 3. **Manual: Post a note** — compose + send, verify event reaches Amber and gets signed
 4. **Manual: Logout + re-login** — verify no leaked connections, clean state
-5. **Verify relay isolation** — check logs: `relay.nsec.app` should only appear in NIP-46 context, never in general relay status
+5. **Verify relay isolation** — check logs: `relay.signer.example` should only appear in NIP-46 context, never in general relay status
 6. **Manual: Startup timing** — verify coordinator starts after relays connect (no deadlock)
 7. **Manual: Rapid login/logout** — verify `Mutex` prevents double NIP-46 client creation
 
@@ -351,7 +351,7 @@ val subscription = client.req(
 
 | # | Question | Resolution |
 |---|----------|------------|
-| 1 | `auth_url` handling? | **Deferred.** Spec defines it, Amber doesn't use it, quartz doesn't handle it. Only nsec.app needs it. See improvement ticket. |
+| 1 | `auth_url` handling? | **Deferred.** Spec defines it, Amber doesn't use it, quartz doesn't handle it. Only web signers need it. See improvement ticket. |
 | 2 | `get_public_key` after connect? | **Deferred.** Already fully implemented in quartz (`NostrSignerRemote.getPublicKey()`). But `connect()` already returns pubkey — redundant for correctness. Nice-to-have security hardening. See improvement ticket. |
 | 3 | Update `since` on reconnect? | **Deferred.** `NostrClientStaticReq` re-sends exact same filter on reconnect. `FiltersChanged` intentionally ignores `since` changes. Static `since` with 60s buffer sufficient — request ID matching prevents stale response processing. See improvement ticket. |
 | 4 | `indexRelays` mutable? | **Resolved: `val` (immutable).** No `updateIndexRelays()` method. Must use nullable coordinator pattern — create inside `LaunchedEffect`. Phase 2 updated. |

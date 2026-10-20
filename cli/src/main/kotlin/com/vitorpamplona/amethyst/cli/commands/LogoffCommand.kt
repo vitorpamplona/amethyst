@@ -20,12 +20,17 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
+import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerLogoutUseCase
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import java.io.File
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * `amy logoff [--yes] [--keep-events]` — log off an account and clear its
@@ -56,6 +61,12 @@ import java.io.File
  * Reads the public key straight from `identity.json` (never unlocking the
  * private key), so it needs no passphrase and pops no keychain prompt.
  *
+ * A NIP-46 bunker account first tells its remote signer (`logout`, bounded,
+ * best effort) so the signer can drop the session; this is the one step that
+ * goes to the network and unlocks the transport key (never the user's key).
+ * `--offline` skips it, and a key that can't be unlocked without a prompt only
+ * skips it with a warning. The key is deleted either way, as NIP-46 requires.
+ *
  * Requires `--yes` to execute, because it is destructive and cannot be
  * undone — the private key is gone with the identity file. Without `--yes`
  * the command reports what it would delete and exits with code 2.
@@ -66,8 +77,11 @@ object LogoffCommand {
         |amy logoff — log off: delete this account's key, per-account state, and its
         |events in the shared store
         |
-        |  logoff [--yes] [--keep-events]   requires --yes; without it, prints a dry run
+        |  logoff [--yes] [--keep-events] [--offline]
+        |                                    requires --yes; without it, prints a dry run
         |                                    (exit 2). --keep-events skips the cache purge.
+        |                                    A bunker account tells its signer first
+        |                                    (NIP-46 logout); --offline skips that.
         """.trimMargin()
 
     suspend fun run(
@@ -80,6 +94,7 @@ object LogoffCommand {
         }
         val confirmed = tail.any { it == "--yes" || it == "-y" }
         val keepEvents = tail.any { it == "--keep-events" }
+        val offline = tail.any { it == "--offline" }
 
         // Read the on-disk identity metadata only — no SecretStore round-trip,
         // so we never prompt for a passphrase or trip a keychain dialog just
@@ -91,6 +106,7 @@ object LogoffCommand {
                     "no identity at ${dataDir.identityFile.absolutePath}; nothing to log off",
                 )
         val pubkey = idFile.pubKeyHex
+        val notifySigner = idFile.bunker != null && !offline
 
         val marker = File(DataDir.DEFAULT_ROOT, DataDir.CURRENT_MARKER_NAME)
         val isPinned = marker.isFile && marker.readText().trim() == dataDir.accountName
@@ -115,12 +131,16 @@ object LogoffCommand {
                     "pinned" to isPinned,
                     "events_to_purge" to eventCount,
                     "keep_events" to keepEvents,
+                    "notify_signer" to notifySigner,
                     "detail" to "pass --yes to permanently delete this account's key, local state" +
                         (if (keepEvents) "" else ", and cached events"),
                 ),
             )
             return 2
         }
+
+        // 0. A bunker account tells its signer, while the transport key still exists.
+        val signerNotified = if (notifySigner) tellSigner(dataDir) else null
 
         // 1. Purge the account's events from the shared store.
         var purged = 0
@@ -152,9 +172,33 @@ object LogoffCommand {
                 "removed_dir" to dataDir.root.absolutePath,
                 "dir_fully_removed" to dirFullyRemoved,
                 "cleared_pin" to clearedPin,
-            ),
+            ) + (if (signerNotified != null) mapOf("signer_notified" to signerNotified) else emptyMap()),
         )
         return 0
+    }
+
+    /**
+     * NIP-46 `logout` to the account's remote signer. Whether the signer acknowledged it; false when
+     * the transport key could not be unlocked here (a passphrase with no TTY) or the signer was silent.
+     */
+    private suspend fun tellSigner(dataDir: DataDir): Boolean {
+        val ctx =
+            try {
+                Context.open(dataDir)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("warning: could not unlock the bunker transport key; the remote signer was not told: ${e.message}")
+                return false
+            }
+        return ctx.use {
+            val bunker = it.identity.bunker ?: return@use false
+            it.client.connect()
+            val relays = bunker.relays.mapNotNull { url -> RelayUrlNormalizer.normalizeOrNull(url) }.toSet()
+            RemoteSignerLogoutUseCase
+                .execute(NostrConnectURI.buildBunker(bunker.remotePubkey, relays, secret = null), bunker.clientPrivKeyHex, it.client)
+                .also { acked -> if (!acked) System.err.println("warning: the remote signer did not acknowledge the logout") }
+        }
     }
 
     /**

@@ -77,11 +77,11 @@ of the protocol are covered; pick the one that matches who initiates.
 
 ```bash
 # Signer machine: host alice's key. Prints a bunker:// URI and blocks.
-amy --account alice bunker --relay wss://relay.nsec.app --secret s3cret
-#   → bunker://<alice-pubkey>?relay=wss://relay.nsec.app/&secret=s3cret
+amy --account alice bunker --relay wss://relay.nip46.com --secret s3cret
+#   → bunker://<alice-pubkey>?relay=wss://relay.nip46.com/&secret=s3cret
 
 # Client machine: log in through it (quote the URI — & is shell-special).
-amy --account remote login 'bunker://<alice-pubkey>?relay=wss://relay.nsec.app/&secret=s3cret'
+amy --account remote login 'bunker://<alice-pubkey>?relay=wss://relay.nip46.com/&secret=s3cret'
 
 # Every signing verb now round-trips to the signer:
 amy --account remote notes post "signed over NIP-46"   # authored by alice
@@ -91,7 +91,7 @@ amy --account remote notes post "signed over NIP-46"   # authored by alice
 
 ```bash
 # Client machine: print an offer and wait for a signer to connect.
-amy --account remote login --nostrconnect --relay wss://relay.nsec.app --timeout 120
+amy --account remote login --nostrconnect --relay wss://relay.nip46.com --timeout 120
 #   → nostrconnect://<client-pubkey>?relay=…&secret=…   (hand this to the signer)
 
 # Signer machine: ack the offer and start serving requests.

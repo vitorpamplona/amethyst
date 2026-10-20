@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.Now
 import com.vitorpamplona.amethyst.commons.model.nip38UserStatuses.nowPlaying.NowPlayingSettingsState
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46SignerState
+import com.vitorpamplona.amethyst.commons.model.nip46Signer.acceptsSignerTraffic
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcInfoCache
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.BookmarkListState
@@ -718,6 +719,7 @@ class Account(
             scope = scope,
             settings = settings,
             consent = nip46Consent,
+            relayAcceptsSignerTraffic = { cache.appHost.nip11Cache.acceptsSignerTraffic(it) },
         )
 
     val forwardKind0ToLocalRelay = ForwardKind0ToLocalRelayState(client, localRelayList, settings)

@@ -126,6 +126,11 @@ suspend fun post(client: NostrClient) {
 - **Resolve a user to a pubkey** from hex, npub, nprofile or a NIP-05 `name@domain`:
   `resolveUserHexOrNull(input, nip05Client)` in `nip05DnsIdentifiers`. Pass a
   `Nip05Client` to enable the NIP-05 lookup; without one only key formats resolve.
+- **Find a remote signer for an address**: `Nip05Client.loadRemoteSigner(Nip05Id)` reads the
+  domain's NIP-46 `nip46` field (both the `nip46[pubkey]` and the `name=_` shapes) into a
+  `Nip05RemoteSigner`; connect to its `signerPubKey` on its `relays`, and check the account the
+  signer reports against `userPubKey`. `NostrConnectURI.fillNostrConnectUrl` fills its
+  `nostrConnectUrl` page with a `nostrconnect://` code.
 - **Encode**: `ByteArray.toNpub()` and the other `to*` helpers in `nip19Bech32`.
 
 ## Running a relay

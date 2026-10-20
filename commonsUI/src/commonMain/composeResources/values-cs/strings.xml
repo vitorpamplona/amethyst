@@ -4604,6 +4604,7 @@
     <string name="kind_relay_discovery">Objevování relayí</string>
     <string name="kind_relay_monitor">Oznámení monitoru relayí</string>
     <string name="kind_relay_set">Sada relayů</string>
+    <string name="kind_release_artifact_set">Sada artefaktů vydání</string>
     <string name="kind_reports">Nahlášení</string>
     <string name="kind_reposts">Sdílení</string>
     <string name="kind_reposts_16">Reposty (16)</string>

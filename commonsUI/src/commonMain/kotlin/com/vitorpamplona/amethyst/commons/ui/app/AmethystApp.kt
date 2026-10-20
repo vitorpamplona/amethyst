@@ -45,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
 import com.vitorpamplona.amethyst.commons.account.ui.LoginOrSignupScreen
+import com.vitorpamplona.amethyst.commons.account.ui.RemoteSignerAuthPrompt
 import com.vitorpamplona.amethyst.commons.appupdate.ui.AppUpdateHost
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -139,6 +140,8 @@ fun AmethystApp(
                     }
                 }
             }
+            // Over the login screen and the logged-in app alike: a challenge can come from either.
+            RemoteSignerAuthPrompt(sessionManager.remoteSignerAuthPrompts)
         }
     }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.account
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
@@ -54,6 +55,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.NostrSignerWithClientTag
@@ -68,6 +70,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
@@ -136,6 +139,8 @@ class AccountCacheState(
     val trustNetworkClientBuilder: (() -> INostrClient)?,
     /** False on a metered network: background Web of Trust downloads then wait. */
     val canDownloadLargeFiles: () -> Boolean,
+    /** Where the pages NIP-46 signers send with `auth_url` challenges wait for the user. */
+    val remoteSignerAuthPrompts: RemoteSignerAuthPrompts? = null,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -158,6 +163,8 @@ class AccountCacheState(
         accountStoreHolders.getOrCreate(accountDir.absolutePath) {
             AppPreferenceStores(rootFilesDir = { accountDir.toOkioPath() })
         }
+
+    override fun loadedAccount(pubkey: HexKey): Account? = accounts.value[pubkey]
 
     override fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
@@ -206,6 +213,9 @@ class AccountCacheState(
                 existingAccounts
             } else {
                 toRemove.values.forEach { it.scope.cancel() }
+                // Like removeAccount: a cached signer would keep listening, and a reload would reuse
+                // it with callbacks bound to these settings instead of the reloaded ones.
+                toRemove.keys.forEach { remoteSigners.remove(it)?.closeSubscription() }
                 existingAccounts.minus(toRemove.keys)
             }
         }
@@ -252,8 +262,22 @@ class AccountCacheState(
         return remoteSigners.getOrPut(pubKey) {
             val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
             NostrSignerRemote
-                .fromBunkerUri(settings.remoteSignerBunkerUri!!, transport, client, clientMetadata = remoteSignerMetadata)
-                .also {
+                .fromBunkerUri(
+                    settings.remoteSignerBunkerUri!!,
+                    transport,
+                    client,
+                    clientMetadata = remoteSignerMetadata,
+                    onAuthUrl = remoteSignerAuthPrompts?.let { prompts -> { url -> prompts.report(url, pubKey) } },
+                    onAuthUrlSettled = remoteSignerAuthPrompts?.let { prompts -> { url -> prompts.settled(url, pubKey) } },
+                    // The signer moved (NIP-46 switch_relays): the saved address follows, so the
+                    // next launch, and the Tor routing of signer relays, reach it there.
+                    onRelaysSwitched = { relays ->
+                        NostrConnectURI.parseBunker(settings.remoteSignerBunkerUri!!)?.let { saved ->
+                            settings.remoteSignerBunkerUri = NostrConnectURI.buildBunker(saved.remoteSignerPubKey, relays, secret = null)
+                            settings.saveAccountSettings()
+                        }
+                    },
+                ).also {
                     // The user's key, not the transport key: self-encryption (private lists, drafts)
                     // keys off signer.pubKey.
                     it.bindUserPubkey(pubKey)
@@ -466,6 +490,24 @@ class AccountCacheState(
             accounts.update { existingAccounts ->
                 existingAccounts.plus(Pair(signer.pubKey, newAccount))
             }
+            if (signer is NostrSignerRemote) newAccount.scope.launch { askToSwitchRelays(signer) }
+        }
+    }
+
+    /**
+     * NIP-46 asks clients to send `switch_relays` as soon as they are connected, so a signer that
+     * moved can say so. Every launch and every login loads the account through here. A signer
+     * that predates the method rejects it, which changes nothing.
+     */
+    private suspend fun askToSwitchRelays(signer: NostrSignerRemote) {
+        try {
+            signer.switchRelays()?.let { relays ->
+                Log.i("AccountCacheState") { "Remote signer moved to ${relays.joinToString { it.url }}" }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.d("AccountCacheState", "Remote signer did not answer switch_relays", e)
         }
     }
 

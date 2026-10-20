@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">Relay-Entdeckung</string>
     <string name="kind_relay_monitor">Relay-Monitor-Ankündigung</string>
     <string name="kind_relay_set">Relay-Set</string>
+    <string name="kind_release_artifact_set">Versions-Artefaktsatz</string>
     <string name="kind_reports">Meldungen</string>
     <string name="kind_reposts">Reposts</string>
     <string name="kind_reposts_16">Reposts (16)</string>

@@ -45,7 +45,6 @@ locally and tick the box. If your change can't possibly affect them
 - [ ] Audio rooms manual — `cli/tests/nests/nests-interop.sh` (Amethyst ↔ nostrnests.com)
 - [ ] MoQ-lite hang-tier — `:nestsClient:jvmTest -DnestsHangInterop=true`
 - [ ] MoQ-lite browser-tier — `:nestsClient:jvmTest -DnestsBrowserInterop=true`
-- [ ] QUIC interop-runner — `quic/interop/run-matrix.sh -s {aioquic,picoquic,quic-go,quinn}`
 
 ## AI assistance
 

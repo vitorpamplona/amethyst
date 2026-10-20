@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
+import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals
@@ -140,6 +141,33 @@ class UriToRouteTest {
         // changes, a scanned bunker:// belongs in the scanner's explanation sheet, and the sheet
         // must not tell the user to take it somewhere that cannot accept it.
         assertNull(uriToRoute("bunker://$PUBKEY_HEX?relay=wss%3A%2F%2Frelay.example&secret=abc", account))
+    }
+
+    @Test
+    fun cordnShareLinksOpenTheLinkScreenCarryingTheLink() {
+        // What cordn.net's "Share group link" copies and puts in its QR code. The manifest sends
+        // these to MainActivity; the link screen shows who runs the group before anyone asks to join.
+        val ref = CordnGroupRef("6d1f0f6a-2a3e-4f2c", PUBKEY_HEX, listOf("wss://relay.example.com")).encode()
+        listOf(
+            "https://cordn.net/chat/$ref?m=eyJuYW1lIjoiVGVzdCJ9",
+            "https://www.cordn.net/chat/$ref/info",
+            ref,
+        ).forEach { link ->
+            assertEquals(link, Route.CordnLink(link), uriToRoute(link, account))
+        }
+    }
+
+    @Test
+    fun aBrokenCordnLinkStillOpensTheLinkScreen() {
+        // The screen says which rule the ref broke; a "not a nostr link" toast would not.
+        val link = "https://cordn.net/chat/cordn1qqqqqqq"
+        assertEquals(Route.CordnLink(link), uriToRoute(link, account))
+    }
+
+    @Test
+    fun otherCordnNetPagesAreNotCordnLinks() {
+        assertNull(uriToRoute("https://cordn.net/chat/news", account))
+        assertNull(uriToRoute("https://cordn.net/", account))
     }
 
     companion object {

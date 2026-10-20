@@ -653,7 +653,14 @@ sealed class Route {
 
     @Serializable object EditNestsServers : Route()
 
-    @Serializable object CordnLink : Route()
+    /**
+     * The "what does this cordn link point at" screen. [link] pre-fills it
+     * when the screen opens from a deep link or a scanned QR code: a bare
+     * `cordn1…` or a cordn.net share link, as `CordnLinkInspection` reads it.
+     */
+    @Serializable data class CordnLink(
+        val link: String? = null,
+    ) : Route()
 
     /**
      * One cordn room.

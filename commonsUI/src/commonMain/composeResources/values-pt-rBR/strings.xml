@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">Descoberta de Relays</string>
     <string name="kind_relay_monitor">Anúncio de Monitor de Relay</string>
     <string name="kind_relay_set">Conjunto de relays</string>
+    <string name="kind_release_artifact_set">Conjunto de artefatos de versão</string>
     <string name="kind_reports">Denúncias</string>
     <string name="kind_reposts">Repostagens</string>
     <string name="kind_reposts_16">Repostagens (16)</string>

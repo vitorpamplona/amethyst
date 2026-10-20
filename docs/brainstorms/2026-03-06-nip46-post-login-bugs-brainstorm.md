@@ -67,18 +67,18 @@ T+4s:  Relay responds to subId=1003 → maybe received, maybe closed again
 ```kotlin
 val nip46Client = getOrCreateNip46Client()  // creates NostrClient, calls connect() (no-op: no relays)
 val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, signer, nip46Client)
-remoteSigner.openSubscription()  // calls client.req(relays=[relay.nsec.app]) → lazy connect
+remoteSigner.openSubscription()  // calls client.req(relays=[relay.signer.example]) → lazy connect
 val remotePubkey = remoteSigner.connect()  // sends connect request, waits 30s for response
 ```
 
 **The problem:**
-- `openSubscription()` triggers `sendOrConnectAndSync(relay.nsec.app, REQ)` — async connection
+- `openSubscription()` triggers `sendOrConnectAndSync(relay.signer.example, REQ)` — async connection
 - `connect()` calls `launchWaitAndParse()` which sends EVENT immediately
-- If websocket to relay.nsec.app isn't established yet, EVENT send fails/queues
+- If websocket to relay.signer.example isn't established yet, EVENT send fails/queues
 - Even if EVENT sends, relay may not have processed REQ yet → response has no matching sub
 - 30s timeout expires
 
-**Also:** Only 1 relay (`wss://relay.nsec.app`) — single point of failure.
+**Also:** Only 1 relay (`wss://relay.signer.example`) — single point of failure.
 
 ## Approaches
 
@@ -184,6 +184,6 @@ Bump `RemoteSignerManager.timeout` to 60s, add logging to track relay connection
 ## Open Questions
 
 1. Does the contact list fail for nsec/key login too, or only bunker? (Would confirm if it's relay churn vs NIP-46 specific)
-2. Is `relay.nsec.app` reachable from this machine? (`websocat wss://relay.nsec.app` test)
+2. Is `relay.signer.example` reachable from this machine? (`websocat wss://relay.signer.example` test)
 3. Should the bunker URI's relays be used for content subscriptions too? (User's relays vs default relays)
-4. Should we add a fallback relay for NIP-46? (e.g., `wss://relay.damus.io` alongside `relay.nsec.app`)
+4. Should we add a fallback relay for NIP-46? (e.g., `wss://relay.damus.io` alongside `relay.signer.example`)

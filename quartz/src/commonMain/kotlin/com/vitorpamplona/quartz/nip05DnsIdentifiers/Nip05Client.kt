@@ -22,7 +22,11 @@ package com.vitorpamplona.quartz.nip05DnsIdentifiers
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
+import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.coroutines.CancellationException
 
 @Stable
@@ -81,6 +85,51 @@ class Nip05Client(
             null
         }
 
+    /**
+     * The NIP-46 signer [nip05]'s domain advertises. The legacy shape first, from the address's own
+     * document: it names the user's key as the signer. Then the spec's, from the domain's `_`
+     * document. Null for a `.bit` name, an unknown address, or a domain that advertises no signer.
+     */
+    override suspend fun loadRemoteSigner(nip05: Nip05Id): Nip05RemoteSigner? {
+        if (namecoinResolverBuilder != null && NamecoinNameResolver.isNamecoinIdentifier(nip05.toValue())) return null
+
+        val userJson = fetchNip05Data(nip05)
+        val user = runCatching { parser.parseHexKey(nip05, userJson) }.getOrNull()?.lowercase() ?: return null
+        if (!Hex.isHex(user) || user.length != 64) return null
+
+        parser.parseLegacyNip46Relays(userJson, user)?.let { urls ->
+            val relays = normalize(urls)
+            if (relays.isNotEmpty()) return Nip05RemoteSigner(userPubKey = user, signerPubKey = user, relays = relays)
+        }
+
+        val announcementJson =
+            try {
+                fetchNip05Data(Nip05Id("_", nip05.domain))
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                return null
+            }
+        val announcement = parser.parseNip46Announcement(announcementJson) ?: return null
+        val signer = announcement.signerPubKey.lowercase()
+        if (!Hex.isHex(signer) || signer.length != 64) return null
+        val relays = normalize(announcement.relays)
+        if (relays.isEmpty()) return null
+        return Nip05RemoteSigner(
+            userPubKey = user,
+            signerPubKey = signer,
+            relays = relays,
+            nostrConnectUrl = announcement.nostrConnectUrl?.takeIf { NostrConnectURI.isNostrConnectUrlTemplate(it) },
+        )
+    }
+
+    /** Normalized, deduplicated and capped: the document is the domain's to write. */
+    private fun normalize(urls: List<String>): Set<NormalizedRelayUrl> =
+        urls
+            .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+            .distinct()
+            .take(MAX_SIGNER_RELAYS)
+            .toSet()
+
     suspend fun fetchNip05Data(nip05: Nip05Id): String {
         val url = nip05.toUserUrl()
 
@@ -101,5 +150,10 @@ class Nip05Client(
             if (e is CancellationException) throw e
             throw IllegalStateException("Error Fetching JSON from the entire NIP-05 domain $domain at $url", e)
         }
+    }
+
+    private companion object {
+        /** More relays than a signer needs; a longer list is cut rather than dialed in full. */
+        const val MAX_SIGNER_RELAYS = 20
     }
 }

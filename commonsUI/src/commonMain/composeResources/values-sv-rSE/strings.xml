@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">Relay upptäckt</string>
     <string name="kind_relay_monitor">Relay övervakningsmeddelande</string>
     <string name="kind_relay_set">Reläuppsättning</string>
+    <string name="kind_release_artifact_set">Artefaktuppsättning för utgåva</string>
     <string name="kind_reports">Rapporter</string>
     <string name="kind_reposts">Återinlägg</string>
     <string name="kind_reposts_16">Återinlägg (16)</string>
