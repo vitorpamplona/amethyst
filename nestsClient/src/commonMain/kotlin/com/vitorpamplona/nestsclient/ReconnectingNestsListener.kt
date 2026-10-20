@@ -410,6 +410,13 @@ private class ReconnectingHandle(
                     // moq-rs propagates announces in < 200 ms.
                     var subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
 
+                    // [SubscribeHandle.broadcastEndedCount] when the previous
+                    // subscription on THIS listener attached; -1 before the
+                    // first. Counts are per session, so a listener swap starts
+                    // over and the replay guard keeps its watermark (the
+                    // publisher is usually unchanged across our own reconnect).
+                    var endedCountAtPreviousAttach = -1L
+
                     while (currentCoroutineContext().isActive) {
                         val handle =
                             try {
@@ -455,6 +462,8 @@ private class ReconnectingHandle(
                         subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
                         liveHandleRef.set(handle)
                         Log.d("NestRx") { "wrapper: handle attached id=${handle.subscribeId}, starting collect" }
+                        val endedCountBeforeThisHandle = endedCountAtPreviousAttach
+                        endedCountAtPreviousAttach = handle.broadcastEndedCount
                         var emitted = 0L
                         var droppedStale = 0L
                         var handleHighestGroup = -1L
@@ -463,6 +472,24 @@ private class ReconnectingHandle(
                             handle.objects.collect { obj ->
                                 if (firstObjectOnHandle) {
                                     firstObjectOnHandle = false
+                                    // The broadcast's announce went Ended since
+                                    // the previous subscription attached: that
+                                    // publisher session is gone, and its cached
+                                    // group with it, so this subscription is
+                                    // served by a new session. The new session
+                                    // may restart its groups at 0, which the
+                                    // heuristic below can't see when the old
+                                    // session sent a single group (watermark 0,
+                                    // the browser publisher in #4577). Checked
+                                    // here, not when the old flow ended: the
+                                    // relay's subscribe FIN usually lands just
+                                    // before the Ended announce, while a new
+                                    // session's first frame comes after the
+                                    // 100 ms re-subscribe backoff and that
+                                    // session's own announce.
+                                    if (endedCountBeforeThisHandle >= 0L && handle.broadcastEndedCount > endedCountBeforeThisHandle) {
+                                        priorGroupWatermark.set(-1L)
+                                    }
                                     // Publisher-side session restart detection.
                                     // The watermark assumes monotonic group
                                     // lineage across publisher sessions, which
