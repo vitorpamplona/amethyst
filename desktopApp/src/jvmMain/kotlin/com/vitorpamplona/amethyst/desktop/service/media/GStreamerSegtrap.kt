@@ -26,38 +26,27 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Turns off GStreamer's segfault trap before the Linux video engine starts GStreamer.
- *
- * While GStreamer runs a plugin's init in this process it swaps the process-wide SIGSEGV handler
- * for its own, which prints "Caught a segmentation fault while loading plugin file" and calls
- * `exit(-1)`. The JVM raises SIGSEGV on purpose (safepoint polls, implicit null checks) and
- * handles it itself, so any such fault on any thread inside that window ends the app, blaming
- * whichever plugin was loading. `libgstnvcodec` spends long enough initialising CUDA that the
- * first feed video lost that race on every start (#4566). composemediaplayer calls `gst_init`
- * without turning the trap off, so it is done here, on the `libgstreamer` it links against.
+ * While GStreamer runs a plugin's init in-process it traps SIGSEGV and calls `exit(-1)`, but the
+ * JVM raises SIGSEGV on purpose (safepoint polls, null checks), so the app died on start (#4566).
+ * composemediaplayer calls `gst_init` with the trap on; drop this once it turns the trap off itself.
  */
 internal object GStreamerSegtrap {
-    private const val TAG = "GStreamerSegtrap"
-
+    // Lazy, so a Linux launch that never plays a video never loads GStreamer.
     private val disabled: Unit by lazy {
         if (!PlatformInfo.host.isLinux) return@lazy
         try {
-            val gst = Native.load("libgstreamer-1.0.so.0", Gst::class.java)
-            gst.gst_segtrap_set_enabled(0)
-            Log.i(TAG) { "GStreamer segfault trap off: ${gst.gst_segtrap_is_enabled() == 0}" }
+            Native.load("libgstreamer-1.0.so.0", Gst::class.java).gst_segtrap_set_enabled(0)
         } catch (e: Throwable) {
             // No GStreamer: the video engine fails to start on its own and reports that.
-            Log.w(TAG, "Could not turn off the GStreamer segfault trap", e)
+            Log.w("GStreamerSegtrap", "Could not turn off the GStreamer segfault trap", e)
         }
     }
 
-    /** Idempotent; call before every video engine is created. */
+    /** Call before every video engine is created; the work runs once. */
     fun disable() = disabled
 
     @Suppress("FunctionName")
     private interface Gst : Library {
         fun gst_segtrap_set_enabled(enabled: Int)
-
-        fun gst_segtrap_is_enabled(): Int
     }
 }
