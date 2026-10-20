@@ -1,0 +1,9 @@
+/.corpus/
+/.cache/
+/results/*.json
+!/results/reference/
+rust/target/
+cpp/build/
+node/node_modules/
+python/.venv/
+go/jsonbench
