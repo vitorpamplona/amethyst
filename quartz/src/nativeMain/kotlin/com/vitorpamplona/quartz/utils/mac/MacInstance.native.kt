@@ -20,46 +20,45 @@
  */
 package com.vitorpamplona.quartz.utils.mac
 
-import io.github.andreypfau.kotlinx.crypto.HMac
-import io.github.andreypfau.kotlinx.crypto.Sha256
-import io.github.andreypfau.kotlinx.crypto.Sha512
+import com.vitorpamplona.quartz.utils.sha2.Sha256Digest
+import com.vitorpamplona.quartz.utils.sha2.Sha512Digest
 
 actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
-    private var nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+    private var hmac = Hmac(digestForAlgorithm(algorithm), key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
-        nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+        hmac = Hmac(digestForAlgorithm(algorithm), key)
     }
 
-    actual fun getMacLength(): Int = nativeHmac.macSize
+    actual fun getMacLength(): Int = hmac.macSize
 
     actual fun update(array: ByteArray) {
-        nativeHmac.update(array)
+        hmac.update(array)
     }
 
     actual fun update(byte: Byte) {
-        nativeHmac.update(byte)
+        hmac.update(byte)
     }
 
-    actual fun doFinal(): ByteArray = nativeHmac.digest()
+    actual fun doFinal(): ByteArray = hmac.doFinal()
 
     actual fun doFinal(
         output: ByteArray,
         offset: Int,
     ) {
-        nativeHmac.digest(output, offset)
+        hmac.doFinal(output, offset)
     }
 
     private fun digestForAlgorithm(algorithm: String) =
         when (algorithm) {
-            "HmacSHA256" -> Sha256()
-            "HmacSHA512" -> Sha512()
+            "HmacSHA256" -> Sha256Digest()
+            "HmacSHA512" -> Sha512Digest()
             else -> error("Algorithm is not yet supported.")
         }
 }

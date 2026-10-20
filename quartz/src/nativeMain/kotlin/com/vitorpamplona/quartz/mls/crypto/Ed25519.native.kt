@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.mls.crypto
 
 import com.vitorpamplona.quartz.utils.RandomInstance
-import io.github.andreypfau.kotlinx.crypto.Sha512
+import com.vitorpamplona.quartz.utils.sha2.Sha512Digest
 
 /**
  * Native Ed25519 implementation using pure Kotlin field arithmetic.
@@ -146,9 +146,8 @@ actual object Ed25519 {
         return packPoint(p)
     }
 
-    /** SHA-512 hash using the platform library. */
     private fun sha512(data: ByteArray): ByteArray {
-        val digest = Sha512()
+        val digest = Sha512Digest()
         digest.update(data)
         return digest.digest()
     }
