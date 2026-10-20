@@ -2911,6 +2911,16 @@
     <string name="contact_list_containing_label">Seznam sledenja (%1$d uporabnikov):</string>
     <string name="contact_list_screen_title">Seznam sledenih</string>
     <string name="contact_list_screen_title_with_count">Seznam sledenih (%1$d)</string>
+    <string name="relay_list_screen_title">Releji</string>
+    <string name="relay_list_show_all">Prikaži vse releje</string>
+    <string name="relay_list_add_to_my_relays">Dodaj v moje releje</string>
+    <string name="relay_list_in_my_relays">V mojih relejih</string>
+    <plurals name="relay_list_section_count">
+        <item quantity="one">%1$d rele</item>
+        <item quantity="two">%1$d releja</item>
+        <item quantity="few">%1$d releji</item>
+        <item quantity="other">%1$d relejev</item>
+    </plurals>
     <string name="follow_pack_creation_name_label">Ime paketa</string>
     <string name="follow_pack_copy_name_label">Novo ime paketa</string>
     <string name="follow_pack_creation_desc_label">Opis paketa</string>
