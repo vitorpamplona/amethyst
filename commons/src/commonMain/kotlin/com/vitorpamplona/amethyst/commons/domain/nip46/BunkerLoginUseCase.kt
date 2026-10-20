@@ -43,8 +43,8 @@ object BunkerLoginUseCase {
                 ephemeralSigner,
                 client,
                 clientMetadata = clientMetadata,
-                onAuthUrl = authPrompts?.let { it::report },
-                onAuthUrlSettled = authPrompts?.let { it::settled },
+                onAuthUrl = authPrompts?.let { prompts -> { url -> prompts.report(url) } },
+                onAuthUrlSettled = authPrompts?.let { prompts -> { url -> prompts.settled(url) } },
             )
         if (remoteSigner.relays.isEmpty()) throw Exception("The bunker address names no relay")
         remoteSigner.openSubscription()

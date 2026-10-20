@@ -161,10 +161,23 @@ class Nip46SignerSwitchRelaysTest {
                 // Told to move, not yet seen there: the app's relay stays in case the answer was lost.
                 assertEquals(setOf(appRelay.url), setup.clientStore.load(coordinate)?.relays)
 
-                // The app's next request arrives on the inbox relay: now the app relay goes.
+                // The app's next request arrives on the inbox relay and is answered: now the app relay
+                // is forgotten, without restarting the listener under that request.
                 withTimeout(20_000) { app.ping() }
-                withTimeout(10_000) { state.listeningRelays.first { it == setOf(inboxRelay) } }
-                assertEquals(emptySet(), setup.clientStore.load(coordinate)?.relays)
+                withTimeout(10_000) {
+                    while (setup.clientStore
+                            .load(coordinate)
+                            ?.relays
+                            ?.isNotEmpty() != false
+                    ) {
+                        delay(50)
+                    }
+                }
+                assertTrue(appRelay in state.listeningRelays.value, "dropped at the next launch, not mid-request")
+
+                // The next launch listens on the inbox relays only.
+                val relaunched = setup.signerState(setOf(inboxRelay))
+                withTimeout(10_000) { relaunched.listeningRelays.first { it == setOf(inboxRelay) } }
 
                 // Asked again (next launch), it is already home.
                 assertNull(withTimeout(20_000) { app.switchRelays() })

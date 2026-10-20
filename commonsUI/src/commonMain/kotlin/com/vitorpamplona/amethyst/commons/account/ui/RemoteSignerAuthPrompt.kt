@@ -33,9 +33,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_body
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_cannot_open
+import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_for_account
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_later
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_open
 import com.vitorpamplona.amethyst.commons.resources.remote_signer_auth_title
@@ -47,15 +49,22 @@ import kotlin.coroutines.cancellation.CancellationException
 /**
  * Shows a NIP-46 `auth_url` challenge, one at a time: what the signer asks, the page's address
  * so the user can check it is their signer's, and a button that opens it. The request that drew
- * the challenge keeps waiting meanwhile, so closing this does not cancel it.
+ * the challenge keeps waiting meanwhile, so closing this does not cancel it. Every loaded account's
+ * signer reports here, so the account it is for is named.
  */
 @Composable
 fun RemoteSignerAuthPrompt(prompts: RemoteSignerAuthPrompts) {
     val pending by prompts.pending.collectAsStateWithLifecycle()
-    val url = pending.firstOrNull() ?: return
+    val page = pending.firstOrNull() ?: return
+    val url = page.url
 
     val uriHandler = LocalUriHandler.current
-    var cannotOpen by remember(url) { mutableStateOf(false) }
+    var cannotOpen by remember(page) { mutableStateOf(false) }
+    // The account's own profile is cached once it is loaded; a login has no account yet.
+    val accountName =
+        remember(page.account) {
+            page.account?.let { LocalCache.getUserIfExists(it)?.toBestDisplayName() ?: it.take(8) }
+        }
 
     PromptDialog(
         symbol = MaterialSymbols.Key,
@@ -65,7 +74,7 @@ fun RemoteSignerAuthPrompt(prompts: RemoteSignerAuthPrompts) {
         onConfirm = {
             try {
                 uriHandler.openUri(url)
-                prompts.dismiss(url)
+                prompts.dismiss(page)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -75,9 +84,16 @@ fun RemoteSignerAuthPrompt(prompts: RemoteSignerAuthPrompts) {
             }
         },
         dismissText = stringRes(Res.string.remote_signer_auth_later),
-        onDismiss = { prompts.dismiss(url) },
+        onDismiss = { prompts.dismiss(page) },
         dismissible = true,
     ) {
+        if (accountName != null) {
+            Text(
+                text = stringRes(Res.string.remote_signer_auth_for_account, accountName),
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+            )
+        }
         SelectionContainer {
             Text(
                 text = url,

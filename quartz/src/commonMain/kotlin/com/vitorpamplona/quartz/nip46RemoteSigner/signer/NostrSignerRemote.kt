@@ -52,6 +52,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
@@ -86,6 +87,13 @@ class NostrSignerRemote(
     @Volatile
     var relays: Set<NormalizedRelayUrl> = relays
         private set
+
+    /**
+     * Relays a switch moved off, still listened on for one request window: a request sent there
+     * before the switch is answered there.
+     */
+    @Volatile
+    private var drainingRelays: Set<NormalizedRelayUrl> = emptySet()
 
     // The user's real identity, resolved from the bunker via `get_public_key`. The constructor
     // `signer` is the ephemeral NIP-46 TRANSPORT keypair, NOT the user — so until this is bound,
@@ -131,7 +139,7 @@ class NostrSignerRemote(
         DynamicSubscription(
             client,
             {
-                this.relays.associateWith {
+                (this.relays + drainingRelays).associateWith {
                     listOf(
                         Filter(
                             kinds = listOf(NostrConnectEvent.KIND),
@@ -330,10 +338,18 @@ class NostrSignerRemote(
         val newRelays = result.result.relays ?: return null
         if (newRelays == relays) return null
 
+        drainingRelays = relays - newRelays
         relays = newRelays
         manager.relayList = newRelays
         subscription.refresh()
         onRelaysSwitched?.invoke(newRelays)
+        if (drainingRelays.isNotEmpty()) {
+            scope.launch {
+                delay(manager.timeout + DRAIN_GRACE_MS)
+                drainingRelays = emptySet()
+                subscription.refresh()
+            }
+        }
         return newRelays
     }
 
@@ -444,6 +460,9 @@ class NostrSignerRemote(
         }
 
     companion object {
+        /** Past a request's own timeout, for an answer already on its way when the window closes. */
+        private const val DRAIN_GRACE_MS = 5_000L
+
         fun fromBunkerUri(
             bunkerUri: String,
             signer: NostrSignerInternal,

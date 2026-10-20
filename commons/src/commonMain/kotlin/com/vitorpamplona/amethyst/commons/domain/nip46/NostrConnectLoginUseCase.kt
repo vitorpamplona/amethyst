@@ -126,8 +126,8 @@ object NostrConnectLoginUseCase {
                 remotePubkey = connectData.signerPubkey,
                 relays = uriData.relays,
                 client = client,
-                onAuthUrl = authPrompts?.let { it::report },
-                onAuthUrlSettled = authPrompts?.let { it::settled },
+                onAuthUrl = authPrompts?.let { prompts -> { url -> prompts.report(url) } },
+                onAuthUrlSettled = authPrompts?.let { prompts -> { url -> prompts.settled(url) } },
             )
         remoteSigner.openSubscription()
         Log.d(TAG) { "Signer ${connectData.signerPubkey.take(8)} answered the code; asking it for the account's key" }

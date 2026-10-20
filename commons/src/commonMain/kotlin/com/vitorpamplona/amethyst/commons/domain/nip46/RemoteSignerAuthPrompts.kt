@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.domain.nip46
 
+import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.isWebLink
+import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,27 +42,65 @@ import kotlinx.coroutines.flow.update
  * user opens or closes it, or when the request it belongs to is over ([settled]).
  */
 class RemoteSignerAuthPrompts {
-    private val _pending = MutableStateFlow<List<String>>(emptyList())
+    /** A page to show, and the account whose signer asked (null during a login, before there is one). */
+    data class AuthPage(
+        val url: String,
+        val account: HexKey?,
+    )
 
-    /** The addresses waiting to be shown, oldest first. */
-    val pending: StateFlow<List<String>> = _pending.asStateFlow()
+    private val lock = KmpLock()
 
-    /** A signer's `onAuthUrl`. Repeats and anything that is not a web page are dropped. */
-    fun report(url: String) {
+    /** Requests still waiting on each page: signers reuse one page for several, and each settles its own. */
+    private val waiting = mutableMapOf<AuthPage, Int>()
+
+    private val _pending = MutableStateFlow<List<AuthPage>>(emptyList())
+
+    /** The pages waiting to be shown, oldest first. */
+    val pending: StateFlow<List<AuthPage>> = _pending.asStateFlow()
+
+    /**
+     * A signer's `onAuthUrl`, for the signer of [account]. Anything that is not a web page is
+     * dropped; a page already up is not shown twice.
+     */
+    fun report(
+        url: String,
+        account: HexKey? = null,
+    ) {
         if (!isWebPage(url)) {
             // Not the address itself: it can carry a session token.
             Log.w(TAG) { "Ignored a remote signer auth_url that is not an http(s) page" }
             return
         }
-        // Past the cap the oldest goes: the newest is the one a signer is waiting on now.
-        _pending.update { if (url in it) it else (it + url).takeLast(MAX_PENDING) }
+        val page = AuthPage(url, account)
+        lock.withLock {
+            waiting[page] = (waiting[page] ?: 0) + 1
+            // Past the cap the oldest goes: the newest is the one a signer is waiting on now.
+            _pending.update { if (page in it) it else (it + page).takeLast(MAX_PENDING) }
+        }
     }
 
-    /** The user opened or closed the prompt for [url]. */
-    fun dismiss(url: String) = _pending.update { it - url }
+    /** The user opened or closed [page]. Requests still waiting on it stay counted. */
+    fun dismiss(page: AuthPage) = _pending.update { it - page }
 
-    /** A signer's `onAuthUrlSettled`: the request [url] challenged was answered, timed out or cancelled. */
-    fun settled(url: String) = dismiss(url)
+    /**
+     * A signer's `onAuthUrlSettled`: a request [url] challenged was answered, timed out or was
+     * cancelled. The page comes down once no request is waiting on it.
+     */
+    fun settled(
+        url: String,
+        account: HexKey? = null,
+    ) {
+        val page = AuthPage(url, account)
+        lock.withLock {
+            val left = (waiting[page] ?: 1) - 1
+            if (left > 0) {
+                waiting[page] = left
+            } else {
+                waiting.remove(page)
+                _pending.update { it - page }
+            }
+        }
+    }
 
     companion object {
         private const val TAG = "RemoteSignerAuthPrompts"

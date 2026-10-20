@@ -56,8 +56,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -294,7 +297,11 @@ class Nip46SignerState(
         val inbox = inboxRelays.value
         if (session.isEmpty() || inbox.containsAll(session)) return null
 
-        val open = inbox.filter { relayAcceptsSignerTraffic(it) }.toSet()
+        // In parallel: each NIP-11 lookup may wait seconds, and the client's request timeout runs meanwhile.
+        val open =
+            coroutineScope {
+                inbox.map { relay -> async { relay.takeIf { relayAcceptsSignerTraffic(it) } } }.awaitAll()
+            }.filterNotNull().toSet()
         if (open.isEmpty()) return null
         movingClients.update { it + clientPubKey }
         return open
@@ -314,8 +321,12 @@ class Nip46SignerState(
 
     /**
      * A request from an app told to move that arrives on an inbox relay outside its own set proves
-     * it moved: only then do its relays leave the listen set. Dropping them on the answer alone would
+     * it moved: only then are its own relays forgotten. Dropping them on the answer alone would
      * strand an app that never got it, since it would keep asking where we no longer listen.
+     *
+     * Forgotten in the store only: the listen set follows the next time it is rebuilt from the store
+     * (a launch, or an app paired or forgotten). Rebuilding it here would restart the listener under
+     * the very request that proved the move, and cancel it.
      */
     private fun onRequestSeenOn(
         clientPubKey: HexKey,
@@ -323,14 +334,13 @@ class Nip46SignerState(
     ) {
         if (clientPubKey !in movingClients.value || relay !in inboxRelays.value) return
         scope.launch(Dispatchers.IO) {
+            val session = sessionRelays(clientPubKey)
+            if (session.isEmpty() || relay in session) return@launch
+            movingClients.update { it - clientPubKey }
             val coordinate = authorizer.coordinateFor(clientPubKey)
             val info = clientStore.load(coordinate) ?: return@launch
-            val session = info.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
-            if (relay in session) return@launch
-            movingClients.update { it - clientPubKey }
             clientStore.store(coordinate, info.copy(relays = emptySet()))
-            refreshExtraRelaysFromStore()
-            Log.d("NIP46Signer") { "${clientPubKey.take(8)}… moved to the inbox relays; no longer listening on ${session.joinToString { it.url }}" }
+            Log.d("NIP46Signer") { "${clientPubKey.take(8)}… moved to the inbox relays; ${session.joinToString { it.url }} go at the next launch" }
         }
     }
 

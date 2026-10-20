@@ -4669,6 +4669,7 @@
     <string name="remote_signer_auth_body">Your remote signer needs you to sign in or approve on its page. Amethyst keeps waiting and goes on once you do.</string>
     <string name="remote_signer_auth_open">Open page</string>
     <string name="remote_signer_auth_later">Not now</string>
+    <string name="remote_signer_auth_for_account">For %1$s</string>
     <string name="remote_signer_auth_cannot_open">No app here can open this page. Copy the address into a browser.</string>
     <string name="remote_signer_relay_apply">Use relay</string>
     <string name="remote_signer_default_relays">Use the default relays</string>

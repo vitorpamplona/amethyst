@@ -164,6 +164,8 @@ class AccountCacheState(
             AppPreferenceStores(rootFilesDir = { accountDir.toOkioPath() })
         }
 
+    override fun loadedAccount(pubkey: HexKey): Account? = accounts.value[pubkey]
+
     override fun removeAccount(pubkey: HexKey) {
         accounts.update { existingAccounts ->
             val oldValue = existingAccounts[pubkey]
@@ -211,6 +213,9 @@ class AccountCacheState(
                 existingAccounts
             } else {
                 toRemove.values.forEach { it.scope.cancel() }
+                // Like removeAccount: a cached signer would keep listening, and a reload would reuse
+                // it with callbacks bound to these settings instead of the reloaded ones.
+                toRemove.keys.forEach { remoteSigners.remove(it)?.closeSubscription() }
                 existingAccounts.minus(toRemove.keys)
             }
         }
@@ -262,8 +267,8 @@ class AccountCacheState(
                     transport,
                     client,
                     clientMetadata = remoteSignerMetadata,
-                    onAuthUrl = remoteSignerAuthPrompts?.let { it::report },
-                    onAuthUrlSettled = remoteSignerAuthPrompts?.let { it::settled },
+                    onAuthUrl = remoteSignerAuthPrompts?.let { prompts -> { url -> prompts.report(url, pubKey) } },
+                    onAuthUrlSettled = remoteSignerAuthPrompts?.let { prompts -> { url -> prompts.settled(url, pubKey) } },
                     // The signer moved (NIP-46 switch_relays): the saved address follows, so the
                     // next launch, and the Tor routing of signer relays, reach it there.
                     onRelaysSwitched = { relays ->

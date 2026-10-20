@@ -529,9 +529,9 @@ class AccountSessionManager(
         hex: HexKey,
         npub: String,
     ) {
-        // The loaded account's settings first: a relay switch may not have been saved yet.
+        // The loaded account's settings first, on screen or not: a relay switch may not be saved yet.
         val settings =
-            loggedInAccount()?.settings?.takeIf { it.keyPair.pubKey.toHexKey() == hex }
+            accountsCache.loadedAccount(hex)?.settings
                 ?: try {
                     localPreferences.loadAccountConfigFromEncryptedStorage(npub)
                 } catch (e: Exception) {

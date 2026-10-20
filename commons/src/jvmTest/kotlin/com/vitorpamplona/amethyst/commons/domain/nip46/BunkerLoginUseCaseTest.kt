@@ -189,7 +189,7 @@ class BunkerLoginUseCaseTest {
 
             val prompts = RemoteSignerAuthPrompts()
             val shown = CopyOnWriteArrayList<String>()
-            val watcher = scope.launch { prompts.pending.collect { pages -> pages.forEach { if (it !in shown) shown.add(it) } } }
+            val watcher = scope.launch { prompts.pending.collect { pages -> pages.forEach { if (it.url !in shown) shown.add(it.url) } } }
             try {
                 val result =
                     withTimeout(20_000) {

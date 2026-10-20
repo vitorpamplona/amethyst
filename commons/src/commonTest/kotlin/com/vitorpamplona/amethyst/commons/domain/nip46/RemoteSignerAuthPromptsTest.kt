@@ -43,6 +43,8 @@ class RemoteSignerAuthPromptsTest {
         assertFalse(RemoteSignerAuthPrompts.isWebPage(""))
     }
 
+    private fun RemoteSignerAuthPrompts.urls() = pending.value.map { it.url }
+
     @Test
     fun queuesEachPageOnceUntilDismissed() {
         val prompts = RemoteSignerAuthPrompts()
@@ -50,10 +52,10 @@ class RemoteSignerAuthPromptsTest {
         prompts.report("javascript:alert(1)")
         prompts.report("https://signer.example/a")
         prompts.report("https://signer.example/b")
-        assertEquals(listOf("https://signer.example/a", "https://signer.example/b"), prompts.pending.value)
+        assertEquals(listOf("https://signer.example/a", "https://signer.example/b"), prompts.urls())
 
-        prompts.dismiss("https://signer.example/a")
-        assertEquals(listOf("https://signer.example/b"), prompts.pending.value)
+        prompts.dismiss(prompts.pending.value.first())
+        assertEquals(listOf("https://signer.example/b"), prompts.urls())
     }
 
     @Test
@@ -62,8 +64,8 @@ class RemoteSignerAuthPromptsTest {
         repeat(20) { prompts.report("https://signer.example/$it") }
         assertEquals(5, prompts.pending.value.size)
         // The newest stays: it is the one a request is still waiting on.
-        assertEquals("https://signer.example/19", prompts.pending.value.last())
-        assertEquals("https://signer.example/15", prompts.pending.value.first())
+        assertEquals("https://signer.example/19", prompts.urls().last())
+        assertEquals("https://signer.example/15", prompts.urls().first())
     }
 
     @Test
@@ -72,6 +74,31 @@ class RemoteSignerAuthPromptsTest {
         prompts.report("https://signer.example/a")
         prompts.report("https://signer.example/b")
         prompts.settled("https://signer.example/a")
-        assertEquals(listOf("https://signer.example/b"), prompts.pending.value)
+        assertEquals(listOf("https://signer.example/b"), prompts.urls())
+    }
+
+    @Test
+    fun aPageSharedByTwoRequestsStaysUntilBothAreOver() {
+        val prompts = RemoteSignerAuthPrompts()
+        // One approval page for the session: a decrypt and a sign both wait on it.
+        prompts.report("https://signer.example/session")
+        prompts.report("https://signer.example/session")
+        assertEquals(1, prompts.pending.value.size)
+
+        prompts.settled("https://signer.example/session")
+        assertEquals(listOf("https://signer.example/session"), prompts.urls(), "the sign is still waiting")
+        prompts.settled("https://signer.example/session")
+        assertEquals(emptyList(), prompts.urls())
+    }
+
+    @Test
+    fun eachAccountsPageIsItsOwn() {
+        val prompts = RemoteSignerAuthPrompts()
+        prompts.report("https://signer.example/a", account = "alice")
+        prompts.report("https://signer.example/a", account = "bob")
+        assertEquals(listOf("alice", "bob"), prompts.pending.value.map { it.account })
+
+        prompts.settled("https://signer.example/a", account = "alice")
+        assertEquals(listOf("bob"), prompts.pending.value.map { it.account })
     }
 }

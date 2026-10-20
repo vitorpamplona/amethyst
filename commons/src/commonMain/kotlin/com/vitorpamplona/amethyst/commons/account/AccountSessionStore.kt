@@ -70,6 +70,9 @@ interface AccountCache {
     /** Drops the in-memory copy. */
     fun removeAccount(pubkey: HexKey)
 
+    /** The in-memory copy of [pubkey]'s account, when it is loaded (on screen or in the background). */
+    fun loadedAccount(pubkey: HexKey): Account? = null
+
     /** Deletes the account's on-disk directory, for a permanent deletion. */
     fun deleteAccountFiles(pubkey: HexKey)
 }

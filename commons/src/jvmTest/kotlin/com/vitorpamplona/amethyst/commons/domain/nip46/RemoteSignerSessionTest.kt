@@ -49,7 +49,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -182,6 +184,49 @@ class RemoteSignerSessionTest {
                 assertTrue(switched.isEmpty())
             } finally {
                 signer.closeSubscription()
+                net.close()
+            }
+        }
+
+    /**
+     * A request sent before the switch is still in flight on the old relay when the signer moves
+     * the session: its answer, which comes back on the old relay, still arrives.
+     */
+    @Test
+    fun anAnswerAlreadyOnItsWayOverTheOldRelayStillArrives() =
+        runBlocking(Dispatchers.Default) {
+            val net = relays(relayA, relayB)
+            val bunkerTransport = NostrSignerInternal(KeyPair())
+            val processor = BunkerRequestProcessor(NostrSignerInternal(KeyPair()), { setOf(relayB) }, AllowAuthorizer())
+
+            val handle =
+                net.client.subscribe(relayA, Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(bunkerTransport.pubKey)))) { event ->
+                    if (event !is NostrConnectEvent) return@subscribe
+                    net.scope.launch {
+                        val app = event.talkingWith(bunkerTransport.pubKey)
+                        val request = event.decryptMessage(bunkerTransport) as? BunkerRequest ?: return@launch
+                        val response =
+                            if (request is BunkerRequestSwitchRelays) {
+                                BunkerResponse(request.id, """["${relayB.url}"]""", null)
+                            } else {
+                                // Slow: answered after the switch has moved the client.
+                                delay(1_500)
+                                processor.process(app, request)
+                            }
+                        net.client.publish(NostrConnectEvent.create(response, app, bunkerTransport), setOf(relayA))
+                    }
+                }
+
+            val signer = NostrSignerRemote(NostrSignerInternal(KeyPair()), bunkerTransport.pubKey, setOf(relayA), net.client)
+            try {
+                val ping = net.scope.async { signer.ping() }
+                delay(300)
+                assertEquals(setOf(relayB), withTimeout(20_000) { signer.switchRelays() })
+                val answered = withTimeout(20_000) { ping.await() }
+                assertTrue(answered.isNotEmpty(), "answered over the relay the switch moved off")
+            } finally {
+                signer.closeSubscription()
+                handle.close()
                 net.close()
             }
         }
