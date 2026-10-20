@@ -502,9 +502,6 @@ object ConcordCommunityList {
         return ConcordListFragments.mergeDocs(legacy, set.doc)
     }
 
-    /** Decodes an internal document (a merged fragment set, or a legacy 13302 plaintext). */
-    fun decodeDocument(doc: JsonObject): ConcordCommunityListDocument = decodeDocument(ConcordJson.instance.encodeToString(JsonObject.serializer(), doc))
-
     /**
      * Parses the decrypted plaintext JSON document back into live entries, or empty on
      * failure. An entry is live unless a tombstone for the same community removed it
@@ -525,7 +522,20 @@ object ConcordCommunityList {
      */
     fun decodeDocument(json: String): ConcordCommunityListDocument =
         try {
-            val root = ConcordJson.instance.parseToJsonElement(json).jsonObject
+            decodeDocument(ConcordJson.instance.parseToJsonElement(json).jsonObject)
+        } catch (_: Exception) {
+            ConcordCommunityListDocument(emptyList())
+        }
+
+    /**
+     * [decodeDocument] for a document already parsed: a merged fragment set or a legacy 13302
+     * plaintext. Entries are first keyed by the id their join material names
+     * ([ConcordListFragments.keyByMaterialId]), so a community is listed once and its tombstone
+     * reaches every copy of it.
+     */
+    fun decodeDocument(doc: JsonObject): ConcordCommunityListDocument =
+        try {
+            val root = ConcordListFragments.keyByMaterialId(doc)
             val tombstones = (root["tombstones"] as? JsonArray)?.mapNotNull { it as? JsonObject } ?: emptyList()
 
             val latestRemoval = HashMap<String, Long>()
@@ -576,10 +586,7 @@ object ConcordCommunityList {
             val docExtras = JsonObject(root.filterKeys { it != "entries" && it != "tombstones" })
 
             ConcordCommunityListDocument(
-                // One entry per community. The merge upstream keys by the outer `community_id`, but
-                // an entry's id comes from its join material, so a list whose two disagree can name
-                // a community twice; the next write then re-emits it once.
-                entries = merge(entries, emptyList()),
+                entries = entries,
                 residue = ConcordListResidue(extras = docExtras, tombstones = tombstones, unparsedEntries = unparsed),
             )
         } catch (_: Exception) {
