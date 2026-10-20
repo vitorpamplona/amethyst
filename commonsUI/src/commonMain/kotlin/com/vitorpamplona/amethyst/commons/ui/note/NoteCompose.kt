@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityAppr
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteModifications
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannelPicture
+import com.vitorpamplona.amethyst.commons.rendering.unknown.isUnknownKind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.approve
 import com.vitorpamplona.amethyst.commons.resources.draft
@@ -424,6 +425,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderThread
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTopEight
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderTorrentComment
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderUnknownKind
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderUserGraspList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderUserStatus
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderVideoCollaboration
@@ -2837,18 +2839,24 @@ internal fun RenderNoteRow(
             is PushLeaseEvent -> RenderPushLease(baseNote)
 
             else -> {
-                RenderTextEvent(
-                    baseNote,
-                    makeItShort,
-                    canPreview,
-                    quotesLeft,
-                    unPackReply,
-                    backgroundColor,
-                    editState,
-                    accountViewModel,
-                    nav,
-                    isBoostedNote = isBoostedNote,
-                )
+                if (noteEvent != null && isUnknownKind(noteEvent)) {
+                    // A kind quartz has no class for: its content may be JSON or ciphertext, and its
+                    // tags carry what it is about, so it gets the fallback card, not the text path.
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+                } else {
+                    RenderTextEvent(
+                        baseNote,
+                        makeItShort,
+                        canPreview,
+                        quotesLeft,
+                        unPackReply,
+                        backgroundColor,
+                        editState,
+                        accountViewModel,
+                        nav,
+                        isBoostedNote = isBoostedNote,
+                    )
+                }
             }
         }
     }

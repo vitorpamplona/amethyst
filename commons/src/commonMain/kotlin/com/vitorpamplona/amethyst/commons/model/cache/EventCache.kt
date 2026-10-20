@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
+import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKind
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
@@ -4359,7 +4360,14 @@ open class EventCache :
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {
-                    Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    if (isStorableUnknownKind(event)) {
+                        // A kind quartz has no class for, kept by id so a quote, a notification or a
+                        // link to it draws the fallback card instead of nothing. A replaceable or
+                        // addressable one is kept by id too: nothing replaces it, which is enough to show it.
+                        consumeRegularEvent(event, relay, wasVerified)
+                    } else {
+                        Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    }
                 }
             }
         } catch (e: Exception) {
