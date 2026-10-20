@@ -95,10 +95,11 @@ class AesTest {
             )
         for ((key, ciphertext) in cases) {
             val aes = AesBitsliced(key.unhex())
+            val scratch = AesBitsliced.Scratch()
             val block = plaintext.copyOf()
-            aes.encryptBlocks(block, 0, block, 0, 1)
+            aes.encryptBlocks(block, 0, block, 0, 1, scratch)
             assertEquals(ciphertext, block.hex())
-            aes.decryptBlocks(block, 0, block, 0, 1)
+            aes.decryptBlocks(block, 0, block, 0, 1, scratch)
             assertContentEquals(plaintext, block)
         }
     }
@@ -106,15 +107,16 @@ class AesTest {
     @Test
     fun fourBlocksAtOnceMatchOneAtATime() {
         val aes = AesBitsliced(pattern(32, 7, 1))
+        val scratch = AesBitsliced.Scratch()
         val input = pattern(64, 13, 5)
         val together = input.copyOf()
-        aes.encryptBlocks(together, 0, together, 0, 4)
+        aes.encryptBlocks(together, 0, together, 0, 4, scratch)
         for (b in 0 until 4) {
             val single = input.copyOfRange(16 * b, 16 * b + 16)
-            aes.encryptBlocks(single, 0, single, 0, 1)
+            aes.encryptBlocks(single, 0, single, 0, 1, scratch)
             assertContentEquals(single, together.copyOfRange(16 * b, 16 * b + 16), "block $b")
         }
-        aes.decryptBlocks(together, 0, together, 0, 4)
+        aes.decryptBlocks(together, 0, together, 0, 4, scratch)
         assertContentEquals(input, together)
     }
 
@@ -133,6 +135,52 @@ class AesTest {
             val cipher = AESGCM(key, nonce)
             assertEquals(case.expected, cipher.encrypt(plaintext, aad).hex(), label)
             assertContentEquals(plaintext, cipher.decrypt(case.expected.unhex(), aad), label)
+        }
+    }
+
+    @Test
+    fun reusedGcmKeyMatchesOneShot() {
+        // In both orders, so H is computed both in the first counter batch (12-byte
+        // nonce first) and up front for a J0 GHASH (other lengths first), then reused.
+        for (order in listOf(gcmCases, gcmCases.reversed())) {
+            val keys = mutableMapOf<Int, AesGcmKey>()
+            val ciphers = mutableMapOf<Pair<Int, Int>, AESGCM>()
+            repeat(2) { pass ->
+                for (case in order) {
+                    val key = pattern(case.keySize, 7, 1)
+                    val nonce = pattern(case.nonceSize, 11, 3)
+                    val plaintext = pattern(case.plaintextSize, 13, 5)
+                    val aad = pattern(case.aadSize, 17, 9)
+                    val label = "pass $pass, key ${case.keySize}, nonce ${case.nonceSize}, data ${case.plaintextSize}"
+
+                    val gcm = keys.getOrPut(case.keySize) { AesGcmKey(key) }
+                    assertEquals(case.expected, gcm.encrypt(nonce, plaintext, aad).hex(), label)
+                    assertContentEquals(plaintext, gcm.decrypt(nonce, case.expected.unhex(), aad), label)
+
+                    val cipher = ciphers.getOrPut(case.keySize to case.nonceSize) { AESGCM(key, nonce) }
+                    assertEquals(case.expected, cipher.encrypt(plaintext, aad).hex(), label)
+                    assertContentEquals(plaintext, cipher.decrypt(case.expected.unhex(), aad), label)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun reusedCbcKeyMatchesOneShot() {
+        val iv = pattern(16, 11, 3)
+        val keys = mutableMapOf<Int, AesCbcKey>()
+        val ciphers = mutableMapOf<Int, AESCBC>()
+        repeat(2) {
+            for (case in cbcCases) {
+                val key = pattern(case.keySize, 7, 1)
+                val plaintext = pattern(case.plaintextSize, 13, 5)
+                val cbc = keys.getOrPut(case.keySize) { AesCbcKey(key) }
+                assertEquals(case.expected, cbc.encrypt(iv, plaintext).hex())
+                assertContentEquals(plaintext, cbc.decrypt(iv, case.expected.unhex()))
+                val cipher = ciphers.getOrPut(case.keySize) { AESCBC(key, iv) }
+                assertEquals(case.expected, cipher.encrypt(plaintext).hex())
+                assertContentEquals(plaintext, cipher.decrypt(case.expected.unhex()))
+            }
         }
     }
 

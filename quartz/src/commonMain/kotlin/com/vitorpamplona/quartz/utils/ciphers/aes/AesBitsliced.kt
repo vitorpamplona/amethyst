@@ -36,7 +36,8 @@ package com.vitorpamplona.quartz.utils.ciphers.aes
  * at once, which is how CTR (GCM) and CBC decryption run; CBC encryption is serial
  * and wastes three slots.
  *
- * Holds the expanded key and per-call scratch, so an instance is not thread-safe.
+ * An instance holds only the expanded key, which never changes, so one can be shared
+ * across threads; each caller brings its own [Scratch].
  */
 internal class AesBitsliced(
     key: ByteArray,
@@ -50,8 +51,12 @@ internal class AesBitsliced(
         }
 
     private val roundKeys = expandKey(key, rounds)
-    private val q = LongArray(8)
-    private val w = IntArray(16)
+
+    /** Working state for one caller: reuse it across calls, never share it between threads. */
+    class Scratch {
+        internal val q = LongArray(8)
+        internal val w = IntArray(16)
+    }
 
     /** Encrypts [count] (1 to 4) consecutive blocks of [src] into [dst]. They may overlap exactly. */
     fun encryptBlocks(
@@ -60,8 +65,10 @@ internal class AesBitsliced(
         dst: ByteArray,
         dstOffset: Int,
         count: Int,
+        scratch: Scratch,
     ) {
-        load(src, srcOffset, count)
+        val q = scratch.q
+        load(scratch, src, srcOffset, count)
         addRoundKey(q, roundKeys, 0)
         for (u in 1 until rounds) {
             sbox(q)
@@ -72,7 +79,7 @@ internal class AesBitsliced(
         sbox(q)
         shiftRows(q)
         addRoundKey(q, roundKeys, rounds shl 3)
-        store(dst, dstOffset, count)
+        store(scratch, dst, dstOffset, count)
     }
 
     /** Decrypts [count] (1 to 4) consecutive blocks of [src] into [dst]. They may overlap exactly. */
@@ -82,8 +89,10 @@ internal class AesBitsliced(
         dst: ByteArray,
         dstOffset: Int,
         count: Int,
+        scratch: Scratch,
     ) {
-        load(src, srcOffset, count)
+        val q = scratch.q
+        load(scratch, src, srcOffset, count)
         addRoundKey(q, roundKeys, rounds shl 3)
         for (u in rounds - 1 downTo 1) {
             invShiftRows(q)
@@ -94,15 +103,18 @@ internal class AesBitsliced(
         invShiftRows(q)
         invSbox(q)
         addRoundKey(q, roundKeys, 0)
-        store(dst, dstOffset, count)
+        store(scratch, dst, dstOffset, count)
     }
 
     private fun load(
+        scratch: Scratch,
         src: ByteArray,
         offset: Int,
         count: Int,
     ) {
         require(count in 1..4) { "1 to 4 blocks at a time, was $count" }
+        val q = scratch.q
+        val w = scratch.w
         w.fill(0)
         for (i in 0 until count * 4) {
             w[i] = littleEndianInt(src, offset + 4 * i)
@@ -114,10 +126,13 @@ internal class AesBitsliced(
     }
 
     private fun store(
+        scratch: Scratch,
         dst: ByteArray,
         offset: Int,
         count: Int,
     ) {
+        val q = scratch.q
+        val w = scratch.w
         ortho(q)
         for (i in 0 until 4) {
             interleaveOut(w, i shl 2, q[i], q[i + 4])
@@ -507,9 +522,12 @@ private fun invMixColumns(q: LongArray) {
     q[7] = q4 xor q5 xor q6 xor r4 xor r6 xor r7 xor rotr32(q4 xor q5 xor q7 xor r4 xor r7)
 }
 
-/** SubWord for the key schedule, through the same bitsliced S-box. */
-private fun subWord(x: Int): Int {
-    val q = LongArray(8)
+/** SubWord for the key schedule, through the same bitsliced S-box, in the caller's [q]. */
+private fun subWord(
+    x: Int,
+    q: LongArray,
+): Int {
+    q.fill(0)
     q[0] = x.toLong() and 0xFFFF_FFFFL
     ortho(q)
     sbox(q)
@@ -528,15 +546,16 @@ private fun expandKey(
     for (i in 0 until nk) {
         words[i] = littleEndianInt(key, 4 * i)
     }
+    val q = LongArray(8)
     var tmp = words[nk - 1]
     var j = 0
     var k = 0
     for (i in nk until nkf) {
         if (j == 0) {
             tmp = (tmp shl 24) or (tmp ushr 8)
-            tmp = subWord(tmp) xor RCON[k]
+            tmp = subWord(tmp, q) xor RCON[k]
         } else if (nk > 6 && j == 4) {
-            tmp = subWord(tmp)
+            tmp = subWord(tmp, q)
         }
         tmp = tmp xor words[i - nk]
         words[i] = tmp
@@ -547,7 +566,6 @@ private fun expandKey(
     }
 
     // Each round key packed into two words, then spread to the eight the rounds xor in.
-    val q = LongArray(8)
     val compressed = LongArray((rounds + 1) shl 1)
     for (i in 0 until nkf step 4) {
         interleaveIn(q, 0, 4, words, i)

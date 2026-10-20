@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.utils.sha2.Sha256Digest
 import com.vitorpamplona.quartz.utils.sha2.Sha512Digest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 /** RFC 4231 vectors for the pure-Kotlin HMAC behind the native [MacInstance]. */
 class HmacTest {
@@ -80,5 +81,37 @@ class HmacTest {
             mac.update(case.message)
             assertEquals(case.sha256, mac.doFinal().hex())
         }
+    }
+
+    @Test
+    fun shortOutputBufferLeavesTheMacUsable() {
+        val case = cases[1]
+        val mac = Hmac(Sha256Digest(), case.key)
+        mac.update(case.message)
+        assertFailsWith<IllegalArgumentException> { mac.doFinal(ByteArray(31)) }
+        assertFailsWith<IllegalArgumentException> { mac.doFinal(ByteArray(40), offset = 10) }
+        // The message fed before the failed calls is still there.
+        assertEquals(case.sha256, mac.doFinal().hex())
+    }
+
+    @Test
+    fun rekeyMatchesAFreshInstance() {
+        val mac = Hmac(Sha512Digest(), cases[0].key)
+        mac.update("left over, dropped by rekey".encodeToByteArray())
+        for (case in cases + cases) {
+            mac.rekey(case.key)
+            mac.update(case.message)
+            assertEquals(case.sha512, mac.doFinal().hex())
+        }
+    }
+
+    @Test
+    fun doFinalWritesAtOffset() {
+        val case = cases[0]
+        val mac = Hmac(Sha256Digest(), case.key)
+        mac.update(case.message)
+        val out = ByteArray(40)
+        mac.doFinal(out, 8)
+        assertEquals(case.sha256, out.copyOfRange(8, 40).hex())
     }
 }

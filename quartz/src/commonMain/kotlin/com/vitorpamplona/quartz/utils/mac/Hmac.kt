@@ -25,33 +25,45 @@ import com.vitorpamplona.quartz.utils.sha2.ShaDigest
 /**
  * HMAC (RFC 2104) over a pure-Kotlin [ShaDigest], for the native [MacInstance].
  * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.
+ *
+ * The digest states after the inner and the outer key block are computed once per
+ * key and restored for every message, so a MAC costs only its own blocks plus one
+ * outer block, not two extra key blocks.
  */
 internal class Hmac(
     private val digest: ShaDigest,
     key: ByteArray,
 ) {
-    private val ipad = ByteArray(digest.blockSize)
-    private val opad = ByteArray(digest.blockSize)
+    private val innerKeyed = digest.newInstance()
+    private val outerKeyed = digest.newInstance()
+    private val outer = digest.newInstance()
     private val innerHash = ByteArray(digest.digestSize)
 
     val macSize: Int get() = digest.digestSize
 
     init {
-        val blockKey =
-            if (key.size > digest.blockSize) {
-                digest.update(key)
-                digest.digest()
-            } else {
-                key
-            }
-        blockKey.copyInto(ipad)
-        blockKey.copyInto(opad)
-        for (i in ipad.indices) {
-            ipad[i] = (ipad[i].toInt() xor 0x36).toByte()
-            opad[i] = (opad[i].toInt() xor 0x5c).toByte()
+        rekey(key)
+    }
+
+    /** Switches to [key] and drops any message in progress, reusing this instance's buffers. */
+    fun rekey(key: ByteArray) {
+        val pad = ByteArray(digest.blockSize)
+        if (key.size > digest.blockSize) {
+            digest.reset()
+            digest.update(key)
+            digest.digestInto(pad)
+        } else {
+            key.copyInto(pad)
         }
-        digest.reset()
-        digest.update(ipad)
+        for (i in pad.indices) pad[i] = (pad[i].toInt() xor 0x36).toByte()
+        innerKeyed.reset()
+        innerKeyed.update(pad)
+        // 0x36 xor 0x5c turns the inner pad into the outer one.
+        for (i in pad.indices) pad[i] = (pad[i].toInt() xor (0x36 xor 0x5c)).toByte()
+        outerKeyed.reset()
+        outerKeyed.update(pad)
+        pad.fill(0)
+        digest.copyFrom(innerKeyed)
     }
 
     fun update(byte: Byte) = digest.update(byte)
@@ -66,12 +78,14 @@ internal class Hmac(
         out: ByteArray,
         offset: Int = 0,
     ) {
+        // Checked before any state changes, so a short buffer leaves the MAC usable.
+        require(offset >= 0 && macSize <= out.size - offset) { "no room for a $macSize-byte MAC" }
         digest.digestInto(innerHash)
-        digest.update(opad)
-        digest.update(innerHash)
-        digest.digestInto(out, offset)
+        outer.copyFrom(outerKeyed)
+        outer.update(innerHash)
+        outer.digestInto(out, offset)
         innerHash.fill(0)
-        digest.update(ipad)
+        digest.copyFrom(innerKeyed)
     }
 
     fun doFinal(): ByteArray = ByteArray(macSize).also { doFinal(it) }

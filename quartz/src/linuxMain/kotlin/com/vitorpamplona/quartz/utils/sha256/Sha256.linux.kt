@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
-import com.vitorpamplona.quartz.utils.sha2.Sha256Digest
+import com.vitorpamplona.quartz.utils.sha2.Sha256Compression
 
-actual fun sha256(data: ByteArray): ByteArray = Sha256Digest().also { it.update(data) }.digest()
+// Straight on the block function: sha256 is on the event-id path, and a digest object
+// would cost allocations and a reset nobody needs.
+actual fun sha256(data: ByteArray): ByteArray = ByteArray(32).also { Sha256Compression.hash(data, 0, data.size, it) }
 
 actual fun sha256Into(
     out: ByteArray,
@@ -30,9 +32,6 @@ actual fun sha256Into(
     len: Int,
 ): ByteArray {
     // Hashes data[0, len) straight into out: no slice copy, no temporary digest.
-    Sha256Digest().apply {
-        update(data, 0, len)
-        digestInto(out)
-    }
+    Sha256Compression.hash(data, 0, len, out)
     return out
 }

@@ -20,15 +20,21 @@
  */
 package com.vitorpamplona.quartz.utils.ciphers.aes
 
-/** AES-CBC with PKCS#7 padding (NIST SP 800-38A §6.2), matching JCA's "AES/CBC/PKCS5Padding". */
-internal object AesCbc {
+/**
+ * AES-CBC with PKCS#7 padding (NIST SP 800-38A §6.2), matching JCA's "AES/CBC/PKCS5Padding".
+ * Holds the key schedule, so one instance serves many messages; it is thread-safe.
+ */
+internal class AesCbcKey(
+    key: ByteArray,
+) {
+    private val aes = AesBitsliced(key)
+
     fun encrypt(
-        key: ByteArray,
         iv: ByteArray,
         plaintext: ByteArray,
     ): ByteArray {
         require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
-        val aes = AesBitsliced(key)
+        val scratch = AesBitsliced.Scratch()
         val pad = 16 - plaintext.size % 16
         val out = plaintext.copyOf(plaintext.size + pad)
         out.fill(pad.toByte(), plaintext.size, out.size)
@@ -39,7 +45,7 @@ internal object AesCbc {
             for (i in 0 until 16) {
                 out[o + i] = (out[o + i].toInt() xor prev[prevOffset + i].toInt()).toByte()
             }
-            aes.encryptBlocks(out, o, out, o, 1)
+            aes.encryptBlocks(out, o, out, o, 1, scratch)
             prev = out
             prevOffset = o
         }
@@ -48,7 +54,6 @@ internal object AesCbc {
 
     /** Throws [IllegalArgumentException] on a length that is not whole blocks or on bad padding. */
     fun decrypt(
-        key: ByteArray,
         iv: ByteArray,
         ciphertext: ByteArray,
     ): ByteArray {
@@ -56,12 +61,12 @@ internal object AesCbc {
         require(ciphertext.isNotEmpty() && ciphertext.size % 16 == 0) {
             "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${ciphertext.size}"
         }
-        val aes = AesBitsliced(key)
+        val scratch = AesBitsliced.Scratch()
         val out = ByteArray(ciphertext.size)
         var o = 0
         while (o < ciphertext.size) {
             val blocks = minOf(4, (ciphertext.size - o) / 16)
-            aes.decryptBlocks(ciphertext, o, out, o, blocks)
+            aes.decryptBlocks(ciphertext, o, out, o, blocks, scratch)
             o += 16 * blocks
         }
         for (i in 0 until 16) {
@@ -79,7 +84,26 @@ internal object AesCbc {
             val differs = ((out[out.size - i].toInt() and 0xFF) xor pad).let { (it or -it) ushr 31 }
             bad = bad or (inPad and differs)
         }
-        require(bad == 0) { "AES-CBC padding is invalid" }
+        if (bad != 0) {
+            out.fill(0)
+            throw IllegalArgumentException("AES-CBC padding is invalid")
+        }
         return out.copyOf(out.size - pad)
     }
+}
+
+/** One-shot AES-CBC, for callers that use a key once. */
+internal object AesCbc {
+    fun encrypt(
+        key: ByteArray,
+        iv: ByteArray,
+        plaintext: ByteArray,
+    ): ByteArray = AesCbcKey(key).encrypt(iv, plaintext)
+
+    /** Throws [IllegalArgumentException] on a length that is not whole blocks or on bad padding. */
+    fun decrypt(
+        key: ByteArray,
+        iv: ByteArray,
+        ciphertext: ByteArray,
+    ): ByteArray = AesCbcKey(key).decrypt(iv, ciphertext)
 }

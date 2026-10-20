@@ -21,17 +21,20 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.ciphers.aes.AesCbc
+import com.vitorpamplona.quartz.utils.ciphers.aes.AesCbcKey
 
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : NostrCipher {
+    // Expanded once, on first use, and reused by every call on this instance.
+    private val key by lazy { AesCbcKey(keyBytes) }
+
     actual override fun name(): String = "aes-cbc"
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = AesCbc.encrypt(keyBytes, iv, bytesToEncrypt)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(iv, bytesToEncrypt)
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = AesCbc.decrypt(keyBytes, iv, bytesToDecrypt)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(iv, bytesToDecrypt)
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {

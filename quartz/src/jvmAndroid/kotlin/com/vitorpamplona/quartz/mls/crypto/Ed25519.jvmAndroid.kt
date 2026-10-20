@@ -129,7 +129,11 @@ actual object Ed25519 {
         return packPoint(p)
     }
 
-    private fun sha512(data: ByteArray): ByteArray = MessageDigest.getInstance("SHA-512").digest(data)
+    // One digest per thread: MessageDigest.getInstance is a provider lookup, and sign and
+    // verify hash two or three times each.
+    private val sha512Digest: ThreadLocal<MessageDigest> = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-512") }
+
+    private fun sha512(data: ByteArray): ByteArray = sha512Digest.get()!!.digest(data)
 
     private fun newPoint(): Array<LongArray> =
         arrayOf(

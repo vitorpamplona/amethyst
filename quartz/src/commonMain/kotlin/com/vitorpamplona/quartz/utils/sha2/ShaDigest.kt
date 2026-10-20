@@ -45,6 +45,12 @@ internal sealed class ShaDigest(
 
     protected abstract fun resetState()
 
+    /** Copies the chaining state of [other], which is the same subclass as this one. */
+    protected abstract fun copyStateFrom(other: ShaDigest)
+
+    /** A fresh digest of the same algorithm. */
+    abstract fun newInstance(): ShaDigest
+
     protected abstract fun writeState(
         out: ByteArray,
         offset: Int,
@@ -131,11 +137,26 @@ internal sealed class ShaDigest(
         bufferLength = 0
         byteCount = 0
     }
+
+    /** Makes this digest continue exactly where [other] is, so a keyed state can be saved and restored. */
+    fun copyFrom(other: ShaDigest) {
+        require(this::class == other::class) { "cannot copy a ${other::class.simpleName} into a ${this::class.simpleName}" }
+        copyStateFrom(other)
+        other.buffer.copyInto(buffer)
+        bufferLength = other.bufferLength
+        byteCount = other.byteCount
+    }
 }
 
 internal class Sha256Digest : ShaDigest(blockSize = 64, digestSize = 32, lengthSize = 8) {
-    private val state = Sha256Compression.IV.copyOf()
+    private val state = IntArray(8).also { Sha256Compression.initState(it) }
     private val w = IntArray(64)
+
+    override fun newInstance() = Sha256Digest()
+
+    override fun copyStateFrom(other: ShaDigest) {
+        (other as Sha256Digest).state.copyInto(state)
+    }
 
     override fun compress(
         block: ByteArray,
@@ -143,7 +164,7 @@ internal class Sha256Digest : ShaDigest(blockSize = 64, digestSize = 32, lengthS
     ) = Sha256Compression.compress(state, block, offset, w)
 
     override fun resetState() {
-        Sha256Compression.IV.copyInto(state)
+        Sha256Compression.initState(state)
         w.fill(0)
     }
 
@@ -165,6 +186,12 @@ internal class Sha256Digest : ShaDigest(blockSize = 64, digestSize = 32, lengthS
 internal class Sha1Digest : ShaDigest(blockSize = 64, digestSize = 20, lengthSize = 8) {
     private val state = IV.copyOf()
     private val w = IntArray(80)
+
+    override fun newInstance() = Sha1Digest()
+
+    override fun copyStateFrom(other: ShaDigest) {
+        (other as Sha1Digest).state.copyInto(state)
+    }
 
     override fun compress(
         block: ByteArray,
@@ -253,6 +280,12 @@ internal class Sha1Digest : ShaDigest(blockSize = 64, digestSize = 20, lengthSiz
 internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, lengthSize = 16) {
     private val state = IV.copyOf()
     private val w = LongArray(80)
+
+    override fun newInstance() = Sha512Digest()
+
+    override fun copyStateFrom(other: ShaDigest) {
+        (other as Sha512Digest).state.copyInto(state)
+    }
 
     override fun compress(
         block: ByteArray,

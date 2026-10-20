@@ -51,4 +51,20 @@ class DigestInstanceNativeTest {
         digest.update("digest".encodeToByteArray())
         assertEquals("5d0689ef49d2fae572b881b123a85ffa21595f36", digest.digest().hex())
     }
+
+    @Test
+    fun resetsAfterEachDigest() {
+        for ((algorithm, abc) in listOf(
+            "SHA-256" to "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            "SHA-1" to "a9993e364706816aba3e25717850c26c9cd0d89d",
+            "ripemd160" to "8eb208f7e05d987a9b044a8e98c6b087f15a0bfc",
+        )) {
+            val digest = DigestInstance(algorithm)
+            repeat(3) {
+                digest.update("abc".encodeToByteArray())
+                assertEquals(abc, digest.digest().hex(), algorithm)
+            }
+            assertEquals(abc, digest.digest("abc".encodeToByteArray()).hex(), algorithm)
+        }
+    }
 }

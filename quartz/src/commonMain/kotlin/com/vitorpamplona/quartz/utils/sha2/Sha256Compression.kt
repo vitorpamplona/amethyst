@@ -29,7 +29,7 @@ package com.vitorpamplona.quartz.utils.sha2
 internal object Sha256Compression {
     const val BLOCK = 64
 
-    val IV =
+    private val IV =
         intArrayOf(
             0x6a09e667,
             -0x4498517b,
@@ -41,7 +41,7 @@ internal object Sha256Compression {
             0x5be0cd19,
         )
 
-    val K =
+    private val K =
         intArrayOf(
             0x428a2f98,
             0x71374491,
@@ -108,6 +108,57 @@ internal object Sha256Compression {
             -0x41065c09,
             -0x398e870e,
         )
+
+    /** Loads the FIPS 180-4 initial hash value into [state]. */
+    fun initState(state: IntArray) {
+        IV.copyInto(state)
+    }
+
+    /**
+     * One-shot SHA-256 of `data[offset until offset + length]` into [out] at [outOffset],
+     * straight on the block function: no digest object, no buffer to reset afterwards.
+     */
+    fun hash(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+        out: ByteArray,
+        outOffset: Int = 0,
+    ) {
+        require(offset >= 0 && length >= 0 && length <= data.size - offset) {
+            "range [$offset, $offset + $length) is outside an array of ${data.size}"
+        }
+        require(outOffset >= 0 && 32 <= out.size - outOffset) { "no room for a 32-byte digest" }
+        val state = IV.copyOf()
+        val w = IntArray(64)
+        var pos = offset
+        val end = offset + length
+        while (end - pos >= BLOCK) {
+            compress(state, data, pos, w)
+            pos += BLOCK
+        }
+
+        val remaining = end - pos
+        // 0x80 marker + 8-byte length: one block if they fit after the remainder, else two
+        val tail = ByteArray(if (remaining < BLOCK - 8) BLOCK else 2 * BLOCK)
+        data.copyInto(tail, 0, pos, end)
+        tail[remaining] = 0x80.toByte()
+        val bitLength = length.toLong() * 8
+        for (i in 0 until 8) {
+            tail[tail.size - 1 - i] = (bitLength ushr (8 * i)).toByte()
+        }
+        compress(state, tail, 0, w)
+        if (tail.size > BLOCK) compress(state, tail, BLOCK, w)
+
+        for (i in 0 until 8) {
+            val word = state[i]
+            val o = outOffset + 4 * i
+            out[o] = (word ushr 24).toByte()
+            out[o + 1] = (word ushr 16).toByte()
+            out[o + 2] = (word ushr 8).toByte()
+            out[o + 3] = word.toByte()
+        }
+    }
 
     /**
      * One SHA-256 compression of `block[offset until offset + 64]` into [state].

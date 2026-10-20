@@ -27,13 +27,20 @@ actual class MacInstance actual constructor(
     algorithm: String,
     key: ByteArray,
 ) {
+    private var algorithm = algorithm
     private var hmac = Hmac(digestForAlgorithm(algorithm), key)
 
     actual fun init(
         key: ByteArray,
         algorithm: String,
     ) {
-        hmac = Hmac(digestForAlgorithm(algorithm), key)
+        // Same algorithm: rekey in place, which skips reallocating the digests.
+        if (algorithm == this.algorithm) {
+            hmac.rekey(key)
+        } else {
+            hmac = Hmac(digestForAlgorithm(algorithm), key)
+            this.algorithm = algorithm
+        }
     }
 
     actual fun getMacLength(): Int = hmac.macSize

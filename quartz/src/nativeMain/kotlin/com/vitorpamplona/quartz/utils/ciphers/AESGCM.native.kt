@@ -21,17 +21,24 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.ciphers.aes.AesGcm
+import com.vitorpamplona.quartz.utils.ciphers.aes.AesGcmKey
 
+/**
+ * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
+ * Apple implementation that has one, CryptoKit, is Swift-only.
+ */
 actual class AESGCM actual constructor(
     actual val keyBytes: ByteArray,
     actual val nonce: ByteArray,
 ) : NostrCipher {
+    // Expanded once, on first use, and reused by every call on this instance.
+    private val key by lazy { AesGcmKey(keyBytes) }
+
     actual override fun name(): String = AES_GCM_NAME
 
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = AesGcm.encrypt(keyBytes, nonce, bytesToEncrypt, EMPTY)
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(nonce, bytesToEncrypt, EMPTY)
 
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = AesGcm.decrypt(keyBytes, nonce, bytesToDecrypt, EMPTY)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(nonce, bytesToDecrypt, EMPTY)
 
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
@@ -44,12 +51,12 @@ actual class AESGCM actual constructor(
     actual fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray = AesGcm.encrypt(keyBytes, nonce, bytesToEncrypt, aad)
+    ): ByteArray = key.encrypt(nonce, bytesToEncrypt, aad)
 
     actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray = AesGcm.decrypt(keyBytes, nonce, bytesToDecrypt, aad)
+    ): ByteArray = key.decrypt(nonce, bytesToDecrypt, aad)
 
     private companion object {
         val EMPTY = ByteArray(0)

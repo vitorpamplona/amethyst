@@ -50,7 +50,7 @@ class Sha256Midstate(
     /** The message from [prefixLength] to its end, plus the SHA-256 padding. */
     val tail: ByteArray
 
-    private val midstate = Sha256Compression.IV.copyOf()
+    private val midstate = IntArray(8).also { Sha256Compression.initState(it) }
     private val state = IntArray(8)
     private val w = IntArray(64)
 

@@ -115,6 +115,20 @@ class ShaDigestTest {
     }
 
     @Test
+    fun oneShotSha256MatchesTheDigest() {
+        val random = Random(9)
+        val digest = Sha256Digest()
+        for (length in 0..200) {
+            val message = random.nextBytes(length + 7)
+            digest.update(message, 3, length)
+            val expected = digest.digest()
+            val out = ByteArray(40)
+            Sha256Compression.hash(message, 3, length, out, 5)
+            assertContentEquals(expected, out.copyOfRange(5, 37), "length $length")
+        }
+    }
+
+    @Test
     fun digestIntoWritesAtOffsetAndResets() {
         val digest = Sha256Digest()
         val out = ByteArray(40)
