@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 
@@ -36,17 +37,25 @@ enum class MyRelayList {
     PRIVATE_HOME,
     PROXY,
     TRUSTED,
+    ;
+
+    /**
+     * False for the NIP-65 outbox and inbox when [relay] is on the local network: those lists are
+     * where other people go to read and reach this user, and nobody else can open a local relay.
+     */
+    fun accepts(relay: NormalizedRelayUrl): Boolean = !(isNip65() && relay.isLocalHost())
+
+    fun isNip65(): Boolean = this == OUTBOX || this == INBOX
 }
 
 /**
- * The relays in [list] as the user saved them: never the defaults some lists fall back to, so
- * adding one relay never saves the defaults along with it, and NIP-65 local relays included, since
- * the filtered readers drop those and a save from them would delete the user's local relay.
+ * The relays in [list], read exactly as its settings screen reads them: never the defaults some
+ * lists fall back to, so adding one relay never saves the defaults along with it.
  */
 fun Account.relaysIn(list: MyRelayList): List<NormalizedRelayUrl> =
     when (list) {
-        MyRelayList.OUTBOX -> nip65RelayList.getNIP65RelayList()?.allWriteRelaysNorm() ?: emptyList()
-        MyRelayList.INBOX -> nip65RelayList.getNIP65RelayList()?.allReadRelaysNorm() ?: emptyList()
+        MyRelayList.OUTBOX -> nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
+        MyRelayList.INBOX -> nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
         MyRelayList.DM_INBOX -> dmRelayList.getDMRelayList()?.relays() ?: emptyList()
         MyRelayList.SEARCH -> searchRelayList.flowNoDefaults.value.toList()
         MyRelayList.RELAY_FEEDS -> favoriteRelayList.flow.value.toList()
@@ -63,12 +72,15 @@ fun Account.listsContaining(relay: NormalizedRelayUrl): Set<MyRelayList> = MyRel
 /**
  * Appends [relay] to [list] and publishes the list through the same save its settings screen uses,
  * so the side effects (republishing account events to new outboxes, key packages to new key
- * package relays) match. Does nothing when the relay is already there.
+ * package relays) match. Does nothing when the relay is already there or [list] does not
+ * [MyRelayList.accepts] it.
  */
 suspend fun Account.addRelayTo(
     list: MyRelayList,
     relay: NormalizedRelayUrl,
 ) {
+    if (!list.accepts(relay)) return
+
     when (list) {
         MyRelayList.OUTBOX -> {
             addToNip65(relay, AdvertisedRelayType.WRITE)
@@ -110,15 +122,20 @@ private suspend fun Account.addToNip65(
 }
 
 /**
- * [current] with [relay] advertised for [type], or null when it already is. NIP-65 keeps one `r`
- * tag per relay with a read/write marker, so a relay already advertised for the other direction
- * becomes BOTH (and any duplicate tags for it collapse into that one) instead of gaining a tag.
+ * [current] with [relay] advertised for [type], or null when it already is or is a local relay.
+ * NIP-65 keeps one `r` tag per relay with a read/write marker, so a relay already advertised for
+ * the other direction becomes BOTH (and any duplicate tags for it collapse into that one) instead
+ * of gaining a tag. Local relays are dropped from the result: the list is for other people to
+ * reach this user, and the settings screen drops them on save the same way.
  */
 fun nip65WithRelay(
-    current: List<AdvertisedRelayInfo>,
+    all: List<AdvertisedRelayInfo>,
     relay: NormalizedRelayUrl,
     type: AdvertisedRelayType,
 ): List<AdvertisedRelayInfo>? {
+    if (relay.isLocalHost()) return null
+
+    val current = all.filterNot { it.relayUrl.isLocalHost() }
     val existing = current.filter { it.relayUrl == relay }
 
     val alreadyThere = existing.any { if (type == AdvertisedRelayType.WRITE) it.type.isWrite() else it.type.isRead() }

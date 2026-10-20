@@ -458,7 +458,8 @@ private fun AddRelayToListMenu(
     val containing = remember(relay) { accountViewModel.account.listsContaining(relay) }
 
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        MyRelayList.entries.forEach { list ->
+        // A local relay is never offered for the NIP-65 outbox or inbox: nobody else can reach it.
+        MyRelayList.entries.filter { it.accepts(relay) }.forEach { list ->
             val alreadyThere = list in containing
             DropdownMenuItem(
                 text = { Text(stringRes(list.title())) },

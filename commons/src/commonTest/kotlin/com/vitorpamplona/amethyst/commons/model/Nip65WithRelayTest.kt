@@ -25,7 +25,9 @@ import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
 import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class Nip65WithRelayTest {
     private val damus = RelayUrlNormalizer.normalizeOrNull("wss://relay.damus.io")!!
@@ -75,9 +77,17 @@ class Nip65WithRelayTest {
     }
 
     @Test
-    fun keepsTheUsersLocalRelays() {
+    fun neverAddsALocalRelay() {
+        assertNull(nip65WithRelay(listOf(AdvertisedRelayInfo(damus, AdvertisedRelayType.BOTH)), local, AdvertisedRelayType.WRITE))
+        assertFalse(MyRelayList.OUTBOX.accepts(local))
+        assertFalse(MyRelayList.INBOX.accepts(local))
+        assertTrue(MyRelayList.PRIVATE_HOME.accepts(local))
+    }
+
+    @Test
+    fun dropsLocalRelaysAlreadyInTheList() {
         val result = nip65WithRelay(listOf(AdvertisedRelayInfo(local, AdvertisedRelayType.BOTH)), nos, AdvertisedRelayType.READ)
 
-        assertEquals(listOf(local.url to AdvertisedRelayType.BOTH, nos.url to AdvertisedRelayType.READ), result.summary())
+        assertEquals(listOf(nos.url to AdvertisedRelayType.READ), result.summary())
     }
 }
