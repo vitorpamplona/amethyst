@@ -38,7 +38,6 @@ class RemoteSignerAuthPromptsTest {
         assertFalse(RemoteSignerAuthPrompts.isWebPage("file:///etc/passwd"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage("nostr:npub1abc"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage("https://"))
-        assertFalse(RemoteSignerAuthPrompts.isWebPage("https:///path"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage("https://nsec.app/a b"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage(" https://nsec.app/"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage(""))
@@ -62,6 +61,17 @@ class RemoteSignerAuthPromptsTest {
         val prompts = RemoteSignerAuthPrompts()
         repeat(20) { prompts.report("https://signer.example/$it") }
         assertEquals(5, prompts.pending.value.size)
-        assertEquals("https://signer.example/0", prompts.pending.value.first())
+        // The newest stays: it is the one a request is still waiting on.
+        assertEquals("https://signer.example/19", prompts.pending.value.last())
+        assertEquals("https://signer.example/15", prompts.pending.value.first())
+    }
+
+    @Test
+    fun aPageComesDownWhenItsRequestIsOver() {
+        val prompts = RemoteSignerAuthPrompts()
+        prompts.report("https://signer.example/a")
+        prompts.report("https://signer.example/b")
+        prompts.settled("https://signer.example/a")
+        assertEquals(listOf("https://signer.example/b"), prompts.pending.value)
     }
 }

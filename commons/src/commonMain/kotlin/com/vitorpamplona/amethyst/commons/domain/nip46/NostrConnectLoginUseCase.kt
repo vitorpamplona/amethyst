@@ -105,7 +105,7 @@ object NostrConnectLoginUseCase {
     suspend fun awaitAndLogin(
         uriData: NostrConnectUri,
         client: INostrClient,
-        onAuthUrl: ((String) -> Unit)? = null,
+        authPrompts: RemoteSignerAuthPrompts? = null,
     ): BunkerLoginResult {
         val connectData =
             waitForConnectRequest(
@@ -126,7 +126,8 @@ object NostrConnectLoginUseCase {
                 remotePubkey = connectData.signerPubkey,
                 relays = uriData.relays,
                 client = client,
-                onAuthUrl = onAuthUrl,
+                onAuthUrl = authPrompts?.let { it::report },
+                onAuthUrlSettled = authPrompts?.let { it::settled },
             )
         remoteSigner.openSubscription()
         Log.d(TAG) { "Signer ${connectData.signerPubkey.take(8)} answered the code; asking it for the account's key" }

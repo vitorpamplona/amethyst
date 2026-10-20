@@ -535,7 +535,7 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
-            onRemoteSignerAuthUrl = remoteSignerAuthPrompts::report,
+            remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA

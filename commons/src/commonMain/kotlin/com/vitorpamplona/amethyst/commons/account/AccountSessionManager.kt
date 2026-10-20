@@ -244,7 +244,7 @@ class AccountSessionManager(
         val transport = KeyPair()
         val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
         return withSignerRelays(relays) {
-            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts::report)
+            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts)
             result.signer.closeSubscription()
             remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
         }
@@ -293,7 +293,7 @@ class AccountSessionManager(
 
             // The wait for the signer and each request to it carry their own timeouts. One more
             // around the whole would cut off a signer that answers near the end of the first.
-            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder(), remoteSignerAuthPrompts::report)
+            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder(), remoteSignerAuthPrompts)
             result.signer.closeSubscription()
 
             val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)

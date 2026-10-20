@@ -55,6 +55,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -187,6 +188,8 @@ class BunkerLoginUseCaseTest {
                 }
 
             val prompts = RemoteSignerAuthPrompts()
+            val shown = CopyOnWriteArrayList<String>()
+            val watcher = scope.launch { prompts.pending.collect { pages -> pages.forEach { if (it !in shown) shown.add(it) } } }
             try {
                 val result =
                     withTimeout(20_000) {
@@ -194,14 +197,16 @@ class BunkerLoginUseCaseTest {
                             "bunker://${bunkerTransport.pubKey}?relay=wss://relay.example.com",
                             NostrSignerInternal(KeyPair()),
                             client,
-                            onAuthUrl = prompts::report,
+                            authPrompts = prompts,
                         )
                     }
                 result.signer.closeSubscription()
 
                 assertEquals(user.pubKey, result.pubKeyHex)
-                assertEquals(listOf(authPage), prompts.pending.value, "the page is waiting to be shown")
+                assertEquals(emptyList(), prompts.pending.value, "the page comes down once its request is answered")
+                assertEquals(listOf(authPage), shown, "the page was shown while the signer waited")
             } finally {
+                watcher.cancel()
                 bunker.close()
                 scope.cancel()
                 server.close()

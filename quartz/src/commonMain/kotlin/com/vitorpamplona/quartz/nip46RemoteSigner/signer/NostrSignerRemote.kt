@@ -71,6 +71,8 @@ class NostrSignerRemote(
      * request keeps waiting for the real response.
      */
     val onAuthUrl: ((String) -> Unit)? = null,
+    /** Invoked with each URL given to [onAuthUrl] once its request is over, answered or not. */
+    val onAuthUrlSettled: ((String) -> Unit)? = null,
 ) : NostrSigner(signer.pubKey) {
     // The user's real identity, resolved from the bunker via `get_public_key`. The constructor
     // `signer` is the ephemeral NIP-46 TRANSPORT keypair, NOT the user — so until this is bound,
@@ -106,6 +108,7 @@ class NostrSignerRemote(
             relayList = relays,
             client = client,
             onAuthUrl = onAuthUrl,
+            onAuthUrlSettled = onAuthUrlSettled,
         )
 
     val subscription =
@@ -386,6 +389,7 @@ class NostrSignerRemote(
             permissions: String? = null,
             clientMetadata: BunkerClientMetadata? = null,
             onAuthUrl: ((String) -> Unit)? = null,
+            onAuthUrlSettled: ((String) -> Unit)? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith(NostrConnectURI.BUNKER_SCHEME)) throw Exception("Invalid bunker uri")
             // Percent-decodes the values: signers built on the `url` crate (Opal, nak) send
@@ -402,6 +406,7 @@ class NostrSignerRemote(
                 secret = parsed.secret,
                 clientMetadata = clientMetadata,
                 onAuthUrl = onAuthUrl,
+                onAuthUrlSettled = onAuthUrlSettled,
             )
         }
     }

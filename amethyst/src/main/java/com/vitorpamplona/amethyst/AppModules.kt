@@ -1012,7 +1012,7 @@ class AppModules(
             nip46ClientStore = nip46ClientStore,
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
-            onRemoteSignerAuthUrl = remoteSignerAuthPrompts::report,
+            remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             // Unknown (a cold start before the first callback) waits, like mobile data.
             canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the

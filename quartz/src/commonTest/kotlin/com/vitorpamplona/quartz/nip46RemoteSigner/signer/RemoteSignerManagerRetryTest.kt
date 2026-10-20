@@ -96,6 +96,7 @@ class RemoteSignerManagerRetryTest {
         runTest {
             val capturing = CapturingNostrClient()
             val seenUrls = mutableListOf<String>()
+            val settledUrls = mutableListOf<String>()
             val manager =
                 RemoteSignerManager(
                     timeout = 5_000,
@@ -105,6 +106,7 @@ class RemoteSignerManagerRetryTest {
                     relayList = setOf(relay),
                     maxRetries = 0,
                     onAuthUrl = { seenUrls.add(it) },
+                    onAuthUrlSettled = { settledUrls.add(it) },
                 )
 
             val deferred =
@@ -126,6 +128,43 @@ class RemoteSignerManagerRetryTest {
             val result = deferred.await()
             assertIs<SignerResult.RequestAddressed.Successful<PingResult>>(result)
             assertEquals(listOf("https://signer.example/auth"), seenUrls)
+            assertEquals(seenUrls, settledUrls, "the page is settled once the answer arrives")
+        }
+
+    @Test
+    fun authUrlIsSettledWhenItsRequestTimesOut() =
+        runTest {
+            val capturing = CapturingNostrClient()
+            val settledUrls = mutableListOf<String>()
+            val manager =
+                RemoteSignerManager(
+                    timeout = 1_000,
+                    client = capturing,
+                    signer = signer,
+                    remoteKey = remoteKey,
+                    relayList = setOf(relay),
+                    maxRetries = 0,
+                    onAuthUrlSettled = { settledUrls.add(it) },
+                )
+
+            val deferred =
+                async {
+                    manager.launchWaitAndParse(
+                        bunkerRequestBuilder = { BunkerRequestPing() },
+                        parser = PingResponse::parse,
+                    )
+                }
+            runCurrent()
+
+            val requestId = decodeRequestId(capturing.publishedEvents.single())
+            manager.newResponse(bunkerAuthUrlFor(requestId, "https://signer.example/auth"))
+            runCurrent()
+            assertEquals(emptyList(), settledUrls, "still waiting for the user")
+
+            // The user never authorizes.
+            advanceUntilIdle()
+            assertIs<SignerResult.RequestAddressed.TimedOut<PingResult>>(deferred.await())
+            assertEquals(listOf("https://signer.example/auth"), settledUrls)
         }
 
     @Test

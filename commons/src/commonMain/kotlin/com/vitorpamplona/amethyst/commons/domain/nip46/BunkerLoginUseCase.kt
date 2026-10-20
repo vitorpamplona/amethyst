@@ -35,9 +35,17 @@ object BunkerLoginUseCase {
         ephemeralSigner: NostrSignerInternal,
         client: INostrClient,
         clientMetadata: BunkerClientMetadata? = null,
-        onAuthUrl: ((String) -> Unit)? = null,
+        authPrompts: RemoteSignerAuthPrompts? = null,
     ): BunkerLoginResult {
-        val remoteSigner = NostrSignerRemote.fromBunkerUri(bunkerUri, ephemeralSigner, client, clientMetadata = clientMetadata, onAuthUrl = onAuthUrl)
+        val remoteSigner =
+            NostrSignerRemote.fromBunkerUri(
+                bunkerUri,
+                ephemeralSigner,
+                client,
+                clientMetadata = clientMetadata,
+                onAuthUrl = authPrompts?.let { it::report },
+                onAuthUrlSettled = authPrompts?.let { it::settled },
+            )
         if (remoteSigner.relays.isEmpty()) throw Exception("The bunker address names no relay")
         remoteSigner.openSubscription()
 

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.account
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
@@ -136,8 +137,8 @@ class AccountCacheState(
     val trustNetworkClientBuilder: (() -> INostrClient)?,
     /** False on a metered network: background Web of Trust downloads then wait. */
     val canDownloadLargeFiles: () -> Boolean,
-    /** Gets the address a NIP-46 signer sends with an `auth_url` challenge, to show the user. */
-    val onRemoteSignerAuthUrl: ((String) -> Unit)? = null,
+    /** Where the pages NIP-46 signers send with `auth_url` challenges wait for the user. */
+    val remoteSignerAuthPrompts: RemoteSignerAuthPrompts? = null,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -259,7 +260,8 @@ class AccountCacheState(
                     transport,
                     client,
                     clientMetadata = remoteSignerMetadata,
-                    onAuthUrl = onRemoteSignerAuthUrl,
+                    onAuthUrl = remoteSignerAuthPrompts?.let { it::report },
+                    onAuthUrlSettled = remoteSignerAuthPrompts?.let { it::settled },
                 ).also {
                     // The user's key, not the transport key: self-encryption (private lists, drafts)
                     // keys off signer.pubKey.
