@@ -548,7 +548,7 @@ object GlobalMediaPlayer {
         if (shutDown) return
         val streaming = MediaRelay.streamingUrl(url) ?: return
         val engine =
-            runCatching { createVideoPlayerState() }
+            runCatching { newVideoEngine() }
                 .onFailure { Log.w(TAG, "Paused video engine init failed", it) }
                 .getOrNull() ?: return
         runCatching {
@@ -1090,6 +1090,12 @@ object GlobalMediaPlayer {
         return MediaSource(streaming)
     }
 
+    /** Every video engine is made here, so GStreamer's segfault trap is off before any starts it. */
+    private fun newVideoEngine(): VideoPlayerState {
+        GStreamerSegtrap.disable()
+        return createVideoPlayerState()
+    }
+
     /**
      * A new engine for a newly opened video, retiring the one before it. kdroidFilter's Linux
      * player frees and reallocates its frame bitmaps on its own thread when the picture size
@@ -1104,7 +1110,7 @@ object GlobalMediaPlayer {
     ): VideoPlayerState? {
         if (shutDown) return null
         val fresh =
-            runCatching { createVideoPlayerState() }
+            runCatching { newVideoEngine() }
                 .onFailure { Log.w(TAG, "Video engine init failed", it) }
                 .getOrNull() ?: return null
         val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = fresh } }
