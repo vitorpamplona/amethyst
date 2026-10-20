@@ -53,7 +53,7 @@ dependencies {
 
     // Marmot's raw-QUIC transport for agent text stream previews, as on Android
     implementation(project(":marmotQuic"))
-    implementation(project(":quic"))
+    implementation(libs.quic)
 
     // The shared preference files (DataStore), as commons opens them
     implementation(libs.androidx.datastore.preferences)
