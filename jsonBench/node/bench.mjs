@@ -54,12 +54,30 @@ function pkgMeta(name) {
 
 // ---------------------------------------------------------------- parsers
 //
-// Each parser: id, library, mode, input ('string' | 'bytes' | 'buffer'), notes,
-// runtimes (where it is listed), meta() -> {version, license}, load() -> parse fn,
-// and optionally fields(result) (for dom results) and fold(result).
+// Every parser starts from what a WebSocket text frame is in JS: a `string`
+// (MessageEvent.data in browsers, Node 22's global WebSocket, Bun, Deno). Each parser:
+// id, library, mode, input (HARNESS.md vocabulary: 'string', 'string→bytes', 'bytes'),
+// notes, runtimes (where it is listed), meta() -> {version, license}, load() -> parse fn,
+// and optionally frame ('buffer': the extra Node `ws` rows), fold(result),
+// fields(result) (dom results), verify ('text' | 'bytes' for baselines) and
+// retained: false (results not measurable on the JS heap).
 
 const td = new TextDecoder('utf-8');
+const te = new TextEncoder();
 const foldEvent = (e) => e.kind + e.tags.length + e.content.length;
+
+// string -> UTF-8 bytes for the parsers that only read bytes. encodeInto a reused scratch
+// buffer is the fastest encode on all three engines (all workload, ns/event: Node 22
+// 465 vs 2737 for TextEncoder.encode and 1170 for Buffer.from; Bun 111 vs 252 / 331;
+// Deno 802 vs 3645 / 1254). The parser gets a view of the scratch buffer, valid until the
+// next call: fine for decoders that copy every value out (jsonjoy, Bun.JSONL).
+let scratch = new Uint8Array(1 << 16);
+function encodeUtf8(s) {
+  if (s.length * 3 > scratch.length) scratch = new Uint8Array(s.length * 3);
+  return scratch.subarray(0, te.encodeInto(s, scratch).written);
+}
+
+const WS_EXTRA = 'EXTRA, not the text-frame path: the Node `ws` package delivers every message, text frames included, as a Buffer; the browser, Node 22 global, Bun and Deno WebSocket deliver a string. ';
 
 const PARSERS = [
   {
@@ -67,61 +85,53 @@ const PARSERS = [
     library: 'JSON.parse',
     mode: 'typed',
     input: 'string',
-    notes: 'JSON.parse on a pre-decoded JS string (what a WebSocket text frame hands a web client); result is a plain object',
+    notes: 'JSON.parse(frame string), the web-client path; result is a plain object',
     meta: () => engineMeta(),
     load: () => (s) => JSON.parse(s),
-  },
-  {
-    id: 'json-parse-bytes',
-    library: 'TextDecoder + JSON.parse',
-    mode: 'typed',
-    input: 'bytes',
-    notes: 'Uint8Array -> TextDecoder.decode -> JSON.parse; the UTF-8 decode is timed',
-    meta: () => engineMeta(),
-    load: () => (b) => JSON.parse(td.decode(b)),
   },
   {
     id: 'json-parse-buffer',
     library: 'Buffer.toString + JSON.parse',
     mode: 'typed',
     input: 'bytes',
-    notes: 'node:buffer Buffer -> toString("utf8") -> JSON.parse (the Node `ws` message path); decode timed',
+    frame: 'buffer',
+    notes: WS_EXTRA + 'node:buffer Buffer -> toString("utf8") -> JSON.parse; the decode is timed',
     meta: () => engineMeta(),
     load: () => (b) => JSON.parse(b.toString('utf8')),
-    prepare: 'buffer',
-  },
-  {
-    id: 'baseline-utf8-decode',
-    library: 'TextDecoder',
-    mode: 'baseline',
-    input: 'bytes',
-    notes: 'TextDecoder.decode only (no parse): the bytes -> string cost to add to json-parse-string',
-    meta: () => engineMeta(),
-    load: () => (b) => td.decode(b),
-    fold: (s) => s.length,
-    verify: 'decode',
   },
   {
     id: 'baseline-buffer-tostring',
     library: 'Buffer.toString',
     mode: 'baseline',
     input: 'bytes',
-    notes: 'node:buffer Buffer.toString("utf8") only (no parse)',
+    frame: 'buffer',
+    notes: WS_EXTRA + 'Buffer.toString("utf8") only (no parse): the decode json-parse-buffer pays',
     meta: () => engineMeta(),
     load: () => (b) => b.toString('utf8'),
     fold: (s) => s.length,
-    verify: 'decode',
-    prepare: 'buffer',
+    verify: 'text',
   },
   {
-    id: 'bun-jsonl-bytes',
-    library: 'Bun.JSONL.parse',
-    mode: 'typed',
-    input: 'bytes',
-    runtimes: ['bun'],
-    notes: 'Bun-native NDJSON parser fed one line as a Uint8Array (no separate decode step); returns [event]',
-    meta: () => ({ version: `Bun ${Bun.version}`, license: 'MIT' }),
-    load: () => (b) => Bun.JSONL.parse(b)[0],
+    id: 'baseline-utf8-encodeinto',
+    library: 'TextEncoder.encodeInto',
+    mode: 'baseline',
+    input: 'string→bytes',
+    notes: 'TextEncoder.encodeInto a reused scratch Uint8Array only (no parse): the string -> bytes step every string→bytes row pays',
+    meta: () => engineMeta(),
+    load: () => encodeUtf8,
+    fold: (b) => b.length,
+    verify: 'bytes',
+  },
+  {
+    id: 'baseline-utf8-encode',
+    library: 'TextEncoder.encode',
+    mode: 'baseline',
+    input: 'string→bytes',
+    notes: 'TextEncoder.encode (a fresh Uint8Array per frame) only, for comparison with encodeInto',
+    meta: () => engineMeta(),
+    load: () => (s) => te.encode(s),
+    fold: (b) => b.length,
+    verify: 'bytes',
   },
   {
     id: 'bun-jsonl-string',
@@ -129,16 +139,26 @@ const PARSERS = [
     mode: 'typed',
     input: 'string',
     runtimes: ['bun'],
-    notes: 'Bun-native NDJSON parser fed one line as a JS string; returns [event]',
+    notes: 'Bun-native NDJSON parser fed the frame string; returns [event]',
     meta: () => ({ version: `Bun ${Bun.version}`, license: 'MIT' }),
     load: () => (s) => Bun.JSONL.parse(s)[0],
+  },
+  {
+    id: 'bun-jsonl-bytes',
+    library: 'Bun.JSONL.parse',
+    mode: 'typed',
+    input: 'string→bytes',
+    runtimes: ['bun'],
+    notes: 'Bun.JSONL.parse(Uint8Array) after TextEncoder.encodeInto a reused scratch buffer (timed); returns [event]',
+    meta: () => ({ version: `Bun ${Bun.version}`, license: 'MIT' }),
+    load: () => (s) => Bun.JSONL.parse(encodeUtf8(s))[0],
   },
   {
     id: 'simdjson-parse',
     library: 'simdjson (npm, luizperes/simdjson_nodejs)',
     mode: 'typed',
     input: 'string',
-    notes: 'native N-API addon bundling simdjson 0.9.1; simdjson.parse() builds the full JS object through node-addon-api',
+    notes: 'native N-API addon bundling simdjson 0.9.1; simdjson.parse(string) is its only entry point (it copies the string out as UTF-8 itself) and builds the full JS object through node-addon-api',
     meta: () => pkgMeta('simdjson'),
     load: () => {
       const s = require('simdjson');
@@ -150,7 +170,8 @@ const PARSERS = [
     library: 'simdjson (npm, luizperes/simdjson_nodejs)',
     mode: 'dom',
     input: 'string',
-    notes: 'lazyParse() keeps the simdjson DOM native; the timed loop reads kind and tags via valueForKeyPath (tags materializes the array: the binding has no length accessor). Under Node 22 the process dies with SIGSEGV (reproduced with a bare lazyParse() loop, cause not traced into the 2021 addon); runs on Bun and Deno',
+    retained: false,
+    notes: 'lazyParse(string) keeps the simdjson DOM native; the timed loop reads kind and tags via valueForKeyPath (tags materializes the array: the binding has no length accessor). Retained: null, the document lives in native memory the JS heap reading does not see. Under Node 22 the process dies with SIGSEGV (reproduced with a bare lazyParse() loop, cause not traced into the 2021 addon); runs on Bun and Deno',
     meta: () => pkgMeta('simdjson'),
     load: () => {
       const s = require('simdjson');
@@ -171,13 +192,13 @@ const PARSERS = [
     id: 'jsonjoy-decoder',
     library: '@jsonjoy.com/json-pack JsonDecoder',
     mode: 'typed',
-    input: 'bytes',
-    notes: 'pure-JS JSON decoder reading a Uint8Array directly (json-joy); one decoder reused. Does not decode \\uXXXX escapes (its unescape regex only knows \\b \\f \\n \\r \\t \\" \\/ \\\\), so events with escaped emoji fail the digest',
+    input: 'string→bytes',
+    notes: 'pure-JS JSON decoder that only reads a Uint8Array (json-joy): TextEncoder.encodeInto a reused scratch buffer, then decode (both timed); one decoder reused. Does not decode \\uXXXX escapes (its unescape regex only knows \\b \\f \\n \\r \\t \\" \\/ \\\\), so events with escaped emoji fail the digest',
     meta: () => pkgMeta('@jsonjoy.com/json-pack'),
     load: () => {
       const { JsonDecoder } = require('@jsonjoy.com/json-pack/lib/json/JsonDecoder.js');
       const dec = new JsonDecoder();
-      return (b) => dec.decode(b);
+      return (s) => dec.decode(encodeUtf8(s));
     },
   },
   {
@@ -185,7 +206,7 @@ const PARSERS = [
     library: '@streamparser/json JSONParser',
     mode: 'typed',
     input: 'string',
-    notes: 'streaming tokenizer + token parser, one parser reused with separator "" and paths ["$"]; each line written as a whole chunk',
+    notes: 'streaming tokenizer + token parser, one parser reused with separator "" and paths ["$"]; each frame written whole through write(string), which TextEncoder.encodes it internally',
     meta: () => pkgMeta('@streamparser/json'),
     load: async () => {
       const { JSONParser } = await import('@streamparser/json');
@@ -343,6 +364,48 @@ function gcRecorder() {
   };
 }
 
+// Retained heap (HARNESS.md "Retained heap"): a full, synchronous collection and the JS
+// heap in use. Node and Deno need --expose-gc (childCommand passes it); Bun.gc(true) is
+// a synchronous full JSC collection and bun:jsc heapStats().heapSize the live JSC heap.
+// Both see the JS heap only: memory a native addon holds (simdjson's documents) or a
+// Buffer's external backing store is invisible to them.
+async function retainedProbe() {
+  if (RT === 'bun') {
+    const jsc = await import('bun:jsc');
+    return { gc: () => Bun.gc(true), used: () => jsc.heapStats().heapSize };
+  }
+  if (typeof globalThis.gc !== 'function') return null;
+  return { gc: () => globalThis.gc(), used: () => process.memoryUsage().heapUsed };
+}
+
+// Parses every event once more from a fresh frame (as a socket would hand it over, so a
+// result that pins its input is charged for it), keeps every result alive, and returns
+// the median over 3 passes of the heap growth per event. The result array is allocated
+// before the first reading, so the container is excluded. Everything alive across the
+// readings is touched afterwards: V8's liveness analysis lets the GC free a local that
+// is never read again, which would otherwise skew the readings.
+function measureRetained(probe, parse, raw, makeFrame) {
+  const n = raw.length;
+  const full = () => {
+    for (let i = 0; i < 4; i++) probe.gc();
+  };
+  const vals = [];
+  let touch = 0;
+  for (let rep = 0; rep < 3; rep++) {
+    let keep = new Array(n).fill(null);
+    full();
+    const before = probe.used();
+    for (let i = 0; i < n; i++) keep[i] = parse(makeFrame(raw[i]));
+    full();
+    const after = probe.used();
+    vals.push((after - before) / n);
+    touch += keep.length + (keep[n - 1] ? 1 : 0) + raw.length;
+    keep = null;
+  }
+  vals.sort((a, b) => a - b);
+  return { perEvent: vals[1], touch };
+}
+
 async function runChild(opts, manifest, workloads) {
   const P = PARSERS.find((p) => p.id === opts.child);
   if (!P) throw new Error(`unknown parser ${opts.child}`);
@@ -359,6 +422,7 @@ async function runChild(opts, manifest, workloads) {
   const fields = P.fields ?? ((e) => e);
   const gcRec = gcRecorder();
   const alloc = allocCounter();
+  const probe = await retainedProbe();
   const rows = [];
   let sinkAll = 0;
 
@@ -382,6 +446,7 @@ async function runChild(opts, manifest, workloads) {
       ns_per_event: null, mb_per_s: null, events_per_s: null,
       alloc_bytes_per_event: null, allocs_per_event: null,
       gc_count: null, gc_ms: null,
+      retained_bytes_per_event: null,
     };
     rows.push(row);
     if (loadError) {
@@ -393,19 +458,23 @@ async function runChild(opts, manifest, workloads) {
       row.error = `line count ${raw.length} != manifest events ${w.events}`;
       continue;
     }
-    let inputs;
-    if (P.input === 'string') inputs = raw.map((b) => td.decode(b));
-    else if (P.prepare === 'buffer') inputs = raw.map((b) => Buffer.from(b));
-    else inputs = raw;
+    // The frame object, prepared untimed: a JS string (TextDecoder output: a flat,
+    // sequential string like the one a WebSocket hands over), or a Buffer for the
+    // extra `ws` rows.
+    const makeFrame = P.frame === 'buffer' ? (b) => Buffer.from(b) : (b) => td.decode(b);
+    const inputs = raw.map(makeFrame);
 
     // 2. verify (untimed)
     const h = createHash('sha256');
     for (let i = 0; i < inputs.length; i++) {
       try {
         const r = parse(inputs[i]);
-        if (P.verify === 'decode') {
-          // a baseline produces the line text: re-parse it with JSON.parse to digest it
+        if (P.verify === 'text') {
+          // a decode baseline produces the line text: re-parse it with JSON.parse to digest it
           h.update(digestText(JSON.parse(r)), 'utf8');
+        } else if (P.verify === 'bytes') {
+          // an encode baseline produces the line's UTF-8: decode and parse it to digest it
+          h.update(digestText(JSON.parse(td.decode(r))), 'utf8');
         } else {
           h.update(digestText(fields(r)), 'utf8');
         }
@@ -466,9 +535,17 @@ async function runChild(opts, manifest, workloads) {
       row.gc_count = g.count;
       row.gc_ms = g.ms;
     }
+    // 5. retained heap (untimed), not for baselines or results held outside the JS heap
+    if (probe && P.mode !== 'baseline' && P.retained !== false) {
+      const r = measureRetained(probe, parse, raw, makeFrame);
+      row.retained_bytes_per_event = r.perEvent;
+      sink += r.touch + inputs.length;
+    }
     process.stderr.write(
       `  ${RT} ${P.id.padEnd(26)} ${w.name.padEnd(10)} ${row.mb_per_s.toFixed(1).padStart(8)} MB/s ` +
-        `${row.ns_per_event.toFixed(0).padStart(7)} ns/ev  rounds=${row.rounds} sink=${sink}\n`,
+        `${row.ns_per_event.toFixed(0).padStart(7)} ns/ev  rounds=${row.rounds}` +
+        (row.retained_bytes_per_event == null ? '' : ` retained=${row.retained_bytes_per_event.toFixed(0)} B/ev`) +
+        ` sink=${sink}\n`,
     );
   }
   process.stdout.write('@@ROWS ' + JSON.stringify(rows) + '\n');
@@ -478,9 +555,12 @@ async function runChild(opts, manifest, workloads) {
 // ---------------------------------------------------------------- orchestrator
 
 function childCommand(args) {
-  if (RT === 'deno') return [Deno.execPath(), ['run', '-A', SCRIPT, ...args]];
+  // --expose-gc gives the child a synchronous full gc() for the retained-heap pass. It
+  // does not change how V8 collects during the timed rounds.
+  if (RT === 'deno') return [Deno.execPath(), ['run', '-A', '--v8-flags=--expose-gc', SCRIPT, ...args]];
   if (RT === 'bun') return [process.execPath, [SCRIPT, ...args]];
-  return [process.execPath, [...process.execArgv, SCRIPT, ...args]];
+  const execArgv = process.execArgv.includes('--expose-gc') ? process.execArgv : [...process.execArgv, '--expose-gc'];
+  return [process.execPath, [...execArgv, SCRIPT, ...args]];
 }
 
 function hostInfo() {
@@ -539,6 +619,7 @@ async function main() {
           notes: p.notes, workload: w.name, events: w.events, bytes: w.bytes, digest_ok: false, errors: 0,
           error: why, rounds: 0, median_ns: null, min_ns: null, p90_ns: null, ns_per_event: null, mb_per_s: null,
           events_per_s: null, alloc_bytes_per_event: null, allocs_per_event: null, gc_count: null, gc_ms: null,
+          retained_bytes_per_event: null,
         });
       }
     }

@@ -16,6 +16,7 @@ import platform
 import subprocess
 import sys
 import time
+import tracemalloc
 from importlib.metadata import version as dist_version
 from pathlib import Path
 
@@ -26,11 +27,16 @@ US, RS, GS, FS = b"\x1f", b"\x1e", b"\x1d", b"\x1c"
 
 # ------------------------------------------------------------------ parsers
 #
-# id -> spec. `input` is the form prepared outside the timed loop; `access` picks the
-# timed-loop fold: "dict" (e["kind"]...), "attr" (e.kind...), "dom" (kind + tag count
-# from a lazy proxy only), "str" (baseline: decoded length). `load()` returns the parse
-# function, `to_py` (optional) converts a lazy result into plain objects for the digest.
-# Licenses were read from each wheel's METADATA / LICENSE file (see README.md).
+# Every parser starts from what a WebSocket text frame is in Python: a `str` (websockets
+# recv(), aiohttp WSMessage.data). `input` names the path (HARNESS.md vocabulary):
+# "string" (the parser takes the str itself) or "string→bytes" (the parser only reads
+# bytes, so `s.encode()` runs inside the timed loop, as part of the parse function).
+# `access` picks the timed-loop fold: "dict" (e["kind"]...), "attr" (e.kind...), "dom"
+# (kind + tag count from a lazy proxy only), "bytes" (baseline: encoded length). `load()`
+# returns the parse function, `to_py` (optional) converts a lazy result into plain
+# objects for the digest. `retained=False` marks results that cannot be kept (views into
+# a reused parser document). Licenses were read from each wheel's METADATA / LICENSE
+# file (see README.md).
 
 PY = f"CPython {platform.python_version()}"
 
@@ -86,13 +92,13 @@ def _load_pysimdjson_recursive():
     import simdjson
 
     p = simdjson.Parser()
-    return lambda b: p.parse(b, True)
+    return lambda s: p.parse(s, True)
 
 
 def _load_cysimdjson():
     import cysimdjson
 
-    return cysimdjson.JSONParser().parse
+    return cysimdjson.JSONParser().parse_string
 
 
 def _load_rapidjson():
@@ -104,7 +110,8 @@ def _load_rapidjson():
 def _load_jiter():
     import jiter
 
-    return jiter.from_json
+    f = jiter.from_json
+    return lambda s: f(s.encode())
 
 
 def _load_simplejson():
@@ -119,48 +126,58 @@ def _load_simplejson():
 def _load_yyjson():
     import yyjson
 
-    return yyjson.loads
+    f = yyjson.loads
+    return lambda s: f(s.encode())
 
 
-def _load_decode():
-    return lambda b: b.decode("utf-8")
+def _load_encode():
+    return str.encode
 
 
 PARSERS = [
     dict(id="json-stdlib", library="json (stdlib)", dist=None, license="PSF-2.0", mode="typed", input="string",
-         access="dict", load=_load_json_str, notes="json.loads(str), C scanner; dict result"),
-    dict(id="json-stdlib-bytes", library="json (stdlib)", dist=None, license="PSF-2.0", mode="typed", input="bytes",
-         access="dict", load=_load_json_str, notes="json.loads(bytes): detects the encoding and decodes inside the call (timed)"),
-    dict(id="baseline-utf8-decode", library="bytes.decode", dist=None, license="PSF-2.0", mode="baseline", input="bytes",
-         access="str", load=_load_decode, notes="bytes.decode('utf-8') only: the bytes -> str cost to add to the str parsers"),
+         access="dict", load=_load_json_str,
+         notes="json.loads(str), C scanner reading the str's own code units; dict result"),
+    dict(id="baseline-utf8-encode", library="str.encode", dist=None, license="PSF-2.0", mode="baseline",
+         input="string→bytes", access="bytes", load=_load_encode,
+         notes="s.encode() only (no parse) on a fresh str: the str -> UTF-8 bytes step the string→bytes rows pay"),
     dict(id="orjson", library="orjson", dist="orjson", license="MPL-2.0 AND (Apache-2.0 OR MIT)", mode="typed",
-         input="bytes", access="dict", load=_load_orjson, notes="orjson.loads(bytes); Rust, caches short dict keys"),
+         input="string", access="dict", load=_load_orjson,
+         notes="orjson.loads(str): reads the str's UTF-8 through the C API (free for an ASCII str, an encode cached on "
+               "the str otherwise); Rust, caches short dict keys"),
     dict(id="ujson", library="ujson", dist="ujson", license="BSD-3-Clause AND TCL", mode="typed", input="string",
          access="dict", load=_load_ujson, notes="ujson.loads(str)"),
-    dict(id="msgspec-typed", library="msgspec", dist="msgspec", license="BSD-3-Clause", mode="typed", input="bytes",
+    dict(id="msgspec-typed", library="msgspec", dist="msgspec", license="BSD-3-Clause", mode="typed", input="string",
          access="attr", load=_load_msgspec_typed,
-         notes="msgspec.json.Decoder(Event).decode, Event is a msgspec.Struct (validated types), decoder reused"),
-    dict(id="msgspec-generic", library="msgspec", dist="msgspec", license="BSD-3-Clause", mode="typed", input="bytes",
-         access="dict", load=_load_msgspec_generic, notes="msgspec.json.Decoder().decode -> dict, decoder reused"),
-    dict(id="pysimdjson", library="pysimdjson", dist="pysimdjson", license="MIT", mode="dom", input="bytes",
-         access="dom", load=_load_pysimdjson_dom, to_py=lambda o: o.as_dict(),
-         notes="simdjson.Parser().parse(bytes) -> lazy Object proxy; one parser reused, so each document is only "
-               "valid until the next parse (borrowed-ish); loop reads kind + len(tags). Bundles simdjson (Apache-2.0)"),
+         notes="msgspec.json.Decoder(Event).decode(str), Event is a msgspec.Struct (validated types), decoder reused"),
+    dict(id="msgspec-generic", library="msgspec", dist="msgspec", license="BSD-3-Clause", mode="typed",
+         input="string", access="dict", load=_load_msgspec_generic,
+         notes="msgspec.json.Decoder().decode(str) -> dict, decoder reused"),
+    dict(id="pysimdjson", library="pysimdjson", dist="pysimdjson", license="MIT", mode="dom", input="string",
+         access="dom", load=_load_pysimdjson_dom, to_py=lambda o: o.as_dict(), retained=False,
+         notes="simdjson.Parser().parse(str) -> lazy Object proxy (parse takes the str's UTF-8 itself); one parser "
+               "reused, so each document is only valid until the next parse (borrowed-ish), and retained is null; "
+               "loop reads kind + len(tags). Bundles simdjson (Apache-2.0)"),
     dict(id="pysimdjson-recursive", library="pysimdjson", dist="pysimdjson", license="MIT", mode="typed",
-         input="bytes", access="dict", load=_load_pysimdjson_recursive,
-         notes="simdjson.Parser().parse(bytes, recursive=True) -> plain dict; parser reused"),
-    dict(id="cysimdjson", library="cysimdjson", dist="cysimdjson", license="Apache-2.0", mode="dom", input="bytes",
-         access="dom", load=_load_cysimdjson, to_py=lambda o: o.export(),
-         notes="cysimdjson.JSONParser().parse(bytes) -> lazy JSONObject; parser reused, documents valid until the "
-               "next parse; loop reads kind + len(tags)"),
+         input="string", access="dict", load=_load_pysimdjson_recursive,
+         notes="simdjson.Parser().parse(str, recursive=True) -> plain dict; parser reused"),
+    dict(id="cysimdjson", library="cysimdjson", dist="cysimdjson", license="Apache-2.0", mode="dom", input="string",
+         access="dom", load=_load_cysimdjson, to_py=lambda o: o.export(), retained=False,
+         notes="cysimdjson.JSONParser().parse_string(str) (its str entry point: PyUnicode_AsUTF8AndSize) -> lazy "
+               "JSONElement; parser reused, documents valid until the next parse, so retained is null; loop reads "
+               "kind + len(tags)"),
     dict(id="python-rapidjson", library="python-rapidjson", dist="python-rapidjson", license="MIT", mode="typed",
          input="string", access="dict", load=_load_rapidjson, notes="rapidjson.loads(str)"),
-    dict(id="jiter", library="jiter", dist="jiter", license="MIT", mode="typed", input="bytes", access="dict",
-         load=_load_jiter, notes="jiter.from_json(bytes) (pydantic's parser), default cache_mode='all' string cache"),
+    dict(id="jiter", library="jiter", dist="jiter", license="MIT", mode="typed", input="string→bytes",
+         access="dict", load=_load_jiter,
+         notes="jiter.from_json(s.encode()) (pydantic's parser; from_json only takes bytes, the encode is timed), "
+               "default cache_mode='all' string cache"),
     dict(id="simplejson", library="simplejson", dist="simplejson", license="MIT OR AFL-2.1", mode="typed",
          input="string", access="dict", load=_load_simplejson, notes="simplejson.loads(str) with the C speedups"),
-    dict(id="yyjson", library="yyjson (py_yyjson)", dist="yyjson", license="MIT", mode="typed", input="bytes",
-         access="dict", load=_load_yyjson, notes="yyjson.loads(bytes) -> dict; bundles yyjson (MIT)"),
+    dict(id="yyjson", library="yyjson (py_yyjson)", dist="yyjson", license="MIT", mode="typed",
+         input="string→bytes", access="dict", load=_load_yyjson,
+         notes="yyjson.loads(s.encode()) -> dict (encode timed). loads(str) is not used: it returns mojibake for "
+               "non-ASCII (checked in 4.0.6: '{\"a\":\"é\"}' -> 'Ã©'). Bundles yyjson (MIT)"),
 ]
 BY_ID = {p["id"]: p for p in PARSERS}
 
@@ -205,32 +222,33 @@ def digest_event(h, e):
 
 # ------------------------------------------------------------------ timed rounds
 
-def make_round(parse, access, inputs):
-    # One closure per access style so the loop body has no extra call for the fold.
+def make_round(parse, access):
+    # One closure per access style so the loop body has no extra call for the fold. A
+    # round takes its inputs as an argument because every round gets fresh str objects.
     if access == "dict":
-        def rnd():
+        def rnd(inputs):
             s = 0
             for x in inputs:
                 e = parse(x)
                 s += e["kind"] + len(e["tags"]) + len(e["content"])
             return s
     elif access == "attr":
-        def rnd():
+        def rnd(inputs):
             s = 0
             for x in inputs:
                 e = parse(x)
                 s += e.kind + len(e.tags) + len(e.content)
             return s
     elif access == "dom":
-        def rnd():
+        def rnd(inputs):
             s = 0
             for x in inputs:
                 e = parse(x)
                 s += e["kind"] + len(e["tags"])
                 del e  # a reused simdjson parser refuses to parse while proxies are alive
             return s
-    elif access == "str":
-        def rnd():
+    elif access == "bytes":
+        def rnd(inputs):
             s = 0
             for x in inputs:
                 s += len(parse(x))
@@ -238,6 +256,45 @@ def make_round(parse, access, inputs):
     else:
         raise ValueError(access)
     return rnd
+
+
+def fresh_frames(raw):
+    """New str objects for every line, as a socket hands over a new str per frame.
+
+    CPython caches a str's UTF-8 form on the str the first time the C API asks for it
+    (PyUnicode_AsUTF8AndSize: orjson, msgspec, rapidjson, pysimdjson and cysimdjson do;
+    the stdlib json, ujson and simplejson read the code units and do not). Rounds over the
+    same str objects would get that encode for free from round 2 on, so every round,
+    warm-up included, runs on a fresh list built outside the timer. ASCII-only strs have
+    no cache: their UTF-8 is their storage.
+    """
+    return [b.decode("utf-8") for b in raw]
+
+
+def measure_retained(parse, raw):
+    """tracemalloc'd bytes still held after keeping every parse result, per event.
+
+    Frames are fresh strs created before tracing starts and dropped one by one, so the
+    frame (and any UTF-8 cache a parser hangs on it) is not counted, as in a client that
+    drops the frame once parsed. The result list is allocated before tracing starts, so
+    the container is excluded. Shared objects (small ints, interned or cached keys)
+    already alive before the pass are free, as they are in a client.
+    """
+    n = len(raw)
+    frames = fresh_frames(raw)
+    keep = [None] * n
+    gc.collect()
+    tracemalloc.start()
+    try:
+        for i in range(n):
+            keep[i] = parse(frames[i])
+            frames[i] = None
+        gc.collect()
+        current, _peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    del keep
+    return current / n
 
 
 class GcTimer:
@@ -286,7 +343,7 @@ def run_child(opts, workloads):
         row = dict(row_base, workload=w["name"], events=w["events"], bytes=w["bytes"], digest_ok=False, errors=0,
                    error=None, rounds=0, median_ns=None, min_ns=None, p90_ns=None, ns_per_event=None,
                    mb_per_s=None, events_per_s=None, alloc_bytes_per_event=None, allocs_per_event=None,
-                   gc_count=None, gc_ms=None)
+                   gc_count=None, gc_ms=None, retained_bytes_per_event=None)
         rows.append(row)
         if load_error:
             row["error"] = load_error
@@ -295,14 +352,13 @@ def run_child(opts, workloads):
         if len(raw) != w["events"]:
             row["error"] = f"line count {len(raw)} != manifest events {w['events']}"
             continue
-        inputs = [b.decode("utf-8") for b in raw] if p["input"] == "string" else raw
 
         # verify (untimed)
         h = hashlib.sha256()
-        for i, x in enumerate(inputs):
+        for i, x in enumerate(fresh_frames(raw)):
             try:
                 r = parse(x)
-                if p["access"] == "str":
+                if p["access"] == "bytes":
                     r = json.loads(r)
                 elif to_py:
                     r = to_py(r)
@@ -319,29 +375,35 @@ def run_child(opts, workloads):
                 row["error"] = f"digest mismatch: {digest} != {w['digest']}"
             continue
 
-        rnd = make_round(parse, p["access"], inputs)
+        rnd = make_round(parse, p["access"])
         clock = time.perf_counter_ns
         sink = 0
         end = clock() + opts.warmup_ms * 1_000_000
         while True:
-            sink += rnd()
+            sink += rnd(fresh_frames(raw))
             if clock() >= end:
                 break
 
+        # Each round is timed on its own, with a fresh str list built (and the previous one
+        # freed) between rounds, outside the clock; min-time counts timed rounds only.
         times = []
         gct.count = gct.ns = 0
-        gct.active = True
-        start = clock()
-        m_end = start + opts.min_time_ms * 1_000_000
-        last = start
+        timed = 0
+        min_ns = opts.min_time_ms * 1_000_000
+        inputs = None
         while len(times) < 10_000:
-            sink += rnd()
-            t = clock()
-            times.append(t - last)
-            last = t
-            if len(times) >= opts.min_rounds and t >= m_end:
+            inputs = None
+            inputs = fresh_frames(raw)
+            gct.active = True
+            t0 = clock()
+            sink += rnd(inputs)
+            t = clock() - t0
+            gct.active = False
+            times.append(t)
+            timed += t
+            if len(times) >= opts.min_rounds and timed >= min_ns:
                 break
-        gct.active = False
+        del inputs
         sink_all += sink
 
         times.sort()
@@ -351,8 +413,13 @@ def run_child(opts, workloads):
         row.update(rounds=n, median_ns=round(med), min_ns=times[0], p90_ns=p90,
                    ns_per_event=med / w["events"], mb_per_s=w["bytes"] / (med / 1e9) / 1e6,
                    events_per_s=w["events"] / (med / 1e9), gc_count=gct.count, gc_ms=gct.ns / 1e6)
+        # retained heap (untimed), not for baselines or views into a reused parser document
+        if p["mode"] != "baseline" and p.get("retained", True):
+            row["retained_bytes_per_event"] = measure_retained(parse, raw)
+        ret = row["retained_bytes_per_event"]
         print(f"  python {p['id']:<22} {w['name']:<10} {row['mb_per_s']:8.1f} MB/s "
-              f"{row['ns_per_event']:7.0f} ns/ev  rounds={n} gc={gct.count} sink={sink}", file=sys.stderr)
+              f"{row['ns_per_event']:7.0f} ns/ev  rounds={n} gc={gct.count}"
+              f"{'' if ret is None else f' retained={ret:.0f} B/ev'} sink={sink}", file=sys.stderr)
     print("@@ROWS " + json.dumps(rows))
     print(f"  (sink {sink_all})", file=sys.stderr)
 
@@ -443,7 +510,8 @@ def main(argv):
                                 events=w["events"], bytes=w["bytes"], digest_ok=False, errors=0, error=why,
                                 rounds=0, median_ns=None, min_ns=None, p90_ns=None, ns_per_event=None,
                                 mb_per_s=None, events_per_s=None, alloc_bytes_per_event=None,
-                                allocs_per_event=None, gc_count=None, gc_ms=None))
+                                allocs_per_event=None, gc_count=None, gc_ms=None,
+                                retained_bytes_per_event=None))
 
     doc = {
         "harness": "python",
