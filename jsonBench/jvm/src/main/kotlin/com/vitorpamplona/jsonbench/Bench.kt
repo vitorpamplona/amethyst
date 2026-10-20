@@ -1,0 +1,190 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.jsonbench
+
+import com.sun.management.ThreadMXBean
+import java.lang.management.ManagementFactory
+
+/**
+ * One parser under test. Every concrete parser is its own final class, so the hot loop in
+ * [parseAll] calls exactly one library entry point (monomorphic for the JIT), and each one
+ * runs in a child JVM of its own (see Main.kt).
+ *
+ * @param I the input form the parser consumes (HARNESS.md "Input forms").
+ */
+abstract class BenchParser<I : Any> {
+    /** Converts the raw lines into this parser's input form. Untimed. */
+    abstract fun prepareAll(lines: List<ByteArray>): Array<I>
+
+    /**
+     * Parses one input and returns it as an [Event], for the digest. Untimed. Returns null
+     * for baselines, which are not parsers.
+     */
+    abstract fun decode(input: I): Event?
+
+    /**
+     * The timed loop: parses every input once, in order, and folds something from every
+     * result into the returned sink so the JIT cannot drop the work.
+     */
+    abstract fun parseAll(inputs: Array<I>): Long
+}
+
+abstract class StringInputParser : BenchParser<String>() {
+    override fun prepareAll(lines: List<ByteArray>): Array<String> = Array(lines.size) { String(lines[it], Charsets.UTF_8) }
+}
+
+abstract class BytesInputParser : BenchParser<ByteArray>() {
+    override fun prepareAll(lines: List<ByteArray>): Array<ByteArray> = Array(lines.size) { lines[it] }
+}
+
+/** A line copied into a buffer with [PADDING] spare bytes after it; [len] is the JSON length. */
+class Padded(
+    val buf: ByteArray,
+    val len: Int,
+)
+
+abstract class PaddedInputParser : BenchParser<Padded>() {
+    override fun prepareAll(lines: List<ByteArray>): Array<Padded> = Array(lines.size) { Padded(lines[it].copyOf(lines[it].size + PADDING), lines[it].size) }
+
+    companion object {
+        const val PADDING = 64
+    }
+}
+
+class Settings(
+    val warmupMs: Long,
+    val minTimeMs: Long,
+    val minRounds: Int,
+) {
+    companion object {
+        const val MAX_ROUNDS = 10_000
+    }
+}
+
+class Verification(
+    val digest: String?,
+    val errors: Int,
+    val firstError: String?,
+)
+
+class Measurement(
+    val rounds: Int,
+    val medianNs: Long,
+    val minNs: Long,
+    val p90Ns: Long,
+    val allocBytes: Long?,
+    val gcCount: Long?,
+    val gcMs: Long?,
+)
+
+object Runner {
+    /** Keeps every round's sink alive; printed at the end of the child so nothing is dead code. */
+    @JvmStatic
+    @Volatile
+    var blackhole: Long = 0
+
+    fun <I : Any> verify(
+        parser: BenchParser<I>,
+        inputs: Array<I>,
+    ): Verification {
+        val digest = EventDigest()
+        var errors = 0
+        var firstError: String? = null
+        var baseline = false
+        for ((index, input) in inputs.withIndex()) {
+            try {
+                val event = parser.decode(input)
+                if (event == null) {
+                    baseline = true
+                    break
+                }
+                digest.update(event)
+            } catch (t: Throwable) {
+                errors++
+                if (firstError == null) firstError = "event #$index: ${t.javaClass.name}: ${t.message?.take(300)}"
+            }
+        }
+        return Verification(if (baseline) null else digest.hex(), errors, firstError)
+    }
+
+    fun <I : Any> measure(
+        parser: BenchParser<I>,
+        inputs: Array<I>,
+        settings: Settings,
+    ): Measurement {
+        var sink = 0L
+
+        // Warm-up: whole rounds for at least warmupMs (and at least one round).
+        val warmupEnd = System.nanoTime() + settings.warmupMs * 1_000_000
+        do {
+            sink += parser.parseAll(inputs)
+        } while (System.nanoTime() < warmupEnd)
+
+        // Start the measurement from a collected heap, JMH-style, so the GC numbers belong
+        // to the measured rounds rather than to the warm-up's leftovers.
+        System.gc()
+
+        val times = LongArray(Settings.MAX_ROUNDS)
+        val minTimeNs = settings.minTimeMs * 1_000_000
+        val threads = ManagementFactory.getThreadMXBean() as? ThreadMXBean
+        val threadId = Thread.currentThread().threadId()
+        val gcBeans = ManagementFactory.getGarbageCollectorMXBeans()
+
+        val gcCountBefore = gcBeans.sumOf { it.collectionCount.coerceAtLeast(0) }
+        val gcTimeBefore = gcBeans.sumOf { it.collectionTime.coerceAtLeast(0) }
+        val allocBefore = threads?.getThreadAllocatedBytes(threadId) ?: -1
+
+        var rounds = 0
+        val start = System.nanoTime()
+        while (rounds < Settings.MAX_ROUNDS) {
+            val t0 = System.nanoTime()
+            sink += parser.parseAll(inputs)
+            val t1 = System.nanoTime()
+            times[rounds++] = t1 - t0
+            if (rounds >= settings.minRounds && t1 - start >= minTimeNs) break
+        }
+
+        val allocAfter = threads?.getThreadAllocatedBytes(threadId) ?: -1
+        val gcCountAfter = gcBeans.sumOf { it.collectionCount.coerceAtLeast(0) }
+        val gcTimeAfter = gcBeans.sumOf { it.collectionTime.coerceAtLeast(0) }
+
+        blackhole += sink
+
+        val sorted = times.copyOf(rounds).also { it.sort() }
+        val median =
+            if (rounds % 2 == 1) {
+                sorted[rounds / 2]
+            } else {
+                (sorted[rounds / 2 - 1] + sorted[rounds / 2]) / 2
+            }
+        val p90Index = (Math.ceil(0.9 * rounds).toInt() - 1).coerceIn(0, rounds - 1)
+
+        return Measurement(
+            rounds = rounds,
+            medianNs = median,
+            minNs = sorted[0],
+            p90Ns = sorted[p90Index],
+            allocBytes = if (allocBefore >= 0 && allocAfter >= 0) allocAfter - allocBefore else null,
+            gcCount = if (gcBeans.isEmpty()) null else gcCountAfter - gcCountBefore,
+            gcMs = if (gcBeans.isEmpty()) null else gcTimeAfter - gcTimeBefore,
+        )
+    }
+}
