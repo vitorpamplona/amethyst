@@ -4484,6 +4484,7 @@
     <string name="kind_relay_discovery">Átjátszófelfedezés</string>
     <string name="kind_relay_monitor">Átjátszó-figyelő hirdetmény</string>
     <string name="kind_relay_set">Átjátszókészlet</string>
+    <string name="kind_release_artifact_set">Összetevőkészlet kiadása</string>
     <string name="kind_reports">Jelentések</string>
     <string name="kind_reposts">Megosztások</string>
     <string name="kind_reposts_16">Megosztások (16)</string>
