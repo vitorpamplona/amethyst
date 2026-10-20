@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
-import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.StaticSubscription
+import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.DynamicSubscription
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
@@ -33,12 +33,14 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestGetPublicKey
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestLogout
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip04Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSwitchRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip57Zaps.PrivateZapEvent
@@ -51,12 +53,13 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 import kotlin.coroutines.cancellation.CancellationException
 
 class NostrSignerRemote(
     val signer: NostrSignerInternal,
     val remotePubkey: HexKey,
-    val relays: Set<NormalizedRelayUrl>,
+    relays: Set<NormalizedRelayUrl>,
     val client: INostrClient,
     val permissions: String? = null,
     val secret: String? = null,
@@ -73,7 +76,17 @@ class NostrSignerRemote(
     val onAuthUrl: ((String) -> Unit)? = null,
     /** Invoked with each URL given to [onAuthUrl] once its request is over, answered or not. */
     val onAuthUrlSettled: ((String) -> Unit)? = null,
+    /**
+     * Invoked with the signer's new relays when [switchRelays] moves to them, so the caller can
+     * save them (a `bunker://` address rebuilt with these relays reaches the signer next time).
+     */
+    val onRelaysSwitched: ((Set<NormalizedRelayUrl>) -> Unit)? = null,
 ) : NostrSigner(signer.pubKey) {
+    /** Where this client reaches the signer: the address's relays until [switchRelays] moves them. */
+    @Volatile
+    var relays: Set<NormalizedRelayUrl> = relays
+        private set
+
     // The user's real identity, resolved from the bunker via `get_public_key`. The constructor
     // `signer` is the ephemeral NIP-46 TRANSPORT keypair, NOT the user — so until this is bound,
     // `pubKey` falls back to the transport key. Every self-encryption / self-authorship site keys
@@ -111,16 +124,21 @@ class NostrSignerRemote(
             onAuthUrlSettled = onAuthUrlSettled,
         )
 
+    // Dynamic: each refresh rebuilds the filter from [relays], which a relay switch changes.
+    // `this.`: in an initializer the constructor parameter of the same name would win, and the
+    // filter would stay on the address's relays forever.
     val subscription =
-        StaticSubscription(
+        DynamicSubscription(
             client,
-            relays.associateWith {
-                listOf(
-                    Filter(
-                        kinds = listOf(NostrConnectEvent.KIND),
-                        tags = mapOf("p" to listOf(signer.pubKey)),
-                    ),
-                )
+            {
+                this.relays.associateWith {
+                    listOf(
+                        Filter(
+                            kinds = listOf(NostrConnectEvent.KIND),
+                            tags = mapOf("p" to listOf(signer.pubKey)),
+                        ),
+                    )
+                }
             },
         ) { event ->
             if (event is NostrConnectEvent) {
@@ -291,6 +309,50 @@ class NostrSignerRemote(
         throw convertExceptions("Could not ping", result)
     }
 
+    /**
+     * NIP-46 `switch_relays`: asks the signer whether it moved. NIP-46 asks clients to send it as
+     * soon as they are connected. A new list moves this client's requests and response
+     * subscription to it, and [onRelaysSwitched] hears it. Returns the new relays, or null when
+     * the signer did not move. Throws like the other requests when it refuses or never answers
+     * (a signer from before `switch_relays` rejects it as an unknown method).
+     */
+    suspend fun switchRelays(): Set<NormalizedRelayUrl>? {
+        val result =
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = { BunkerRequestSwitchRelays() },
+                parser = SwitchRelaysResponse::parse,
+            )
+
+        if (result !is SignerResult.RequestAddressed.Successful<SwitchRelaysResult>) {
+            throw convertExceptions("Could not switch relays", result)
+        }
+
+        val newRelays = result.result.relays ?: return null
+        if (newRelays == relays) return null
+
+        relays = newRelays
+        manager.relayList = newRelays
+        subscription.refresh()
+        onRelaysSwitched?.invoke(newRelays)
+        return newRelays
+    }
+
+    /**
+     * NIP-46 `logout`: tells the signer this client is done, so it can drop the session. A
+     * courtesy only: the caller deletes the transport key whether or not this is answered.
+     */
+    suspend fun logout() {
+        val result =
+            manager.launchWaitAndParse(
+                bunkerRequestBuilder = { BunkerRequestLogout() },
+                parser = LogoutResponse::parse,
+            )
+
+        if (result is SignerResult.RequestAddressed.Successful<LogoutResult>) return
+
+        throw convertExceptions("Could not log out", result)
+    }
+
     suspend fun connect() {
         val result =
             manager.launchWaitAndParse(
@@ -390,6 +452,7 @@ class NostrSignerRemote(
             clientMetadata: BunkerClientMetadata? = null,
             onAuthUrl: ((String) -> Unit)? = null,
             onAuthUrlSettled: ((String) -> Unit)? = null,
+            onRelaysSwitched: ((Set<NormalizedRelayUrl>) -> Unit)? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith(NostrConnectURI.BUNKER_SCHEME)) throw Exception("Invalid bunker uri")
             // Percent-decodes the values: signers built on the `url` crate (Opal, nak) send
@@ -407,6 +470,7 @@ class NostrSignerRemote(
                 clientMetadata = clientMetadata,
                 onAuthUrl = onAuthUrl,
                 onAuthUrlSettled = onAuthUrlSettled,
+                onRelaysSwitched = onRelaysSwitched,
             )
         }
     }

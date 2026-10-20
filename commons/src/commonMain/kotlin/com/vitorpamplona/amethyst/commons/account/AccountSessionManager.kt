@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerLogoutUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.stripBunkerSecret
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -520,6 +521,36 @@ class AccountSessionManager(
             }
         }
 
+    /**
+     * NIP-46 `logout` to the remote signer of the account being removed, if it has one. Launched
+     * on its own: the account's deletion does not wait for a signer that may never answer.
+     */
+    private suspend fun logOutOfRemoteSigner(
+        hex: HexKey,
+        npub: String,
+    ) {
+        // The loaded account's settings first: a relay switch may not have been saved yet.
+        val settings =
+            loggedInAccount()?.settings?.takeIf { it.keyPair.pubKey.toHexKey() == hex }
+                ?: try {
+                    localPreferences.loadAccountConfigFromEncryptedStorage(npub)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("AccountSessionManager", "Could not read the account's remote signer for logout", e)
+                    null
+                }
+        if (settings == null || !settings.usesRemoteSigner()) return
+        val bunkerUri = settings.remoteSignerBunkerUri ?: return
+        val transportKey = settings.remoteSignerTransportKey ?: return
+        val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
+
+        scope.launch(Dispatchers.IO) {
+            withSignerRelays(relays) {
+                RemoteSignerLogoutUseCase.execute(bunkerUri, transportKey, clientBuilder())
+            }
+        }
+    }
+
     fun logOff(accountInfo: AccountInfo) {
         scope.launch(Dispatchers.IO) {
             val hex = decodePublicKeyAsHexOrNull(accountInfo.npub)
@@ -531,6 +562,9 @@ class AccountSessionManager(
             // platform may keep the account's contacts outside our own storage (Android's launcher
             // shortcuts).
             hooks.onAccountRemoving(accountInfo.npub)
+
+            // Read before the settings are deleted: the logout needs the address and transport key.
+            logOutOfRemoteSigner(hex, accountInfo.npub)
 
             if (accountInfo.npub == currentAccountNPub()) {
                 // End what the account had running before its state is torn down.

@@ -33,13 +33,15 @@ import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 class RemoteSignerManager(
     val timeout: Long = 65_000,
     val client: INostrClient,
     val signer: NostrSignerInternal,
     val remoteKey: String,
-    val relayList: Set<NormalizedRelayUrl>,
+    /** Where requests go. Changes when the signer moves (NIP-46 `switch_relays`). */
+    @Volatile var relayList: Set<NormalizedRelayUrl>,
     val maxRetries: Int = 1,
     /**
      * Invoked with the authorization URL when the bunker answers a request with

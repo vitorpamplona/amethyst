@@ -33,6 +33,14 @@ apps pass `RemoteSignerAuthPrompts::report` (`commons/.../domain/nip46/`), from 
 cases and `AccountCacheState` alike; `RemoteSignerAuthPrompt` in `AmethystApp` shows each page
 with an Open button, and only `http(s)` pages get through. The CLI prints the URL instead.
 
+`switchRelays()` sends NIP-46 `switch_relays`; a new list moves the requests and the response
+subscription (`relays` is mutable, the subscription a `DynamicSubscription`) and fires
+`onRelaysSwitched`. `AccountCacheState` asks it whenever it loads a remote-signer account and
+saves the new relays into `remoteSignerBunkerUri`; `AccountsTorStateConnector` re-reads that on
+every settings save. `logout()` sends NIP-46 `logout`: `AccountSessionManager.logOff` runs
+`RemoteSignerLogoutUseCase` (its own short-lived signer on the saved transport key, bounded, never
+throws) before the account's settings are deleted. The CLI sends neither.
+
 ## Identity
 
 The constructor's `signer` is the transport key, **not** the user. `NostrSignerRemote.pubKey`

@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 sealed interface SignerResult<T : IResult> {
     sealed interface RequestAddressed<T : IResult> : SignerResult<T> {
@@ -80,3 +81,10 @@ sealed interface ConnectResult : IResult {
 
     data object AlreadyConnected : ConnectResult
 }
+
+/** The signer's relays after `switch_relays`, or null when it did not move. */
+data class SwitchRelaysResult(
+    val relays: Set<NormalizedRelayUrl>?,
+) : IResult
+
+data object LogoutResult : IResult
