@@ -166,9 +166,6 @@ kotlin {
 
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
-
-                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 
@@ -296,10 +293,6 @@ kotlin {
         val nativeMain =
             create("nativeMain") {
                 dependsOn(commonMain.get())
-                dependencies {
-                    // cryptography-kotlin: the AES ciphers and digests of every native target.
-                    implementation(libs.dev.whyoleg.cryptography.provider.optimal)
-                }
             }
 
         val nativeTest =

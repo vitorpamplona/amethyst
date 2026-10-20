@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.mls.crypto
 
 import com.vitorpamplona.quartz.utils.RandomInstance
-import io.github.andreypfau.kotlinx.crypto.Sha512
+import java.security.MessageDigest
 
 /**
  * JVM/Android Ed25519 implementation using pure Kotlin field arithmetic.
@@ -129,11 +129,11 @@ actual object Ed25519 {
         return packPoint(p)
     }
 
-    private fun sha512(data: ByteArray): ByteArray {
-        val digest = Sha512()
-        digest.update(data)
-        return digest.digest()
-    }
+    // One digest per thread: MessageDigest.getInstance is a provider lookup, and sign and
+    // verify hash two or three times each.
+    private val sha512Digest: ThreadLocal<MessageDigest> = ThreadLocal.withInitial { MessageDigest.getInstance("SHA-512") }
+
+    private fun sha512(data: ByteArray): ByteArray = sha512Digest.get()!!.digest(data)
 
     private fun newPoint(): Array<LongArray> =
         arrayOf(

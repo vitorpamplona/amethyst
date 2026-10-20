@@ -21,45 +21,25 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.AES
+import com.vitorpamplona.quartz.utils.ciphers.aes.AesCbcKey
 
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : NostrCipher {
-    private val cryptoProvider = CryptographyProvider.Default
-    private val aesCbc = cryptoProvider.get(AES.CBC)
-
-    private val keyDecoder =
-        aesCbc
-            .keyDecoder()
-            .decodeFromByteArrayBlocking(format = AES.Key.Format.RAW, keyBytes)
-
-    private fun cipher() = keyDecoder.cipher()
+    // Expanded once, on first use, and reused by every call on this instance.
+    private val key by lazy { AesCbcKey(keyBytes) }
 
     actual override fun name(): String = "aes-cbc"
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            encryptWithIvBlocking(iv, bytesToEncrypt)
-        }
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(iv, bytesToEncrypt)
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            decryptWithIvBlocking(iv, bytesToDecrypt)
-        }
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(iv, bytesToDecrypt)
 
-    @OptIn(DelicateCryptographyApi::class)
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
-            with(cipher()) {
-                decryptWithIvBlocking(iv, bytesToDecrypt)
-            }
-        } catch (e: Exception) {
+            decrypt(bytesToDecrypt)
+        } catch (e: IllegalArgumentException) {
             Log.w("AESCBC", "Failed to decrypt", e)
             null
         }

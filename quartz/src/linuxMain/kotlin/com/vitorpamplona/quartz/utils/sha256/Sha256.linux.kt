@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.quartz.utils.sha256
 
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.algorithms.SHA256
+import com.vitorpamplona.quartz.utils.sha2.Sha256Compression
 
-// Resolved once: the provider lookup is not free and sha256 is on the event-id path.
-private val hasher = CryptographyProvider.Default.get(SHA256).hasher()
-
-actual fun sha256(data: ByteArray): ByteArray = hasher.hashBlocking(data)
+// Straight on the block function: sha256 is on the event-id path, and a digest object
+// would cost allocations and a reset nobody needs.
+actual fun sha256(data: ByteArray): ByteArray = ByteArray(32).also { Sha256Compression.hash(data, 0, data.size, it) }
 
 actual fun sha256Into(
     out: ByteArray,
@@ -34,9 +32,6 @@ actual fun sha256Into(
     len: Int,
 ): ByteArray {
     // Hashes data[0, len) straight into out: no slice copy, no temporary digest.
-    hasher.createHashFunction().use { function ->
-        function.update(data, 0, len)
-        function.hashIntoByteArray(out, 0)
-    }
+    Sha256Compression.hash(data, 0, len, out)
     return out
 }

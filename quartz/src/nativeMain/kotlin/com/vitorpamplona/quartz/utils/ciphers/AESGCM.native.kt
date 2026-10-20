@@ -21,64 +21,44 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.AES
+import com.vitorpamplona.quartz.utils.ciphers.aes.AesGcmKey
 
+/**
+ * AES-GCM in Kotlin on every native target: CommonCrypto has no public GCM, and the
+ * Apple implementation that has one, CryptoKit, is Swift-only.
+ */
 actual class AESGCM actual constructor(
     actual val keyBytes: ByteArray,
     actual val nonce: ByteArray,
 ) : NostrCipher {
-    private val provider = CryptographyProvider.Default
-    private val aesGcm = provider.get(AES.GCM)
-
-    private val keyDecoder =
-        aesGcm
-            .keyDecoder()
-            .decodeFromByteArrayBlocking(AES.Key.Format.RAW, keyBytes)
-
-    private fun cipher() = keyDecoder.cipher()
+    // Expanded once, on first use, and reused by every call on this instance.
+    private val key by lazy { AesGcmKey(keyBytes) }
 
     actual override fun name(): String = AES_GCM_NAME
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            encryptWithIvBlocking(nonce, bytesToEncrypt)
-        }
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = key.encrypt(nonce, bytesToEncrypt, EMPTY)
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            decryptWithIvBlocking(nonce, bytesToDecrypt)
-        }
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = key.decrypt(nonce, bytesToDecrypt, EMPTY)
 
-    @OptIn(DelicateCryptographyApi::class)
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
-            with(cipher()) {
-                decryptWithIvBlocking(nonce, bytesToDecrypt)
-            }
-        } catch (e: Exception) {
+            decrypt(bytesToDecrypt)
+        } catch (e: IllegalArgumentException) {
             Log.w("AESGCM", "Failed to decrypt", e)
             null
         }
 
-    @OptIn(DelicateCryptographyApi::class)
     actual fun encrypt(
         bytesToEncrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray =
-        with(cipher()) {
-            encryptWithIvBlocking(nonce, bytesToEncrypt, aad)
-        }
+    ): ByteArray = key.encrypt(nonce, bytesToEncrypt, aad)
 
-    @OptIn(DelicateCryptographyApi::class)
     actual fun decrypt(
         bytesToDecrypt: ByteArray,
         aad: ByteArray,
-    ): ByteArray =
-        with(cipher()) {
-            decryptWithIvBlocking(nonce, bytesToDecrypt, aad)
-        }
+    ): ByteArray = key.decrypt(nonce, bytesToDecrypt, aad)
+
+    private companion object {
+        val EMPTY = ByteArray(0)
+    }
 }
