@@ -31,8 +31,8 @@ import kotlinx.serialization.Serializable
 @Immutable
 @Serializable(with = EventKSerializer::class)
 open class Event(
-    val id: HexKey,
-    val pubKey: HexKey,
+    id: HexKey,
+    pubKey: HexKey,
     val createdAt: Long,
     val kind: Kind,
     val tags: TagArray,
@@ -40,6 +40,38 @@ open class Event(
     val sig: HexKey,
 ) : IEvent,
     OptimizedSerializable {
+    // Settable only through shareStrings, which swaps in an equal string.
+    var id: HexKey = id
+        private set
+
+    var pubKey: HexKey = pubKey
+        private set
+
+    /**
+     * Swaps [id], [pubKey] and every tag value for equal instances shared across events, so
+     * a cache that keeps many events holds each distinct string once (the same author's
+     * pubkey, the same tagged ids, the tag names). Parsers don't do this: most received
+     * events are duplicates or never kept, and de-duplicating every one of them cost more
+     * than the parse itself.
+     *
+     * Each replacement must be equal to the value it replaces ([sharedId] and [sharedPubKey]
+     * are ignored when they are not), so the event is unchanged to every reader; only which
+     * object holds the characters changes. A concurrent reader sees one of two equal strings.
+     */
+    fun shareStrings(
+        sharedId: HexKey,
+        sharedPubKey: HexKey,
+        share: (String) -> String,
+    ) {
+        if (sharedId !== id && sharedId == id) id = sharedId
+        if (sharedPubKey !== pubKey && sharedPubKey == pubKey) pubKey = sharedPubKey
+        for (tag in tags) {
+            for (i in tag.indices) {
+                tag[i] = share(tag[i])
+            }
+        }
+    }
+
     /**
      * Set this to true if the .content is encrypted or encoded in a
      * way that it should not be indexed for local search.
