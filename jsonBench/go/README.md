@@ -52,7 +52,7 @@ How it measures:
   `runtime.GC()`, read `MemStats.HeapAlloc`, parse every event once more and keep every
   result in a slice, `runtime.GC()` again, read `HeapAlloc`. The delta divided by the
   event count is the number; the slice itself is allocated before the first reading,
-  so it is not counted. The kept result is the parser's own: the library's event type
+  so it is not counted (a struct result stored by value has its `unsafe.Sizeof` added, as the JVM and C++ count the event object itself). The kept result is the parser's own: the library's event type
   for typed rows, the tree for dom rows (`map[string]any`, `ast.Node`), the string for
   the baseline. The pass runs 3 times and the median is reported. In this pass each
   line is first copied into a fresh `[]byte` (counted), the way gorilla and coder hand

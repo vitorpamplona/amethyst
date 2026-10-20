@@ -5,8 +5,10 @@ import (
 	stdjson "encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"runtime"
 	"strconv"
+	"unsafe"
 
 	fnostr "fiatjaf.com/nostr"
 	"github.com/buger/jsonparser"
@@ -56,7 +58,9 @@ type impl struct {
 // whose strings alias the frame (or a library-internal copy of it) keeps that whole
 // buffer alive, and it is counted too. Parsing the preloaded corpus lines instead
 // would make aliasing results look free, because those lines are already allocated.
-// The results slice is allocated before the baseline reading, so it is not counted.
+// The results slice is allocated before the baseline reading, so it is not counted,
+// but a result stored by value in it (a struct) has its own size added, because the
+// JVM and C++ harnesses count the event object itself too.
 func keepOf[T any](parse func([]byte) (T, error)) keepFn {
 	return func(lines [][]byte) (int64, error) {
 		res := make([]T, len(lines))
@@ -75,7 +79,12 @@ func keepOf[T any](parse func([]byte) (T, error)) keepFn {
 		runtime.GC()
 		runtime.ReadMemStats(&after)
 		runtime.KeepAlive(res)
-		return int64(after.HeapAlloc) - int64(before.HeapAlloc), nil
+		var inline int64
+		if reflect.TypeOf((*T)(nil)).Elem().Kind() == reflect.Struct {
+			var zero T
+			inline = int64(unsafe.Sizeof(zero)) * int64(len(lines))
+		}
+		return int64(after.HeapAlloc) - int64(before.HeapAlloc) + inline, nil
 	}
 }
 

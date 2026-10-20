@@ -61,7 +61,9 @@ pub struct Entry {
 
 /// Keeps the result of parsing every line and returns the live heap bytes per event: the
 /// allocator's (allocated - freed) before vs after, with the `Vec` of results allocated first
-/// so its own buffer is not counted. Temporaries a parse frees again cancel out.
+/// so its own buffer is not counted. Temporaries a parse frees again cancel out. The result's
+/// own inline size (`size_of::<T>()`, e.g. the `Event` struct's String headers) is added,
+/// because the JVM and C++ harnesses count the event object itself too.
 fn retain_with<T>(lines: &[Line], mut parse: impl FnMut(Line) -> R<T>) -> Option<f64> {
     let mut kept: Vec<T> = Vec::with_capacity(lines.len());
     let before = crate::alloc::live();
@@ -71,7 +73,9 @@ fn retain_with<T>(lines: &[Line], mut parse: impl FnMut(Line) -> R<T>) -> Option
     let after = crate::alloc::live();
     black_box(&kept);
     drop(kept);
-    Some(after.saturating_sub(before) as f64 / lines.len().max(1) as f64)
+    let n = lines.len().max(1);
+    let inline = (std::mem::size_of::<T>() * lines.len()) as u64;
+    Some((after.saturating_sub(before) + inline) as f64 / n as f64)
 }
 
 /// Declares a parser: its state, and the expression that turns `l: Line` into a `View`.

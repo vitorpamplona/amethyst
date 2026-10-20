@@ -38,7 +38,7 @@ line into a `String` before timing (validated once, untimed) and every parser st
 ## Retained heap
 
 After timing, `retained_bytes_per_event` parses every event once more and keeps every result in
-a `Vec` (allocated up front, so its own buffer is not counted). The allocator also counts freed
+a `Vec` (allocated up front, so its own buffer is not counted, but each result's inline `size_of::<T>()` is added, as the JVM and C++ count the event object itself). The allocator also counts freed
 bytes (`dealloc` and the old size of a `realloc`), and the figure is live bytes (allocated -
 freed) after the pass minus before it, per event. It is reported for:
 
