@@ -27,6 +27,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.usePinned
 import platform.CoreCrypto.CC_SHA1_CTX
 import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
@@ -71,7 +72,7 @@ private class CommonCryptoSha256 : StreamingDigest {
     private val context: CPointer<CC_SHA256_CTX> = nativeHeap.alloc<CC_SHA256_CTX>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     init {
         CC_SHA256_Init(context)
@@ -97,7 +98,7 @@ private class CommonCryptoSha1 : StreamingDigest {
     private val context: CPointer<CC_SHA1_CTX> = nativeHeap.alloc<CC_SHA1_CTX>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     init {
         CC_SHA1_Init(context)
