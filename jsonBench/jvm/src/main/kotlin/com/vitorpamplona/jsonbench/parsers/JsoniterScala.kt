@@ -20,16 +20,17 @@
  */
 package com.vitorpamplona.jsonbench.parsers
 
-import com.vitorpamplona.jsonbench.BytesInputParser
 import com.vitorpamplona.jsonbench.Event
+import com.vitorpamplona.jsonbench.StringInputParser
 import java.util.function.Function
 import java.util.function.ToLongFunction
 
 /**
  * jsoniter-scala's macro-generated codec. The codec and its timed loop are Scala
- * (src/main/scala/.../JsoniterScalaParser.scala); this class only bridges to it.
+ * (src/main/scala/.../JsoniterScalaParser.scala); this class only bridges to it. It reads the
+ * frame's String with jsoniter-scala's own `readFromString`.
  */
-class JsoniterScala : BytesInputParser() {
+class JsoniterScala : StringInputParser() {
     private val impl: Any =
         Class
             .forName("com.vitorpamplona.jsonbench.scalacodec.JsoniterScalaParser")
@@ -37,13 +38,13 @@ class JsoniterScala : BytesInputParser() {
             .newInstance()
 
     @Suppress("UNCHECKED_CAST")
-    private val loop = impl as ToLongFunction<Array<ByteArray>>
+    private val loop = impl as ToLongFunction<Array<String>>
 
     @Suppress("UNCHECKED_CAST")
-    private val one = impl as Function<ByteArray, Array<Any>>
+    private val one = impl as Function<String, Array<Any>>
 
     @Suppress("UNCHECKED_CAST")
-    override fun decode(input: ByteArray): Event {
+    override fun decode(input: String): Event {
         val f = one.apply(input)
         return Event(
             f[0] as String,
@@ -56,5 +57,5 @@ class JsoniterScala : BytesInputParser() {
         )
     }
 
-    override fun parseAll(inputs: Array<ByteArray>): Long = loop.applyAsLong(inputs)
+    override fun parseAll(inputs: Array<String>): Long = loop.applyAsLong(inputs)
 }

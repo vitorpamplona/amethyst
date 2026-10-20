@@ -84,11 +84,12 @@ class JacksonStreamingBytes : BytesInputParser() {
 
     private fun parse(input: ByteArray): Event = factory.createParser(input).use { reader.read(it) }
 
-    override fun decode(input: ByteArray) = parse(input)
+    override fun decodeBytes(input: ByteArray) = parse(input)
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = parse(b)
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -117,7 +118,9 @@ class JacksonStreamingString : StringInputParser() {
 class JacksonTree : BytesInputParser() {
     private val mapper = ObjectMapper()
 
-    override fun decode(input: ByteArray): Event {
+    override fun keep(input: String): Any = mapper.readTree(utf8(input))
+
+    override fun decodeBytes(input: ByteArray): Event {
         val n = mapper.readTree(input)
         return Event(
             n.get("id").textValue(),
@@ -133,9 +136,10 @@ class JacksonTree : BytesInputParser() {
         )
     }
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val n = mapper.readTree(b)
             sink += n.get("kind").intValue() + n.get("tags").size()
         }

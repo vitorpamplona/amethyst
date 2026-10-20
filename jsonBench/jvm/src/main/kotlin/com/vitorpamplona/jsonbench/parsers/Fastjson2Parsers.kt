@@ -52,11 +52,12 @@ class Fastjson2Event {
 }
 
 class Fastjson2ReflectBytes : BytesInputParser() {
-    override fun decode(input: ByteArray) = JSON.parseObject(input, Fastjson2Event::class.java).toBench()
+    override fun decodeBytes(input: ByteArray) = JSON.parseObject(input, Fastjson2Event::class.java).toBench()
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = JSON.parseObject(b, Fastjson2Event::class.java)
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -116,11 +117,12 @@ class Fastjson2Reader : BytesInputParser() {
         }
     }
 
-    override fun decode(input: ByteArray) = parse(input)
+    override fun decodeBytes(input: ByteArray) = parse(input)
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = parse(b)
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -139,7 +141,9 @@ class Fastjson2Reader : BytesInputParser() {
 }
 
 class Fastjson2Dom : BytesInputParser() {
-    override fun decode(input: ByteArray): Event {
+    override fun keep(input: String): Any = JSON.parseObject(utf8(input))
+
+    override fun decodeBytes(input: ByteArray): Event {
         val o = JSON.parseObject(input)
         val tags = o.getJSONArray("tags")
         return Event(
@@ -156,9 +160,10 @@ class Fastjson2Dom : BytesInputParser() {
         )
     }
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val o = JSON.parseObject(b)
             sink += o.getIntValue("kind") + o.getJSONArray("tags").size
         }

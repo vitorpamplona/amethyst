@@ -35,7 +35,10 @@ import org.simdjson.annotations.JsonFieldName
 class SimdjsonDom : PaddedInputParser() {
     private val parser = SimdJsonParser()
 
-    override fun decode(input: Padded): Event {
+    /** The JsonValue is a view into the reused tape: results cannot all be kept. */
+    override fun keep(input: String): Any? = null
+
+    override fun decodePadded(input: Padded): Event {
         val v = parser.parse(input.buf, input.len)
         val tags = v.get("tags")
         val tagArray = ArrayList<Array<String>>()
@@ -58,10 +61,11 @@ class SimdjsonDom : PaddedInputParser() {
         )
     }
 
-    override fun parseAll(inputs: Array<Padded>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
         val p = parser
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = padded(s)
             val v = p.parse(b.buf, b.len)
             sink += v.get("kind").asLong() + v.get("tags").getSize()
         }
@@ -87,15 +91,16 @@ data class SimdEvent(
 class SimdjsonSchema : PaddedInputParser() {
     private val parser = SimdJsonParser()
 
-    override fun decode(input: Padded): Event {
+    override fun decodePadded(input: Padded): Event {
         val e = parser.parse(input.buf, input.len, SimdEvent::class.java)
         return Event(e.id, e.pubkey, e.createdAt, e.kind, e.tags, e.content, e.sig)
     }
 
-    override fun parseAll(inputs: Array<Padded>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
         val p = parser
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = padded(s)
             val e = p.parse(b.buf, b.len, SimdEvent::class.java)
             sink += e.kind + e.tags.size + e.content.length
         }

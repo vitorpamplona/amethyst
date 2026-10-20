@@ -150,7 +150,7 @@ val PARSERS: List<ParserSpec> =
             "jackson",
             APACHE,
             "typed",
-            "bytes",
+            "string→bytes",
             "JsonFactory.createParser(byte[]) + hand-written field loop (Quartz's loop minus intern/EventFactory).",
         ) { JacksonStreamingBytes() },
         ParserSpec(
@@ -168,7 +168,7 @@ val PARSERS: List<ParserSpec> =
             "jackson",
             APACHE,
             "dom",
-            "bytes",
+            "string→bytes",
             "ObjectMapper.readTree(byte[]) -> JsonNode.",
         ) { JacksonTree() },
         ParserSpec(
@@ -186,7 +186,7 @@ val PARSERS: List<ParserSpec> =
             "kotlinx-serialization",
             APACHE,
             "typed",
-            "bytes",
+            "string→bytes",
             "Json.decodeFromStream(ByteArrayInputStream) into the same @Serializable class.",
         ) { KotlinxStream() },
         ParserSpec(
@@ -223,7 +223,7 @@ val PARSERS: List<ParserSpec> =
             "moshi",
             APACHE,
             "typed",
-            "bytes",
+            "string (okio writeUtf8)",
             "com.squareup.moshi.JsonReader over an okio Buffer (the byte[] -> Buffer copy is timed) + " +
                 "JsonReader.Options field selection, as Moshi's generated adapters do. okio is Apache-2.0.",
         ) { MoshiStreaming() },
@@ -233,7 +233,7 @@ val PARSERS: List<ParserSpec> =
             "fastjson2",
             APACHE,
             "typed",
-            "bytes",
+            "string→bytes",
             "JSON.parseObject(byte[], Pojo) (fastjson2's ASM-generated reader; String[][] tags).",
         ) { Fastjson2ReflectBytes() },
         ParserSpec(
@@ -251,7 +251,7 @@ val PARSERS: List<ParserSpec> =
             "fastjson2",
             APACHE,
             "typed",
-            "bytes",
+            "string→bytes",
             "JSONReader.of(byte[]) + hand-written loop dispatching on readFieldNameHashCode().",
         ) { Fastjson2Reader() },
         ParserSpec(
@@ -260,7 +260,7 @@ val PARSERS: List<ParserSpec> =
             "fastjson2",
             APACHE,
             "dom",
-            "bytes",
+            "string→bytes",
             "JSON.parseObject(byte[]) -> JSONObject.",
         ) { Fastjson2Dom() },
         ParserSpec(
@@ -269,7 +269,7 @@ val PARSERS: List<ParserSpec> =
             "dsl-json",
             "BSD-3-Clause",
             "typed",
-            "bytes",
+            "string→bytes",
             "Hand-written loop over a reused com.dslplatform.json.JsonReader, dispatching on fillName() hashes " +
                 "(what @CompiledJson's annotation processor would generate; no processor used).",
         ) { DslJsonBytes() },
@@ -279,7 +279,7 @@ val PARSERS: List<ParserSpec> =
             "dsl-json",
             "BSD-3-Clause",
             "typed",
-            "bytes",
+            "string→bytes",
             "DslJson(Settings.withRuntime().includeServiceLoader()).deserialize(Pojo, byte[], len): " +
                 "runtime reflection analysis, no annotation processor.",
         ) { DslJsonReflect() },
@@ -289,7 +289,7 @@ val PARSERS: List<ParserSpec> =
             "simdjson-java",
             APACHE,
             "dom",
-            "bytes-padded",
+            "string→bytes-padded",
             "SimdJsonParser.parse(byte[], len) -> JsonValue over a reused tape (invalidated by the next parse). " +
                 "0.3.0: 0.4.0 needs Java 24. $SIMDJSON_NOTE",
         ) { SimdjsonDom() },
@@ -299,7 +299,7 @@ val PARSERS: List<ParserSpec> =
             "simdjson-java",
             APACHE,
             "typed",
-            "bytes-padded",
+            "string→bytes-padded",
             "SimdJsonParser.parse(byte[], len, Record.class): schema-based parse into a record with String[][] tags. " +
                 "0.3.0 calls ClassResolver.reset() on every parse, so it re-resolves the record by reflection per event " +
                 "(the bulk of its time and allocation). " +
@@ -321,7 +321,7 @@ val PARSERS: List<ParserSpec> =
             "jsoniter",
             "MIT",
             "typed",
-            "bytes",
+            "string→bytes",
             "com.jsoniter.JsonIterator iterator API (reset(byte[]) on one reused iterator) + hand-written loop; no codegen.",
         ) { JsoniterIterator() },
         ParserSpec(
@@ -330,7 +330,7 @@ val PARSERS: List<ParserSpec> =
             "jsoniter-scala",
             "MIT",
             "typed",
-            "bytes",
+            "string (readFromString)",
             "readFromArray with a JsonCodecMaker.make codec (Scala 3 macro, compiled by Gradle's scala plugin) " +
                 "into a case class with Array[Array[String]] tags; the timed loop is Scala. " +
                 "Pulls in scala3-library/scala-library (Apache-2.0).",
@@ -369,7 +369,7 @@ val PARSERS: List<ParserSpec> =
             JDK_LICENSE,
             "baseline",
             "bytes",
-            "new String(bytes, UTF_8): add to a string-input parser fed from network bytes.",
+            "new String(bytes, UTF_8): what the WebSocket client already paid to hand every parser its String (not added to any row).",
         ) { Utf8Decode() },
         ParserSpec(
             "baseline-utf8-encode",
@@ -378,6 +378,6 @@ val PARSERS: List<ParserSpec> =
             JDK_LICENSE,
             "baseline",
             "string",
-            "String.encodeToByteArray(): add to a byte-input parser fed from a String.",
+            "String.encodeToByteArray(): the encode every string→bytes row already includes in its time.",
         ) { Utf8Encode() },
     )

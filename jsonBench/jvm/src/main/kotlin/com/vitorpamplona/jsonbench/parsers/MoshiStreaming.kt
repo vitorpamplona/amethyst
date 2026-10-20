@@ -21,23 +21,23 @@
 package com.vitorpamplona.jsonbench.parsers
 
 import com.squareup.moshi.JsonReader
-import com.vitorpamplona.jsonbench.BytesInputParser
 import com.vitorpamplona.jsonbench.EMPTY_TAGS
 import com.vitorpamplona.jsonbench.Event
+import com.vitorpamplona.jsonbench.StringInputParser
 import com.vitorpamplona.jsonbench.TagCollector
 import okio.Buffer
 
 /**
  * Moshi's streaming reader with pre-encoded field names ([JsonReader.Options]), the way
- * Moshi's own generated adapters read. The bytes are first copied into an okio [Buffer]
- * (that copy is timed: it is how Moshi consumes a byte array).
+ * Moshi's own generated adapters read. The frame's String is written into an okio [Buffer]
+ * with `writeUtf8` (timed: it is how Moshi consumes a String).
  */
-class MoshiStreaming : BytesInputParser() {
+class MoshiStreaming : StringInputParser() {
     private val tags = TagCollector()
     private val names = JsonReader.Options.of("id", "pubkey", "created_at", "kind", "tags", "content", "sig")
 
-    private fun parse(input: ByteArray): Event {
-        val r = JsonReader.of(Buffer().write(input))
+    private fun parse(input: String): Event {
+        val r = JsonReader.of(Buffer().writeUtf8(input))
         var id = ""
         var pubKey = ""
         var createdAt = 0L
@@ -76,9 +76,9 @@ class MoshiStreaming : BytesInputParser() {
         return Event(id, pubKey, createdAt, kind, tagArray, content, sig)
     }
 
-    override fun decode(input: ByteArray) = parse(input)
+    override fun decode(input: String) = parse(input)
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
         for (b in inputs) {
             val e = parse(b)

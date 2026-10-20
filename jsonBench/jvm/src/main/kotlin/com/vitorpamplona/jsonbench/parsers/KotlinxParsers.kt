@@ -66,11 +66,12 @@ class KotlinxTyped : StringInputParser() {
 
 @OptIn(ExperimentalSerializationApi::class)
 class KotlinxStream : BytesInputParser() {
-    override fun decode(input: ByteArray) = kxJson.decodeFromStream(KxEvent.serializer(), ByteArrayInputStream(input)).toBench()
+    override fun decodeBytes(input: ByteArray) = kxJson.decodeFromStream(KxEvent.serializer(), ByteArrayInputStream(input)).toBench()
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = kxJson.decodeFromStream(KxEvent.serializer(), ByteArrayInputStream(b))
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -79,6 +80,8 @@ class KotlinxStream : BytesInputParser() {
 }
 
 class KotlinxElement : StringInputParser() {
+    override fun keep(input: String): Any = kxJson.parseToJsonElement(input)
+
     override fun decode(input: String): Event {
         val o = kxJson.parseToJsonElement(input).jsonObject
         val tags = o.getValue("tags").jsonArray

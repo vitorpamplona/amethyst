@@ -83,6 +83,8 @@ class GsonStreaming : StringInputParser() {
 }
 
 class GsonTree : StringInputParser() {
+    override fun keep(input: String): Any = JsonParser.parseString(input)
+
     override fun decode(input: String): Event {
         val o = JsonParser.parseString(input).asJsonObject
         val tags = o.getAsJsonArray("tags")

@@ -55,26 +55,53 @@ abstract class BenchParser<I : Any> {
     abstract fun parseAll(inputs: Array<I>): Long
 }
 
+/**
+ * Every parser starts from a [String]: that is what a WebSocket text frame is on the JVM
+ * (OkHttp's `onMessage(webSocket, text: String)`), so whatever a parser needs to turn the
+ * String into its own input is part of the parse and runs inside the timed loop.
+ */
 abstract class StringInputParser : BenchParser<String>() {
     override fun prepareAll(lines: List<ByteArray>): Array<String> = Array(lines.size) { String(lines[it], Charsets.UTF_8) }
 }
 
-abstract class BytesInputParser : BenchParser<ByteArray>() {
-    override fun prepareAll(lines: List<ByteArray>): Array<ByteArray> = Array(lines.size) { lines[it] }
+/**
+ * A parser that reads UTF-8 bytes. It is handed the frame's String like everyone else and
+ * encodes it with [utf8] inside its timed loop, the adaptation an app on OkHttp would make.
+ */
+abstract class BytesInputParser : StringInputParser() {
+    /** Parses one already-encoded input and returns it as an [Event], for the digest. */
+    abstract fun decodeBytes(input: ByteArray): Event?
+
+    final override fun decode(input: String): Event? = decodeBytes(utf8(input))
+
+    protected fun utf8(s: String): ByteArray = s.toByteArray(Charsets.UTF_8)
 }
 
-/** A line copied into a buffer with [PADDING] spare bytes after it; [len] is the JSON length. */
+/** A line encoded into a buffer with [PADDING] spare bytes after it; [len] is the JSON length. */
 class Padded(
     val buf: ByteArray,
     val len: Int,
 )
 
-abstract class PaddedInputParser : BenchParser<Padded>() {
-    override fun prepareAll(lines: List<ByteArray>): Array<Padded> = Array(lines.size) { Padded(lines[it].copyOf(lines[it].size + PADDING), lines[it].size) }
+/** A SIMD parser that needs [PADDING] readable bytes past the JSON: encodes, then pads. */
+abstract class PaddedInputParser : StringInputParser() {
+    abstract fun decodePadded(input: Padded): Event?
+
+    final override fun decode(input: String): Event? = decodePadded(padded(input))
+
+    protected fun padded(s: String): Padded {
+        val raw = s.toByteArray(Charsets.UTF_8)
+        return Padded(raw.copyOf(raw.size + PADDING), raw.size)
+    }
 
     companion object {
         const val PADDING = 64
     }
+}
+
+/** Raw UTF-8 lines, for the one baseline that measures what decoding a frame into a String costs. */
+abstract class RawBytesInputParser : BenchParser<ByteArray>() {
+    override fun prepareAll(lines: List<ByteArray>): Array<ByteArray> = Array(lines.size) { lines[it] }
 }
 
 class Settings(

@@ -21,8 +21,8 @@ Every event has exactly the seven NIP-01 fields: `id`, `pubkey`, `sig`, `content
 ## The task a parser performs
 
 **One parse = one event line → one in-memory event.** The harness loads every line
-of a workload into memory *before* timing, in the parser's preferred input form
-(byte array, or the language's string type), then times parsing all of them.
+of a workload into memory *before* timing, as the language's WebSocket text-frame type
+(see "Input" below), then times parsing all of them.
 
 Each parser entry declares a `mode`:
 
@@ -41,18 +41,32 @@ The timed loop must make the result observable so the compiler cannot drop it: f
 something from every parsed event into a sink (e.g. `sink += kind + tags.size +
 content.length`) and print or return the sink at the end.
 
-## Input forms (`input`)
+## Input: the WebSocket text frame (`input`)
 
-`string` (a decoded string object: Java/Kotlin `String`, JS string, Python `str`),
-`bytes` (UTF-8 bytes), `bytes-padded` (bytes with extra capacity a SIMD parser
-requires, e.g. simdjson's 64 bytes), `bytes-copy` (the parser destroys its input, so
-the timed loop copies the line into a scratch buffer first: the copy is timed). Anything
-else, explain in `notes`.
+Nostr arrives as WebSocket **text frames**, so every parser starts from what the
+language's usual WebSocket client hands an app for one text frame. The harness prepares
+that object before timing; everything a parser needs on top of it (encode to bytes,
+copy into a padded or mutable buffer, wrap in a reader) is part of the parse and runs
+**inside** the timed loop, with the parser's own allocations counted.
 
-Prepare the input form outside the timed loop, but report the conversion cost as a
-`baseline` row when the language has a meaningful one (JVM `bytes → String`, JS
-`Buffer → string`), so readers can add it to a byte parser that an app would feed from
-a `String`.
+| harness | a text frame arrives as | free for byte parsers? |
+|---|---|---|
+| JVM | `java.lang.String` (OkHttp `onMessage(ws, text: String)`, Ktor `Frame.Text.readText()`) | no: `String → byte[]` is an encode, timed |
+| Rust | `&str` / `Utf8Bytes` (tungstenite `Message::Text`), already UTF-8-validated | yes: `as_bytes()`; a padded or mutable copy is timed |
+| C/C++ | `std::string` (IXWebSocket, websocketpp, Boost.Beast `flat_buffer`) | yes: `data()`/`c_str()`; a padded or mutable copy is timed |
+| Go | `[]byte` (gorilla/websocket and coder/websocket `ReadMessage`) | yes; a `string` conversion or copy is timed |
+| JS | JS `string` (`MessageEvent.data` in browsers, Node 22, Bun, Deno) | no: `TextEncoder.encode` is timed |
+| Python | `str` (`websockets`, aiohttp `WSMessage.data`) | no: `str.encode()` is timed |
+
+Use each library's most natural adaptation from that type (a native string entry point
+when it has one, e.g. jsoniter-scala `readFromString` or okio `writeUtf8`, otherwise the
+platform's fastest encode/copy) and say which in `notes`. `input` names the path:
+`string`, `bytes` (the frame type is already bytes), `string→bytes` (encoded inside the
+loop), `string→bytes-padded`, `bytes-copy` (copied into a mutable or padded scratch
+buffer inside the loop), or the library entry point in parentheses.
+
+A `baseline` row may still report a conversion on its own (JVM `String → byte[]`),
+so readers can see how much of a row it is.
 
 ## Verification: the digest
 

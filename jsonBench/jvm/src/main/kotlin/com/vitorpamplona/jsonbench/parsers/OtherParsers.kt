@@ -37,6 +37,8 @@ import net.minidev.json.JSONObject as SmartObject
 
 /** org.json, the API Android ships in the platform (android.jar's org.json is a fork of it). */
 class OrgJsonDom : StringInputParser() {
+    override fun keep(input: String): Any = JSONObject(input)
+
     override fun decode(input: String): Event {
         val o = JSONObject(input)
         val tags = o.getJSONArray("tags")
@@ -103,11 +105,12 @@ class JsoniterIterator : BytesInputParser() {
         return Event(id, pubKey, createdAt, kind, tagArray, content, sig)
     }
 
-    override fun decode(input: ByteArray) = parse(input)
+    override fun decodeBytes(input: ByteArray) = parse(input)
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = parse(b)
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -173,6 +176,8 @@ class ParssonStreaming : StringInputParser() {
 }
 
 class MinimalJsonDom : StringInputParser() {
+    override fun keep(input: String): Any = MinimalJson.parse(input)
+
     override fun decode(input: String): Event {
         val o = MinimalJson.parse(input).asObject()
         val tags = o.get("tags").asArray()
@@ -203,6 +208,8 @@ class MinimalJsonDom : StringInputParser() {
 /** json-smart in strict RFC 4627 mode; its tree is plain HashMap/ArrayList subclasses. */
 class JsonSmartDom : StringInputParser() {
     private val parser = JSONParser(JSONParser.MODE_RFC4627)
+
+    override fun keep(input: String): Any = parser.parse(input)
 
     override fun decode(input: String): Event {
         val o = parser.parse(input) as SmartObject

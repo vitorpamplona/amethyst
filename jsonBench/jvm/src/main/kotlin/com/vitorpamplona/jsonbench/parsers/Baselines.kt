@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.jsonbench.parsers
 
-import com.vitorpamplona.jsonbench.BytesInputParser
+import com.vitorpamplona.jsonbench.RawBytesInputParser
 import com.vitorpamplona.jsonbench.StringInputParser
 
 /** What `bytes -> String` costs: add it to a string parser fed from the socket's bytes. */
-class Utf8Decode : BytesInputParser() {
+class Utf8Decode : RawBytesInputParser() {
     override fun decode(input: ByteArray) = null
 
     override fun parseAll(inputs: Array<ByteArray>): Long {

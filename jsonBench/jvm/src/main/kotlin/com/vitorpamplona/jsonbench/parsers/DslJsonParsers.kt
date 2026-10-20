@@ -116,11 +116,12 @@ class DslJsonBytes : BytesInputParser() {
         return tags.finish()
     }
 
-    override fun decode(input: ByteArray) = parse(input)
+    override fun decodeBytes(input: ByteArray) = parse(input)
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = parse(b)
             sink += e.kind + e.tags.size + e.content.length
         }
@@ -152,14 +153,15 @@ class DslEvent {
 class DslJsonReflect : BytesInputParser() {
     private val dsl = DslJson(Settings.withRuntime<Any>().includeServiceLoader())
 
-    override fun decode(input: ByteArray): Event {
+    override fun decodeBytes(input: ByteArray): Event {
         val e = dsl.deserialize(DslEvent::class.java, input, input.size) ?: error("null event")
         return Event(e.id, e.pubkey, e.created_at, e.kind, e.tags, e.content, e.sig)
     }
 
-    override fun parseAll(inputs: Array<ByteArray>): Long {
+    override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
-        for (b in inputs) {
+        for (s in inputs) {
+            val b = utf8(s)
             val e = dsl.deserialize(DslEvent::class.java, b, b.size)!!
             sink += e.kind + e.tags.size + e.content.length
         }

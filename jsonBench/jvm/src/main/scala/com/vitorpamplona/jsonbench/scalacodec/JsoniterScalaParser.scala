@@ -45,14 +45,14 @@ object SEvent {
  * so the two compilers never see each other's classes. The timed loop is here, in Scala,
  * so it is as monomorphic as the Kotlin ones.
  */
-final class JsoniterScalaParser extends ToLongFunction[Array[Array[Byte]]] with JFunction[Array[Byte], Array[AnyRef]] {
+final class JsoniterScalaParser extends ToLongFunction[Array[String]] with JFunction[String, Array[AnyRef]] {
   private val codec = SEvent.codec
 
-  override def applyAsLong(inputs: Array[Array[Byte]]): Long = {
+  override def applyAsLong(inputs: Array[String]): Long = {
     var sink = 0L
     var i = 0
     while (i < inputs.length) {
-      val e = readFromArray(inputs(i))(codec)
+      val e = readFromString(inputs(i))(codec)
       sink += e.kind + e.tags.length + e.content.length
       i += 1
     }
@@ -60,8 +60,8 @@ final class JsoniterScalaParser extends ToLongFunction[Array[Array[Byte]]] with 
   }
 
   /** One event's fields in Event's constructor order, for the digest. */
-  override def apply(input: Array[Byte]): Array[AnyRef] = {
-    val e = readFromArray(input)(codec)
+  override def apply(input: String): Array[AnyRef] = {
+    val e = readFromString(input)(codec)
     Array[AnyRef](e.id, e.pubkey, java.lang.Long.valueOf(e.createdAt), java.lang.Integer.valueOf(e.kind), e.tags, e.content, e.sig)
   }
 }
