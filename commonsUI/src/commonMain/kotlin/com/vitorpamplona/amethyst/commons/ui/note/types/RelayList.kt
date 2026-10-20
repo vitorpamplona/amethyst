@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,23 +29,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
-import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.blocked_relays_title
 import com.vitorpamplona.amethyst.commons.resources.broadcast_relays_title
@@ -60,12 +53,11 @@ import com.vitorpamplona.amethyst.commons.resources.public_home_section
 import com.vitorpamplona.amethyst.commons.resources.public_notif_section
 import com.vitorpamplona.amethyst.commons.resources.search_relays_title
 import com.vitorpamplona.amethyst.commons.resources.trusted_relays_title
-import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.AddRelayButton
 import com.vitorpamplona.amethyst.commons.ui.note.RemoveRelayButton
-import com.vitorpamplona.amethyst.commons.ui.note.getGradient
+import com.vitorpamplona.amethyst.commons.ui.note.types.lists.ListCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
@@ -334,79 +326,30 @@ fun DisplayRelaySet(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    // One collector for the card, not one per row: a NIP-65 list can carry thousands of relays.
+    val trustedRelays by accountViewModel.account.trustedRelays.flow
+        .collectAsStateWithLifecycle()
 
-    val toMembersShow =
-        if (expanded) {
-            relay.relays
-        } else {
-            relay.relays.take(3)
-        }
-
-    Text(
-        text = relayListName,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-        textAlign = TextAlign.Center,
-    )
-
-    relayDescription?.let {
-        Text(
-            text = it,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(5.dp),
-            textAlign = TextAlign.Center,
-            color = Color.Gray,
-        )
-    }
-
-    Box {
-        Column(modifier = Modifier.padding(top = 5.dp)) {
-            toMembersShow.forEach { relay ->
-                key(relay) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = relay.displayUrl(),
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier =
-                                Modifier
-                                    .padding(start = 10.dp, bottom = 5.dp)
-                                    .weight(1f),
-                        )
-
-                        Column(modifier = Modifier.padding(start = 10.dp)) {
-                            RelayOptionsAction(relay, accountViewModel, nav)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (relay.relays.size > 3 && !expanded) {
+    ListCard(relayListName, relayDescription, relay.relays, hasUnreadablePrivateItems = false, backgroundColor) { url ->
+        key(url) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(getGradient(backgroundColor)),
             ) {
-                ShowMoreButton { expanded = !expanded }
+                Text(
+                    text = url.displayUrl(),
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier =
+                        Modifier
+                            .padding(start = 10.dp, bottom = 5.dp)
+                            .weight(1f),
+                )
+
+                Column(modifier = Modifier.padding(start = 10.dp)) {
+                    RelayOptionsAction(url, url in trustedRelays, nav)
+                }
             }
         }
     }
@@ -415,10 +358,9 @@ fun DisplayRelaySet(
 @Composable
 private fun RelayOptionsAction(
     relay: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
+    isCurrentlyOnTheUsersList: Boolean,
     nav: INav,
 ) {
-    val isCurrentlyOnTheUsersList by observeUserRelayIntoList(relay, accountViewModel)
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 

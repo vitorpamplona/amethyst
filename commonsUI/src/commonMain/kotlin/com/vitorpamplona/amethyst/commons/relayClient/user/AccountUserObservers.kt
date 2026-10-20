@@ -517,23 +517,3 @@ fun observeUserStatuses(
     @Suppress("StateFlowValueCalledInComposition")
     return flow.collectAsStateWithLifecycle(user.statusState().statuses.value)
 }
-
-@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
-@Composable
-fun observeUserRelayIntoList(
-    relayUrl: NormalizedRelayUrl,
-    accountViewModel: AccountViewModel,
-): State<Boolean> {
-    // Subscribe in the LocalCache for changes that arrive in the device
-    val flow =
-        remember(accountViewModel, relayUrl) {
-            accountViewModel.account.trustedRelays.flow
-                .mapLatest { relays ->
-                    relayUrl in relays
-                }.distinctUntilChanged()
-                .flowOn(Dispatchers.IO)
-        }
-
-    @Suppress("StateFlowValueCalledInComposition")
-    return flow.collectAsStateWithLifecycle(relayUrl in accountViewModel.account.trustedRelays.flow.value)
-}
