@@ -161,6 +161,61 @@ class UnknownEventDigestTest {
     }
 
     @Test
+    fun deeplyNestedJsonIsNotParsed() {
+        // The JSON parser recurses: a hundred thousand brackets overflow the stack.
+        val depth = 100_000
+        assertEquals(ContentShape.Encoded(BlobEncoding.JSON, depth * 2), classifyContent("[".repeat(depth) + "]".repeat(depth)))
+        assertIs<ContentShape.Encoded>(classifyContent("{\"a\":".repeat(depth) + "1" + "}".repeat(depth)))
+    }
+
+    @Test
+    fun bracketsInsideStringsDoNotCountAsNesting() {
+        val shape = classifyContent("""{"note":"${"[".repeat(100)}"}""")
+        assertIs<ContentShape.Json>(shape)
+        assertEquals("note", shape.fields.single().key)
+    }
+
+    @Test
+    fun hugeJsonIsNotParsedWhileDrawing() {
+        val big = "{" + (0 until 60_000).joinToString(",") { "\"key$it\":\"value $it\"" } + "}"
+        assertEquals(BlobEncoding.JSON, (classifyContent(big) as ContentShape.Encoded).encoding)
+    }
+
+    @Test
+    fun repeatedAndFallbackTagsStayWithTheOtherTags() {
+        val digest =
+            UnknownEventDigest.of(
+                event(
+                    9_999,
+                    arrayOf(
+                        arrayOf("title", "First"),
+                        arrayOf("title", "Second"),
+                        arrayOf("name", "A name"),
+                        arrayOf("summary", "Short"),
+                        arrayOf("description", "Long"),
+                        arrayOf("published_at", "100"),
+                        arrayOf("published_at", "200"),
+                    ),
+                    "",
+                ),
+            )
+        assertEquals("First", digest.title)
+        assertEquals("Short", digest.summary)
+        assertEquals(100L, digest.publishedAt)
+        assertEquals(
+            listOf(RawTag("title", listOf("Second")), RawTag("published_at", listOf("200")), RawTag("name", listOf("A name")), RawTag("description", listOf("Long"))),
+            digest.otherTags,
+        )
+    }
+
+    @Test
+    fun nameFillsAMissingTitle() {
+        val digest = UnknownEventDigest.of(event(9_999, arrayOf(arrayOf("name", "A name"), arrayOf("subject", "A subject")), ""))
+        assertEquals("A name", digest.title)
+        assertEquals(listOf(RawTag("subject", listOf("A subject"))), digest.otherTags)
+    }
+
+    @Test
     fun malformedReferencesStayAsRawTags() {
         val digest = UnknownEventDigest.of(event(9_999, arrayOf(arrayOf("p", "not-a-key"), arrayOf("image", "ipfs://cid")), ""))
         assertTrue(digest.people.isEmpty())

@@ -51,15 +51,19 @@ sealed interface ContentShape {
 
     /**
      * A JSON document. [fields] are the top-level members of an object with their scalar values
-     * (nested objects and arrays are summarized), for drawing as a table; [pretty] is the whole
-     * document re-indented, for a code block.
+     * (nested objects and arrays are summarized), for drawing as a table; [pretty] is the document
+     * re-indented for a code block, built only when asked for.
      */
-    data class Json(
+    class Json(
         val fields: List<JsonField>,
         val isArray: Boolean,
         val size: Int,
-        val pretty: String,
-    ) : ContentShape
+        private val element: JsonElement,
+    ) : ContentShape {
+        val pretty: String by lazy {
+            PRETTY_JSON.encodeToString(JsonElement.serializer(), element).let { if (it.length > MAX_PRETTY_CHARS) it.take(MAX_PRETTY_CHARS) + "\n…" else it }
+        }
+    }
 
     /** Ciphertext: only the recipients can read it, so nothing of it is shown. */
     data class Encrypted(
@@ -75,7 +79,8 @@ sealed interface ContentShape {
 
 enum class EncryptionScheme { NIP04, NIP44 }
 
-enum class BlobEncoding { HEX, BASE64, OPAQUE }
+/** [JSON] is a document too large or too deeply nested to parse while drawing a feed. */
+enum class BlobEncoding { HEX, BASE64, JSON, OPAQUE }
 
 /** One top-level member of a JSON object. [nested] when the value is an object or array, summarized in [value]. */
 @Immutable
@@ -173,10 +178,7 @@ class UnknownEventDigest(
         fun of(event: Event): UnknownEventDigest {
             var alt: String? = null
             var title: String? = null
-            var name: String? = null
-            var subject: String? = null
             var summary: String? = null
-            var description: String? = null
             var identifier: String? = null
             var publishedAt: Long? = null
             var startsAt: Long? = null
@@ -186,65 +188,85 @@ class UnknownEventDigest(
             var location: String? = null
             var contentWarning: String? = null
             var client: String? = null
-            val media = ArrayList<DigestMedia>()
+            // Fallbacks for the title and summary: shown only when the preferred tag is missing,
+            // else they stay with the other tags.
+            var nameTag: Array<String>? = null
+            var subjectTag: Array<String>? = null
+            var descriptionTag: Array<String>? = null
+            val media = LinkedHashMap<String, DigestMedia>()
             val people = ArrayList<DigestPerson>()
             val events = ArrayList<DigestEventRef>()
             val addresses = ArrayList<DigestAddressRef>()
-            val hashtags = ArrayList<String>()
-            val links = ArrayList<String>()
-            val kinds = ArrayList<Int>()
-            val relays = ArrayList<String>()
+            val hashtags = LinkedHashSet<String>()
+            val links = LinkedHashSet<String>()
+            val kinds = LinkedHashSet<Int>()
+            val relays = LinkedHashSet<String>()
             val other = ArrayList<RawTag>()
 
             for (tag in event.tags) {
                 if (tag.isEmpty()) continue
                 val v = tag.getOrNull(1)?.trim()?.ifEmpty { null }
+                // A slot keeps the first value it sees; a repeat of the tag stays with the other tags.
                 val consumed =
                     when (tag[0]) {
-                        "alt" -> v?.also { alt = alt ?: it } != null
-                        "title" -> v?.also { title = title ?: it } != null
-                        "name" -> v?.also { name = name ?: it } != null
-                        "subject" -> v?.also { subject = subject ?: it } != null
-                        "summary" -> v?.also { summary = summary ?: it } != null
-                        "description", "about" -> v?.also { description = description ?: it } != null
-                        "d" -> true.also { identifier = identifier ?: v }
+                        "alt" -> v != null && alt == null && true.also { alt = v }
+                        "title" -> v != null && title == null && true.also { title = v }
+                        "name" -> v != null && nameTag == null && true.also { nameTag = tag }
+                        "subject" -> v != null && subjectTag == null && true.also { subjectTag = tag }
+                        "summary" -> v != null && summary == null && true.also { summary = v }
+                        "description", "about" -> v != null && descriptionTag == null && true.also { descriptionTag = tag }
+                        "d" -> identifier == null && true.also { identifier = v }
                         "image", "thumb", "picture", "banner", "cover" ->
-                            v?.takeIf { it.isWebUrl() }?.also { url ->
-                                if (media.none { it.url == url }) media += DigestMedia(url, null, null, tag.getOrNull(2), null)
-                            } != null
-                        "imeta" -> parseImeta(tag)?.also { m -> if (media.none { it.url == m.url }) media += m } != null
-                        "p" -> v?.takeIf { Hex.isHex64(it) }?.also { people += DigestPerson(it, tag.getOrNull(3)?.ifBlank { null }) } != null
+                            v != null && v.isWebUrl() && media.putIfAbsent(v, DigestMedia(v, null, null, tag.getOrNull(2), null)) == null
+                        "imeta" -> parseImeta(tag)?.let { media.putIfAbsent(it.url, it) == null } ?: false
+                        "p" -> v != null && Hex.isHex64(v) && true.also { people += DigestPerson(v, tag.getOrNull(3)?.ifBlank { null }) }
                         "e", "q" ->
-                            v?.takeIf { Hex.isHex64(it) }?.also {
-                                events += DigestEventRef(it, tag.getOrNull(2)?.ifBlank { null }, tag.getOrNull(3)?.ifBlank { null }, isQuote = tag[0] == "q")
-                            } ?: v?.let { Address.parse(it) }?.also {
+                            if (v != null && Hex.isHex64(v)) {
+                                events += DigestEventRef(v, tag.getOrNull(2)?.ifBlank { null }, tag.getOrNull(3)?.ifBlank { null }, isQuote = tag[0] == "q")
+                                true
+                            } else {
                                 // `q` may carry an address.
-                                addresses += DigestAddressRef(it, tag.getOrNull(2)?.ifBlank { null }, null)
-                            } != null
+                                v?.let { Address.parse(it) }?.also { addresses += DigestAddressRef(it, tag.getOrNull(2)?.ifBlank { null }, null) } != null
+                            }
                         "a" -> v?.let { Address.parse(it) }?.also { addresses += DigestAddressRef(it, tag.getOrNull(2)?.ifBlank { null }, tag.getOrNull(3)?.ifBlank { null }) } != null
-                        "t" -> v?.also { if (it !in hashtags) hashtags += it } != null
-                        "r", "u", "url", "web", "website" -> v?.takeIf { it.isWebUrl() }?.also { if (it !in links) links += it } != null
-                        "k" -> v?.toIntOrNull()?.also { if (it !in kinds) kinds += it } != null
-                        "relay", "relays" ->
-                            tag
-                                .drop(1)
-                                .filter { it.startsWith("ws") }
-                                .also { relays += it }
-                                .isNotEmpty()
-                        "published_at" -> v?.toLongOrNull()?.also { publishedAt = it } != null
-                        "start", "starts" -> v?.toLongOrNull()?.also { startsAt = it } != null
-                        "end", "ends" -> v?.toLongOrNull()?.also { endsAt = it } != null
-                        "expiration" -> v?.toLongOrNull()?.also { expiration = it } != null
-                        "g" -> v?.also { if (geohash == null || it.length > geohash!!.length) geohash = it } != null
-                        "location" -> v?.also { location = location ?: it } != null
-                        "content-warning" -> true.also { contentWarning = contentWarning ?: v ?: "" }
-                        "client" -> v?.also { client = client ?: it } != null
+                        "t" -> v != null && true.also { hashtags += v }
+                        "r", "u", "url", "web", "website" -> v != null && v.isWebUrl() && true.also { links += v }
+                        "k" -> v?.toIntOrNull()?.also { kinds += it } != null
+                        "relay", "relays" -> {
+                            val urls = tag.drop(1).filter { it.startsWith("ws") }
+                            relays += urls
+                            urls.isNotEmpty()
+                        }
+                        "published_at" -> publishedAt == null && v?.toLongOrNull()?.also { publishedAt = it } != null
+                        "start", "starts" -> startsAt == null && v?.toLongOrNull()?.also { startsAt = it } != null
+                        "end", "ends" -> endsAt == null && v?.toLongOrNull()?.also { endsAt = it } != null
+                        "expiration" -> expiration == null && v?.toLongOrNull()?.also { expiration = it } != null
+                        // The most precise of the geohash prefixes an event carries.
+                        "g" -> v != null && true.also { if (geohash.let { g -> g == null || v.length > g.length }) geohash = v }
+                        "location" -> v != null && location == null && true.also { location = v }
+                        "content-warning" -> contentWarning == null && true.also { contentWarning = v ?: "" }
+                        "client" -> v != null && client == null && true.also { client = v }
                         // Drawn by every note row already (PoW, zap splits) or meant for relays (NIP-70).
                         "nonce", "zap", "-" -> true
                         else -> false
                     }
                 if (!consumed) other += RawTag(tag[0], tag.drop(1))
             }
+
+            // The fallbacks that didn't fill the title or summary are left with the other tags.
+            val name = nameTag?.get(1)?.trim()
+            val subject = subjectTag?.get(1)?.trim()
+            val description = descriptionTag?.get(1)?.trim()
+            val titleSource =
+                if (title != null) {
+                    null
+                } else if (name != null) {
+                    nameTag
+                } else {
+                    subjectTag
+                }
+            listOf(nameTag, subjectTag).forEach { if (it != null && it !== titleSource) other += RawTag(it[0], it.drop(1)) }
+            if (summary != null) descriptionTag?.let { other += RawTag(it[0], it.drop(1)) }
 
             return UnknownEventDigest(
                 kind = event.kind,
@@ -253,15 +275,15 @@ class UnknownEventDigest(
                 title = title ?: name ?: subject,
                 summary = summary ?: description,
                 content = classifyContent(event.content),
-                media = media,
+                media = media.values.toList(),
                 people = people.distinctBy { it.pubKey },
                 events = events.distinctBy { it.id },
                 addresses = addresses.distinctBy { it.address },
-                hashtags = hashtags,
-                links = links,
+                hashtags = hashtags.toList(),
+                links = links.toList(),
                 identifier = identifier,
-                kinds = kinds,
-                relays = relays.distinct(),
+                kinds = kinds.toList(),
+                relays = relays.toList(),
                 publishedAt = publishedAt,
                 startsAt = startsAt,
                 endsAt = endsAt,
@@ -310,6 +332,18 @@ fun isUnknownKind(event: Event): Boolean = event::class == Event::class
  */
 fun isStorableUnknownKind(event: Event): Boolean = isUnknownKind(event) && event.kind !in 20_000..29_999
 
+/**
+ * Where NIP-01 says an event of an unknown kind lives when it is replaceable (0, 3, 10000-19999:
+ * one per author) or addressable (30000-39999: one per author and `d` tag), or null for a regular
+ * kind, which lives only by its id.
+ */
+fun unknownKindAddress(event: Event): Address? =
+    when (event.kind) {
+        0, 3, in 10_000..19_999 -> Address(event.kind, event.pubKey, "")
+        in 30_000..39_999 -> Address(event.kind, event.pubKey, event.tags.firstOrNull { it.size > 1 && it[0] == "d" }?.get(1) ?: "")
+        else -> null
+    }
+
 /** Long single tokens that are meant to be read: links, invoices, ecash and bech32 entities. */
 private val READABLE_TOKEN_PREFIXES =
     listOf("nostr:", "lightning:", "lnbc", "lntb", "lnurl", "lno1", "cashu", "npub1", "nprofile1", "note1", "nevent1", "naddr1", "nrelay1")
@@ -317,6 +351,8 @@ private val READABLE_TOKEN_PREFIXES =
 private val PRETTY_JSON = Json { prettyPrint = true }
 
 private const val MAX_PRETTY_CHARS = 4_000
+private const val MAX_JSON_CHARS = 32_000
+private const val MAX_JSON_DEPTH = 32
 private const val MAX_FIELD_CHARS = 160
 
 /**
@@ -365,19 +401,50 @@ private fun isNip44Payload(text: String): Boolean {
 
 private fun Char.isBase64Char() = this in 'A'..'Z' || this in 'a'..'z' || this in '0'..'9' || this == '+' || this == '/' || this == '=' || this == '-' || this == '_'
 
-private fun parseJson(text: String): ContentShape.Json? {
+/**
+ * Parses [text] as JSON, or null when it isn't. A document over [MAX_JSON_CHARS] or nested deeper
+ * than [MAX_JSON_DEPTH] is not parsed: the parser recurses (a relay can send `[[[[…` a hundred
+ * thousand deep and overflow the stack) and this runs while a feed draws.
+ */
+private fun parseJson(text: String): ContentShape? {
+    if (text.length > MAX_JSON_CHARS || jsonDepthExceeds(text, MAX_JSON_DEPTH)) return ContentShape.Encoded(BlobEncoding.JSON, text.length)
     val element =
         try {
             Json.parseToJsonElement(text)
         } catch (_: IllegalArgumentException) {
             return null
         }
-    val pretty = PRETTY_JSON.encodeToString(JsonElement.serializer(), element).let { if (it.length > MAX_PRETTY_CHARS) it.take(MAX_PRETTY_CHARS) + "\n…" else it }
     return when (element) {
-        is JsonObject -> ContentShape.Json(element.map { (k, v) -> jsonField(k, v) }, isArray = false, size = element.size, pretty = pretty)
-        is JsonArray -> ContentShape.Json(emptyList(), isArray = true, size = element.size, pretty = pretty)
+        is JsonObject -> ContentShape.Json(element.map { (k, v) -> jsonField(k, v) }, isArray = false, size = element.size, element = element)
+        is JsonArray -> ContentShape.Json(emptyList(), isArray = true, size = element.size, element = element)
         else -> null
     }
+}
+
+/** True when brackets outside of strings nest deeper than [max] anywhere in [text]. */
+private fun jsonDepthExceeds(
+    text: String,
+    max: Int,
+): Boolean {
+    var depth = 0
+    var inString = false
+    var escaped = false
+    for (c in text) {
+        if (inString) {
+            when {
+                escaped -> escaped = false
+                c == '\\' -> escaped = true
+                c == '"' -> inString = false
+            }
+        } else {
+            when (c) {
+                '"' -> inString = true
+                '{', '[' -> if (++depth > max) return true
+                '}', ']' -> depth--
+            }
+        }
+    }
+    return false
 }
 
 private fun jsonField(

@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_client
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_base64
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_hex
+import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_json
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encoded_opaque
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_encrypted
 import com.vitorpamplona.amethyst.commons.resources.unknown_kind_ends
@@ -133,25 +134,26 @@ private fun UnknownKindCard(
     val kindLabel = unknownKindLabel(digest)
     KindCard(
         icon = MaterialSymbols.Extension,
-        title = digest.title ?: kindLabel,
-        subtitle = if (digest.title != null) kindLabel else digest.alt?.takeIf { digest.content !is ContentShape.Prose },
+        title = digest.title?.clip() ?: kindLabel,
+        subtitle = if (digest.title != null) kindLabel else digest.alt?.takeIf { digest.content !is ContentShape.Prose }?.clip(),
         tone = KindTone.Neutral,
         status = stringRes(Res.string.unknown_kind_unsupported),
         framed = false,
     ) {
-        if (!makeItShort) digest.media.firstOrNull()?.let { UnknownKindImage(it, accountViewModel) }
+        // Only where the row may load media: not in quotes, short rows or hidden notes.
+        if (kindCardCanPreview()) digest.media.firstOrNull()?.let { UnknownKindImage(it, accountViewModel) }
         digest.summary?.let {
-            Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = if (makeItShort) 2 else 5, overflow = TextOverflow.Ellipsis)
+            Text(it.clip(), style = MaterialTheme.typography.bodyMedium, maxLines = if (makeItShort) 2 else 5, overflow = TextOverflow.Ellipsis)
         }
 
         when (val content = digest.content) {
             is ContentShape.Prose -> {
                 if (makeItShort) {
-                    Text(content.text, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(content.text.clip(), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 } else {
                     // Gated once, around the whole body, by RenderUnknownKind.
                     ProvideTextStyle(MaterialTheme.typography.bodyMedium) {
-                        KindCardText(note, content.text, backgroundColor, accountViewModel, nav, quotesLeft, gated = false)
+                        KindCardText(note, content.text, backgroundColor, accountViewModel, nav, quotesLeft, gated = false, screened = true)
                     }
                 }
             }
@@ -170,7 +172,7 @@ private fun UnknownKindCard(
 
             else -> {
                 // With no title, the alt is already the subtitle.
-                if (digest.title != null) digest.alt?.let { Text(it, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis) }
+                if (digest.title != null) digest.alt?.let { Text(it.clip(), style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis) }
                 UnknownContentLine(content)
             }
         }
@@ -178,8 +180,11 @@ private fun UnknownKindCard(
         if (makeItShort) return@KindCard
 
         UnknownKindFacts(digest)
-        KindCardChips(digest.uncitedHashtags.map { "#$it" })
-        KindCardUsers(digest.people.map { it.pubKey }, accountViewModel, nav)
+        // Remembered: a new list each recomposition would keep the chip rows from skipping.
+        val hashtagChips = remember(digest) { digest.uncitedHashtags.map { "#$it" } }
+        val people = remember(digest) { digest.people.map { it.pubKey } }
+        KindCardChips(hashtagChips)
+        KindCardUsers(people, accountViewModel, nav)
         UnknownKindFirstReference(digest, quotesLeft, backgroundColor, accountViewModel, nav)
         UnknownKindOtherTags(digest.otherTags, accountViewModel, nav)
     }
@@ -199,6 +204,7 @@ private fun UnknownContentLine(content: ContentShape) {
                 when (content.encoding) {
                     BlobEncoding.HEX -> stringRes(Res.string.unknown_kind_encoded_hex, content.length)
                     BlobEncoding.BASE64 -> stringRes(Res.string.unknown_kind_encoded_base64, content.length)
+                    BlobEncoding.JSON -> stringRes(Res.string.unknown_kind_encoded_json, content.length)
                     BlobEncoding.OPAQUE -> stringRes(Res.string.unknown_kind_encoded_opaque, content.length)
                 }
             is ContentShape.Json -> if (content.isArray) pluralStringRes(Res.plurals.unknown_kind_json_items, content.size, content.size) else null
@@ -233,7 +239,10 @@ private fun UnknownKindFacts(digest: UnknownEventDigest) {
         digest.links.take(MAX_LINKS).forEach { ClickableUrl(url = it, style = MaterialTheme.typography.bodySmall) }
         KindCardMore(digest.links.size - MAX_LINKS)
     }
-    if (digest.relays.isNotEmpty()) KindCardSectionChips(stringRes(Res.string.unknown_kind_relays), digest.relays.map { it.removePrefix("wss://").removeSuffix("/") }, max = 4)
+    if (digest.relays.isNotEmpty()) {
+        val relays = remember(digest) { digest.relays.map { it.removePrefix("wss://").removeSuffix("/") } }
+        KindCardSectionChips(stringRes(Res.string.unknown_kind_relays), relays, max = 4)
+    }
 }
 
 /** The first event the record points at, quoted; the record is usually about it. */
@@ -297,9 +306,11 @@ private fun UnknownKindOtherTags(
         )
     }
     if (open) {
+        // A list kind can carry thousands of tags, and this column is not lazy.
         Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            tags.forEach { RawTagRow(it, accountViewModel, nav) }
+            tags.take(MAX_RAW_TAGS).forEach { RawTagRow(it, accountViewModel, nav) }
         }
+        KindCardMore(tags.size - MAX_RAW_TAGS)
     }
 }
 
@@ -314,7 +325,8 @@ private fun RawTagRow(
         Row(Modifier.width(104.dp).padding(end = 8.dp)) { TagNameChip(tag.name) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             val value = tag.values.firstOrNull() ?: ""
-            val address = remember(value) { Address.parse(value) }
+            // Address.parse logs every value it rejects: only try the ones shaped like "kind:pubkey:d".
+            val address = remember(value) { if (value.length >= 66 && value.indexOf(':') in 1..5) Address.parse(value) else null }
             when {
                 // NIP-22's upper-case root tags carry the same keys and ids as `p` and `e`.
                 tag.name == "P" && Hex.isHex64(value) -> {
@@ -345,7 +357,7 @@ private fun TagExtras(values: List<String>) {
     val rest = values.filter { it.isNotBlank() }
     if (rest.isEmpty()) return
     Text(
-        text = rest.joinToString("  ·  "),
+        text = rest.joinToString("  ·  ").clip(),
         style = MaterialTheme.typography.labelSmall,
         fontFamily = FontFamily.Monospace,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -359,7 +371,7 @@ private fun TagValue(value: String) {
     if (value.startsWith("https://") || value.startsWith("http://")) {
         ClickableUrl(url = value, style = MaterialTheme.typography.bodySmall)
     } else {
-        Text(value, style = MaterialTheme.typography.bodySmall, maxLines = 4, overflow = TextOverflow.Ellipsis)
+        Text(value.clip(), style = MaterialTheme.typography.bodySmall, maxLines = 4, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -396,5 +408,13 @@ private fun TagNameChip(text: String) {
 
 private fun formatSeconds(epochSeconds: Long): String = formatDateTime(epochSeconds * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
 
+/**
+ * At most [max] characters of [this], for a Text that shows a few lines of it: Text lays out the
+ * whole string before cutting it to maxLines, and a tag value or summary from a relay can be huge.
+ */
+private fun String.clip(max: Int = MAX_TEXT_CHARS): String = if (length > max) take(max) + "…" else this
+
+private const val MAX_TEXT_CHARS = 600
+private const val MAX_RAW_TAGS = 50
 private const val MAX_JSON_FIELDS = 8
 private const val MAX_LINKS = 3

@@ -7552,6 +7552,7 @@
     <string name="unknown_kind_encrypted">Encrypted content (%1$s)</string>
     <string name="unknown_kind_encoded_hex">Hex data, %1$d characters</string>
     <string name="unknown_kind_encoded_base64">Base64 data, %1$d characters</string>
+    <string name="unknown_kind_encoded_json">JSON data, %1$d characters</string>
     <string name="unknown_kind_encoded_opaque">Encoded data, %1$d characters</string>
     <plurals name="unknown_kind_json_items">
         <item quantity="one">JSON list with %1$d item</item>

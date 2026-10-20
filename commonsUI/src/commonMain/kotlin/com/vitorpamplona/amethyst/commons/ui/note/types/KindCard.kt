@@ -500,6 +500,7 @@ private fun firstLines(
 /**
  * Free text the author wrote (a reason, a description, a comment), with links and mentions, behind
  * the note's content warning unless [gated] is false because the caller already gates the card.
+ * [screened] is true when the caller already decided [text] is words, not a machine payload.
  */
 @Composable
 fun KindCardText(
@@ -510,9 +511,10 @@ fun KindCardText(
     nav: INav,
     quotesLeft: Int = 1,
     gated: Boolean = true,
+    screened: Boolean = false,
 ) {
     if (text.isNullOrBlank()) return
-    val opaque = remember(text) { looksLikeOpaquePayload(text) }
+    val opaque = remember(text, screened) { !screened && looksLikeOpaquePayload(text) }
     if (opaque) return
     val tags = remember(note.event) { note.event?.tags?.toImmutableListOfLists() } ?: return
     val cardBackground = LocalKindCardBackground.current ?: backgroundColor
