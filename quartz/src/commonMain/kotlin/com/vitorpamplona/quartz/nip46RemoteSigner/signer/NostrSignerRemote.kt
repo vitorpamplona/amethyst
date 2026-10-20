@@ -385,6 +385,7 @@ class NostrSignerRemote(
             client: INostrClient,
             permissions: String? = null,
             clientMetadata: BunkerClientMetadata? = null,
+            onAuthUrl: ((String) -> Unit)? = null,
         ): NostrSignerRemote {
             if (!bunkerUri.startsWith(NostrConnectURI.BUNKER_SCHEME)) throw Exception("Invalid bunker uri")
             // Percent-decodes the values: signers built on the `url` crate (Opal, nak) send
@@ -400,6 +401,7 @@ class NostrSignerRemote(
                 permissions = permissions,
                 secret = parsed.secret,
                 clientMetadata = clientMetadata,
+                onAuthUrl = onAuthUrl,
             )
         }
     }

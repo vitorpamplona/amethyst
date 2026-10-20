@@ -136,6 +136,8 @@ class AccountCacheState(
     val trustNetworkClientBuilder: (() -> INostrClient)?,
     /** False on a metered network: background Web of Trust downloads then wait. */
     val canDownloadLargeFiles: () -> Boolean,
+    /** Gets the address a NIP-46 signer sends with an `auth_url` challenge, to show the user. */
+    val onRemoteSignerAuthUrl: ((String) -> Unit)? = null,
 ) : AccountCache {
     val accounts = MutableStateFlow<Map<HexKey, Account>>(emptyMap())
 
@@ -252,8 +254,13 @@ class AccountCacheState(
         return remoteSigners.getOrPut(pubKey) {
             val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
             NostrSignerRemote
-                .fromBunkerUri(settings.remoteSignerBunkerUri!!, transport, client, clientMetadata = remoteSignerMetadata)
-                .also {
+                .fromBunkerUri(
+                    settings.remoteSignerBunkerUri!!,
+                    transport,
+                    client,
+                    clientMetadata = remoteSignerMetadata,
+                    onAuthUrl = onRemoteSignerAuthUrl,
+                ).also {
                     // The user's key, not the transport key: self-encryption (private lists, drafts)
                     // keys off signer.pubKey.
                     it.bindUserPubkey(pubKey)

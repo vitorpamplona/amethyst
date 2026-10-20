@@ -27,9 +27,11 @@ bunker://<bunker-pubkey>?relay=wss://…&secret=…
   -> remote.getPublicKey()       // binds the user identity
 ```
 
-`fromBunkerUri` takes optional `permissions` and `clientMetadata`; the constructor also takes
-`onAuthUrl` for NIP-46 `auth_url` challenges (surface the URL; the request keeps waiting on
-the same id).
+`fromBunkerUri` takes optional `permissions`, `clientMetadata` and `onAuthUrl`, the callback for
+NIP-46 `auth_url` challenges (surface the URL; the request keeps waiting on the same id). The
+apps pass `RemoteSignerAuthPrompts::report` (`commons/.../domain/nip46/`), from the login use
+cases and `AccountCacheState` alike; `RemoteSignerAuthPrompt` in `AmethystApp` shows each page
+with an Open button, and only `http(s)` pages get through. The CLI prints the URL instead.
 
 ## Identity
 
@@ -43,7 +45,7 @@ that encrypts to self or checks authorship must use `pubKey` after binding. Tran
 
 Each call creates a request with a random id, publishes it to the bunker relays
 (`client.publish(event, relayList)`), parks a channel in a `LargeCache` keyed by id, and waits
-up to `timeout` (65 s). No answer → one retry with a fresh id after 2 s → then
+up to `timeout` (65 s). No answer → after 2 s, one retry that resends the same event under the same id → then
 `SignerResult.RequestAddressed.TimedOut`, which `NostrSignerRemote` throws as
 `SignerExceptions.TimedOutException`. Concurrent requests never interleave because responses
 route by id (`newResponse`).

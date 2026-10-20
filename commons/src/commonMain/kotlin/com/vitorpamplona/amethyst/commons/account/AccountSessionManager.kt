@@ -24,6 +24,7 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.domain.nip46.stripBunkerSecret
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -100,6 +101,8 @@ class AccountSessionManager(
     val remoteSignerMetadata: BunkerClientMetadata? = null,
     /** Routes a NIP-46 login's relays like the user's own before any account lists them. */
     val signerRelayRouting: SignerRelayRouting = SignerRelayRouting.None,
+    /** Where a NIP-46 signer's `auth_url` challenges wait for the user, during login and after. */
+    val remoteSignerAuthPrompts: RemoteSignerAuthPrompts = RemoteSignerAuthPrompts(),
 ) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
@@ -241,7 +244,7 @@ class AccountSessionManager(
         val transport = KeyPair()
         val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
         return withSignerRelays(relays) {
-            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata)
+            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts::report)
             result.signer.closeSubscription()
             remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
         }
@@ -290,7 +293,7 @@ class AccountSessionManager(
 
             // The wait for the signer and each request to it carry their own timeouts. One more
             // around the whole would cut off a signer that answers near the end of the first.
-            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
+            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder(), remoteSignerAuthPrompts::report)
             result.signer.closeSubscription()
 
             val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoragePrompts
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
@@ -501,6 +502,9 @@ class DesktopAppModules(
     // A legacy user who ran the deck gets it on here too.
     private val legacyDeckImport = LegacyDeckImport(filesDir) { uiPrefs.deckMode.tryEmit(true) }
 
+    // A NIP-46 signer's auth_url challenges, from logins and from the accounts' signers alike.
+    val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()
+
     val accountsCache =
         AccountCacheState(
             geolocationFlow = { noLocation },
@@ -531,6 +535,7 @@ class DesktopAppModules(
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
+            onRemoteSignerAuthUrl = remoteSignerAuthPrompts::report,
             // No metered networks to wait out on a desktop.
             canDownloadLargeFiles = { true },
             // Per account, as on Android: joined Buzz workspaces and starred channels, NIP-OA
@@ -557,6 +562,7 @@ class DesktopAppModules(
             hooks = DesktopAccountSessionHooks(),
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             signerRelayRouting = torEvaluatorFlow,
+            remoteSignerAuthPrompts = remoteSignerAuthPrompts,
         )
 
     private val _appUpdates = MutableStateFlow<AppUpdateManager?>(null)
