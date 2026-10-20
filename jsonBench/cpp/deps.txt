@@ -1,0 +1,31 @@
+# name      repo (github.com/...)        ref (tag, or a full commit sha for libraries without a usable release)
+simdjson    simdjson/simdjson            v5.0.5
+yyjson      ibireme/yyjson               0.13.0
+rapidjson   Tencent/rapidjson            24b5e7a8b27f42fa16b96fc70aade9106cf7102f
+nlohmann    nlohmann/json                v3.12.0
+glaze       stephenberry/glaze           v9.0.0
+cjson       DaveGamble/cJSON             v1.7.19
+sajson      chadaustin/sajson            68fe32ed6bcb5ac026671d6eadac9024a21c8b05
+jsonc       json-c/json-c                json-c-0.19-20260627
+jsmn        zserge/jsmn                  v1.1.0
+jansson     akheron/jansson              v2.15.1
+# Boost.JSON, header-only (boost/json/src.hpp), plus the Boost libraries its headers include
+boost-json             boostorg/json             boost-1.92.0
+boost-align            boostorg/align            boost-1.92.0
+boost-assert           boostorg/assert           boost-1.92.0
+boost-config           boostorg/config           boost-1.92.0
+boost-compat           boostorg/compat           boost-1.92.0
+boost-container        boostorg/container        boost-1.92.0
+boost-container_hash   boostorg/container_hash   boost-1.92.0
+boost-core             boostorg/core             boost-1.92.0
+boost-describe         boostorg/describe         boost-1.92.0
+boost-endian           boostorg/endian           boost-1.92.0
+boost-intrusive        boostorg/intrusive        boost-1.92.0
+boost-move             boostorg/move             boost-1.92.0
+boost-mp11             boostorg/mp11             boost-1.92.0
+boost-predef           boostorg/predef           boost-1.92.0
+boost-static_assert    boostorg/static_assert    boost-1.92.0
+boost-system           boostorg/system           boost-1.92.0
+boost-throw_exception  boostorg/throw_exception  boost-1.92.0
+boost-variant2         boostorg/variant2         boost-1.92.0
+boost-winapi           boostorg/winapi           boost-1.92.0
