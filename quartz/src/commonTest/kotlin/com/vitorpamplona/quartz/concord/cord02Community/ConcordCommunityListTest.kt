@@ -250,6 +250,23 @@ class ConcordCommunityListTest {
         assertTrue(ConcordCommunityList.decode(json).isEmpty()) // removed after add ⇒ not live
     }
 
+    @Test
+    fun twoEntriesForTheSameCommunityDecodeToOne() {
+        // mergeDocs collapses entries by their outer community_id, but an entry's id comes from its
+        // join material. A list whose outer key disagrees with the material (another client's 13302)
+        // used to surface the community twice, and the hub's LazyColumn crashed on the repeated key.
+        val cid = "11".repeat(32)
+
+        fun jm(epoch: Long) = """{"community_id":"$cid","owner":"${"0f".repeat(32)}","owner_salt":"${"aa".repeat(32)}","community_root":"${"bb".repeat(32)}","root_epoch":$epoch,"channels":[],"relays":[],"name":"Epoch $epoch"}"""
+        val json =
+            """{"entries":[{"community_id":"$cid","seed":${jm(0)},"current":${jm(1)},"added_at":100},""" +
+                """{"community_id":"${cid.uppercase()}","seed":${jm(0)},"current":${jm(2)},"added_at":100}],"tombstones":[]}"""
+
+        val entries = ConcordCommunityList.decode(json)
+        assertEquals(listOf(cid), entries.map { it.id })
+        assertEquals(2, entries.single().rootEpoch) // the freshest epoch wins, as in merge
+    }
+
     // ---- unknown-key preservation --------------------------------------------
     //
     // Armada's communityList.ts entry type ends in `[k: string]: unknown` — unknown keys are

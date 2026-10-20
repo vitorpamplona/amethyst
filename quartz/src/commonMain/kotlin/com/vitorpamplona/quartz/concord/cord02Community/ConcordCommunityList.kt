@@ -576,7 +576,10 @@ object ConcordCommunityList {
             val docExtras = JsonObject(root.filterKeys { it != "entries" && it != "tombstones" })
 
             ConcordCommunityListDocument(
-                entries = entries,
+                // One entry per community. The merge upstream keys by the outer `community_id`, but
+                // an entry's id comes from its join material, so a list whose two disagree can name
+                // a community twice; the next write then re-emits it once.
+                entries = merge(entries, emptyList()),
                 residue = ConcordListResidue(extras = docExtras, tombstones = tombstones, unparsedEntries = unparsed),
             )
         } catch (_: Exception) {
