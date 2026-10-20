@@ -155,20 +155,15 @@ class PoolEventOutboxAuthTest {
         }
 
     @Test
-    fun ordinaryTransientFailureStillBounded() =
+    fun anOrdinaryRefusalEndsDeliveryAtOnce() =
         kotlinx.coroutines.test.runTest {
             val outbox = PoolEventOutbox()
             val ev = event("dd".repeat(32))
 
             outbox.publish(ev, setOf(relay))
-            // 3 non-auth error responses exhaust the retry budget. Responses only
-            // accumulate here; the drop happens on the next send attempt.
-            repeat(3) { outbox.nak(ev, relay, "error: rate-limited") }
-            assertEquals(setOf(relay), outbox.pendingRelaysFor(ev.id))
-
-            // The next resend attempt observes the exhausted budget and drops the event
-            // (unlike auth-required, which never poisons the budget).
-            outbox.onSent(relay, EventCmd(ev))
+            // Unlike auth-required, an OK false is the relay's verdict: the event leaves the
+            // outbox on it, rather than waiting for a reconnect to draw the same refusal again.
+            outbox.nak(ev, relay, "error: rate-limited")
             assertNull(outbox.pendingRelaysFor(ev.id))
         }
 }
