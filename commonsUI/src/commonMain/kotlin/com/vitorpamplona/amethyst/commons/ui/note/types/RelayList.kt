@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.collection.LruCache
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
@@ -43,6 +44,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,10 +63,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MyRelayList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.addRelayTo
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.listsContaining
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
+import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.auth_required
@@ -102,9 +106,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
@@ -117,7 +124,10 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.ProxyRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.StringResource
 
 /** How many relays a feed card shows before it points to [Route.RelayListMembers] for the rest. */
@@ -134,9 +144,20 @@ class RelayListSection(
     val relays: List<NormalizedRelayUrl>,
 )
 
+/** Above this many tags a list is parsed off the main thread; below it, parsing inline costs less than a blank frame. */
+private const val INLINE_PARSE_MAX_TAGS = 300
+
 /**
- * The relays [event] lists, grouped as the card and [Route.RelayListMembers] show them. Private
- * halves are decrypted when the viewer is the author. Empty for an event that is not a relay list.
+ * Parsed relays per event id, one list per section. Parsing normalizes every URL: 33-150 ms for an
+ * 8,464-relay list on a desktop JVM, more on a phone. A feed card that scrolls out and back would
+ * otherwise pay that again each time it is composed.
+ */
+private val parsedRelayLists = LruCache<HexKey, List<List<NormalizedRelayUrl>>>(32)
+
+/**
+ * The relays [event] lists, grouped as the card and [Route.RelayListMembers] show them, or null
+ * while a large list is still being parsed. Private halves are decrypted when the viewer is the
+ * author. Empty for an event that is not a relay list.
  *
  * Shared by the feed card and the full screen so both always agree on what a list contains.
  */
@@ -145,26 +166,21 @@ fun observeRelayListSections(
     baseNote: Note,
     event: Event?,
     accountViewModel: AccountViewModel,
-): List<RelayListSection> {
+): List<RelayListSection>? {
     val account = accountViewModel.account
     return when (event) {
         is RelaySetEvent -> {
             val title = remember(event) { event.tags.firstTagValueFor("title", "name") ?: "#${event.dTag()}" }
-            remember(event) { listOf(RelayListSection(title, event.description(), event.relays())) }
+            parsedSections(event, listOf(title), listOf(event.description())) { listOf(event.relays()) }
         }
 
         is DmRelayListEvent -> {
-            singleSection(event, stringRes(Res.string.dm_relays_title), null) { event.relays() }
+            parsedSections(event, listOf(stringRes(Res.string.dm_relays_title))) { listOf(event.relays()) }
         }
 
         is AdvertisedRelayListEvent -> {
-            val outbox = stringRes(Res.string.public_home_section)
-            val inbox = stringRes(Res.string.public_notif_section)
-            remember(event, outbox, inbox) {
-                listOf(
-                    RelayListSection(outbox, null, event.writeRelaysNorm() ?: emptyList()),
-                    RelayListSection(inbox, null, event.readRelaysNorm() ?: emptyList()),
-                )
+            parsedSections(event, listOf(stringRes(Res.string.public_home_section), stringRes(Res.string.public_notif_section))) {
+                listOf(event.writeRelaysNorm() ?: emptyList(), event.readRelaysNorm() ?: emptyList())
             }
         }
 
@@ -177,22 +193,23 @@ fun observeRelayListSections(
         is BroadcastRelayListEvent -> decryptedSection(baseNote, account.broadcastRelayListDecryptionCache, stringRes(Res.string.broadcast_relays_title))
 
         is KeyPackageRelayListEvent -> {
-            singleSection(event, stringRes(Res.string.keypackage_section), null) { event.relays() }
+            parsedSections(event, listOf(stringRes(Res.string.keypackage_section))) { listOf(event.relays()) }
         }
 
         is PrivateOutboxRelayListEvent -> {
             // The private half stays encrypted and is only noted.
             val hidden = if (event.content.isNotEmpty()) stringRes(Res.string.kind_card_private_relays_hidden) else null
-            singleSection(event, stringRes(Res.string.private_outbox_section), hidden) { event.publicRelays() }
+            parsedSections(event, listOf(stringRes(Res.string.private_outbox_section)), listOf(hidden)) { listOf(event.publicRelays()) }
         }
 
         is GoodWikiRelayListEvent -> {
             val private by loadPrivateItems(event, accountViewModel) { event.privateRelays(it) }
+            val public = parsedRelays(event) { listOf(event.publicRelays()) }?.firstOrNull() ?: return null
             val title = stringRes(Res.string.kind_good_wiki_relays)
             // Only said when there is nothing else to show: an all-private list should read as closed, not broken.
             val hidden = stringRes(Res.string.nip51_list_has_private_members)
-            remember(event, private, title, hidden) {
-                val all = private?.let { event.publicRelays() + it } ?: event.publicRelays()
+            remember(public, private, title, hidden) {
+                val all = private?.let { public + it } ?: public
                 val description = if (event.hidesPrivateMembers(private) && all.isEmpty()) hidden else null
                 listOf(RelayListSection(title, description, all))
             }
@@ -204,23 +221,63 @@ fun observeRelayListSections(
     }
 }
 
+/** [titles] and [descriptions] matched, by position, to the relay lists [parse] reads from [event]. */
 @Composable
-private fun singleSection(
+private fun parsedSections(
     event: Event,
-    title: String,
-    description: String?,
-    relays: () -> List<NormalizedRelayUrl>,
-): List<RelayListSection> = remember(event, title, description) { listOf(RelayListSection(title, description, relays())) }
+    titles: List<String>,
+    descriptions: List<String?> = emptyList(),
+    parse: () -> List<List<NormalizedRelayUrl>>,
+): List<RelayListSection>? {
+    val relays = parsedRelays(event, parse) ?: return null
+    return remember(relays, titles, descriptions) {
+        relays.mapIndexed { index, list -> RelayListSection(titles[index], descriptions.getOrNull(index), list) }
+    }
+}
+
+/**
+ * [parse] of [event], from [parsedRelayLists] when it was parsed before. A small list is parsed
+ * inline; a large one on [Dispatchers.Default], returning null until it is done.
+ */
+@Composable
+private fun parsedRelays(
+    event: Event,
+    parse: () -> List<List<NormalizedRelayUrl>>,
+): List<List<NormalizedRelayUrl>>? {
+    // Keyed by hand: produceState remembers its state across key changes, which would keep showing
+    // the previous version of a replaceable list.
+    val parsed =
+        remember(event) {
+            mutableStateOf(
+                parsedRelayLists[event.id]
+                    ?: if (event.tags.size <= INLINE_PARSE_MAX_TAGS) parse().also { parsedRelayLists.put(event.id, it) } else null,
+            )
+        }
+
+    LaunchedEffect(event) {
+        if (parsed.value == null) {
+            parsed.value = withContext(Dispatchers.Default) { parse() }.also { parsedRelayLists.put(event.id, it) }
+        }
+    }
+
+    return parsed.value
+}
 
 @Composable
 private fun decryptedSection(
     baseNote: Note,
     cache: GenericRelayListCache<*>,
     title: String,
-): List<RelayListSection> {
+): List<RelayListSection>? {
     val flow = remember(baseNote, cache) { cache.observeDecryptedRelayList(baseNote) }
-    val relays by flow.collectAsStateWithLifecycle(remember(baseNote, cache) { cache.fastStartValueForRelayList(baseNote) })
-    return remember(relays, title) { listOf(RelayListSection(title, null, relays.relays)) }
+    // The fast start parses on the main thread, so a large list waits for the flow instead.
+    val initial: RelayListCard? =
+        remember(baseNote, cache) {
+            if ((baseNote.event?.tags?.size ?: 0) <= INLINE_PARSE_MAX_TAGS) cache.fastStartValueForRelayList(baseNote) else null
+        }
+    val relays by flow.collectAsStateWithLifecycle(initial)
+    val loaded = relays ?: return null
+    return remember(loaded, title) { listOf(RelayListSection(title, null, loaded.relays)) }
 }
 
 /**
@@ -234,7 +291,7 @@ fun DisplayRelayList(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val sections = observeRelayListSections(baseNote, baseNote.event, accountViewModel)
+    val sections = observeRelayListSections(baseNote, baseNote.event, accountViewModel) ?: return
 
     Column(modifier = Modifier.fillMaxWidth()) {
         sections.forEachIndexed { index, section ->
@@ -324,14 +381,14 @@ fun RelayListRow(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val relayInfo by loadRelayInfo(relay)
+    val relayInfo by loadListedRelayInfo(relay)
     val clipboardManager = LocalClipboard.current
     val scope = rememberCoroutineScope()
 
     val address = remember(relay) { relay.displayUrl() }
-    val name = relayInfo.name?.trim()?.takeIf { it.isNotEmpty() } ?: address
-    // The placeholder document names the relay by its address, so only a real name gets a second line.
-    val subtitle = if (name != address) address else relayInfo.description?.trim()?.takeIf { it.isNotEmpty() }
+    val name = relayInfo?.name?.trim()?.takeIf { it.isNotEmpty() } ?: address
+    // Only a real name gets the address as a second line; otherwise the address is the name.
+    val subtitle = if (name != address) address else relayInfo?.description?.trim()?.takeIf { it.isNotEmpty() }
 
     Row(
         modifier =
@@ -344,8 +401,8 @@ fun RelayListRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RenderRelayIcon(
-            displayUrl = relayInfo.id ?: relay.url,
-            iconUrl = relayInfo.icon,
+            displayUrl = relayInfo?.id ?: relay.url,
+            iconUrl = relayInfo?.icon,
             loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
             loadRobohash = LocalDisplaySettings.current.loadRobohash,
             pingInMs = 0,
@@ -368,7 +425,7 @@ fun RelayListRow(
                     modifier = Modifier.weight(1f, fill = false),
                 )
 
-                if (relayInfo.limitation?.payment_required == true) {
+                if (relayInfo?.limitation?.payment_required == true) {
                     Icon(
                         symbol = MaterialSymbols.Paid,
                         contentDescription = stringRes(Res.string.paid_relay),
@@ -377,7 +434,7 @@ fun RelayListRow(
                     )
                 }
 
-                if (relayInfo.limitation?.auth_required == true) {
+                if (relayInfo?.limitation?.auth_required == true) {
                     Icon(
                         symbol = MaterialSymbols.Lock,
                         contentDescription = stringRes(Res.string.auth_required),
@@ -400,6 +457,32 @@ fun RelayListRow(
 
         RelayMembershipAction(relay, accountViewModel, nav)
     }
+}
+
+/** How long a row must stay composed before it asks its relay for a NIP-11 document. */
+private const val NIP11_SETTLE_MS = 400L
+
+/**
+ * The NIP-11 document of a relay in someone's list, or null until there is one. The list's author
+ * picked these addresses, so a local-network relay is never contacted (that would aim requests at
+ * the viewer's own machine or LAN), and the rest are fetched only after their row has stayed on
+ * screen for [NIP11_SETTLE_MS]: flinging through thousands of rows sends no requests and leaves the
+ * shared NIP-11 cache alone. A document already cached shows at once.
+ */
+@Composable
+private fun loadListedRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInformation?> {
+    val cache = LocalCache.appHost.nip11Cache
+    // Keyed by hand: produceState keeps its state across key changes, and a lazy row reused for
+    // another relay would go on showing the previous relay's name and icon.
+    val info = remember(relay) { mutableStateOf(cache.peek(relay)) }
+
+    LaunchedEffect(relay) {
+        if (info.value != null || relay.isLocalHost()) return@LaunchedEffect
+        delay(NIP11_SETTLE_MS)
+        cache.loadRelayInfo(relay, onInfo = { info.value = it }, onError = { _, _, _ -> })
+    }
+
+    return info
 }
 
 /**

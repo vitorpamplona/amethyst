@@ -84,6 +84,11 @@ private fun RelayListMembersScreen(
 
     val sections = observeRelayListSections(note, event, accountViewModel)
 
+    if (sections == null) {
+        RelayListLoading(nav)
+        return
+    }
+
     Scaffold(
         topBar = {
             TopBarWithBackButton(

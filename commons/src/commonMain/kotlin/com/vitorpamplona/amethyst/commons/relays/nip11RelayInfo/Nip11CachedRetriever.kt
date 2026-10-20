@@ -72,6 +72,13 @@ class Nip11CachedRetriever(
         return info
     }
 
+    /**
+     * The fetched document for [relay] when one is cached, else null. Unlike [getFromCache] it never
+     * stores a placeholder, so a list of thousands of relays scrolling past does not push the
+     * documents of the user's own relays out of the cache.
+     */
+    fun peek(relay: NormalizedRelayUrl): Nip11RelayInformation? = (relayInformationDocumentCache.get(relay) as? RetrieveResult.Success)?.data
+
     fun getFromCache(relay: NormalizedRelayUrl): Nip11RelayInformation {
         val result = relayInformationDocumentCache.get(relay)
 
