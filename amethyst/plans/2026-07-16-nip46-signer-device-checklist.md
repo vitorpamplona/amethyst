@@ -12,7 +12,7 @@ the client.
 
 ## Pairing
 - [ ] **Bunker flow**: Settings → Nostr Signer → turn on → scan/copy the
-      `bunker://` QR into a client (nsec.app, Coracle, Nostrudel, or a second
+      `bunker://` QR into a client (Coracle, Nostrudel, or a second
       Amethyst via `amy login bunker://…`). Client resolves your npub via
       `get_public_key`.
 - [ ] **NostrConnect flow**: client shows a `nostrconnect://` code → "Scan a
@@ -102,7 +102,6 @@ the client.
 
 ## Interop matrix
 Pair + sign + nip44 encrypt/decrypt + logout against each:
-- [ ] nsec.app
 - [ ] Coracle
 - [ ] Nostrudel
 - [ ] snort / other NIP-46 client

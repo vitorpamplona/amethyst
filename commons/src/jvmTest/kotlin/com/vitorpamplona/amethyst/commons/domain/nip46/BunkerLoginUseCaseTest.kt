@@ -146,7 +146,7 @@ class BunkerLoginUseCaseTest {
         }
 
     /**
-     * NIP-46 auth challenge, the way nsec.app answers a `connect` it wants the user to confirm on
+     * NIP-46 auth challenge, the way a web signer answers a `connect` it wants the user to confirm on
      * its page: `auth_url` first, then the real answer under the same request id once the user
      * has. The login shows the page's address and carries on with the answer that follows.
      */

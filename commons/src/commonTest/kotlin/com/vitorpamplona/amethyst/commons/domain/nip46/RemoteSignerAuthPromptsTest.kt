@@ -28,8 +28,8 @@ import kotlin.test.assertTrue
 class RemoteSignerAuthPromptsTest {
     @Test
     fun onlyWebPagesAreShown() {
-        assertTrue(RemoteSignerAuthPrompts.isWebPage("https://nsec.app/confirm?id=1"))
-        assertTrue(RemoteSignerAuthPrompts.isWebPage("HTTPS://NSEC.APP/"))
+        assertTrue(RemoteSignerAuthPrompts.isWebPage("https://signer.example/confirm?id=1"))
+        assertTrue(RemoteSignerAuthPrompts.isWebPage("HTTPS://SIGNER.EXAMPLE/"))
         assertTrue(RemoteSignerAuthPrompts.isWebPage("http://127.0.0.1:8080/auth"))
 
         // The signer's address is handed to the platform: none of these may reach it.
@@ -38,8 +38,8 @@ class RemoteSignerAuthPromptsTest {
         assertFalse(RemoteSignerAuthPrompts.isWebPage("file:///etc/passwd"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage("nostr:npub1abc"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage("https://"))
-        assertFalse(RemoteSignerAuthPrompts.isWebPage("https://nsec.app/a b"))
-        assertFalse(RemoteSignerAuthPrompts.isWebPage(" https://nsec.app/"))
+        assertFalse(RemoteSignerAuthPrompts.isWebPage("https://signer.example/a b"))
+        assertFalse(RemoteSignerAuthPrompts.isWebPage(" https://signer.example/"))
         assertFalse(RemoteSignerAuthPrompts.isWebPage(""))
     }
 

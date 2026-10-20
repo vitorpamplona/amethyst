@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.update
 
 /**
  * NIP-46 auth challenges waiting for the user. A remote signer that needs the user to
- * authenticate somewhere else first (nsec.app) answers a request with `result: "auth_url"` and
+ * authenticate somewhere else first (a web signer) answers a request with `result: "auth_url"` and
  * the address in `error`. NIP-46 asks the client to show that address and to keep listening for
  * the real answer under the same request id, which `RemoteSignerManager` already does.
  *

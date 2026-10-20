@@ -15,7 +15,7 @@ on a garbage key. Fixed by trying NIP-05 first and requiring 64 hex from the key
 
 ## Problem
 
-Typing `bob@nsec.app` in the login field resolves the NIP-05 to a pubkey and logs in **read-only**
+Typing `bob@signer.example` in the login field resolves the NIP-05 to a pubkey and logs in **read-only**
 (`AccountSessionManager.loginSync`, the `EMAIL_PATTERN` branch). A remote signer that serves that
 domain can sign for the account, and NIP-46 (appendix, "Announcing remote-signer metadata") lets a
 client find it from the domain's `/.well-known/nostr.json`. The user should get a signing account
@@ -31,13 +31,12 @@ from the address alone, approving on the signer's page, with no `bunker://` stri
 | Extra | `nip46.nostrconnect_url`, a template with `<nostrconnect>` | none |
 
 The legacy shape is what nostr-tools reads in every version up to 2.25.2 (`queryBunkerProfile`:
-`pubkey = names[name]`, `relays = nip46[pubkey]`). nsec.app and nostr-login are built on it. The
+`pubkey = names[name]`, `relays = nip46[pubkey]`), and nostr-login is built on it. The
 spec shape gives the signer app, not the user, so it needs `nostrconnect://` (the user approves on
 the signer's site) or a connect with no secret followed by an `auth_url` challenge.
 
-Not verified against a live document: this container cannot reach nsec.app (connection reset).
-First implementation step: capture real `nostr.json` responses from nsec.app and one other
-provider as parser fixtures.
+Not verified against a live provider's document: the parser fixtures are written by hand from
+nostr-tools and the spec. Capture a real `nostr.json` as a fixture once a provider is reachable.
 
 ## Flow
 
@@ -102,4 +101,4 @@ NIP-89 signer discovery (kind 31990, `k=24133`) and nostr-tools' non-standard `c
   - identity mismatch refused;
   - no `nip46` falls back to read-only.
 - CLI: a harness case for `amy login name@domain` against `amy serve` and a local `nostr.json`.
-- By hand: an nsec.app account on a device. It can't be reached from the build container.
+- By hand: an account at a domain that advertises a signer, on a device.

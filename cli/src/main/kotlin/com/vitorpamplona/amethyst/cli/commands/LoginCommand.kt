@@ -122,7 +122,7 @@ object LoginCommand {
         dataDir.saveIdentity(identity)
 
         // For a bunker, the pubkey in the URI is the REMOTE SIGNER's key, which for many signer apps
-        // (Amber, nsec.app, Amethyst) is a transport key distinct from the user's identity key. Resolve
+        // (Amber, Amethyst) is a transport key distinct from the user's identity key. Resolve
         // the real identity via the NIP-46 get_public_key RPC and persist THAT (the bunker's remote key
         // is kept in Identity.bunker for transport addressing). A signer that can't say which account it
         // signs for fails the login: guessing would save an account that is not the user's.
