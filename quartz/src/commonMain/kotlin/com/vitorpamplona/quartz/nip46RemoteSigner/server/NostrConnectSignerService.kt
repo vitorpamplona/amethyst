@@ -144,6 +144,12 @@ class NostrConnectSignerService(
      * consumer: keep it cheap.
      */
     val onRequestSeenOn: ((clientPubKey: HexKey, relay: NormalizedRelayUrl) -> Unit)? = null,
+    /**
+     * Invoked once the request subscription on [relays] is registered with the client, so a host
+     * about to answer a pairing can wait for it: a REQ registered before an EVENT goes out ahead of
+     * it on the same connection, so the relay already listens when the app replies.
+     */
+    val onListening: ((relays: Set<NormalizedRelayUrl>) -> Unit)? = null,
 ) {
     /** A request and the relay it came in on; dedup keeps the first arrival. */
     private class Arrival(
@@ -269,6 +275,7 @@ class NostrConnectSignerService(
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
         client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
+        onListening?.invoke(relays)
         try {
             while (true) {
                 val arrival = events.receive()

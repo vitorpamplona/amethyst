@@ -20,34 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.model.nip46Signer
 
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
-import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
-import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.server.NostrServer
-import com.vitorpamplona.quartz.nip01Core.relay.server.inprocess.InProcessWebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
-import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -65,80 +48,21 @@ class Nip46SignerSwitchRelaysTest {
     private val appRelay = NormalizedRelayUrl("wss://app-relay.example.com/")
     private val inboxRelay = NormalizedRelayUrl("wss://inbox.example.com/")
 
-    private object NeverConnects : WebSocket {
-        override fun needsReconnect() = false
-
-        override fun connect() {}
-
-        override fun disconnect() {}
-
-        override fun send(msg: String) = false
-    }
-
-    private class Setup(
-        val acceptsSignerTraffic: Boolean = true,
-        relays: List<NormalizedRelayUrl>,
-    ) {
-        val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-        val servers = relays.associateWith { NostrServer(EventStore(null)) }
-        val client =
-            NostrClient(
-                object : WebsocketBuilder {
-                    override fun build(
-                        url: NormalizedRelayUrl,
-                        out: WebSocketListener,
-                    ) = servers[url]?.let { InProcessWebSocket(it, out) } ?: NeverConnects
-                },
-                scope,
-            )
-        val identity = NostrSignerInternal(KeyPair())
-        val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
-        val clientStore = InMemoryNip46ClientStore()
-
-        fun signerState(inbox: Set<NormalizedRelayUrl>) =
-            Nip46SignerState(
-                signer = identity,
-                client = client,
-                ledger = ledger,
-                clientStore = clientStore,
-                inboxRelays = MutableStateFlow(inbox),
-                scope = scope,
-                settings = AccountSettings(identity.keyPair),
-                consent = Nip46ConsentPrompter.Unanswered,
-                relayAcceptsSignerTraffic = { acceptsSignerTraffic },
-            )
-
-        fun close() {
-            scope.cancel()
-            servers.values.forEach { it.close() }
-        }
-    }
-
     private class Paired(
         val state: Nip46SignerState,
         val app: NostrSignerRemote,
         val coordinate: String,
     )
 
-    /**
-     * Pairs an app whose code offered [appRelay]. The signer is already listening there when the app
-     * answers: pairing restarts the listener to add an app's relay, and an app's first request sent
-     * during that restart is lost (kind 24133 is ephemeral) until its retry a minute later.
-     */
-    private suspend fun pairApp(setup: Setup): Paired {
+    /** Pairs an app whose code offered [appRelay], with the signer listening on [inboxRelay]. */
+    private suspend fun pairApp(setup: Nip46SignerTestNet): Paired {
         val code = NostrConnectLoginUseCase.generateUri(KeyPair(), listOf(appRelay.url), BunkerClientMetadata(name = "App"))
         val coordinate = Nip46PermissionAuthorizer.coordinateFor(setup.identity.pubKey, code.ephemeralKeyPair.pubKey.toHexKey())
-        // Already trusted, so pairing skips the consent dialog.
+        // Already trusted, so pairing skips the consent dialog; used just now, so the idle prune keeps it.
         setup.ledger.setPolicy(coordinate, AppSignerPolicy.FULL_TRUST)
-        // Used just now, so the start-up prune of idle apps keeps it.
         setup.ledger.updateLastUsed(coordinate)
-        setup.clientStore.store(coordinate, Nip46ClientInfo(name = "App", relays = setOf(appRelay.url)))
 
         val state = setup.signerState(setOf(inboxRelay))
-        state.setEnabled(true)
-        withTimeout(10_000) { state.listeningRelays.first { appRelay in it } }
-        delay(1_000)
-
         val login = setup.scope.async { NostrConnectLoginUseCase.awaitAndLogin(code, setup.client) }
         // The code's subscription is open before the signer answers.
         delay(1_000)
@@ -149,7 +73,7 @@ class Nip46SignerSwitchRelaysTest {
     @Test
     fun aNostrConnectAppIsMovedToTheInboxRelaysAndTheAppRelayIsDropped() =
         runBlocking(Dispatchers.Default) {
-            val setup = Setup(relays = listOf(appRelay, inboxRelay))
+            val setup = Nip46SignerTestNet(listOf(appRelay, inboxRelay))
             try {
                 val paired = pairApp(setup)
                 val state = paired.state
@@ -190,7 +114,7 @@ class Nip46SignerSwitchRelaysTest {
     @Test
     fun noInboxRelayThatWouldCarryTheSessionMeansStay() =
         runBlocking(Dispatchers.Default) {
-            val setup = Setup(acceptsSignerTraffic = false, relays = listOf(appRelay, inboxRelay))
+            val setup = Nip46SignerTestNet(listOf(appRelay, inboxRelay), acceptsSignerTraffic = false)
             try {
                 val paired = pairApp(setup)
                 val state = paired.state

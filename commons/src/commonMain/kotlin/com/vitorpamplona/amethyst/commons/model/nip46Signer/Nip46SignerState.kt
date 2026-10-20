@@ -68,12 +68,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** How many recently-serviced request ids to persist for cross-restart replay dedup. */
 private const val MAX_SEEN_IDS = 128
+
+/** How long a pairing waits for the listener to reach the app's relays before answering anyway. */
+private const val LISTENER_READY_TIMEOUT_MS = 10_000L
 
 /**
  * How often newly serviced request ids are written to the account settings. Batching keeps a
@@ -129,6 +134,9 @@ class Nip46SignerState(
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /** The relays the running listener is subscribed on; empty while it is stopped or restarting. */
+    private val subscribedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
 
     /** Clients told to move to the inbox relays (`switch_relays`), until a request shows they did. */
     private val movingClients = MutableStateFlow<Set<HexKey>>(emptySet())
@@ -281,8 +289,13 @@ class Nip46SignerState(
                             initialSeen = settings.nip46SeenRequestIds.value,
                             onHandledId = { id -> rememberHandledId(id) },
                             onRequestSeenOn = ::onRequestSeenOn,
+                            onListening = { subscribedRelays.value = it },
                         )
-                    service.run()
+                    try {
+                        service.run()
+                    } finally {
+                        subscribedRelays.value = emptySet()
+                    }
                 }
         }
     }
@@ -456,12 +469,6 @@ class Nip46SignerState(
             }
 
         return try {
-            // Echo the offer secret back to the client — authored by the transport key so the client
-            // learns THAT as our remote-signer pubkey (not our identity). Only after consent.
-            val ack = BunkerResponse(newSubId(), offer.secret, null)
-            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner())
-            client.publish(reply, offer.relays)
-
             if (grantedPolicy != null) {
                 ledger.setPolicy(coordinate, grantedPolicy)
                 // The user just reviewed and approved these declared perms, so honor them — including
@@ -479,6 +486,19 @@ class Nip46SignerState(
             refreshExtraRelaysFromStore()
 
             setEnabled(true)
+
+            // The app answers the ack at once, on its own relays, and kind 24133 is ephemeral: answer
+            // only once the (re)started listener is subscribed there, or that first request is lost and
+            // the app waits out its retry. Paired and granted above, so the request is served as well.
+            withTimeoutOrNull(LISTENER_READY_TIMEOUT_MS) {
+                subscribedRelays.first { it.containsAll(offer.relays) }
+            } ?: Log.w("NIP46Signer") { "listener not on the app's relays yet; sending the pairing ack anyway" }
+
+            // Echo the offer secret back to the client — authored by the transport key so the client
+            // learns THAT as our remote-signer pubkey (not our identity). Only after consent.
+            val ack = BunkerResponse(newSubId(), offer.secret, null)
+            val reply = NostrConnectEvent.create(ack, offer.clientPubKey, transportSigner())
+            client.publish(reply, offer.relays)
             ConnectResult.Connected(offer.clientPubKey, offer.name)
         } catch (e: CancellationException) {
             throw e
