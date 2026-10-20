@@ -27,6 +27,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.usePinned
 import platform.CoreCrypto.CC_SHA1_CTX
 import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
