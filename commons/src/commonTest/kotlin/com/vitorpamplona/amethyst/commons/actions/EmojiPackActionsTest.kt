@@ -98,7 +98,7 @@ class EmojiPackActionsTest {
             val removed = EmojiPackActions.removeEmojis(signer, withPrivate, listOf("a"), isPrivate = true)
             assertEquals(listOf("a"), removed.removed)
             assertEquals(listOf(emoji("a")), removed.event!!.publicEmojis())
-            assertEquals(listOf(emoji("secret")), removed.event!!.privateEmojis(signer))
+            assertEquals(listOf(emoji("secret")), removed.event.privateEmojis(signer))
         }
 
     @Test

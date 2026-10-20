@@ -74,8 +74,8 @@ class ChannelMetadataAndLiveActivityWatcherSubAssembler(
         val relaySince =
             sinceDroppingGrownRelays(
                 mapOfSet {
-                    perRelayPublicChannelFilter.forEach { (relay, channels) -> channels.forEach { add(relay, (it as PublicChatChannel).idHex) } }
-                    perRelayLiveActivityFilter.forEach { (relay, channels) -> channels.forEach { add(relay, (it as LiveActivitiesChannel).address.toValue()) } }
+                    perRelayPublicChannelFilter.forEach { (relay, channels) -> channels.forEach { add(relay, it.idHex) } }
+                    perRelayLiveActivityFilter.forEach { (relay, channels) -> channels.forEach { add(relay, it.address.toValue()) } }
                 },
                 since,
             )

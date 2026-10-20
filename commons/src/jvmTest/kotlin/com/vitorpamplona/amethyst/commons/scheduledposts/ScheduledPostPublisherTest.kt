@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runTest
@@ -36,6 +37,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 /** The checks every platform's drain gets from the shared publisher, before anything is sent. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class ScheduledPostPublisherTest {
     @get:Rule
     val temp = TemporaryFolder()
