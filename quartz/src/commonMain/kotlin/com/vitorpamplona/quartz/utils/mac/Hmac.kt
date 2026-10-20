@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.quartz.utils.mac
 
-import com.vitorpamplona.quartz.utils.sha2.Sha2Digest
+import com.vitorpamplona.quartz.utils.sha2.ShaDigest
 
 /**
- * HMAC (RFC 2104) over a pure-Kotlin [Sha2Digest], for the native [MacInstance].
+ * HMAC (RFC 2104) over a pure-Kotlin [ShaDigest], for the native [MacInstance].
  * Like JCA's `Mac`, [doFinal] leaves it keyed and ready for the next message.
  */
 internal class Hmac(
-    private val digest: Sha2Digest,
+    private val digest: ShaDigest,
     key: ByteArray,
 ) {
     private val ipad = ByteArray(digest.blockSize)

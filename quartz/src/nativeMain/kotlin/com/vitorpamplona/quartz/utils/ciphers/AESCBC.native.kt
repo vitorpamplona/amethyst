@@ -21,46 +21,22 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.AES
-import dev.whyoleg.cryptography.providers.apple.Apple
+import com.vitorpamplona.quartz.utils.ciphers.aes.AesCbc
 
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : NostrCipher {
-    private val cryptoProvider = CryptographyProvider.Apple
-    private val aesCbc = cryptoProvider.get(AES.CBC)
-
-    private val keyDecoder =
-        aesCbc
-            .keyDecoder()
-            .decodeFromByteArrayBlocking(format = AES.Key.Format.RAW, keyBytes)
-
-    private fun cipher() = keyDecoder.cipher()
-
     actual override fun name(): String = "aes-cbc"
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            encryptWithIvBlocking(iv, bytesToEncrypt)
-        }
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = AesCbc.encrypt(keyBytes, iv, bytesToEncrypt)
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            decryptWithIvBlocking(iv, bytesToDecrypt)
-        }
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray = AesCbc.decrypt(keyBytes, iv, bytesToDecrypt)
 
-    @OptIn(DelicateCryptographyApi::class)
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
-            with(cipher()) {
-                decryptWithIvBlocking(iv, bytesToDecrypt)
-            }
-        } catch (e: Exception) {
+            decrypt(bytesToDecrypt)
+        } catch (e: IllegalArgumentException) {
             Log.w("AESCBC", "Failed to decrypt", e)
             null
         }

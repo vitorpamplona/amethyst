@@ -21,15 +21,15 @@
 package com.vitorpamplona.quartz.utils.sha2
 
 /**
- * Pure-Kotlin incremental SHA-2 (FIPS 180-4), for the targets without a platform
- * digest Quartz trusts to call directly. JVM and Android use JCA instead.
+ * Pure-Kotlin incremental SHA-1 and SHA-2 (FIPS 180-4), for the targets without a
+ * platform digest Quartz calls directly. JVM and Android use JCA instead.
  *
  * The subclasses provide the block function; this class does the buffering and the
  * padding. The message length is counted in a [Long], so inputs past 2 GiB hash
- * correctly. SHA-2 has no table lookups indexed by secret data, so this is
+ * correctly. These hashes have no table lookups indexed by secret data, so this is
  * constant-time by construction, which matters when it runs under HMAC.
  */
-internal sealed class Sha2Digest(
+internal sealed class ShaDigest(
     val blockSize: Int,
     val digestSize: Int,
     private val lengthSize: Int,
@@ -133,7 +133,7 @@ internal sealed class Sha2Digest(
     }
 }
 
-internal class Sha256Digest : Sha2Digest(blockSize = 64, digestSize = 32, lengthSize = 8) {
+internal class Sha256Digest : ShaDigest(blockSize = 64, digestSize = 32, lengthSize = 8) {
     private val state = Sha256Compression.IV.copyOf()
     private val w = IntArray(64)
 
@@ -162,7 +162,95 @@ internal class Sha256Digest : Sha2Digest(blockSize = 64, digestSize = 32, length
     }
 }
 
-internal class Sha512Digest : Sha2Digest(blockSize = 128, digestSize = 64, lengthSize = 16) {
+internal class Sha1Digest : ShaDigest(blockSize = 64, digestSize = 20, lengthSize = 8) {
+    private val state = IV.copyOf()
+    private val w = IntArray(80)
+
+    override fun compress(
+        block: ByteArray,
+        offset: Int,
+    ) {
+        for (t in 0 until 16) {
+            val i = offset + 4 * t
+            w[t] = (block[i].toInt() shl 24) or
+                ((block[i + 1].toInt() and 0xff) shl 16) or
+                ((block[i + 2].toInt() and 0xff) shl 8) or
+                (block[i + 3].toInt() and 0xff)
+        }
+        for (t in 16 until 80) {
+            w[t] = (w[t - 3] xor w[t - 8] xor w[t - 14] xor w[t - 16]).rotateLeft(1)
+        }
+
+        var a = state[0]
+        var b = state[1]
+        var c = state[2]
+        var d = state[3]
+        var e = state[4]
+
+        for (t in 0 until 80) {
+            val f: Int
+            val k: Int
+            when {
+                t < 20 -> {
+                    f = d xor (b and (c xor d))
+                    k = 0x5a827999
+                }
+
+                t < 40 -> {
+                    f = b xor c xor d
+                    k = 0x6ed9eba1
+                }
+
+                t < 60 -> {
+                    f = (b and c) or (d and (b or c))
+                    k = 0x8f1bbcdc.toInt()
+                }
+
+                else -> {
+                    f = b xor c xor d
+                    k = 0xca62c1d6.toInt()
+                }
+            }
+            val temp = a.rotateLeft(5) + f + e + k + w[t]
+            e = d
+            d = c
+            c = b.rotateLeft(30)
+            b = a
+            a = temp
+        }
+
+        state[0] += a
+        state[1] += b
+        state[2] += c
+        state[3] += d
+        state[4] += e
+    }
+
+    override fun resetState() {
+        IV.copyInto(state)
+        w.fill(0)
+    }
+
+    override fun writeState(
+        out: ByteArray,
+        offset: Int,
+    ) {
+        for (i in 0 until 5) {
+            val word = state[i]
+            val o = offset + 4 * i
+            out[o] = (word ushr 24).toByte()
+            out[o + 1] = (word ushr 16).toByte()
+            out[o + 2] = (word ushr 8).toByte()
+            out[o + 3] = word.toByte()
+        }
+    }
+
+    private companion object {
+        val IV = intArrayOf(0x67452301, 0xefcdab89.toInt(), 0x98badcfe.toInt(), 0x10325476, 0xc3d2e1f0.toInt())
+    }
+}
+
+internal class Sha512Digest : ShaDigest(blockSize = 128, digestSize = 64, lengthSize = 16) {
     private val state = IV.copyOf()
     private val w = LongArray(80)
 

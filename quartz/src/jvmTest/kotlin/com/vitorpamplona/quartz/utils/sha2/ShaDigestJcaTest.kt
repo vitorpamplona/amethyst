@@ -34,12 +34,12 @@ import kotlin.test.assertContentEquals
  * (55/56/64 bytes for SHA-256, 111/112/128 for SHA-512), and for keys around the
  * block size.
  */
-class Sha2DigestJcaTest {
+class ShaDigestJcaTest {
     private val random = Random(7)
 
     @Test
     fun digestsMatchJca() {
-        val pairs = listOf(Sha256Digest() to "SHA-256", Sha512Digest() to "SHA-512")
+        val pairs = listOf(Sha256Digest() to "SHA-256", Sha512Digest() to "SHA-512", Sha1Digest() to "SHA-1")
         for ((digest, name) in pairs) {
             val jca = MessageDigest.getInstance(name)
             for (length in 0..3 * digest.blockSize + 1) {

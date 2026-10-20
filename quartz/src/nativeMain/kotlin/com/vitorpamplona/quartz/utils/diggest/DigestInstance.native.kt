@@ -20,44 +20,46 @@
  */
 package com.vitorpamplona.quartz.utils.diggest
 
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.RIPEMD160
-import dev.whyoleg.cryptography.algorithms.SHA1
-import dev.whyoleg.cryptography.algorithms.SHA256
+import com.vitorpamplona.quartz.nip03Timestamp.ots.crypto.RIPEMD160Digest
+import com.vitorpamplona.quartz.utils.sha2.Sha1Digest
+import com.vitorpamplona.quartz.utils.sha2.Sha256Digest
+import com.vitorpamplona.quartz.utils.sha2.ShaDigest
 
 actual class DigestInstance actual constructor(
     algorithm: String,
 ) {
-    private val cryptoProvider = CryptographyProvider.Default
+    private val sha: ShaDigest? =
+        when (algorithm) {
+            "SHA-256" -> Sha256Digest()
 
-    private val hasher = cryptoProvider.get(digestForAlgorithm(algorithm)).hasher()
-    private val hashFunction = hasher.createHashFunction()
+            "SHA-1" -> Sha1Digest()
 
-    actual fun update(array: ByteArray) {
-        hashFunction.update(array)
-    }
-
-    actual fun update(byte: Byte) {
-        hashFunction.update(byteArrayOf(byte))
-    }
-
-    actual fun digest(): ByteArray = hashFunction.hashToByteArray()
-
-    actual fun digest(input: ByteArray): ByteArray = hasher.hashBlocking(input)
-
-    @OptIn(DelicateCryptographyApi::class)
-    private fun digestForAlgorithm(algorithmName: String) =
-        when (algorithmName) {
-            "SHA-256" -> SHA256
-
-            "SHA-1" -> SHA1
-
-            "ripemd160" -> RIPEMD160
+            "ripemd160" -> null
 
             // Adding this below as a reminder.
             "keccak256" -> error("KECCAK-256 is not yet supported.")
 
             else -> error("This message digest is not supported.")
         }
+
+    private val ripemd = if (sha == null) RIPEMD160Digest() else null
+
+    actual fun update(array: ByteArray) {
+        if (sha != null) sha.update(array) else ripemd!!.update(array, 0, array.size)
+    }
+
+    actual fun update(byte: Byte) {
+        if (sha != null) sha.update(byte) else ripemd!!.update(byte)
+    }
+
+    actual fun digest(): ByteArray {
+        if (sha != null) return sha.digest()
+        val r = ripemd!!
+        return ByteArray(r.getDigestSize()).also { r.doFinal(it, 0) }
+    }
+
+    actual fun digest(input: ByteArray): ByteArray {
+        update(input)
+        return digest()
+    }
 }

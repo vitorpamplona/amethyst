@@ -26,10 +26,10 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
 /**
- * FIPS 180-4 known answers for the pure-Kotlin SHA-2 that the native targets use.
+ * FIPS 180-4 known answers for the pure-Kotlin SHA-1 and SHA-2 that the native targets use.
  * jvmTest also compares it with JCA on every length across the padding boundaries.
  */
-class Sha2DigestTest {
+class ShaDigestTest {
     private fun ByteArray.hex() = joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
     private val twoBlock256 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq".encodeToByteArray()
@@ -39,7 +39,7 @@ class Sha2DigestTest {
                 "ijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu"
         ).encodeToByteArray()
 
-    private fun Sha2Digest.hash(input: ByteArray): String {
+    private fun ShaDigest.hash(input: ByteArray): String {
         update(input)
         return digest().hex()
     }
@@ -49,6 +49,13 @@ class Sha2DigestTest {
         assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", Sha256Digest().hash(ByteArray(0)))
         assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Sha256Digest().hash("abc".encodeToByteArray()))
         assertEquals("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", Sha256Digest().hash(twoBlock256))
+    }
+
+    @Test
+    fun sha1KnownAnswers() {
+        assertEquals("da39a3ee5e6b4b0d3255bfef95601890afd80709", Sha1Digest().hash(ByteArray(0)))
+        assertEquals("a9993e364706816aba3e25717850c26c9cd0d89d", Sha1Digest().hash("abc".encodeToByteArray()))
+        assertEquals("84983e441c3bd26ebaae4aa1f95129e5e54670f1", Sha1Digest().hash(twoBlock256))
     }
 
     @Test
@@ -90,7 +97,7 @@ class Sha2DigestTest {
     @Test
     fun splitUpdatesMatchOneShot() {
         val random = Random(42)
-        for (digest in listOf(Sha256Digest(), Sha512Digest())) {
+        for (digest in listOf(Sha1Digest(), Sha256Digest(), Sha512Digest())) {
             for (length in 0..300) {
                 val message = random.nextBytes(length)
                 digest.update(message)

@@ -293,10 +293,6 @@ kotlin {
         val nativeMain =
             create("nativeMain") {
                 dependsOn(commonMain.get())
-                dependencies {
-                    // cryptography-kotlin: the AES ciphers and digests of every native target.
-                    implementation(libs.dev.whyoleg.cryptography.provider.optimal)
-                }
             }
 
         val nativeTest =
