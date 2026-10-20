@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * moq-lite (Lite-03) session for both listener and publisher roles.
@@ -460,6 +461,7 @@ class MoqLiteSession internal constructor(
                     ok = resp.ok,
                     frames = frames.consumeAsFlow(),
                     unsubscribeAction = { unsubscribe(id) },
+                    broadcastEndedCountProbe = { broadcastEndedCounts[broadcast] ?: 0L },
                 )
             }
         }
@@ -472,6 +474,13 @@ class MoqLiteSession internal constructor(
      * blocking other state-mutating operations.
      */
     private val announceWatchLock = Mutex()
+
+    /**
+     * `Ended` announces seen per broadcast suffix, behind
+     * [SubscribeHandle.broadcastEndedCount]. Written by the announce pump,
+     * read without suspending by handle probes on other coroutines.
+     */
+    private val broadcastEndedCounts = ConcurrentHashMap<String, Long>()
 
     /**
      * Open the shared announce-watch bidi *synchronously* (and
@@ -537,6 +546,12 @@ class MoqLiteSession internal constructor(
                         "\"hops\":${update.hops}"
                 }
                 if (update.status != MoqLiteAnnounceStatus.Ended) return@collect
+                // Count it before anything else. The relay usually FINs the
+                // subscribe bidi in the same instant, which closes `frames`
+                // on its own path, so a subscription can end before this
+                // runs; the count is what tells the next subscription that
+                // the publisher session behind the old one is gone.
+                broadcastEndedCounts.merge(update.suffix, 1L, Long::plus)
                 val targets =
                     state.withLock {
                         subscriptionsBySubscribeId.values

@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PersistedPoWJob
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobStore
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.utils.Log
@@ -146,7 +146,7 @@ class PowJobRestorer(
             }
 
             PersistedPoWJob.REPLAY_RELAYS -> {
-                val relays = record.relayUrls.map { NormalizedRelayUrl(it) }
+                val relays = record.relayUrls.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
                 account.signAndSendPrivatelyOrBroadcast(mined) { relays }
             }
 

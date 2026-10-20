@@ -28,15 +28,14 @@ import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CancellationException
 import kotlin.contracts.ExperimentalContracts
 
-sealed interface NormalizationResult {
-    class Success(
-        val url: NormalizedRelayUrl,
-    ) : NormalizationResult
+/**
+ * Recently parsed inputs, as written, to their canonical relay. A speed cache only: identity comes
+ * from [RelayUrlInterner], so an eviction costs a re-parse and never a second copy of a relay.
+ */
+val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
 
-    object Error : NormalizationResult
-}
-
-val normalizedUrls = LruCache<String, NormalizationResult>(5000)
+/** Recently rejected inputs, kept apart so a list full of junk cannot evict the good entries. */
+private val rejectedUrls = LruCache<String, Boolean>(1000)
 
 class RelayUrlNormalizer {
     companion object {
@@ -347,15 +346,25 @@ class RelayUrlNormalizer {
          * `host` or `host:port` — letters, digits, `.`, `-`, `_`, plus at most one `:`
          * followed by digits only. Rejects addressable-event pointers (`31990:hex:dtag`),
          * bare scheme leftovers (`wss:`) and anything else that would otherwise be blindly
-         * prefixed with `wss://`.
+         * prefixed with `wss://`. A path starting with `//` is rejected too, as [fixWs] rejects
+         * it after a scheme: it is a broken scheme (`wss//relay.example.com`), and prefixing it
+         * built a url the parser itself refuses, so normalizing was not idempotent.
          */
         private fun isBareHostAndPath(url: String): Boolean {
-            if (url[0] == '[') return true // IPv6 literal: defer to the RFC 3986 parser
+            if (url[0] == '[') {
+                // IPv6 literal: the RFC 3986 parser checks the address, but the `//` path rule
+                // below still applies after the closing bracket.
+                val slash = url.indexOf('/', url.indexOf(']').coerceAtLeast(0))
+                return slash < 0 || slash + 1 >= url.length || url[slash + 1] != '/'
+            }
             var i = 0
             var portStart = -1
             while (i < url.length) {
                 val c = url[i]
-                if (c == '/') break
+                if (c == '/') {
+                    if (i + 1 < url.length && url[i + 1] == '/') return false
+                    break
+                }
                 if (c == ':') {
                     if (portStart >= 0) return false
                     portStart = i + 1
@@ -546,13 +555,14 @@ class RelayUrlNormalizer {
          */
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
+
+            // Already canonical: every url the app wrote itself and every well-formed tag. Safe
+            // because normalizing is idempotent: a canonical url normalizes to itself.
+            RelayUrlInterner.Default.get(url)?.let { return it }
+
             // happy path when the url has been fixed already
-            normalizedUrls[url]?.let {
-                return when (it) {
-                    is NormalizationResult.Success -> it.url
-                    else -> null
-                }
-            }
+            normalizedUrls[url]?.let { return it }
+            if (rejectedUrls[url] != null) return null
 
             return try {
                 val fixed = fix(url)
@@ -561,23 +571,33 @@ class RelayUrlNormalizer {
                     // the RFC 3986 parser can drop or replace the scheme on odd inputs;
                     // anything that is not ws(s):// at this point cannot be connected to.
                     if (!isRelayUrl(normalized.url)) {
-                        Log.d("NormalizedRelayUrl") { "Rejected $url" }
-                        normalizedUrls.put(url, NormalizationResult.Error)
+                        reject(url)
                         return null
                     }
-                    normalizedUrls.put(url, NormalizationResult.Success(normalized))
-                    normalized
+                    val canonical = RelayUrlInterner.Default.intern(normalized)
+                    normalizedUrls.put(url, canonical)
+                    canonical
                 } else {
-                    Log.d("NormalizedRelayUrl") { "Rejected $url" }
-                    normalizedUrls.put(url, NormalizationResult.Error)
+                    reject(url)
                     null
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                normalizedUrls.put(url, NormalizationResult.Error)
-                Log.d("NormalizedRelayUrl") { "Rejected $url" }
+                reject(url)
                 null
             }
+        }
+
+        /** Forgets every cached parse, so the next call runs the parser. For tests. */
+        internal fun clearCaches() {
+            normalizedUrls.evictAll()
+            rejectedUrls.evictAll()
+            RelayUrlInterner.Default.clear()
+        }
+
+        private fun reject(url: String) {
+            Log.d("NormalizedRelayUrl") { "Rejected $url" }
+            rejectedUrls.put(url, true)
         }
     }
 }

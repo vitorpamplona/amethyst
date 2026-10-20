@@ -27,6 +27,7 @@ import android.os.Debug
 import androidx.core.content.getSystemService
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlInterner
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizedUrls
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
@@ -126,7 +127,7 @@ fun debugState(context: Context) {
         STATE_DUMP_TAG,
         "Indexed Relays: " +
             Amethyst.instance.cache.relayHints.relayDB
-                .size() + "/" + normalizedUrls.size(),
+                .size() + "/" + normalizedUrls.size() + " (interned " + RelayUrlInterner.Default.size() + ")",
     )
 
     Log.d(STATE_DUMP_TAG) { "Image Disk Cache ${(Amethyst.instance.diskCache.size) / (1024 * 1024)}/${(Amethyst.instance.diskCache.maxSize) / (1024 * 1024)} MB" }

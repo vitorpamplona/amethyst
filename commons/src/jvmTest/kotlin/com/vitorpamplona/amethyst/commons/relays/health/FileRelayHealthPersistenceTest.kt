@@ -21,12 +21,14 @@
 package com.vitorpamplona.amethyst.commons.relays.health
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertSame
 
 class FileRelayHealthPersistenceTest {
     private val dir = Files.createTempDirectory("relay-health").toFile()
@@ -59,6 +61,29 @@ class FileRelayHealthPersistenceTest {
         assertEquals(5, loaded.firstScanAt)
         assertEquals(20, loaded.lastSeenAny)
         assertContentEquals(intArrayOf(120, 340, 90), loaded.latencySamples[relay]?.get(LatencyMetric.EOSE))
+    }
+
+    @Test
+    fun loadedRelaysAreTheSharedInstancesNotNewCopies() {
+        val canonical = RelayUrlNormalizer.normalize("wss://health-identity.example.com/")
+        FileRelayHealthPersistence(file).save(
+            RelayHealthSnapshot(
+                records = mapOf(canonical to RelayHealthRecord(lastConnectAt = 1)),
+                latencySamples = mapOf(canonical to mapOf(LatencyMetric.EOSE to intArrayOf(10))),
+            ),
+        )
+
+        val loaded = FileRelayHealthPersistence(file).load()
+
+        assertSame(canonical, loaded.records.keys.single())
+        assertSame(canonical, loaded.latencySamples.keys.single())
+    }
+
+    @Test
+    fun aStoredKeyTheNormalizerRejectsIsDropped() {
+        file.writeText("""{"records":{"not a relay":{"lastConnectAt":1}}}""")
+
+        assertEquals(emptyMap(), FileRelayHealthPersistence(file).load().records)
     }
 
     @Test

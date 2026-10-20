@@ -965,8 +965,20 @@ class SubscribeHandle internal constructor(
     val ok: SubscribeOk,
     val objects: Flow<MoqObject>,
     private val unsubscribeAction: suspend () -> Unit,
+    private val broadcastEndedCountProbe: () -> Long = { 0L },
 ) {
     suspend fun unsubscribe() = unsubscribeAction()
+
+    /**
+     * How many times this session has seen the subscribed broadcast's
+     * announce go `Ended` (moq-lite), read live. Each `Ended` is a
+     * publisher session going away, so a rise between two subscriptions
+     * means the later one is served by a new publisher session, whose
+     * groups may restart at 0. Always 0 for transports without announces,
+     * and on the handle `connectReconnectingNestsListener` returns, which
+     * outlives the publisher sessions it follows.
+     */
+    val broadcastEndedCount: Long get() = broadcastEndedCountProbe()
 }
 
 /** Thrown when the peer violates the MoQ-transport state machine. */

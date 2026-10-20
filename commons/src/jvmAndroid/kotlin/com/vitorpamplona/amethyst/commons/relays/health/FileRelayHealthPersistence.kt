@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relays.health
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -60,13 +61,13 @@ class FileRelayHealthPersistence(
                 val stored = json.decodeFromString<Stored>(file.readText())
                 RelayHealthSnapshot(
                     records =
-                        stored.records.mapKeys { NormalizedRelayUrl(it.key) }.mapValues {
-                            RelayHealthRecord(it.value.lastConnectAt, it.value.lastIncomingAt, it.value.snoozedUntil)
+                        stored.records.restoreKeys {
+                            RelayHealthRecord(it.lastConnectAt, it.lastIncomingAt, it.snoozedUntil)
                         },
                     firstScanAt = stored.firstScanAt,
                     lastSeenAny = stored.lastSeenAny,
                     latencySamples =
-                        stored.latency.mapKeys { NormalizedRelayUrl(it.key) }.mapValues { (_, perMetric) ->
+                        stored.latency.restoreKeys { perMetric ->
                             perMetric
                                 .mapNotNull { (name, samples) ->
                                     LatencyMetric.entries.firstOrNull { it.name == name }?.let { it to samples }
@@ -78,6 +79,16 @@ class FileRelayHealthPersistence(
             Log.w("FileRelayHealthPersistence", "Starting over: could not read ${file.path}", e)
             RelayHealthSnapshot()
         }
+
+    /**
+     * Rebuilds the relay keys through the normalizer rather than the constructor, so they are the
+     * same interned instances the rest of the app holds instead of a second copy of every relay.
+     * A key that no longer passes the normalizer is dropped.
+     */
+    private fun <V, R> Map<String, V>.restoreKeys(value: (V) -> R): Map<NormalizedRelayUrl, R> =
+        entries
+            .mapNotNull { (url, stored) -> RelayUrlNormalizer.normalizeOrNull(url)?.let { it to value(stored) } }
+            .toMap()
 
     @Synchronized
     override fun save(snapshot: RelayHealthSnapshot) {

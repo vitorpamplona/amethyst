@@ -655,6 +655,9 @@ quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/nip01Core/
 │   └── accessories/
 │       ├── NostrClientPublishExt.kt  # publishAndConfirm / publishAndConfirmDetailed
 │       └── NostrClientPublishStreamExt.kt  # publishStream / publishRawStream: a windowed bulk publish to one relay
+├── relay/normalizer/
+│   ├── RelayUrlNormalizer.kt        # Repairs and canonicalizes relay urls (use it, not the NormalizedRelayUrl constructor)
+│   └── RelayUrlInterner.kt          # One shared NormalizedRelayUrl per relay, held weakly
 ├── relay/sockets/
 │   ├── WebSocket.kt                  # Transport interface
 │   ├── WebSocketListener.kt         # Transport callback interface
