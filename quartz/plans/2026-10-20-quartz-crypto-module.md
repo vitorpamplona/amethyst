@@ -16,6 +16,10 @@ quic-kmp ([vitorpamplona/quic-kmp](https://github.com/vitorpamplona/quic-kmp)) d
 | `AESGCM`, `MacInstance`, `sha256`, `RandomInstance` | `utils.ciphers`, `utils.mac`, `utils.sha256`, `utils` |
 | `Log`, `TimeUtils` | `utils` (not crypto) |
 
+`Log` and `TimeUtils` are habits from the days quic lived in Amethyst, not needs: 4 debug log
+calls and 2 default clocks. quic-kmp drops both on its own (see Phase 3), so only the 9 crypto
+symbols are left for this module to serve.
+
 Three problems follow:
 
 1. **Everything else in Quartz comes with it.** Every quic user gets Quartz's other `api`
@@ -32,7 +36,7 @@ Three problems follow:
 
 ## What moves
 
-62 main-source files: 36 in `commonMain`, 12 in `jvmAndroid`, 5 in `appleMain`, 4 in
+60 main-source files: 34 in `commonMain`, 12 in `jvmAndroid`, 5 in `appleMain`, 4 in
 `nativeMain`, 5 in `linuxMain`. Their tests move with them.
 
 | Group | Files (packages unchanged) |
@@ -42,11 +46,25 @@ Three problems follow:
 | MAC and KDF | `utils/mac/` (`MacInstance` + actuals, `Hmac`), `nip44Encryption/crypto/Hkdf` |
 | Ciphers | `utils/ciphers/` (`AESCBC`, `AESGCM`, `NostrCipher` + actuals), `utils/ciphers/aes/`, `nip44Encryption/crypto/` (`ChaCha20`, `ChaCha20Core`, `Poly1305`, `ChaCha20Poly1305`, `XChaCha20Poly1305`) |
 | Curves | `mls/crypto/` `X25519`, `Curve25519Field`, `Ed25519` + actuals |
-| Support | `utils/` `Log`, `LogLevel`, `LogSink`, `RandomInstance`, `SecureRandom` + actuals, `ConstantTime`, `Hex` |
+| Support | `utils/` `RandomInstance`, `SecureRandom` + actuals, `ConstantTime`, `Hex` |
 
-The support files move because the crypto files need them. The actuals log through `Log`,
-`Hkdf` compares MACs with `equalsConstantTime`, and anything random goes through
-`RandomInstance`. None of them imports anything else from Quartz.
+The support files move because the crypto files need them: `Hkdf` compares MACs with
+`equalsConstantTime`, anything random goes through `RandomInstance`, and hex is the byte codec
+error messages print with. None of them imports anything else from Quartz.
+
+**No logging in the module.** Six moving files log today:
+- `decryptOrNull` warns on every failed decryption: `AESCBC` (JVM/Android, Apple, Linux) and
+  `AESGCM` (JVM/Android, native).
+- The JVM `Sha256Pool` warns when it runs low.
+
+Phase 1 removes these six calls instead of moving `Log`, and the module ends up depending on
+nothing but the Kotlin stdlib:
+- A library primitive can't tell an expected `null` from an alarming one. Commons'
+  `EncryptedBlobInterceptor` returns `null` on purpose for some blobs and retries with a UTF-8
+  nonce, so that warning is noise.
+- The other two callers, Concord's `ImagePointer` and `CyberspaceBagEvent`, can log their own
+  `null` where it means something.
+- The pool warning has nothing to act on: `take()` blocks until a digest comes back.
 
 **What stays in Quartz:**
 - **secp256k1/Schnorr.** It is Nostr's curve and carries the JNI builds; moving it would bring
@@ -54,8 +72,8 @@ The support files move because the crypto files need them. The actuals log throu
 - **`Hpke` and `MlsCryptoProvider`.** They depend on the MLS TLS codec (`mls.codec`).
 - **The protocol compositions:** NIP-04, NIP-44 v2, NIP-49, gift wraps, Cashu BDHKE, the
   OpenTimestamps ops.
-- **`TimeUtils`**, which is a clock, not crypto. quic uses it twice (`QuicConnection.kt:3357`,
-  `TlsClient.kt:93`).
+- **`Log`, `LogLevel`, `LogSink`** (414 files outside Quartz import `Log`) and **`TimeUtils`**.
+  Neither is crypto, and after Phase 3 quic uses neither.
 
 **Boundary check (run on 2026-10-20):** the moving files import exactly one thing from outside the set,
 `nip01Core.core.toHexKey`, used in `Hkdf` (an error message) and `AESGCM.jvmAndroid`. Both
@@ -77,8 +95,8 @@ SHA-256 resumed from a saved state, used by `PoWMiner`, `PoWHashMode` and common
 
 **D3. Keep every package name.** This is the `commonsUI` precedent: "the split is a module
 boundary, not a package rename".
-- Outside Quartz, 414 files import `utils.Log`, 37 `utils.sha256`, 33 `RandomInstance` and 22
-  `utils.ciphers`. None of them changes.
+- Outside Quartz, 37 files import `utils.sha256`, 33 `RandomInstance` and 22 `utils.ciphers`.
+  None of them changes.
 - Quartz declares `api(project(":quartzCrypto"))`, so a consumer that depends on `quartz`
   compiles unchanged.
 - The cost is a package split across two jars. Kotlin, Android and R8 don't care. JPMS would,
@@ -112,7 +130,7 @@ dependency, so check its license against its actual `LICENSE` file before wiring
 
 ## Phases
 
-### Phase 1: create the module and move the files (no behaviour change)
+### Phase 1: create the module and move the files (no API change)
 
 1. Create `quartzCrypto/build.gradle.kts`.
    - Copy `quartz/build.gradle.kts` for the targets: JVM, Android, `iosArm64`,
@@ -124,7 +142,7 @@ dependency, so check its license against its actual `LICENSE` file before wiring
 2. Add `include(":quartzCrypto")` to `settings.gradle.kts`, and
    `api(project(":quartzCrypto"))` to Quartz's `commonMain`.
 3. `git mv` the files listed above, keeping history, then their tests. The tests that move:
-   - `utils/sha2`, `utils/mac`, `utils/ciphers/aes`, `utils/sha256`, `LogSinkTest`;
+   - `utils/sha2`, `utils/mac`, `utils/ciphers/aes`, `utils/sha256`;
    - `nativeTest` `DigestInstanceNativeTest`;
    - `jvmTest` `ShaDigestJcaTest` and `AesJcaTest`;
    - `Sha256MidstateTest`;
@@ -133,7 +151,9 @@ dependency, so check its license against its actual `LICENSE` file before wiring
    - `jvmAndroidTest` `Ed25519Test`.
 
    Tests of compositions (NIP-04/44 envelopes, MLS) stay in Quartz.
-4. Replace the two `toHexKey()` calls with `Hex.encode`.
+4. Replace the two `toHexKey()` calls with `Hex.encode`, and remove the six log calls (see "No
+   logging in the module"). The only behaviour change: failed decryptions in `decryptOrNull`
+   no longer log a warning.
 5. Build wiring:
    - apply `gradle/kmp-purity.gradle.kts`;
    - add `:quartzCrypto` to the `lint` job's purity and metadata compiles;
@@ -167,22 +187,28 @@ Then add the binary-compatibility validator (D5). Quartz's own callers don't cha
 
 ### Phase 3: quic-kmp 2.0.0 on `quartz-crypto`
 
-1. In quic-kmp:
+1. **Done ahead of this plan,** on quic-kmp's `claude/compassionate-wozniak-743sh0` branch
+   (`43a5cb5`, not yet merged or released): quic stops using Quartz's `TimeUtils` and `Log`.
+   - The two default clocks read `kotlin.time.Clock.System`, which is stable since Kotlin 2.3.
+   - The four debug logs go through quic's own `QuicLog` hook, which logs nothing until a sink
+     is set.
+   - Amethyst must point `QuicLog.sink` at Quartz's `Log` when it bumps `quicKmp`. Otherwise
+     quic's debug lines disappear from its logs.
+2. Then:
    - depend on `com.vitorpamplona.quartz:quartz-crypto`, replacing `quartz`;
-   - replace `TimeUtils.nowMillis()` with `kotlin.time.Clock.System` or a local clock;
    - move `crypto/PlatformCrypto.kt` and the AEADs onto Phase 2's types where they are at
      least as fast. Keep quic's `Aead` interface, which carries the RFC 9001 limits.
-2. Version 2.0.0. Two caveats:
+3. Version 2.0.0. Two caveats:
    - **`X25519KeyPair` is no change.** It's in quic's public API (`TlsClient`), but it keeps its
      fully qualified name.
    - **Dropping Quartz is a breaking change anyway.** Anyone relying on quic to bring in Quartz
      must now add it themselves. Amethyst's `nestsClient` and `marmotQuic` already depend on
      Quartz directly.
-3. Release order:
+4. Release order:
    1. `quartz` and `quartz-crypto` publish together.
    2. quic-kmp 2.0.0 publishes, pinned to that version (it pins Quartz `1.19.0` today).
    3. Amethyst bumps `quicKmp`.
-4. With `-PquicKmpDir=../quic-kmp`, the included quic build must resolve `quartz-crypto` to this
+5. With `-PquicKmpDir=../quic-kmp`, the included quic build must resolve `quartz-crypto` to this
    checkout's `:quartzCrypto`, the way it resolves `quartz` to `:quartz` today. Check that the
    coordinates match, so Gradle's composite build swaps it in without an explicit substitute.
 
@@ -199,12 +225,11 @@ This is item B11 of the iOS plan. It needs its own plan for the socket and audio
 
 ## Open questions for review
 
-1. **Module name.** `quartzCrypto` / `quartz-crypto`, or something broader (`quartz-core`),
-   since `Log` and `Hex` come along?
-2. **secp256k1.** Keeping it in Quartz (recommended) means `quartz-crypto` never needs JNI. Is
+Settled in review: the module stays crypto-only (`Log` and `TimeUtils` remain in Quartz, and
+quic stops using them), which also settles the name: `quartzCrypto` / `quartz-crypto`.
+
+1. **secp256k1.** Keeping it in Quartz (recommended) means `quartz-crypto` never needs JNI. Is
    there a consumer that wants Schnorr without the rest of Quartz?
-3. **`TimeUtils`.** Leave it in Quartz (recommended), or move it so quic needs no change for its
-   clock?
-4. **Package rename.** Leave the misplaced packages (`nip44Encryption.crypto`, `mls.crypto`)
+2. **Package rename.** Leave the misplaced packages (`nip44Encryption.crypto`, `mls.crypto`)
    as they are for good, or plan the breaking rename to `com.vitorpamplona.quartz.crypto` for a
    later major release?
