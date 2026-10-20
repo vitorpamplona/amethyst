@@ -71,7 +71,7 @@ private class CommonCryptoSha256 : StreamingDigest {
     private val context: CPointer<CC_SHA256_CTX> = nativeHeap.alloc<CC_SHA256_CTX>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     init {
         CC_SHA256_Init(context)
@@ -97,7 +97,7 @@ private class CommonCryptoSha1 : StreamingDigest {
     private val context: CPointer<CC_SHA1_CTX> = nativeHeap.alloc<CC_SHA1_CTX>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     init {
         CC_SHA1_Init(context)

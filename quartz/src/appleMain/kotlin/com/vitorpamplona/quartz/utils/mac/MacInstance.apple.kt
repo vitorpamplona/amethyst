@@ -51,7 +51,7 @@ actual class MacInstance actual constructor(
     private val context: CPointer<CCHmacContext> = nativeHeap.alloc<CCHmacContext>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     private var ccAlgorithm: CCHmacAlgorithm = ccAlgorithmFor(algorithm)
     private var macLength: Int = macLengthFor(algorithm)
