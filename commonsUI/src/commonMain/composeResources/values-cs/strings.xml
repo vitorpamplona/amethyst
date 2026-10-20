@@ -8598,4 +8598,5 @@
     <string name="drawing_discard_message">Zatím nebyla přidána do vašeho příspěvku.</string>
     <string name="drawing_discard">Zahodit</string>
     <string name="drawing_keep_drawing">Kreslit dál</string>
+    <string name="kind_release_artifact_set">Sada artefaktů vydání</string>
 </resources>

@@ -8084,4 +8084,5 @@
     <string name="drawing_discard_message">Ele ainda não foi adicionado à sua publicação.</string>
     <string name="drawing_discard">Descartar</string>
     <string name="drawing_keep_drawing">Continuar desenhando</string>
+    <string name="kind_release_artifact_set">Conjunto de artefatos de versão</string>
 </resources>

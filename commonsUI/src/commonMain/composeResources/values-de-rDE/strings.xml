@@ -8086,4 +8086,5 @@
     <string name="drawing_discard_message">Sie wurde deinem Beitrag noch nicht hinzugefügt.</string>
     <string name="drawing_discard">Verwerfen</string>
     <string name="drawing_keep_drawing">Weiterzeichnen</string>
+    <string name="kind_release_artifact_set">Versions-Artefaktsatz</string>
 </resources>

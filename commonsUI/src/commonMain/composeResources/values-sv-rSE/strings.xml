@@ -8084,4 +8084,5 @@
     <string name="drawing_discard_message">Den har inte lagts till i ditt inlägg än.</string>
     <string name="drawing_discard">Kasta</string>
     <string name="drawing_keep_drawing">Fortsätt rita</string>
+    <string name="kind_release_artifact_set">Artefaktuppsättning för utgåva</string>
 </resources>
