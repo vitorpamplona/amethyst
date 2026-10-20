@@ -26,7 +26,10 @@ exists. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`) and
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`), `jsonBench`
+(cross-language JSON parser benchmark on real Nostr events — JVM harness is the
+`:jsonBench` module at `jsonBench/jvm`, plus Rust/C++/Go/JS/Python harnesses;
+`./jsonBench/run.sh`, see `jsonBench/README.md`) and
 `quic-interop` (QUIC interop runner, lives at `quic/interop`). `marmotQuic` is the Marmot raw-QUIC transport
 binding for agent text stream previews (`transports/quic.md`) on top of
 `:quic` — its own ALPNs and framing, not WebTransport. `nestsClient` runs
