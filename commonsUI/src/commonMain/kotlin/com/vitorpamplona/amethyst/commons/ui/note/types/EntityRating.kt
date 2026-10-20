@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.decentralizedLists.dListItemView
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -70,6 +71,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.ResolveDListConcept
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.isDListItemPage
+import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.presentAmongMany
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -81,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.ratings.RatingMark
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlin.math.floor
 import kotlin.math.roundToInt
 
@@ -129,7 +134,7 @@ fun RenderEntityRating(
         if (targetAddress != null) {
             LoadAddressableNote(targetAddress) { targetNote ->
                 targetNote?.let {
-                    RatedPublicationCard(
+                    RatedAddressableCard(
                         targetNote = it,
                         mark = mark,
                         fallbackIdentifier = noteEvent.targetIdentifier(),
@@ -270,15 +275,13 @@ internal fun RatingStars(
 }
 
 /**
- * The rated publication as a cover-led card.
+ * The rated coordinate, drawn by what it turns out to be once loaded.
  *
  * [observeNote] both watches the cache and asks the relays for the event, so a rating that arrives
- * before its kind-30040 index fills in once the index does. Until then the title falls back to the
- * coordinate's identifier, which for the slugs publishers use ("wuthering-heights") already reads
- * as a title.
+ * before its target fills in once the target does.
  */
 @Composable
-private fun RatedPublicationCard(
+private fun RatedAddressableCard(
     targetNote: AddressableNote,
     mark: String,
     fallbackIdentifier: String,
@@ -286,41 +289,104 @@ private fun RatedPublicationCard(
     nav: INav,
 ) {
     val noteState by observeNote(targetNote, accountViewModel)
-    val publication = noteState.note.event as? PublicationIndexEvent
+    val event = noteState.note.event
 
+    if (event != null && isDListItemPage(event)) {
+        RatedDListItemCard(targetNote, event, mark, fallbackIdentifier, accountViewModel, nav)
+    } else {
+        RatedPublicationCard(targetNote, event as? PublicationIndexEvent, mark, fallbackIdentifier, accountViewModel, nav)
+    }
+}
+
+/**
+ * The rated publication as a cover-led card. Until its kind-30040 index arrives the title falls
+ * back to the coordinate's identifier, which for the slugs publishers use ("wuthering-heights")
+ * already reads as a title.
+ */
+@Composable
+private fun RatedPublicationCard(
+    targetNote: AddressableNote,
+    publication: PublicationIndexEvent?,
+    mark: String,
+    fallbackIdentifier: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val title =
-        remember(noteState) {
+        remember(publication, targetNote) {
             publication?.titleOrIdentifier()
                 ?: PublicationIndexEvent.humanizeIdentifier(targetNote.address.dTag.ifEmpty { fallbackIdentifier })
         }
 
-    val subtitle = remember(noteState) { publication?.author() ?: publication?.summary() }
-    val cover = remember(noteState) { publication?.image() }
+    val subtitle = remember(publication) { publication?.author() ?: publication?.summary() }
+    val cover = remember(publication) { publication?.image() }
 
     RatedTargetCard(
         mark = mark,
         title = title,
         subtitle = subtitle,
         onClick = { routeFor(targetNote, accountViewModel.account)?.let { nav.nav(it) } },
-        cover = {
-            if (cover != null) {
-                Box(CoverModifier) {
-                    MyAsyncImage(
-                        imageUrl = cover,
-                        contentDescription = stringRes(Res.string.preview_card_image_for, cover),
-                        contentScale = ContentScale.Crop,
-                        mainImageModifier = Modifier.fillMaxSize(),
-                        loadedImageModifier = CoverModifier,
-                        accountViewModel = accountViewModel,
-                        onLoadingBackground = { CoverPlaceholder(mark) },
-                        onError = { CoverPlaceholder(mark) },
-                    )
-                }
-            } else {
-                CoverPlaceholder(mark)
-            }
-        },
+        cover = { RatedCover(cover, mark, accountViewModel) },
     )
+}
+
+/**
+ * A rated Decentralized List item (kinds 9999 / 39999), e.g. a book from Brainstorm's catalog.
+ * Read the way the item reads among many in its own list, through its concept's definition: a
+ * book shows its cover, title and author instead of the slug in its coordinate.
+ */
+@Composable
+private fun RatedDListItemCard(
+    targetNote: AddressableNote,
+    item: Event,
+    mark: String,
+    fallbackIdentifier: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    ResolveDListConcept(item, accountViewModel) { resolved, _, _ ->
+        val view =
+            remember(item, resolved) {
+                val hinted = dListItemView(item.tags, item.content, resolved?.governing)
+                if (resolved != null) presentAmongMany(item, resolved.communityCoordinate, resolved.governing, hinted) else hinted
+            }
+
+        val title =
+            view.title ?: PublicationIndexEvent.humanizeIdentifier(targetNote.address.dTag.ifEmpty { fallbackIdentifier })
+
+        RatedTargetCard(
+            mark = mark,
+            title = title,
+            subtitle = view.summary,
+            onClick = { routeFor(targetNote, accountViewModel.account)?.let { nav.nav(it) } },
+            cover = { RatedCover(view.image, mark, accountViewModel) },
+        )
+    }
+}
+
+/** The target's artwork in the cover slot, or the mark's icon while there is none or it fails. */
+@Composable
+private fun RatedCover(
+    cover: String?,
+    mark: String,
+    accountViewModel: AccountViewModel,
+) {
+    if (cover != null) {
+        Box(CoverModifier) {
+            MyAsyncImage(
+                imageUrl = cover,
+                contentDescription = stringRes(Res.string.preview_card_image_for, cover),
+                contentScale = ContentScale.Crop,
+                mainImageModifier = Modifier.fillMaxSize(),
+                loadedImageModifier = CoverModifier,
+                accountViewModel = accountViewModel,
+                onLoadingBackground = { CoverPlaceholder(mark) },
+                onError = { CoverPlaceholder(mark) },
+            )
+        }
+    } else {
+        CoverPlaceholder(mark)
+    }
 }
 
 /**
