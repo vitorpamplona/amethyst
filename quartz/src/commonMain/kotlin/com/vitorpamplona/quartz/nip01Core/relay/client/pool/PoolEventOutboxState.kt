@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.utils.concurrent.withLock
 import kotlin.concurrent.Volatile
 
 /**
- * Delivery bookkeeping for one published event: which relays still owe an OK, and the tries and
- * failures per relay.
+ * Delivery bookkeeping for one published event: which relays still owe an OK, and the sends per
+ * relay that no OK has answered yet.
  *
  * Each relay's OK arrives on that relay's socket thread, so the two collections are guarded by one
  * lock; unguarded, two OKs landing together lost one and the event never finished. They are mutable
@@ -110,6 +110,17 @@ class PoolEventOutboxState(
             false
         }
 
+    /**
+     * The relay's `OK` for this event. Any `OK`, true or false, is the relay's verdict and ends
+     * delivery to [url]: the outbox exists to re-send what a dropped connection lost, not to argue
+     * with an answer. Re-sending a refusal only drew the same refusal on every reconnect, and until
+     * three had piled up the event stayed resident: a bulk publisher whose events a relay refused
+     * (a tag or size limit) kept every one of them in memory for the life of the socket.
+     *
+     * Two answers say "later", not "no", and keep the event pending: `auth-required:`, re-sent once
+     * the AUTH lands, and a `rate-limited:` that states its back-off, re-sent after it (bounded by
+     * [MAX_BACK_OFFS]).
+     */
     fun newResponse(
         url: NormalizedRelayUrl,
         success: Boolean,
@@ -117,37 +128,28 @@ class PoolEventOutboxState(
         retryAfterMs: Long? = null,
     ) {
         lock.withLock {
-            if (success || message.shouldDiscard()) {
-                drop(url)
-                failures?.remove(url)
-                backOffs?.remove(url)
-            } else if (retryAfterMs != null && (backOffs?.get(url) ?: 0) < MAX_BACK_OFFS) {
+            if (!success && retryAfterMs != null && (backOffs?.get(url) ?: 0) < MAX_BACK_OFFS) {
                 // NIP-01 `rate-limited:` with a back-off: the relay is up and will take the event
-                // later; the pool re-sends it once the back-off passes. Like auth-required, that is
-                // not a failure of the event, so it must not spend the retry budget — a busy relay
-                // pacing a burst would otherwise drop events it was about to accept. Bounded, so a
-                // relay that only ever says "later" still ends up a failure.
+                // later; the pool re-sends it once the back-off passes. Not a failure of the event,
+                // so it must not spend the retry budget — a busy relay pacing a burst would otherwise
+                // drop events it was about to accept. Bounded, so a relay that only ever says
+                // "later" is in the end taken at its word.
                 val b = backOffs ?: HashMap<NormalizedRelayUrl, Int>(2).also { backOffs = it }
                 b[url] = (b[url] ?: 0) + 1
                 failures?.remove(url)
-            } else if (message.isAuthRequired()) {
+            } else if (!success && message.isAuthRequired()) {
                 // NIP-42 AUTH challenge in flight. The relay responded, so it's up and simply wants
                 // auth first: RelayAuthenticator signs, the relay re-issues OK, and syncFilters()
                 // re-pumps this outbox to retry the publish. Reset the retry budget for this relay
-                // (clear both tries and responses) so the send attempts accumulated across reconnects /
-                // slow AUTH rounds can't exhaust the cap and drop the event before AUTH lands. Note
-                // newTry() (the send path) grows `tries` and is NOT auth-aware, so only clearing
-                // `responses` would still let a re-pumped event give up here. The relay stays in
-                // [remaining]: the event must stay pending for this relay until AUTH unlocks it.
+                // so the send attempts accumulated across reconnects / slow AUTH rounds can't exhaust
+                // the cap and drop the event before AUTH lands: newTry() (the send path) grows
+                // `tries` and is NOT auth-aware. The relay stays in [remaining]: the event must stay
+                // pending for this relay until AUTH unlocks it.
                 failures?.remove(url)
             } else {
-                val f = failuresMap()
-                val currentTries = f[url]
-                if (currentTries != null) {
-                    currentTries.addResponse(message)
-                } else {
-                    f[url] = Tries(listOf(TimeUtils.now() - 1), listOf(message))
-                }
+                drop(url)
+                failures?.remove(url)
+                backOffs?.remove(url)
             }
         }
     }
@@ -157,12 +159,6 @@ class PoolEventOutboxState(
         const val MAX_BACK_OFFS = 10
     }
 
-    fun String.shouldDiscard() =
-        this.startsWith("replaced:") ||
-            this.startsWith("pow:") ||
-            this.startsWith("deleted:") ||
-            this.startsWith("invalid:")
-
     /**
      * NIP-42 machine-readable prefix a relay uses to tell us an event was held
      * back pending authentication. The event should be re-sent after AUTH, not
@@ -170,16 +166,11 @@ class PoolEventOutboxState(
      */
     fun String.isAuthRequired() = this.startsWith("auth-required:") || this == "auth-required"
 
-    // Tries 3 times
+    /** Send attempts to one relay that no `OK` has answered; the fourth gives up on the relay. */
     class Tries(
         var tries: List<Long> = listOf(),
-        var responses: List<String> = listOf(),
     ) {
-        fun isDone() = responses.size > 2 || tries.size > 3
-
-        fun addResponse(msg: String) {
-            responses += msg
-        }
+        fun isDone() = tries.size > 3
 
         fun addTriedTime(tried: Long) {
             tries += tried
