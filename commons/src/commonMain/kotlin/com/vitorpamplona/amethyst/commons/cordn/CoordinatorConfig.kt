@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +93,30 @@ data class CoordinatorConfig(
             val relays = ref.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
             if (relays.isEmpty()) return null
             return CoordinatorConfig(pubKey, relays, Origin.GROUP_REF)
+        }
+
+        /**
+         * The coordinator a typed form names, or null while it cannot name one.
+         *
+         * Forms call this on every keystroke, inside composition, so an
+         * unfinished form must come back null rather than throw. [pubKeyInput]
+         * takes an npub as well as hex: a coordinator pubkey is shared the same
+         * ways any other Nostr pubkey is. [relaysInput] is one URL per line;
+         * lines that are not relays are dropped.
+         *
+         * The length check is not redundant with [init]: raw hex falls through
+         * to a plain hex decode, which accepts any even-length prefix, so a
+         * half-typed key would otherwise reach the constructor and throw.
+         */
+        fun fromInput(
+            pubKeyInput: String,
+            relaysInput: String,
+            label: String? = null,
+        ): CoordinatorConfig? {
+            val pubKey = decodePublicKeyAsHexOrNull(pubKeyInput.trim())?.takeIf { it.isValid() } ?: return null
+            val relays = relaysInput.lines().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
+            if (relays.isEmpty()) return null
+            return CoordinatorConfig(pubKey, relays, Origin.MANUAL, label?.trim()?.ifEmpty { null })
         }
     }
 }

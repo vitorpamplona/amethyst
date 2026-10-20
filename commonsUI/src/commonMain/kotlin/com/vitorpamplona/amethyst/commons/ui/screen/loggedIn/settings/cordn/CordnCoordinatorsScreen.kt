@@ -123,8 +123,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -679,13 +677,7 @@ private fun AddCoordinator(runtime: CordnRuntime) {
 
     val config =
         remember(pubKeyInput, relaysInput, labelInput) {
-            val pubKey = decodePublicKeyAsHexOrNull(pubKeyInput.trim())
-            val relays = relaysInput.lines().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-            if (pubKey == null || relays.isEmpty()) {
-                null
-            } else {
-                CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL, labelInput.trim().ifEmpty { null })
-            }
+            CoordinatorConfig.fromInput(pubKeyInput, relaysInput, labelInput)
         }
 
     OutlinedTextField(
