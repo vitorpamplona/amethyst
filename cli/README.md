@@ -255,9 +255,9 @@ Two amy processes can talk: one **hosts** a bunker with its local key; the other
 | Command | What it does |
 |---|---|
 | `amy bunker [--relay URL[,URL…]] [--secret S] [--timeout SECS]` | Run a NIP-46 remote signer for the active local-key account. Prints a `bunker://…` URI, then services sign / nip04 / nip44 / get_public_key / ping requests until interrupted (or `--timeout`). |
-| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair; the account then acts as PUBKEY and every signing/encryption call is delegated to the remote signer. Percent-encoded relay params are decoded. |
+| `amy login bunker://PUBKEY?relay=…&secret=…` | Log in through a bunker (signer advertises). Mints a local transport keypair, connects, and asks the bunker which account it signs for (`get_public_key`): the account is that key, which for most signers is not PUBKEY (their transport key). Every signing/encryption call is delegated to the remote signer. A bunker that can't answer fails the login with `signer_error` and saves nothing. Percent-encoded relay params are decoded. |
 | `amy bunker connect nostrconnect://…` | Client-initiated (NostrConnect) flow, signer side: ack a client's offer (echo its secret) and service its requests. |
-| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer to connect, then persist a bunker account that acts as the signer's key. |
+| `amy login --nostrconnect [--relay URL[,URL…]] [--name N] [--perms P] [--timeout SECS]` | Client-initiated flow, client side: print a `nostrconnect://` offer, wait for a signer that answers with its secret, ask it which account it signs for (`get_public_key`), then persist a bunker account for that key. `timeout` when no signer answers, `signer_error` when one answers but won't say. |
 
 The flows were verified against the real [`nak`](https://github.com/fiatjaf/nak)
 binary during development — `amy login bunker://` ⇄ `nak bunker`, `nak event

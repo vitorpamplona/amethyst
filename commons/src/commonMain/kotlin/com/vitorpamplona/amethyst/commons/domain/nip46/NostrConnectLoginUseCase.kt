@@ -74,6 +74,8 @@ object NostrConnectLoginUseCase {
         ephemeralKeyPair: KeyPair,
         relays: List<String>,
         clientMetadata: BunkerClientMetadata?,
+        /** NIP-46 `perms`: the operations to ask the signer to pre-approve, comma-separated. */
+        perms: String? = null,
     ): NostrConnectUri {
         val ephemeralSigner = NostrSignerInternal(ephemeralKeyPair)
         val ephemeralPubKey = ephemeralKeyPair.pubKey.toHexKey()
@@ -88,6 +90,7 @@ object NostrConnectLoginUseCase {
                 clientPubKey = ephemeralPubKey,
                 relays = normalizedRelays,
                 secret = secret,
+                perms = perms,
                 name = clientMetadata?.name,
                 url = clientMetadata?.url,
                 image = clientMetadata?.image,
@@ -106,6 +109,10 @@ object NostrConnectLoginUseCase {
         uriData: NostrConnectUri,
         client: INostrClient,
         authPrompts: RemoteSignerAuthPrompts? = null,
+        /** How long to wait for a signer to answer the code. */
+        connectTimeoutMs: Long = NOSTRCONNECT_TIMEOUT_MS,
+        /** Also told of each `auth_url` page, for a caller that shows it its own way (the CLI prints it). */
+        onAuthUrl: ((String) -> Unit)? = null,
     ): BunkerLoginResult {
         val connectData =
             waitForConnectRequest(
@@ -114,6 +121,7 @@ object NostrConnectLoginUseCase {
                 relays = uriData.relays,
                 expectedSecret = uriData.secret,
                 client = client,
+                timeoutMs = connectTimeoutMs,
             )
 
         if (connectData.requestId != null) {
@@ -126,7 +134,15 @@ object NostrConnectLoginUseCase {
                 remotePubkey = connectData.signerPubkey,
                 relays = uriData.relays,
                 client = client,
-                onAuthUrl = authPrompts?.let { prompts -> { url -> prompts.report(url) } },
+                onAuthUrl =
+                    if (authPrompts == null && onAuthUrl == null) {
+                        null
+                    } else {
+                        { url ->
+                            authPrompts?.report(url)
+                            onAuthUrl?.invoke(url)
+                        }
+                    },
                 onAuthUrlSettled = authPrompts?.let { prompts -> { url -> prompts.settled(url) } },
             )
         remoteSigner.openSubscription()
@@ -147,6 +163,7 @@ object NostrConnectLoginUseCase {
         relays: Set<NormalizedRelayUrl>,
         expectedSecret: String,
         client: INostrClient,
+        timeoutMs: Long,
     ): ConnectRequestData {
         // Every event for the code's key, in order: the first one is not necessarily the signer's.
         val events = Channel<NostrConnectEvent>(Channel.UNLIMITED)
@@ -170,7 +187,7 @@ object NostrConnectLoginUseCase {
         try {
             // Not withTimeout: its TimeoutCancellationException reads as a cancellation to
             // callers, so the login screen would never show that the wait ended.
-            return withTimeoutOrNull(NOSTRCONNECT_TIMEOUT_MS) {
+            return withTimeoutOrNull(timeoutMs) {
                 for (event in events) {
                     readConnect(event, ephemeralSigner, expectedSecret)?.let { return@withTimeoutOrNull it }
                 }

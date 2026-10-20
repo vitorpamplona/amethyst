@@ -108,12 +108,18 @@ data class Identity(
             relays: List<String>,
             connectSecret: String?,
             clientPrivKeyHex: String,
+            /**
+             * The account the signer signs for (its `get_public_key` answer). Defaults to
+             * [signerPubkey] only until that answer is known: most signers use a transport key
+             * that is not the user's.
+             */
+            userPubkey: String = signerPubkey,
         ): Identity =
             Identity(
                 privKeyHex = null,
-                pubKeyHex = signerPubkey,
+                pubKeyHex = userPubkey,
                 nsec = null,
-                npub = signerPubkey.hexToByteArray().toNpub(),
+                npub = userPubkey.hexToByteArray().toNpub(),
                 bunker = Bunker(signerPubkey, relays, connectSecret, clientPrivKeyHex),
             )
 

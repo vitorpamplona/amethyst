@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.Nip49
 import okhttp3.OkHttpClient
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * `amy login KEY [--password X]` — import any of the identifier forms
@@ -100,11 +101,19 @@ object LoginCommand {
         dataDir.saveIdentity(identity)
 
         // For a bunker, the pubkey in the URI is the REMOTE SIGNER's key, which for many signer apps
-        // (Amber, nsec.app) is a per-connection key distinct from the user's identity key. Resolve the
-        // real identity via the NIP-46 get_public_key RPC and persist THAT (the bunker's remote key is
-        // kept in Identity.bunker for transport addressing). Best-effort: if the bunker can't answer,
-        // fall back to the URI pubkey so login still succeeds.
-        val account = if (identity.bunker != null) resolveBunkerIdentity(dataDir, identity) else identity
+        // (Amber, nsec.app, Amethyst) is a transport key distinct from the user's identity key. Resolve
+        // the real identity via the NIP-46 get_public_key RPC and persist THAT (the bunker's remote key
+        // is kept in Identity.bunker for transport addressing). A signer that can't say which account it
+        // signs for fails the login: guessing would save an account that is not the user's.
+        val account =
+            if (identity.bunker != null) {
+                resolveBunkerIdentity(dataDir, identity) ?: run {
+                    dataDir.deleteIdentity()
+                    return Output.error("signer_error", "the bunker did not say which account it signs for (get_public_key); nothing was saved")
+                }
+            } else {
+                identity
+            }
 
         Output.emit(
             mapOf(
@@ -122,12 +131,12 @@ object LoginCommand {
     /**
      * Connect the freshly-saved bunker and ask it (NIP-46 `get_public_key`) for the user's real
      * identity pubkey, re-persisting the [Identity] when it differs from the bunker's transport key.
-     * Returns the corrected identity, or [provisional] unchanged if the RPC fails.
+     * Returns the corrected identity, or null when the bunker can't be reached or won't answer.
      */
     private suspend fun resolveBunkerIdentity(
         dataDir: DataDir,
         provisional: Identity,
-    ): Identity =
+    ): Identity? =
         try {
             Context.open(dataDir).use { ctx ->
                 ctx.prepare()
@@ -140,9 +149,11 @@ object LoginCommand {
                     corrected
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            System.err.println("[nip46] could not resolve identity via get_public_key (${e.message}); using the bunker URI pubkey")
-            provisional
+            System.err.println("[nip46] could not resolve identity via get_public_key: ${e.message}")
+            null
         }
 
     private suspend fun resolveIdentity(
