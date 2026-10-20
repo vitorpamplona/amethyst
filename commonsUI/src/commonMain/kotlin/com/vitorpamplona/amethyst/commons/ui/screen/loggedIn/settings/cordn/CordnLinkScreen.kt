@@ -104,9 +104,11 @@ import org.jetbrains.compose.resources.stringResource
 fun CordnLinkScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
+    /** A link this screen was opened with (a deep link or a scanned QR code), inspected on arrival. */
+    initialLink: String? = null,
 ) {
-    var input by remember { mutableStateOf("") }
-    var inspection by remember { mutableStateOf<CordnLinkInspection?>(null) }
+    var input by remember { mutableStateOf(initialLink.orEmpty()) }
+    var inspection by remember { mutableStateOf(initialLink?.let { CordnLinkInspection.of(it) }) }
     var requestState by remember { mutableStateOf<String?>(null) }
     var requesting by remember { mutableStateOf(false) }
     val runtime = accountViewModel.account.cordnRuntime

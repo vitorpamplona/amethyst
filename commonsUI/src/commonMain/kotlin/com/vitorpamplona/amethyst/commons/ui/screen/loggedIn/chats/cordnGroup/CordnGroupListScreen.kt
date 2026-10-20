@@ -26,10 +26,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,7 +38,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -46,21 +49,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.cordn.CoordinatorHealth
 import com.vitorpamplona.amethyst.commons.cordn.ui.CoordinatorHealthRow
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupChatroom
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cordn_create_action
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_count
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_down_note
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_manage
+import com.vitorpamplona.amethyst.commons.resources.cordn_groups_menu_invitations
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_none_detail
-import com.vitorpamplona.amethyst.commons.resources.cordn_groups_start
 import com.vitorpamplona.amethyst.commons.resources.cordn_groups_title
-import com.vitorpamplona.amethyst.commons.resources.cordn_invitations_title
+import com.vitorpamplona.amethyst.commons.resources.cordn_hub_link
+import com.vitorpamplona.amethyst.commons.resources.more_options
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -73,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * Every cordn group this account is in, grouped by the coordinator serving it.
@@ -111,30 +118,7 @@ fun CordnGroupListScreen(
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(Res.string.cordn_groups_title), nav) {
-                // Invitations are fetched only when someone opens that screen
-                // (every call to a coordinator is metadata, spec/00.md §8), so
-                // this is a plain way in, never a badge.
-                IconButton(onClick = { nav.nav(Route.CordnInvitations) }) {
-                    Icon(
-                        symbol = MaterialSymbols.MoveToInbox,
-                        contentDescription = stringRes(Res.string.cordn_invitations_title),
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                IconButton(onClick = { nav.nav(Route.CordnCoordinators) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Dns,
-                        contentDescription = stringRes(Res.string.cordn_groups_manage),
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-                IconButton(onClick = { nav.nav(Route.CordnCreateGroup) }) {
-                    Icon(
-                        symbol = MaterialSymbols.Add,
-                        contentDescription = stringRes(Res.string.cordn_groups_start),
-                        modifier = Modifier.size(24.dp),
-                    )
-                }
+                CordnGroupListMenu(nav)
             }
         },
         bottomBar = {
@@ -341,3 +325,49 @@ private fun healthOf(
 
 /** How much a group under a coordinator that stopped answering fades. */
 private const val DIMMED = 0.55f
+
+/**
+ * The groups screen's actions behind one overflow, as on a Concord community: three icons
+ * squeezed the title at phone width, and none of these is a daily action.
+ */
+@Composable
+private fun CordnGroupListMenu(nav: INav) {
+    var menuOpen by remember { mutableStateOf(false) }
+    IconButton(onClick = { menuOpen = true }) {
+        Icon(symbol = MaterialSymbols.MoreVert, contentDescription = stringRes(Res.string.more_options))
+    }
+    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+        CordnGroupListMenuItem(Res.string.cordn_create_action, MaterialSymbols.Add) {
+            menuOpen = false
+            nav.nav(Route.CordnCreateGroup)
+        }
+        // Invitations are fetched only when someone opens that screen (every call to a
+        // coordinator is metadata, spec/00.md §8), so this is a plain way in, never a badge.
+        CordnGroupListMenuItem(Res.string.cordn_groups_menu_invitations, MaterialSymbols.MoveToInbox) {
+            menuOpen = false
+            nav.nav(Route.CordnInvitations)
+        }
+        // Where a cordn1… or cordn.net link someone shared gets pasted, scanned and joined.
+        CordnGroupListMenuItem(Res.string.cordn_hub_link, MaterialSymbols.Link) {
+            menuOpen = false
+            nav.nav(Route.CordnLink())
+        }
+        CordnGroupListMenuItem(Res.string.cordn_groups_manage, MaterialSymbols.Dns) {
+            menuOpen = false
+            nav.nav(Route.CordnCoordinators)
+        }
+    }
+}
+
+@Composable
+private fun CordnGroupListMenuItem(
+    label: StringResource,
+    symbol: MaterialSymbol,
+    onClick: () -> Unit,
+) {
+    DropdownMenuItem(
+        text = { Text(stringRes(label)) },
+        leadingIcon = { Icon(symbol = symbol, contentDescription = null) },
+        onClick = onClick,
+    )
+}

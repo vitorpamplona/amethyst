@@ -132,8 +132,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -790,15 +788,7 @@ private fun resolve(
     relaysInput: String,
 ): CoordinatorConfig? {
     if (selected != null) return known.firstOrNull { it.pubKey == selected }
-
-    // npub as well as hex: a coordinator pubkey is shared the same ways any
-    // other Nostr pubkey is, and refusing the bech32 form would just move the
-    // conversion to the user.
-    val pubKey = decodePublicKeyAsHexOrNull(pubKeyInput.trim()) ?: return null
-    val relays = relaysInput.lines().mapNotNull { RelayUrlNormalizer.normalizeOrNull(it.trim()) }
-    if (relays.isEmpty()) return null
-
-    return CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
+    return CoordinatorConfig.fromInput(pubKeyInput, relaysInput)
 }
 
 /** A numbered step label, so the form reads as an order rather than a pile. */

@@ -110,6 +110,40 @@ class CordnLinkInspectionTest {
     }
 
     @Test
+    fun `a cordn net share link resolves to the ref inside it`() {
+        // What cordn.net's "Share group link" copies and puts in its QR code:
+        // the ref as a /chat/ path, plus `m`, a base64url JSON name/icon
+        // preview that carries nothing needed to reach the group.
+        val preview = "eyJuYW1lIjoiVGVzdCBncm91cCIsImljb24iOiLwn5KsIn0"
+        listOf(
+            "https://cordn.net/chat/${link()}?m=$preview",
+            "https://cordn.net/chat/${link()}",
+            "  https://cordn.net/chat/${link()}?m=$preview\n",
+            "HTTPS://CORDN.NET/chat/${link()}",
+            "cordn.net/chat/${link()}",
+            "https://www.cordn.net/chat/${link()}#top",
+            // The group info page and message permalinks hang off the same ref.
+            "https://cordn.net/chat/${link()}/info",
+            // A self-hosted instance of the same client builds the same path.
+            "https://chat.example.org/chat/${link()}?m=$preview",
+        ).forEach {
+            val result = CordnLinkInspection.of(it)
+            assertTrue(result is CordnLinkInspection.Valid, "must accept '$it', got $result")
+            assertEquals(gid, result.ref.gid)
+            assertEquals(coordinator, result.coordinator?.pubKey)
+            assertEquals(listOf("wss://relay.example.com/"), result.coordinator?.relays?.map { it.url })
+        }
+    }
+
+    @Test
+    fun `a share link with a broken ref is refused with the decoder's reason`() {
+        val broken = link().dropLast(1) + if (link().last() == 'q') "p" else "q"
+        val result = CordnLinkInspection.of("https://cordn.net/chat/$broken?m=e30")
+        assertTrue(result is CordnLinkInspection.Invalid, "got $result")
+        assertTrue(result.reason.isNotEmpty())
+    }
+
+    @Test
     fun `everything else is refused, with the reason the decoder gave`() {
         listOf(
             "",
@@ -118,6 +152,13 @@ class CordnLinkInspectionTest {
             "cordn1qqqqq",
             "npub1xxxx",
             "https://cordn.net/g/abc",
+            // Not a group: cordn.net's other pages, and its pre-cordn1 links
+            // that named a bare gid and left the coordinator to a `c` param.
+            "https://cordn.net/chat",
+            "https://cordn.net/chat/news",
+            "https://cordn.net/p/npub1xxxx",
+            "https://cordn.net/chat/6d1f0f6a-2a3e-4f2c?c=npub1xxxx",
+            "https://cordn.net/other/${link()}",
         ).forEach {
             val result = CordnLinkInspection.of(it)
             assertTrue(result is CordnLinkInspection.Invalid, "must refuse '$it', got $result")
