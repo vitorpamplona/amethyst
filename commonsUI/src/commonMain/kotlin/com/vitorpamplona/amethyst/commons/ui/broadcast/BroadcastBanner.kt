@@ -104,6 +104,7 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWEstimator
 import com.vitorpamplona.amethyst.commons.service.pow.PoWEventShape
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobState
 import com.vitorpamplona.amethyst.commons.service.pow.PoWRateEstimate
+import com.vitorpamplona.amethyst.commons.service.pow.formatHashRate
 import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.pow.deviceRate
@@ -274,6 +275,23 @@ private fun MiningContent(
         }
     val miningShape = miningJobs.firstOrNull { it.isMining }?.shape ?: PoWEventShape.SHORT_NOTE
 
+    // what the miners reach right now, summed over every worker: each sample
+    // counts the hashes tried over a one-second window.
+    var liveRate by remember { mutableStateOf<Double?>(null) }
+    LaunchedEffect(anyMiningStarted) {
+        liveRate = null
+        while (anyMiningStarted) {
+            val sample = PoWEstimator.liveHashesPerSecond()
+            if (sample != null) {
+                liveRate = sample
+            } else {
+                // between two jobs nothing mines: keep the last reading and pace the retry,
+                // since no sampling window was waited.
+                delay(1_000)
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -295,6 +313,15 @@ private fun MiningContent(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
+
+            liveRate?.let {
+                Text(
+                    text = formatHashRate(it),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+            }
         }
 
         miningJobs.forEach { job ->
