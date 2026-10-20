@@ -250,6 +250,51 @@ class ConcordCommunityListTest {
         assertTrue(ConcordCommunityList.decode(json).isEmpty()) // removed after add ⇒ not live
     }
 
+    // ---- one membership per community ---------------------------------------
+    //
+    // mergeDocs keys an entry by its outer community_id, but a reader resolves it to the id its
+    // join material names. A retired 13302 document stores both and is merged in on every read, so
+    // when they disagree the decoder must key by the material id: otherwise the community is listed
+    // twice (the hub's LazyColumn crashed on the repeated key) and a leave never reaches the copy.
+
+    private val cid = "ab".repeat(32) // has letters, so its uppercase is a different key
+
+    private fun joinMaterial(epoch: Long) = """{"community_id":"$cid","owner":"${"0f".repeat(32)}","owner_salt":"${"aa".repeat(32)}","community_root":"${"bb".repeat(32)}","root_epoch":$epoch,"channels":[],"relays":[],"name":"Epoch $epoch"}"""
+
+    /** One community twice: under its own id at [epochA], and under a foreign outer key at [epochB]. */
+    private fun docWithTwoCopies(
+        epochA: Long,
+        epochB: Long,
+        extraB: String = "",
+        tombstones: String = "",
+    ) = """{"entries":[{"community_id":"$cid","seed":${joinMaterial(0)},"current":${joinMaterial(epochA)},"added_at":100},""" +
+        """{"community_id":"${cid.uppercase()}","seed":${joinMaterial(0)},"current":${joinMaterial(epochB)},"added_at":100$extraB}],"tombstones":[$tombstones]}"""
+
+    @Test
+    fun twoCopiesOfACommunityDecodeToOne() {
+        val entries = ConcordCommunityList.decode(docWithTwoCopies(epochA = 1, epochB = 2))
+        assertEquals(listOf(cid), entries.map { it.id })
+        assertEquals(2L, entries.single().rootEpoch) // the freshest epoch wins, as in mergeDocs
+    }
+
+    @Test
+    fun aTombstoneReachesACopyKeyedByAnotherId() {
+        // unfollow tombstones the entry's id, i.e. the material id.
+        val json = docWithTwoCopies(epochA = 1, epochB = 2, tombstones = """{"community_id":"$cid","removed_at":200}""")
+        assertTrue(ConcordCommunityList.decode(json).isEmpty())
+    }
+
+    @Test
+    fun mergingTheCopiesKeepsTheLosersMarkersAndUnknownKeys() {
+        val doc = ConcordCommunityList.decodeDocument(docWithTwoCopies(epochA = 2, epochB = 1, extraB = ""","excluded_at_epoch":3,"x_armada":"keep""""))
+        val entry = doc.entries.single()
+        assertEquals(2L, entry.rootEpoch)
+        assertEquals(3L, entry.excludedAtEpoch) // beyond the held epoch, so it still means something
+        val written = ConcordCommunityList.encode(doc.entries, doc.residue).asJson().entry0()
+        assertEquals("keep", written["x_armada"]!!.jsonPrimitive.content)
+        assertEquals(cid, written["community_id"]!!.jsonPrimitive.content)
+    }
+
     // ---- unknown-key preservation --------------------------------------------
     //
     // Armada's communityList.ts entry type ends in `[k: string]: unknown` — unknown keys are
