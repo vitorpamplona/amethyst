@@ -46,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.resources.compose_settings
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.cordn_hub_title
 import com.vitorpamplona.amethyst.commons.resources.danger_zone
+import com.vitorpamplona.amethyst.commons.resources.devtools_search_keywords
+import com.vitorpamplona.amethyst.commons.resources.devtools_title
 import com.vitorpamplona.amethyst.commons.resources.drawer_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.drawer_settings
 import com.vitorpamplona.amethyst.commons.resources.event_sync_search_keywords
@@ -219,6 +221,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.namecoin_settings, MaterialSymbols.Security, Res.string.namecoin_search_keywords, Route.NamecoinSettings),
                     symEntry(Res.string.active_subs_title, MaterialSymbols.CloudSync, Res.string.active_subs_search_keywords, Route.ActiveSubscriptions),
                     symEntry(Res.string.resource_usage_title, MaterialSymbols.Bolt, Res.string.resource_usage_search_keywords, Route.ResourceUsage),
+                    symEntry(Res.string.devtools_title, MaterialSymbols.Code, Res.string.devtools_search_keywords, Route.DevTools),
                 ),
         )
 
