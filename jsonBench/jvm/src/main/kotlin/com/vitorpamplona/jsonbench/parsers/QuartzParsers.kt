@@ -32,6 +32,8 @@ private fun QuartzEvent.toBench() = Event(id, pubKey, createdAt, kind, tags, con
 class QuartzJackson : StringInputParser() {
     override fun decode(input: String) = JacksonMapper.fromJson(input).toBench()
 
+    override fun keep(input: String): Any = JacksonMapper.fromJson(input)
+
     override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L
         for (s in inputs) {
@@ -45,6 +47,8 @@ class QuartzJackson : StringInputParser() {
 /** Quartz's kotlinx.serialization path (the one native/iOS targets use). */
 class QuartzKotlinx : StringInputParser() {
     override fun decode(input: String) = KotlinSerializationMapper.fromJson(input).toBench()
+
+    override fun keep(input: String): Any = KotlinSerializationMapper.fromJson(input)
 
     override fun parseAll(inputs: Array<String>): Long {
         var sink = 0L

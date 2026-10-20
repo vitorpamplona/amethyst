@@ -142,15 +142,16 @@ def main():
             continue
         mrows.sort(key=lambda r: -(r.get("mb_per_s") or 0))
         L.append(f"## {MODE_TITLES[mode]} — `{headline}` workload\n")
-        L.append("| # | language | parser | input | MB/s | ns/event | × quartz | alloc B/event | allocs/event | GC | license |")
-        L.append("|---:|---|---|---|---:|---:|---:|---:|---:|---|---|")
+        L.append("| # | language | parser | input | MB/s | ns/event | × quartz | alloc B/event | allocs/event | GC | retained B/event | license |")
+        L.append("|---:|---|---|---|---:|---:|---:|---:|---:|---|---:|---|")
         for i, r in enumerate(mrows, 1):
             nspe = r["median_ns"] / r["events"]
             rel = base.get(r["workload"])
             L.append(
                 f"| {i} | {r['language']} | `{r['parser']}` | {r.get('input', '')} | {fmt(r.get('mb_per_s'))} "
                 f"| {fmt(nspe)} | {fmt(rel / nspe, 2) + '×' if rel else '–'} "
-                f"| {fmt(r.get('alloc_bytes_per_event'))} | {fmt(r.get('allocs_per_event'), 1)} | {gc_cell(r)} | {r.get('license') or ''} |"
+                f"| {fmt(r.get('alloc_bytes_per_event'))} | {fmt(r.get('allocs_per_event'), 1)} | {gc_cell(r)} "
+                f"| {fmt(r.get('retained_bytes_per_event'))} | {r.get('license') or ''} |"
             )
         L.append("")
 
@@ -178,6 +179,41 @@ def main():
             cells = [fmt(per[w].get("mb_per_s")) if w in per else "" for w in workloads]
             g = score(((lang, parser, mode), per))
             L.append(f"| {lang} | `{parser}` | {mode} | " + " | ".join(cells) + f" | {fmt(g, 2) + '×' if g else '–'} |")
+        L.append("")
+
+    # The interning trade-off: Quartz's production path against its own loop with and without
+    # String.intern(), per workload: what interning costs in parse time, what it saves in heap.
+    trade = {}
+    for r in ok:
+        if r["harness"] == "jvm" and r["parser"] in ("quartz-jackson", "quartz-loop", "quartz-loop-nointern", "quartz-loop-plain", "jackson-streaming-string"):
+            trade.setdefault(r["workload"], {})[r["parser"]] = r
+    if any("quartz-loop" in v and "quartz-loop-nointern" in v for v in trade.values()):
+        L.append("## Interning: parse cost vs. memory kept (JVM)\n")
+        L.append(
+            "`quartz-jackson` is the production path (databind → `EventDeserializer`, `String.intern()` on id, "
+            "pubkey and every tag value, `EventFactory`). `quartz-loop` is the same loop on a bare jackson-core "
+            "parser; `quartz-loop-nointern` drops the intern calls; `quartz-loop-plain` also drops `EventFactory`. "
+            "*Retained* is the heap still held after parsing the whole workload and keeping every event "
+            "(what a client's cache holds), so its difference is what interning saves; the ns/event difference "
+            "is what it costs.\n"
+        )
+        L.append("| workload | quartz-jackson ns/ev | quartz-loop ns/ev | no-intern ns/ev | plain ns/ev | intern cost ns/ev | retained B/ev (intern) | retained B/ev (no intern) | intern saves B/ev | saves % |")
+        L.append("|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
+
+        def nspe(r):
+            return r["median_ns"] / r["events"] if r else None
+
+        for w in workloads:
+            t = trade.get(w)
+            if not t or "quartz-loop" not in t or "quartz-loop-nointern" not in t:
+                continue
+            a, b = t["quartz-loop"], t["quartz-loop-nointern"]
+            ra, rb = a.get("retained_bytes_per_event"), b.get("retained_bytes_per_event")
+            saves = rb - ra if ra is not None and rb is not None else None
+            L.append(
+                f"| {w} | {fmt(nspe(t.get('quartz-jackson')))} | {fmt(nspe(a))} | {fmt(nspe(b))} | {fmt(nspe(t.get('quartz-loop-plain')))} "
+                f"| {fmt(nspe(a) - nspe(b))} | {fmt(ra)} | {fmt(rb)} | {fmt(saves)} | {fmt(100 * saves / rb, 1) + '%' if saves is not None and rb else '–'} |"
+            )
         L.append("")
 
     if failed:

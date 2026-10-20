@@ -44,6 +44,9 @@ import com.vitorpamplona.jsonbench.parsers.OrgJsonDom
 import com.vitorpamplona.jsonbench.parsers.ParssonStreaming
 import com.vitorpamplona.jsonbench.parsers.QuartzJackson
 import com.vitorpamplona.jsonbench.parsers.QuartzKotlinx
+import com.vitorpamplona.jsonbench.parsers.QuartzLoop
+import com.vitorpamplona.jsonbench.parsers.QuartzLoopNoIntern
+import com.vitorpamplona.jsonbench.parsers.QuartzLoopPlain
 import com.vitorpamplona.jsonbench.parsers.SimdjsonDom
 import com.vitorpamplona.jsonbench.parsers.SimdjsonSchema
 import com.vitorpamplona.jsonbench.parsers.Utf8Decode
@@ -99,7 +102,7 @@ val PARSERS: List<ParserSpec> =
             "typed",
             "string",
             "Amethyst's production path: JacksonMapper.fromJson(String) -> Quartz EventDeserializer " +
-                "(String.intern() on id/pubkey, EventFactory builds the kind's Event subclass). The baseline.",
+                "(String.intern() on id, pubkey and tag values; EventFactory builds the kind's Event subclass). The baseline.",
         ) { QuartzJackson() },
         ParserSpec(
             "quartz-kotlinx",
@@ -110,6 +113,37 @@ val PARSERS: List<ParserSpec> =
             "string",
             "Quartz's native/iOS path: KotlinSerializationMapper.fromJson(String) -> EventKSerializer -> EventFactory.",
         ) { QuartzKotlinx() },
+        ParserSpec(
+            "quartz-loop",
+            "jackson-core + Quartz's EventDeserializer loop",
+            "jackson",
+            "Apache-2.0 AND MIT",
+            "typed",
+            "string",
+            "Breakdown row: Quartz's EventDeserializer loop as shipped (String.intern() on id, pubkey and " +
+                "every tag value + EventFactory) on a bare jackson-core parser. quartz-jackson minus this = " +
+                "the cost of going through ObjectMapper.readValue.",
+        ) { QuartzLoop() },
+        ParserSpec(
+            "quartz-loop-nointern",
+            "jackson-core + Quartz's EventDeserializer loop",
+            "jackson",
+            "Apache-2.0 AND MIT",
+            "typed",
+            "string",
+            "Breakdown row: quartz-loop without String.intern(). Speed difference = what interning costs; " +
+                "retained-heap difference = what it saves.",
+        ) { QuartzLoopNoIntern() },
+        ParserSpec(
+            "quartz-loop-plain",
+            "jackson-core + Quartz's EventDeserializer loop",
+            "jackson",
+            "Apache-2.0 AND MIT",
+            "typed",
+            "string",
+            "Breakdown row: as quartz-loop-nointern but builds a plain Event instead of calling EventFactory. " +
+                "The difference is EventFactory's cost.",
+        ) { QuartzLoopPlain() },
         ParserSpec(
             "jackson-streaming-bytes",
             "jackson-core",

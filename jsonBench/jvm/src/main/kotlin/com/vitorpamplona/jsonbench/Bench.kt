@@ -22,6 +22,7 @@ package com.vitorpamplona.jsonbench
 
 import com.sun.management.ThreadMXBean
 import java.lang.management.ManagementFactory
+import java.lang.ref.Reference
 
 /**
  * One parser under test. Every concrete parser is its own final class, so the hot loop in
@@ -39,6 +40,13 @@ abstract class BenchParser<I : Any> {
      * for baselines, which are not parsers.
      */
     abstract fun decode(input: I): Event?
+
+    /**
+     * Parses one input into the object an app would keep (the parser's own result, e.g.
+     * Quartz's Event subclass), for the retained-memory measurement. Untimed. Defaults to
+     * [decode]; null for baselines.
+     */
+    open fun keep(input: I): Any? = decode(input)
 
     /**
      * The timed loop: parses every input once, in order, and folds something from every
@@ -123,6 +131,46 @@ object Runner {
             }
         }
         return Verification(if (baseline) null else digest.hex(), errors, firstError)
+    }
+
+    /**
+     * Heap still in use after parsing every input of the workload and keeping all results
+     * alive, as a client keeps the events it shows (HARNESS.md "retained"). This is where
+     * de-duplication such as String.intern() pays off: equal pubkeys, ids and tag values
+     * are then one object instead of one per event. Median of three runs, each measured
+     * between full collections; the array holding the results is not counted.
+     */
+    fun <I : Any> retained(
+        parser: BenchParser<I>,
+        inputs: Array<I>,
+    ): Long? {
+        if (parser.keep(inputs[0]) == null) return null
+        val runs = LongArray(3)
+        for (r in runs.indices) {
+            val kept = arrayOfNulls<Any>(inputs.size)
+            fullGc()
+            val before = usedHeap()
+            for (i in inputs.indices) kept[i] = parser.keep(inputs[i])
+            fullGc()
+            val after = usedHeap()
+            Reference.reachabilityFence(kept)
+            runs[r] = after - before
+        }
+        runs.sort()
+        return runs[1]
+    }
+
+    private fun usedHeap(): Long = ManagementFactory.getMemoryMXBean().heapMemoryUsage.used
+
+    /** Collects until the used heap stops shrinking, so soft garbage doesn't count. */
+    private fun fullGc() {
+        var last = Long.MAX_VALUE
+        repeat(10) {
+            System.gc()
+            val used = usedHeap()
+            if (used >= last) return
+            last = used
+        }
     }
 
     fun <I : Any> measure(

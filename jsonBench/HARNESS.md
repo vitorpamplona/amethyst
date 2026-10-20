@@ -103,6 +103,14 @@ Report the median round (headline), the minimum and the 90th percentile. Derived
   (JVM `GarbageCollectorMXBean`s, Go `NumGC`/`PauseTotalNs`, JS `PerformanceObserver`
   `gc` entries). Null for runtimes without a tracing GC.
 
+**Retained heap** (optional, `retained_bytes_per_event`): parse every event of the
+workload once more and keep all results alive, the way a client keeps the events it
+shows; report the heap still in use after a full collection, divided by the event
+count. This is the number that shows what de-duplication such as `String.intern()`
+buys: allocation per event measures garbage, retained heap measures what stays. JVM:
+used heap between `System.gc()` calls; Go: `HeapAlloc` after `runtime.GC()`; Rust/C/C++:
+live bytes from the allocation counter. Null when not measured.
+
 Isolation: harnesses on JIT runtimes must run each parser in a **fresh process** so
 one parser's JIT profile and heap don't tax the next (the JVM harness forks itself per
 parser, JMH-style). Compiled harnesses may run everything in one process.
@@ -151,7 +159,8 @@ Every harness exposes the same flags (through its own launcher, e.g. `run.sh`):
       "median_ns": 4812345, "min_ns": 4790000, "p90_ns": 4900000,
       "ns_per_event": 1348.7, "mb_per_s": 670.2, "events_per_s": 741430,
       "alloc_bytes_per_event": 1840.2, "allocs_per_event": 14.0,
-      "gc_count": null, "gc_ms": null
+      "gc_count": null, "gc_ms": null,
+      "retained_bytes_per_event": null
     }
   ]
 }

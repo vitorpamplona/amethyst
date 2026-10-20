@@ -215,6 +215,15 @@ object Child {
             }
         }
 
+        var retained: Long? = null
+        if (v.errors == 0) {
+            try {
+                retained = Runner.retained(parser, inputs)
+            } catch (t: Throwable) {
+                if (error == null) error = "while measuring retained heap: ${t.javaClass.name}: ${t.message?.take(300)}"
+            }
+        }
+
         val row = LinkedHashMap<String, Any?>()
         row["parser"] = spec.id
         row["library"] = spec.library
@@ -248,6 +257,7 @@ object Child {
         row["allocs_per_event"] = null
         row["gc_count"] = m?.gcCount
         row["gc_ms"] = m?.gcMs
+        row["retained_bytes_per_event"] = retained?.let { it / w.events.toDouble() }
 
         val status =
             when (digestOk) {
@@ -259,12 +269,13 @@ object Child {
             System.err.println(
                 String.format(
                     java.util.Locale.ROOT,
-                    "  %-26s %-10s %9.1f MB/s %10.0f ns/ev %9.0f B/ev  %4d rounds  gc %d/%dms  %s",
+                    "  %-26s %-10s %9.1f MB/s %10.0f ns/ev %9.0f B/ev %7.0f kept B/ev  %4d rounds  gc %d/%dms  %s",
                     spec.id,
                     w.name,
                     row["mb_per_s"] as Double,
                     row["ns_per_event"] as Double,
                     (row["alloc_bytes_per_event"] as Double?) ?: Double.NaN,
+                    (row["retained_bytes_per_event"] as Double?) ?: Double.NaN,
                     m.rounds,
                     m.gcCount ?: -1,
                     m.gcMs ?: -1,
@@ -408,6 +419,7 @@ object Parent {
             "allocs_per_event" to null,
             "gc_count" to null,
             "gc_ms" to null,
+            "retained_bytes_per_event" to null,
         )
 
     private fun gcName(beans: List<String>): String =

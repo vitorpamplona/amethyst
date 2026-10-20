@@ -48,6 +48,7 @@ artifact's published POM.
 | id | library | version | license | mode | input |
 |---|---|---|---|---|---|
 | `quartz-jackson` | Quartz `JacksonMapper` (jackson-databind + `EventDeserializer`, intern + `EventFactory`) | 2.22.3 | Apache-2.0 (Quartz: MIT) | typed | string |
+| `quartz-loop` / `quartz-loop-nointern` / `quartz-loop-plain` | breakdown of `quartz-jackson`: its deserializer loop on bare jackson-core (no databind), then without `String.intern()`, then with a plain `Event` instead of `EventFactory` | 2.22.3 | Apache-2.0 (Quartz: MIT) | typed | string |
 | `quartz-kotlinx` | Quartz `KotlinSerializationMapper` (the iOS/native path) | 1.11.0 | Apache-2.0 (Quartz: MIT) | typed | string |
 | `jackson-streaming-bytes` / `-string` | jackson-core `JsonFactory`, hand loop | 2.22.3 | Apache-2.0 | typed | bytes / string |
 | `jackson-tree` | jackson-databind `readTree` | 2.22.3 | Apache-2.0 | dom | bytes |
