@@ -192,10 +192,6 @@ class GitNewIssueViewModel : ViewModel() {
                                 iMetaAttachments.replace(iMeta.url, iMeta)
                                 uploaded.url
                             }
-
-                            else -> {
-                                null
-                            }
                         }
                     }
 

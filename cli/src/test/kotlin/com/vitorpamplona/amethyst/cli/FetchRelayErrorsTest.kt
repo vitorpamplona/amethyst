@@ -236,7 +236,7 @@ class FetchRelayErrorsTest {
                 val accept = Base64.getEncoder().encodeToString(MessageDigest.getInstance("SHA-1").digest("${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11".toByteArray()))
                 socket.getOutputStream().write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: $accept\r\n\r\n".toByteArray())
                 socket.getOutputStream().flush()
-                while (input.read() >= 0) Unit
+                input.readText()
             }
         }
 

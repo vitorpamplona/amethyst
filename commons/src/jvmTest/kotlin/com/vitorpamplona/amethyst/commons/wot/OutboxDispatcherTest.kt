@@ -302,7 +302,10 @@ class OutboxDispatcherTest {
                     indexRelays = { indexRelays },
                     gateway = gateway,
                     perRelayTimeoutMs = 200,
-                    overallTimeoutMs = 2_000,
+                    // Phases 1 and 3 each wait out the 200 ms per-relay timeout, so the run
+                    // ends on its own; a tight overall budget only races the runner's clock and
+                    // turns a slow CI machine into an all-zero result.
+                    overallTimeoutMs = 30_000,
                 )
 
             val result = dispatcher.fetchKind3Only(setOf(alice, bob))
