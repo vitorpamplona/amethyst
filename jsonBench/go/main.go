@@ -66,6 +66,10 @@ type row struct {
 	AllocsPerEvent     *float64 `json:"allocs_per_event"`
 	GCCount            *int64   `json:"gc_count"`
 	GCMs               *float64 `json:"gc_ms"`
+	// Heap still in use per event after a full GC with every result of one more parse
+	// pass kept alive (median of 3 passes; see measureRetained). Null when the
+	// parser's result is invalidated by the next parse, or the pass failed.
+	RetainedBytesPerEvent *float64 `json:"retained_bytes_per_event"`
 	// Go-specific extra: estimated GC CPU time (runtime/metrics
 	// /cpu/classes/gc/total:cpu-seconds) over the measured rounds. gc_ms is only the
 	// stop-the-world pause total, which hides the concurrent mark work.
@@ -312,16 +316,17 @@ func printSummary(rows []row) {
 		}
 		return sorted[i].MBPerS > sorted[j].MBPerS
 	})
-	fmt.Fprintf(os.Stderr, "%-10s %-22s %-8s %6s %9s %9s %10s %8s %5s %8s\n",
-		"workload", "parser", "mode", "digest", "MB/s", "ns/event", "B/event", "allocs/e", "GCs", "gcCPUms")
+	fmt.Fprintf(os.Stderr, "%-10s %-22s %-8s %6s %9s %9s %10s %8s %5s %8s %10s\n",
+		"workload", "parser", "mode", "digest", "MB/s", "ns/event", "B/event", "allocs/e", "GCs", "gcCPUms", "retainedB/e")
 	for _, r := range sorted {
 		d := "n/a"
 		if r.DigestOK != nil {
 			d = fmt.Sprint(*r.DigestOK)
 		}
-		fmt.Fprintf(os.Stderr, "%-10s %-22s %-8s %6s %9.1f %9.1f %10s %8s %5s %8s\n",
+		fmt.Fprintf(os.Stderr, "%-10s %-22s %-8s %6s %9.1f %9.1f %10s %8s %5s %8s %10s\n",
 			r.Workload, r.Parser, r.Mode, d, r.MBPerS, r.NsPerEvent,
-			fmtF(r.AllocBytesPerEvent), fmtF(r.AllocsPerEvent), fmtI(r.GCCount), fmtF(r.GCCPUMs))
+			fmtF(r.AllocBytesPerEvent), fmtF(r.AllocsPerEvent), fmtI(r.GCCount), fmtF(r.GCCPUMs),
+			fmtF(r.RetainedBytesPerEvent))
 	}
 }
 
@@ -473,7 +478,8 @@ func runOne(p parserDef, o opts, w workload) (r row) {
 	if len(lines) != w.Events {
 		r.Error = strp(fmt.Sprintf("loaded %d lines, manifest says %d", len(lines), w.Events))
 	}
-	run, toEvent, err := p.setup()
+	im, err := p.setup()
+	run, toEvent := im.run, im.toEvent
 	if err != nil {
 		f := false
 		r.DigestOK = &f
@@ -584,9 +590,46 @@ func runOne(p parserDef, o opts, w workload) (r row) {
 	gccpu := (gcCPUAfter - gcCPUBefore) * 1e3
 	r.AllocBytesPerEvent, r.AllocsPerEvent, r.GCCount, r.GCMs, r.GCCPUMs = &ab, &ac, &gcn, &gcms, &gccpu
 	r.Sink = sink
-	fmt.Fprintf(os.Stderr, "   %-10s rounds=%-5d median=%.2fms %.1f MB/s %.0f B/ev %.1f allocs/ev gc=%d digest=%v sink=%d\n",
-		w.Name, r.Rounds, med/1e6, r.MBPerS, ab, ac, gcn, fmtDigest(r.DigestOK), sink)
+
+	// 5. retained heap (untimed, after the measured rounds)
+	if im.keep != nil && r.Errors == 0 {
+		r.RetainedBytesPerEvent = measureRetained(im.keep, lines)
+	}
+	fmt.Fprintf(os.Stderr, "   %-10s rounds=%-5d median=%.2fms %.1f MB/s %.0f B/ev %.1f allocs/ev gc=%d retained=%s B/ev digest=%v sink=%d\n",
+		w.Name, r.Rounds, med/1e6, r.MBPerS, ab, ac, gcn, fmtF(r.RetainedBytesPerEvent), fmtDigest(r.DigestOK), sink)
 	return r
+}
+
+// retainedPasses is how many keep passes measureRetained runs; it reports the median.
+const retainedPasses = 3
+
+// measureRetained runs the parser's keep pass retainedPasses times and returns the
+// median HeapAlloc growth per event, or nil if a pass failed. Each pass parses a
+// fresh copy of every line and keeps all results alive across a runtime.GC() (see
+// keepOf); the previous pass's results are garbage by the next pass's first GC.
+func measureRetained(keep keepFn, lines [][]byte) *float64 {
+	if len(lines) == 0 {
+		return nil
+	}
+	deltas := make([]int64, 0, retainedPasses)
+	for i := 0; i < retainedPasses; i++ {
+		d, err := func() (d int64, err error) {
+			defer func() {
+				if e := recover(); e != nil {
+					err = fmt.Errorf("panic: %v", e)
+				}
+			}()
+			return keep(lines)
+		}()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "   retained pass failed: %v\n", err)
+			return nil
+		}
+		deltas = append(deltas, d)
+	}
+	sort.Slice(deltas, func(i, j int) bool { return deltas[i] < deltas[j] })
+	v := float64(deltas[len(deltas)/2]) / float64(len(lines))
+	return &v
 }
 
 func fmtDigest(b *bool) string {
