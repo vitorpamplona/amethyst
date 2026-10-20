@@ -113,8 +113,9 @@ class Tok final : public Runner {
 }  // namespace
 
 void register_jsmn(Registry& r) {
-  r.push_back({"jsmn-tokens", "jsmn", JB_REF_jsmn, "MIT", "dom", "bytes",
-               "tokenizer only (JSMN_STRICT, reused token array): no string or number decoding in the "
-               "timed loop; the digest decodes the token slices with the harness's own unescaper",
+  r.push_back({"jsmn-tokens", "jsmn", JB_REF_jsmn, "MIT", "dom", "string",
+               "jsmn_parse(frame.data(), frame.size()); tokenizer only (JSMN_STRICT, reused token array): no string "
+               "or number decoding in the timed loop; the digest decodes the token slices with the harness's own "
+               "unescaper. Retained heap null: tokens are offsets in a reused array",
                [](const Lines& l) -> std::unique_ptr<Runner> { return std::make_unique<Tok>(l); }});
 }

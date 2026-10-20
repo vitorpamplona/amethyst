@@ -53,6 +53,10 @@ class DomRunner final : public Runner {
     for (const auto& l : lines_) sink += fold_dom(json::parse(l));
     return sink;
   }
+  // A value on the default resource owns all its storage.
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<json::value>(lines_.size(), [&](size_t i) { return new json::value(json::parse(lines_[i])); });
+  }
 
  private:
   const Lines& lines_;
@@ -110,6 +114,10 @@ class TypedRunner final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<Event>(lines_.size(),
+                            [&](size_t i) { return new Event(json::value_to<Event>(json::parse(lines_[i]))); });
+  }
 
  private:
   const Lines& lines_;
@@ -124,12 +132,14 @@ std::unique_ptr<Runner> make(const Lines& l) {
 
 void register_boostjson(Registry& r) {
   const std::string ver = JB_REF_boost_json;
-  r.push_back({"boostjson-dom", kLib, ver, kLicense, "dom", "bytes", "json::parse with the default heap resource",
-               make<DomRunner>});
-  r.push_back({"boostjson-dom-pool", kLib, ver, kLicense, "dom", "bytes",
-               "reused json::parser + monotonic_resource over a reused buffer (no malloc per parse)",
+  const std::string in = "json::parse / parser::write take the frame as a string_view (no copy); ";
+  r.push_back({"boostjson-dom", kLib, ver, kLicense, "dom", "string",
+               in + "json::parse with the default heap resource; each value owns its storage", make<DomRunner>});
+  r.push_back({"boostjson-dom-pool", kLib, ver, kLicense, "dom", "string",
+               in + "reused json::parser + monotonic_resource over a reused buffer (no malloc per parse). Retained "
+                    "heap null: the value lives in the reused arena",
                make<PoolRunner>});
-  r.push_back({"boostjson-typed", kLib, ver, kLicense, "typed", "bytes",
-               "json::value_to<Event>(json::parse(line)) via BOOST_DESCRIBE_STRUCT (DOM, then copy)",
+  r.push_back({"boostjson-typed", kLib, ver, kLicense, "typed", "string",
+               in + "json::value_to<Event>(json::parse(frame)) via BOOST_DESCRIBE_STRUCT (DOM, then copy)",
                make<TypedRunner>});
 }

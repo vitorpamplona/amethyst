@@ -18,37 +18,57 @@ pick the compiler on the first configure (tested with gcc 13.3). Needs `libssl-d
 
 ## Parsers
 
-| parser | library | version | license | mode | input |
-|---|---|---|---|---|---|
-| `simdjson-ondemand-typed` | simdjson | v5.0.5 | Apache-2.0 OR MIT | typed | bytes-padded |
-| `simdjson-ondemand-borrowed` | simdjson | v5.0.5 | Apache-2.0 OR MIT | borrowed | bytes-padded |
-| `simdjson-dom` | simdjson | v5.0.5 | Apache-2.0 OR MIT | dom | bytes-padded |
-| `yyjson-dom` | yyjson | 0.13.0 | MIT | dom | bytes |
-| `yyjson-insitu` | yyjson | 0.13.0 | MIT | dom | bytes-copy |
-| `yyjson-dom-pool` | yyjson | 0.13.0 | MIT | dom | bytes |
-| `yyjson-typed` | yyjson | 0.13.0 | MIT | typed | bytes |
-| `yyjson-borrowed` | yyjson | 0.13.0 | MIT | borrowed | bytes |
-| `rapidjson-dom` | RapidJSON | master@24b5e7a8b27f | MIT | dom | bytes |
-| `rapidjson-insitu` | RapidJSON | master@24b5e7a8b27f | MIT | dom | bytes-copy |
-| `rapidjson-dom-pool` | RapidJSON | master@24b5e7a8b27f | MIT | dom | bytes |
-| `rapidjson-sax-typed` | RapidJSON | master@24b5e7a8b27f | MIT | typed | bytes |
-| `nlohmann-dom` | nlohmann/json | v3.12.0 | MIT | dom | bytes |
-| `nlohmann-typed` | nlohmann/json | v3.12.0 | MIT | typed | bytes |
-| `nlohmann-sax-typed` | nlohmann/json | v3.12.0 | MIT | typed | bytes |
-| `glaze-typed` | glaze | v9.0.0 | MIT | typed | bytes |
-| `glaze-borrowed` | glaze | v9.0.0 | MIT | borrowed (partial) | bytes |
-| `glaze-dom` | glaze | v9.0.0 | MIT | dom | bytes |
-| `cjson-dom` | cJSON | v1.7.19 | MIT | dom | bytes |
-| `boostjson-dom` | Boost.JSON | boost-1.92.0 | BSL-1.0 | dom | bytes |
-| `boostjson-dom-pool` | Boost.JSON | boost-1.92.0 | BSL-1.0 | dom | bytes |
-| `boostjson-typed` | Boost.JSON | boost-1.92.0 | BSL-1.0 | typed | bytes |
-| `sajson-dom` | sajson | master@68fe32ed6bcb | MIT | dom | bytes |
-| `jsonc-dom` | json-c | json-c-0.19-20260627 | MIT | dom | bytes |
-| `jsmn-tokens` | jsmn | v1.1.0 | MIT | dom (tokenizer) | bytes |
-| `jansson-dom` | Jansson | v2.15.1 | MIT | dom | bytes |
+| parser | library | version | license | mode | input | retained |
+|---|---|---|---|---|---|---|
+| `simdjson-ondemand-typed` | simdjson | v5.0.5 | Apache-2.0 OR MIT | typed | string→bytes-padded | yes |
+| `simdjson-ondemand-borrowed` | simdjson | v5.0.5 | Apache-2.0 OR MIT | borrowed | string→bytes-padded | null |
+| `simdjson-dom` | simdjson | v5.0.5 | Apache-2.0 OR MIT | dom | string→bytes-padded | null |
+| `yyjson-dom` | yyjson | 0.13.0 | MIT | dom | string | yes |
+| `yyjson-insitu` | yyjson | 0.13.0 | MIT | dom | bytes-copy | null |
+| `yyjson-dom-pool` | yyjson | 0.13.0 | MIT | dom | string | null |
+| `yyjson-typed` | yyjson | 0.13.0 | MIT | typed | string | yes |
+| `yyjson-borrowed` | yyjson | 0.13.0 | MIT | borrowed | string | yes (doc + views) |
+| `rapidjson-dom` | RapidJSON | master@24b5e7a8b27f | MIT | dom | string | yes |
+| `rapidjson-insitu` | RapidJSON | master@24b5e7a8b27f | MIT | dom | bytes-copy | null |
+| `rapidjson-dom-pool` | RapidJSON | master@24b5e7a8b27f | MIT | dom | string | null |
+| `rapidjson-sax-typed` | RapidJSON | master@24b5e7a8b27f | MIT | typed | string | yes |
+| `nlohmann-dom` | nlohmann/json | v3.12.0 | MIT | dom | string | yes |
+| `nlohmann-typed` | nlohmann/json | v3.12.0 | MIT | typed | string | yes |
+| `nlohmann-sax-typed` | nlohmann/json | v3.12.0 | MIT | typed | string | yes |
+| `glaze-typed` | glaze | v9.0.0 | MIT | typed | string | yes |
+| `glaze-borrowed` | glaze | v9.0.0 | MIT | borrowed (partial) | string | yes (event + frame) |
+| `glaze-dom` | glaze | v9.0.0 | MIT | dom | string | yes |
+| `cjson-dom` | cJSON | v1.7.19 | MIT | dom | string | yes |
+| `boostjson-dom` | Boost.JSON | boost-1.92.0 | BSL-1.0 | dom | string | yes |
+| `boostjson-dom-pool` | Boost.JSON | boost-1.92.0 | BSL-1.0 | dom | string | null |
+| `boostjson-typed` | Boost.JSON | boost-1.92.0 | BSL-1.0 | typed | string | yes |
+| `sajson-dom` | sajson | master@68fe32ed6bcb | MIT | dom | string | yes |
+| `jsonc-dom` | json-c | json-c-0.19-20260627 | MIT | dom | string | yes |
+| `jsmn-tokens` | jsmn | v1.1.0 | MIT | dom (tokenizer) | string | null |
+| `jansson-dom` | Jansson | v2.15.1 | MIT | dom | string | yes |
 
 Every row's `notes` field in the results says exactly what the glue does. The points that
 matter when reading the numbers:
+
+- **Input is the WebSocket text frame**: a `std::string` (what IXWebSocket, websocketpp and
+  Boost.Beast hand an app). The harness builds one per line from `(data, size)` before timing,
+  so `capacity() == size()`: no spare capacity a parser could use as padding. Every parser
+  starts from that string inside the timed loop:
+  - `string`: the library reads `data()`/`size()` (or `c_str()`, whose NUL is free) directly.
+    Copies the library makes on its own (yyjson_read and sajson copy into their document) are
+    part of the parse.
+  - `string→bytes-padded` (simdjson): the frame lacks `SIMDJSON_PADDING` spare bytes.
+    On-Demand's `iterate(const std::string&)` uses the string's capacity and returns
+    `INSUFFICIENT_PADDING`; `iterate(std::string&)` would `reserve()` (reallocate) a frame the
+    app does not own mutably; `padded_input` skips the copy only by reading past the
+    allocation when that stays inside the page. So the On-Demand rows memcpy each frame into one
+    reused buffer with `SIMDJSON_PADDING` spare bytes (timed) and iterate a
+    `padded_string_view` of it. `simdjson-dom` calls `dom::parser::parse(const std::string&)`,
+    simdjson's own string entry point, which sees the missing padding and memcpys into the
+    parser's reused padded buffer. (simdjson also has `parse_unpadded` for the DOM; not used.)
+  - `bytes-copy` (`yyjson-insitu`, `rapidjson-insitu`): in-situ parsing needs a mutable
+    buffer (yyjson also needs `YYJSON_PADDING_SIZE` zero bytes), so each parse memcpys the
+    frame into one reused scratch buffer (timed).
 
 - **typed** builds `struct Event { std::string id, pubkey; uint64_t created_at; uint32_t kind;
   std::vector<std::vector<std::string>> tags; std::string content, sig; }` per event, and its
@@ -83,6 +103,28 @@ matter when reading the numbers:
 `-rdynamic`) and forwards them to glibc's `__libc_*` functions, so it also sees
 `operator new` from libstdc++ and every C library. Each successful call is one allocation;
 bytes are the requested size (for `realloc`, the full new size). `gc_count` and `gc_ms` are null.
+
+It also keeps a live-byte counter: a block adds its `malloc_usable_size()` when handed out and
+subtracts it when freed (`realloc` applies the difference). That is the heap the block really
+occupies (the request rounded up to glibc's 16-byte chunks), without the 8-byte chunk header.
+
+**Retained heap** (`retained_bytes_per_event`): after timing, `Runner::keep_all()` parses every
+event once more and keeps each result as its own heap object in a pointer vector (reserved
+before the first reading, so the vector is not counted): `Event*` for typed rows (the 168-byte
+`Event` node is counted, like a JVM object header and fields), and for DOM rows the
+independent document (`yyjson_doc*`, `rapidjson::Document*`, `nlohmann::json*`,
+`glz::generic_u64*`, `cJSON*`, `boost::json::value*`, `sajson::document*`, `json_object*`,
+`json_t*`). Retained = live bytes after minus before, divided by events; then all are freed.
+`yyjson-borrowed` keeps each doc with its views. `glaze-borrowed` keeps each event with an
+exact-size copy of its frame, standing in for the websocket string the app would have to move
+in. The column is null where a result is a view into reused state: the simdjson rows (reused
+parser), `*-insitu` (reused scratch buffer), `*-pool` (reused arena) and `jsmn-tokens`.
+
+What it shows: typed rows that size their strings exactly retain about the same (decoded
+strings + vectors + node). `simdjson-ondemand-typed` and `rapidjson-sax-typed` grow the tag
+vectors with `emplace_back` and retain a little more; `glaze-typed` more again;
+`nlohmann-sax-typed` moves the lexer's token buffer into each field, so every string keeps the
+capacity it grew to. `rapidjson-dom` keeps its 64 KiB allocator chunk per document.
 
 ## Licenses
 

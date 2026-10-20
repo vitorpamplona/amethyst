@@ -21,6 +21,13 @@ struct GlazeBorrowedEvent {
   std::string_view sig;
 };
 
+// A partially borrowed event kept with the frame its views point into: the app would move the
+// websocket's std::string in here; the harness copies it (exact size) to model that.
+struct FrameAndView {
+  std::string frame;
+  GlazeBorrowedEvent e;
+};
+
 template <class E>
 void read_or_throw(E& e, const std::string& l) {
   auto ec = glz::read_json(e, l);
@@ -44,6 +51,22 @@ class TypedRunner final : public Runner {
       sink += e.kind + e.tags.size() + e.content.size();
     }
     return sink;
+  }
+  std::unique_ptr<Kept> keep_all() override {
+    if constexpr (std::is_same_v<E, Event>) {
+      return keep_each<Event>(lines_.size(), [&](size_t i) {
+        auto e = std::make_unique<Event>();
+        read_or_throw(*e, lines_[i]);
+        return e.release();
+      });
+    } else {
+      return keep_each<FrameAndView>(lines_.size(), [&](size_t i) {
+        auto k = std::make_unique<FrameAndView>();
+        k->frame = std::string(lines_[i].data(), lines_[i].size());
+        read_or_throw(k->e, k->frame);
+        return k.release();
+      });
+    }
   }
 
  private:
@@ -97,6 +120,13 @@ class DomRunner final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<Generic>(lines_.size(), [&](size_t i) {
+      auto j = std::make_unique<Generic>();
+      read_or_throw(*j, lines_[i]);
+      return j.release();
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -111,13 +141,15 @@ std::unique_ptr<Runner> make(const Lines& l) {
 
 void register_glaze(Registry& r) {
   const std::string ver = JB_REF_glaze;
-  r.push_back({"glaze-typed", kLib, ver, kLicense, "typed", "bytes",
-               "glz::read_json into the Event aggregate (compile-time reflection, default opts)",
-               make<TypedRunner<Event>>});
-  r.push_back({"glaze-borrowed", kLib, ver, kLicense, "borrowed", "bytes",
-               "partial borrow: glaze string_views are raw (escapes not decoded), so only id/pubkey/sig "
-               "(hex) are views into the input; content and tags are owned std::string",
+  const std::string in = "glz::read_json(value, frame) takes the std::string directly (default opts rely on its "
+                         "free NUL terminator); ";
+  r.push_back({"glaze-typed", kLib, ver, kLicense, "typed", "string",
+               in + "into the Event aggregate (compile-time reflection)", make<TypedRunner<Event>>});
+  r.push_back({"glaze-borrowed", kLib, ver, kLicense, "borrowed", "string",
+               in + "partial borrow: glaze string_views are raw (escapes not decoded), so only id/pubkey/sig "
+                    "(hex) are views into the frame; content and tags are owned std::string. Retained keeps each "
+                    "event with an exact-size copy of its frame (standing in for the moved websocket string)",
                make<TypedRunner<GlazeBorrowedEvent>>});
-  r.push_back({"glaze-dom", kLib, ver, kLicense, "dom", "bytes",
-               "glz::read_json into glz::generic_u64 (variant tree, map objects)", make<DomRunner>});
+  r.push_back({"glaze-dom", kLib, ver, kLicense, "dom", "string",
+               in + "into glz::generic_u64 (variant tree, map objects)", make<DomRunner>});
 }

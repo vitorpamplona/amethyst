@@ -5,6 +5,10 @@
 
 namespace {
 
+struct CjsonFree {
+  void operator()(cJSON* j) const { cJSON_Delete(j); }
+};
+
 std::string_view sv(const cJSON* v) {
   if (!cJSON_IsString(v)) fail("expected string");
   return v->valuestring;  // cJSON strings are NUL-terminated (an embedded \u0000 would truncate)
@@ -53,6 +57,13 @@ class Dom final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<cJSON, CjsonFree>(lines_.size(), [&](size_t i) {
+      cJSON* root = cJSON_ParseWithLength(lines_[i].data(), lines_[i].size());
+      if (!root) fail("cJSON parse error");
+      return root;
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -61,7 +72,7 @@ class Dom final : public Runner {
 }  // namespace
 
 void register_cjson(Registry& r) {
-  r.push_back({"cjson-dom", "cJSON", JB_REF_cjson, "MIT", "dom", "bytes",
-               "cJSON_ParseWithLength; one malloc per node and per string; numbers as double. Strings are NUL-terminated with no length, so a \\u0000 escape truncates them: digest fails on the corpus events that contain one",
+  r.push_back({"cjson-dom", "cJSON", JB_REF_cjson, "MIT", "dom", "string",
+               "cJSON_ParseWithLength(frame.data(), frame.size()); one malloc per node and per string; numbers as double. Strings are NUL-terminated with no length, so a \\u0000 escape truncates them: digest fails on the corpus events that contain one",
                [](const Lines& l) -> std::unique_ptr<Runner> { return std::make_unique<Dom>(l); }});
 }

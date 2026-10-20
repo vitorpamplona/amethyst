@@ -49,6 +49,17 @@ void digest_dom(yyjson_val* root, DigestWriter& d) {
   d.event_end();
 }
 
+struct DocFree {
+  void operator()(yyjson_doc* d) const { yyjson_doc_free(d); }
+};
+
+// A borrowed event kept alive together with the document its views point into.
+struct DocAndView {
+  yyjson_doc* doc = nullptr;
+  BorrowedEvent e;
+  ~DocAndView() { yyjson_doc_free(doc); }
+};
+
 inline uint64_t fold_dom(yyjson_val* root) {
   return yyjson_get_uint(yyjson_obj_get(root, "kind")) + yyjson_arr_size(yyjson_obj_get(root, "tags"));
 }
@@ -107,6 +118,11 @@ class DomRunner final : public Runner {
       yyjson_doc_free(doc);
     }
     return sink;
+  }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<yyjson_doc, DocFree>(lines_.size(), [&](size_t i) {
+      return read_or_throw(lines_[i].data(), lines_[i].size(), 0, nullptr);
+    });
   }
 
  private:
@@ -216,6 +232,25 @@ class TypedRunner final : public Runner {
     }
     return sink;
   }
+  // typed keeps the Event (the doc is freed); borrowed keeps the doc with its views.
+  std::unique_ptr<Kept> keep_all() override {
+    if constexpr (std::is_same_v<E, Event>) {
+      return keep_each<Event>(lines_.size(), [&](size_t i) {
+        yyjson_doc* doc = read_or_throw(lines_[i].data(), lines_[i].size(), 0, nullptr);
+        auto e = std::make_unique<Event>();
+        extract(yyjson_doc_get_root(doc), *e);
+        yyjson_doc_free(doc);
+        return e.release();
+      });
+    } else {
+      return keep_each<DocAndView>(lines_.size(), [&](size_t i) {
+        auto k = std::make_unique<DocAndView>();
+        k->doc = read_or_throw(lines_[i].data(), lines_[i].size(), 0, nullptr);
+        extract(yyjson_doc_get_root(k->doc), k->e);
+        return k.release();
+      });
+    }
+  }
 
  private:
   const Lines& lines_;
@@ -230,16 +265,23 @@ std::unique_ptr<Runner> make(const Lines& l) {
 
 void register_yyjson(Registry& r) {
   const std::string ver = JB_REF_yyjson;
-  r.push_back({"yyjson-dom", kLib, ver, kLicense, "dom", "bytes",
-               "yyjson_read (library copies the input, then builds an immutable DOM)", make<DomRunner>});
+  const std::string in = "yyjson_read(frame.data(), frame.size()) reads the std::string as is (the library "
+                         "copies it into the doc's own padded buffer, timed). ";
+  r.push_back({"yyjson-dom", kLib, ver, kLicense, "dom", "string",
+               in + "Immutable DOM; each yyjson_doc is independent, so retained keeps the docs", make<DomRunner>});
   r.push_back({"yyjson-insitu", kLib, ver, kLicense, "dom", "bytes-copy",
-               "YYJSON_READ_INSITU on a reused padded scratch buffer; the memcpy is timed", make<InsituRunner>});
-  r.push_back({"yyjson-dom-pool", kLib, ver, kLicense, "dom", "bytes",
-               "yyjson_read with yyjson_alc_pool_init over one reused buffer (no malloc per parse)",
+               "YYJSON_READ_INSITU needs a mutable buffer with YYJSON_PADDING_SIZE zero bytes: each parse memcpys "
+               "the frame into one reused scratch buffer and zeroes the padding (timed). Retained heap null: the "
+               "doc's strings point into the reused scratch",
+               make<InsituRunner>});
+  r.push_back({"yyjson-dom-pool", kLib, ver, kLicense, "dom", "string",
+               in + "yyjson_alc_pool_init over one reused buffer (no malloc per parse). Retained heap null: the "
+                    "doc lives in the reused pool",
                make<PoolRunner>});
-  r.push_back({"yyjson-typed", kLib, ver, kLicense, "typed", "bytes",
-               "yyjson_read, then copy fields into Event (std::string) and free the doc", make<TypedRunner<Event>>});
-  r.push_back({"yyjson-borrowed", kLib, ver, kLicense, "borrowed", "bytes",
-               "yyjson_read, then string_views into the doc (valid until yyjson_doc_free)",
+  r.push_back({"yyjson-typed", kLib, ver, kLicense, "typed", "string",
+               in + "Then copy fields into Event (std::string) and free the doc", make<TypedRunner<Event>>});
+  r.push_back({"yyjson-borrowed", kLib, ver, kLicense, "borrowed", "string",
+               in + "Then string_views into the doc (valid until yyjson_doc_free); retained keeps each doc "
+                    "together with its BorrowedEvent",
                make<TypedRunner<BorrowedEvent>>});
 }

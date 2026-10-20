@@ -5,9 +5,15 @@
 //
 // Counting rule: every successful malloc/calloc/realloc/memalign-family call is one
 // allocation; bytes are the requested size (for realloc, the full new size).
+//
+// Live bytes (for the retained-heap measurement): every block adds its malloc_usable_size()
+// when it is handed out and subtracts it when it is freed; realloc applies the difference.
+// That is the heap the block really occupies (requested size rounded up to glibc's chunk
+// granularity), not counting glibc's 8-byte chunk header.
 // The harness is single-threaded, so plain counters are enough.
 #define _GNU_SOURCE
 #include <errno.h>
+#include <malloc.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -19,11 +25,13 @@ extern void* __libc_memalign(size_t, size_t);
 
 uint64_t jb_alloc_count = 0;
 uint64_t jb_alloc_bytes = 0;
+int64_t jb_live_bytes = 0;
 
 static inline void* counted(void* p, size_t n) {
   if (p) {
     jb_alloc_count++;
     jb_alloc_bytes += n;
+    jb_live_bytes += (int64_t)malloc_usable_size(p);
   }
   return p;
 }
@@ -37,11 +45,24 @@ void* calloc(size_t a, size_t b) {
 }
 
 void* realloc(void* p, size_t n) {
+  const int64_t old = p ? (int64_t)malloc_usable_size(p) : 0;
   void* r = __libc_realloc(p, n);
-  return n ? counted(r, n) : r;
+  if (r) {
+    jb_live_bytes += (int64_t)malloc_usable_size(r) - old;
+    if (n) {
+      jb_alloc_count++;
+      jb_alloc_bytes += n;
+    }
+  } else if (n == 0) {
+    jb_live_bytes -= old;  // glibc's realloc(p, 0) frees p
+  }
+  return r;
 }
 
-void free(void* p) { __libc_free(p); }
+void free(void* p) {
+  if (p) jb_live_bytes -= (int64_t)malloc_usable_size(p);
+  __libc_free(p);
+}
 
 void* memalign(size_t align, size_t n) { return counted(__libc_memalign(align, n), n); }
 

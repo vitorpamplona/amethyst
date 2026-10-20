@@ -59,6 +59,14 @@ class Dom final : public Runner {
     }
     return sink;
   }
+  // A document owns its input copy and AST (dynamic_allocation), so each one is independent.
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<sajson::document>(lines_.size(), [&](size_t i) {
+      auto doc = std::make_unique<sajson::document>(parse(lines_[i]));
+      if (!doc->is_valid()) fail(std::string("sajson: ") + doc->get_error_message_as_cstring());
+      return doc.release();
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -67,8 +75,9 @@ class Dom final : public Runner {
 }  // namespace
 
 void register_sajson(Registry& r) {
-  r.push_back({"sajson-dom", "sajson", JB_REF_sajson, "MIT", "dom", "bytes",
-               "sajson::parse(dynamic_allocation, string): copies the input, decodes in place; "
+  r.push_back({"sajson-dom", "sajson", JB_REF_sajson, "MIT", "dom", "string",
+               "sajson::parse(dynamic_allocation, sajson::string(frame.data(), frame.size())): the library copies the "
+               "input into the document's own mutable buffer and decodes in place; "
                "integers are int32 (created_at becomes a double)",
                [](const Lines& l) -> std::unique_ptr<Runner> { return std::make_unique<Dom>(l); }});
 }

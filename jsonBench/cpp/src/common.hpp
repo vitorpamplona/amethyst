@@ -1,12 +1,14 @@
 // Shared types for the C/C++ jsonBench harness. See jsonBench/HARNESS.md for the contract.
 #pragma once
 
+#include <algorithm>
 #include <charconv>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 // The typed result: owned, fully decoded strings.
@@ -88,17 +90,56 @@ void digest_event(DigestWriter& d, const E& e) {
   d.event_end();
 }
 
-// One (parser, workload) instance. The constructor receives the raw lines and prepares the
-// parser's preferred input form (untimed). digest() parses event i once and feeds the
-// digest, throwing on any failure. round() parses every event once and returns the sink.
+extern "C" {
+extern int64_t jb_live_bytes;  // alloc_count.c: heap bytes currently handed out
+}
+
+// Results kept alive for the retained-heap measurement (HARNESS.md "Retained heap").
+// live_before is read after the pointer vector is reserved, so the vector itself is not
+// counted; everything each result owns (its own node included) is.
+struct Kept {
+  int64_t live_before = 0;
+  int64_t live_after = 0;
+  virtual ~Kept() = default;
+};
+
+template <class T, class Free>
+struct KeptAll final : Kept {
+  std::vector<T*> items;
+  ~KeptAll() override {
+    for (T* p : items) Free{}(p);
+  }
+};
+
+// Calls make(i) for every event; each returns one independent heap result (an Event*, a
+// yyjson_doc*, a cJSON*...) that stays alive until the returned Kept is destroyed.
+template <class T, class Free = std::default_delete<T>, class Make>
+std::unique_ptr<Kept> keep_each(size_t n, Make&& make) {
+  auto k = std::make_unique<KeptAll<T, Free>>();
+  k->items.reserve(n);
+  k->live_before = jb_live_bytes;
+  for (size_t i = 0; i < n; i++) k->items.push_back(make(i));
+  k->live_after = jb_live_bytes;
+  return k;
+}
+
+// The WebSocket text frames: one exact-size std::string per event (HARNESS.md "Input").
+using Lines = std::vector<std::string>;
+
+// One (parser, workload) instance. The constructor receives the frames and may set up
+// reusable state (a parser, a scratch buffer) but must not transform the input: anything a
+// parser does on top of the std::string happens inside digest()/round(). digest() parses
+// event i once and feeds the digest, throwing on any failure. round() parses every event
+// once and returns the sink. keep_all() parses every event once more and keeps the results
+// (keep_each); it returns nullptr when a result is a view into reused parser state (a
+// reused tape, arena or scratch buffer), so retained heap is not measurable.
 class Runner {
  public:
   virtual ~Runner() = default;
   virtual void digest(size_t i, DigestWriter& d) = 0;
   virtual uint64_t round() = 0;
+  virtual std::unique_ptr<Kept> keep_all() { return nullptr; }
 };
-
-using Lines = std::vector<std::string>;
 
 struct ParserInfo {
   std::string id;
@@ -106,7 +147,7 @@ struct ParserInfo {
   std::string version;
   std::string license;
   std::string mode;   // typed | borrowed | dom | baseline
-  std::string input;  // string | bytes | bytes-padded | bytes-copy
+  std::string input;  // string | string→bytes-padded | bytes-copy (HARNESS.md "Input")
   std::string notes;
   std::unique_ptr<Runner> (*make)(const Lines&);
 };

@@ -5,6 +5,10 @@
 
 namespace {
 
+struct JsoncFree {
+  void operator()(json_object* j) const { json_object_put(j); }
+};
+
 std::string_view sv(json_object* v) {
   if (!json_object_is_type(v, json_type_string)) fail("expected string");
   return {json_object_get_string(v), size_t(json_object_get_string_len(v))};
@@ -62,6 +66,14 @@ class Dom final : public Runner {
     }
     return sink;
   }
+  // The tokener is reused, but each parse returns an independent object tree.
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<json_object, JsoncFree>(lines_.size(), [&](size_t i) {
+      json_object* root = parse(lines_[i]);
+      if (!root) fail(std::string("json-c: ") + json_tokener_error_desc(json_tokener_get_error(tok_)));
+      return root;
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -71,7 +83,8 @@ class Dom final : public Runner {
 }  // namespace
 
 void register_jsonc(Registry& r) {
-  r.push_back({"jsonc-dom", "json-c", JB_REF_jsonc, "MIT", "dom", "bytes",
-               "json_tokener_parse_ex with one reused tokener; refcounted json_object tree, hash-table objects",
+  r.push_back({"jsonc-dom", "json-c", JB_REF_jsonc, "MIT", "dom", "string",
+               "json_tokener_parse_ex(tok, frame.data(), frame.size()) with one reused tokener; refcounted json_object "
+               "tree, hash-table objects (each tree independent of the tokener, so retained keeps the trees)",
                [](const Lines& l) -> std::unique_ptr<Runner> { return std::make_unique<Dom>(l); }});
 }

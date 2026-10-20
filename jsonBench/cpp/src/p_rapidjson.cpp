@@ -71,6 +71,15 @@ class DomRunner final : public Runner {
     }
     return sink;
   }
+  // A Document owns its MemoryPoolAllocator (and the 64 KiB chunk), so each one is independent.
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<rj::Document>(lines_.size(), [&](size_t i) {
+      auto doc = std::make_unique<rj::Document>();
+      doc->Parse(lines_[i].c_str());
+      check(*doc);
+      return doc.release();
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -229,6 +238,13 @@ class SaxRunner final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<Event>(lines_.size(), [&](size_t i) {
+      auto e = std::make_unique<Event>();
+      parse(lines_[i], *e);
+      return e.release();
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -245,15 +261,16 @@ std::unique_ptr<Runner> make(const Lines& l) {
 void register_rapidjson(Registry& r) {
   const std::string ver = JB_REF_rapidjson;
   const std::string simd = "built with RAPIDJSON_SSE42; ";
-  r.push_back({"rapidjson-dom", kLib, ver, kLicense, "dom", "bytes",
-               simd + "fresh Document per event: Parse(NUL-terminated str), default MemoryPoolAllocator (mallocs a 64 KiB chunk per Document). Parse(str, len) goes through a MemoryStream without the SSE4.2 string scan and measured ~1.6x slower",
+  const std::string cstr = "reads frame.c_str() (std::string is NUL-terminated for free); ";
+  r.push_back({"rapidjson-dom", kLib, ver, kLicense, "dom", "string",
+               simd + cstr + "fresh Document per event: Parse(const char*), default MemoryPoolAllocator (mallocs a 64 KiB chunk per Document, which a kept Document keeps). Parse(str, len) goes through a MemoryStream without the SSE4.2 string scan and measured ~1.6x slower",
                make<DomRunner>});
   r.push_back({"rapidjson-insitu", kLib, ver, kLicense, "dom", "bytes-copy",
-               simd + "ParseInsitu on a reused scratch copy (memcpy timed); strings point into it",
+               simd + "ParseInsitu needs a mutable NUL-terminated buffer: each parse memcpys the frame into one reused scratch buffer (timed); strings point into it. Retained heap null: the scratch is reused",
                make<InsituRunner>});
-  r.push_back({"rapidjson-dom-pool", kLib, ver, kLicense, "dom", "bytes",
-               simd + "Parse(NUL-terminated str) with MemoryPoolAllocators over reused user buffers (no malloc per parse)",
+  r.push_back({"rapidjson-dom-pool", kLib, ver, kLicense, "dom", "string",
+               simd + cstr + "Parse(const char*) with MemoryPoolAllocators over reused user buffers (no malloc per parse). Retained heap null: values live in the reused pool",
                make<PoolRunner>});
-  r.push_back({"rapidjson-sax-typed", kLib, ver, kLicense, "typed", "bytes",
-               simd + "Reader + SAX handler filling Event; one reused Reader", make<SaxRunner>});
+  r.push_back({"rapidjson-sax-typed", kLib, ver, kLicense, "typed", "string",
+               simd + cstr + "Reader over a StringStream + SAX handler filling Event; one reused Reader", make<SaxRunner>});
 }

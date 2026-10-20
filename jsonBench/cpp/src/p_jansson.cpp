@@ -5,6 +5,10 @@
 
 namespace {
 
+struct JanssonFree {
+  void operator()(json_t* j) const { json_decref(j); }
+};
+
 std::string_view sv(const json_t* v) {
   if (!json_is_string(v)) fail("expected string");
   return {json_string_value(v), json_string_length(v)};
@@ -54,6 +58,14 @@ class Dom final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<json_t, JanssonFree>(lines_.size(), [&](size_t i) {
+      json_error_t err;
+      json_t* root = json_loadb(lines_[i].data(), lines_[i].size(), JSON_ALLOW_NUL, &err);
+      if (!root) fail(std::string("jansson: ") + err.text);
+      return root;
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -62,7 +74,7 @@ class Dom final : public Runner {
 }  // namespace
 
 void register_jansson(Registry& r) {
-  r.push_back({"jansson-dom", "Jansson", JB_REF_jansson, "MIT", "dom", "bytes",
-               "json_loadb(JSON_ALLOW_NUL); refcounted json_t tree, hash-table objects",
+  r.push_back({"jansson-dom", "Jansson", JB_REF_jansson, "MIT", "dom", "string",
+               "json_loadb(frame.data(), frame.size(), JSON_ALLOW_NUL); refcounted json_t tree, hash-table objects",
                [](const Lines& l) -> std::unique_ptr<Runner> { return std::make_unique<Dom>(l); }});
 }

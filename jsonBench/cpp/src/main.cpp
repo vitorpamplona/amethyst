@@ -82,13 +82,16 @@ Options parse_args(int argc, char** argv) {
   return o;
 }
 
+// Every line becomes what a WebSocket client hands the app for one text frame: a std::string
+// holding exactly the frame (built from (data, size), so capacity() == size() past the SSO
+// limit: no spare capacity a padding-hungry parser could borrow).
 Lines load_lines(const fs::path& file) {
   std::ifstream in(file, std::ios::binary);
   if (!in) fail("cannot open " + file.string());
   Lines lines;
   std::string line;
   while (std::getline(in, line))
-    if (!line.empty()) lines.push_back(line);
+    if (!line.empty()) lines.emplace_back(line.data(), line.size());
   return lines;
 }
 
@@ -190,6 +193,7 @@ ojson run_one(const ParserInfo& p, const ojson& wl, const Lines& lines, const Op
     row["rounds"] = 0;
     row["gc_count"] = nullptr;
     row["gc_ms"] = nullptr;
+    row["retained_bytes_per_event"] = nullptr;
   };
 
   // A parser that fails on some event cannot run a clean round; one with only a digest
@@ -240,6 +244,16 @@ ojson run_one(const ParserInfo& p, const ojson& wl, const Lines& lines, const Op
     row["error"] = std::string("timed round: ") + e.what();
     row["digest_ok"] = false;
     null_timing();
+    return row;
+  }
+
+  // Retained heap: parse every event once more, keep every result, count the live bytes.
+  row["retained_bytes_per_event"] = nullptr;
+  try {
+    std::unique_ptr<Kept> kept = runner->keep_all();
+    if (kept) row["retained_bytes_per_event"] = double(kept->live_after - kept->live_before) / double(events);
+  } catch (const std::exception& e) {
+    if (row["error"].is_null()) row["error"] = std::string("retain: ") + e.what();
   }
   return row;
 }
@@ -386,10 +400,12 @@ int main(int argc, char** argv) {
       std::fprintf(stderr, "== %s: %zu events\n", w["name"].get<std::string>().c_str(), lines.size());
       for (const ParserInfo* p : selected) {
         ojson row = run_one(*p, w, lines, o);
-        std::fprintf(stderr, "  %-28s %-8s digest=%-5s %9s MB/s %10s ns/ev %9s B/ev %7s allocs/ev%s%s\n",
+        std::fprintf(stderr,
+                     "  %-28s %-8s digest=%-5s %9s MB/s %10s ns/ev %9s B/ev %7s allocs/ev %9s retained B/ev%s%s\n",
                      p->id.c_str(), p->mode.c_str(), row["digest_ok"].get<bool>() ? "ok" : "FAIL",
                      fmt(row["mb_per_s"], 1).c_str(), fmt(row["ns_per_event"], 1).c_str(),
                      fmt(row["alloc_bytes_per_event"], 1).c_str(), fmt(row["allocs_per_event"], 2).c_str(),
+                     fmt(row["retained_bytes_per_event"], 1).c_str(),
                      row["error"].is_null() ? "" : "  error: ",
                      row["error"].is_null() ? "" : row["error"].get<std::string>().c_str());
         out["results"].push_back(std::move(row));

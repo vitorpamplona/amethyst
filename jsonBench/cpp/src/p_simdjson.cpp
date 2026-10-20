@@ -1,6 +1,8 @@
 // simdjson: On-Demand into owned and borrowed events, and the DOM API.
 #include "simdjson.h"
 
+#include <cstring>
+
 #include "common.hpp"
 
 using namespace simdjson;
@@ -10,12 +12,25 @@ namespace {
 constexpr const char* kLib = "simdjson";
 constexpr const char* kLicense = "Apache-2.0 OR MIT";
 
-std::vector<padded_string> pad_all(const Lines& lines) {
-  std::vector<padded_string> out;
-  out.reserve(lines.size());
-  for (const auto& l : lines) out.emplace_back(l);
-  return out;
-}
+// The frame is an exact-size std::string, so capacity() - size() < SIMDJSON_PADDING and
+// ondemand::parser::iterate(const std::string&) would return INSUFFICIENT_PADDING. On-Demand
+// has no copying entry point for it, so every parse copies the frame into one reused buffer
+// with SIMDJSON_PADDING spare bytes (zeroed once; simdjson does not care what they hold).
+class PaddedScratch {
+ public:
+  explicit PaddedScratch(const Lines& lines) {
+    size_t max = 0;
+    for (const auto& l : lines) max = std::max(max, l.size());
+    buf_.assign(max + SIMDJSON_PADDING, 0);
+  }
+  padded_string_view copy(const std::string& l) {
+    std::memcpy(buf_.data(), l.data(), l.size());
+    return padded_string_view(buf_.data(), l.size(), buf_.size());
+  }
+
+ private:
+  std::vector<char> buf_;
+};
 
 template <class E>
 void read_ondemand(ondemand::document& doc, E& e) {
@@ -43,37 +58,58 @@ void read_ondemand(ondemand::document& doc, E& e) {
 template <class E>
 class OnDemandRunner final : public Runner {
  public:
-  explicit OnDemandRunner(const Lines& lines) : docs_(pad_all(lines)) {}
+  explicit OnDemandRunner(const Lines& lines) : lines_(lines), scratch_(lines) {}
+
+  void parse(const std::string& l, E& e) {
+    ondemand::document doc = parser_.iterate(scratch_.copy(l));
+    read_ondemand(doc, e);
+  }
 
   void digest(size_t i, DigestWriter& d) override {
     E e;
-    ondemand::document doc = parser_.iterate(docs_[i]);
-    read_ondemand(doc, e);
+    parse(lines_[i], e);
     digest_event(d, e);
   }
 
   uint64_t round() override {
     uint64_t sink = 0;
-    for (auto& s : docs_) {
+    for (const auto& l : lines_) {
       E e;
-      ondemand::document doc = parser_.iterate(s);
-      read_ondemand(doc, e);
+      parse(l, e);
       sink += e.kind + e.tags.size() + e.content.size();
     }
     return sink;
   }
 
+  // Borrowed views point into the reused parser's string buffer: nothing to keep.
+  std::unique_ptr<Kept> keep_all() override {
+    if constexpr (std::is_same_v<E, Event>) {
+      return keep_each<Event>(lines_.size(), [&](size_t i) {
+        auto e = std::make_unique<Event>();
+        parse(lines_[i], *e);
+        return e.release();
+      });
+    } else {
+      return nullptr;
+    }
+  }
+
  private:
-  std::vector<padded_string> docs_;
+  const Lines& lines_;
+  PaddedScratch scratch_;
   ondemand::parser parser_;
 };
 
+// dom::parser::parse(const std::string&) is simdjson's own std::string entry point: it sees
+// capacity() - size() < SIMDJSON_PADDING and memcpys the frame into the parser's reused
+// padded buffer (loaded_bytes), then builds the tape in the parser's reused tape/string
+// buffers. The element is a view into them, valid until the next parse.
 class DomRunner final : public Runner {
  public:
-  explicit DomRunner(const Lines& lines) : docs_(pad_all(lines)) {}
+  explicit DomRunner(const Lines& lines) : lines_(lines) {}
 
   void digest(size_t i, DigestWriter& d) override {
-    dom::element root = parser_.parse(docs_[i]);
+    dom::element root = parser_.parse(lines_[i]);
     d.str(root["id"].get_string());
     d.str(root["pubkey"].get_string());
     d.num(root["created_at"].get_uint64());
@@ -90,15 +126,15 @@ class DomRunner final : public Runner {
 
   uint64_t round() override {
     uint64_t sink = 0;
-    for (auto& s : docs_) {
-      dom::element root = parser_.parse(s);
+    for (const auto& l : lines_) {
+      dom::element root = parser_.parse(l);
       sink += uint64_t(root["kind"].get_uint64()) + dom::array(root["tags"]).size();
     }
     return sink;
   }
 
  private:
-  std::vector<padded_string> docs_;
+  const Lines& lines_;
   dom::parser parser_;
 };
 
@@ -112,12 +148,22 @@ std::unique_ptr<Runner> make(const Lines& l) {
 void register_simdjson(Registry& r) {
   const std::string ver = JB_REF_simdjson;
   std::string impl = std::string("SIMD kernel: ") + get_active_implementation()->name() + "; ";
-  r.push_back({"simdjson-ondemand-typed", kLib, ver, kLicense, "typed", "bytes-padded",
-               impl + "On-Demand field walk, strings copied into std::string; one reused ondemand::parser",
+  const std::string pad =
+      "the frame std::string has no spare capacity, so iterate(const std::string&) refuses it "
+      "(INSUFFICIENT_PADDING); each parse memcpys it into one reused buffer with SIMDJSON_PADDING "
+      "spare bytes (timed) and iterates a padded_string_view of that. ";
+  r.push_back({"simdjson-ondemand-typed", kLib, ver, kLicense, "typed", "string→bytes-padded",
+               impl + pad + "On-Demand field walk, strings copied into std::string; one reused ondemand::parser",
                make<OnDemandRunner<Event>>});
-  r.push_back({"simdjson-ondemand-borrowed", kLib, ver, kLicense, "borrowed", "bytes-padded",
-               impl + "On-Demand; string_views into the parser's string buffer (valid until next iterate)",
+  r.push_back({"simdjson-ondemand-borrowed", kLib, ver, kLicense, "borrowed", "string→bytes-padded",
+               impl + pad +
+                   "string_views into the reused parser's string buffer (valid until next iterate); "
+                   "retained heap null: the views live in the reused parser",
                make<OnDemandRunner<BorrowedEvent>>});
-  r.push_back({"simdjson-dom", kLib, ver, kLicense, "dom", "bytes-padded",
-               impl + "dom::parser::parse, one reused parser (tape + string buffer reused)", make<DomRunner>});
+  r.push_back({"simdjson-dom", kLib, ver, kLicense, "dom", "string→bytes-padded",
+               impl +
+                   "dom::parser::parse(const std::string&): the frame lacks SIMDJSON_PADDING spare capacity, so "
+                   "simdjson memcpys it into the parser's reused padded buffer (timed); one reused parser "
+                   "(tape + string buffer reused). Retained heap null: the element is a view into the reused parser",
+               make<DomRunner>});
 }

@@ -39,6 +39,9 @@ class DomRunner final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<json>(lines_.size(), [&](size_t i) { return new json(json::parse(lines_[i])); });
+  }
 
  private:
   const Lines& lines_;
@@ -58,6 +61,9 @@ class GetRunner final : public Runner {
       sink += e.kind + e.tags.size() + e.content.size();
     }
     return sink;
+  }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<Event>(lines_.size(), [&](size_t i) { return new Event(json::parse(lines_[i]).get<Event>()); });
   }
 
  private:
@@ -148,6 +154,13 @@ class SaxRunner final : public Runner {
     }
     return sink;
   }
+  std::unique_ptr<Kept> keep_all() override {
+    return keep_each<Event>(lines_.size(), [&](size_t i) {
+      auto e = std::make_unique<Event>();
+      parse(lines_[i], *e);
+      return e.release();
+    });
+  }
 
  private:
   const Lines& lines_;
@@ -162,10 +175,12 @@ std::unique_ptr<Runner> make(const Lines& l) {
 
 void register_nlohmann(Registry& r) {
   const std::string ver = JB_REF_nlohmann;
-  r.push_back({"nlohmann-dom", kLib, ver, kLicense, "dom", "bytes", "json::parse (std::map objects)", make<DomRunner>});
-  r.push_back({"nlohmann-typed", kLib, ver, kLicense, "typed", "bytes",
-               "json::parse(line).get<Event>() via NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE (DOM, then copy)",
+  const std::string in = "json::parse / sax_parse take the frame std::string directly (iterator input adapter, no copy); ";
+  r.push_back({"nlohmann-dom", kLib, ver, kLicense, "dom", "string", in + "std::map objects", make<DomRunner>});
+  r.push_back({"nlohmann-typed", kLib, ver, kLicense, "typed", "string",
+               in + "json::parse(frame).get<Event>() via NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE (DOM, then copy)",
                make<GetRunner>});
-  r.push_back({"nlohmann-sax-typed", kLib, ver, kLicense, "typed", "bytes",
-               "json::sax_parse with a json_sax handler moving strings into Event", make<SaxRunner>});
+  r.push_back({"nlohmann-sax-typed", kLib, ver, kLicense, "typed", "string",
+               in + "json_sax handler moving the lexer's strings into Event (their capacity grew by push_back)",
+               make<SaxRunner>});
 }
