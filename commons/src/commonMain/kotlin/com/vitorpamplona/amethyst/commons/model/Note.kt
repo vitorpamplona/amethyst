@@ -69,6 +69,7 @@ import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.anyAsync
 import com.vitorpamplona.quartz.utils.containsAny
+import com.vitorpamplona.quartz.utils.internIfPossible
 import com.vitorpamplona.quartz.utils.launchAndWaitAll
 import com.vitorpamplona.quartz.utils.plus
 import kotlinx.coroutines.CancellationException
@@ -82,6 +83,17 @@ import kotlin.concurrent.Volatile
 interface NotesGatherer {
     fun removeNote(note: Note)
 }
+
+/**
+ * Tag values longer than this are payloads (a zap's embedded request, bolt11 invoices, alt
+ * text, imeta URLs) that rarely repeat across events. Interning one hashes the whole value for
+ * no sharing: skipping them cut the cache-entry cost of a zap receipt by 2.3 µs for 16 more
+ * bytes kept per event (nostrJsonBench, zaps workload). Ids, pubkeys, addresses, relay URLs,
+ * tag names and markers all fit.
+ */
+private const val MAX_SHARED_TAG_VALUE = 128
+
+private fun shareTagValue(value: String) = if (value.length <= MAX_SHARED_TAG_VALUE) value.internIfPossible() else value
 
 @Stable
 class AddressableNote(
@@ -445,6 +457,11 @@ open class Note(
         replyTo: List<Note>,
     ) {
         if (this.event?.id != event.id) {
+            // The cache keeps this event, so this is where its strings get shared with the
+            // rest of the cache: the id with this note's key (an addressable note's key is its
+            // address instead), the pubkey with the author's, tag values through the intern
+            // pool. Parsers no longer intern: most events they produce are never kept.
+            event.shareStrings(if (this is AddressableNote) event.id else idHex, author.pubkeyHex, ::shareTagValue)
             this.event = event
             this.author = author
             this.replyTo = replyTo

@@ -40,7 +40,7 @@ class TagArrayDeserializer : StdDeserializer<TagArray>(TagArray::class.java) {
                 if (p.currentToken == JsonToken.VALUE_NULL) {
                     innerList.add("")
                 } else {
-                    innerList.add(p.text.intern())
+                    innerList.add(p.text)
                 }
             }
 

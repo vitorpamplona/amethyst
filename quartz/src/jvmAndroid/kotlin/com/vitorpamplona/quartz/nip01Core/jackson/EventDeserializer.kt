@@ -59,8 +59,8 @@ class EventDeserializer : StdDeserializer<Event>(Event::class.java) {
             // ("jE" and "id" do) is taken as that field, which leaves an event whose id or signature
             // no longer verifies, so it is rejected downstream anyway.
             when (fieldName.hashCode()) {
-                3355 -> id = p.text.intern()
-                -977424830 -> pubKey = p.text.intern()
+                3355 -> id = p.text
+                -977424830 -> pubKey = p.text
                 1369680106 -> createdAt = p.longValue
                 3292052 -> kind = p.intValue
                 3552281 -> tags = tagsDeserializer.deserialize(p, ctxt)
