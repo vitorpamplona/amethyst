@@ -105,6 +105,15 @@ sealed interface CordnLinkInspection {
         }
 
         /**
+         * Whether [input] is shaped like a cordn link, valid or not.
+         *
+         * For routing: a link that is cordn-shaped but broken still belongs on
+         * the link screen, which can say which rule it broke, rather than in a
+         * generic "not a link" error.
+         */
+        fun looksLikeLink(input: String): Boolean = refIn(input.trim()).startsWith(CordnGroupRef.HRP + "1", ignoreCase = true)
+
+        /**
          * A `/chat/` path segment that is a ref. Any host, because a
          * self-hosted copy of the cordn.net client builds the same path, and
          * the host is never trusted for anything: the ref names its own
