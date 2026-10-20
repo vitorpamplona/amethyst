@@ -4742,6 +4742,12 @@
     <string name="remote_signer_login_failed">S oddaljenim podpisnikom se ni bilo mogoče prijaviti: %1$s</string>
     <string name="remote_signer_relay_label">Eden od tvojih vhodnih relejev</string>
     <string name="remote_signer_relay_hint">Podpisnik se ne poveže? Uporabi enega od vhodnih relejev svojega računa.</string>
+    <string name="remote_signer_auth_title">Odobrite v svojem podpisniku</string>
+    <string name="remote_signer_auth_body">Vaš oddaljeni podpisnik zahteva, da se prijavite ali odobrite na njegovi strani. Amethyst čaka in nadaljuje, ko to storite.</string>
+    <string name="remote_signer_auth_open">Odpri stran</string>
+    <string name="remote_signer_auth_later">Ne zdaj</string>
+    <string name="remote_signer_auth_for_account">Za %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Nobena aplikacija tukaj ne more odpreti te strani. Kopirajte naslov v brskalnik.</string>
     <string name="remote_signer_relay_apply">Uporabi rele</string>
     <string name="remote_signer_default_relays">Uporabi privzete releje</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Uporabljaš javni ključ in javni ključi omogočajo le branje. Prijavi se s privatnim ključem za posredovanje sporočila</string>
