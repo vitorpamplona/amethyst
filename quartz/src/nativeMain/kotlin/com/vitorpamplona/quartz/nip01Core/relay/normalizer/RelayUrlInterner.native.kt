@@ -26,13 +26,13 @@ package com.vitorpamplona.quartz.nip01Core.relay.normalizer
  * savings, native keeps the parse memo's dedup only.
  */
 actual class RelayUrlInterner {
-    actual fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl = relay
+    internal actual fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl = relay
 
     actual fun get(url: String): NormalizedRelayUrl? = null
 
     actual fun size(): Int = 0
 
-    actual fun clear() {}
+    internal actual fun clear() {}
 
     actual companion object {
         actual val Default: RelayUrlInterner = RelayUrlInterner()

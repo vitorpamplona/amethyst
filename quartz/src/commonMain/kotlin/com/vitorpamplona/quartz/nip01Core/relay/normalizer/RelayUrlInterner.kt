@@ -32,8 +32,12 @@ package com.vitorpamplona.quartz.nip01Core.relay.normalizer
  * Platforms without weak references fall back to a passthrough: no canonicalisation, no leaks.
  */
 expect class RelayUrlInterner() {
-    /** The canonical instance for [relay]'s url, storing [relay] as canonical if no live one exists. */
-    fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl
+    /**
+     * The canonical instance for [relay]'s url, storing [relay] as canonical if no live one exists.
+     * Internal: [RelayUrlNormalizer] answers straight from this map, so only urls it has validated
+     * may enter it. A public intern would let any caller plant an unvalidated url.
+     */
+    internal fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl
 
     /** The live canonical instance whose url is exactly [url], else null. */
     fun get(url: String): NormalizedRelayUrl?
@@ -41,8 +45,8 @@ expect class RelayUrlInterner() {
     /** Number of map entries, including dead weak references not swept yet. */
     fun size(): Int
 
-    /** Drops every entry. Mostly useful for tests. */
-    fun clear()
+    /** Drops every entry. For tests. */
+    internal fun clear()
 
     companion object {
         /** Process-wide shared instance, the one [RelayUrlNormalizer] uses. */

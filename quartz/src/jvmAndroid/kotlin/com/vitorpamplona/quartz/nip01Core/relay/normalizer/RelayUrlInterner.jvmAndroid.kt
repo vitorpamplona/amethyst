@@ -42,7 +42,7 @@ actual class RelayUrlInterner {
         queue: ReferenceQueue<NormalizedRelayUrl>,
     ) : WeakReference<NormalizedRelayUrl>(relay, queue)
 
-    actual fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl {
+    internal actual fun intern(relay: NormalizedRelayUrl): NormalizedRelayUrl {
         sweep()
 
         cache[relay.url]?.get()?.let { return it }
@@ -59,7 +59,7 @@ actual class RelayUrlInterner {
 
     actual fun size(): Int = cache.size
 
-    actual fun clear() {
+    internal actual fun clear() {
         cache.clear()
         while (collected.poll() != null) Unit
     }
