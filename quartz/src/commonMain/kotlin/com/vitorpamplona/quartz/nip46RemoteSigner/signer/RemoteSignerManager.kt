@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner.signer
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Kind
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path

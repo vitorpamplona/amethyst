@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.buzz.workspace
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /*
  * Buzz-specific readers over a NIP-29 group's relay-signed metadata (kind:39000).

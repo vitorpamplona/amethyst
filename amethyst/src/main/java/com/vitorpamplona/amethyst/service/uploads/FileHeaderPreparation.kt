@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.media.MediaDataSource
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageDownloader
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 import java.io.IOException

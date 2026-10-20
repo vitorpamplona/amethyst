@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRotationManager.Companion.SNAPSHOT_VERSION
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
 import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.mls.crypto.X25519
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.mls.tree.Credential

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -27,7 +28,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType

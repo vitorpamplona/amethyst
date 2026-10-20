@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDeviceTip
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDocumentException
@@ -43,7 +44,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive

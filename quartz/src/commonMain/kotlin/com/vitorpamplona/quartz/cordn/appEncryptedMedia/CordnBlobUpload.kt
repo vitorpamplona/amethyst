@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.appEncryptedMedia
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Everything a blob host is told about a cordn attachment — which is as close

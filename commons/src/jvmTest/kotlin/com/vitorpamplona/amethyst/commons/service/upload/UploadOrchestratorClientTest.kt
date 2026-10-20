@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload
 
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

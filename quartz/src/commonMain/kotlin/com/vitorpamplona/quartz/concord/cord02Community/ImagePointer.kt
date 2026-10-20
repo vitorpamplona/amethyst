@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.concord.cord02Community
 
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive

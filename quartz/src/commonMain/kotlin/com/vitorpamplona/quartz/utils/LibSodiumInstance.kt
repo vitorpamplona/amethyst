@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils
 
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Core
-import com.vitorpamplona.quartz.nip44Encryption.crypto.XChaCha20Poly1305
+import com.vitorpamplona.crypto.chacha.ChaCha20Core
+import com.vitorpamplona.crypto.chacha.XChaCha20Poly1305
 
 /**
  * Pure Kotlin replacement for LazySodium/libsodium.

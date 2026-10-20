@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import com.vitorpamplona.amethyst.commons.blurhash.toBlurhash
 import com.vitorpamplona.amethyst.commons.blurhash.toPlatformImage
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.File

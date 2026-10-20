@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.bloom
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.Sha256Hasher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

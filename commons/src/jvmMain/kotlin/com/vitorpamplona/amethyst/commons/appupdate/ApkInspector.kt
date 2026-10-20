@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.appupdate
 import com.android.apksig.ApkVerifier
 import com.android.apksig.apk.ApkUtils
 import com.android.apksig.util.DataSources
+import com.vitorpamplona.crypto.sha2.Sha256Hasher
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer

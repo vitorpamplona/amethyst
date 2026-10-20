@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.cordn.spec03Payloads
 
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
-import com.vitorpamplona.quartz.utils.mac.MacInstance
+import com.vitorpamplona.crypto.mac.MacInstance
 import kotlin.math.ceil
 import kotlin.math.pow
 

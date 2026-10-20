@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.service.uploads
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 
@@ -90,7 +90,7 @@ class UploadOrchestrator {
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         uploader: MediaUploader,

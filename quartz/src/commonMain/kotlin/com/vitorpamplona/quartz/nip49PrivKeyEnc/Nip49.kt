@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.UnicodeNormalizer
 import kotlin.math.pow
 

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -40,7 +41,6 @@ import com.vitorpamplona.quartz.nip29RelayGroups.request.GroupLeaveRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.GroupTag
 import com.vitorpamplona.quartz.nip51Lists.simpleGroupList.SimpleGroupListEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * `amy relaygroup …` — NIP-29 relay-based groups. Every group lives on exactly

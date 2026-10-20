@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.cordn.appMultiDevice
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * §7 — sealing a document to the per-identity document encryption key.

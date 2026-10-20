@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.utils.LibSodiumInstance
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
 

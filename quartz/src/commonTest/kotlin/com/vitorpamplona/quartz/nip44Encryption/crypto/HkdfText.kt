@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption.crypto
 
+import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals

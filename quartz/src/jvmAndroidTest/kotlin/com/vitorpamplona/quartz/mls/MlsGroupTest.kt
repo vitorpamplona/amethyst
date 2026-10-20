@@ -48,7 +48,7 @@ class MlsGroupTest {
     fun testCreateGroupWithSigningKey() {
         val identity = "alice@nostr".encodeToByteArray()
         val sigKp =
-            com.vitorpamplona.quartz.mls.crypto.Ed25519
+            com.vitorpamplona.crypto.curve25519.Ed25519
                 .generateKeyPair()
         val group = MlsGroup.create(identity, sigKp.privateKey)
 

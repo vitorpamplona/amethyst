@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
@@ -34,7 +35,6 @@ import com.vitorpamplona.quartz.marmot.appComponents.MarmotMediaType
 import com.vitorpamplona.quartz.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 /**

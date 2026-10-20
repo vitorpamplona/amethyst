@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.single
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 fun newSubId() = RandomInstance.randomChars(6)
 

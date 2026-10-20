@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.mls
 
+import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.quartz.mls.crypto.Hpke
-import com.vitorpamplona.quartz.mls.crypto.X25519
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

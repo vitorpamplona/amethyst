@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipBCOnchainZaps.psbt
 
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.crypto.sha2.sha256
 
 /**
  * BIP-341 taproot signature hash (`SigMsg` + `TapSighash` tagged hash).

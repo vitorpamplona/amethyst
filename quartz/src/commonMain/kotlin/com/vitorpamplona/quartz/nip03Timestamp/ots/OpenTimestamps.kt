@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp.ots
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip03Timestamp.ots.VerifyResult.Chains
 import com.vitorpamplona.quartz.nip03Timestamp.ots.attestation.BitcoinBlockHeaderAttestation
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpCrypto
 import com.vitorpamplona.quartz.nip03Timestamp.ots.op.OpSHA256
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.coroutines.CancellationException
 

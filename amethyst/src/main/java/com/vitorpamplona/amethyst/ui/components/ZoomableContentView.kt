@@ -134,12 +134,12 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoView
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.saveMediaToGallery
+import com.vitorpamplona.crypto.sha2.sha256StreamWithCount
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CancellationException

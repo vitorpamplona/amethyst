@@ -22,9 +22,9 @@ package com.vitorpamplona.quartz.nip06KeyDerivation
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.RandomInstance
 import junit.framework.TestCase.fail
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import kotlin.time.TimeSource
 
 /**

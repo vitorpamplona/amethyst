@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads
 
+import com.vitorpamplona.crypto.sha2.sha256StreamWithCount
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256StreamWithCount
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay

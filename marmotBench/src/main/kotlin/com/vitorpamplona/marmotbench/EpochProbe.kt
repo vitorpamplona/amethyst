@@ -21,9 +21,9 @@
 package com.vitorpamplona.marmotbench
 
 import com.vitorpamplona.amethyst.commons.marmot.ingest
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.runBlocking
 
 // Counts the commits `create_group/N` actually publishes, so the README's

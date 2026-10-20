@@ -20,14 +20,15 @@
  */
 package com.vitorpamplona.quartz.mls.group
 
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.curve25519.Ed25519KeyPair
+import com.vitorpamplona.crypto.curve25519.X25519
+import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
-import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
 import com.vitorpamplona.quartz.mls.crypto.Hpke
 import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.mls.crypto.X25519
 import com.vitorpamplona.quartz.mls.framing.ContentType
 import com.vitorpamplona.quartz.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.mls.framing.PrivateMessage
@@ -66,7 +67,6 @@ import com.vitorpamplona.quartz.mls.tree.RatchetTree
 import com.vitorpamplona.quartz.mls.tree.UpdatePathNode
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
  * MLS Group state and operations (RFC 9420 Section 8, 12).
@@ -2651,7 +2651,7 @@ class MlsGroup private constructor(
         membershipTag: ByteArray,
     ): Boolean {
         val mac =
-            com.vitorpamplona.quartz.utils.mac
+            com.vitorpamplona.crypto.mac
                 .MacInstance("HmacSHA256", epochSecrets.membershipKey)
         mac.update(authenticatedContentBytes)
         val expectedTag = mac.doFinal()

@@ -177,7 +177,7 @@ object DmCommands {
         }
         val server = args.requireFlag("server")
         val cipher =
-            com.vitorpamplona.quartz.utils.ciphers
+            com.vitorpamplona.crypto.aes
                 .AESGCM()
         val orchestrator = UploadOrchestrator()
         val uploaded = orchestrator.uploadEncrypted(file, cipher, server, ctx.signer)
@@ -264,7 +264,7 @@ object DmCommands {
                     .DimensionTag(match.groupValues[1].toInt(), match.groupValues[2].toInt())
             }
         val cipher =
-            com.vitorpamplona.quartz.utils.ciphers
+            com.vitorpamplona.crypto.aes
                 .AESGCM(keyBytes, nonceBytes)
         val result =
             DmActions.buildFileDmReference(

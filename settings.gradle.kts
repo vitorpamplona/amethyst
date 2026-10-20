@@ -44,6 +44,17 @@ include(":cli")
 include(":relayBench")
 include(":marmotBench")
 
+// crypto-kmp lives in its own repo (vitorpamplona/crypto-kmp) and comes from Maven Central, like
+// quic below. To change it alongside quartz, point Gradle at a local checkout:
+//   ./gradlew -PcryptoKmpDir=../crypto-kmp :quartz:jvmTest
+providers.gradleProperty("cryptoKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.crypto:crypto")).using(project(":crypto"))
+        }
+    }
+}
+
 // quic lives in its own repo (vitorpamplona/quic-kmp) and comes from Maven Central. To change
 // it alongside nestsClient or marmotQuic, point Gradle at a local checkout and it builds that
 // checkout instead of the published artifact:

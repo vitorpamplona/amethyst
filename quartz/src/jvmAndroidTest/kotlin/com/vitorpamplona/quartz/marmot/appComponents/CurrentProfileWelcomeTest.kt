@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.curve25519.Ed25519KeyPair
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
@@ -30,8 +32,6 @@ import com.vitorpamplona.quartz.marmot.groups.agentTextStreamSecret
 import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.marmot.groups.currentMarmotData
 import com.vitorpamplona.quartz.marmot.groups.currentNostrGroupId
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
-import com.vitorpamplona.quartz.mls.crypto.Ed25519KeyPair
 import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.mls.tree.Capabilities

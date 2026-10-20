@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDeviceTip
 import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDocumentSeal
@@ -46,7 +47,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip5aStaticWebsites.resolver
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals

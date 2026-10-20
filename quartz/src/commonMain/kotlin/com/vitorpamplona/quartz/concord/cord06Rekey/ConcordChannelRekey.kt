@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord06Rekey
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
 import com.vitorpamplona.quartz.concord.cord04Roles.control.tags.VacTag
 import com.vitorpamplona.quartz.concord.crypto.ConcordKeyDerivation
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * One Private Channel's rotation as a receiver sees it (CORD-06 §2): the kind-3303 chunks one

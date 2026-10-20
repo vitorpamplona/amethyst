@@ -32,7 +32,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import com.vitorpamplona.crypto.aes.AESGCM
 
 class ChatFileUploader(
     val account: Account,

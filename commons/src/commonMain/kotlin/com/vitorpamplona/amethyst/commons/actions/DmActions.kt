@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.actions
 
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nip17Dm.NIP17Factory
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 /**
  * NIP-17 direct-message verbs — relay resolution policy + gift-wrap builders.

@@ -62,15 +62,15 @@ import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetrie
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -198,7 +198,7 @@ class DesktopMediaUploader(
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         useH265: Boolean,

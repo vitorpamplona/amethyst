@@ -1,8 +1,17 @@
 # A `quartz-crypto` module that Quartz and quic-kmp share
 
-Status: **draft for review** (2026-10-20). Nothing is implemented. Follows
-[vitorpamplona/amethyst#4586](https://github.com/vitorpamplona/amethyst/pull/4586), which replaced
-Quartz's third-party native crypto with in-repo code.
+Status: **superseded by a separate repository** (2026-10-20). In review the module became its own
+repo, [vitorpamplona/crypto-kmp](https://github.com/vitorpamplona/crypto-kmp), and the primitives
+were renamed to `com.vitorpamplona.crypto.*` (`sha2`, `digest`, `mac`, `kdf`, `aes`, `chacha`,
+`curve25519`, `random`), with every import in quartz, the apps and quic-kmp rewritten instead of
+keeping the old package names. That reverses D1 and D3 below. Phases 1 and 3 are done that way:
+crypto-kmp 1.0.0 holds the code, quartz takes it as `api(libs.crypto)`, and quic-kmp 2.0.0 depends
+on it instead of quartz. `Hex` and `Log` stayed in quartz; NIP-44's `fastExpand`/`MessageKey`
+stayed in quartz as `nip44Encryption/crypto/Nip44MessageKey.kt`. Phase 2 (a public API shaped for
+quic's hot path) and Phase 4 remain open, now in crypto-kmp. The text below is the original plan.
+
+Follows [vitorpamplona/amethyst#4586](https://github.com/vitorpamplona/amethyst/pull/4586), which
+replaced Quartz's third-party native crypto with in-repo code.
 
 ## Why
 

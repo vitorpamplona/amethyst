@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import fr.acinq.secp256k1.Secp256k1
 
 /**

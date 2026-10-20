@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.mls.interop
 
+import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.quartz.mls.crypto.X25519
 import com.vitorpamplona.quartz.mls.framing.MlsMessage
 import com.vitorpamplona.quartz.mls.framing.WireFormat
 import com.vitorpamplona.quartz.mls.messages.GroupInfo

@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.prodbench
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.negentropy.fingerprint.FingerprintCalculator
 import com.vitorpamplona.negentropy.storage.PrefixSumStorageVector
 import com.vitorpamplona.negentropy.storage.StorageVector
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

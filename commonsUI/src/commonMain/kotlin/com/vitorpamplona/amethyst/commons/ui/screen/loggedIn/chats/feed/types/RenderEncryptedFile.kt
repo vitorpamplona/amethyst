@@ -43,10 +43,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioWithWavefo
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.aes.AES_GCM_NAME
 import com.vitorpamplona.quartz.nip17Dm.files.ChatMessageEncryptedFileHeaderEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.ciphers.AES_GCM_NAME
 import kotlinx.collections.immutable.persistentListOf
 
 @Composable

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
 
 /**
  * A [CordnBlobCipher] under a key the caller supplies: ChaCha20-Poly1305 with

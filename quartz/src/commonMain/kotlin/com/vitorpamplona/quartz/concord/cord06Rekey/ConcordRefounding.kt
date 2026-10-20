@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord06Rekey
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.HeldRoot
 import com.vitorpamplona.quartz.concord.cord04Roles.AuthorityCitation
@@ -36,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * The events a Refounding produces (CORD-06 §3): the [controlWraps] (the current
