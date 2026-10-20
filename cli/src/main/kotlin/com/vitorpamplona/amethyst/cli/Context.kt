@@ -75,6 +75,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayObserver
 import com.vitorpamplona.quartz.nip66RelayMonitor.reachability.RelayReachabilityStore
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +87,7 @@ import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Per-invocation wiring. Each CLI run constructs a Context, does its work,
@@ -419,8 +421,34 @@ class Context(
         (signer as? NostrSignerRemote)?.let {
             it.openSubscription()
             it.connect()
+            askToSwitchRelays(it)
         }
         prepared = true
+    }
+
+    /**
+     * NIP-46 asks clients to send `switch_relays` once connected, so a signer that moved can say so.
+     * amy runs once per command, so it asks at most once a [SWITCH_RELAYS_INTERVAL_SECONDS] and
+     * waits [SWITCH_RELAYS_TIMEOUT_MS]: a signer from before the method may never answer it. A
+     * refusal or no answer changes nothing; a new relay list is saved for the next run.
+     */
+    private suspend fun askToSwitchRelays(remote: NostrSignerRemote) {
+        val bunker = identity.bunker ?: return
+        val now = TimeUtils.now()
+        val checkedAt = bunker.relaysCheckedAt
+        if (checkedAt != null && now - checkedAt < SWITCH_RELAYS_INTERVAL_SECONDS) return
+
+        val moved =
+            try {
+                withTimeoutOrNull(SWITCH_RELAYS_TIMEOUT_MS) { remote.switchRelays() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("[nip46] remote signer did not take switch_relays: ${e.message}")
+                null
+            }
+        if (moved != null) System.err.println("[nip46] remote signer moved to ${moved.joinToString { it.url }}")
+        dataDir.updateBunkerRelays(remote.relays.map { it.url }, now)
     }
 
     /**
@@ -984,6 +1012,12 @@ class Context(
     }
 
     companion object {
+        /** How often a bunker account asks its signer `switch_relays`: once a day. */
+        private const val SWITCH_RELAYS_INTERVAL_SECONDS = 24 * 60 * 60L
+
+        /** How long that one question may hold up a command. */
+        private const val SWITCH_RELAYS_TIMEOUT_MS = 10_000L
+
         /** FDs reserved for everything that isn't a relay socket (store, jars, pipes, DNS). */
         private const val FD_RESERVE = 256L
 
