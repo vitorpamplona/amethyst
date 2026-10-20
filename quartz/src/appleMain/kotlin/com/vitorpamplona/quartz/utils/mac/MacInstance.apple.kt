@@ -27,6 +27,7 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.convert
 import kotlinx.cinterop.nativeHeap
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.rawValue
 import kotlinx.cinterop.usePinned
 import platform.CoreCrypto.CCHmacAlgorithm
 import platform.CoreCrypto.CCHmacContext
@@ -51,7 +52,7 @@ actual class MacInstance actual constructor(
     private val context: CPointer<CCHmacContext> = nativeHeap.alloc<CCHmacContext>().ptr
 
     @Suppress("unused")
-    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it) }
+    private val cleaner: Cleaner = createCleaner(context) { nativeHeap.free(it.rawValue) }
 
     private var ccAlgorithm: CCHmacAlgorithm = ccAlgorithmFor(algorithm)
     private var macLength: Int = macLengthFor(algorithm)
