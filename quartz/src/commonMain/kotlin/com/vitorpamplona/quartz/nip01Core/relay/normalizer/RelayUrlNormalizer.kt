@@ -346,15 +346,25 @@ class RelayUrlNormalizer {
          * `host` or `host:port` — letters, digits, `.`, `-`, `_`, plus at most one `:`
          * followed by digits only. Rejects addressable-event pointers (`31990:hex:dtag`),
          * bare scheme leftovers (`wss:`) and anything else that would otherwise be blindly
-         * prefixed with `wss://`.
+         * prefixed with `wss://`. A path starting with `//` is rejected too, as [fixWs] rejects
+         * it after a scheme: it is a broken scheme (`wss//relay.example.com`), and prefixing it
+         * built a url the parser itself refuses, so normalizing was not idempotent.
          */
         private fun isBareHostAndPath(url: String): Boolean {
-            if (url[0] == '[') return true // IPv6 literal: defer to the RFC 3986 parser
+            if (url[0] == '[') {
+                // IPv6 literal: the RFC 3986 parser checks the address, but the `//` path rule
+                // below still applies after the closing bracket.
+                val slash = url.indexOf('/', url.indexOf(']').coerceAtLeast(0))
+                return slash < 0 || slash + 1 >= url.length || url[slash + 1] != '/'
+            }
             var i = 0
             var portStart = -1
             while (i < url.length) {
                 val c = url[i]
-                if (c == '/') break
+                if (c == '/') {
+                    if (i + 1 < url.length && url[i + 1] == '/') return false
+                    break
+                }
                 if (c == ':') {
                     if (portStart >= 0) return false
                     portStart = i + 1
@@ -576,6 +586,13 @@ class RelayUrlNormalizer {
                 reject(url)
                 null
             }
+        }
+
+        /** Forgets every cached parse, so the next call runs the parser. For tests. */
+        internal fun clearCaches() {
+            normalizedUrls.evictAll()
+            rejectedUrls.evictAll()
+            RelayUrlInterner.Default.clear()
         }
 
         private fun reject(url: String) {

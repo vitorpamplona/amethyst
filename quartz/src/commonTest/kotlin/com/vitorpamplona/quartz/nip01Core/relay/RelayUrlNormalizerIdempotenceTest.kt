@@ -28,7 +28,8 @@ import kotlin.test.assertNull
 /**
  * A canonical url must normalize to itself. [RelayUrlNormalizer.normalizeOrNull] answers straight
  * from the interner when its input already is a canonical url, skipping the parser, which is only
- * right if running the parser on it would have returned it unchanged.
+ * right if running the parser on it would have returned it unchanged. The caches are cleared before
+ * the second parse: otherwise the shortcut under test would answer it.
  */
 class RelayUrlNormalizerIdempotenceTest {
     private val inputs =
@@ -56,6 +57,8 @@ class RelayUrlNormalizerIdempotenceTest {
             "wss://relay.example.com/?query=1",
             "wss://[2001:db8::1]:7777",
             "wss://[200:1234::1]/",
+            "[2001:db8::1]/path",
+            "[2001:db8::1]:7777",
             " wss://relay.example.com ",
             "wss:/relay.example.com",
             "wss//relay.example.com",
@@ -68,16 +71,18 @@ class RelayUrlNormalizerIdempotenceTest {
     fun aCanonicalUrlNormalizesToItself() {
         inputs.forEach { raw ->
             val canonical = RelayUrlNormalizer.normalizeOrNull(raw) ?: return@forEach
+            RelayUrlNormalizer.clearCaches()
             assertEquals(canonical, RelayUrlNormalizer.normalizeOrNull(canonical.url), "from $raw")
         }
     }
 
     @Test
-    fun theInternerShortcutNeverLetsALenientRepairPassAsAHint() {
-        // The lenient parser repairs this into a url the strict hint parser must still refuse,
-        // even once the repaired url is interned and the shortcut would find it.
-        val repaired = RelayUrlNormalizer.normalizeOrNull("wss//relay.example.com") ?: return
-
-        assertNull(RelayUrlNormalizer.normalizeHintOrNull(repaired.url))
+    fun aBrokenSchemeIsRejectedWithOrWithoutTheColon() {
+        // With the colon, fixWs refuses the `//` path; without it, the bare-host path must agree
+        // instead of building `wss://wss//relay.example.com`, a url the parser then refuses.
+        assertNull(RelayUrlNormalizer.normalizeOrNull("wss://wss//relay.example.com"))
+        assertNull(RelayUrlNormalizer.normalizeOrNull("wss//relay.example.com"))
+        assertNull(RelayUrlNormalizer.normalizeOrNull("relay.example.com//x"))
+        assertNull(RelayUrlNormalizer.normalizeOrNull("[2001:db8::1]//x"))
     }
 }
