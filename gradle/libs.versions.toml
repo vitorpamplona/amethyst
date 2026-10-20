@@ -78,7 +78,7 @@ mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.2.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
-quicKmp = "0.1.0"
+quicKmp = "1.0.0"
 # Navigation 3, the Compose Multiplatform build (Apache-2.0): Android, desktop and iOS. The
 # ViewModel decorator scopes each back-stack entry's ViewModels; match it to the lifecycle version.
 navigation3 = "1.1.2"
