@@ -7070,6 +7070,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Iz teh skupin ne prihaja nič. Amethyst poskuša znova.</string>
     <string name="cordn_groups_manage">Koordinatorji</string>
+    <string name="cordn_groups_menu_invitations">Povabila</string>
     <string name="cordn_groups_none">Ni še cordn skupin</string>
     <string name="cordn_groups_none_detail">Cordn skupina živi na enem koordinatorju, ki hrani njeno članstvo in posreduje sporočila, ne da bi kdaj videl, kaj kdo piše.</string>
     <string name="cordn_groups_start">Začni skupino</string>
