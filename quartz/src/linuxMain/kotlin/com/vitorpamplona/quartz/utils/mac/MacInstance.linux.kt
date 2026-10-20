@@ -18,46 +18,54 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.diggest
+package com.vitorpamplona.quartz.utils.mac
 
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.RIPEMD160
-import dev.whyoleg.cryptography.algorithms.SHA1
-import dev.whyoleg.cryptography.algorithms.SHA256
+import com.vitorpamplona.quartz.utils.sha2.Sha256Digest
+import com.vitorpamplona.quartz.utils.sha2.Sha512Digest
 
-actual class DigestInstance actual constructor(
+actual class MacInstance actual constructor(
     algorithm: String,
+    key: ByteArray,
 ) {
-    private val cryptoProvider = CryptographyProvider.Default
+    private var algorithm = algorithm
+    private var hmac = Hmac(digestForAlgorithm(algorithm), key)
 
-    private val hasher = cryptoProvider.get(digestForAlgorithm(algorithm)).hasher()
-    private val hashFunction = hasher.createHashFunction()
+    actual fun init(
+        key: ByteArray,
+        algorithm: String,
+    ) {
+        // Same algorithm: rekey in place, which skips reallocating the digests.
+        if (algorithm == this.algorithm) {
+            hmac.rekey(key)
+        } else {
+            hmac = Hmac(digestForAlgorithm(algorithm), key)
+            this.algorithm = algorithm
+        }
+    }
+
+    actual fun getMacLength(): Int = hmac.macSize
 
     actual fun update(array: ByteArray) {
-        hashFunction.update(array)
+        hmac.update(array)
     }
 
     actual fun update(byte: Byte) {
-        hashFunction.update(byteArrayOf(byte))
+        hmac.update(byte)
     }
 
-    actual fun digest(): ByteArray = hashFunction.hashToByteArray()
+    actual fun doFinal(): ByteArray = hmac.doFinal()
 
-    actual fun digest(input: ByteArray): ByteArray = hasher.hashBlocking(input)
+    actual fun doFinal(
+        output: ByteArray,
+        offset: Int,
+    ) {
+        hmac.doFinal(output, offset)
+    }
 
-    @OptIn(DelicateCryptographyApi::class)
-    private fun digestForAlgorithm(algorithmName: String) =
-        when (algorithmName) {
-            "SHA-256" -> SHA256
-
-            "SHA-1" -> SHA1
-
-            "ripemd160" -> RIPEMD160
-
-            // Adding this below as a reminder.
-            "keccak256" -> error("KECCAK-256 is not yet supported.")
-
-            else -> error("This message digest is not supported.")
+    private fun digestForAlgorithm(algorithm: String) =
+        when (algorithm) {
+            "HmacSHA256" -> Sha256Digest()
+            "HmacSHA512" -> Sha512Digest()
+            else -> error("Algorithm is not yet supported.")
         }
 }

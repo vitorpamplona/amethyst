@@ -21,47 +21,78 @@
 package com.vitorpamplona.quartz.utils.ciphers
 
 import com.vitorpamplona.quartz.utils.Log
-import dev.whyoleg.cryptography.CryptographyProvider
-import dev.whyoleg.cryptography.DelicateCryptographyApi
-import dev.whyoleg.cryptography.algorithms.AES
-import dev.whyoleg.cryptography.providers.apple.Apple
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.convert
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.refTo
+import kotlinx.cinterop.value
+import platform.CoreCrypto.CCCrypt
+import platform.CoreCrypto.CCOperation
+import platform.CoreCrypto.kCCAlgorithmAES
+import platform.CoreCrypto.kCCDecrypt
+import platform.CoreCrypto.kCCEncrypt
+import platform.CoreCrypto.kCCOptionPKCS7Padding
+import platform.CoreCrypto.kCCSuccess
+import platform.posix.size_tVar
 
+/** AES-CBC with PKCS#7 padding on CommonCrypto's CCCrypt (hardware AES). */
 actual class AESCBC actual constructor(
     actual val keyBytes: ByteArray,
     actual val iv: ByteArray,
 ) : NostrCipher {
-    private val cryptoProvider = CryptographyProvider.Apple
-    private val aesCbc = cryptoProvider.get(AES.CBC)
-
-    private val keyDecoder =
-        aesCbc
-            .keyDecoder()
-            .decodeFromByteArrayBlocking(format = AES.Key.Format.RAW, keyBytes)
-
-    private fun cipher() = keyDecoder.cipher()
-
     actual override fun name(): String = "aes-cbc"
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            encryptWithIvBlocking(iv, bytesToEncrypt)
-        }
+    actual override fun encrypt(bytesToEncrypt: ByteArray): ByteArray = crypt(kCCEncrypt, bytesToEncrypt)
 
-    @OptIn(DelicateCryptographyApi::class)
-    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray =
-        with(cipher()) {
-            decryptWithIvBlocking(iv, bytesToDecrypt)
+    actual override fun decrypt(bytesToDecrypt: ByteArray): ByteArray {
+        require(bytesToDecrypt.isNotEmpty() && bytesToDecrypt.size % 16 == 0) {
+            "AES-CBC ciphertext must be a non-empty multiple of 16 bytes, was ${bytesToDecrypt.size}"
         }
+        return crypt(kCCDecrypt, bytesToDecrypt)
+    }
 
-    @OptIn(DelicateCryptographyApi::class)
     actual override fun decryptOrNull(bytesToDecrypt: ByteArray): ByteArray? =
         try {
-            with(cipher()) {
-                decryptWithIvBlocking(iv, bytesToDecrypt)
-            }
-        } catch (e: Exception) {
+            decrypt(bytesToDecrypt)
+        } catch (e: IllegalArgumentException) {
             Log.w("AESCBC", "Failed to decrypt", e)
             null
         }
+
+    @OptIn(ExperimentalForeignApi::class)
+    private fun crypt(
+        operation: CCOperation,
+        input: ByteArray,
+    ): ByteArray {
+        require(keyBytes.size == 16 || keyBytes.size == 24 || keyBytes.size == 32) {
+            "AES key must be 16, 24 or 32 bytes, was ${keyBytes.size}"
+        }
+        // CCCrypt reads 16 IV bytes whatever the array holds.
+        require(iv.size == 16) { "AES-CBC IV must be 16 bytes, was ${iv.size}" }
+        // Padding adds at most one block.
+        val out = ByteArray(input.size + 16)
+        val written =
+            memScoped {
+                val moved = alloc<size_tVar>()
+                val status =
+                    CCCrypt(
+                        operation,
+                        kCCAlgorithmAES.convert(),
+                        kCCOptionPKCS7Padding.convert(),
+                        keyBytes.refTo(0),
+                        keyBytes.size.convert(),
+                        iv.refTo(0),
+                        if (input.isEmpty()) null else input.refTo(0),
+                        input.size.convert(),
+                        out.refTo(0),
+                        out.size.convert(),
+                        moved.ptr,
+                    )
+                require(status == kCCSuccess) { "AES-CBC failed: CCCrypt status $status" }
+                moved.value.toInt()
+            }
+        return out.copyOf(written)
+    }
 }

@@ -25,6 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
@@ -162,6 +163,22 @@ object AndroidNotePlatform : NotePlatform {
         onDialog = onDialog,
         accountViewModel = accountViewModel,
         thumbhash = thumbhash,
+    )
+
+    // Coil's animated decoder plays GIFs through the plain image loader on Android.
+    @Composable
+    override fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
+    ) = AsyncImage(
+        model = url,
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        modifier = modifier,
+        onError = { onError() },
     )
 
     @Composable

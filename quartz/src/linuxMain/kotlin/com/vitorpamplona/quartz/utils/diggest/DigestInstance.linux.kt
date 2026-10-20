@@ -18,48 +18,21 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.utils.mac
+package com.vitorpamplona.quartz.utils.diggest
 
-import io.github.andreypfau.kotlinx.crypto.HMac
-import io.github.andreypfau.kotlinx.crypto.Sha256
-import io.github.andreypfau.kotlinx.crypto.Sha512
-
-actual class MacInstance actual constructor(
+actual class DigestInstance actual constructor(
     algorithm: String,
-    key: ByteArray,
 ) {
-    private var nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+    private val digest = kotlinStreamingDigest(algorithm)
 
-    actual fun init(
-        key: ByteArray,
-        algorithm: String,
-    ) {
-        nativeHmac = HMac(digestForAlgorithm(algorithm), key)
+    actual fun update(array: ByteArray) = digest.update(array)
+
+    actual fun update(byte: Byte) = digest.update(byte)
+
+    actual fun digest(): ByteArray = digest.digest()
+
+    actual fun digest(input: ByteArray): ByteArray {
+        digest.update(input)
+        return digest.digest()
     }
-
-    actual fun getMacLength(): Int = nativeHmac.macSize
-
-    actual fun update(array: ByteArray) {
-        nativeHmac.update(array)
-    }
-
-    actual fun update(byte: Byte) {
-        nativeHmac.update(byte)
-    }
-
-    actual fun doFinal(): ByteArray = nativeHmac.digest()
-
-    actual fun doFinal(
-        output: ByteArray,
-        offset: Int,
-    ) {
-        nativeHmac.digest(output, offset)
-    }
-
-    private fun digestForAlgorithm(algorithm: String) =
-        when (algorithm) {
-            "HmacSHA256" -> Sha256()
-            "HmacSHA512" -> Sha512()
-            else -> error("Algorithm is not yet supported.")
-        }
 }

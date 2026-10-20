@@ -31,7 +31,6 @@ tracingPerfetto = "1.0.1"
 composeRuntimeAnnotation = "1.12.1"
 coreKtx = "1.19.1"
 datastore = "1.2.1"
-devWhyolegCryptography = "0.6.0"
 espressoCore = "3.7.0"
 firebaseBom = "34.19.0"
 fragmentKtx = "1.9.1"
@@ -205,7 +204,6 @@ composemediaplayer = { group = "io.github.kdroidfilter", name = "composemediapla
 composemediaplayer-audio = { group = "io.github.kdroidfilter", name = "composemediaplayer-audio", version.ref = "composemediaplayer" }
 jcodec = { group = "org.jcodec", name = "jcodec", version.ref = "jcodec" }
 jcodec-javase = { group = "org.jcodec", name = "jcodec-javase", version.ref = "jcodec" }
-dev-whyoleg-cryptography-provider-optimal = { module = "dev.whyoleg.cryptography:cryptography-provider-optimal", version.ref = "devWhyolegCryptography" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging" }
 jetbrains-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "jetbrainsCompose" }

@@ -43,11 +43,14 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.rememberFallbackUrlState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultProfileBanner
+import com.vitorpamplona.amethyst.commons.ui.note.platform.AnimatedImage
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableImageDialog
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -113,15 +116,29 @@ fun DrawBanner(
                 )
             }
 
-            AsyncImage(
-                model = bannerUrl.url,
-                contentDescription = bannerMeta?.alt ?: stringRes(id = Res.string.profile_image),
-                contentScale = ContentScale.Crop,
-                placeholder = if (hasPreviewHash) null else painterRes(Res.drawable.profile_banner, 1),
-                error = painterRes(Res.drawable.profile_banner, 1),
-                onError = { bannerUrl.onError() },
-                modifier = Modifier.matchParentSize(),
-            )
+            val loadingUrl = bannerUrl.url
+            if (loadingUrl != null && isAnimatedGifUrl(loadingUrl)) {
+                // A GIF banner plays like one: looping, silent, no controls. The image loader would
+                // only draw its first frame on desktop.
+                if (!hasPreviewHash) DefaultProfileBanner(Modifier.matchParentSize(), 1)
+                AnimatedImage(
+                    url = loadingUrl,
+                    contentDescription = bannerMeta?.alt ?: stringRes(id = Res.string.profile_image),
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize(),
+                    onError = { bannerUrl.onError() },
+                )
+            } else {
+                AsyncImage(
+                    model = loadingUrl,
+                    contentDescription = bannerMeta?.alt ?: stringRes(id = Res.string.profile_image),
+                    contentScale = ContentScale.Crop,
+                    placeholder = if (hasPreviewHash) null else painterRes(Res.drawable.profile_banner, 1),
+                    error = painterRes(Res.drawable.profile_banner, 1),
+                    onError = { bannerUrl.onError() },
+                    modifier = Modifier.matchParentSize(),
+                )
+            }
         }
 
         if (zoomImageDialogOpen) {

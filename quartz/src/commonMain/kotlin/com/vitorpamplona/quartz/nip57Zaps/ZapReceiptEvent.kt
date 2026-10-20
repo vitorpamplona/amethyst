@@ -51,8 +51,8 @@ class ZapReceiptEvent(
     AddressHintProvider,
     PubKeyHintProvider,
     SearchableEvent {
-    // The zap comment lives in the embedded request, which init{} already parses
-    // into [zapRequest] — so indexing it adds no extra parse cost.
+    // The zap comment lives in the embedded request, which [zapRequest] parses once and
+    // keeps — so indexing it adds no extra parse cost.
     override fun indexableContent() = zapRequest?.content.orEmpty()
 
     // The read path: the same fields indexableContent() joins, without the join.
@@ -87,10 +87,19 @@ class ZapReceiptEvent(
 
     override fun linkedAddressIds() = zappedAddresses()
 
-    // This event is also kept in LocalCache (same object)
-    @kotlinx.serialization.Transient
-    @kotlin.jvm.Transient
-    val zapRequest: ZapRequestEvent?
+    /**
+     * The embedded zap request, parsed from the `description` tag on first use and kept
+     * (LocalCache stores this same object as the request's note).
+     *
+     * Lazy because parsing it is a second full `fromJson`, and a receipt is constructed for
+     * every relay delivery: duplicates from other relays and receipts that fail verification
+     * are dropped without ever needing it. `EventCache.consume` reads it right after
+     * verification, on the relay thread, before the receipt goes into a Note, so readers of a
+     * cached receipt (including the UI) get it already parsed. Keep the default synchronized
+     * mode: the instance must be the same for every thread.
+     */
+    @delegate:kotlin.jvm.Transient
+    val zapRequest: ZapRequestEvent? by lazy { containedPost() }
 
     // Keeps this as a field because it's a heavier function used everywhere.
     val amount by lazy {
@@ -109,10 +118,6 @@ class ZapReceiptEvent(
             Log.w("ZapReceiptEvent", "Failed to Parse Contained Post ${description()} in event $id", e)
             null
         }
-
-    init {
-        zapRequest = containedPost()
-    }
 
     override fun zappedPost() = tags.mapNotNull(ETag::parseId)
 

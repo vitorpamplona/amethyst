@@ -169,9 +169,6 @@ kotlin {
 
                 // RFC 9420 MLS engine under Marmot and cordn (vitorpamplona/mls-kmp)
                 api(libs.mls.kmp)
-
-                implementation("io.github.andreypfau:kotlinx-crypto-hmac:0.0.4")
-                implementation("io.github.andreypfau:kotlinx-crypto-sha2:0.0.4")
             }
         }
 
@@ -299,10 +296,6 @@ kotlin {
         val nativeMain =
             create("nativeMain") {
                 dependsOn(commonMain.get())
-                dependencies {
-                    // cryptography-kotlin: the AES ciphers and digests of every native target.
-                    implementation(libs.dev.whyoleg.cryptography.provider.optimal)
-                }
             }
 
         val nativeTest =

@@ -21,10 +21,10 @@
 package com.vitorpamplona.quartz
 
 import com.vitorpamplona.quartz.utils.GZip
-import dev.whyoleg.cryptography.CryptographyProviderApi
-import dev.whyoleg.cryptography.providers.base.toByteArray
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.usePinned
 import kotlinx.io.files.FileNotFoundException
 import platform.Foundation.NSData
 import platform.Foundation.NSString
@@ -32,6 +32,7 @@ import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.dataWithContentsOfFile
 import platform.Foundation.stringWithContentsOfFile
 import platform.posix.getenv
+import platform.posix.memcpy
 
 actual class TestResourceLoader {
     actual fun loadDecompressString(file: String): String {
@@ -46,10 +47,19 @@ actual class TestResourceLoader {
         return NSString.stringWithContentsOfFile(filePath, encoding = NSUTF8StringEncoding, error = null) as String
     }
 
-    @OptIn(ExperimentalForeignApi::class, CryptographyProviderApi::class)
+    @OptIn(ExperimentalForeignApi::class)
     fun loadFileData(file: String): ByteArray {
         val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
         val filePath = "$resourceDir/$file"
         return NSData.dataWithContentsOfFile(filePath)?.toByteArray() ?: throw FileNotFoundException("Resource $file was not found.")
     }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun NSData.toByteArray(): ByteArray {
+    val out = ByteArray(length.toInt())
+    if (out.isNotEmpty()) {
+        out.usePinned { memcpy(it.addressOf(0), bytes, length) }
+    }
+    return out
 }
