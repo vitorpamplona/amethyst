@@ -5,20 +5,20 @@ use crate::model::{D, Event, EventCow, EventRef, R, View, digest_fields, e};
 use sha2::Sha256;
 use std::hint::black_box;
 
-/// One input line. Every line is stored with `SIMDJSON_PADDING` (64) zero bytes after it in the
-/// same allocation (`bytes-padded`); parsers that need no padding just never read past `b`.
+/// One input line: what a WebSocket text frame is in Rust, a `&str` (tungstenite
+/// `Message::Text(Utf8Bytes)`), already UTF-8-validated by the socket. The harness builds it
+/// (as a leaked `String`, so results can borrow it for `'static`) before timing; every parser
+/// starts from it, and any copy it needs on top is part of the timed parse.
 #[derive(Clone, Copy)]
 pub struct Line {
-    pub b: &'static [u8],
+    pub s: &'static str,
 }
 
 impl Line {
-    /// The line as `&str`. Validated once at load, so this costs nothing; the
-    /// `std-from_utf8` baseline row shows what validating it would cost.
+    /// The frame's bytes, free (`str::as_bytes`), for parsers that take a byte slice.
     #[inline(always)]
-    pub fn s(&self) -> &'static str {
-        // SAFETY: every line passed `std::str::from_utf8` when the corpus was loaded.
-        unsafe { std::str::from_utf8_unchecked(self.b) }
+    pub fn b(&self) -> &'static [u8] {
+        self.s.as_bytes()
     }
 }
 
@@ -36,6 +36,13 @@ pub trait Parser {
     fn fold(&mut self, l: Line) -> R<u64>;
     /// Parse one line and feed the decoded event into the digest.
     fn digest(&mut self, l: Line, h: &mut Sha256) -> R<()>;
+    /// Untimed: parse every line once more, keep every result alive, and return the live heap
+    /// bytes they hold per event. `None` when the results borrow a reused parser buffer or tape,
+    /// so they cannot all be kept at once.
+    fn retained(&mut self, lines: &[Line]) -> Option<f64> {
+        let _ = lines;
+        None
+    }
     /// One timed round over the workload; monomorphized per parser, so `fold` inlines.
     #[inline(never)]
     fn round(&mut self, lines: &[Line]) -> u64 {
@@ -52,14 +59,46 @@ pub struct Entry {
     pub make: fn() -> Box<dyn Parser>,
 }
 
+/// Keeps the result of parsing every line and returns the live heap bytes per event: the
+/// allocator's (allocated - freed) before vs after, with the `Vec` of results allocated first
+/// so its own buffer is not counted. Temporaries a parse frees again cancel out.
+fn retain_with<T>(lines: &[Line], mut parse: impl FnMut(Line) -> R<T>) -> Option<f64> {
+    let mut kept: Vec<T> = Vec::with_capacity(lines.len());
+    let before = crate::alloc::live();
+    for &l in lines {
+        kept.push(parse(l).ok()?);
+    }
+    let after = crate::alloc::live();
+    black_box(&kept);
+    drop(kept);
+    Some(after.saturating_sub(before) as f64 / lines.len().max(1) as f64)
+}
+
 /// Declares a parser: its state, and the expression that turns `l: Line` into a `View`.
+/// A leading `keep` also measures retained heap: only for results that own their data or
+/// borrow just the input line (which outlives them), never a reused parser buffer.
 macro_rules! parser {
+    (keep $name:ident { $($f:ident : $t:ty = $init:expr),* $(,)? }, |$s:ident, $l:ident| $body:expr) => {
+        parser!(@impl $name { $($f : $t = $init),* }, |$s, $l| $body,
+            #[allow(unused_variables)]
+            fn retained(&mut self, lines: &[Line]) -> Option<f64> {
+                retain_with(lines, |$l: Line| -> R<_> {
+                    let $s = &mut *self;
+                    Ok($body)
+                })
+            }
+        );
+    };
     ($name:ident { $($f:ident : $t:ty = $init:expr),* $(,)? }, |$s:ident, $l:ident| $body:expr) => {
+        parser!(@impl $name { $($f : $t = $init),* }, |$s, $l| $body,);
+    };
+    (@impl $name:ident { $($f:ident : $t:ty = $init:expr),* }, |$s:ident, $l:ident| $body:expr, $($extra:tt)*) => {
         pub struct $name { $($f: $t),* }
         impl $name {
             fn new() -> Self { Self { $($f: $init),* } }
         }
         impl Parser for $name {
+            $($extra)*
             #[inline(always)]
             #[allow(unused_variables)]
             fn fold(&mut self, $l: Line) -> R<u64> {
@@ -77,31 +116,25 @@ macro_rules! parser {
     };
 }
 
-/// Copies the line into the parser's scratch buffer (for parsers that destroy their input).
+/// Copies the frame into the parser's reused scratch buffer (simd-json unescapes in place, so
+/// it needs a mutable copy of the `&str`); timed, as part of the parse.
 #[inline(always)]
 fn copy_into(scratch: &mut Vec<u8>, l: Line) -> &mut [u8] {
     scratch.clear();
-    scratch.extend_from_slice(l.b);
+    scratch.extend_from_slice(l.b());
     scratch.as_mut_slice()
 }
 
 // ---------------------------------------------------------------- serde_json
-parser!(SerdeJsonTyped {}, |s, l| serde_json::from_slice::<Event>(l.b)
-    .map_err(e)?);
-parser!(SerdeJsonTypedStr {}, |s, l| serde_json::from_str::<Event>(l.s())
-    .map_err(e)?);
-parser!(SerdeJsonBorrowed {}, |s, l| serde_json::from_slice::<EventCow>(l.b)
-    .map_err(e)?);
-parser!(SerdeJsonValue {}, |s, l| D(
-    serde_json::from_slice::<serde_json::Value>(l.b).map_err(e)?
+parser!(keep SerdeJsonTyped {}, |s, l| serde_json::from_str::<Event>(l.s).map_err(e)?);
+parser!(keep SerdeJsonBorrowed {}, |s, l| serde_json::from_str::<EventCow>(l.s).map_err(e)?);
+parser!(keep SerdeJsonValue {}, |s, l| D(serde_json::from_str::<serde_json::Value>(l.s).map_err(e)?));
+parser!(keep SerdeJsonBorrowValue {}, |s, l| D(
+    serde_json::from_str::<serde_json_borrow::Value>(l.s).map_err(e)?
 ));
-parser!(SerdeJsonBorrowValue {}, |s, l| D(serde_json::from_slice::<
-    serde_json_borrow::Value,
->(l.b)
-.map_err(e)?));
 
 // ---------------------------------------------------------------- simd-json
-parser!(SimdJsonTyped { scratch: Vec<u8> = Vec::new(), buf: simd_json::Buffers = simd_json::Buffers::default() }, |s, l| {
+parser!(keep SimdJsonTyped { scratch: Vec<u8> = Vec::new(), buf: simd_json::Buffers = simd_json::Buffers::default() }, |s, l| {
     let input = copy_into(&mut s.scratch, l);
     simd_json::serde::from_slice_with_buffers::<Event>(input, &mut s.buf).map_err(e)?
 });
@@ -113,7 +146,7 @@ parser!(SimdJsonBorrowedValue { scratch: Vec<u8> = Vec::new(), buf: simd_json::B
     let input = copy_into(&mut s.scratch, l);
     D(simd_json::to_borrowed_value_with_buffers(input, &mut s.buf).map_err(e)?)
 });
-parser!(SimdJsonOwnedValue { scratch: Vec<u8> = Vec::new(), buf: simd_json::Buffers = simd_json::Buffers::default() }, |s, l| {
+parser!(keep SimdJsonOwnedValue { scratch: Vec<u8> = Vec::new(), buf: simd_json::Buffers = simd_json::Buffers::default() }, |s, l| {
     let input = copy_into(&mut s.scratch, l);
     D(simd_json::to_owned_value_with_buffers(input, &mut s.buf).map_err(e)?)
 });
@@ -198,7 +231,7 @@ impl Parser for SimdJsonTape {
 }
 
 // ---------------------------------------------------------------- simd-json-derive
-parser!(SimdJsonDeriveTyped { scratch: Vec<u8> = Vec::new(), buf: sjd::Buffers = sjd::new_buffers() }, |s, l| {
+parser!(keep SimdJsonDeriveTyped { scratch: Vec<u8> = Vec::new(), buf: sjd::Buffers = sjd::new_buffers() }, |s, l| {
     let input = copy_into(&mut s.scratch, l);
     sjd::parse_owned(input, &mut s.buf)?
 });
@@ -208,20 +241,17 @@ parser!(SimdJsonDeriveBorrowed { scratch: Vec<u8> = Vec::new(), buf: sjd::Buffer
 });
 
 // ---------------------------------------------------------------- sonic-rs
-parser!(SonicTyped {}, |s, l| sonic_rs::from_slice::<Event>(l.b).map_err(e)?);
-parser!(SonicBorrowed {}, |s, l| sonic_rs::from_slice::<EventCow>(l.b)
-    .map_err(e)?);
-parser!(SonicValue {}, |s, l| D(
-    sonic_rs::from_slice::<sonic_rs::Value>(l.b).map_err(e)?
-));
-parser!(SonicLazy {}, |s, l| sonic_lazy(l.b)?);
+parser!(keep SonicTyped {}, |s, l| sonic_rs::from_str::<Event>(l.s).map_err(e)?);
+parser!(keep SonicBorrowed {}, |s, l| sonic_rs::from_str::<EventCow>(l.s).map_err(e)?);
+parser!(keep SonicValue {}, |s, l| D(sonic_rs::from_str::<sonic_rs::Value>(l.s).map_err(e)?));
+parser!(keep SonicLazy {}, |s, l| sonic_lazy(l.s)?);
 
 /// sonic-rs lazy API: iterate the object's raw fields and materialize an owned `Event`.
 #[inline(always)]
-fn sonic_lazy(b: &[u8]) -> R<Event> {
+fn sonic_lazy(s: &str) -> R<Event> {
     use sonic_rs::JsonValueTrait;
     let mut ev = Event::default();
-    for item in sonic_rs::to_object_iter(b) {
+    for item in sonic_rs::to_object_iter(s) {
         let (k, v) = item.map_err(e)?;
         let str_of = |v: &sonic_rs::LazyValue| v.as_str().map(str::to_owned).ok_or("expected string");
         match &*k {
@@ -247,15 +277,13 @@ fn sonic_lazy(b: &[u8]) -> R<Event> {
 }
 
 // ---------------------------------------------------------------- jiter
-parser!(JiterValue {}, |s, l| D(jiter::JsonValue::parse(l.b, false).map_err(e)?));
-parser!(JiterValueScratch { scratch: jiter::JsonValueScratch<'static> = jiter::JsonValueScratch::new() }, |s, l| D(
-    s.scratch.parse(l.b, false, jiter::PartialMode::Off).map_err(e)?
+parser!(keep JiterValue {}, |s, l| D(jiter::JsonValue::parse(l.b(), false).map_err(e)?));
+parser!(keep JiterValueScratch { scratch: jiter::JsonValueScratch<'static> = jiter::JsonValueScratch::new() }, |s, l| D(
+    s.scratch.parse(l.b(), false, jiter::PartialMode::Off).map_err(e)?
 ));
-parser!(JiterTyped {}, |s, l| jiter_event(l.b).map_err(e)?);
-parser!(JiterSerdeTyped {}, |s, l| jiter::serde::from_slice::<Event>(l.b)
-    .map_err(e)?);
-parser!(JiterSerdeBorrowed {}, |s, l| jiter::serde::from_slice::<EventCow>(l.b)
-    .map_err(e)?);
+parser!(keep JiterTyped {}, |s, l| jiter_event(l.b()).map_err(e)?);
+parser!(keep JiterSerdeTyped {}, |s, l| jiter::serde::from_str::<Event>(l.s).map_err(e)?);
+parser!(keep JiterSerdeBorrowed {}, |s, l| jiter::serde::from_str::<EventCow>(l.s).map_err(e)?);
 
 #[derive(Clone, Copy)]
 enum Field {
@@ -335,35 +363,32 @@ fn jiter_event(b: &[u8]) -> R<Event> {
 }
 
 // ---------------------------------------------------------------- json (json-rust)
-parser!(JsonDom {}, |s, l| D(json::parse(l.s()).map_err(e)?));
+parser!(keep JsonDom {}, |s, l| D(json::parse(l.s).map_err(e)?));
 
 // ---------------------------------------------------------------- miniserde / nanoserde / tinyjson
-parser!(MiniserdeTyped {}, |s, l| miniserde::json::from_str::<Event>(l.s())
+parser!(keep MiniserdeTyped {}, |s, l| miniserde::json::from_str::<Event>(l.s)
     .map_err(e)?);
-parser!(NanoserdeTyped {}, |s, l| {
-    <Event as nanoserde::DeJson>::deserialize_json(l.s()).map_err(e)?
+parser!(keep NanoserdeTyped {}, |s, l| {
+    <Event as nanoserde::DeJson>::deserialize_json(l.s).map_err(e)?
 });
-parser!(TinyjsonDom {}, |s, l| D(l
-    .s()
-    .parse::<tinyjson::JsonValue>()
-    .map_err(e)?));
+parser!(keep TinyjsonDom {}, |s, l| D(l.s.parse::<tinyjson::JsonValue>().map_err(e)?));
 
 // ---------------------------------------------------------------- hifijson
-parser!(HifijsonValue {}, |s, l| {
+parser!(keep HifijsonValue {}, |s, l| {
     use hifijson::token::Lex;
-    let mut lexer = hifijson::SliceLexer::new(l.b);
+    let mut lexer = hifijson::SliceLexer::new(l.b());
     let v: HifiValue = lexer
         .exactly_one(Lex::ws_peek, hifijson::value::parse_unbounded)
         .map_err(e)?;
     D(v)
 });
-parser!(HifijsonSerdeTyped {}, |s, l| {
-    let mut lexer = hifijson::SliceLexer::new(l.b);
+parser!(keep HifijsonSerdeTyped {}, |s, l| {
+    let mut lexer = hifijson::SliceLexer::new(l.b());
     hifijson::serde::exactly_one::<Event, _>(&mut lexer).map_err(e)?
 });
 
 // ---------------------------------------------------------------- struson
-parser!(StrusonTyped {}, |s, l| struson_event(l.b).map_err(e)?);
+parser!(keep StrusonTyped {}, |s, l| struson_event(l.b()).map_err(e)?);
 
 /// struson's streaming reader, hand-written into an owned `Event`.
 #[inline(always)]
@@ -403,12 +428,12 @@ fn struson_event(b: &[u8]) -> Result<Event, Box<dyn std::error::Error>> {
 
 // ---------------------------------------------------------------- simdjson-rust (C++ simdjson)
 parser!(
-    SimdjsonRustTyped {
+    keep SimdjsonRustTyped {
         p: simdjson_rust::dom::Parser = simdjson_rust::dom::Parser::default()
     },
     |s, l| {
-        // SAFETY: every line is stored with SIMDJSON_PADDING zero bytes after it.
-        let tape = unsafe { s.p.parse_bytes_with_padding(l.b) }.map_err(e)?;
+        // parse_str copies the frame into the parser's reused padded buffer (timed).
+        let tape = s.p.parse_str(l.s).map_err(e)?;
         simdjson_rust::serde::from_tape::<Event>(tape).map_err(e)?
     }
 );
@@ -417,8 +442,7 @@ parser!(
         p: simdjson_rust::dom::Parser = simdjson_rust::dom::Parser::default()
     },
     |s, l| {
-        // SAFETY: as above.
-        let tape = unsafe { s.p.parse_bytes_with_padding(l.b) }.map_err(e)?;
+        let tape = s.p.parse_str(l.s).map_err(e)?;
         simdjson_rust::serde::from_tape::<EventRef>(tape).map_err(e)?
     }
 );
@@ -427,8 +451,7 @@ parser!(
         p: simdjson_rust::dom::Parser = simdjson_rust::dom::Parser::default()
     },
     |s, l| {
-        // SAFETY: as above.
-        let mut tape = unsafe { s.p.parse_bytes_with_padding(l.b) }.map_err(e)?;
+        let mut tape = s.p.parse_str(l.s).map_err(e)?;
         D(tape.parse_value().map_err(e)?)
     }
 );
@@ -439,7 +462,7 @@ pub struct Utf8Baseline;
 impl Parser for Utf8Baseline {
     #[inline(always)]
     fn fold(&mut self, l: Line) -> R<u64> {
-        Ok(std::str::from_utf8(l.b).map_err(e)?.len() as u64)
+        Ok(std::str::from_utf8(l.b()).map_err(e)?.len() as u64)
     }
     fn digest(&mut self, _: Line, _: &mut Sha256) -> R<()> {
         Err("baseline: not a parser".into())
@@ -467,7 +490,7 @@ impl Utf8Baseline {
     }
 }
 
-const COPY: &str = "simd-json unescapes in place, so each line is first copied into a reused scratch buffer (timed); Buffers reused across lines";
+const COPY_TYPED: &str = "simd_json::serde::from_slice_with_buffers into owned Event. simd-json unescapes in place, so the &str frame is first copied into a reused scratch Vec<u8> (timed); Buffers reused across lines";
 
 pub fn all() -> Vec<Entry> {
     vec![
@@ -476,40 +499,32 @@ pub fn all() -> Vec<Entry> {
             "serde_json-typed",
             "serde_json",
             "typed",
-            "bytes",
-            "serde_json::from_slice into owned Event"
-        ),
-        entry!(
-            SerdeJsonTypedStr,
-            "serde_json-typed-str",
-            "serde_json",
-            "typed",
             "string",
-            "serde_json::from_str (&str input skips serde_json's UTF-8 check of string contents)"
+            "serde_json::from_str into owned Event (a &str input skips serde_json's UTF-8 check of string contents, which from_slice would repeat)"
         ),
         entry!(
             SerdeJsonBorrowed,
             "serde_json-borrowed",
             "serde_json",
             "borrowed",
-            "bytes",
-            "Cow<'a, str> fields with #[serde(borrow)]: borrowed when the string has no escape, owned otherwise"
+            "string",
+            "serde_json::from_str into Cow<'a, str> fields with #[serde(borrow)]: borrowed from the frame when the string has no escape, owned otherwise. Borrows only the input, so retained heap is measured with the frames kept alongside (counts the owned Cows + tag Vecs only)"
         ),
         entry!(
             SerdeJsonValue,
             "serde_json-value",
             "serde_json",
             "dom",
-            "bytes",
-            "serde_json::Value (BTreeMap objects)"
+            "string",
+            "serde_json::from_str::<serde_json::Value> (BTreeMap objects)"
         ),
         entry!(
             SerdeJsonBorrowValue,
             "serde_json_borrow-value",
             "serde_json_borrow",
             "dom",
-            "bytes",
-            "serde_json_borrow::Value via serde_json::from_slice: Cow strings, objects as Vec of pairs"
+            "string",
+            "serde_json::from_str::<serde_json_borrow::Value>: Cow strings into the frame, objects as Vec of pairs. Borrows only the input, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             SimdJsonTyped,
@@ -517,7 +532,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json",
             "typed",
             "bytes-copy",
-            COPY
+            COPY_TYPED
         ),
         entry!(
             SimdJsonBorrowedStruct,
@@ -525,7 +540,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json",
             "borrowed",
             "bytes-copy",
-            "serde into a struct of &str pointing into the in-place-unescaped copy; same copy as simd_json-typed"
+            "simd_json::serde::from_slice_with_buffers into a struct of &str pointing into the in-place-unescaped scratch copy (copy timed, as simd_json-typed); results borrow the reused scratch, so no retained heap"
         ),
         entry!(
             SimdJsonBorrowedValue,
@@ -533,7 +548,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json",
             "dom",
             "bytes-copy",
-            "simd_json::BorrowedValue (Cow strings into the scratch copy)"
+            "simd_json::to_borrowed_value_with_buffers: BorrowedValue with Cow strings into the reused scratch copy (copy timed); borrows the scratch, so no retained heap"
         ),
         entry!(
             SimdJsonOwnedValue,
@@ -541,7 +556,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json",
             "dom",
             "bytes-copy",
-            "simd_json::OwnedValue"
+            "simd_json::to_owned_value_with_buffers: OwnedValue (frame copied into a reused scratch buffer first, timed)"
         ),
         entry!(
             SimdJsonTape,
@@ -549,7 +564,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json",
             "dom",
             "bytes-copy",
-            "simd_json::fill_tape into a reused Tape, read through tape::Value"
+            "simd_json::fill_tape into a reused Tape, read through tape::Value (frame copied into a reused scratch buffer first, timed); the tape is reused, so no retained heap"
         ),
         entry!(
             SimdJsonDeriveTyped,
@@ -557,7 +572,7 @@ pub fn all() -> Vec<Entry> {
             "simd-json-derive",
             "typed",
             "bytes-copy",
-            "simd-json-derive (no serde) into owned Event; runs on simd-json 0.17.3, which simd-json-derive 0.18 pins"
+            "simd-json-derive (no serde) from_slice_with_buffers into owned Event, frame copied into a reused scratch buffer first (timed); runs on simd-json 0.17.3, which simd-json-derive 0.18 pins"
         ),
         entry!(
             SimdJsonDeriveBorrowed,
@@ -565,79 +580,79 @@ pub fn all() -> Vec<Entry> {
             "simd-json-derive",
             "borrowed",
             "bytes-copy",
-            "simd-json-derive into a struct of &str; runs on simd-json 0.17.3"
+            "simd-json-derive into a struct of &str into the reused scratch copy (copy timed); runs on simd-json 0.17.3; borrows the scratch, so no retained heap"
         ),
         entry!(
             SonicTyped,
             "sonic_rs-typed",
             "sonic-rs",
             "typed",
-            "bytes",
-            "sonic_rs::from_slice into owned Event"
+            "string",
+            "sonic_rs::from_str into owned Event (&str input: no UTF-8 re-check, which from_slice would add)"
         ),
         entry!(
             SonicBorrowed,
             "sonic_rs-borrowed",
             "sonic-rs",
             "borrowed",
-            "bytes",
-            "Cow<'a, str> fields with #[serde(borrow)]"
+            "string",
+            "sonic_rs::from_str into Cow<'a, str> fields with #[serde(borrow)]. Borrows only the input, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             SonicValue,
             "sonic_rs-value",
             "sonic-rs",
             "dom",
-            "bytes",
-            "sonic_rs::Value"
+            "string",
+            "sonic_rs::from_str::<sonic_rs::Value>"
         ),
         entry!(
             SonicLazy,
             "sonic_rs-lazy",
             "sonic-rs",
             "typed",
-            "bytes",
-            "lazy API: to_object_iter + LazyValue::as_str/into_array_iter, materialized into owned Event"
+            "string",
+            "lazy API on the &str: to_object_iter + LazyValue::as_str/into_array_iter, materialized into owned Event"
         ),
         entry!(
             JiterValue,
             "jiter-value",
             "jiter",
             "dom",
-            "bytes",
-            "jiter::JsonValue::parse (Cow strings, Arc'd arrays/objects)"
+            "string",
+            "jiter::JsonValue::parse(s.as_bytes()) (Cow strings into the frame, Arc'd arrays/objects; jiter takes bytes only and validates string contents itself). Borrows only the input, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             JiterValueScratch,
             "jiter-value-scratch",
             "jiter",
             "dom",
-            "bytes",
-            "JsonValueScratch reused across lines (parse stacks and string tape kept)"
+            "string",
+            "JsonValueScratch::parse(s.as_bytes()) reused across lines (parse stacks and string tape kept); the value borrows only the frame, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             JiterTyped,
             "jiter-typed",
             "jiter",
             "typed",
-            "bytes",
-            "hand-written loop over jiter's pull API (Jiter::next_object/next_str/...)"
+            "string",
+            "hand-written loop over jiter's pull API (Jiter::new(s.as_bytes()), next_object/next_str/...) into owned Event"
         ),
         entry!(
             JiterSerdeTyped,
             "jiter-serde-typed",
             "jiter",
             "typed",
-            "bytes",
-            "jiter::serde::from_slice into owned Event"
+            "string",
+            "jiter::serde::from_str into owned Event (from_str is from_slice(s.as_bytes()))"
         ),
         entry!(
             JiterSerdeBorrowed,
             "jiter-serde-borrowed",
             "jiter",
             "borrowed",
-            "bytes",
-            "jiter::serde::from_slice into Cow fields"
+            "string",
+            "jiter::serde::from_str into Cow fields. Borrows only the input, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             JsonDom,
@@ -645,7 +660,7 @@ pub fn all() -> Vec<Entry> {
             "json",
             "dom",
             "string",
-            "json::parse (json-rust JsonValue)"
+            "json::parse(&str) (json-rust JsonValue)"
         ),
         entry!(
             MiniserdeTyped,
@@ -661,7 +676,7 @@ pub fn all() -> Vec<Entry> {
             "nanoserde",
             "typed",
             "string",
-            "nanoserde DeJson::deserialize_json into owned Event"
+            "nanoserde DeJson::deserialize_json(&str) into owned Event"
         ),
         entry!(
             TinyjsonDom,
@@ -669,55 +684,55 @@ pub fn all() -> Vec<Entry> {
             "tinyjson",
             "dom",
             "string",
-            "tinyjson::JsonValue (numbers are f64; exact for NIP-01 integers < 2^53)"
+            "str::parse::<tinyjson::JsonValue> (numbers are f64; exact for NIP-01 integers < 2^53)"
         ),
         entry!(
             HifijsonValue,
             "hifijson-value",
             "hifijson",
             "dom",
-            "bytes",
-            "hifijson value::parse_unbounded on a SliceLexer (numbers kept as text, Cow strings)"
+            "string",
+            "hifijson value::parse_unbounded on SliceLexer::new(s.as_bytes()) (numbers kept as text, Cow strings into the frame). Borrows only the input, so retained heap is measured with the frames kept alongside"
         ),
         entry!(
             HifijsonSerdeTyped,
             "hifijson-serde-typed",
             "hifijson",
             "typed",
-            "bytes",
-            "hifijson::serde::exactly_one into owned Event"
+            "string",
+            "hifijson::serde::exactly_one on SliceLexer::new(s.as_bytes()) into owned Event"
         ),
         entry!(
             StrusonTyped,
             "struson-typed",
             "struson",
             "typed",
-            "bytes",
-            "hand-written loop over struson's JsonStreamReader (a Read over the slice)"
+            "string",
+            "hand-written loop over struson's JsonStreamReader over s.as_bytes() (a Read over the slice) into owned Event"
         ),
         entry!(
             SimdjsonRustTyped,
             "simdjson_rust-typed",
             "simdjson-rust",
             "typed",
-            "bytes-padded",
-            "C++ simdjson DOM (reused parser) + the crate's serde tape deserializer into owned Event; C++ allocations are not counted"
+            "bytes-copy",
+            "dom::Parser::parse_str (copies the frame into the parser's reused padded buffer, timed) + the crate's serde tape deserializer into owned Event; C++ allocations are not counted"
         ),
         entry!(
             SimdjsonRustBorrowed,
             "simdjson_rust-borrowed",
             "simdjson-rust",
             "borrowed",
-            "bytes-padded",
-            "as simdjson_rust-typed, into a struct of &str pointing into simdjson's string buffer"
+            "bytes-copy",
+            "as simdjson_rust-typed, into a struct of &str pointing into simdjson's reused string buffer, so no retained heap"
         ),
         entry!(
             SimdjsonRustDom,
             "simdjson_rust-dom",
             "simdjson-rust",
             "dom",
-            "bytes-padded",
-            "C++ simdjson DOM materialized as simdjson_rust::tape::Value (Vec-backed, &str strings)"
+            "bytes-copy",
+            "parse_str (padded copy timed), materialized as simdjson_rust::tape::Value (Vec-backed, &str into the reused string buffer, so no retained heap)"
         ),
         entry!(
             Utf8Baseline,
@@ -725,7 +740,7 @@ pub fn all() -> Vec<Entry> {
             "std",
             "baseline",
             "bytes",
-            "std::str::from_utf8: the cost of turning the byte input into the &str the string-input rows read"
+            "std::str::from_utf8 over the frame's bytes: the UTF-8 validation the WebSocket client already paid to hand over a &str (tungstenite Message::Text); no parser row pays it again"
         ),
     ]
 }

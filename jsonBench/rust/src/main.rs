@@ -19,7 +19,6 @@ mod crates {
     include!(concat!(env!("OUT_DIR"), "/crates.rs"));
 }
 
-const PADDING: usize = 64; // simdjson's SIMDJSON_PADDING
 const MAX_ROUNDS: usize = 10_000;
 
 struct Args {
@@ -86,8 +85,9 @@ fn parse_args() -> Args {
     a
 }
 
-/// Loads a workload: every line UTF-8 checked, stored with 64 zero bytes after it, leaked so
-/// parsers can borrow it for `'static` (a few tens of MB for the whole run).
+/// Loads a workload as WebSocket text frames: every line becomes a `String` (UTF-8 validated
+/// here, once and untimed, as the socket already did), leaked so parsers and kept results can
+/// borrow it for `'static` (a few tens of MB for the whole run).
 fn load_lines(path: &Path) -> Vec<Line> {
     let data = std::fs::read(path).unwrap_or_else(|err| panic!("read {}: {err}", path.display()));
     let mut lines = Vec::new();
@@ -95,13 +95,10 @@ fn load_lines(path: &Path) -> Vec<Line> {
         if raw.is_empty() {
             continue;
         }
-        std::str::from_utf8(raw).unwrap_or_else(|err| panic!("{}: invalid UTF-8: {err}", path.display()));
-        let mut v = Vec::with_capacity(raw.len() + PADDING);
-        v.extend_from_slice(raw);
-        v.resize(raw.len() + PADDING, 0);
-        let padded: &'static [u8] = Box::leak(v.into_boxed_slice());
+        let frame =
+            String::from_utf8(raw.to_vec()).unwrap_or_else(|err| panic!("{}: invalid UTF-8: {err}", path.display()));
         lines.push(Line {
-            b: &padded[..raw.len()],
+            s: Box::leak(frame.into_boxed_str()),
         });
     }
     lines
@@ -268,7 +265,7 @@ fn main() {
         let name = w["name"].as_str().unwrap();
         let lines = load_lines(&a.corpus.join(w["file"].as_str().unwrap()));
         let events = lines.len();
-        let bytes: usize = lines.iter().map(|l| l.b.len()).sum();
+        let bytes: usize = lines.iter().map(|l| l.s.len()).sum();
         if events as u64 != w["events"].as_u64().unwrap() || bytes as u64 != w["bytes"].as_u64().unwrap() {
             panic!("{name}: corpus does not match manifest ({events} events, {bytes} bytes)");
         }
@@ -300,6 +297,7 @@ fn main() {
                 "ns_per_event": null, "mb_per_s": null, "events_per_s": null,
                 "alloc_bytes_per_event": null, "allocs_per_event": null,
                 "gc_count": null, "gc_ms": null,
+                "retained_bytes_per_event": null,
             });
             if v.ok {
                 let t = measure(p.as_mut(), &lines, &a);
@@ -329,13 +327,16 @@ fn main() {
                     json!(round2(t.alloc_bytes as f64 / parsed)),
                 );
                 o.insert("allocs_per_event".into(), json!(round2(t.allocs as f64 / parsed)));
+                let retained = p.retained(&lines);
+                o.insert("retained_bytes_per_event".into(), json!(retained.map(round2)));
                 eprintln!(
-                    "{name:<10} {:<28} {:>9.1} MB/s {:>8.1} ns/ev {:>8.1} B/ev {:>6.2} allocs/ev  ({n} rounds)",
+                    "{name:<10} {:<28} {:>9.1} MB/s {:>8.1} ns/ev {:>8.1} B/ev {:>6.2} allocs/ev {:>8} kept B/ev  ({n} rounds)",
                     m.id,
                     bytes as f64 / (median / 1e9) / 1e6,
                     median / events as f64,
                     t.alloc_bytes as f64 / parsed,
-                    t.allocs as f64 / parsed
+                    t.allocs as f64 / parsed,
+                    retained.map_or("-".to_string(), |r| format!("{r:.1}"))
                 );
             } else {
                 eprintln!(
