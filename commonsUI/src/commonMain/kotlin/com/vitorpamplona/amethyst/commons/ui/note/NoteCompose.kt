@@ -151,19 +151,10 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootNappletEven
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBlockedRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayBroadcastRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayContactList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayDMRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayFavoriteRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayIndexerRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayNIP65RelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayPeopleList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayProxyRelayList
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayRelaySet
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplaySearchRelayList
+import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
-import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayTrustedRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.note.types.EmptyState
 import com.vitorpamplona.amethyst.commons.ui.note.types.FileMetadataDisplay
@@ -343,7 +334,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderIdentityProof
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStory
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderInteractiveStoryReadingState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderJesterChess
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderKeyPackageRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLabel
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLearningResource
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveActivityChatMessage
@@ -390,7 +380,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPostingStreak
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPredictionMarket
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateKindCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateMessage
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPrivateOutboxRelays
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileBadges
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderProfileGalleryEntry
@@ -467,7 +456,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderGeohashList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderGitAuthorList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderGitRepositoryList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderGoodWikiAuthorList
-import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderGoodWikiRelayList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderInterestList
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderInterestSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderKindMuteSet
@@ -1741,43 +1729,43 @@ internal fun RenderNoteRow(
             }
 
             is RelaySetEvent -> {
-                DisplayRelaySet(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is DmRelayListEvent -> {
-                DisplayDMRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is AdvertisedRelayListEvent -> {
-                DisplayNIP65RelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is SearchRelayListEvent -> {
-                DisplaySearchRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is BlockedRelayListEvent -> {
-                DisplayBlockedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is TrustedRelayListEvent -> {
-                DisplayTrustedRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is FavoriteRelayListEvent -> {
-                DisplayFavoriteRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is IndexerRelayListEvent -> {
-                DisplayIndexerRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is ProxyRelayListEvent -> {
-                DisplayProxyRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is BroadcastRelayListEvent -> {
-                DisplayBroadcastRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is RelayDiscoveryEvent -> {
@@ -2548,7 +2536,7 @@ internal fun RenderNoteRow(
             }
 
             is GoodWikiRelayListEvent -> {
-                RenderGoodWikiRelayList(baseNote, backgroundColor, accountViewModel)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             // NIP-85: one card for the four assertion kinds, which differ only in what they score.
@@ -2604,7 +2592,7 @@ internal fun RenderNoteRow(
             is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
             is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
             is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
-            is PrivateOutboxRelayListEvent -> RenderPrivateOutboxRelays(baseNote, backgroundColor, accountViewModel, nav)
+            is PrivateOutboxRelayListEvent -> DisplayRelayList(baseNote, accountViewModel, nav)
             is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
             is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
             is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)
@@ -2765,7 +2753,7 @@ internal fun RenderNoteRow(
             is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
             // Marmot MLS (KeyPackageEvent 30443 and LegacyKeyPackageEvent 443 share PublishedKeyPackage)
             is PublishedKeyPackage -> RenderMarmotKeyPackage(baseNote)
-            is KeyPackageRelayListEvent -> RenderKeyPackageRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            is KeyPackageRelayListEvent -> DisplayRelayList(baseNote, accountViewModel, nav)
             is WelcomeEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.GroupAdd)
             is GroupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Groups)
             is NotificationRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
