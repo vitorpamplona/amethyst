@@ -38,8 +38,12 @@ class MoqLiteSubscribeHandle internal constructor(
     val ok: MoqLiteSubscribeOk,
     val frames: Flow<MoqLiteFrame>,
     private val unsubscribeAction: suspend () -> Unit,
+    private val broadcastEndedCountProbe: () -> Long = { 0L },
 ) {
     suspend fun unsubscribe() = unsubscribeAction()
+
+    /** How many `Ended` announces the session has seen for this broadcast, read live. */
+    val broadcastEndedCount: Long get() = broadcastEndedCountProbe()
 }
 
 /**
