@@ -27,7 +27,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.service.playback.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
@@ -63,6 +65,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.IOException
 import java.util.Collections
+import java.util.WeakHashMap
 import kotlin.math.abs
 
 data class MediaPlaybackState(
@@ -164,6 +167,10 @@ object GlobalMediaPlayer {
 
     private const val CLOCK_POLL_MS = 250L
 
+    // From here on a video counts as played to its end: play starts it over. The same mark the
+    // cards use to keep an ended video from starting again on its own.
+    private const val ENDED_POSITION = 0.99f
+
     // How long publishShape waits for an engine to read a video's size before giving up.
     private const val SHAPE_WAIT_MS = 30_000L
 
@@ -231,12 +238,10 @@ object GlobalMediaPlayer {
         defaultMuted = muted
     }
 
-    // Where each video was when [releaseVideo] let it go, as a 0..1 fraction, so coming back to it
-    // resumes there instead of from the start. Bounded: only the most recent few are worth keeping.
-    private val savedPositions =
-        object : LinkedHashMap<String, Float>(16, 0.75f, true) {
-            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Float>?) = size > 64
-        }
+    // The video each engine opened, so whatever sets an engine aside or releases it can save where
+    // that video was in [VideoViewedPositionCache], as Android's players do. Weak: an engine that is
+    // gone needs no entry.
+    private val engineUrls: MutableMap<VideoPlayerState, String> = Collections.synchronizedMap(WeakHashMap())
     private var preMuteAudioVolume: Int = 100
 
     private var videoSyncJob: Job? = null
@@ -277,12 +282,9 @@ object GlobalMediaPlayer {
         // No owner (the now-playing bar, a full-screen request): whichever card shows it claims it.
         _videoSurfaceOwner.value = owner
         videoPauseRequested = false
-        val startAt =
-            if (seekPosition > 0f) {
-                seekPosition
-            } else {
-                synchronized(savedPositions) { savedPositions.remove(url) } ?: 0f
-            }
+        // Only an explicit start (full screen, the lightbox): every engine otherwise seeks back to
+        // where the video was itself, once it has loaded it (see restorePosition).
+        val startAt = seekPosition
         val current = _videoState.value
 
         // Reuse the engine only when it's already on this URL AND healthy. If the last attempt
@@ -291,15 +293,16 @@ object GlobalMediaPlayer {
         val loaded = videoPlayer
         if (loaded != null && current.url == url && current.errorReason == null) {
             Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
-            if (startAt > 0f) loaded.seekTo(startAt * 1000f)
+            if (startAt > 0f) {
+                loaded.seekTo(startAt * 1000f)
+            } else if (chosen && !current.isPlaying && current.position >= ENDED_POSITION) {
+                // Pressed play on it after it ended: start over.
+                loaded.seekTo(0f)
+            }
             if (!current.isPlaying) loaded.play()
             if (chosen) _videoState.update { it.copy(isChosen = true) }
             return
         }
-
-        // The video being replaced picks up where it was when it comes back, unless its card keeps
-        // its engine, paused right there.
-        if (!isCardEngine(loaded)) rememberPosition(current)
 
         // The card's own engine, or, without a card (full screen, the now-playing bar), the engine
         // of a card showing this video: the picture on screen is the one that plays.
@@ -338,6 +341,7 @@ object GlobalMediaPlayer {
             }
 
         Log.d(TAG) { "playVideo open url=$url (was=${current.url} err=${current.errorReason})" }
+        engineUrls[player] = url
 
         // The kdroidFilter player retains `volume` and speed across openUri calls, so set both for
         // the new track: normal speed, and muted or not as the user last chose.
@@ -367,14 +371,10 @@ object GlobalMediaPlayer {
             scope.launch(Dispatchers.IO) {
                 if (!openSource(player, url, _videoState) { videoDownloading = it }) return@launch
                 launch { publishShape(player, url) }
-                // openUri auto-plays per InitialPlayerState.PLAY default. For an
-                // initial seek we wait for the first hasMedia=true emission then
-                // stop collecting (Flow.first terminates the collector cleanly,
-                // unlike `return@collect` which only exits the lambda).
-                if (startAt > 0f) {
-                    snapshotFlow { player.hasMedia }.first { it }
-                    player.seekTo(startAt * 1000f)
-                }
+                // openUri auto-plays per InitialPlayerState.PLAY default. Once it has the media: the
+                // explicit start, else back to where this video was the last time it played.
+                snapshotFlow { player.hasMedia }.first { it }
+                if (startAt > 0f) player.seekTo(startAt * 1000f) else restorePosition(player, url, restartIfEnded = chosen)
             }
     }
 
@@ -417,7 +417,17 @@ object GlobalMediaPlayer {
             scope.launch(Dispatchers.Main) {
                 snapshotFlow { player.hasMedia || player.error != null }.first { it }
                 if (player.error != null || _videoState.value.url != url) return@launch
-                if (startAt > 0f) player.seekTo(startAt * 1000f)
+                if (startAt > 0f) {
+                    player.seekTo(startAt * 1000f)
+                } else if (chosen && player.engineSnapshot().positionOr(0f) >= ENDED_POSITION) {
+                    // Pressed play on a card whose engine played to its end: start over. Not when
+                    // the feed brings it back on its own: it then stays on the last frame.
+                    player.seekTo(0f)
+                } else {
+                    // Where this video was, if its paused open had not restored it before it took
+                    // over (a no-op when it had: it is already there).
+                    restorePosition(player, url, restartIfEnded = chosen)
+                }
                 if (!videoPauseRequested) player.play()
             }
     }
@@ -512,6 +522,7 @@ object GlobalMediaPlayer {
      * then, unless it became the playing video meanwhile.
      */
     private fun pauseAside(player: VideoPlayerState) {
+        savePosition(player)
         runCatching {
             player.volume = 0f
             player.pause()
@@ -545,11 +556,21 @@ object GlobalMediaPlayer {
             engine.playbackSpeed = 1f
         }
         synchronized(initLock) { keep(engine) }
+        engineUrls[engine] = url
         Log.d(TAG) { "paused open url=$url" }
         scope.launch(Dispatchers.IO) {
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
-                .onSuccess { publishShape(engine, url) }
-                .onFailure { Log.w(TAG) { "Paused open failed for $url: ${it.message}" } }
+                .onSuccess {
+                    // Paused on the frame where this video was the last time it played, so its card
+                    // shows that frame and time, and plays on from there.
+                    // Only while it is still set aside: once it is the playing engine, the play that made
+                    // it so decides where it starts (startWarmVideo), and a restore landing up to
+                    // SHAPE_WAIT_MS later would overrule a full-screen start or a replay.
+                    if (withTimeoutOrNull(SHAPE_WAIT_MS) { snapshotFlow { engine.hasMedia }.first { it } } != null && engine !== videoPlayer) {
+                        restorePosition(engine, url, restartIfEnded = false)
+                    }
+                    publishShape(engine, url)
+                }.onFailure { Log.w(TAG) { "Paused open failed for $url: ${it.message}" } }
         }
     }
 
@@ -752,6 +773,9 @@ object GlobalMediaPlayer {
             pauseVideo()
         } else {
             videoPauseRequested = false
+            // Play on a video that played to its end starts it over: the engine would sit on the
+            // last frame.
+            if (state.position >= ENDED_POSITION) player.seekTo(0f)
             player.play()
             _videoState.update { it.copy(isChosen = true) }
         }
@@ -893,16 +917,43 @@ object GlobalMediaPlayer {
         val state = _videoState.value
         if (state.url != url || _isFullscreen.value) return
         if (state.isChosen && isVideoGoing(state)) return
-        rememberPosition(state)
         stopVideo()
     }
 
-    /** Keeps where [state]'s video is, unless it has not started, has finished or failed. */
-    private fun rememberPosition(state: MediaPlaybackState) {
-        val url = state.url ?: return
-        if (state.errorReason == null && state.position > 0f && state.position < 0.98f) {
-            synchronized(savedPositions) { savedPositions[url] = state.position }
+    /**
+     * Saves where [player]'s video is in [VideoViewedPositionCache], as Android's players do when they
+     * pause or stop: read from the engine, so exact. Not for a live stream, which has no position to
+     * come back to, nor for one that never started.
+     */
+    private fun savePosition(player: VideoPlayerState) {
+        val url = engineUrls[player] ?: return
+        if (isHlsMedia(url, null)) return
+        val millis = runCatching { (player.currentTime * 1000.0).toLong() }.getOrNull() ?: return
+        if (millis > 1L) VideoViewedPositionCache.add(url, millis)
+    }
+
+    /**
+     * Seeks [player], which just loaded [url], back to where that video was the last time it played,
+     * when that is meaningfully far from where it is (see [VideoViewedPositionCache.shouldRestore]).
+     * [restartIfEnded] is for a play the user pressed: a video saved at its end then starts over
+     * instead of resuming on its last frame, where it would have nothing left to play.
+     */
+    private fun restorePosition(
+        player: VideoPlayerState,
+        url: String,
+        restartIfEnded: Boolean,
+    ) {
+        if (isHlsMedia(url, null)) return
+        val saved = VideoViewedPositionCache.get(url) ?: return
+        val length = (player.duration * 1000.0).toLong()
+        if (length <= 0L) return
+        if (restartIfEnded && saved >= length * ENDED_POSITION) {
+            if (player.engineSnapshot().positionOr(0f) >= ENDED_POSITION) player.seekTo(0f)
+            return
         }
+        val current = (player.currentTime * 1000.0).toLong()
+        if (!VideoViewedPositionCache.shouldRestore(current, saved)) return
+        player.seekTo(saved.coerceIn(0L, length).toFloat() / length * 1000f)
     }
 
     fun stopAudio() {
@@ -1071,6 +1122,7 @@ object GlobalMediaPlayer {
      * No stop() first: it queues native work the dispose right after would race.
      */
     private fun retireVideoPlayer(player: VideoPlayerState) {
+        savePosition(player)
         runCatching {
             player.volume = 0f
             player.pause()
