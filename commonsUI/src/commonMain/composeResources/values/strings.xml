@@ -2892,10 +2892,9 @@
     <string name="contact_list_screen_title">Follow list</string>
     <string name="contact_list_screen_title_with_count">Follow list (%1$d)</string>
     <string name="relay_list_screen_title">Relays</string>
-    <plurals name="relay_list_show_all">
-        <item quantity="one">Show %1$d relay</item>
-        <item quantity="other">Show all %1$d relays</item>
-    </plurals>
+    <string name="relay_list_show_all">Show all relays</string>
+    <string name="relay_list_add_to_my_relays">Add to my relays</string>
+    <string name="relay_list_in_my_relays">In my relays</string>
     <plurals name="relay_list_section_count">
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>

@@ -20,34 +20,44 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserRelayIntoList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.auth_required
 import com.vitorpamplona.amethyst.commons.resources.blocked_relays_title
 import com.vitorpamplona.amethyst.commons.resources.broadcast_relays_title
 import com.vitorpamplona.amethyst.commons.resources.dm_relays_title
@@ -57,23 +67,28 @@ import com.vitorpamplona.amethyst.commons.resources.keypackage_section
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_relays_hidden
 import com.vitorpamplona.amethyst.commons.resources.kind_good_wiki_relays
 import com.vitorpamplona.amethyst.commons.resources.nip51_list_has_private_members
+import com.vitorpamplona.amethyst.commons.resources.paid_relay
 import com.vitorpamplona.amethyst.commons.resources.private_outbox_section
 import com.vitorpamplona.amethyst.commons.resources.proxy_relays_title
 import com.vitorpamplona.amethyst.commons.resources.public_home_section
 import com.vitorpamplona.amethyst.commons.resources.public_notif_section
+import com.vitorpamplona.amethyst.commons.resources.relay_list_add_to_my_relays
+import com.vitorpamplona.amethyst.commons.resources.relay_list_in_my_relays
+import com.vitorpamplona.amethyst.commons.resources.relay_list_section_count
 import com.vitorpamplona.amethyst.commons.resources.relay_list_show_all
 import com.vitorpamplona.amethyst.commons.resources.search_relays_title
 import com.vitorpamplona.amethyst.commons.resources.trusted_relays_title
-import com.vitorpamplona.amethyst.commons.ui.components.ShowMoreButton
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.note.AddRelayButton
-import com.vitorpamplona.amethyst.commons.ui.note.RemoveRelayButton
-import com.vitorpamplona.amethyst.commons.ui.note.getGradient
+import com.vitorpamplona.amethyst.commons.ui.note.RenderRelayIcon
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.hidesPrivateMembers
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.loadPrivateItems
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
+import com.vitorpamplona.amethyst.commons.ui.theme.MediumRelayIconModifier
+import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -198,123 +213,190 @@ private fun decryptedSection(
 }
 
 /**
- * The feed card of any relay-list kind: each section's first [COLLAPSED_RELAYS] relays, and a
- * button to [Route.RelayListMembers] when there are more. The full list never renders inline: a
- * list can hold tens of thousands of relays, and a feed row that composed them all would crash.
+ * The feed card of any relay-list kind: each section's first [COLLAPSED_RELAYS] relays, and one
+ * button to [Route.RelayListMembers] when any section has more. The full list never renders inline:
+ * a list can hold tens of thousands of relays, and a feed row that composed them all would crash.
  */
 @Composable
 fun DisplayRelayList(
     baseNote: Note,
-    backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val sections = observeRelayListSections(baseNote, baseNote.event, accountViewModel)
 
-    sections.forEach { section ->
-        DisplayRelaySetPreview(section, backgroundColor, accountViewModel, nav) {
-            nav.nav(Route.RelayListMembers(baseNote.idHex))
+    Column(modifier = Modifier.fillMaxWidth()) {
+        sections.forEachIndexed { index, section ->
+            RelayListSectionHeader(
+                section,
+                Modifier.padding(start = 10.dp, end = 10.dp, top = if (index == 0) 5.dp else 15.dp, bottom = 5.dp),
+            )
+
+            section.relays.take(COLLAPSED_RELAYS).forEach { relay ->
+                RelayListRow(relay, accountViewModel, nav)
+            }
+        }
+
+        // One button for the whole card: the screen shows every section, and the headers already
+        // carry the counts. It sits under the rows rather than fading over the last one.
+        if (sections.any { it.relays.size > COLLAPSED_RELAYS }) {
+            FilledTonalButton(
+                onClick = { nav.nav(Route.RelayListMembers(baseNote.idHex)) },
+                shape = ButtonBorder,
+                contentPadding = ShowAllButtonPadding,
+                modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 4.dp),
+            ) {
+                Text(stringRes(Res.string.relay_list_show_all))
+                Spacer(Modifier.width(4.dp))
+                Icon(MaterialSymbols.ChevronRight, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }
 
+private val ShowAllButtonPadding = PaddingValues(start = 16.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
+
+/** A section's name with its relay count beside it, and its description underneath when it has one. */
 @Composable
-private fun DisplayRelaySetPreview(
+fun RelayListSectionHeader(
     section: RelayListSection,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    onShowAll: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    RelayListSectionHeader(section)
-
-    Box {
-        Column(modifier = Modifier.padding(top = 5.dp)) {
-            section.relays.take(COLLAPSED_RELAYS).forEach { relay ->
-                RelayListRow(relay, accountViewModel, nav, Modifier.padding(bottom = 5.dp))
-            }
-        }
-
-        if (section.relays.size > COLLAPSED_RELAYS) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(getGradient(backgroundColor)),
-            ) {
-                ShowMoreButton(
-                    text = pluralStringRes(Res.plurals.relay_list_show_all, section.relays.size, section.relays.size),
-                    onClick = onShowAll,
+    Column(modifier = modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = section.title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            Spacer(Modifier.width(8.dp))
+            Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.secondaryContainer) {
+                Text(
+                    text = pluralStringRes(Res.plurals.relay_list_section_count, section.relays.size, section.relays.size),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    maxLines = 1,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 )
             }
         }
+
+        section.description?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
     }
 }
 
-/** A section's name and, when it has one, its description, centered above its relays. */
-@Composable
-fun RelayListSectionHeader(section: RelayListSection) {
-    Text(
-        text = section.title,
-        fontWeight = FontWeight.Bold,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(5.dp),
-        textAlign = TextAlign.Center,
-    )
-
-    section.description?.let {
-        Text(
-            text = it,
-            maxLines = 3,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(5.dp),
-            textAlign = TextAlign.Center,
-            color = Color.Gray,
-        )
-    }
-}
-
-/** One relay of a list: its address and a button to add it to, or manage it in, the viewer's relays. */
+/**
+ * One relay of a list, drawn like the relays everywhere else: its NIP-11 icon (a robohash until
+ * one loads), its NIP-11 name with paid and auth badges, and its address underneath. Tapping it
+ * opens the relay's page, holding it copies the address, and the trailing button says whether the
+ * viewer already uses it.
+ *
+ * The NIP-11 document only loads while the row is composed, so a lazy list of thousands only asks
+ * for the relays on screen.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RelayListRow(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
-    textModifier: Modifier = Modifier,
 ) {
+    val relayInfo by loadRelayInfo(relay)
+    val clipboardManager = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+
+    val address = remember(relay) { relay.displayUrl() }
+    val name = relayInfo.name?.trim()?.takeIf { it.isNotEmpty() } ?: address
+    // The placeholder document names the relay by its address, so only a real name gets a second line.
+    val subtitle = if (name != address) address else relayInfo.description?.trim()?.takeIf { it.isNotEmpty() }
+
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = { nav.nav(Route.RelayInfo(relay.url)) },
+                    onLongClick = { scope.launch { clipboardManager.setText(relay.url) } },
+                ).padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = relay.displayUrl(),
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier =
-                textModifier
-                    .padding(start = 10.dp)
-                    .weight(1f),
+        RenderRelayIcon(
+            displayUrl = relayInfo.id ?: relay.url,
+            iconUrl = relayInfo.icon,
+            loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
+            loadRobohash = LocalDisplaySettings.current.loadRobohash,
+            pingInMs = 0,
+            iconModifier = MediumRelayIconModifier,
         )
 
-        Column(modifier = Modifier.padding(start = 10.dp)) {
-            RelayOptionsAction(relay, accountViewModel, nav)
+        Column(
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+
+                if (relayInfo.limitation?.payment_required == true) {
+                    Icon(
+                        symbol = MaterialSymbols.Paid,
+                        contentDescription = stringRes(Res.string.paid_relay),
+                        modifier = Modifier.padding(start = 4.dp).size(16.dp),
+                        tint = MaterialTheme.colorScheme.allGoodColor,
+                    )
+                }
+
+                if (relayInfo.limitation?.auth_required == true) {
+                    Icon(
+                        symbol = MaterialSymbols.Lock,
+                        contentDescription = stringRes(Res.string.auth_required),
+                        modifier = Modifier.padding(start = 4.dp).size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
+
+        RelayMembershipAction(relay, accountViewModel, nav)
     }
 }
 
+/**
+ * A check when the viewer already uses [relay], a plus when they don't. Both open the relay
+ * editor; the plus first copies the address so it can be pasted there.
+ */
 @Composable
-private fun RelayOptionsAction(
+private fun RelayMembershipAction(
     relay: NormalizedRelayUrl,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -324,15 +406,31 @@ private fun RelayOptionsAction(
     val scope = rememberCoroutineScope()
 
     if (isCurrentlyOnTheUsersList) {
-        RemoveRelayButton {
-            nav.nav(Route.EditRelays)
+        FilledTonalIconButton(
+            onClick = { nav.nav(Route.EditRelays) },
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Check,
+                contentDescription = stringRes(Res.string.relay_list_in_my_relays),
+                modifier = Modifier.size(20.dp),
+            )
         }
     } else {
-        AddRelayButton {
-            scope.launch {
-                clipboardManager.setText(relay.url)
-                nav.nav(Route.EditRelays)
-            }
+        OutlinedIconButton(
+            onClick = {
+                scope.launch {
+                    clipboardManager.setText(relay.url)
+                    nav.nav(Route.EditRelays)
+                }
+            },
+            modifier = Modifier.size(36.dp),
+        ) {
+            Icon(
+                symbol = MaterialSymbols.Add,
+                contentDescription = stringRes(Res.string.relay_list_add_to_my_relays),
+                modifier = Modifier.size(20.dp),
+            )
         }
     }
 }

@@ -1729,43 +1729,43 @@ internal fun RenderNoteRow(
             }
 
             is RelaySetEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is DmRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is AdvertisedRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is SearchRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is BlockedRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is TrustedRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is FavoriteRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is IndexerRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is ProxyRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is BroadcastRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             is RelayDiscoveryEvent -> {
@@ -2536,7 +2536,7 @@ internal fun RenderNoteRow(
             }
 
             is GoodWikiRelayListEvent -> {
-                DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+                DisplayRelayList(baseNote, accountViewModel, nav)
             }
 
             // NIP-85: one card for the four assertion kinds, which differ only in what they score.
@@ -2592,7 +2592,7 @@ internal fun RenderNoteRow(
             is BlossomServersEvent -> RenderBlossomServers(baseNote, backgroundColor)
             is FileServersEvent -> RenderFileServers(baseNote, backgroundColor)
             is NestsServersEvent -> RenderNestsServers(baseNote, backgroundColor)
-            is PrivateOutboxRelayListEvent -> DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            is PrivateOutboxRelayListEvent -> DisplayRelayList(baseNote, accountViewModel, nav)
             is NutzapInfoEvent -> RenderNutzapInfo(baseNote)
             is PaymentTargetsEvent -> RenderPaymentTargets(baseNote, accountViewModel, nav)
             is Bolt12OfferListEvent -> RenderBolt12OfferList(baseNote, accountViewModel)
@@ -2753,7 +2753,7 @@ internal fun RenderNoteRow(
             is CashuMintQuoteEvent -> RenderCashuMintQuote(baseNote)
             // Marmot MLS (KeyPackageEvent 30443 and LegacyKeyPackageEvent 443 share PublishedKeyPackage)
             is PublishedKeyPackage -> RenderMarmotKeyPackage(baseNote)
-            is KeyPackageRelayListEvent -> DisplayRelayList(baseNote, backgroundColor, accountViewModel, nav)
+            is KeyPackageRelayListEvent -> DisplayRelayList(baseNote, accountViewModel, nav)
             is WelcomeEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.GroupAdd)
             is GroupEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Groups)
             is NotificationRequestEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Notifications)
