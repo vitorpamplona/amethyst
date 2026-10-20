@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.cli.Identity
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
@@ -58,7 +59,10 @@ object LoginCommand {
         |  login KEY [--password X]     KEY: nsec | ncryptsec (needs --password, alias --pw) |
         |                                BIP-39 mnemonic | 64-hex privkey (with --private) |
         |                                npub/nprofile/64-hex pubkey (read-only) |
-        |                                NIP-05 name@domain (read-only) | bunker://…
+        |                                NIP-05 name@domain | bunker://…
+        |  login name@domain [--read-only] [--timeout SECS]
+        |                                through the NIP-46 signer the domain advertises,
+        |                                else (or with --read-only) the address's npub
         |  login bunker://PUBKEY?relay=…&secret=…      sign through a remote NIP-46 bunker
         |  login --nostrconnect [--relay URL[,URL…]]   client-initiated: print a nostrconnect://
         |    [--name N] [--perms P] [--timeout SECS]    offer, wait for a signer, persist it
@@ -89,7 +93,24 @@ object LoginCommand {
         val args = Args(rest.drop(1).toTypedArray())
         // --password/--pw/--private are read branch-dependently inside
         // resolveIdentity, so whitelist them up front.
+        val readOnly = args.bool("read-only")
+        val timeoutMs = args.timeoutMs(120)
         args.rejectUnknown("password", "pw", "private")
+
+        // A name@domain whose domain advertises a NIP-46 signer logs in through it.
+        if (!readOnly) {
+            Nip05Id.parse(key)?.let { nip05 ->
+                val signer =
+                    try {
+                        nip05Client().loadRemoteSigner(nip05)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        null
+                    }
+                if (signer != null) return Nip05SignerLogin.login(dataDir, key, signer, timeoutMs)
+            }
+        }
 
         val identity =
             resolveIdentity(Bech32Transcription.normalize(key), args)
@@ -198,10 +219,16 @@ object LoginCommand {
 
     private fun isHex64(s: String): Boolean = s.length == 64 && s.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }
 
-    private fun nip05Client(): Nip05Client {
+    /**
+     * Builds the NIP-05 client login resolves addresses with. A seam for tests, which serve a
+     * domain's `nostr.json` without HTTPS; like `amy.home`, nothing else sets it.
+     */
+    internal var nip05ClientBuilder: () -> Nip05Client = {
         // Build a throwaway OkHttp client — we don't hold a Context here and
         // login is a one-shot CLI invocation anyway.
         val http = OkHttpClient.Builder().build()
-        return Nip05Client(fetcher = OkHttpNip05Fetcher { _ -> http })
+        Nip05Client(fetcher = OkHttpNip05Fetcher { _ -> http })
     }
+
+    private fun nip05Client(): Nip05Client = nip05ClientBuilder()
 }

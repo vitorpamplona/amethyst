@@ -1,6 +1,17 @@
 # Signing login with a NIP-05 address (NIP-46 discovery)
 
-Status: proposed, not started.
+Status: implemented 2026-10-20 (Amethyst and `amy`). Not yet checked against a live provider: see
+"Two discovery shapes in the wild".
+
+Decided:
+- Legacy before spec: legacy names the user's own key, and it is what is deployed.
+- An address without a signer logs in read-only, as before.
+- `amy login name@domain --read-only` keeps the read-only login on purpose. The app keeps it for
+  platforms that can't log in to a remote signer (`AppPlatform.supportsRemoteSignerLogin`).
+
+Found on the way: `resolveUserHexOrNull` turned an even-length address (`bob@signer.example`) into
+a few bogus bytes through the key path's lenient hex fallback, so read-only NIP-05 logins could end
+on a garbage key. Fixed by trying NIP-05 first and requiring 64 hex from the key path.
 
 ## Problem
 
@@ -77,14 +88,9 @@ provider as parser fixtures.
 - The NIP-05 fetch stays on the app's HTTP client (Tor, no redirects), as `Nip05Client` already
   does.
 
-## Open questions
+## Out of scope
 
-1. When both shapes are present, prefer legacy (it names the user's own key) or spec?
-2. When the address has no signer, log in read-only silently (as today, plus a note) or ask?
-3. Should a user who wants read-only on purpose keep a way to get it: type the npub, or a
-   "read-only" toggle?
-4. NIP-89 signer discovery (kind 31990, `k=24133`) and nostr-tools' non-standard `create_account`
-   are out of scope here.
+NIP-89 signer discovery (kind 31990, `k=24133`) and nostr-tools' non-standard `create_account`.
 
 ## Tests
 

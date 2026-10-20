@@ -36,6 +36,8 @@ object BunkerLoginUseCase {
         client: INostrClient,
         clientMetadata: BunkerClientMetadata? = null,
         authPrompts: RemoteSignerAuthPrompts? = null,
+        /** Also told of each `auth_url` page, for a caller that shows it its own way (the CLI prints it). */
+        onAuthUrl: ((String) -> Unit)? = null,
     ): BunkerLoginResult {
         val remoteSigner =
             NostrSignerRemote.fromBunkerUri(
@@ -43,7 +45,15 @@ object BunkerLoginUseCase {
                 ephemeralSigner,
                 client,
                 clientMetadata = clientMetadata,
-                onAuthUrl = authPrompts?.let { prompts -> { url -> prompts.report(url) } },
+                onAuthUrl =
+                    if (authPrompts == null && onAuthUrl == null) {
+                        null
+                    } else {
+                        { url ->
+                            authPrompts?.report(url)
+                            onAuthUrl?.invoke(url)
+                        }
+                    },
                 onAuthUrlSettled = authPrompts?.let { prompts -> { url -> prompts.settled(url) } },
             )
         if (remoteSigner.relays.isEmpty()) throw Exception("The bunker address names no relay")

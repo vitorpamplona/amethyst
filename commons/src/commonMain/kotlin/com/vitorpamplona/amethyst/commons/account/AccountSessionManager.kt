@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.Nip05SignerLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerLogoutUseCase
@@ -40,6 +41,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05RemoteSigner
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
@@ -251,6 +254,31 @@ class AccountSessionManager(
         }
     }
 
+    /** The NIP-46 signer [address]'s domain advertises, or null for none (or no answer). */
+    private suspend fun findNip05Signer(address: String): Nip05RemoteSigner? {
+        val nip05 = Nip05Id.parse(address) ?: return null
+        return try {
+            nip05ClientBuilder().loadRemoteSigner(nip05)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d("Login", "No remote signer found for $address", e)
+            null
+        }
+    }
+
+    /** Logs in through the signer a NIP-05 domain advertises, with a fresh transport key. */
+    private suspend fun nip05SignerLogin(
+        signer: Nip05RemoteSigner,
+        transientAccount: Boolean,
+    ): AccountSettings {
+        val transport = KeyPair()
+        return withSignerRelays(signer.relays) {
+            val login = Nip05SignerLoginUseCase.execute(signer, transport, clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts)
+            login.result.signer.closeSubscription()
+            remoteSignerSettings(login.result.pubKeyHex, login.bunkerUri, transport, transientAccount)
+        }
+    }
+
     /**
      * Runs [block] with [relays] routed as the user's own. After a login the account's saved bunker
      * address takes over (`AccountsTorStateConnector`, which waits out a short debounce), so the
@@ -336,6 +364,8 @@ class AccountSessionManager(
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         rememberKey: Boolean = true,
+        /** Whether a `name@domain` may log in through the signer its domain advertises (NIP-46). */
+        allowRemoteSigner: Boolean = true,
         onError: (String?) -> Unit,
     ) {
         // Accepts keys copied by hand from the backup screen: UPPERCASE, and split
@@ -363,6 +393,22 @@ class AccountSessionManager(
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
                 }
             } else if (EMAIL_PATTERN.matches(cleanKey)) {
+                // A domain may advertise a NIP-46 signer for the address: sign through it. Without one
+                // the address still resolves, to a read-only account.
+                val signer = if (allowRemoteSigner) findNip05Signer(cleanKey) else null
+                if (signer != null) {
+                    try {
+                        startUI(localPreferences.setDefaultAccount(nip05SignerLogin(signer, transientAccount)))
+                    } catch (e: Nip05SignerLoginUseCase.SignerMismatchException) {
+                        Log.w("Login") { "The signer for $cleanKey signs for ${e.actual.take(8)}, not ${e.expected.take(8)}" }
+                        onError("The signer for $cleanKey signs for a different account than the address names")
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Login", "Could not log in through the signer for $cleanKey", e)
+                        onError("Could not log in through the signer for $cleanKey: ${e.message}")
+                    }
+                    return@launch
+                }
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
                 // lockstep with the CLI and anywhere else we accept user identifiers.
                 try {

@@ -49,6 +49,12 @@ inbox relays, keeping only those whose NIP-11 doesn't require auth, payment or r
 arrives on an inbox relay (`NostrConnectSignerService.onRequestSeenOn`), so an app that never got
 the answer isn't stranded.
 
+`name@domain` logins: `Nip05Client.loadRemoteSigner` reads the domain's `nip46` (the legacy
+`nip46[pubkey]` relays first, then the spec's `name=_` announcement with `nostrconnect_url`), and
+`Nip05SignerLoginUseCase` logs in through it — no-secret connect, or the signer's page carrying a
+`nostrconnect://` code, shown through `RemoteSignerAuthPrompts` — and requires the account to be the
+address's key. `AccountSessionManager` and `amy login` fall back to read-only without a signer.
+
 ## Identity
 
 The constructor's `signer` is the transport key, **not** the user. `NostrSignerRemote.pubKey`

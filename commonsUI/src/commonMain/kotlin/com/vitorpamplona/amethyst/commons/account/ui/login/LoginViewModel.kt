@@ -264,6 +264,7 @@ class LoginViewModel(
                 password = password.text,
                 transientAccount = isTemporary,
                 rememberKey = rememberKey,
+                allowRemoteSigner = remoteSignerLoginSupported,
             ) {
                 processingLogin = false
                 if (it != null) {
