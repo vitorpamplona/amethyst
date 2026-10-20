@@ -1,0 +1,10 @@
+# Pinned parser versions for the jsonBench Python harness (installed by run.sh into .venv).
+orjson==3.13.0
+ujson==6.0.0
+msgspec==0.22.0
+pysimdjson==7.0.2
+python-rapidjson==1.25
+jiter==0.17.0
+simplejson==4.2.0
+yyjson==4.0.6
+cysimdjson==26.27
