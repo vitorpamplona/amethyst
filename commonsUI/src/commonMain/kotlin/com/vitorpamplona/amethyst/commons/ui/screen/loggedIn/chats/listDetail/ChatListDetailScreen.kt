@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -64,7 +66,10 @@ fun ChatListDetailScreen(
     // Above the size switch, so the open chat outlives a collapse to Compact (handed over below).
     val selection = rememberDetailPaneSelection()
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    // Painted here because nothing else paints the detail pane while no chat is open: the list
+    // brings its own Scaffold, the empty pane does not, and the window showed through it (Swing's
+    // light grey on desktop). MessagesTwoPane gets the same from its Scaffold.
+    BoxWithConstraints(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         val paneWidthClass = widthClassOf(maxWidth)
 
         if (paneWidthClass == WidthClass.Compact) {
