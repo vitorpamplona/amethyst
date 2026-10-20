@@ -36,6 +36,7 @@ internal object GStreamerSegtrap {
         if (!PlatformInfo.host.isLinux) return@lazy
         try {
             Native.load("libgstreamer-1.0.so.0", Gst::class.java).gst_segtrap_set_enabled(0)
+            Log.i("GStreamerSegtrap", "GStreamer segfault trap off")
         } catch (e: Throwable) {
             // No GStreamer: the video engine fails to start on its own and reports that.
             Log.w("GStreamerSegtrap", "Could not turn off the GStreamer segfault trap", e)
