@@ -465,6 +465,48 @@ object ConcordListFragments {
 
     private fun idOf(o: JsonObject): String? = stringOr(o["community_id"], "").ifEmpty { null }
 
+    /** The id the entry's join material names, which is the id a reader resolves the entry to. */
+    private fun materialIdOf(o: JsonObject): String? = currentOf(o)?.let { stringOr(it["community_id"], "") }?.ifEmpty { null }
+
+    /**
+     * [doc] with every membership keyed by the id its join material names, and the copies that
+     * then share an id merged the way [mergeDocs] merges them.
+     *
+     * A fragment can't disagree with itself (its decode writes the entry's id into the material),
+     * but a retired 13302 document stores both ids and is merged in again on every read. An entry
+     * whose two ids differ used to surface its community twice, and a tombstone, written under the
+     * material id, never reached it. Entries naming no id pass through untouched, so a reader still
+     * keeps the ones it can't parse. Returns [doc] itself when nothing needed re-keying.
+     */
+    fun keyByMaterialId(doc: JsonObject): JsonObject {
+        val entries = doc["entries"] as? JsonArray ?: return doc
+        val byId = LinkedHashMap<String, JsonObject>()
+        val unkeyed = ArrayList<JsonElement>()
+        var changed = false
+        for (e in entries) {
+            val o = e as? JsonObject
+            val id = o?.let { materialIdOf(it) ?: idOf(it) }
+            if (o == null || id == null) {
+                unkeyed.add(e)
+                continue
+            }
+            val keyed =
+                if (idOf(o) == id) {
+                    o
+                } else {
+                    changed = true
+                    JsonObject(LinkedHashMap<String, JsonElement>(o).apply { put("community_id", JsonPrimitive(id)) })
+                }
+            val prev = byId[id]
+            if (prev != null) changed = true
+            byId[id] = if (prev == null) keyed else mergeEntry(prev, keyed)
+        }
+        if (!changed) return doc
+        val out = LinkedHashMap<String, JsonElement>(doc)
+        out["entries"] = JsonArray(byId.values + unkeyed)
+        return JsonObject(out)
+    }
+
     /**
      * Merges two internal documents: one membership per `community_id` (current keeps the higher
      * epoch, seed the lower, `added_at` the later), one tombstone per id (the later `removed_at`),
