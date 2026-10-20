@@ -61,18 +61,45 @@ class PoolEventOutboxStateTest {
     }
 
     @Test
-    fun regularRejectionStillBoundedByTryCap() {
-        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
-
-        // 3 non-AUTH rejections accumulate normally.
-        repeat(3) {
-            state.newResponse(relay, success = false, message = "error: rate limited")
+    fun anyRefusalEndsDelivery() {
+        // An OK false is the relay's verdict: re-sending it on every reconnect only draws the same
+        // answer, and kept a refused event resident until three of them had piled up.
+        for (message in listOf("error: insert failed", "blocked: kind not accepted", "restricted: no", "rate-limited: slow down", "duplicate: have it")) {
+            val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+            state.newTry(relay)
+            state.newResponse(relay, success = false, message = message)
+            assertFalse(state.relaysLeft().contains(relay), "'$message' should end delivery")
+            assertTrue(state.isDone(), "'$message' should end delivery")
         }
-        state.newTry(relay)
+    }
 
-        // After the 4th newTry (with 3 prior responses already in flight), the
-        // Tries cap kicks in and the relay is dropped from the outbox.
-        assertFalse(state.relaysLeft().contains(relay))
+    @Test
+    fun aRateLimitWithItsBackOffStaysPending() {
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        state.newTry(relay)
+        state.newResponse(relay, success = false, message = "rate-limited: slow down", retryAfterMs = 1_000)
+        assertContains(state.relaysLeft(), relay)
+        assertFalse(state.isDone())
+    }
+
+    @Test
+    fun aRateLimitThatNeverEndsIsTakenAtItsWord() {
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        repeat(PoolEventOutboxState.MAX_BACK_OFFS) {
+            state.newResponse(relay, success = false, message = "rate-limited: slow down", retryAfterMs = 1_000)
+        }
+        assertContains(state.relaysLeft(), relay)
+        state.newResponse(relay, success = false, message = "rate-limited: slow down", retryAfterMs = 1_000)
+        assertTrue(state.isDone())
+    }
+
+    @Test
+    fun unansweredSendsStillGiveUpAfterTheirBudget() {
+        // What the outbox is for: a send the connection lost, retried on reconnect, a bounded number of times.
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        repeat(3) { assertFalse(state.newTry(relay), "send ${it + 1} is within the budget") }
+        assertTrue(state.newTry(relay), "the fourth unanswered send gives up")
+        assertTrue(state.isDone())
     }
 
     @Test
