@@ -25,6 +25,10 @@ import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
 /**
  * What a pasted `cordn1…` link turns out to be.
  *
+ * Accepts the bare ref and the web link cordn.net shares and puts in its QR
+ * codes, `https://cordn.net/chat/cordn1…?m=…`, which carries the same ref as
+ * its path (see [refIn]).
+ *
  * A group ref is the one cordn artifact a person handles directly — it arrives
  * in a chat message or a QR code — and it is also the moment where §8 matters:
  * before joining, not after. So the parse and the disclosure are computed
@@ -75,7 +79,7 @@ sealed interface CordnLinkInspection {
 
             val ref =
                 try {
-                    CordnGroupRef.decode(trimmed)
+                    CordnGroupRef.decode(refIn(trimmed))
                 } catch (e: IllegalArgumentException) {
                     return Invalid(e.message ?: "not a cordn group reference")
                 }
@@ -99,5 +103,24 @@ sealed interface CordnLinkInspection {
                     },
             )
         }
+
+        /**
+         * A `/chat/` path segment that is a ref. Any host, because a
+         * self-hosted copy of the cordn.net client builds the same path, and
+         * the host is never trusted for anything: the ref names its own
+         * coordinator and relays.
+         */
+        private val SHARE_LINK = Regex("""^(?:https?://)?[^/?#\s]+/chat/(cordn1[0-9a-z]+)(?:[/?#]\S*)?$""", RegexOption.IGNORE_CASE)
+
+        /**
+         * The ref inside a share link, or [input] unchanged.
+         *
+         * The `m` query parameter is dropped: it is a base64url JSON name and
+         * icon preview, chosen by whoever made the link, and nothing in it is
+         * needed to reach the group. Later path segments (`/info`, message
+         * permalinks) point into the same group. cordn.net's pre-`cordn1`
+         * form, `/chat/<gid>?c=<key>`, is not read: it carries no relay.
+         */
+        private fun refIn(input: String): String = SHARE_LINK.matchEntire(input)?.groupValues?.get(1) ?: input
     }
 }
