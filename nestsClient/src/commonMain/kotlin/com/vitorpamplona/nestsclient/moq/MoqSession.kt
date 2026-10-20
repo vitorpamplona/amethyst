@@ -974,7 +974,9 @@ class SubscribeHandle internal constructor(
      * announce go `Ended` (moq-lite), read live. Each `Ended` is a
      * publisher session going away, so a rise between two subscriptions
      * means the later one is served by a new publisher session, whose
-     * groups may restart at 0. Always 0 for transports without announces.
+     * groups may restart at 0. Always 0 for transports without announces,
+     * and on the handle `connectReconnectingNestsListener` returns, which
+     * outlives the publisher sessions it follows.
      */
     val broadcastEndedCount: Long get() = broadcastEndedCountProbe()
 }

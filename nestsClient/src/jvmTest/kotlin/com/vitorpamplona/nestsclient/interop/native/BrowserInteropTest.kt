@@ -1113,9 +1113,11 @@ private suspend fun runBrowserPublishKotlinListen(
                             for (s in samples) pcm += s.toFloat() / Short.MAX_VALUE.toFloat()
                         }
                     }
-                if (withTimeoutOrNull(FIRST_FRAME_TIMEOUT_MS) { firstFrame.await() } != null) {
-                    delay(collectMs)
+                if (withTimeoutOrNull(FIRST_FRAME_TIMEOUT_MS) { firstFrame.await() } == null) {
+                    collector.cancel()
+                    error("listener received no frame within ${FIRST_FRAME_TIMEOUT_MS / 1_000} s of subscribing")
                 }
+                delay(collectMs)
                 collector.cancel()
             }
         } finally {

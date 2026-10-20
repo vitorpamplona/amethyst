@@ -40,7 +40,9 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.consumeAsFlow
+import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.flow.take
@@ -156,7 +158,10 @@ class ReconnectingNestsListenerTest {
 
         class Subscription(
             val frames: Channel<MoqObject>,
-        )
+        ) {
+            /** Completes when the wrapper starts collecting, i.e. after it attached. */
+            val collecting = CompletableDeferred<Unit>()
+        }
 
         private val broadcastEndedCount = AtomicLong(0L)
         private val opened = MutableStateFlow<List<Subscription>>(emptyList())
@@ -177,7 +182,11 @@ class ReconnectingNestsListenerTest {
                         groupOrder = 0x01,
                         contentExists = false,
                     ),
-                objects = sub.frames.consumeAsFlow(),
+                objects =
+                    flow {
+                        sub.collecting.complete(Unit)
+                        emitAll(sub.frames.consumeAsFlow())
+                    },
                 unsubscribeAction = { },
                 broadcastEndedCountProbe = { broadcastEndedCount.get() },
             )
@@ -193,7 +202,12 @@ class ReconnectingNestsListenerTest {
             // moq-lite closes the frames first (the relay's subscribe FIN),
             // then sees the Ended announce.
             sub.frames.close()
-            if (byPublisher) broadcastEndedCount.incrementAndGet()
+            if (byPublisher) countBroadcastEnded()
+        }
+
+        /** The session sees the broadcast's `Ended` announce. */
+        fun countBroadcastEnded() {
+            broadcastEndedCount.incrementAndGet()
         }
 
         override suspend fun close() {}
@@ -471,12 +485,30 @@ class ReconnectingNestsListenerTest {
         }
 
     /**
+     * The `Ended` announce and the subscribe FIN travel on different
+     * streams, so `Ended` can be counted only after the wrapper has already
+     * re-subscribed. The reset is decided at the new subscription's first
+     * frame, not at attach time, so this ordering still counts as a new
+     * publisher session.
+     */
+    @Test
+    fun broadcast_end_counted_after_resubscribe_still_resets_the_guard() =
+        runBlocking {
+            val result = runTwoSubscriptions(byPublisher = true, endedCountedAfterResubscribe = true)
+            assertEquals(listOf<Byte>(0x01, 0x02), result.map { it.payload[0] })
+        }
+
+    /**
      * Delivers group 0 (0x01) on the first subscription, ends it
      * ([byPublisher] picks how), then sends group 0 (0x02) and group 1
      * (0x03) on the re-issued second subscription. Returns the first two
-     * frames the consumer saw.
+     * frames the consumer saw. With [endedCountedAfterResubscribe], the
+     * `Ended` count rises only once the second subscription has attached.
      */
-    private suspend fun runTwoSubscriptions(byPublisher: Boolean): List<MoqObject> {
+    private suspend fun runTwoSubscriptions(
+        byPublisher: Boolean,
+        endedCountedAfterResubscribe: Boolean = false,
+    ): List<MoqObject> {
         val scope = CoroutineScope(SupervisorJob())
         try {
             val listener = CyclingSubscriptionListener(room)
@@ -516,8 +548,12 @@ class ReconnectingNestsListenerTest {
             first.frames.send(frame(byteArrayOf(0x01), groupId = 0L))
             withTimeout(5_000L) { consumerProgress.first { it >= 1 } }
 
-            listener.end(first, byPublisher)
+            listener.end(first, byPublisher && !endedCountedAfterResubscribe)
             val second = listener.subscription(2)
+            if (byPublisher && endedCountedAfterResubscribe) {
+                withTimeout(5_000L) { second.collecting.await() }
+                listener.countBroadcastEnded()
+            }
             second.frames.send(frame(byteArrayOf(0x02), groupId = 0L))
             second.frames.send(frame(byteArrayOf(0x03), groupId = 1L))
 
