@@ -127,6 +127,7 @@ import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
 import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
+import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
@@ -138,6 +139,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarItemDef
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.canOpen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.AnimatedImage
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
@@ -312,7 +314,15 @@ fun ProfileContentTemplate(
     accountMenu: AccountMenu? = null,
 ) {
     Box {
-        if (profileBanner != null) {
+        if (profileBanner != null && isAnimatedGifUrl(profileBanner)) {
+            AnimatedImage(
+                url = profileBanner,
+                contentDescription = stringRes(id = Res.string.profile_image),
+                contentScale = ContentScale.Crop,
+                modifier = bannerModifier,
+                onError = {},
+            )
+        } else if (profileBanner != null) {
             AsyncImage(
                 model = profileBanner,
                 contentDescription = stringRes(id = Res.string.profile_image),

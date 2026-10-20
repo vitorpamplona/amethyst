@@ -96,6 +96,8 @@ fun AnimatedGifImage(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     contentScale: ContentScale = ContentScale.Fit,
+    // Called when neither the GIF decoder nor the image loader can draw [url].
+    onError: (() -> Unit)? = null,
 ) {
     var gifFrames by remember(url) { mutableStateOf(GifFrameCache.get(url)) }
     var currentFrame by remember(url) { mutableIntStateOf(0) }
@@ -152,6 +154,7 @@ fun AnimatedGifImage(
                 contentDescription = contentDescription,
                 modifier = modifier,
                 contentScale = contentScale,
+                onError = onError?.let { callback -> { callback() } },
             )
         }
 

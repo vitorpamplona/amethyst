@@ -87,6 +87,20 @@ interface NotePlatform {
         thumbhash: String?,
     ) {}
 
+    /**
+     * An animated image (a GIF) drawn the way a still is: filling [modifier], looping, silent, with
+     * no player controls. [onError] runs when it cannot be drawn, so the caller can move to a
+     * fallback URL.
+     */
+    @Composable
+    fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
+    ) {}
+
     @Composable
     fun VideoView(
         videoUri: String,

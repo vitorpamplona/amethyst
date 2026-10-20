@@ -353,6 +353,11 @@ object DesktopNotePlatform : NotePlatform {
         }
     }
 
+    /**
+     * A GIF (or AVIF) in an image slot, such as a profile banner: drawn as an image, looping, with no
+     * player controls and no sound. With [ContentScale.Crop] it fills the slot the caller sized;
+     * otherwise it takes the inline image size.
+     */
     @Composable
     override fun GifVideoView(
         videoUri: String,
@@ -366,27 +371,29 @@ object DesktopNotePlatform : NotePlatform {
         thumbhash: String?,
     ) {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
-        if (LocalMediaCapture.current != null) {
-            if (isAnimatedGifUrl(videoUri)) {
-                AnimatedGifImage(url = videoUri, contentDescription = contentDescription, modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight).clip(shape), contentScale = contentScale)
-            } else {
-                CapturedVideoStill(videoUri, null, false, accountViewModel, dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri), blurhash, thumbhash, shape, contentDescription)
+        val ratio = dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri)
+        val fillsSlot = contentScale == ContentScale.Crop
+        val modifier =
+            (if (fillsSlot) Modifier.fillMaxSize() else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight))
+                .clip(shape)
+                .let { if (onDialog != null) it.clickable { onDialog() } else it }
+        Box(modifier) {
+            if (blurhash != null || thumbhash != null) {
+                DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.matchParentSize(), thumbhash = thumbhash)
             }
-            return
+            // With no known shape the image itself sizes the box, so it must not just match it.
+            MediaImage(videoUri, contentDescription, contentScale, if (fillsSlot || ratio != null) Modifier.matchParentSize() else Modifier.fillMaxWidth())
         }
-        DesktopVideoPlayer(
-            url = videoUri,
-            modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
-            shape = shape,
-            declaredRatio = dimensions.ratioOrNull(),
-            blurhash = blurhash,
-            thumbhash = thumbhash,
-            onFullscreen = onDialog?.let { open -> { _ -> open() } },
-            autoPlayWhenVisible = accountViewModel.settings.autoPlayVideos(),
-            pauseWhenHidden = true,
-            loadOnDemand = !accountViewModel.settings.startVideoPlayback(),
-        )
     }
+
+    @Composable
+    override fun AnimatedImage(
+        url: String,
+        contentDescription: String?,
+        contentScale: ContentScale,
+        modifier: Modifier,
+        onError: () -> Unit,
+    ) = AnimatedGifImage(url = url, contentDescription = contentDescription, modifier = modifier, contentScale = contentScale, onError = onError)
 
     @Composable
     override fun VideoView(

@@ -75,6 +75,21 @@ fun ZoomableImageDialog(
 )
 
 @Composable
+fun AnimatedImage(
+    url: String,
+    contentDescription: String?,
+    contentScale: ContentScale,
+    modifier: Modifier,
+    onError: () -> Unit,
+) = LocalNotePlatform.current.AnimatedImage(
+    url = url,
+    contentDescription = contentDescription,
+    contentScale = contentScale,
+    modifier = modifier,
+    onError = onError,
+)
+
+@Composable
 fun GifVideoView(
     videoUri: String,
     contentDescription: String?,

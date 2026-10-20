@@ -60,17 +60,23 @@ fun MyAsyncImage(
     onError: (@Composable () -> Unit)?,
 ) {
     if (isAnimatedMediaUrl(imageUrl)) {
-        GifVideoView(
-            videoUri = imageUrl,
-            contentDescription = contentDescription,
-            dimensions = null,
-            blurhash = null,
-            roundedCorner = contentScale == ContentScale.Crop,
-            contentScale = contentScale,
-            onDialog = null,
-            accountViewModel = accountViewModel,
-            thumbhash = null,
-        )
+        // Same slot as a still: the caller's modifiers size and shape it (a banner, a thumbnail),
+        // so the GIF neither spills out of its slot nor picks up corners the still would not have.
+        Box(mainImageModifier) {
+            Box(loadedImageModifier) {
+                GifVideoView(
+                    videoUri = imageUrl,
+                    contentDescription = contentDescription,
+                    dimensions = null,
+                    blurhash = null,
+                    roundedCorner = false,
+                    contentScale = contentScale,
+                    onDialog = null,
+                    accountViewModel = accountViewModel,
+                    thumbhash = null,
+                )
+            }
+        }
     } else {
         val ratio = MediaAspectRatioCache.get(imageUrl)
         val capture = LocalMediaCapture.current
