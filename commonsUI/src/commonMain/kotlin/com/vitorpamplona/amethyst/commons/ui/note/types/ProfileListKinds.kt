@@ -54,7 +54,6 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.cashu_mints
@@ -103,9 +102,7 @@ import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_incomplete
 import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_title_font
 import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
-import com.vitorpamplona.amethyst.commons.resources.kind_card_private_relays_hidden
 import com.vitorpamplona.amethyst.commons.resources.nests_servers_auth_label
-import com.vitorpamplona.amethyst.commons.resources.private_outbox_section
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -141,7 +138,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip30CustomEmoji.selection.EmojiListEvent
 import com.vitorpamplona.quartz.nip30CustomEmoji.stickers.StickerPackEvent
-import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
 import com.vitorpamplona.quartz.nip38UserStatus.UserStatusEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.ExternalIdentitiesEvent
 import com.vitorpamplona.quartz.nip39ExtIdentities.identityClaims
@@ -503,29 +499,6 @@ fun RenderNestsServers(
     ServerListCard(MaterialSymbols.Mic, kindName(event.kind), hosts) {
         KindCardField(stringRes(Res.string.nests_servers_auth_label), authHosts.joinToString(", "), maxLines = 2)
     }
-}
-
-/** NIP-37 kind 10013: the relays this user stores drafts on. Usually all private, never decrypted here. */
-@Composable
-fun RenderPrivateOutboxRelays(
-    baseNote: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val event = baseNote.event as? PrivateOutboxRelayListEvent ?: return
-    val relays = remember(event) { RelayListCard(event.publicRelays()) }
-    val hasPrivateItems = remember(event) { event.content.isNotEmpty() }
-
-    // Drawn like every other relay list kind; the private half stays encrypted and is only noted.
-    DisplayRelaySet(
-        relays,
-        stringRes(Res.string.private_outbox_section),
-        if (hasPrivateItems) stringRes(Res.string.kind_card_private_relays_hidden) else null,
-        backgroundColor,
-        accountViewModel,
-        nav,
-    )
 }
 
 // ---------------------------------------------------------------------------------------------

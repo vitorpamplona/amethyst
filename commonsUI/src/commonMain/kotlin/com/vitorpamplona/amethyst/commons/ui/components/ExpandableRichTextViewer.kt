@@ -180,14 +180,17 @@ fun ExpandableRichTextViewer(
 private val ShowLessRowHeight = 40.dp
 
 @Composable
-fun ShowMoreButton(onClick: () -> Unit) {
+fun ShowMoreButton(
+    text: String = stringRes(Res.string.show_more),
+    onClick: () -> Unit,
+) {
     FilledTonalButton(
         modifier = StdTopPadding,
         onClick = onClick,
         shape = ButtonBorder,
         contentPadding = ShowMoreButtonPadding,
     ) {
-        Text(text = stringRes(Res.string.show_more))
+        Text(text = text)
         Spacer(Modifier.width(4.dp))
         Icon(symbol = MaterialSymbols.UnfoldMore, contentDescription = null, modifier = Modifier.size(18.dp))
     }

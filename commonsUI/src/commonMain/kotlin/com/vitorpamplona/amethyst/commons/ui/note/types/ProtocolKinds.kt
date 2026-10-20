@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_bolt12_zap_title
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_cashu_history_title
@@ -51,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.resources.kc_proto_offer
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_relays
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_zap_request_title
 import com.vitorpamplona.amethyst.commons.resources.kc_proto_zap_to
-import com.vitorpamplona.amethyst.commons.resources.keypackage_section
 import com.vitorpamplona.amethyst.commons.resources.kind_card_private_pill
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
 import com.vitorpamplona.amethyst.commons.resources.zap_type_private
@@ -64,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.decoupling.setup.EncryptionKeyListEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
@@ -274,27 +271,6 @@ private fun ciphersuiteShortName(code: String): String =
         MlsCiphersuite.MLS_256_DHKEMP384_AES256GCM_SHA384_P384 -> "P-384 · AES-256-GCM · P-384"
         null -> code
     }
-
-/** Marmot KeyPackage relay list (kind 10051), drawn like the other relay lists. */
-@Composable
-fun RenderKeyPackageRelayList(
-    baseNote: Note,
-    backgroundColor: MutableState<Color>,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val event = baseNote.event as? KeyPackageRelayListEvent ?: return
-    val relays = remember(event) { RelayListCard(event.relays()) }
-
-    DisplayRelaySet(
-        relays,
-        stringRes(Res.string.keypackage_section),
-        null,
-        backgroundColor,
-        accountViewModel,
-        nav,
-    )
-}
 
 /** NIP-60 mint quote (kind 7374): the quote id is encrypted, the mint it was opened at is public. */
 @Composable

@@ -206,6 +206,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.publicChats.PublicC
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ShowQRScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.redirect.LoadRedirectScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relay.RelayFeedScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relayList.RelayListMembersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relayauth.RelayAuthSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.AllRelayListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.RelayInformationScreen
@@ -488,6 +489,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImageFile> { ShareNoteAsImageFileScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ContactListUsers> { ContactListUsersScreen(it.noteId, accountViewModel, nav) }
+    composableFromEndArgs<Route.RelayListMembers> { RelayListMembersScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.PollResults> { PollResultsScreen(it.noteId, accountViewModel, nav) }
     composableFromEndArgs<Route.Hashtag> { HashtagScreen(it, accountViewModel, nav) }
     composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }

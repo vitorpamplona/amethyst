@@ -768,6 +768,11 @@ sealed class Route {
         val noteId: String,
     ) : Route()
 
+    /** Every relay of a relay-list event (NIP-65, NIP-17, NIP-51 sets and lists…), in a lazy list. */
+    @Serializable data class RelayListMembers(
+        val noteId: String,
+    ) : Route()
+
     @Serializable data class Hashtag(
         val hashtag: String,
     ) : Route()
