@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_AUTH_REFUSED
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.DONE_REASON_EOSE
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -42,6 +41,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -73,9 +73,6 @@ data class RelayProbeResult(
     val status: RelayProbeStatus,
     /** `created_at` of the newest matching event this relay served. */
     val newestAt: Long? = null,
-    /** NIP-45 COUNT for the count filter; null when not asked or the relay refused COUNT. */
-    val count: Int? = null,
-    val approximate: Boolean = false,
     /** The relay's own words for a refusal or failure. */
     val message: String? = null,
 )
@@ -100,20 +97,15 @@ data class RelayProbeState(
 }
 
 /**
- * Asks many relays the same question, one REQ per relay, and keeps what each one did — the
- * kinds.amethyst.social crawler, generalized. A kind probe sends `{kinds:[k], limit:1}` and a
- * COUNT; a "where is this event" probe sends `{ids:[id]}`.
- *
- * Unlike the web crawler it does not page each relay's whole history: one `limit:1` REQ says
- * whether a relay holds the kind and how recently, and NIP-45 COUNT says how much where the
- * relay supports it. That keeps a 500-relay crawl to two small frames per relay.
+ * "Where is this event": asks many relays for one id, one REQ per relay, and keeps what each one
+ * did (found, none, refused, offline, timed out, waiting for Tor), the per-relay table
+ * kinds.amethyst.social draws for a kind.
  *
  * Runs on a throwaway client from [clientBuilder] (Amethyst's crawl client: relay-authenticated,
  * blocked relays removed, events kept out of LocalCache) and closes it when done.
  */
 class RelayProbeViewModel(
     private val filter: Filter,
-    private val countFilter: Filter?,
     private val seedRelays: Set<NormalizedRelayUrl>,
     private val clientBuilder: () -> INostrClient,
     private val canDial: (NormalizedRelayUrl) -> Boolean = { true },
@@ -217,26 +209,11 @@ class RelayProbeViewModel(
             }
         val message = reason?.substringAfter(':', "")?.ifBlank { null }
 
-        val count =
-            if (status == RelayProbeStatus.FOUND && countFilter != null) {
-                try {
-                    client.count(relay, countFilter, idleTimeoutMs = IDLE_MS)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    null
-                }
-            } else {
-                null
-            }
-
         report(
             RelayProbeResult(
                 relay = relay,
                 status = status,
                 newestAt = newest?.createdAt,
-                count = count?.count,
-                approximate = count?.approximate ?: false,
                 message = message,
             ),
             newest,
@@ -257,31 +234,6 @@ class RelayProbeViewModel(
         }
     }
 
-    /**
-     * Relays NIP-66 monitors reported on in the last day (kind 30166, one per relay in `d`).
-     * Checked 2026-10-20: each of [MONITOR_RELAYS] served ~400 relays from 11-13 monitors.
-     */
-    private suspend fun discoverRelays(client: INostrClient): Set<NormalizedRelayUrl> {
-        val discovered = mutableSetOf<NormalizedRelayUrl>()
-        val reports =
-            Filter(
-                kinds = listOf(RelayDiscoveryEvent.KIND),
-                since = TimeUtils.oneDayAgo(),
-                limit = 2000,
-            )
-        withTimeoutOrNull(DISCOVERY_DEADLINE_MS) {
-            client.fetchAllWithHooks(MONITOR_RELAYS.associateWith { listOf(reports) }, idleTimeoutMs = IDLE_MS) { _, event ->
-                event.tags
-                    .firstOrNull { it.size > 1 && it[0] == "d" }
-                    ?.get(1)
-                    ?.let { RelayUrlNormalizer.normalizeOrNull(it) }
-                    ?.let { discovered.add(it) }
-                true
-            }
-        }
-        return discovered
-    }
-
     companion object {
         const val PARALLEL_RELAYS = 24
         const val IDLE_MS = 6_000L
@@ -293,21 +245,33 @@ class RelayProbeViewModel(
                 .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
                 .toSet()
 
+        /**
+         * Relays NIP-66 monitors reported on in the last day (kind 30166, one per relay in `d`).
+         * Checked 2026-10-20: each of [MONITOR_RELAYS] served ~400 relays from 11-13 monitors.
+         */
+        suspend fun discoverRelays(client: INostrClient): Set<NormalizedRelayUrl> {
+            val discovered = mutableSetOf<NormalizedRelayUrl>()
+            val reports =
+                Filter(
+                    kinds = listOf(RelayDiscoveryEvent.KIND),
+                    since = TimeUtils.oneDayAgo(),
+                    limit = 2000,
+                )
+            withTimeoutOrNull(DISCOVERY_DEADLINE_MS) {
+                client.fetchAllWithHooks(MONITOR_RELAYS.associateWith { listOf(reports) }, idleTimeoutMs = IDLE_MS) { _, event ->
+                    event.tags
+                        .firstOrNull { it.size > 1 && it[0] == "d" }
+                        ?.get(1)
+                        ?.let { RelayUrlNormalizer.normalizeOrNull(it) }
+                        ?.let { discovered.add(it) }
+                    true
+                }
+            }
+            return discovered
+        }
+
         /** Relays worth asking even when discovery is off: Amethyst's indexers, search and finder relays. */
         fun defaultSeeds(accountRelays: Set<NormalizedRelayUrl>): Set<NormalizedRelayUrl> = accountRelays + DefaultIndexerRelayList + DefaultSearchRelayList + Constants.eventFinderRelays
-
-        fun forKind(
-            kind: Int,
-            seeds: Set<NormalizedRelayUrl>,
-            clientBuilder: () -> INostrClient,
-            canDial: (NormalizedRelayUrl) -> Boolean,
-        ) = RelayProbeViewModel(
-            filter = Filter(kinds = listOf(kind), limit = 1),
-            countFilter = Filter(kinds = listOf(kind)),
-            seedRelays = seeds,
-            clientBuilder = clientBuilder,
-            canDial = canDial,
-        )
 
         fun forEvent(
             id: String,
@@ -316,7 +280,6 @@ class RelayProbeViewModel(
             canDial: (NormalizedRelayUrl) -> Boolean,
         ) = RelayProbeViewModel(
             filter = Filter(ids = listOf(id)),
-            countFilter = null,
             seedRelays = seeds,
             clientBuilder = clientBuilder,
             canDial = canDial,

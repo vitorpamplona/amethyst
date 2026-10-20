@@ -30,15 +30,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -54,9 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,18 +61,10 @@ import com.vitorpamplona.amethyst.commons.devtools.RelayProbeViewModel
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_finder_title
-import com.vitorpamplona.amethyst.commons.resources.devtools_event_unknown_kind
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_button
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_field
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_nip
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_usage_title
-import com.vitorpamplona.amethyst.commons.resources.devtools_probe_count
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_discovering
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_event_explainer
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_found_only
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_include_discovered
-import com.vitorpamplona.amethyst.commons.resources.devtools_probe_kind_explainer
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_newest
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_none_found
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_progress
@@ -97,103 +83,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindDisplayName
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import org.jetbrains.compose.resources.StringResource
-
-/**
- * kinds.amethyst.social in the app: type a kind number, get its name when Quartz knows it, the
- * newest example any relay holds, and which relays hold it, how recently and how much.
- */
-@Composable
-fun KindUsageScreen(
-    initialKind: Int?,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    var kind by rememberSaveable { mutableStateOf(initialKind) }
-
-    Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_kind_lookup_title), nav) },
-    ) { padding ->
-        val current = kind
-        val header: @Composable () -> Unit = { KindLookupHeader(current) { kind = it } }
-        if (current == null) {
-            Column(Modifier.padding(padding).padding(horizontal = 16.dp, vertical = 12.dp)) { header() }
-        } else {
-            val viewModel =
-                rememberViewModel(key = "KindUsage-$current") {
-                    RelayProbeViewModel.forKind(current, seeds(accountViewModel), accountViewModel::buildCrawlClient, accountViewModel.host.websocketBuilder::canConnect)
-                }
-            RelayProbeList(padding, Res.string.devtools_probe_kind_explainer, viewModel, nav, header)
-        }
-    }
-}
-
-/** The kind field, and what the registry knows about the kind being shown. */
-@Composable
-private fun KindLookupHeader(
-    kind: Int?,
-    onLookUp: (Int) -> Unit,
-) {
-    var text by rememberSaveable { mutableStateOf(kind?.toString() ?: "") }
-    val parsed = text.trim().toIntOrNull()?.takeIf { it in 0..65535 }
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it.filter(Char::isDigit).take(5) },
-                label = { Text(stringRes(Res.string.devtools_kind_lookup_field)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { parsed?.let(onLookUp) }),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-                modifier = Modifier.weight(1f),
-            )
-            Button(onClick = { parsed?.let(onLookUp) }, enabled = parsed != null && parsed != kind) {
-                Text(stringRes(Res.string.devtools_kind_lookup_button))
-            }
-        }
-
-        if (kind != null) {
-            val info = KindNames.infoFor(kind)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Name the kind only when the app knows it, not with kindName's "k1234" fallback.
-                val known = info != null || kindDisplayName(kind) != null
-                Text(
-                    stringRes(Res.string.devtools_kind_usage_title, kind) + if (known) " · " + kindName(kind) else "",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                info?.nip?.let { nip ->
-                    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.secondaryContainer) {
-                        Text(
-                            stringRes(Res.string.devtools_kind_nip, nip),
-                            style = MaterialTheme.typography.labelSmall,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        )
-                    }
-                }
-            }
-            if (info == null) {
-                Text(
-                    stringRes(Res.string.devtools_event_unknown_kind, kind),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-}
 
 /** "Where is my event": which relays serve [eventId] right now. */
 @Composable
@@ -204,7 +99,7 @@ fun EventFinderScreen(
 ) {
     val viewModel =
         rememberViewModel(key = "EventFinder-$eventId") {
-            RelayProbeViewModel.forEvent(eventId, seeds(accountViewModel), accountViewModel::buildCrawlClient, accountViewModel.host.websocketBuilder::canConnect)
+            RelayProbeViewModel.forEvent(eventId, devToolsSeedRelays(accountViewModel), accountViewModel::buildCrawlClient, accountViewModel.host.websocketBuilder::canConnect)
         }
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_event_finder_title), nav) },
@@ -213,21 +108,20 @@ fun EventFinderScreen(
     }
 }
 
-private fun seeds(accountViewModel: AccountViewModel) =
+internal fun devToolsSeedRelays(accountViewModel: AccountViewModel) =
     RelayProbeViewModel.defaultSeeds(
         accountViewModel.account.client
             .availableRelaysFlow()
             .value,
     )
 
-/** [header], then the newest match, then the crawl controls, then one row per relay. */
+/** The event as found, then the crawl controls, then one row per relay. */
 @Composable
 private fun RelayProbeList(
     padding: PaddingValues,
     explainer: StringResource,
     viewModel: RelayProbeViewModel,
     nav: INav,
-    header: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var includeDiscovered by rememberSaveable { mutableStateOf(true) }
@@ -251,8 +145,6 @@ private fun RelayProbeList(
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                header()
-
                 val newest = state.newest
                 if (newest != null) {
                     DevToolsSectionTitle(stringRes(Res.string.devtools_probe_newest) + " · " + timeAgoNoDot(newest.createdAt))
@@ -338,7 +230,6 @@ private fun ProbeRow(
             val details =
                 buildList {
                     result.newestAt?.let { add(timeAgoNoDot(it).trim()) }
-                    result.count?.let { add((if (result.approximate) "~" else "") + pluralStringRes(Res.plurals.devtools_probe_count, it, it)) }
                     result.message?.let { add(it) }
                 }
             if (details.isNotEmpty()) {

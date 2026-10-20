@@ -131,7 +131,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.DevToolsHu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.EventFinderScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.EventInspectorScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.KindBrowserScreen
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.KindUsageScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.KindLookupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.Nip19ToolScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.RelayConsoleScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.DiscoverScreen
@@ -479,7 +479,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.DevToolsNip19> { Nip19ToolScreen(it.input, accountViewModel, nav) }
     composableFromEndArgs<Route.DevToolsEventInspector> { EventInspectorScreen(it.noteKey, nav) }
     composableFromEnd<Route.DevToolsKinds> { KindBrowserScreen(nav) }
-    composableFromEndArgs<Route.DevToolsKindUsage> { KindUsageScreen(it.kind, accountViewModel, nav) }
+    composableFromEndArgs<Route.DevToolsKindUsage> { KindLookupScreen(it.kind, accountViewModel, nav) }
     composableFromEndArgs<Route.DevToolsEventFinder> { EventFinderScreen(it.eventId, accountViewModel, nav) }
     composableFromEndArgs<Route.DevToolsRelayConsole>(capWidth = false) { RelayConsoleScreen(it.url, accountViewModel, nav) }
     composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }

@@ -23,7 +23,13 @@ package com.vitorpamplona.amethyst.commons.devtools
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CountCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.EventCmd
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.ReqCmd
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocket
@@ -37,6 +43,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -95,16 +102,17 @@ class RelayConsoleViewModel(
     private val _connection = MutableStateFlow(ConsoleConnection.DISCONNECTED)
     val connection: StateFlow<ConsoleConnection> = _connection
 
-    /** The last NIP-42 challenge the relay sent, offered to the user as a one-tap AUTH. */
+    /** REQ subscriptions sent and not yet closed by either side, newest last: what CLOSE offers. */
+    private val _openSubs = MutableStateFlow<ImmutableList<String>>(persistentListOf())
+    val openSubs: StateFlow<ImmutableList<String>> = _openSubs
+
+    /** The last NIP-42 challenge the relay sent; the screen asks before answering it. */
     private val _pendingChallenge = MutableStateFlow<String?>(null)
     val pendingChallenge: StateFlow<String?> = _pendingChallenge
 
     private var socket: WebSocket? = null
     private var relay: NormalizedRelayUrl? = null
     private var nextId = 0L
-
-    /** The subscription id of the last REQ sent, so the CLOSE template closes it. */
-    private var lastSubId: String? = null
 
     val canSign: Boolean get() = signer?.isWriteable() == true
 
@@ -136,6 +144,7 @@ class RelayConsoleViewModel(
                 override suspend fun onMessage(text: String) {
                     val label = labelOf(text)
                     if (label == "AUTH") _pendingChallenge.value = challengeOf(text)
+                    if (label == "CLOSED") subIdOf(text)?.let(::forgetSub)
                     append(FrameDirection.RECEIVED, text, label)
                 }
 
@@ -166,6 +175,7 @@ class RelayConsoleViewModel(
         socket?.disconnect()
         socket = null
         _pendingChallenge.value = null
+        _openSubs.value = persistentListOf()
         _connection.value = ConsoleConnection.DISCONNECTED
     }
 
@@ -176,13 +186,31 @@ class RelayConsoleViewModel(
         if (sent) {
             val label = labelOf(payload)
             // Only a REQ stays open; a COUNT ends with its answer, so there is nothing to CLOSE.
-            if (label == "REQ") lastSubId = SUB_ID.find(payload)?.groupValues?.get(1)
+            when (label) {
+                "REQ" -> subIdOf(payload)?.let { sub -> _openSubs.update { (it - sub + sub).toImmutableList() } }
+                "CLOSE" -> subIdOf(payload)?.let(::forgetSub)
+            }
             append(FrameDirection.SENT, payload, label)
         } else {
             system(ConsoleSystemEvent.SEND_FAILED, payload.take(80))
         }
         return sent
     }
+
+    fun sendReq(filter: Filter) = send(ReqCmd(newSubId(), listOf(filter)).toJson())
+
+    fun sendCount(filter: Filter) = send(CountCmd(newSubId(), listOf(filter)).toJson())
+
+    fun close(subId: String) = send(CloseCmd(subId).toJson())
+
+    /** Publishes an already-signed event: a bare event JSON is wrapped in `["EVENT", …]`. */
+    fun sendEvent(event: Event) = send(EventCmd(event).toJson())
+
+    fun dismissAuth() {
+        _pendingChallenge.value = null
+    }
+
+    private fun forgetSub(subId: String) = _openSubs.update { (it - subId).toImmutableList() }
 
     /** Signs a kind 22242 for the pending challenge with the account's key and sends it. */
     fun answerAuth() {
@@ -232,15 +260,9 @@ class RelayConsoleViewModel(
 
         fun challengeOf(frame: String): String? = AUTH_CHALLENGE.find(frame)?.groupValues?.get(1)
 
+        /** The second element of a REQ, COUNT, CLOSE or CLOSED frame. */
+        fun subIdOf(frame: String): String? = SUB_ID.find(frame)?.groupValues?.get(1)
+
         private fun newSubId() = "console-" + RandomInstance.int(100000)
-
-        /** Frames a developer most often starts from; `{sub}` stays unique per insert. */
-        fun reqTemplate() = """["REQ","${newSubId()}",{"kinds":[1],"limit":5}]"""
-
-        fun countTemplate() = """["COUNT","${newSubId()}",{"kinds":[1]}]"""
-
-        fun eventTemplate() = """["EVENT",{}]"""
     }
-
-    fun closeTemplate() = """["CLOSE","${lastSubId ?: "console-"}"]"""
 }

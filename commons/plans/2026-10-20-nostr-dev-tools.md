@@ -1,9 +1,18 @@
 # Nostr developer tools in Amethyst
 
 Status: prototype (2026-10-20). The screens are shared UI in `commonsUI`, so Android and Desktop
-both have them: a hub, a NIP-19 converter, an event inspector, a kind lookup (type a number, get
-its name and a recent example crawled from relays), a kind browser, "find this event on relays",
-and a raw relay console. The rest of this plan is proposed.
+both have them:
+- a hub;
+- a NIP-19 converter;
+- an event inspector;
+- a kind lookup: type a number and see the kind's name, then every way clients encode it, sampled
+  from relays, grouped by client or by shape, each with tag usage and a real example;
+- a kind browser;
+- "find this event on relays";
+- a relay console with REQ/COUNT builders, CLOSE for open subscriptions, a signed-event publisher
+  and AUTH behind a confirm.
+
+The rest of this plan is proposed.
 
 ## Why
 
@@ -40,7 +49,7 @@ api.nostr.watch.
 | Id and signature checks | `nip01Core/crypto/EventExt.kt` (`generateId`, `verifySignature`) | reused |
 | Kind names and NIPs | `quartz/kinds/KindNames` (378 kinds); localized overlay `kindName()` in commonsUI | reused |
 | Relay fan-out with per-relay outcome | `fetchAllWithHooks` → `FetchAllResult.doneReasons` (eose / closed / cannot / auth-refused) | reused |
-| NIP-45 COUNT | `INostrClient.count(relay, filter)` | reused |
+| NIP-45 COUNT | `INostrClient.count(relay, filter)` | not needed yet; the console sends COUNT raw |
 | Throwaway relay client | `BaseAccountViewModel.buildCrawlClient()`: relay-authenticated, blocked relays removed, events kept out of `LocalCache` | reused |
 | Raw sockets that obey Tor | `AccountViewModelHost.websocketBuilder` | reused |
 | NIP-66 relay discovery | `RelayDiscoveryEvent` (30166) | reused |
@@ -69,21 +78,36 @@ Headless code in `commons/…/devtools/` (CLI-safe, unit-tested in `DevToolsInsp
   `["EVENT",{…}]` or an nembed.
   - It recomputes the id and reports a mismatch with the computed value, and checks the signature.
   - It flags a `created_at` in the future and kinds missing from the registry.
-- `RelayProbeViewModel` is the kinds.amethyst.social crawler, generalized.
-  - It sends one REQ per relay, 24 relays in parallel, with a 6 s idle timeout and a 20 s cap.
-  - Each relay ends as one of found / none / auth required / refused / offline / timed out, taken
-    from `doneReasons`.
-  - `forKind` sends `{kinds:[k],limit:1}`, plus NIP-45 COUNT where a relay serves it.
-  - `forEvent` sends `{ids:[id]}`.
+- `KindSamplerViewModel` + `KindVariantCollector` are behind Kind Lookup.
+  - The sampler asks each relay for its 50 newest events of the kind, 24 relays at a time, and
+    stops starting new relays at 5,000 events. Breadth over depth: different clients publish to
+    different relays.
+  - The collector keeps only aggregates and the newest example per group, in two groupings:
+    - by the NIP-89 `client` tag, exact string (so "Yakihonne", "YakiHonne" and "yakihonne.com"
+      stay apart: that difference is itself an encoding);
+    - by shape: the set of tag names plus the content format.
+  - Each group reports events, authors, content formats, and per tag the share of events carrying
+    it and the tag lengths seen.
+  - Content format is one of empty, JSON object, JSON array, encrypted (NIP-04 `?iv=` or a NIP-44
+    base64 payload) or text.
   - The relay set is the app's pool, the indexer, search and finder defaults, and, by default,
     every relay NIP-66 monitors reported on in the last day. The monitors are read from
     `relay.nostr.watch`, `relaypag.es` and `monitorlizard.nostr1.com`; on 2026-10-20 each returned
     ~390 relays from 11–13 monitors.
+- `RelayProbeViewModel` is "find this event on relays".
+  - It sends one `{ids:[id]}` REQ per relay, 24 relays in parallel, with a 6 s idle timeout and a
+    20 s cap.
+  - Each relay ends as one of found / none / auth required / refused / offline / timed out /
+    waiting for Tor, taken from `doneReasons`.
+- `FilterDraft` is the console's REQ/COUNT form.
+  - Fields: kinds, authors, ids, one `#tag` with values, a since window, limit and NIP-50 search.
+  - Authors, ids and `#p`/`#e`/`#a` values accept NIP-19 as well as hex.
+  - An invalid token is reported with the field it is in.
 - `RelayConsoleViewModel` is a raw WebSocket to one relay with every frame both ways, unparsed.
-  - Templates are provided for REQ, COUNT, CLOSE and EVENT. CLOSE closes the last subscription
-    sent.
-  - When the relay sends a challenge, it offers "Sign and send AUTH" using the account signer. It
-    never authenticates on its own.
+  - It tracks the REQs it opened (dropping any the relay CLOSED), so CLOSE offers exactly those.
+  - It sends REQ/COUNT/CLOSE/EVENT through Quartz's own command serializers.
+  - It answers a relay's AUTH challenge only after the user confirms a dialog that names the relay,
+    the challenge and the signing npub.
 
 Screens in `commonsUI/…/ui/screen/loggedIn/devtools/`:
 
@@ -93,7 +117,7 @@ Screens in `commonsUI/…/ui/screen/loggedIn/devtools/`:
 | `DevToolsNip19(input?)` | `Nip19ToolScreen`: decode, re-encode, open in Amethyst, crawl the kind |
 | `DevToolsEventInspector(noteKey?)` | `EventInspectorScreen`: verdict, fields, tag chips, content, JSON, then find on relays / crawl kind / open |
 | `DevToolsKinds` | `KindBrowserScreen`: search by number, name or NIP; an unknown number still offers a crawl |
-| `DevToolsKindUsage(kind?)` | `KindUsageScreen` ("Kind Lookup"): type a kind number. It shows the name and NIP when the registry knows the kind (or says it doesn't), the newest example any relay holds, then the per-relay table, with "only relays that have it" |
+| `DevToolsKindUsage(kind?)` | `KindLookupScreen`: type a kind number. It shows the name and NIP when the registry knows the kind (or says it doesn't), then one card per client or per shape, each with tag chips (share, value counts; tags under 5% folded) and a "Show example" |
 | `DevToolsEventFinder(eventId)` | `EventFinderScreen`: the same table for one event id |
 | `DevToolsRelayConsole(url?)` | `RelayConsoleScreen` |
 
@@ -107,17 +131,19 @@ Checked by hand on the desktop app at phone size, read-only npub login:
 - The note menu opens the inspector on that note, which reports a valid id and signature.
 - The NIP-19 converter decodes an nevent and re-encodes it.
 - The kind browser search works.
-- Kind Lookup on 1010, 4242 (unregistered) and 30023 returns names and examples. With Tor off,
-  30023 was found on 257 of 769 answering relays out of 1,464 within a minute.
-- Kind 9735 shows NIP-45 counts (~3.4M on relay.ditto.pub).
-- The relay console exchanged REQ, COUNT and CLOSE with nos.lol.
+- Kind Lookup on 30023 with Tor off sampled ~3k events from ~220 relays within a minute, in 66
+  client groups.
+- The relay console built and exchanged REQ (npub converted to hex, since applied), COUNT and
+  CLOSE with nos.lol.
+- AUTH could not be exercised: a read-only login cannot sign.
 
 Not checked on an Android device.
 
 Choices worth reviewing:
-- **No full-history paging in the kind crawl.** One `limit:1` REQ plus COUNT costs two small frames
-  per relay. The web crawler pages each relay's whole history, which on a popular kind is
-  thousands of events per relay. A count from a relay without NIP-45 shows as blank, not as zero.
+- **Kind Lookup shows encodings, not relay coverage.** Which relays hold a kind is not the
+  question it answers, so the per-relay table lives only on "find this event". Shape grouping is
+  noisy on kinds with many optional tags (30023: ~300 shapes in a 3k sample); grouping by client
+  is the readable default.
 - **The crawl runs on `buildCrawlClient()`**, so crawled events never enter `LocalCache`, and the
   account's blocked relays (kind 10006) are never contacted.
 - **The console bypasses the relay pool** on purpose: no reconnects, no automatic AUTH, no dedup. A

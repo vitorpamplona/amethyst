@@ -159,4 +159,91 @@ class DevToolsInspectorsTest {
         assertEquals(null, RelayConsoleViewModel.labelOf("""{"id":"x"}"""))
         assertEquals("abc-123", RelayConsoleViewModel.challengeOf("""["AUTH","abc-123"]"""))
     }
+
+    @Test
+    fun variantsGroupByClientAndByShape() =
+        runTest {
+            val a = signer.sign<TextNoteEvent>(1_000, TextNoteEvent.KIND, arrayOf(arrayOf("client", "Amethyst"), arrayOf("t", "nostr")), "hi")
+            val b = signer.sign<TextNoteEvent>(1_001, TextNoteEvent.KIND, arrayOf(arrayOf("client", "Amethyst"), arrayOf("e", "a".repeat(64), "", "root")), "yo")
+            val c = signer.sign<TextNoteEvent>(1_002, TextNoteEvent.KIND, arrayOf(arrayOf("t", "nostr")), "")
+
+            val collector = KindVariantCollector()
+            listOf(a, b, c, a).forEach { collector.add(it) }
+            assertEquals(3, collector.total)
+
+            val byClient = collector.variants(KindVariantGrouping.CLIENT)
+            assertEquals(listOf("Amethyst", null), byClient.map { it.client })
+            val amethyst = byClient.first()
+            assertEquals(2, amethyst.count)
+            assertEquals(b.id, amethyst.example.id)
+            assertEquals(listOf(2), amethyst.tags.first { it.name == "client" }.lengths)
+            assertEquals(listOf(4), amethyst.tags.first { it.name == "e" }.lengths)
+            assertEquals(1, amethyst.tags.first { it.name == "t" }.events)
+
+            // a, b and c each carry a different tag-name set, and c's content is empty.
+            val byShape = collector.variants(KindVariantGrouping.SHAPE)
+            assertEquals(3, byShape.size)
+            assertEquals(
+                ContentFormat.EMPTY,
+                byShape
+                    .first { it.example.id == c.id }
+                    .formats
+                    .single()
+                    .first,
+            )
+        }
+
+    @Test
+    fun contentFormats() {
+        assertEquals(ContentFormat.EMPTY, KindVariantCollector.contentFormatOf("  "))
+        assertEquals(ContentFormat.JSON_OBJECT, KindVariantCollector.contentFormatOf("""{"name":"x"}"""))
+        assertEquals(ContentFormat.JSON_ARRAY, KindVariantCollector.contentFormatOf("""[["p","x"]]"""))
+        assertEquals(ContentFormat.ENCRYPTED, KindVariantCollector.contentFormatOf("abc==?iv=def=="))
+        assertEquals(ContentFormat.ENCRYPTED, KindVariantCollector.contentFormatOf("A".repeat(120)))
+        assertEquals(ContentFormat.TEXT, KindVariantCollector.contentFormatOf("hello world"))
+    }
+
+    @Test
+    fun filterDraftAcceptsNip19AndBuildsTheFilter() {
+        val npub = NPub.create(pubKey)
+        val result =
+            FilterDraft(
+                kinds = "1, 7",
+                authors = "$npub ${"b".repeat(64)}",
+                tagName = "#p",
+                tagValues = npub,
+                since = SinceWindow.DAY,
+                limit = "10",
+            ).build(now = 100_000)
+        assertIs<FilterDraft.Result.Ok>(result)
+        assertEquals(listOf(1, 7), result.filter.kinds)
+        assertEquals(listOf(pubKey, "b".repeat(64)), result.filter.authors)
+        assertEquals(mapOf("p" to listOf(pubKey)), result.filter.tags)
+        assertEquals(100_000L - 86_400, result.filter.since)
+        assertEquals(10, result.filter.limit)
+    }
+
+    @Test
+    fun filterDraftPointsAtTheBadField() {
+        val badKind = FilterDraft(kinds = "1, notakind").build()
+        assertIs<FilterDraft.Result.Invalid>(badKind)
+        assertEquals(FilterField.KINDS, badKind.field)
+        assertEquals("notakind", badKind.token)
+
+        val badAuthor = FilterDraft(authors = "npub1nope").build()
+        assertIs<FilterDraft.Result.Invalid>(badAuthor)
+        assertEquals(FilterField.AUTHORS, badAuthor.field)
+
+        val tagWithoutValues = FilterDraft(tagName = "t").build()
+        assertIs<FilterDraft.Result.Invalid>(tagWithoutValues)
+        assertEquals(FilterField.TAG, tagWithoutValues.field)
+
+        assertIs<FilterDraft.Result.Ok>(FilterDraft().build())
+    }
+
+    @Test
+    fun consoleReadsSubscriptionIds() {
+        assertEquals("console-1", RelayConsoleViewModel.subIdOf("""["REQ","console-1",{"kinds":[1]}]"""))
+        assertEquals("abc", RelayConsoleViewModel.subIdOf("""["CLOSED","abc","error: nope"]"""))
+    }
 }
