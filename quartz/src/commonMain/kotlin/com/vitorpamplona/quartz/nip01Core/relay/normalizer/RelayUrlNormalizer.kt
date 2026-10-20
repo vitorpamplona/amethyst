@@ -28,15 +28,14 @@ import com.vitorpamplona.quartz.utils.Rfc3986
 import kotlinx.coroutines.CancellationException
 import kotlin.contracts.ExperimentalContracts
 
-sealed interface NormalizationResult {
-    class Success(
-        val url: NormalizedRelayUrl,
-    ) : NormalizationResult
+/**
+ * Recently parsed inputs, as written, to their canonical relay. A speed cache only: identity comes
+ * from [RelayUrlInterner], so an eviction costs a re-parse and never a second copy of a relay.
+ */
+val normalizedUrls = LruCache<String, NormalizedRelayUrl>(5000)
 
-    object Error : NormalizationResult
-}
-
-val normalizedUrls = LruCache<String, NormalizationResult>(5000)
+/** Recently rejected inputs, kept apart so a list full of junk cannot evict the good entries. */
+private val rejectedUrls = LruCache<String, Boolean>(1000)
 
 class RelayUrlNormalizer {
     companion object {
@@ -546,13 +545,14 @@ class RelayUrlNormalizer {
          */
         fun normalizeOrNull(url: String): NormalizedRelayUrl? {
             if (url.isEmpty()) return null
+
+            // Already canonical: every url the app wrote itself and every well-formed tag. Safe
+            // because normalizing is idempotent: a canonical url normalizes to itself.
+            RelayUrlInterner.Default.get(url)?.let { return it }
+
             // happy path when the url has been fixed already
-            normalizedUrls[url]?.let {
-                return when (it) {
-                    is NormalizationResult.Success -> it.url
-                    else -> null
-                }
-            }
+            normalizedUrls[url]?.let { return it }
+            if (rejectedUrls[url] != null) return null
 
             return try {
                 val fixed = fix(url)
@@ -561,23 +561,26 @@ class RelayUrlNormalizer {
                     // the RFC 3986 parser can drop or replace the scheme on odd inputs;
                     // anything that is not ws(s):// at this point cannot be connected to.
                     if (!isRelayUrl(normalized.url)) {
-                        Log.d("NormalizedRelayUrl") { "Rejected $url" }
-                        normalizedUrls.put(url, NormalizationResult.Error)
+                        reject(url)
                         return null
                     }
-                    normalizedUrls.put(url, NormalizationResult.Success(normalized))
-                    normalized
+                    val canonical = RelayUrlInterner.Default.intern(normalized)
+                    normalizedUrls.put(url, canonical)
+                    canonical
                 } else {
-                    Log.d("NormalizedRelayUrl") { "Rejected $url" }
-                    normalizedUrls.put(url, NormalizationResult.Error)
+                    reject(url)
                     null
                 }
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                normalizedUrls.put(url, NormalizationResult.Error)
-                Log.d("NormalizedRelayUrl") { "Rejected $url" }
+                reject(url)
                 null
             }
+        }
+
+        private fun reject(url: String) {
+            Log.d("NormalizedRelayUrl") { "Rejected $url" }
+            rejectedUrls.put(url, true)
         }
     }
 }

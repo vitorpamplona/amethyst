@@ -85,6 +85,8 @@ in `NostrClient` completion — import them by name:
 Their waits are **idle windows** (`idleTimeoutMs`) that reset on real progress, never
 wall-clock deadlines; wrap a call in `withTimeoutOrNull` for a hard bound. Relay URLs are
 `NormalizedRelayUrl` (`"wss://…".normalizeRelayUrl()`); most helpers also accept a `String`.
+Build them through the normalizer, not the constructor: it repairs the url and interns it, so
+every spelling of a relay is one shared instance.
 
 ## Keys, events and publishing
 
