@@ -133,14 +133,17 @@ fun RenderEntityRating(
     Column(Modifier.fillMaxWidth()) {
         if (targetAddress != null) {
             LoadAddressableNote(targetAddress) { targetNote ->
-                targetNote?.let {
+                if (targetNote != null) {
                     RatedAddressableCard(
-                        targetNote = it,
+                        targetNote = targetNote,
                         mark = mark,
+                        stars = stars,
                         fallbackIdentifier = noteEvent.targetIdentifier(),
                         accountViewModel = accountViewModel,
                         nav = nav,
                     )
+                } else {
+                    stars?.let { RatingStarsRow(it, mark) }
                 }
             }
         } else if (targetEventId != null) {
@@ -154,6 +157,8 @@ fun RenderEntityRating(
                     RatedTargetCard(mark = mark, title = targetEventId.take(8), subtitle = null, onClick = null)
                 }
             }
+
+            stars?.let { RatingStarsRow(it, mark) }
         } else {
             // Marks like `hashtag` or `relay` name their target with a plain string rather than a
             // coordinate, so there is no note to load. Showing the identifier is the difference
@@ -163,14 +168,8 @@ fun RenderEntityRating(
             if (identifier.isNotEmpty()) {
                 RatedTargetCard(mark = mark, title = identifier, subtitle = null, onClick = null)
             }
-        }
 
-        // Under the card, not above it: the stars are a verdict on the thing named in the card, so
-        // a reader who meets them first has nothing to attach them to.
-        stars?.let {
-            Box(Modifier.padding(top = Size5dp)) {
-                RatingStars(it, mark)
-            }
+            stars?.let { RatingStarsRow(it, mark) }
         }
 
         if (noteEvent.content.isNotBlank()) {
@@ -193,6 +192,21 @@ fun RenderEntityRating(
 }
 
 /**
+ * The stars under a rating's card, not above it: they are a verdict on the thing named in the card,
+ * so a reader who meets them first has nothing to attach them to.
+ */
+@Composable
+private fun RatingStarsRow(
+    stars: Double,
+    mark: String,
+    showMark: Boolean = mark !in MARKS_WITH_A_CARD,
+) {
+    Box(Modifier.padding(top = Size5dp)) {
+        RatingStars(stars, mark, showMark)
+    }
+}
+
+/**
  * The score, as a row of five stars.
  *
  * Filled and empty stars are the **same codepoint**: Material Symbols carries fill on a variable
@@ -209,6 +223,7 @@ fun RenderEntityRating(
 internal fun RatingStars(
     stars: Double,
     mark: String,
+    showMark: Boolean = mark !in MARKS_WITH_A_CARD,
 ) {
     val filled = floor(stars).roundToInt()
     val hasHalf = stars - filled >= 0.25 && filled < EntityRatingEvent.MAX_STARS
@@ -260,7 +275,7 @@ internal fun RatingStars(
 
         // The mark is the only clue to what was rated when the target card cannot name it, but it
         // would just repeat the icon and title of a card that can.
-        if (mark !in MARKS_WITH_A_CARD) {
+        if (showMark) {
             Spacer(StdHorzSpacer)
 
             Text(
@@ -284,6 +299,7 @@ internal fun RatingStars(
 private fun RatedAddressableCard(
     targetNote: AddressableNote,
     mark: String,
+    stars: Double?,
     fallbackIdentifier: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -292,9 +308,12 @@ private fun RatedAddressableCard(
     val event = noteState.note.event
 
     if (event != null && isDListItemPage(event)) {
-        RatedDListItemCard(targetNote, event, mark, fallbackIdentifier, accountViewModel, nav)
+        RatedDListItemCard(targetNote, event, mark, stars, fallbackIdentifier, accountViewModel, nav)
     } else {
-        RatedPublicationCard(targetNote, event as? PublicationIndexEvent, mark, fallbackIdentifier, accountViewModel, nav)
+        val publication = event as? PublicationIndexEvent
+        RatedPublicationCard(targetNote, publication, mark, fallbackIdentifier, accountViewModel, nav)
+        // A loaded publication names itself; until then the slug title needs the mark beside it.
+        stars?.let { RatingStarsRow(it, mark, showMark = publication == null && mark !in MARKS_WITH_A_CARD) }
     }
 }
 
@@ -340,6 +359,7 @@ private fun RatedDListItemCard(
     targetNote: AddressableNote,
     item: Event,
     mark: String,
+    stars: Double?,
     fallbackIdentifier: String,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -361,6 +381,9 @@ private fun RatedDListItemCard(
             onClick = { routeFor(targetNote, accountViewModel.account)?.let { nav.nav(it) } },
             cover = { RatedCover(view.image, mark, accountViewModel) },
         )
+
+        // A titled item names itself; an untitled one falls back to its slug, which the mark explains.
+        stars?.let { RatingStarsRow(it, mark, showMark = view.title == null && mark !in MARKS_WITH_A_CARD) }
     }
 }
 
@@ -515,13 +538,21 @@ internal val MARKS_WITH_A_CARD = setOf(RatingMark.BOOKS, RatingMark.MOVIES, Rati
  */
 internal const val PRODUCT_RATING_MARK = "product"
 
+/**
+ * Not spec marks: what Brainstorm publishes when rating a Decentralized List book or place
+ * (kind 39999), singular where the spec's examples say `books`.
+ */
+private const val BOOK_MARK = "book"
+private const val PLACE_MARK = "place"
+
 private fun iconForMark(mark: String): MaterialSymbol =
     when (mark) {
-        RatingMark.BOOKS -> MaterialSymbols.MenuBook
+        RatingMark.BOOKS, BOOK_MARK -> MaterialSymbols.MenuBook
         RatingMark.MOVIES -> MaterialSymbols.Movie
         RatingMark.PROFILE -> MaterialSymbols.Person
         RatingMark.RELAY -> MaterialSymbols.Dns
         RatingMark.HASHTAG -> MaterialSymbols.Tag
+        PLACE_MARK -> MaterialSymbols.LocationOn
         else -> MaterialSymbols.AutoMirrored.Article
     }
 
