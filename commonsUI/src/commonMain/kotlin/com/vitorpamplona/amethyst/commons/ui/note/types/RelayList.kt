@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,8 +32,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
@@ -40,8 +44,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboard
@@ -51,7 +57,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.MyRelayList
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.addRelayTo
+import com.vitorpamplona.amethyst.commons.model.listsContaining
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
@@ -76,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_list_add_to_my_relays
 import com.vitorpamplona.amethyst.commons.resources.relay_list_in_my_relays
 import com.vitorpamplona.amethyst.commons.resources.relay_list_section_count
 import com.vitorpamplona.amethyst.commons.resources.relay_list_show_all
+import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.search_relays_title
 import com.vitorpamplona.amethyst.commons.resources.trusted_relays_title
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -108,6 +118,7 @@ import com.vitorpamplona.quartz.nip51Lists.relayLists.TrustedRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.relaySets.RelaySetEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /** How many relays a feed card shows before it points to [Route.RelayListMembers] for the rest. */
 private const val COLLAPSED_RELAYS = 3
@@ -392,8 +403,9 @@ fun RelayListRow(
 }
 
 /**
- * A check when the viewer already uses [relay], a plus when they don't. Both open the relay
- * editor; the plus first copies the address so it can be pasted there.
+ * A check when the viewer already uses [relay], a plus when they don't. Either one opens a menu of
+ * the viewer's relay lists: tapping a list adds the relay to it right away, lists that already hold
+ * it are checked, and the last entry opens the relay settings for anything more.
  */
 @Composable
 private fun RelayMembershipAction(
@@ -402,35 +414,94 @@ private fun RelayMembershipAction(
     nav: INav,
 ) {
     val isCurrentlyOnTheUsersList by observeUserRelayIntoList(relay, accountViewModel)
-    val clipboardManager = LocalClipboard.current
-    val scope = rememberCoroutineScope()
+    var menuOpen by remember { mutableStateOf(false) }
 
-    if (isCurrentlyOnTheUsersList) {
-        FilledTonalIconButton(
-            onClick = { nav.nav(Route.EditRelays) },
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Check,
-                contentDescription = stringRes(Res.string.relay_list_in_my_relays),
-                modifier = Modifier.size(20.dp),
-            )
+    Box {
+        if (isCurrentlyOnTheUsersList) {
+            FilledTonalIconButton(
+                onClick = { menuOpen = true },
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Check,
+                    contentDescription = stringRes(Res.string.relay_list_in_my_relays),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        } else {
+            OutlinedIconButton(
+                onClick = { menuOpen = true },
+                modifier = Modifier.size(36.dp),
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Add,
+                    contentDescription = stringRes(Res.string.relay_list_add_to_my_relays),
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
-    } else {
-        OutlinedIconButton(
-            onClick = {
-                scope.launch {
-                    clipboardManager.setText(relay.url)
-                    nav.nav(Route.EditRelays)
-                }
-            },
-            modifier = Modifier.size(36.dp),
-        ) {
-            Icon(
-                symbol = MaterialSymbols.Add,
-                contentDescription = stringRes(Res.string.relay_list_add_to_my_relays),
-                modifier = Modifier.size(20.dp),
-            )
+
+        if (menuOpen) {
+            AddRelayToListMenu(relay, accountViewModel, nav) { menuOpen = false }
         }
     }
 }
+
+@Composable
+private fun AddRelayToListMenu(
+    relay: NormalizedRelayUrl,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    onDismiss: () -> Unit,
+) {
+    // Read once when the menu opens: the menu closes on every pick, so it never needs to update.
+    val containing = remember(relay) { accountViewModel.account.listsContaining(relay) }
+
+    DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        MyRelayList.entries.forEach { list ->
+            val alreadyThere = list in containing
+            DropdownMenuItem(
+                text = { Text(stringRes(list.title())) },
+                enabled = !alreadyThere,
+                leadingIcon = {
+                    Icon(
+                        symbol = if (alreadyThere) MaterialSymbols.Check else MaterialSymbols.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                },
+                onClick = {
+                    onDismiss()
+                    accountViewModel.launchSigner { accountViewModel.account.addRelayTo(list, relay) }
+                },
+            )
+        }
+
+        HorizontalDivider()
+
+        DropdownMenuItem(
+            text = { Text(stringRes(Res.string.relay_settings)) },
+            leadingIcon = {
+                Icon(symbol = MaterialSymbols.Settings, contentDescription = null, modifier = Modifier.size(20.dp))
+            },
+            onClick = {
+                onDismiss()
+                nav.nav(Route.EditRelays)
+            },
+        )
+    }
+}
+
+private fun MyRelayList.title(): StringResource =
+    when (this) {
+        MyRelayList.OUTBOX -> Res.string.public_home_section
+        MyRelayList.INBOX -> Res.string.public_notif_section
+        MyRelayList.DM_INBOX -> Res.string.dm_relays_title
+        MyRelayList.SEARCH -> Res.string.search_relays_title
+        MyRelayList.RELAY_FEEDS -> Res.string.favorite_relays_title
+        MyRelayList.INDEXER -> Res.string.indexer_relays_title
+        MyRelayList.BROADCAST -> Res.string.broadcast_relays_title
+        MyRelayList.PRIVATE_HOME -> Res.string.private_outbox_section
+        MyRelayList.PROXY -> Res.string.proxy_relays_title
+        MyRelayList.TRUSTED -> Res.string.trusted_relays_title
+    }
