@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** How many recently-serviced request ids to persist for cross-restart replay dedup. */
@@ -116,9 +117,18 @@ class Nip46SignerState(
     val settings: AccountSettings,
     /** Asks the user when the ledger says ASK (the app's signer dialogs). */
     val consent: Nip46ConsentPrompter,
+    /**
+     * Whether a relay takes kind-24133 traffic between two keys that aren't its users'. Only those
+     * are offered to a client in `switch_relays`: a relay that requires login, payment or restricted
+     * writes would refuse the session, and the client, having moved, could not reach us any more.
+     */
+    val relayAcceptsSignerTraffic: suspend (NormalizedRelayUrl) -> Boolean = { true },
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /** Clients told to move to the inbox relays (`switch_relays`), until a request shows they did. */
+    private val movingClients = MutableStateFlow<Set<HexKey>>(emptySet())
 
     /** Newest-first, in-memory feed of serviced requests, so the UI can show what apps are doing. */
     val activityLog = Nip46ActivityLog(scope)
@@ -243,7 +253,7 @@ class Nip46SignerState(
 
                     // Envelope wrapped with the local transport key; the actual work (and get_public_key)
                     // uses the account's identity signer inside the processor.
-                    val processor = BunkerRequestProcessor(signer, { listeningRelays.value }, authorizer)
+                    val processor = BunkerRequestProcessor(signer, { listeningRelays.value }, authorizer, switchRelays = ::relaysToMoveTo)
                     val service =
                         NostrConnectSignerService(
                             // The bunker REQ is built inside Quartz, so it is tagged at the client.
@@ -267,9 +277,60 @@ class Nip46SignerState(
                             // re-sign a relay's replay of the same stored requests (matched by exact id).
                             initialSeen = settings.nip46SeenRequestIds.value,
                             onHandledId = { id -> rememberHandledId(id) },
+                            onRequestSeenOn = ::onRequestSeenOn,
                         )
                     service.run()
                 }
+        }
+    }
+
+    /**
+     * NIP-46 `switch_relays`: a `nostrconnect://` app talks to us on relays it picked, which we then
+     * listen on for good. Move it to the account's inbox relays, where a `bunker://` address points
+     * every app. Null (stay) for an app already there, or when no inbox relay would carry the session.
+     */
+    private suspend fun relaysToMoveTo(clientPubKey: HexKey): Set<NormalizedRelayUrl>? {
+        val session = sessionRelays(clientPubKey)
+        val inbox = inboxRelays.value
+        if (session.isEmpty() || inbox.containsAll(session)) return null
+
+        val open = inbox.filter { relayAcceptsSignerTraffic(it) }.toSet()
+        if (open.isEmpty()) return null
+        movingClients.update { it + clientPubKey }
+        return open
+    }
+
+    /**
+     * The relays an app offered when it paired (`nostrconnect://`); empty for a `bunker://` app,
+     * which uses the inbox relays.
+     */
+    private suspend fun sessionRelays(clientPubKey: HexKey): Set<NormalizedRelayUrl> =
+        clientStore
+            .load(authorizer.coordinateFor(clientPubKey))
+            ?.relays
+            ?.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+            ?.toSet()
+            ?: emptySet()
+
+    /**
+     * A request from an app told to move that arrives on an inbox relay outside its own set proves
+     * it moved: only then do its relays leave the listen set. Dropping them on the answer alone would
+     * strand an app that never got it, since it would keep asking where we no longer listen.
+     */
+    private fun onRequestSeenOn(
+        clientPubKey: HexKey,
+        relay: NormalizedRelayUrl,
+    ) {
+        if (clientPubKey !in movingClients.value || relay !in inboxRelays.value) return
+        scope.launch(Dispatchers.IO) {
+            val coordinate = authorizer.coordinateFor(clientPubKey)
+            val info = clientStore.load(coordinate) ?: return@launch
+            val session = info.relays.mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }.toSet()
+            if (relay in session) return@launch
+            movingClients.update { it - clientPubKey }
+            clientStore.store(coordinate, info.copy(relays = emptySet()))
+            refreshExtraRelaysFromStore()
+            Log.d("NIP46Signer") { "${clientPubKey.take(8)}… moved to the inbox relays; no longer listening on ${session.joinToString { it.url }}" }
         }
     }
 

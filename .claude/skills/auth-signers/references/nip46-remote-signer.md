@@ -41,6 +41,14 @@ every settings save. `logout()` sends NIP-46 `logout`: `AccountSessionManager.lo
 `RemoteSignerLogoutUseCase` (its own short-lived signer on the saved transport key, bounded, never
 throws) before the account's settings are deleted. The CLI sends neither.
 
+On the signer side (`server/`), `BunkerRequestProcessor`'s `switchRelays` hook answers
+`switch_relays` (paired clients only; strangers get `null`). `Nip46SignerState` uses it to move a
+`nostrconnect://` app, whose session sits on relays the app picked, onto the account's NIP-65
+inbox relays, keeping only those whose NIP-11 doesn't require auth, payment or restricted writes
+(`acceptsSignerTraffic`). The app's own relays leave the listen set only once one of its requests
+arrives on an inbox relay (`NostrConnectSignerService.onRequestSeenOn`), so an app that never got
+the answer isn't stranded.
+
 ## Identity
 
 The constructor's `signer` is the transport key, **not** the user. `NostrSignerRemote.pubKey`
