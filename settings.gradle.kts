@@ -37,12 +37,21 @@ include(":quartz")
 include(":geode")
 include(":commons")
 include(":commonsUI")
-include(":quic")
 include(":nestsClient")
 include(":marmotQuic")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
 include(":marmotBench")
-include(":quic-interop")
-project(":quic-interop").projectDir = file("quic/interop")
+
+// quic lives in its own repo (vitorpamplona/quic-kmp) and comes from Maven Central. To change
+// it alongside nestsClient or marmotQuic, point Gradle at a local checkout and it builds that
+// checkout instead of the published artifact:
+//   ./gradlew -PquicKmpDir=../quic-kmp :nestsClient:jvmTest
+providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.quic:quic")).using(project(":quic"))
+        }
+    }
+}

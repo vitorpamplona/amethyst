@@ -584,7 +584,7 @@ dependencies {
     // Agent text stream previews: the raw-QUIC binding plus the QUIC
     // stack under it (for the certificate validator it requires).
     implementation(project(":marmotQuic"))
-    implementation(project(":quic"))
+    implementation(libs.quic)
     implementation(project(":nappletHost"))
     // Compose Multiplatform resources runtime, so app-side screens that share a
     // string with a commons renderer can read commons' generated `Res` directly

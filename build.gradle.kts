@@ -95,6 +95,15 @@ allprojects {
 }
 
 subprojects {
+    // The published quic artifact depends on the published quartz. Resolve that to this
+    // checkout's :quartz so every module builds against one quartz, the one in this tree,
+    // instead of carrying a second copy of its classes from Maven Central.
+    configurations.configureEach {
+        resolutionStrategy.dependencySubstitution {
+            substitute(module("com.vitorpamplona.quartz:quartz")).using(project(":quartz"))
+        }
+    }
+
     afterEvaluate {
         // The Kotlin Multiplatform plugin never registers a plain `test` task: it creates one
         // task per target (jvmTest, androidUnitTest, linuxX64Test, ...) plus the `allTests`

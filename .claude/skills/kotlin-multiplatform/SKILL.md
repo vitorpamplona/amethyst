@@ -13,10 +13,12 @@ adds the source-set mechanics and the build traps.
 
 ## Modules
 
-`settings.gradle.kts` includes 16: `amethyst`, `nappletHost`, `benchmark`,
-`baselineprofile`, `quartz`, `geode`, `commons`, `commonsUI`, `quic`, `nestsClient`,
-`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`, `quic-interop`
-(project dir `quic/interop`).
+`settings.gradle.kts` includes 14: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `quartz`, `geode`, `commons`, `commonsUI`, `nestsClient`,
+`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. QUIC is the
+external `libs.quic` (vitorpamplona/quic-kmp); its published `quartz` dependency is
+substituted with `:quartz` in the root `build.gradle.kts`, and `-PquicKmpDir=../quic-kmp`
+builds a local checkout instead.
 
 ## Source sets
 
@@ -30,7 +32,7 @@ adds the source-set mechanics and the build traps.
 
 Targets: `quartz` builds android, jvm, iosArm64, iosSimulatorArm64, linuxX64,
 macosArm64. `commons` and `commonsUI` build android, jvm, iosArm64,
-iosSimulatorArm64. `quic`, `nestsClient`, `marmotQuic` are android + jvm. There is
+iosSimulatorArm64. `nestsClient`, `marmotQuic` are android + jvm. There is
 no `iosX64`.
 
 `jvmAndroid` is a custom intermediate set created with `create("jvmAndroid")`

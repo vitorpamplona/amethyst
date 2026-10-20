@@ -111,14 +111,14 @@ jobs:
 
       - name: Test + Build Desktop (gradle)
         run: |
-          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :quic:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          CMD="./gradlew :quartz:jvmTest :commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
           if [ "${{ runner.os }}" = "Linux" ]; then
             xvfb-run --auto-servernum $CMD
           else
             $CMD
           fi
 
-      # This job runs the JVM test suites (:quartz, :commons, :commonsUI, :quic,
+      # This job runs the JVM test suites (:quartz, :commons, :commonsUI,
       # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
       # test-quartz-ios /
       # test-and-build-android, published nothing when one of them failed. The

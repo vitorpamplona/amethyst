@@ -4,13 +4,13 @@
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
 over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `commonsUI`, `amethyst`,
-`desktopApp`, `cli`, plus the audio-rooms transport stack `quic` + `nestsClient`. Quartz should
+`desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. Quartz should
 contain implementations of Nostr specifications and utilities to help implement them — NIPs under
 `nipXX` packages, and whole non-NIP protocol families beside them: `marmot/` (MLS over Nostr,
 `mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
 `concord/` (`cordXX`), `openagents/` (OpenAgents NIP-CAP/NIP-EXT, `nipXxx`), `buzz/`, plus the
 binding-agnostic RFC 9420 engine in `mls/`. A new protocol over Nostr belongs here as a package,
-not as a Gradle module; `quic`/`nestsClient`/`marmotQuic` are modules because they are transports
+not as a Gradle module; `nestsClient`/`marmotQuic` are modules because they are transports
 with no Nostr in them. Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
@@ -20,17 +20,20 @@ shim that renders the same UI (`desktopApp/…/desktop/app/`, see
 deck and navigation) is gone: its desktop-only features were rebuilt in the shared UI or dropped
 (`commons/plans/2026-10-09-legacy-desktop-retirement.md`). `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
-humans, agents, and interop tests. `quic` is a from-scratch pure-Kotlin QUIC v1 + HTTP/3 +
-WebTransport client (no JNI, no BouncyCastle), built because no Android-compatible Java QUIC library
-exists. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+humans, agents, and interop tests. QUIC itself is no longer in this repo: the from-scratch pure-Kotlin
+QUIC v1 + HTTP/3 + WebTransport client (no JNI, no BouncyCastle, built because no Android-compatible
+Java QUIC library exists) lives in <https://github.com/vitorpamplona/quic-kmp> with its interop runner
+and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). It depends on
+the published `quartz`, which the root build substitutes with this checkout's `:quartz`. To change
+QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
+(`settings.gradle.kts`). `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`) and
-`quic-interop` (QUIC interop runner, lives at `quic/interop`). `marmotQuic` is the Marmot raw-QUIC transport
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `marmotQuic` is the Marmot raw-QUIC transport
 binding for agent text stream previews (`transports/quic.md`) on top of
-`:quic` — its own ALPNs and framing, not WebTransport. `nestsClient` runs
-the audio-room protocol on top of `:quic` for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
+quic-kmp — its own ALPNs and framing, not WebTransport. `nestsClient` runs
+the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
 nostrnests reference relay. The IETF code is kept as a reference + unit-test
@@ -95,11 +98,6 @@ amethyst/
 │       ├── jvmAndroid/    # Markdown renderer, Coil OkHttp fetchers
 │       ├── androidMain/   # Android Coil bridge
 │       └── jvmMain/       # Desktop Coil bridge (+ skikoMain shared with iOS)
-├── quic/           # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport (audio-rooms transport)
-│   └── src/
-│       ├── commonMain/    # Protocol, frame/packet codecs, TLS state machine
-│       ├── jvmAndroid/    # JCA-backed AEAD + UDP socket actuals
-│       └── commonTest/    # RFC vector + adversarial tests
 ├── nestsClient/    # Audio-room client (production runs on moq-lite; IETF MoQ kept as reference)
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
@@ -126,12 +124,10 @@ amethyst/
   boundary, and a "where does my code go?" guide are documented in
   **`commons/ARCHITECTURE.md`** (+ `commonsUI/ARCHITECTURE.md`) — read them
   before adding a new package or dropping code into either module.
-- `quic/` = Transport library (QUIC + HTTP/3 + WebTransport); reusable for any
-  KMP project that needs MoQ. Has no Android-framework dependencies.
-- `nestsClient/` = MoQ + audio-rooms client; takes `:quic` as transport,
+- `nestsClient/` = MoQ + audio-rooms client; takes quic-kmp (`libs.quic`) as transport,
   Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
 - `marmotQuic/` = Marmot's raw-QUIC binding for agent text stream previews.
-  Takes `:quic` for the connection and `:quartz` for the record/envelope
+  Takes quic-kmp for the connection and `:quartz` for the record/envelope
   codecs. Not WebTransport — the binding has its own ALPNs and writes frames
   straight onto QUIC streams, so it deliberately does not reuse
   `nestsClient`'s `WebTransportSession`.
@@ -309,7 +305,7 @@ tools/desktop-run/run-headless.sh start
 ## Dependency Licensing
 
 **MANDATORY whenever you introduce a new third-party dependency** — in *any*
-module (`quartz`, `commons`, `commonsUI`, `amethyst`, `desktopApp`, `cli`, `quic`,
+module (`quartz`, `commons`, `commonsUI`, `amethyst`, `desktopApp`, `cli`,
 `nestsClient`, …), whether you add it to `gradle/libs.versions.toml` or to a
 module's `build.gradle.kts`: determine its license **before** wiring it in.
 Amethyst ships under the **MIT** license, so a copyleft dependency linked into a

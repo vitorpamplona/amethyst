@@ -3,7 +3,7 @@
 Thanks for your interest in improving Amethyst. This document captures the
 expectations, conventions, and review rules for code, documentation, and
 translation contributions across all modules in this repository (`amethyst/`,
-`desktopApp/`, `quartz/`, `commons/`, `commonsUI/`, `cli/`, `quic/`, `nestsClient/`).
+`desktopApp/`, `quartz/`, `commons/`, `commonsUI/`, `cli/`, `nestsClient/`).
 
 By contributing, you agree to license your work under the MIT license. Any
 work contributed where you are not the original author must contain its
@@ -163,9 +163,9 @@ Modules:
 - `quartz/` — Nostr KMP library (protocol, crypto, models). **No UI.**
 - `commons/` — Shared headless layer: models, ViewModels, flows, relay client. **No Compose UI** (the CLI depends on it).
 - `commonsUI/` — Shared Compose Multiplatform UI, icons, theme, Compose resources, on top of `commons`.
-- `quic/` — Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport.
-- `nestsClient/` — Audio-rooms client (NIP-53) built on `:quic` and
-  `:quartz`.
+- `nestsClient/` — Audio-rooms client (NIP-53) built on quic-kmp and
+  `:quartz`. The pure-Kotlin QUIC v1 + HTTP/3 + WebTransport stack lives in
+  its own repo, [quic-kmp](https://github.com/vitorpamplona/quic-kmp), and comes from Maven Central.
 - `amethyst/` — Android app: Activity, layouts, navigation.
 - `desktopApp/` — Desktop JVM app: Window, sidebar, keyboard shortcuts.
 - `cli/` — `amy`, a non-interactive JVM CLI over `quartz` + `commons`.
@@ -185,7 +185,7 @@ of PR churn. Place new code by purpose:
 | Android-only screen, navigation, system integration | `amethyst/` |
 | Desktop-only window, sidebar, menu bar, shortcut | `desktopApp/` |
 | `amy <verb>` subcommand (thin assembly only) | `cli/src/main/kotlin/.../cli/` |
-| QUIC / HTTP/3 / WebTransport protocol code | `quic/` |
+| QUIC / HTTP/3 / WebTransport protocol code | [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (its own repo) |
 | MoQ session / audio-room logic | `nestsClient/` |
 
 Hard rules:
@@ -257,8 +257,7 @@ the PR description. Reviewers may ask if you didn't.
 | **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
 | **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
 | **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |
-| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any change to `:quic` (WebTransport, packet header protection, key updates, stream demux) |
-| **QUIC interop-runner** | `quic/interop/` | The standard `quic-interop-runner` matrix (ns-3 sim) against aioquic, picoquic, quic-go, quinn. Handshake, transfer, loss, corruption, IPv6, migration, key update, version negotiation | Any change in `:quic` that could affect wire bytes, congestion control, or the TLS state machine |
+| **MoQ-lite browser-tier** | `nestsClient/tests/browser-interop/` | Headless Chromium with `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse). WebCodecs encode/decode, ALPN negotiation, browser-side reconnect | Same as hang-tier, plus any quic-kmp version bump (WebTransport, packet header protection, key updates, stream demux) |
 
 ### Running them
 
@@ -268,10 +267,8 @@ front:
 - **MoQ-lite tiers** are opt-in via `-DnestsHangInterop=true` and
   `-DnestsBrowserInterop=true` on `:nestsClient:jvmTest`. Cold first run is
   ~10–13 min per tier; cached runs ~3–7 min.
-- **`quic/interop/run-matrix.sh` is not concurrency-safe.** Run peers
-  sequentially: `for peer in aioquic picoquic quic-go quinn; do
-  quic/interop/run-matrix.sh -s $peer; done`. Plan at
-  `quic/interop/plans/2026-05-06-interop-runner.md`.
+- **The QUIC interop-runner matrix** moved with the QUIC stack to
+  [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (`quic/interop/` there).
 - **CLI suites** ([`cli/tests/README.md`](cli/tests/README.md)): every
   relay-backed suite boots the embedded `amy serve` relay (geode) — no
   external relay binary; only the Marmot suites additionally need `cargo`
