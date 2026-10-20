@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.NoteState
@@ -979,6 +980,9 @@ class AppModules(
         PowJobRestorer(powPublishQueue, powJobStore, scheduledPostStore)
     }
 
+    // A NIP-46 signer's auth_url challenges, from logins and from the accounts' signers alike.
+    val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()
+
     // keeps all accounts live
     val accountsCache =
         AccountCacheState(
@@ -1008,6 +1012,7 @@ class AppModules(
             nip46ClientStore = nip46ClientStore,
             // Same sockets as the app (Tor, blocked relays), but never filed into LocalCache.
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
+            remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             // Unknown (a cold start before the first callback) waits, like mobile data.
             canDownloadLargeFiles = { connManager.isMobileOrNull.value == false },
             // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
@@ -1037,6 +1042,7 @@ class AppModules(
             hooks = AndroidAccountSessionHooks(),
             remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             signerRelayRouting = torEvaluatorFlow,
+            remoteSignerAuthPrompts = remoteSignerAuthPrompts,
         )
 
     // Web of Trust: whenever the app comes to the foreground, or the network changes under it (a

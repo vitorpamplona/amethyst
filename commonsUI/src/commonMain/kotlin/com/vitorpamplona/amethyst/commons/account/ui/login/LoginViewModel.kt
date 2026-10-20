@@ -264,6 +264,7 @@ class LoginViewModel(
                 password = password.text,
                 transientAccount = isTemporary,
                 rememberKey = rememberKey,
+                allowRemoteSigner = remoteSignerLoginSupported,
             ) {
                 processingLogin = false
                 if (it != null) {
@@ -371,8 +372,8 @@ class LoginViewModel(
     companion object {
         /**
          * Where the `nostrconnect://` handshake happens; the signer replies on the same relays.
-         * Several, so one relay going down doesn't break the login: relay.nsec.app was the only
-         * one and stopped answering (2026-10). All three are NIP-46 relays that Amber and Opal
+         * Several, so one relay going down doesn't break the login: the single default relay used
+         * before stopped answering (2026-10). All three are NIP-46 relays that Amber and Opal
          * also use by default.
          */
         val DEFAULT_NOSTR_CONNECT_RELAYS: ImmutableList<String> =

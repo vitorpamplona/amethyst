@@ -95,12 +95,12 @@ class FromBunkerUriTest {
     @Test
     fun percentEncodedRelaysAndSecret() {
         val uri =
-            "bunker://$validHex?relay=wss%3A%2F%2Frelay.nsec.app&relay=wss%3A%2F%2Frelay.nip46.com" +
+            "bunker://$validHex?relay=wss%3A%2F%2Frelay.signer.example&relay=wss%3A%2F%2Frelay.nip46.com" +
                 "&relay=wss%3A%2F%2Fbucket.coracle.social&secret=a%2Bb"
         val remote = NostrSignerRemote.fromBunkerUri(uri, signer, client)
         assertEquals(
             setOf(
-                NormalizedRelayUrl("wss://relay.nsec.app/"),
+                NormalizedRelayUrl("wss://relay.signer.example/"),
                 NormalizedRelayUrl("wss://relay.nip46.com/"),
                 NormalizedRelayUrl("wss://bucket.coracle.social/"),
             ),

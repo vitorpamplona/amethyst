@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip46RemoteSigner.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -35,6 +36,7 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Decrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestNip44Encrypt
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestPing
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSign
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestSwitchRelays
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseDecrypt
@@ -76,7 +78,8 @@ import kotlinx.coroutines.CancellationException
  * unparseable params ([BunkerRequestInvalid]), or an exception from the signer —
  * are turned into a [BunkerResponseError] carrying the request id, so the client
  * always gets a reply it can correlate (NIP-46: unknown or unsupported methods MUST
- * be replied with an error). `switch_relays` is answered with `null`.
+ * be replied with an error). `switch_relays` is answered from [switchRelays] (`null`, "stay", by
+ * default).
  *
  * Pairs with [NostrConnectSignerService], which subscribes to the relays,
  * decrypts each kind-24133 request, calls [process], and publishes the reply.
@@ -85,6 +88,12 @@ class BunkerRequestProcessor(
     val signer: NostrSigner,
     val relays: suspend () -> Set<NormalizedRelayUrl>,
     val authorizer: Nip46RequestAuthorizer,
+    /**
+     * NIP-46 `switch_relays`: the relays [clientPubKey] should move to, or null to stay. A signer
+     * that wants a session off relays a client picked (a `nostrconnect://` offer) answers with its
+     * own here. Asked only for paired clients.
+     */
+    val switchRelays: suspend (clientPubKey: HexKey) -> Set<NormalizedRelayUrl>? = { null },
 ) {
     /**
      * Fulfils a single decrypted [request] sent by [clientPubKey], returning the
@@ -116,6 +125,8 @@ class BunkerRequestProcessor(
 
                 // Liveness only; answers with no identity at all, so it stays open (see class doc).
                 is BunkerRequestPing -> BunkerResponsePong(request.id)
+
+                is BunkerRequestSwitchRelays -> answerSwitchRelays(clientPubKey, request.id)
 
                 is BunkerRequestGetRelays ->
                     ifPaired(clientPubKey, request) {
@@ -154,10 +165,7 @@ class BunkerRequestProcessor(
                             authorizer.onLogout(clientPubKey)
                             BunkerResponseAck(request.id)
                         }
-                        // This signer listens on a fixed relay set it does not migrate, so there is
-                        // never an update to hand out: NIP-46 says reply `null` ("nothing to change").
-                        // `result` is a string on the wire, so this is the JSON-stringified null.
-                        METHOD_SWITCH_RELAYS -> BunkerResponse(request.id, RESULT_NULL, null)
+                        METHOD_SWITCH_RELAYS -> answerSwitchRelays(clientPubKey, request.id)
                         else -> BunkerResponseError(request.id, "$ERROR_UNSUPPORTED_METHOD: ${request.method}")
                     }
             }
@@ -166,6 +174,23 @@ class BunkerRequestProcessor(
         } catch (e: Exception) {
             BunkerResponseError(request.id, "${e::class.simpleName}: ${e.message}")
         }
+
+    /**
+     * The new relays from [switchRelays] as a JSON-stringified list, or `null` (stay). A stranger is
+     * always told to stay: the relays are the account's, so like `get_relays` they are for paired
+     * clients, but an error would only confuse a client that asks before pairing.
+     */
+    private suspend fun answerSwitchRelays(
+        clientPubKey: HexKey,
+        id: String,
+    ): BunkerResponse {
+        val relays = if (authorizer.isPaired(clientPubKey)) switchRelays(clientPubKey) else null
+        return if (relays.isNullOrEmpty()) {
+            BunkerResponse(id, RESULT_NULL, null)
+        } else {
+            BunkerResponse(id, JsonMapper.toJson(relays.map { it.url }), null)
+        }
+    }
 
     /**
      * Runs [block] only when [clientPubKey] has already paired with this signer (a successful

@@ -108,12 +108,18 @@ data class Identity(
             relays: List<String>,
             connectSecret: String?,
             clientPrivKeyHex: String,
+            /**
+             * The account the signer signs for (its `get_public_key` answer). Defaults to
+             * [signerPubkey] only until that answer is known: most signers use a transport key
+             * that is not the user's.
+             */
+            userPubkey: String = signerPubkey,
         ): Identity =
             Identity(
                 privKeyHex = null,
-                pubKeyHex = signerPubkey,
+                pubKeyHex = userPubkey,
                 nsec = null,
-                npub = signerPubkey.hexToByteArray().toNpub(),
+                npub = userPubkey.hexToByteArray().toNpub(),
                 bunker = Bunker(signerPubkey, relays, connectSecret, clientPrivKeyHex),
             )
 
@@ -179,6 +185,8 @@ data class Bunker(
     val connectSecret: String?,
     @get:com.fasterxml.jackson.annotation.JsonIgnore
     val clientPrivKeyHex: String,
+    /** When the signer was last asked NIP-46 `switch_relays` (unix seconds). */
+    val relaysCheckedAt: Long? = null,
 )
 
 /** Opaque per-run state (subscription cursors, etc). Stored alongside identity. */
@@ -325,7 +333,7 @@ class DataDir(
                 pubKeyHex = file.pubKeyHex,
                 npub = file.npub,
                 privKeyHex = null,
-                bunker = Bunker(b.remotePubkey, b.relays, b.connectSecret, clientPriv),
+                bunker = Bunker(b.remotePubkey, b.relays, b.connectSecret, clientPriv, b.relaysCheckedAt),
             )
         }
         val privHex: String? =
@@ -355,7 +363,7 @@ class DataDir(
                     pubKeyHex = id.pubKeyHex,
                     npub = id.npub,
                     secret = secret,
-                    bunker = BunkerFile(id.bunker.remotePubkey, id.bunker.relays, id.bunker.connectSecret),
+                    bunker = BunkerFile(id.bunker.remotePubkey, id.bunker.relays, id.bunker.connectSecret, id.bunker.relaysCheckedAt),
                 )
             SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
             return
@@ -363,6 +371,21 @@ class DataDir(
         val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
         val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
         SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
+    }
+
+    /**
+     * Rewrites a bunker account's relays (NIP-46 `switch_relays`) and when the signer was asked, in
+     * the identity file only: the secret reference stays as it is, so no keychain write and no
+     * passphrase prompt.
+     */
+    fun updateBunkerRelays(
+        relays: List<String>,
+        checkedAt: Long,
+    ) {
+        val file = loadIdentityFileOrNull() ?: return
+        val bunker = file.bunker ?: return
+        val updated = file.copy(bunker = bunker.copy(relays = relays, relaysCheckedAt = checkedAt))
+        SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(updated))
     }
 
     /** Remove the identity file and any backend-held secret. */

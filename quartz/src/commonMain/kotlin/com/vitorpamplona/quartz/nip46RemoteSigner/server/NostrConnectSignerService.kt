@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.server
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.single.newSubId
@@ -137,7 +138,25 @@ class NostrConnectSignerService(
     val initialSeen: Set<String> = emptySet(),
     /** Invoked with each serviced request's kind-24133 event id so the host can persist it for [initialSeen]. */
     val onHandledId: (suspend (eventId: String) -> Unit)? = null,
+    /**
+     * Invoked with each serviced request's author and the relay it first arrived on, so a host that
+     * moved a client (NIP-46 `switch_relays`) can see when it really did. Runs on the single intake
+     * consumer: keep it cheap.
+     */
+    val onRequestSeenOn: ((clientPubKey: HexKey, relay: NormalizedRelayUrl) -> Unit)? = null,
+    /**
+     * Invoked once the request subscription on [relays] is registered with the client, so a host
+     * about to answer a pairing can wait for it: a REQ registered before an EVENT goes out ahead of
+     * it on the same connection, so the relay already listens when the app replies.
+     */
+    val onListening: ((relays: Set<NormalizedRelayUrl>) -> Unit)? = null,
 ) {
+    /** A request and the relay it came in on; dedup keeps the first arrival. */
+    private class Arrival(
+        val event: NostrConnectEvent,
+        val relay: NormalizedRelayUrl,
+    )
+
     /**
      * Fixed-window limit for unpaired authors: per author, plus one shared budget across all of them.
      * Touched only by the single consumer coroutine (never the relay threads), so it needs no
@@ -215,7 +234,7 @@ class NostrConnectSignerService(
     private suspend fun CoroutineScope.runLoop() {
         val self = transportSigner.pubKey
         // Bounded + DROP_LATEST so a flood bounds memory instead of growing an unlimited queue.
-        val events = Channel<NostrConnectEvent>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
+        val events = Channel<Arrival>(capacity = maxQueue, onBufferOverflow = BufferOverflow.DROP_LATEST)
         val subId = newSubId()
         val listener =
             object : SubscriptionListener {
@@ -229,7 +248,7 @@ class NostrConnectSignerService(
                     // touch no shared mutable state here — the (thread-safe) channel send is all it
                     // does; dedup happens in the single-threaded consumer below.
                     if (event is NostrConnectEvent && event.verifiedRecipientPubKey() == self) {
-                        events.trySend(event)
+                        events.trySend(Arrival(event, relay))
                     }
                 }
             }
@@ -256,9 +275,11 @@ class NostrConnectSignerService(
         // otherwise replay every old request each time we (re)subscribe. See [maxRequestAgeSeconds].
         val filter = Filter(kinds = listOf(NostrConnectEvent.KIND), tags = mapOf("p" to listOf(self)), since = TimeUtils.now() - maxRequestAgeSeconds)
         client.subscribe(subId, relays.associateWith { listOf(filter) }, listener)
+        onListening?.invoke(relays)
         try {
             while (true) {
-                val event = events.receive()
+                val arrival = events.receive()
+                val event = arrival.event
                 if (!seen.add(event.id)) continue // same request already handled (arrived on another relay)
                 if (seen.size > seenCap) {
                     seen.iterator().let {
@@ -316,6 +337,7 @@ class NostrConnectSignerService(
                 // not synchronized; a request we decided to service here should not be re-prompted after a
                 // restart even if it is ultimately denied (the in-memory `seen` already covers this run).
                 onHandledId?.invoke(event.id)
+                onRequestSeenOn?.invoke(event.pubKey, arrival.relay)
                 // Acquire BEFORE launching so intake applies backpressure at the cap instead of spawning
                 // unbounded child coroutines; dedup/staleness/limit above already ran on this single consumer.
                 handleGate.acquire()

@@ -130,7 +130,7 @@ class StoreAccountSessionStoreTest {
             val user = KeyPair()
             val transport = KeyPair()
             val npub = user.pubKey.toNpub()
-            val bunkerUri = "bunker://${KeyPair().pubKey.toHexKey()}?relay=wss://relay.nsec.app"
+            val bunkerUri = "bunker://${KeyPair().pubKey.toHexKey()}?relay=wss://relay.signer.example"
 
             store.setDefaultAccount(
                 AccountSettings(

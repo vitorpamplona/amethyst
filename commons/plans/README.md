@@ -25,6 +25,7 @@ _Audited 2026-06-30 (+ 2026-09-12 split entry, 2026-09-27 migration and one-UI e
 ## Shipped
 | Plan | Summary |
 | ---- | ------- |
+| [2026-10-20-nip05-remote-signer-login.md](2026-10-20-nip05-remote-signer-login.md) | Signing login from a `name@domain` address: read the NIP-05 document's `nip46` field (the spec's `name=_` shape and the legacy `nip46[pubkey]` shape nostr-tools uses), connect through the existing bunker / `nostrconnect://` use cases and `auth_url` prompt, and require the signer's account to match the address. Falls back to the read-only login. Implemented for Amethyst and `amy`; not yet checked against a live provider. |
 | [2026-10-15-dlist-three-tier-rendering.md](2026-10-15-dlist-three-tier-rendering.md) | Decentralized List items drawn in three tiers after Brainstorm-UI ADRs 0004/0007: raw tags, the governing definition (copy resolution, display hints, URL templates, media, location, "More fields"), and hand-made views for GitHub accounts, food and drink places and books on the item's page. Third-party enrichment (GitHub, Open Library) not ported. |
 | [2026-09-12-audit-findings.md](2026-09-12-audit-findings.md) | Bug/performance audit of `commons` + `commonsUI` after the split: 34 verified fixes shipped, 4 deferred with rationale, 6 rejected. |
 | [2026-09-12-commons-ui-split.md](2026-09-12-commons-ui-split.md) | Split the Compose half of `commons` into the new `:commonsUI` module (same packages, `api(:commons)`), so `cli` no longer carries Compose/Skiko; records the classification method and follow-ups. |

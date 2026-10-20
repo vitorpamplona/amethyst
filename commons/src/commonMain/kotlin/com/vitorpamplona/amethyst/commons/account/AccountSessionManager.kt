@@ -23,7 +23,10 @@ package com.vitorpamplona.amethyst.commons.account
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.domain.nip46.BunkerLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.Nip05SignerLoginUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.NostrConnectLoginUseCase
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
+import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerLogoutUseCase
 import com.vitorpamplona.amethyst.commons.domain.nip46.stripBunkerSecret
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -38,6 +41,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05RemoteSigner
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.resolveUserHexOrNull
 import com.vitorpamplona.quartz.nip06KeyDerivation.Nip06
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
@@ -100,6 +105,8 @@ class AccountSessionManager(
     val remoteSignerMetadata: BunkerClientMetadata? = null,
     /** Routes a NIP-46 login's relays like the user's own before any account lists them. */
     val signerRelayRouting: SignerRelayRouting = SignerRelayRouting.None,
+    /** Where a NIP-46 signer's `auth_url` challenges wait for the user, during login and after. */
+    val remoteSignerAuthPrompts: RemoteSignerAuthPrompts = RemoteSignerAuthPrompts(),
 ) {
     private val _accountContent = MutableStateFlow<AccountState>(AccountState.Loading)
     val accountContent = _accountContent.asStateFlow()
@@ -241,9 +248,34 @@ class AccountSessionManager(
         val transport = KeyPair()
         val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
         return withSignerRelays(relays) {
-            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata)
+            val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts)
             result.signer.closeSubscription()
             remoteSignerSettings(result.pubKeyHex, stripBunkerSecret(bunkerUri), transport, transientAccount)
+        }
+    }
+
+    /** The NIP-46 signer [address]'s domain advertises, or null for none (or no answer). */
+    private suspend fun findNip05Signer(address: String): Nip05RemoteSigner? {
+        val nip05 = Nip05Id.parse(address) ?: return null
+        return try {
+            nip05ClientBuilder().loadRemoteSigner(nip05)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.d("Login", "No remote signer found for $address", e)
+            null
+        }
+    }
+
+    /** Logs in through the signer a NIP-05 domain advertises, with a fresh transport key. */
+    private suspend fun nip05SignerLogin(
+        signer: Nip05RemoteSigner,
+        transientAccount: Boolean,
+    ): AccountSettings {
+        val transport = KeyPair()
+        return withSignerRelays(signer.relays) {
+            val login = Nip05SignerLoginUseCase.execute(signer, transport, clientBuilder(), remoteSignerMetadata, remoteSignerAuthPrompts)
+            login.result.signer.closeSubscription()
+            remoteSignerSettings(login.result.pubKeyHex, login.bunkerUri, transport, transientAccount)
         }
     }
 
@@ -290,7 +322,7 @@ class AccountSessionManager(
 
             // The wait for the signer and each request to it carry their own timeouts. One more
             // around the whole would cut off a signer that answers near the end of the first.
-            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder())
+            val result = NostrConnectLoginUseCase.awaitAndLogin(uriData, clientBuilder(), remoteSignerAuthPrompts)
             result.signer.closeSubscription()
 
             val bunkerUri = NostrConnectURI.buildBunker(result.signer.remotePubkey, uriData.relays, secret = null)
@@ -332,6 +364,8 @@ class AccountSessionManager(
         loginWithExternalSigner: Boolean = false,
         packageName: String = "",
         rememberKey: Boolean = true,
+        /** Whether a `name@domain` may log in through the signer its domain advertises (NIP-46). */
+        allowRemoteSigner: Boolean = true,
         onError: (String?) -> Unit,
     ) {
         // Accepts keys copied by hand from the backup screen: UPPERCASE, and split
@@ -359,6 +393,22 @@ class AccountSessionManager(
                     loginSync(newKey, transientAccount, loginWithExternalSigner, packageName, onError, rememberKey)
                 }
             } else if (EMAIL_PATTERN.matches(cleanKey)) {
+                // A domain may advertise a NIP-46 signer for the address: sign through it. Without one
+                // the address still resolves, to a read-only account.
+                val signer = if (allowRemoteSigner) findNip05Signer(cleanKey) else null
+                if (signer != null) {
+                    try {
+                        startUI(localPreferences.setDefaultAccount(nip05SignerLogin(signer, transientAccount)))
+                    } catch (e: Nip05SignerLoginUseCase.SignerMismatchException) {
+                        Log.w("Login") { "The signer for $cleanKey signs for ${e.actual.take(8)}, not ${e.expected.take(8)}" }
+                        onError("The signer for $cleanKey signs for a different account than the address names")
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Login", "Could not log in through the signer for $cleanKey", e)
+                        onError("Could not log in through the signer for $cleanKey: ${e.message}")
+                    }
+                    return@launch
+                }
                 // Delegate to the shared quartz resolver so NIP-05 handling stays in
                 // lockstep with the CLI and anywhere else we accept user identifiers.
                 try {
@@ -517,6 +567,36 @@ class AccountSessionManager(
             }
         }
 
+    /**
+     * NIP-46 `logout` to the remote signer of the account being removed, if it has one. Launched
+     * on its own: the account's deletion does not wait for a signer that may never answer.
+     */
+    private suspend fun logOutOfRemoteSigner(
+        hex: HexKey,
+        npub: String,
+    ) {
+        // The loaded account's settings first, on screen or not: a relay switch may not be saved yet.
+        val settings =
+            accountsCache.loadedAccount(hex)?.settings
+                ?: try {
+                    localPreferences.loadAccountConfigFromEncryptedStorage(npub)
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("AccountSessionManager", "Could not read the account's remote signer for logout", e)
+                    null
+                }
+        if (settings == null || !settings.usesRemoteSigner()) return
+        val bunkerUri = settings.remoteSignerBunkerUri ?: return
+        val transportKey = settings.remoteSignerTransportKey ?: return
+        val relays = NostrConnectURI.parseBunker(bunkerUri)?.relays ?: emptySet()
+
+        scope.launch(Dispatchers.IO) {
+            withSignerRelays(relays) {
+                RemoteSignerLogoutUseCase.execute(bunkerUri, transportKey, clientBuilder())
+            }
+        }
+    }
+
     fun logOff(accountInfo: AccountInfo) {
         scope.launch(Dispatchers.IO) {
             val hex = decodePublicKeyAsHexOrNull(accountInfo.npub)
@@ -528,6 +608,9 @@ class AccountSessionManager(
             // platform may keep the account's contacts outside our own storage (Android's launcher
             // shortcuts).
             hooks.onAccountRemoving(accountInfo.npub)
+
+            // Read before the settings are deleted: the logout needs the address and transport key.
+            logOutOfRemoteSigner(hex, accountInfo.npub)
 
             if (accountInfo.npub == currentAccountNPub()) {
                 // End what the account had running before its state is torn down.

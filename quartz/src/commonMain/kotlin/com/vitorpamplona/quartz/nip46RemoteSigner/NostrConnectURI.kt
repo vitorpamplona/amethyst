@@ -43,6 +43,21 @@ object NostrConnectURI {
     const val BUNKER_SCHEME = "bunker://"
     const val NOSTRCONNECT_SCHEME = "nostrconnect://"
 
+    /** Where a signer's `nostrconnect_url` (NIP-46 appendix) takes the client's code. */
+    const val NOSTRCONNECT_URL_PLACEHOLDER = "<nostrconnect>"
+
+    /** A signer's `nostrconnect_url`: a web page with a place for the code. */
+    fun isNostrConnectUrlTemplate(url: String): Boolean {
+        val lower = url.trim().lowercase()
+        return (lower.startsWith("https://") || lower.startsWith("http://")) && url.contains(NOSTRCONNECT_URL_PLACEHOLDER)
+    }
+
+    /** The signer's page for [nostrConnectUri]: [template] with the code, percent-encoded, in its place. */
+    fun fillNostrConnectUrl(
+        template: String,
+        nostrConnectUri: String,
+    ): String = template.replace(NOSTRCONNECT_URL_PLACEHOLDER, encode(nostrConnectUri))
+
     /** A parsed `bunker://` advertisement. */
     data class Bunker(
         val remoteSignerPubKey: HexKey,
