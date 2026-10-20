@@ -178,6 +178,9 @@ fun <T> rememberAtNow(
  * [subtitle] beside it, an optional [status] pill on the right, then [body].
  *
  * [iconTint], when given, overrides the tone's color for the badge, the wash and the pill.
+ *
+ * With [framed] false the header and body draw straight on the note row, with no wash or rounded
+ * box: for a card that is the whole body of a note, where the row already frames it.
  */
 @Composable
 fun KindCard(
@@ -188,45 +191,28 @@ fun KindCard(
     tone: KindTone = KindTone.Primary,
     status: String? = null,
     statusTone: KindTone? = null,
+    framed: Boolean = true,
     body: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val accent = iconTint ?: tone.color()
     val pillColor = statusTone?.color() ?: accent
     val cleanSubtitle = subtitle?.takeIf { it.isNotBlank() && !it.equals(title, ignoreCase = true) }
 
-    ActivityCardFrame(tint = accent) { transparentBackground ->
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            ActivityBadge(tint = accent) {
-                Icon(
-                    symbol = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                    tint = Color.White,
-                )
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                cleanSubtitle?.let {
-                    Text(
-                        text = it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+    if (!framed) {
+        // On the row's own background: inner notes and rich text keep drawing on it.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            KindCardHeader(icon, title, cleanSubtitle, accent, status, pillColor)
+            if (body != null) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    body()
                 }
             }
-            status?.let { ActivityPill(it, pillColor) }
         }
+        return
+    }
+
+    ActivityCardFrame(tint = accent) { transparentBackground ->
+        KindCardHeader(icon, title, cleanSubtitle, accent, status, pillColor)
         if (body != null) {
             CompositionLocalProvider(LocalKindCardBackground provides transparentBackground) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -234,6 +220,50 @@ fun KindCard(
                 }
             }
         }
+    }
+}
+
+/** The badge, title, subtitle and status pill that open every kind card. */
+@Composable
+private fun KindCardHeader(
+    icon: MaterialSymbol,
+    title: String,
+    subtitle: String?,
+    accent: Color,
+    status: String?,
+    pillColor: Color,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        ActivityBadge(tint = accent) {
+            Icon(
+                symbol = icon,
+                contentDescription = null,
+                modifier = Modifier.size(15.dp),
+                tint = Color.White,
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            subtitle?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        status?.let { ActivityPill(it, pillColor) }
     }
 }
 

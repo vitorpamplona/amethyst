@@ -127,7 +127,8 @@ data class RawTag(
  * Everything the fallback card can say about an event of a kind the app has no renderer for,
  * read from the conventions most kinds share: NIP-31 `alt`, `title`/`name`/`subject`,
  * `summary`/`description`, `image`/`imeta`, `p`/`e`/`q`/`a` references, `t` hashtags, `r` links,
- * the `d` identifier and NIP-40 expiration. Tags it has no slot for stay in [otherTags], in order.
+ * the `d` identifier and NIP-40 expiration. Tags it has no slot for stay in [otherTags], in order;
+ * `nonce`, `zap` and `-` are left out of it, since the note row around the card already shows them.
  */
 @Immutable
 class UnknownEventDigest(
@@ -238,6 +239,8 @@ class UnknownEventDigest(
                         "location" -> v?.also { location = location ?: it } != null
                         "content-warning" -> true.also { contentWarning = contentWarning ?: v ?: "" }
                         "client" -> v?.also { client = client ?: it } != null
+                        // Drawn by every note row already (PoW, zap splits) or meant for relays (NIP-70).
+                        "nonce", "zap", "-" -> true
                         else -> false
                     }
                 if (!consumed) other += RawTag(tag[0], tag.drop(1))

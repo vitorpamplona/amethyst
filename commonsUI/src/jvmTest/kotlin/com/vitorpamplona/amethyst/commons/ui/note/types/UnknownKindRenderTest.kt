@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.ImageComposeScene
@@ -43,7 +44,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.rendering.unknown.isUnknownKind
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
+import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
+import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -60,9 +65,10 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Renders events of kinds the app has no renderer for, offscreen, through today's text path and
- * each [UnknownKindStyle] prototype side by side, into `commonsUI/build/unknown-kinds/<case>-<theme>.png`.
- * It exists to compare the prototypes; it fails only if a case draws nothing.
+ * Renders events of kinds the app has no renderer for, offscreen, into
+ * `commonsUI/build/unknown-kinds/<case>-<theme>.png`: the old text path beside [RenderUnknownKind]
+ * as NoteCompose draws it, full and quoted, so the card can be checked against the row's own first
+ * line (expiration, location, PoW). It fails only if a case draws nothing.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class UnknownKindRenderTest {
@@ -202,7 +208,7 @@ class UnknownKindRenderTest {
             '6',
             carol,
             1_717,
-            arrayOf(arrayOf("q", quotedId), arrayOf("t", "food")),
+            arrayOf(arrayOf("q", quotedId), arrayOf("t", "food"), arrayOf("g", "u4pruydqqvj"), arrayOf("nonce", "4", "20")),
             "Replying to my own question: yes, and it's great #food",
         )
 
@@ -231,19 +237,27 @@ class UnknownKindRenderTest {
             val scene =
                 ImageComposeScene(width = (1640 * density).toInt(), height = (heightDp * density).toInt(), density = Density(density)) {
                     AmethystPreviewTheme(dark = dark) {
-                        Surface(color = MaterialTheme.colorScheme.background) {
-                            Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                                Column(Modifier.weight(1f)) { Labeled("Today (text path)") { Today(note, nav) } }
-                                UnknownKindStyle.entries.forEach { style ->
+                        CompositionLocalProvider(LocalNotePlatform provides GeohashOnlyPlatform) {
+                            Surface(color = MaterialTheme.colorScheme.background) {
+                                Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                    Column(Modifier.weight(1f)) { Labeled("Before (text path)") { Today(note, nav) } }
                                     Column(Modifier.weight(1f)) {
-                                        Labeled(style.name) {
-                                            ProvideKindCardRow(quotesLeft = 2, canPreview = true) {
-                                                RenderUnknownKind(note, false, 2, remember { mutableStateOf(Color.Transparent) }, mockAccountViewModel(), nav, style)
-                                            }
+                                        Labeled("After, in NoteCompose") {
+                                            NoteCompose(baseNote = note, quotesLeft = 2, accountViewModel = mockAccountViewModel(), nav = nav)
                                         }
-                                        Text("— quoted —", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 16.dp, bottom = 6.dp))
-                                        ProvideKindCardRow(quotesLeft = 0, canPreview = false) {
-                                            RenderUnknownKind(note, true, 0, remember { mutableStateOf(Color.Transparent) }, mockAccountViewModel(), nav, style)
+                                    }
+                                    Column(Modifier.weight(1f)) {
+                                        Labeled("After, quoted") {
+                                            NoteCompose(
+                                                baseNote = note,
+                                                modifier = MaterialTheme.colorScheme.replyModifier,
+                                                isQuotedNote = true,
+                                                unPackReply = ReplyRenderType.NONE,
+                                                makeItShort = true,
+                                                quotesLeft = 0,
+                                                accountViewModel = mockAccountViewModel(),
+                                                nav = nav,
+                                            )
                                         }
                                     }
                                 }
@@ -268,6 +282,16 @@ class UnknownKindRenderTest {
                 scene.close()
             }
         }
+    }
+
+    /** The note row's first line names a `g` geohash's city through the app's services; here it shows the geohash. */
+    private object GeohashOnlyPlatform : NotePlatform {
+        @Composable
+        override fun LoadCityName(
+            geohashStr: String,
+            onLoading: (@Composable () -> Unit)?,
+            content: @Composable (String) -> Unit,
+        ) = content(geohashStr)
     }
 
     @Composable

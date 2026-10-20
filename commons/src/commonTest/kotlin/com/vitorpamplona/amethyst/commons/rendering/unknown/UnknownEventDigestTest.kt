@@ -155,6 +155,12 @@ class UnknownEventDigestTest {
     }
 
     @Test
+    fun tagsTheNoteRowDrawsAreNotRawTags() {
+        val digest = UnknownEventDigest.of(event(9_999, arrayOf(arrayOf("nonce", "123", "20"), arrayOf("zap", alice, "", "1"), arrayOf("-"), arrayOf("x", "y")), ""))
+        assertEquals(listOf(RawTag("x", listOf("y"))), digest.otherTags)
+    }
+
+    @Test
     fun malformedReferencesStayAsRawTags() {
         val digest = UnknownEventDigest.of(event(9_999, arrayOf(arrayOf("p", "not-a-key"), arrayOf("image", "ipfs://cid")), ""))
         assertTrue(digest.people.isEmpty())
