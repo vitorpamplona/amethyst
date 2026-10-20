@@ -1,0 +1,40 @@
+[package]
+name = "jsonbench-rust"
+version = "0.1.0"
+edition = "2024"
+publish = false
+license = "MIT"
+description = "jsonBench Rust harness: which Rust JSON parser decodes Nostr events fastest"
+
+[workspace]
+members = [".", "sjd"]
+
+[dependencies]
+# simd-json-derive pins simd-json 0.17 and its derive emits `::simd_json` paths, so it lives
+# in its own crate (sjd) that sees simd-json 0.17 under that name.
+sjd = { path = "sjd" }
+
+serde = { version = "1.0.229", features = ["derive"] }
+sha2 = "0.11.1"
+
+hifijson = { version = "0.5.0", features = ["serde"] }
+jiter = { version = "0.17.0", features = ["serde"] }
+json = "0.12.4"
+miniserde = "0.1.46"
+nanoserde = { version = "0.2.1", default-features = false, features = ["json", "std"] }
+serde_json = "1.0.154"
+serde_json_borrow = "0.9.0"
+simd-json = "0.18.1"
+simdjson-rust = { version = "0.4.0-alpha.2", features = ["native"] }
+sonic-rs = "0.5.10"
+struson = "0.7.2"
+tinyjson = "2.5.1"
+
+[build-dependencies]
+serde_json = "1.0.154"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+debug = false
