@@ -40,6 +40,7 @@ import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.PersistentList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 enum class FrameDirection {
     SENT,
@@ -104,7 +108,7 @@ class RelayConsoleViewModel(
     private val websocketBuilder: WebsocketBuilder,
     private val signer: NostrSigner?,
 ) : ViewModel() {
-    private val _frames = MutableStateFlow<ImmutableList<ConsoleFrame>>(persistentListOf())
+    private val _frames = MutableStateFlow<PersistentList<ConsoleFrame>>(persistentListOf())
     val frames: StateFlow<ImmutableList<ConsoleFrame>> = _frames
 
     private val _connection = MutableStateFlow(ConsoleConnection.DISCONNECTED)
@@ -121,9 +125,14 @@ class RelayConsoleViewModel(
     private val _pendingChallenge = MutableStateFlow<String?>(null)
     val pendingChallenge: StateFlow<String?> = _pendingChallenge
 
-    private var socket: WebSocket? = null
+    // Read from the signing coroutine (AUTH) as well as the main thread.
+    @Volatile private var socket: WebSocket? = null
     private var relay: NormalizedRelayUrl? = null
-    private var nextId = 0L
+
+    // Frames arrive on OkHttp's delivery thread while sends append from the main thread, and the
+    // id keys the log's LazyColumn: a duplicate would crash it.
+    @OptIn(ExperimentalAtomicApi::class)
+    private val nextId = AtomicLong(0L)
 
     val canSign: Boolean get() = signer?.isWriteable() == true
 
@@ -180,9 +189,10 @@ class RelayConsoleViewModel(
                 }
             }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            socket = websocketBuilder.build(normalized, listener).also { it.connect() }
-        }
+        // Built and dialed right here: connect() only enqueues the dial. Doing it on a coroutine let
+        // a disconnect() land before the socket existed, and the dial then opened a session no one
+        // could close.
+        socket = websocketBuilder.build(normalized, listener).also { it.connect() }
     }
 
     fun disconnect() {
@@ -261,9 +271,11 @@ class RelayConsoleViewModel(
         label: String?,
         system: ConsoleSystemEvent? = null,
     ) {
+        @OptIn(ExperimentalAtomicApi::class)
+        val frame = ConsoleFrame(nextId.fetchAndAdd(1), direction, text, TimeUtils.nowMillis(), label, system)
         _frames.update { current ->
-            val frame = ConsoleFrame(nextId++, direction, text, TimeUtils.nowMillis(), label, system)
-            (current + frame).takeLast(MAX_FRAMES).toImmutableList()
+            val next = current.add(frame)
+            if (next.size > MAX_FRAMES) next.removeAt(0) else next
         }
     }
 

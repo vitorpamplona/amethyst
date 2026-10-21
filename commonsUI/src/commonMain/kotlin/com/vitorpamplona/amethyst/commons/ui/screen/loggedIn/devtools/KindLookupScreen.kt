@@ -125,6 +125,11 @@ fun KindLookupScreen(
     nav: INav,
 ) {
     var kind by rememberSaveable { mutableStateOf(initialKind) }
+    // One sampler for the screen: looking up another kind cancels the crawl in flight.
+    val viewModel =
+        rememberViewModel(key = "KindSampler") {
+            KindSamplerViewModel(devToolsSeedRelays(accountViewModel), accountViewModel::buildCrawlClient, accountViewModel.host.websocketBuilder::canConnect)
+        }
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_kind_lookup_title), nav) },
@@ -135,10 +140,6 @@ fun KindLookupScreen(
                 KindLookupHeader(null) { kind = it }
             }
         } else {
-            val viewModel =
-                rememberViewModel(key = "KindSampler-$current") {
-                    KindSamplerViewModel(current, devToolsSeedRelays(accountViewModel), accountViewModel::buildCrawlClient, accountViewModel.host.websocketBuilder::canConnect)
-                }
             KindVariantsList(padding, current, viewModel) { kind = it }
         }
     }
@@ -155,8 +156,8 @@ private fun KindVariantsList(
     var includeDiscovered by rememberSaveable { mutableStateOf(true) }
     var grouping by rememberSaveable { mutableStateOf(KindVariantGrouping.CLIENT) }
 
-    LaunchedEffect(viewModel) {
-        if (viewModel.state.value.phase == KindSamplerPhase.IDLE) viewModel.start(includeDiscovered)
+    LaunchedEffect(kind) {
+        if (viewModel.state.value.kind != kind) viewModel.start(kind, includeDiscovered)
     }
 
     val running = state.phase == KindSamplerPhase.DISCOVERING || state.phase == KindSamplerPhase.SAMPLING
@@ -186,7 +187,7 @@ private fun KindVariantsList(
                     if (running) {
                         OutlinedButton(onClick = viewModel::cancel) { Text(stringRes(Res.string.devtools_probe_stop)) }
                     } else {
-                        Button(onClick = { viewModel.start(includeDiscovered) }) { Text(stringRes(Res.string.devtools_probe_start)) }
+                        Button(onClick = { viewModel.start(kind, includeDiscovered) }) { Text(stringRes(Res.string.devtools_probe_start)) }
                     }
                     Text(
                         stringRes(Res.string.devtools_kind_sampled, state.events, state.relaysWithEvents, state.relaysAnswered, state.relaysTotal),

@@ -140,12 +140,14 @@ fun Nip19ToolScreen(
                             .firstOrNull { it.field == Nip19Field.KIND }
                             ?.value
                             ?.toIntOrNull()
-                    if (!inspection.isSecret) {
-                        val route = remember(input) { uriToRoute(input.trim(), accountViewModel.account) }
-                        if (route != null) {
-                            OutlinedButton(onClick = { nav.nav(route) }, modifier = Modifier.padding(top = 12.dp)) {
-                                Text(stringRes(Res.string.devtools_open_in_app))
-                            }
+                    // nrelay has no screen of its own; an nsec must never be routed anywhere.
+                    if (!inspection.isSecret && inspection.prefix != "nrelay") {
+                        // Resolved on tap: uriToRoute creates cache entries, which every keystroke must not.
+                        OutlinedButton(
+                            onClick = { uriToRoute(input.trim(), accountViewModel.account)?.let(nav::nav) },
+                            modifier = Modifier.padding(top = 12.dp),
+                        ) {
+                            Text(stringRes(Res.string.devtools_open_in_app))
                         }
                     }
                     if (kind != null) {

@@ -133,7 +133,7 @@ private fun RelayProbeList(
 
     val rows =
         remember(state.results, foundOnly) {
-            state.results
+            state.results.values
                 .filter { !foundOnly || it.status == RelayProbeStatus.FOUND }
                 .sortedWith(compareBy<RelayProbeResult> { it.status.order() }.thenByDescending { it.newestAt ?: 0 }.thenBy { it.relay.url })
         }

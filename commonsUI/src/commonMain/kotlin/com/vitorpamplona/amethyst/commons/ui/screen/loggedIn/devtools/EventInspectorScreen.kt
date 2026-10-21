@@ -37,9 +37,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -47,7 +44,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.devtools.EventInspectResult
 import com.vitorpamplona.amethyst.commons.devtools.EventInspection
-import com.vitorpamplona.amethyst.commons.devtools.EventInspector
 import com.vitorpamplona.amethyst.commons.devtools.EventIssue
 import com.vitorpamplona.amethyst.commons.devtools.EventSource
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -96,10 +92,8 @@ fun EventInspectorScreen(
     noteKey: String?,
     nav: INav,
 ) {
-    var input by rememberSaveable {
-        mutableStateOf(noteKey?.let { LocalCache.getNoteIfExists(it)?.event?.toPrettyJson() } ?: "")
-    }
-    val result = remember(input) { EventInspector.inspect(input) }
+    var input by rememberSaveableText { noteKey?.let { LocalCache.getNoteIfExists(it)?.event?.toPrettyJson() } ?: "" }
+    val result = rememberEventInspection(input).value
 
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_event_title), nav) },

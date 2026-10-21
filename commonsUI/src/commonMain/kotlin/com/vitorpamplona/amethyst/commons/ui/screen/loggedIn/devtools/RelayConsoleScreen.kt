@@ -67,6 +67,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,7 +89,6 @@ import com.vitorpamplona.amethyst.commons.devtools.ConsoleFrame
 import com.vitorpamplona.amethyst.commons.devtools.ConsoleLink
 import com.vitorpamplona.amethyst.commons.devtools.ConsoleSystemEvent
 import com.vitorpamplona.amethyst.commons.devtools.EventInspectResult
-import com.vitorpamplona.amethyst.commons.devtools.EventInspector
 import com.vitorpamplona.amethyst.commons.devtools.FilterDraft
 import com.vitorpamplona.amethyst.commons.devtools.FilterField
 import com.vitorpamplona.amethyst.commons.devtools.FrameDirection
@@ -202,7 +202,7 @@ fun RelayConsoleScreen(
         }
 
     var url by rememberSaveable { mutableStateOf(initialUrl ?: "") }
-    var composer by rememberSaveable { mutableStateOf("") }
+    var composer by rememberSaveableText()
     var builderOpen by remember { mutableStateOf(false) }
     var authDialog by remember { mutableStateOf(false) }
     val connected = connection == ConsoleConnection.CONNECTED
@@ -416,8 +416,17 @@ private fun FrameLog(
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    LaunchedEffect(frames.size) {
-        if (frames.isNotEmpty()) listState.animateScrollToItem(frames.lastIndex)
+    // Follow new frames only while the reader is at the bottom, so scrolling up to read one
+    // holds still during a busy REQ. Keyed on the newest id: at the 500-frame cap the size stops
+    // changing while frames keep arriving.
+    val atBottom by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            (info.visibleItemsInfo.lastOrNull()?.index ?: -1) >= info.totalItemsCount - FOLLOW_SLACK
+        }
+    }
+    LaunchedEffect(frames.lastOrNull()?.id) {
+        if (frames.isNotEmpty() && atBottom) listState.scrollToItem(frames.lastIndex)
     }
 
     Box(
@@ -439,6 +448,9 @@ private fun FrameLog(
         }
     }
 }
+
+/** How many frames behind the end still counts as "at the bottom": a burst lands several at once. */
+private const val FOLLOW_SLACK = 4
 
 // ---- bottom: open subscriptions and the composer ----
 
@@ -518,7 +530,7 @@ private fun BuilderSheet(
 ) {
     var mode by rememberSaveable { mutableStateOf(BuilderMode.REQ) }
     var draft by remember { mutableStateOf(FilterDraft(kinds = "1", limit = "10")) }
-    var eventJson by rememberSaveable { mutableStateOf("") }
+    var eventJson by rememberSaveableText()
     // One id per sheet, so the preview and the sent frame agree.
     val subId = remember { RelayConsoleViewModel.newSubId() }
 
@@ -674,7 +686,7 @@ private fun EventForm(
     onSend: (Event) -> Unit,
     onEditInComposer: (Event) -> Unit,
 ) {
-    val result = remember(json) { EventInspector.inspect(json) }
+    val result = rememberEventInspection(json).value
     val parsed = (result as? EventInspectResult.Parsed)?.inspection
 
     DevToolsInput(json, onJsonChange, stringRes(Res.string.devtools_console_event_field), minLines = 6, maxLines = 12)

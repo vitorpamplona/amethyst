@@ -36,9 +36,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip66RelayMonitor.discovery.RelayDiscoveryEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.PersistentMap
+import kotlinx.collections.immutable.persistentMapOf
+import kotlinx.collections.immutable.toPersistentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -87,13 +87,14 @@ enum class RelayProbePhase {
 @Immutable
 data class RelayProbeState(
     val phase: RelayProbePhase = RelayProbePhase.IDLE,
-    val results: ImmutableList<RelayProbeResult> = persistentListOf(),
+    /** One row per relay, keyed so each answer is an O(log n) update instead of a list copy. */
+    val results: PersistentMap<NormalizedRelayUrl, RelayProbeResult> = persistentMapOf(),
     /** The newest matching event across every relay: the sample the screen shows. */
     val newest: Event? = null,
 ) {
     val total get() = results.size
-    val finished get() = results.count { it.status != RelayProbeStatus.WAITING && it.status != RelayProbeStatus.QUERYING }
-    val found get() = results.count { it.status == RelayProbeStatus.FOUND }
+    val finished get() = results.values.count { it.status != RelayProbeStatus.WAITING && it.status != RelayProbeStatus.QUERYING }
+    val found get() = results.values.count { it.status == RelayProbeStatus.FOUND }
 }
 
 /**
@@ -154,7 +155,7 @@ class RelayProbeViewModel(
         _state.value =
             RelayProbeState(
                 phase = RelayProbePhase.PROBING,
-                results = relays.sortedBy { it.url }.map { RelayProbeResult(it, RelayProbeStatus.WAITING) }.toImmutableList(),
+                results = relays.associateWith { RelayProbeResult(it, RelayProbeStatus.WAITING) }.toPersistentMap(),
             )
 
         val permits = Semaphore(PARALLEL_RELAYS)
@@ -227,8 +228,10 @@ class RelayProbeViewModel(
         _state.update { current ->
             val newest =
                 if (event != null && (current.newest == null || event.createdAt > current.newest.createdAt)) event else current.newest
+            // A probe cancelled by a restart may still answer; its relay may not be in this run.
+            if (result.relay !in current.results) return@update current
             current.copy(
-                results = current.results.map { if (it.relay == result.relay) result else it }.toImmutableList(),
+                results = current.results.put(result.relay, result),
                 newest = newest,
             )
         }
