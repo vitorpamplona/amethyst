@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -97,15 +97,15 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeTagArray_matchesJackson() {
-        val jacksonJson = JacksonMapper.toJson(tags)
+    fun serializeTagArray_matchesOptimized() {
+        val optimizedJson = OptimizedJsonMapper.toJson(tags)
         val kotlinJson = KotlinSerializationMapper.toJson(tags)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun deserializeTagArray_matchesJackson() {
-        val json = JacksonMapper.toJson(tags)
+    fun deserializeTagArray_matchesOptimized() {
+        val json = OptimizedJsonMapper.toJson(tags)
         val deserialized = KotlinSerializationMapper.fromJsonToTagArray(json)
         tags.forEachIndexed { index, tag ->
             assertContentEquals(tag, deserialized[index])
@@ -144,15 +144,15 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeEvent_matchesJackson() {
-        val jacksonJson = JacksonMapper.toJson(followCard)
+    fun serializeEvent_matchesOptimized() {
+        val optimizedJson = OptimizedJsonMapper.toJson(followCard)
         val kotlinJson = KotlinSerializationMapper.toJson(followCard)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun deserializeEvent_matchesJackson() {
-        val json = JacksonMapper.toJson(followCard)
+    fun deserializeEvent_matchesOptimized() {
+        val json = OptimizedJsonMapper.toJson(followCard)
         val deserialized = KotlinSerializationMapper.fromJson(json)
 
         assertEquals(followCard.id, deserialized.id)
@@ -209,21 +209,21 @@ class KotlinSerializationMapperTest {
 
     @Test
     fun crossDeserializationEvent() {
-        // Serialize with Jackson, deserialize with Kotlin Serialization
-        val jacksonJson = JacksonMapper.toJson(followCard)
-        val kotlinDeserialized = KotlinSerializationMapper.fromJson(jacksonJson)
+        // Serialize with Optimized, deserialize with Kotlin Serialization
+        val optimizedJson = OptimizedJsonMapper.toJson(followCard)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJson(optimizedJson)
 
         assertEquals(followCard.id, kotlinDeserialized.id)
         assertEquals(followCard.pubKey, kotlinDeserialized.pubKey)
         assertEquals(followCard.kind, kotlinDeserialized.kind)
 
-        // Serialize with Kotlin Serialization, deserialize with Jackson
+        // Serialize with Kotlin Serialization, deserialize with Optimized
         val kotlinJson = KotlinSerializationMapper.toJson(followCard)
-        val jacksonDeserialized = JacksonMapper.fromJson(kotlinJson)
+        val optimizedDeserialized = OptimizedJsonMapper.fromJson(kotlinJson)
 
-        assertEquals(followCard.id, jacksonDeserialized.id)
-        assertEquals(followCard.pubKey, jacksonDeserialized.pubKey)
-        assertEquals(followCard.kind, jacksonDeserialized.kind)
+        assertEquals(followCard.id, optimizedDeserialized.id)
+        assertEquals(followCard.pubKey, optimizedDeserialized.pubKey)
+        assertEquals(followCard.kind, optimizedDeserialized.kind)
     }
 
     // =========================================================================
@@ -231,15 +231,15 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeRumor_matchesJackson() {
-        val jacksonJson = JacksonMapper.toJson(followCardRumor)
+    fun serializeRumor_matchesOptimized() {
+        val optimizedJson = OptimizedJsonMapper.toJson(followCardRumor)
         val kotlinJson = KotlinSerializationMapper.toJson(followCardRumor)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun deserializeRumor_matchesJackson() {
-        val json = JacksonMapper.toJson(followCardRumor)
+    fun deserializeRumor_matchesOptimized() {
+        val json = OptimizedJsonMapper.toJson(followCardRumor)
         val deserialized = KotlinSerializationMapper.fromJsonToRumor(json)
 
         assertEquals(followCardRumor.id, deserialized.id)
@@ -292,15 +292,15 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeTemplate_matchesJackson() {
-        val jacksonJson = JacksonMapper.toJson(followCardTemplate)
+    fun serializeTemplate_matchesOptimized() {
+        val optimizedJson = OptimizedJsonMapper.toJson(followCardTemplate)
         val kotlinJson = KotlinSerializationMapper.toJson(followCardTemplate)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun deserializeTemplate_matchesJackson() {
-        val json = JacksonMapper.toJson(followCardTemplate)
+    fun deserializeTemplate_matchesOptimized() {
+        val json = OptimizedJsonMapper.toJson(followCardTemplate)
         val deserialized = KotlinSerializationMapper.fromJsonToEventTemplate(json)
 
         assertEquals(followCardTemplate.kind, deserialized.kind)
@@ -336,15 +336,15 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun emptyFilter_matchesJackson() {
+    fun emptyFilter_matchesOptimized() {
         val filter = Filter()
-        val jacksonJson = JacksonMapper.toJson(filter)
+        val optimizedJson = OptimizedJsonMapper.toJson(filter)
         val kotlinJson = KotlinSerializationMapper.toJson(filter)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun filterWithAllFields_matchesJackson() {
+    fun filterWithAllFields_matchesOptimized() {
         val filter =
             Filter(
                 ids = listOf("abc123" + "0".repeat(58)),
@@ -357,9 +357,9 @@ class KotlinSerializationMapperTest {
                 limit = 50,
                 search = "hello",
             )
-        val jacksonJson = JacksonMapper.toJson(filter)
+        val optimizedJson = OptimizedJsonMapper.toJson(filter)
         val kotlinJson = KotlinSerializationMapper.toJson(filter)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -395,17 +395,17 @@ class KotlinSerializationMapperTest {
                 tagsAll = mapOf("p" to listOf(expectedTagValue)),
             )
 
-        // Jackson serialized -> Kotlin deserialized
-        val jacksonJson = JacksonMapper.toJson(filter)
-        val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<Filter>(jacksonJson)
+        // Optimized serialized -> Kotlin deserialized
+        val optimizedJson = OptimizedJsonMapper.toJson(filter)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<Filter>(optimizedJson)
         assertEquals(listOf(expectedTagValue), kotlinDeserialized.tags?.get("p"))
         assertEquals(listOf(expectedTagValue), kotlinDeserialized.tagsAll?.get("p"))
 
-        // Kotlin serialized -> Jackson deserialized
+        // Kotlin serialized -> Optimized deserialized
         val kotlinJson = KotlinSerializationMapper.toJson(filter)
-        val jacksonDeserialized = JacksonMapper.fromJsonTo<Filter>(kotlinJson)
-        assertEquals(listOf(expectedTagValue), jacksonDeserialized.tags?.get("p"))
-        assertEquals(listOf(expectedTagValue), jacksonDeserialized.tagsAll?.get("p"))
+        val optimizedDeserialized = OptimizedJsonMapper.fromJsonTo<Filter>(kotlinJson)
+        assertEquals(listOf(expectedTagValue), optimizedDeserialized.tags?.get("p"))
+        assertEquals(listOf(expectedTagValue), optimizedDeserialized.tagsAll?.get("p"))
     }
 
     // =========================================================================
@@ -413,11 +413,11 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeEventMessage_matchesJackson() {
+    fun serializeEventMessage_matchesOptimized() {
         val msg = EventMessage("sub1", followCard)
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -432,19 +432,19 @@ class KotlinSerializationMapperTest {
     }
 
     @Test
-    fun serializeNoticeMessage_matchesJackson() {
+    fun serializeNoticeMessage_matchesOptimized() {
         val msg = NoticeMessage("something went wrong")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeOkMessage_matchesJackson() {
+    fun serializeOkMessage_matchesOptimized() {
         val msg = OkMessage("abc123", true, "success")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -460,27 +460,27 @@ class KotlinSerializationMapperTest {
     }
 
     @Test
-    fun serializeAuthMessage_matchesJackson() {
+    fun serializeAuthMessage_matchesOptimized() {
         val msg = AuthMessage("challenge123")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeNotifyMessage_matchesJackson() {
+    fun serializeNotifyMessage_matchesOptimized() {
         val msg = NotifyMessage("notification text")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeClosedMessage_matchesJackson() {
+    fun serializeClosedMessage_matchesOptimized() {
         val msg = ClosedMessage("sub1", "subscription closed")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -492,15 +492,15 @@ class KotlinSerializationMapperTest {
     }
 
     @Test
-    fun serializeCountMessage_matchesJackson() {
+    fun serializeCountMessage_matchesOptimized() {
         val msg = CountMessage("q1", CountResult(42, false))
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeLimitsMessage_matchesJackson() {
+    fun serializeLimitsMessage_matchesOptimized() {
         val msg =
             LimitsMessage(
                 canWrite = true,
@@ -522,9 +522,9 @@ class KotlinSerializationMapperTest {
                 publishingRateLimit = 500L,
                 requiredTags = listOf(listOf("t", "nostr"), listOf("p")),
             )
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -546,7 +546,7 @@ class KotlinSerializationMapperTest {
     @Test
     fun deserializeLimitsMessageToleratesMistypedAndMissingPayload() {
         // The kotlinx path is the iOS/native incoming parser; a mistyped field or a
-        // payload-less ["LIMITS"] must degrade to null / empty, matching Jackson,
+        // payload-less ["LIMITS"] must degrade to null / empty, matching Optimized,
         // rather than throwing.
         val mistyped =
             KotlinSerializationMapper.fromJsonToMessage(
@@ -574,19 +574,19 @@ class KotlinSerializationMapperTest {
                 requiredTags = listOf(listOf("t", "nostr")),
             )
 
-        val jacksonJson = JacksonMapper.toJson(msg)
-        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
+        val optimizedJson = OptimizedJsonMapper.toJson(msg)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(optimizedJson)
         assertTrue(kotlinDeserialized is LimitsMessage)
         assertEquals(msg.maxLimit, kotlinDeserialized.maxLimit)
         assertEquals(msg.acceptedEventKinds, kotlinDeserialized.acceptedEventKinds)
         assertEquals(msg.requiredTags, kotlinDeserialized.requiredTags)
 
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
-        assertTrue(jacksonDeserialized is LimitsMessage)
-        assertEquals(msg.maxLimit, jacksonDeserialized.maxLimit)
-        assertEquals(msg.acceptedEventKinds, jacksonDeserialized.acceptedEventKinds)
-        assertEquals(msg.requiredTags, jacksonDeserialized.requiredTags)
+        val optimizedDeserialized = OptimizedJsonMapper.fromJsonToMessage(kotlinJson)
+        assertTrue(optimizedDeserialized is LimitsMessage)
+        assertEquals(msg.maxLimit, optimizedDeserialized.maxLimit)
+        assertEquals(msg.acceptedEventKinds, optimizedDeserialized.acceptedEventKinds)
+        assertEquals(msg.requiredTags, optimizedDeserialized.requiredTags)
     }
 
     @Test
@@ -600,13 +600,13 @@ class KotlinSerializationMapperTest {
             )
 
         for (msg in messages) {
-            val jacksonJson = JacksonMapper.toJson(msg)
-            val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
+            val optimizedJson = OptimizedJsonMapper.toJson(msg)
+            val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(optimizedJson)
             assertEquals(msg.label(), kotlinDeserialized.label())
 
             val kotlinJson = KotlinSerializationMapper.toJson(msg)
-            val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
-            assertEquals(msg.label(), jacksonDeserialized.label())
+            val optimizedDeserialized = OptimizedJsonMapper.fromJsonToMessage(kotlinJson)
+            assertEquals(msg.label(), optimizedDeserialized.label())
         }
     }
 
@@ -615,16 +615,16 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeReqCmd_matchesJackson() {
+    fun serializeReqCmd_matchesOptimized() {
         val filter =
             Filter(
                 kinds = listOf(1),
                 limit = 10,
             )
         val cmd = ReqCmd("sub1", listOf(filter))
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val optimizedJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -642,34 +642,34 @@ class KotlinSerializationMapperTest {
     }
 
     @Test
-    fun serializeEventCmd_matchesJackson() {
+    fun serializeEventCmd_matchesOptimized() {
         val cmd = EventCmd(followCard)
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val optimizedJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeCloseCmd_matchesJackson() {
+    fun serializeCloseCmd_matchesOptimized() {
         val cmd = CloseCmd("sub1")
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val optimizedJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
     fun crossDeserializationCommands() {
         val cmd = CloseCmd("sub1")
 
-        val jacksonJson = JacksonMapper.toJson(cmd)
-        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToCommand(jacksonJson)
+        val optimizedJson = OptimizedJsonMapper.toJson(cmd)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToCommand(optimizedJson)
         assertTrue(kotlinDeserialized is CloseCmd)
         assertEquals("sub1", (kotlinDeserialized).subId)
 
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
-        val jacksonDeserialized = JacksonMapper.fromJsonToCommand(kotlinJson)
-        assertTrue(jacksonDeserialized is CloseCmd)
-        assertEquals("sub1", (jacksonDeserialized).subId)
+        val optimizedDeserialized = OptimizedJsonMapper.fromJsonToCommand(kotlinJson)
+        assertTrue(optimizedDeserialized is CloseCmd)
+        assertEquals("sub1", (optimizedDeserialized).subId)
     }
 
     // =========================================================================
@@ -677,11 +677,11 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeBunkerRequest_matchesJackson() {
+    fun serializeBunkerRequest_matchesOptimized() {
         val req = BunkerRequest("id1", "connect", arrayOf("pubkey", "secret"))
-        val jacksonJson = JacksonMapper.toJson(req)
+        val optimizedJson = OptimizedJsonMapper.toJson(req)
         val kotlinJson = KotlinSerializationMapper.toJson(req)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -695,17 +695,17 @@ class KotlinSerializationMapperTest {
     @Test
     fun crossDeserializationBunkerRequest() {
         val req = BunkerRequest("id1", "sign_event", arrayOf("{\"created_at\":1234,\"kind\":1,\"tags\":[],\"content\":\"This is an unsigned event.\"}"))
-        val jacksonJson = JacksonMapper.toJson(req)
-        val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<BunkerRequest>(jacksonJson)
+        val optimizedJson = OptimizedJsonMapper.toJson(req)
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonTo<BunkerRequest>(optimizedJson)
         assertEquals(req.id, kotlinDeserialized.id)
         assertEquals(req.method, kotlinDeserialized.method)
         assertContentEquals(req.params, kotlinDeserialized.params)
 
         val kotlinJson = KotlinSerializationMapper.toJson(req)
-        val jacksonDeserialized = JacksonMapper.fromJsonTo<BunkerRequest>(kotlinJson)
-        assertEquals(req.id, jacksonDeserialized.id)
-        assertEquals(req.method, jacksonDeserialized.method)
-        assertContentEquals(req.params, jacksonDeserialized.params)
+        val optimizedDeserialized = OptimizedJsonMapper.fromJsonTo<BunkerRequest>(kotlinJson)
+        assertEquals(req.id, optimizedDeserialized.id)
+        assertEquals(req.method, optimizedDeserialized.method)
+        assertContentEquals(req.params, optimizedDeserialized.params)
     }
 
     // =========================================================================
@@ -713,19 +713,19 @@ class KotlinSerializationMapperTest {
     // =========================================================================
 
     @Test
-    fun serializeBunkerResponse_matchesJackson() {
+    fun serializeBunkerResponse_matchesOptimized() {
         val resp = BunkerResponse("id1", "ok", null)
-        val jacksonJson = JacksonMapper.toJson(resp)
+        val optimizedJson = OptimizedJsonMapper.toJson(resp)
         val kotlinJson = KotlinSerializationMapper.toJson(resp)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
-    fun serializeBunkerResponseWithError_matchesJackson() {
+    fun serializeBunkerResponseWithError_matchesOptimized() {
         val resp = BunkerResponse("id1", null, "something went wrong")
-        val jacksonJson = JacksonMapper.toJson(resp)
+        val optimizedJson = OptimizedJsonMapper.toJson(resp)
         val kotlinJson = KotlinSerializationMapper.toJson(resp)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
@@ -743,23 +743,23 @@ class KotlinSerializationMapperTest {
     @Test
     fun toJsonDispatchForFilter() {
         val filter = Filter(kinds = listOf(1))
-        val jacksonJson = JacksonMapper.toJson(filter)
+        val optimizedJson = OptimizedJsonMapper.toJson(filter)
         val kotlinJson = KotlinSerializationMapper.toJson(filter)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
     fun toJsonDispatchForRumor() {
-        val jacksonJson = JacksonMapper.toJson(followCardRumor)
+        val optimizedJson = OptimizedJsonMapper.toJson(followCardRumor)
         val kotlinJson = KotlinSerializationMapper.toJson(followCardRumor)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     @Test
     fun toJsonDispatchForEventTemplate() {
-        val jacksonJson = JacksonMapper.toJson(followCardTemplate)
+        val optimizedJson = OptimizedJsonMapper.toJson(followCardTemplate)
         val kotlinJson = KotlinSerializationMapper.toJson(followCardTemplate)
-        assertEquals(jacksonJson, kotlinJson)
+        assertEquals(optimizedJson, kotlinJson)
     }
 
     // =========================================================================

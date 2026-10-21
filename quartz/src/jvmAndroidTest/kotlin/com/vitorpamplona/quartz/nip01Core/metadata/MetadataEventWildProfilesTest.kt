@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.metadata
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -44,7 +44,7 @@ class MetadataEventWildProfilesTest {
         json: String,
         assertions: (label: String, event: MetadataEvent) -> Unit,
     ) {
-        assertions("jackson", JacksonMapper.fromJson(json) as MetadataEvent)
+        assertions("jackson", OptimizedJsonMapper.fromJson(json) as MetadataEvent)
         assertions("kotlinx", KotlinSerializationMapper.fromJson(json) as MetadataEvent)
     }
 

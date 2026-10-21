@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.contextvm.cep06Announcements
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -45,7 +45,7 @@ class ServerAnnouncementLiveVectorTest {
         """{"id":"acead902457220f407bcb7857020c034089d0c35e4c29d18066ac17fab055aa7","pubkey":"35e2a4020dd6b9f5f45cf27d3e65f4a286a8e89d75c8ae141d9a794c1236dc26","created_at":1786113384,"kind":11316,"tags":[["name","My coordinator"],["about","Cordn coordinator running in a browser tab; key package quota 33 per identity"],["support_encryption"],["support_encryption_ephemeral"],["support_oversized_transfer"],["support_open_stream"]],"content":"{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{\"tools\":{\"listChanged\":true}},\"serverInfo\":{\"name\":\"My coordinator\",\"version\":\"0.1.0\"}}","sig":"a0f29d13955636d407635eaa59ee307fa9b39d54466189e247f0ff9c61c17070084d0bd604efd29287a19c4e841a21c7c69dd1a500b245c98561dacc09b550a7"}"""
 
     private fun parse(json: String): ServerAnnouncement {
-        val event: Event = JacksonMapper.fromJson(json)
+        val event: Event = OptimizedJsonMapper.fromJson(json)
         assertTrue("captured vector must still verify", event.verify())
         return ServerAnnouncement.parseOrNull(event)!!
     }
@@ -93,7 +93,7 @@ class ServerAnnouncementLiveVectorTest {
     /** Replaceable kinds: a lagging relay's older copy must not win. */
     @Test
     fun keepsTheNewestAnnouncementPerKind() {
-        val events = listOf(JacksonMapper.fromJson(browserTab), JacksonMapper.fromJson(dojopop))
+        val events = listOf(OptimizedJsonMapper.fromJson(browserTab), OptimizedJsonMapper.fromJson(dojopop))
 
         val latest = ServerAnnouncement.latestPerKind(events)
 

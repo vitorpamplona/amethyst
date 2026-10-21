@@ -304,8 +304,8 @@ object Nip47RequestKSerializer : KSerializer<Request> {
         return PayMethod(
             params?.let {
                 // contentOrNull / `as? JsonObject` treat an explicit JSON `null` as absent —
-                // Jackson (JVM/Android) writes null-valued keys, so a native/iOS peer parsing
-                // that output must not read `JsonNull` as the string "null" or crash on it.
+                // other clients write null-valued keys, so reading one must not turn
+                // `JsonNull` into the string "null" or crash on it.
                 PayParams(
                     payment = it.stringOrNull("payment"),
                     amount = it.longOrNull("amount"),

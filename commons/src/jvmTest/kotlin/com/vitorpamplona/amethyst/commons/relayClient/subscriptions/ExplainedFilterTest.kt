@@ -65,8 +65,8 @@ class ExplainedFilterTest {
     // ---- the wire must not learn why we asked -------------------------------
 
     /**
-     * The privacy guarantee. It holds because `FilterSerializer` is registered for [Filter] and
-     * writes an explicit protocol field list, so subclass state is dropped regardless of the runtime
+     * The privacy guarantee. It holds because `NostrJsonWriter` writes any [Filter] as an
+     * explicit protocol field list, so subclass state is dropped regardless of the runtime
      * type. If anyone swaps that for reflective serialization, this is what catches it.
      */
     @Test

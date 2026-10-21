@@ -20,11 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.fasterxml.jackson.core.JsonEncoding
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -50,7 +46,6 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
 import org.junit.Rule
 import org.junit.rules.TestName
-import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.GZIPInputStream
@@ -63,12 +58,14 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * [NostrJsonWriter] against the Jackson serializers it replaces, byte for byte: every event of
- * the recorded startup capture (as JSON, as its id preimage in text and UTF-8, as tags, as a
- * rumor and inside frames), hand-picked and random strings that need escaping, and every
- * message and command type.
+ * [NostrJsonWriter] over every event of the recorded startup capture (as JSON, as its id
+ * preimage in text and UTF-8, as tags, as a rumor and inside frames), hand-picked and random
+ * strings that need escaping, and every message and command type, each test pinned by a [Pin].
+ *
+ * The pins were recorded while every output was also compared, byte for byte, with the
+ * Jackson serializers the writer replaced.
  */
-class NostrJsonWriterJacksonParityTest {
+class NostrJsonWriterPinnedTest {
     @get:Rule val testName = TestName()
 
     private val pin = Pin("")
@@ -80,79 +77,17 @@ class NostrJsonWriterJacksonParityTest {
         pin.check(PINS.getValue(name))
     }
 
-    // What EventHasherSerializer did on the JVM before the writer: a tree for the text and a
-    // UTF-8 generator combining surrogate pairs for the bytes.
-    private fun jacksonIdJson(
-        pubKey: String,
-        createdAt: Long,
-        kind: Int,
-        tags: TagArray,
-        content: String,
-    ): String {
-        val factory = JsonNodeFactory.instance
-        val node =
-            factory.arrayNode(6).apply {
-                add(0)
-                add(pubKey)
-                add(createdAt)
-                add(kind)
-                add(factory.arrayNode(tags.size).apply { tags.forEach { tag -> add(factory.arrayNode(tag.size).apply { tag.forEach { add(it) } }) } })
-                add(content)
-            }
-        return JacksonMapper.toJson(node)
-    }
-
-    private fun jacksonIdBytes(
-        pubKey: String,
-        createdAt: Long,
-        kind: Int,
-        tags: TagArray,
-        content: String,
-    ): ByteArray {
-        val out = ByteArrayOutputStream()
-        JacksonMapper.mapper.createGenerator(out, JsonEncoding.UTF8).use {
-            it.enable(JsonGenerator.Feature.COMBINE_UNICODE_SURROGATES_IN_UTF8)
-            it.writeStartArray()
-            it.writeNumber(0)
-            it.writeString(pubKey)
-            it.writeNumber(createdAt)
-            it.writeNumber(kind)
-            it.writeStartArray()
-            tags.forEach { tag ->
-                it.writeStartArray()
-                tag.forEach { value -> it.writeString(value) }
-                it.writeEndArray()
-            }
-            it.writeEndArray()
-            it.writeString(content)
-            it.writeEndArray()
-        }
-        return out.toByteArray()
-    }
-
     private val sha = MessageDigest.getInstance("SHA-256")
 
-    /** Every way the writer serializes [e], each checked against Jackson. */
-    private fun assertSameAsJackson(e: Event) {
-        val label = { "for ${JacksonMapper.toJson(e).take(300)}" }
+    /** Every way the writer serializes [e], pinned. */
+    private fun assertPinned(e: Event) {
+        val idBytes = EventHasherSerializer.fastMakeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content)
         pin.add(NostrJsonWriter.toJson(e))
         pin.add(NostrJsonWriter.toJson(e.tags))
         pin.add(EventHasherSerializer.makeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content))
-        pin.add(EventHasherSerializer.fastMakeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content).toHexKey())
+        pin.add(idBytes.toHexKey())
         pin.add(NostrJsonWriter.toJson(Rumor.create(e)))
-        assertEquals(JacksonMapper.toJson(e), NostrJsonWriter.toJson(e), "event ${label()}")
-        assertEquals(JacksonMapper.mapper.writeValueAsString(e), NostrJsonWriter.toJson(e), "EventSerializer ${label()}")
-        assertEquals(JacksonMapper.toJson(e.tags), NostrJsonWriter.toJson(e.tags), "tags ${label()}")
-
-        val idJson = jacksonIdJson(e.pubKey, e.createdAt, e.kind, e.tags, e.content)
-        assertEquals(idJson, EventHasherSerializer.makeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content), "id text ${label()}")
-
-        val idBytes = jacksonIdBytes(e.pubKey, e.createdAt, e.kind, e.tags, e.content)
-        assertContentEquals(idBytes, EventHasherSerializer.fastMakeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content), "id bytes ${label()}")
-        assertContentEquals(sha.digest(idBytes), NostrJsonWriter.idHash(e.pubKey, e.createdAt, e.kind, e.tags, e.content), "id hash ${label()}")
-
-        val rumor = Rumor.create(e)
-        assertEquals(JacksonMapper.toJson(rumor), NostrJsonWriter.toJson(rumor), "rumor ${label()}")
+        assertContentEquals(sha.digest(idBytes), NostrJsonWriter.idHash(e.pubKey, e.createdAt, e.kind, e.tags, e.content), "id hash for ${NostrJsonWriter.toJson(e).take(300)}")
     }
 
     private fun forEachCapturedEvent(action: (String) -> Unit) {
@@ -205,28 +140,28 @@ class NostrJsonWriterJacksonParityTest {
     }
 
     @Test
-    fun everyCapturedEventWritesTheSame() {
+    fun everyCapturedEventWritesAsPinned() {
         var count = 0
         var validIds = 0
-        var validIdsJackson = 0
+        var validIdsFromBytes = 0
         forEachCapturedEvent { json ->
-            val e = JacksonMapper.fromJson(json)
-            assertSameAsJackson(e)
+            val e = NostrJsonReader.readEvent(json)
+            assertPinned(e)
             if (EventHasherSerializer.makeJsonForIdHashAndCheck(e.id, e.pubKey, e.createdAt, e.kind, e.tags, e.content)) validIds++
-            if (sha.digest(jacksonIdBytes(e.pubKey, e.createdAt, e.kind, e.tags, e.content)).toHexKey() == e.id) validIdsJackson++
+            if (sha.digest(EventHasherSerializer.fastMakeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content)).toHexKey() == e.id) validIdsFromBytes++
 
             val frame = EventMessage("sub", e)
             pin.add(NostrJsonWriter.toJsonOrNull(frame))
-            assertEquals(JacksonMapper.toJson(frame), NostrJsonWriter.toJsonOrNull(frame))
+            assertEquals(frame.toJson(), NostrJsonWriter.toJsonOrNull(frame))
             val cmd = EventCmd(e)
             pin.add(NostrJsonWriter.toJsonOrNull(cmd))
-            assertEquals(JacksonMapper.toJson(cmd), NostrJsonWriter.toJsonOrNull(cmd))
+            assertEquals(cmd.toJson(), NostrJsonWriter.toJsonOrNull(cmd))
             count++
         }
-        println("captured events: $count written the same, $validIds with a matching id")
+        println("captured events: $count written, $validIds with a matching id")
         assertTrue(count > 200_000, "expected the whole capture, got $count")
-        // Some captured events carry an id that does not match their fields; both paths must agree on which.
-        assertEquals(validIdsJackson, validIds)
+        // Some captured events carry an id that does not match their fields; both id paths must agree on which.
+        assertEquals(validIdsFromBytes, validIds)
     }
 
     private val oddStrings =
@@ -259,18 +194,18 @@ class NostrJsonWriterJacksonParityTest {
     ) = Event("a".repeat(64), "b".repeat(64), createdAt, kind, tags, content, "c".repeat(128))
 
     @Test
-    fun oddStringsWriteTheSame() {
+    fun oddStringsWriteAsPinned() {
         for (s in oddStrings) {
-            assertSameAsJackson(event(s, arrayOf(arrayOf("t", s), arrayOf(s))))
-            assertSameAsJackson(event("x", arrayOf(arrayOf(s, s, s))))
+            assertPinned(event(s, arrayOf(arrayOf("t", s), arrayOf(s))))
+            assertPinned(event("x", arrayOf(arrayOf(s, s, s))))
         }
-        assertSameAsJackson(event("", emptyArray()))
-        assertSameAsJackson(event("", arrayOf(emptyArray())))
-        assertSameAsJackson(event(oddStrings.joinToString("|"), arrayOf(oddStrings.toTypedArray())))
+        assertPinned(event("", emptyArray()))
+        assertPinned(event("", arrayOf(emptyArray())))
+        assertPinned(event(oddStrings.joinToString("|"), arrayOf(oddStrings.toTypedArray())))
         for (n in listOf(0L, 1L, 9L, 10L, -1L, -10L, Long.MAX_VALUE, Long.MIN_VALUE, Int.MAX_VALUE.toLong(), 1_000_000_000_000L)) {
-            assertSameAsJackson(event("n", emptyArray(), createdAt = n, kind = (n % 70_000).toInt()))
+            assertPinned(event("n", emptyArray(), createdAt = n, kind = (n % 70_000).toInt()))
         }
-        assertSameAsJackson(event("k", emptyArray(), kind = Int.MIN_VALUE))
+        assertPinned(event("k", emptyArray(), kind = Int.MIN_VALUE))
     }
 
     private fun randomString(random: Random): String {
@@ -284,11 +219,11 @@ class NostrJsonWriterJacksonParityTest {
     }
 
     @Test
-    fun randomStringsWriteTheSame() {
+    fun randomStringsWriteAsPinned() {
         val random = Random(4595)
         repeat(20_000) {
             val tags = Array(random.nextInt(0, 4)) { Array(random.nextInt(0, 4)) { randomString(random) } }
-            assertSameAsJackson(event(randomString(random), tags, createdAt = random.nextLong(), kind = random.nextInt()))
+            assertPinned(event(randomString(random), tags, createdAt = random.nextLong(), kind = random.nextInt()))
         }
     }
 
@@ -296,10 +231,10 @@ class NostrJsonWriterJacksonParityTest {
     fun bigEventsGrowAndReleaseTheBuffers() {
         // Past every buffer the writer keeps, with escapes and multi-byte chars spread through.
         val big = buildString { repeat(30_000) { append(oddStrings[it % oddStrings.size]) } }
-        assertSameAsJackson(event(big, arrayOf(arrayOf("t", big))))
-        assertSameAsJackson(event("small after big", arrayOf(arrayOf("p", "a".repeat(64)))))
+        assertPinned(event(big, arrayOf(arrayOf("t", big))))
+        assertPinned(event("small after big", arrayOf(arrayOf("p", "a".repeat(64)))))
         val tags = Array(5_000) { arrayOf("p", it.toString().padStart(64, '0'), "wss://relay.example.com/", "") }
-        assertSameAsJackson(event("contact list", tags, kind = 3))
+        assertPinned(event("contact list", tags, kind = 3))
     }
 
     private val sampleEvent = event("hello \"world\"\n", arrayOf(arrayOf("e", "d".repeat(64), "wss://r.example/"), arrayOf("t", "nostr")))
@@ -376,7 +311,7 @@ class NostrJsonWriterJacksonParityTest {
             ReqCmd("odd \" \\ \u0000", listOf(Filter(kinds = listOf(1)))),
             CountCmd("q", filters),
             EventCmd(sampleEvent),
-            EventCmd(sampleEvent, JacksonMapper.toJson(sampleEvent)),
+            EventCmd(sampleEvent, NostrJsonWriter.toJson(sampleEvent)),
             EventCmd(sampleEvent, "{ \"raw\" : true }"),
             CloseCmd("sub"),
             CloseCmd("\u2028"),
@@ -386,30 +321,27 @@ class NostrJsonWriterJacksonParityTest {
         )
 
     @Test
-    fun everyMessageTypeWritesTheSame() {
+    fun everyMessageTypeWritesAsPinned() {
         for (msg in messages) {
             pin.add(NostrJsonWriter.toJsonOrNull(msg))
-            assertEquals(JacksonMapper.toJson(msg), NostrJsonWriter.toJsonOrNull(msg), msg::class.simpleName)
             // The type's own toJson, fast paths included.
-            assertEquals(JacksonMapper.toJson(msg), msg.toJson(), msg::class.simpleName)
+            assertEquals(NostrJsonWriter.toJsonOrNull(msg), msg.toJson(), msg::class.simpleName)
         }
     }
 
     @Test
-    fun everyCommandTypeWritesTheSame() {
+    fun everyCommandTypeWritesAsPinned() {
         for (cmd in commands) {
             pin.add(NostrJsonWriter.toJsonOrNull(cmd))
-            assertEquals(JacksonMapper.toJson(cmd), NostrJsonWriter.toJsonOrNull(cmd), cmd::class.simpleName)
-            assertEquals(JacksonMapper.toJson(cmd), cmd.toJson(), cmd::class.simpleName)
+            assertEquals(NostrJsonWriter.toJsonOrNull(cmd), cmd.toJson(), cmd::class.simpleName)
         }
     }
 
     @Test
-    fun filtersAndRumorsWriteTheSame() {
+    fun filtersAndRumorsWriteAsPinned() {
         for (f in filters) {
             pin.add(NostrJsonWriter.toJson(f))
-            assertEquals(JacksonMapper.toJson(f), NostrJsonWriter.toJson(f))
-            assertEquals(JacksonMapper.toJson(f), f.toJson())
+            assertEquals(NostrJsonWriter.toJson(f), f.toJson())
         }
         val rumors =
             listOf(
@@ -420,8 +352,7 @@ class NostrJsonWriterJacksonParityTest {
             )
         for (r in rumors) {
             pin.add(NostrJsonWriter.toJson(r))
-            assertEquals(JacksonMapper.toJson(r), NostrJsonWriter.toJson(r))
-            assertEquals(JacksonMapper.toJson(r), Rumor.toJson(r))
+            assertEquals(NostrJsonWriter.toJson(r), Rumor.toJson(r))
         }
     }
 
@@ -429,8 +360,9 @@ class NostrJsonWriterJacksonParityTest {
     fun threadsWritingAtOnceDoNotShareState() {
         val random = Random(7)
         val events = List(500) { event(randomString(random), arrayOf(arrayOf("t", randomString(random)))) }
-        val expectedJson = events.map { JacksonMapper.toJson(it) }
-        val expectedId = events.map { sha.digest(jacksonIdBytes(it.pubKey, it.createdAt, it.kind, it.tags, it.content)) }
+        // What one thread alone writes.
+        val expectedJson = events.map { NostrJsonWriter.toJson(it) }
+        val expectedId = events.map { sha.digest(EventHasherSerializer.fastMakeJsonForId(it.pubKey, it.createdAt, it.kind, it.tags, it.content)) }
         val failures = AtomicInteger()
         val threads =
             List(4) { t ->
@@ -451,7 +383,7 @@ class NostrJsonWriterJacksonParityTest {
     }
 
     @Test
-    fun unknownTypesAreLeftToJackson() {
+    fun unknownTypesAreLeftToKotlinx() {
         val custom =
             object : Message {
                 override fun label() = "CUSTOM"
@@ -461,18 +393,18 @@ class NostrJsonWriterJacksonParityTest {
     }
 
     companion object {
-        /** See [Pin]: recorded while every output was also checked against Jackson. */
+        /** See [Pin]: recorded while every output was also compared with Jackson. */
         private val PINS =
             mapOf(
-                "everyCapturedEventWritesTheSame" to "9e5eaceae7542873dc146c65e6d90a835f443a3ab89eb3490b9d3f0ddd01250e",
-                "oddStringsWriteTheSame" to "04e18de89fa95d22a9f73f09ea2843a2d3a5874fcb8173c31fa764bf6d4ac797",
-                "randomStringsWriteTheSame" to "8659a51ab78aa485ffbbf486ebdae79d9eda546133e90b294a45da77a5c4191e",
+                "everyCapturedEventWritesAsPinned" to "9e5eaceae7542873dc146c65e6d90a835f443a3ab89eb3490b9d3f0ddd01250e",
+                "oddStringsWriteAsPinned" to "04e18de89fa95d22a9f73f09ea2843a2d3a5874fcb8173c31fa764bf6d4ac797",
+                "randomStringsWriteAsPinned" to "8659a51ab78aa485ffbbf486ebdae79d9eda546133e90b294a45da77a5c4191e",
                 "bigEventsGrowAndReleaseTheBuffers" to "c9a492b36f5020abcced842d40ce912c10b056b38b292acc403bf63e7a4c3932",
-                "everyMessageTypeWritesTheSame" to "58f694b89e08afa1372c740b77173796ad04dcfc45e280af661612c82a8f2baa",
-                "everyCommandTypeWritesTheSame" to "ed5ef44394d23eaed7d6877c8454d61bebfe7092cb2db7d11e36e72e8d943bea",
-                "filtersAndRumorsWriteTheSame" to "ac358d4667a389f04205e5a31bd4114464faafc7869377885a70cd45ebf80ece",
+                "everyMessageTypeWritesAsPinned" to "58f694b89e08afa1372c740b77173796ad04dcfc45e280af661612c82a8f2baa",
+                "everyCommandTypeWritesAsPinned" to "ed5ef44394d23eaed7d6877c8454d61bebfe7092cb2db7d11e36e72e8d943bea",
+                "filtersAndRumorsWriteAsPinned" to "ac358d4667a389f04205e5a31bd4114464faafc7869377885a70cd45ebf80ece",
                 "threadsWritingAtOnceDoNotShareState" to "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                "unknownTypesAreLeftToJackson" to "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "unknownTypesAreLeftToKotlinx" to "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
             )
 
         const val CORPUS = "nostr_vitor_startup_data.json.gz"

@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip77Negentropy
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlin.test.Test
@@ -35,7 +35,7 @@ class Nip77SerializationTest {
     @Test
     fun serializeNegMsgMessage_matchesJackson() {
         val msg = NegMsgMessage("neg-sub1", "abcdef0123456789")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val jacksonJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
         assertEquals(jacksonJson, kotlinJson)
     }
@@ -43,7 +43,7 @@ class Nip77SerializationTest {
     @Test
     fun deserializeNegMsgMessage_jackson() {
         val json = """["NEG-MSG","neg-sub1","abcdef0123456789"]"""
-        val deserialized = JacksonMapper.fromJsonToMessage(json)
+        val deserialized = OptimizedJsonMapper.fromJsonToMessage(json)
 
         assertTrue(deserialized is NegMsgMessage)
         assertEquals("neg-sub1", deserialized.subId)
@@ -64,14 +64,14 @@ class Nip77SerializationTest {
     fun negMsgMessage_crossDeserialization() {
         val msg = NegMsgMessage("neg-sub1", "abcdef0123456789")
 
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val jacksonJson = OptimizedJsonMapper.toJson(msg)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
         assertTrue(kotlinDeserialized is NegMsgMessage)
         assertEquals(msg.subId, kotlinDeserialized.subId)
         assertEquals(msg.message, kotlinDeserialized.message)
 
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
+        val jacksonDeserialized = OptimizedJsonMapper.fromJsonToMessage(kotlinJson)
         assertTrue(jacksonDeserialized is NegMsgMessage)
         assertEquals(msg.subId, jacksonDeserialized.subId)
         assertEquals(msg.message, jacksonDeserialized.message)
@@ -84,7 +84,7 @@ class Nip77SerializationTest {
     @Test
     fun serializeNegErrMessage_matchesJackson() {
         val msg = NegErrMessage("neg-sub1", "blocked: query too large")
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val jacksonJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
         assertEquals(jacksonJson, kotlinJson)
     }
@@ -92,7 +92,7 @@ class Nip77SerializationTest {
     @Test
     fun deserializeNegErrMessage_jackson() {
         val json = """["NEG-ERR","neg-sub1","blocked: query too large"]"""
-        val deserialized = JacksonMapper.fromJsonToMessage(json)
+        val deserialized = OptimizedJsonMapper.fromJsonToMessage(json)
 
         assertTrue(deserialized is NegErrMessage)
         assertEquals("neg-sub1", deserialized.subId)
@@ -113,13 +113,13 @@ class Nip77SerializationTest {
     fun negErrMessage_crossDeserialization() {
         val msg = NegErrMessage("neg-sub1", "blocked: too many records")
 
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val jacksonJson = OptimizedJsonMapper.toJson(msg)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(jacksonJson)
         assertTrue(kotlinDeserialized is NegErrMessage)
         assertEquals(msg.reason, kotlinDeserialized.reason)
 
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
-        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(kotlinJson)
+        val jacksonDeserialized = OptimizedJsonMapper.fromJsonToMessage(kotlinJson)
         assertTrue(jacksonDeserialized is NegErrMessage)
         assertEquals(msg.reason, jacksonDeserialized.reason)
     }
@@ -127,7 +127,7 @@ class Nip77SerializationTest {
     @Test
     fun serializeNegErrMessageWithCap_matchesJackson() {
         val msg = NegErrMessage("neg-sub1", "blocked: too many query results", 1_000_000L)
-        val jacksonJson = JacksonMapper.toJson(msg)
+        val jacksonJson = OptimizedJsonMapper.toJson(msg)
         val kotlinJson = KotlinSerializationMapper.toJson(msg)
 
         assertEquals(jacksonJson, kotlinJson)
@@ -141,14 +141,14 @@ class Nip77SerializationTest {
         // every existing reader then has to tolerate.
         val msg = NegErrMessage("neg-sub1", "closed: timeout")
         assertEquals("""["NEG-ERR","neg-sub1","closed: timeout"]""", KotlinSerializationMapper.toJson(msg))
-        assertEquals("""["NEG-ERR","neg-sub1","closed: timeout"]""", JacksonMapper.toJson(msg))
+        assertEquals("""["NEG-ERR","neg-sub1","closed: timeout"]""", OptimizedJsonMapper.toJson(msg))
     }
 
     @Test
     fun deserializeNegErrMessageWithCap_bothMappers() {
         val json = """["NEG-ERR","neg-sub1","blocked: too many query results",1000000]"""
 
-        val jackson = JacksonMapper.fromJsonToMessage(json)
+        val jackson = OptimizedJsonMapper.fromJsonToMessage(json)
         assertTrue(jackson is NegErrMessage)
         assertEquals(1_000_000L, jackson.cap)
         assertEquals(1_000_000L, jackson.statedCap)
@@ -164,7 +164,7 @@ class Nip77SerializationTest {
         // not break the frame that carries the reason.
         val json = """["NEG-ERR","neg-sub1","blocked: too many query results","soon"]"""
 
-        val jackson = JacksonMapper.fromJsonToMessage(json)
+        val jackson = OptimizedJsonMapper.fromJsonToMessage(json)
         assertTrue(jackson is NegErrMessage)
         assertEquals("blocked: too many query results", jackson.reason)
         assertEquals(null, jackson.cap)
@@ -182,7 +182,7 @@ class Nip77SerializationTest {
         // this element existed any extra was simply ignored.
         val json = """["NEG-ERR","neg-sub1","blocked: too many query results",{"max":10}]"""
 
-        val jackson = JacksonMapper.fromJsonToMessage(json)
+        val jackson = OptimizedJsonMapper.fromJsonToMessage(json)
         assertTrue(jackson is NegErrMessage)
         assertEquals("blocked: too many query results", jackson.reason)
         assertEquals(null, jackson.cap)
@@ -197,11 +197,11 @@ class Nip77SerializationTest {
     fun negErrMessageWithCap_crossDeserialization() {
         val msg = NegErrMessage("neg-sub1", "blocked: too many records", 500_000L)
 
-        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(JacksonMapper.toJson(msg))
+        val kotlinDeserialized = KotlinSerializationMapper.fromJsonToMessage(OptimizedJsonMapper.toJson(msg))
         assertTrue(kotlinDeserialized is NegErrMessage)
         assertEquals(500_000L, kotlinDeserialized.cap)
 
-        val jacksonDeserialized = JacksonMapper.fromJsonToMessage(KotlinSerializationMapper.toJson(msg))
+        val jacksonDeserialized = OptimizedJsonMapper.fromJsonToMessage(KotlinSerializationMapper.toJson(msg))
         assertTrue(jacksonDeserialized is NegErrMessage)
         assertEquals(500_000L, jacksonDeserialized.cap)
     }
@@ -214,7 +214,7 @@ class Nip77SerializationTest {
     fun serializeNegOpenCmd_matchesJackson() {
         val filter = Filter(kinds = listOf(1), since = 1000L)
         val cmd = NegOpenCmd("neg-sub1", filter, "61abcdef")
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val jacksonJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         assertEquals(jacksonJson, kotlinJson)
     }
@@ -222,7 +222,7 @@ class Nip77SerializationTest {
     @Test
     fun deserializeNegOpenCmd_jackson() {
         val json = """["NEG-OPEN","neg-sub1",{"kinds":[1],"since":1000},"61abcdef"]"""
-        val deserialized = JacksonMapper.fromJsonToCommand(json)
+        val deserialized = OptimizedJsonMapper.fromJsonToCommand(json)
 
         assertTrue(deserialized is NegOpenCmd)
         assertEquals("neg-sub1", deserialized.subId)
@@ -247,14 +247,14 @@ class Nip77SerializationTest {
         val filter = Filter(kinds = listOf(1, 7), limit = 100)
         val cmd = NegOpenCmd("neg-sub1", filter, "61aabbccdd")
 
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val jacksonJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinDeserialized = KotlinSerializationMapper.fromJsonToCommand(jacksonJson)
         assertTrue(kotlinDeserialized is NegOpenCmd)
         assertEquals(cmd.subId, kotlinDeserialized.subId)
         assertEquals(cmd.initialMessage, kotlinDeserialized.initialMessage)
 
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
-        val jacksonDeserialized = JacksonMapper.fromJsonToCommand(kotlinJson)
+        val jacksonDeserialized = OptimizedJsonMapper.fromJsonToCommand(kotlinJson)
         assertTrue(jacksonDeserialized is NegOpenCmd)
         assertEquals(cmd.subId, jacksonDeserialized.subId)
         assertEquals(cmd.initialMessage, jacksonDeserialized.initialMessage)
@@ -267,7 +267,7 @@ class Nip77SerializationTest {
     @Test
     fun serializeNegMsgCmd_matchesJackson() {
         val cmd = NegMsgCmd("neg-sub1", "aabbccdd")
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val jacksonJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         assertEquals(jacksonJson, kotlinJson)
     }
@@ -275,7 +275,7 @@ class Nip77SerializationTest {
     @Test
     fun deserializeNegMsgCmd_jackson() {
         val json = """["NEG-MSG","neg-sub1","aabbccdd"]"""
-        val deserialized = JacksonMapper.fromJsonToCommand(json)
+        val deserialized = OptimizedJsonMapper.fromJsonToCommand(json)
 
         assertTrue(deserialized is NegMsgCmd)
         assertEquals("neg-sub1", deserialized.subId)
@@ -299,7 +299,7 @@ class Nip77SerializationTest {
     @Test
     fun serializeNegCloseCmd_matchesJackson() {
         val cmd = NegCloseCmd("neg-sub1")
-        val jacksonJson = JacksonMapper.toJson(cmd)
+        val jacksonJson = OptimizedJsonMapper.toJson(cmd)
         val kotlinJson = KotlinSerializationMapper.toJson(cmd)
         assertEquals(jacksonJson, kotlinJson)
     }
@@ -307,7 +307,7 @@ class Nip77SerializationTest {
     @Test
     fun deserializeNegCloseCmd_jackson() {
         val json = """["NEG-CLOSE","neg-sub1"]"""
-        val deserialized = JacksonMapper.fromJsonToCommand(json)
+        val deserialized = OptimizedJsonMapper.fromJsonToCommand(json)
 
         assertTrue(deserialized is NegCloseCmd)
         assertEquals("neg-sub1", deserialized.subId)

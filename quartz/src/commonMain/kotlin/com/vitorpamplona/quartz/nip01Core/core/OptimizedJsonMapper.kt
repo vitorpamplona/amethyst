@@ -20,36 +20,52 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 interface OptimizedSerializable
 
-expect object OptimizedJsonMapper {
-    fun fromJson(json: String): Event
+/**
+ * Quartz's JSON entry points, the same on every target.
+ *
+ * Everything Nostr-shaped (events, tags, templates, rumors, filters, every relay message and
+ * client command, NIP-46 messages) goes through Quartz's own [NostrJsonReader] and
+ * [NostrJsonWriter]. Every other [OptimizedSerializable] (NIP-47, CLINK) goes through kotlinx,
+ * whose serializers name every field as a string literal, so R8 has nothing to keep and a field
+ * of the wrong shape from someone else's wallet reads as absent rather than failing the message.
+ */
+object OptimizedJsonMapper {
+    fun fromJson(json: String): Event = NostrJsonReader.readEvent(json)
 
-    fun toJson(event: Event): String
+    fun toJson(event: Event): String = NostrJsonWriter.toJson(event)
 
-    fun fromJsonToMessage(json: String): Message
+    fun fromJsonToMessage(json: String): Message = NostrJsonReader.readMessage(json)
 
-    fun fromJsonToCommand(json: String): Command
+    fun fromJsonToCommand(json: String): Command = NostrJsonReader.readCommand(json)
 
-    fun fromJsonToTagArray(json: String): Array<Array<String>>
+    fun fromJsonToTagArray(json: String): Array<Array<String>> = NostrJsonReader.readTagArray(json)
 
-    fun fromJsonToEventTemplate(json: String): EventTemplate<Event>
+    fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = NostrJsonReader.readEventTemplate(json)
 
-    fun fromJsonToEventList(json: String): List<Event>
+    fun fromJsonToEventList(json: String): List<Event> = NostrJsonReader.readEventList(json)
 
-    fun fromJsonToRumor(json: String): Rumor
+    fun fromJsonToRumor(json: String): Rumor = NostrJsonReader.readRumor(json)
 
-    fun toJson(tags: Array<Array<String>>): String
+    fun toJson(tags: Array<Array<String>>): String = NostrJsonWriter.toJson(tags)
 
-    inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T
+    inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
+        readKnownType(T::class, json) as T? ?: try {
+            KotlinSerializationMapper.fromJsonTo<T>(json)
+        } catch (e: SerializationException) {
+            throw IllegalArgumentException(e.message, e)
+        }
 
-    fun toJson(value: OptimizedSerializable): String
+    fun toJson(value: OptimizedSerializable): String = NostrJsonWriter.toJsonOrNull(value) ?: KotlinSerializationMapper.toJson(value)
 }
 
 object JsonMapper {

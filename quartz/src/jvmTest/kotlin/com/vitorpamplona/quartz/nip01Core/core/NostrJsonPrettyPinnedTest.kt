@@ -20,19 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** [NostrJsonPretty] against Jackson with `InliningTagArrayPrettyPrinter`, which it replaces. */
-class NostrJsonPrettyJacksonParityTest {
-    private val pretty = JacksonMapper.mapper.writerWithDefaultPrettyPrinter()
-
-    private fun jacksonPretty(node: JsonNode) = pretty.writeValueAsString(node).replace("\r\n", "\n")
-
+/**
+ * [NostrJsonPretty], the layout Jackson's `InliningTagArrayPrettyPrinter` wrote. The expected
+ * text and the pin were recorded while every output was also compared with Jackson.
+ */
+class NostrJsonPrettyPinnedTest {
     @Test
     fun eventsAndTemplates() {
         val e =
@@ -45,12 +42,55 @@ class NostrJsonPrettyJacksonParityTest {
                 "hi\n\"there\"",
                 "c".repeat(128),
             )
-        assertEquals(JacksonMapper.toJsonPretty(e).replace("\r\n", "\n"), NostrJsonPretty.format(NostrJsonWriter.toJson(e)))
+        assertEquals(
+            """
+            {
+              "id": "${"a".repeat(64)}",
+              "pubkey": "${"b".repeat(64)}",
+              "created_at": 1700000000,
+              "kind": 1,
+              "tags": [
+                ["e", "x", "", "root"],
+                ["t"],
+                [],
+                ["p", "q\"\n"]
+              ],
+              "content": "hi\n\"there\"",
+              "sig": "${"c".repeat(128)}"
+            }
+            """.trimIndent(),
+            NostrJsonWriter.toPrettyJson(e),
+        )
         val empty = Event("a".repeat(64), "b".repeat(64), 1, 1, emptyArray(), "", "c".repeat(128))
-        assertEquals(JacksonMapper.toJsonPretty(empty).replace("\r\n", "\n"), NostrJsonPretty.format(NostrJsonWriter.toJson(empty)))
+        assertEquals(
+            """
+            {
+              "id": "${"a".repeat(64)}",
+              "pubkey": "${"b".repeat(64)}",
+              "created_at": 1,
+              "kind": 1,
+              "tags": [],
+              "content": "",
+              "sig": "${"c".repeat(128)}"
+            }
+            """.trimIndent(),
+            NostrJsonWriter.toPrettyJson(empty),
+        )
 
         val t = EventTemplate<Event>(5, 7, arrayOf(arrayOf("d", "1")), "c")
-        assertEquals(JacksonMapper.toJsonPretty(t).replace("\r\n", "\n"), NostrJsonPretty.format(JacksonMapper.toJson(t)))
+        assertEquals(
+            """
+            {
+              "created_at": 5,
+              "kind": 7,
+              "tags": [
+                ["d", "1"]
+              ],
+              "content": "c"
+            }
+            """.trimIndent(),
+            NostrJsonWriter.toPrettyJson(t),
+        )
     }
 
     // Strings as compact JSON: plain, with escapes, with structural chars, and non-ASCII.
@@ -80,7 +120,6 @@ class NostrJsonPrettyJacksonParityTest {
             val compact = randomTree(random, 0)
             val formatted = NostrJsonPretty.format(compact)
             pin.add(formatted)
-            assertEquals(jacksonPretty(JacksonMapper.mapper.readTree(compact)), formatted, compact)
             // Whitespace in the input changes nothing.
             assertEquals(formatted, NostrJsonPretty.format(formatted), compact)
         }
@@ -88,7 +127,7 @@ class NostrJsonPrettyJacksonParityTest {
     }
 
     companion object {
-        /** See [Pin]: recorded while every output was also checked against Jackson. */
+        /** See [Pin]: recorded while every output was also compared with Jackson. */
         private const val PIN_RANDOM_TREES = "8b7a2a57ab3d98fbbc1dbfc420fc3b7dca680bbb3ccaad5ae52bc1e289fb7bf9"
     }
 }

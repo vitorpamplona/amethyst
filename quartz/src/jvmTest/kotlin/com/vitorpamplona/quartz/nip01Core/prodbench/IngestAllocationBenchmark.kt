@@ -20,11 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip01Core.prodbench
 
-import com.fasterxml.jackson.core.JsonToken
 import com.sun.management.ThreadMXBean
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findIndexTagsWithPeople
@@ -133,13 +132,33 @@ class IngestAllocationBenchmark {
 
         val out = ArrayList<Event>(EVENTS)
         val seen = HashSet<String>(EVENTS * 2)
-        GZIPInputStream(stream).use { gz ->
-            val parser = JacksonMapper.mapper.factory.createParser(gz)
-            check(parser.nextToken() == JsonToken.START_ARRAY) { "$CORPUS is not a JSON array" }
-            while (out.size < EVENTS && parser.nextToken() == JsonToken.START_OBJECT) {
-                val event: Event = JacksonMapper.mapper.readValue(parser, JacksonMapper.eventTypeInstance)
-                // the capture spans many relays, so the same event arrives several times
-                if (seen.add(event.id)) out.add(event)
+        GZIPInputStream(stream).bufferedReader().use { reader ->
+            // Splits the top-level array into its objects by brace depth, outside strings.
+            val sb = StringBuilder()
+            var depth = 0
+            var inStr = false
+            var esc = false
+            while (out.size < EVENTS) {
+                val c = reader.read()
+                if (c < 0) break
+                val ch = c.toChar()
+                if (depth > 0 || ch == '{') sb.append(ch)
+                when {
+                    esc -> esc = false
+                    ch == '\\' && inStr -> esc = true
+                    ch == '"' -> inStr = !inStr
+                    inStr -> {}
+                    ch == '{' -> depth++
+                    ch == '}' -> {
+                        depth--
+                        if (depth == 0) {
+                            val event = OptimizedJsonMapper.fromJson(sb.toString())
+                            sb.setLength(0)
+                            // the capture spans many relays, so the same event arrives several times
+                            if (seen.add(event.id)) out.add(event)
+                        }
+                    }
+                }
             }
         }
         return out
@@ -168,7 +187,7 @@ class IngestAllocationBenchmark {
         // ---- per stage ----
         val decode = allocBytes(count) { i -> String(frameBytes[i], Charsets.UTF_8) }
         val msgParse = allocBytes(count) { i -> Message.fromJson(frames[i]) }
-        val evtParse = allocBytes(count) { i -> JacksonMapper.fromJson(eventJson[i]) }
+        val evtParse = allocBytes(count) { i -> OptimizedJsonMapper.fromJson(eventJson[i]) }
         val verify = allocBytes(count) { i -> events[i].verify() }
         val scans =
             allocBytes(count) { i ->

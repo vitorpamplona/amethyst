@@ -20,16 +20,15 @@
 # configuration. These rules are merged into the R8 config of EVERY app that
 # depends on quartz, so a rule we do not need is noise in somebody else's build.
 
-# No Jackson keeps. Every wire format Quartz speaks is now handled by a
-# hand-written serializer that names its fields as string literals: the
-# StdSerializer/StdDeserializer pairs registered on JacksonMapper (Event, Filter,
-# Message, Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker messages),
-# JsonMapperNip55 (IntentResult, Permission), and the kotlinx serializers that
-# NIP-47 and CLINK route through on every target. None of it reads a Kotlin
-# constructor parameter name at runtime, so none of it has to survive R8.
+# No JSON keeps. Every wire format Quartz speaks is handled by code that names
+# its fields as string literals: NostrJsonReader and NostrJsonWriter (Event,
+# Filter, Message, Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker
+# messages), Nip55Json (IntentResult, Permission), and the kotlinx serializers
+# that NIP-47 and CLINK use. None of it reads a Kotlin constructor parameter
+# name at runtime, so none of it has to survive R8.
 
-# Quartz serialises enums by name (Jackson writes/reads Enum.name, and
-# Enum.valueOf resolves that string against the static field name), so the
+# Quartz serialises enums by name (it writes Enum.name, and Enum.valueOf
+# resolves that string against the static field name), so the
 # constants of its own enums have to keep their names. Consumers that persist
 # their OWN enums by name need the equivalent rule in their own configuration.
 -keepclassmembers enum com.vitorpamplona.quartz.** {

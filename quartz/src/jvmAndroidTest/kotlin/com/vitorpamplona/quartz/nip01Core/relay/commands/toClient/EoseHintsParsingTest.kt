@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.commands.toClient
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -33,7 +33,7 @@ import kotlin.test.assertTrue
 class EoseHintsParsingTest {
     private val parsers: List<Pair<String, (String) -> Message>> =
         listOf(
-            "jackson" to { json -> JacksonMapper.fromJsonToMessage(json) },
+            "jackson" to { json -> OptimizedJsonMapper.fromJsonToMessage(json) },
             "kotlinx" to { json -> KotlinSerializationMapper.fromJsonToMessage(json) },
         )
 
@@ -110,7 +110,7 @@ class EoseHintsParsingTest {
     fun serializesWithoutHintsAsTwoElements() {
         val msg = EoseMessage("sub1")
         assertEquals("""["EOSE","sub1"]""", msg.toJson())
-        assertEquals("""["EOSE","sub1"]""", JacksonMapper.toJson(msg))
+        assertEquals("""["EOSE","sub1"]""", OptimizedJsonMapper.toJson(msg))
         assertEquals("""["EOSE","sub1"]""", KotlinSerializationMapper.toJson(msg))
     }
 
@@ -119,7 +119,7 @@ class EoseHintsParsingTest {
         val msg = EoseMessage("sub1", listOf("auth", "finish"))
         val expected = """["EOSE","sub1",["auth","finish"]]"""
         assertEquals(expected, msg.toJson())
-        assertEquals(expected, JacksonMapper.toJson(msg))
+        assertEquals(expected, OptimizedJsonMapper.toJson(msg))
         assertEquals(expected, KotlinSerializationMapper.toJson(msg))
     }
 

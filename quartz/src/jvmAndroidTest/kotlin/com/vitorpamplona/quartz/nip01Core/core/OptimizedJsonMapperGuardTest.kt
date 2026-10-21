@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.jackson
+package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.CloseCmd
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -30,38 +29,29 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * [JacksonMapper.toJson] refuses a type it has no registered serializer for.
- *
- * Bean introspection would otherwise name every field after its getter, and R8
- * renames getters — so the JSON is correct in debug and one-letter garbage in a
- * release build. The failure has to happen here, on the first call, or it happens
- * on a user's device.
+ * [OptimizedJsonMapper.toJson] refuses a type that neither [NostrJsonWriter] nor a kotlinx
+ * serializer covers, on the first call, rather than writing something on a user's device.
  */
-class JacksonSerializerGuardTest {
+class OptimizedJsonMapperGuardTest {
     private class NotRegistered(
         val someField: String = "value",
     ) : OptimizedSerializable
 
     @Test
     fun unregisteredTypeIsRefused() {
-        val e = assertFailsWith<IllegalArgumentException> { JacksonMapper.toJson(NotRegistered()) }
-        assertTrue(e.message!!.contains("No Jackson serializer is registered"), e.message!!)
+        val e = assertFailsWith<IllegalArgumentException> { OptimizedJsonMapper.toJson(NotRegistered()) }
+        assertTrue(e.message!!.contains("Unsupported type"), e.message!!)
     }
 
-    /**
-     * The guard is an `is` chain because Jackson's SimpleSerializers walks the
-     * hierarchy: CLOSE has no serializer of its own, it rides Command's. An
-     * exact-class check would reject it — and with it every relay command the
-     * client sends.
-     */
+    /** Subclasses of a covered root, like CLOSE under Command, are covered too. */
     @Test
     fun subclassesOfARegisteredRootStillSerialize() {
-        assertEquals("""["CLOSE","sub-1"]""", JacksonMapper.toJson(CloseCmd("sub-1")))
+        assertEquals("""["CLOSE","sub-1"]""", OptimizedJsonMapper.toJson(CloseCmd("sub-1")))
     }
 
     @Test
     fun registeredRootsStillSerialize() {
-        assertEquals("""{"kinds":[1]}""", JacksonMapper.toJson(Filter(kinds = listOf(1))))
-        assertTrue(JacksonMapper.toJson(BunkerRequest("id-1", "connect", arrayOf("a"))).contains("\"connect\""))
+        assertEquals("""{"kinds":[1]}""", OptimizedJsonMapper.toJson(Filter(kinds = listOf(1))))
+        assertTrue(OptimizedJsonMapper.toJson(BunkerRequest("id-1", "connect", arrayOf("a"))).contains("\"connect\""))
     }
 }

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.GZIPInputStream
@@ -28,25 +27,19 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /**
- * [NostrJsonReader] against Quartz's Jackson path, which it replaces: every event of the
- * recorded startup capture, as an event and as an EVENT frame, every prefix of a sample, and
- * random edits of real events.
+ * [NostrJsonReader] over every event of the recorded startup capture, as an event and as an
+ * EVENT frame, every prefix of a sample, and random edits of real events, each set pinned by
+ * a [Pin].
  *
- * Whenever both accept an input they must build the same event. The reader may reject what
- * Jackson accepts (its stricter cases, and a jackson-core quirk that takes any character whose
- * low byte is a hex digit inside a \u escape) but must never accept what Jackson rejects.
+ * The pins were recorded while every outcome was also compared with the Jackson path the
+ * reader replaced: whenever both accepted an input they built the same event, and the reader
+ * never accepted what Jackson rejected. It rejects some inputs Jackson took (its stricter
+ * cases, and a jackson-core quirk that took any character whose low byte is a hex digit
+ * inside a \u escape).
  */
-class NostrJsonReaderJacksonParityTest {
-    private fun jackson(json: String): Event? =
-        try {
-            JacksonMapper.fromJson(json)
-        } catch (e: Exception) {
-            null
-        }
-
+class NostrJsonReaderPinnedTest {
     private fun reader(json: String): Event? =
         try {
             NostrJsonReader.readEvent(json)
@@ -71,37 +64,26 @@ class NostrJsonReaderJacksonParityTest {
 
     private class Tally {
         val pin = Pin("")
-        var same = 0
-        var bothReject = 0
-        var onlyJackson = 0
-        val readerOnly = ArrayList<String>()
-        val different = ArrayList<String>()
+        var accepted = 0
+        var rejected = 0
     }
 
     private fun compare(
         json: String,
         t: Tally,
     ) {
-        val j = jackson(json)
         val r = reader(json)
         t.pin.add(r?.let { describe(it) })
-        when {
-            j != null && r != null -> if (sameEvent(j, r)) t.same++ else t.different += json
-            j == null && r == null -> t.bothReject++
-            j != null -> t.onlyJackson++
-            else -> t.readerOnly += json
-        }
+        if (r != null) t.accepted++ else t.rejected++
     }
 
-    private fun assertParity(
+    private fun assertPinned(
         name: String,
         t: Tally,
     ) {
         t.pin.name = name
+        println("$name: accepted ${t.accepted}, rejected ${t.rejected}")
         t.pin.check(PINS.getValue(name))
-        println("$name: same ${t.same}, both reject ${t.bothReject}, only Jackson ${t.onlyJackson}, only reader ${t.readerOnly.size}, different ${t.different.size}")
-        if (t.different.isNotEmpty()) fail("$name: ${t.different.size} inputs build different events, e.g. ${t.different.first().take(300)}")
-        if (t.readerOnly.isNotEmpty()) fail("$name: ${t.readerOnly.size} inputs only the reader accepts, e.g. ${t.readerOnly.first().take(300)}")
     }
 
     /** Every top-level object of the capture's single-line JSON array, as the raw text. */
@@ -144,23 +126,22 @@ class NostrJsonReaderJacksonParityTest {
     }
 
     @Test
-    fun everyCapturedEventParsesTheSame() {
+    fun everyCapturedEventParsesAsPinned() {
         val events = Tally()
         var frames = 0
         forEachCapturedEvent { json ->
             compare(json, events)
 
             val frame = "[\"EVENT\",\"sub\",$json]"
-            val viaJackson = JacksonMapper.fromJsonToMessage(frame) as EventMessage
-            val viaReader = NostrJsonReader.readMessage(frame) as EventMessage
-            assertEquals(viaJackson.subId, viaReader.subId)
-            assertTrue(sameEvent(viaJackson.event, viaReader.event), "EVENT frame differs: ${json.take(300)}")
+            val viaFrame = NostrJsonReader.readMessage(frame) as EventMessage
+            assertEquals("sub", viaFrame.subId)
+            assertTrue(sameEvent(NostrJsonReader.readEvent(json), viaFrame.event), "EVENT frame differs: ${json.take(300)}")
             frames++
         }
-        assertParity("captured events", events)
-        assertTrue(events.same > 200_000, "expected the whole capture, got ${events.same}")
-        assertEquals(events.same, frames)
-        assertEquals(0, events.onlyJackson)
+        assertPinned("captured events", events)
+        assertTrue(events.accepted > 200_000, "expected the whole capture, got ${events.accepted}")
+        assertEquals(events.accepted, frames)
+        assertEquals(0, events.rejected)
     }
 
     /** The first 2,000 captured events under 4,000 chars, read once for every test that needs it. */
@@ -176,9 +157,9 @@ class NostrJsonReaderJacksonParityTest {
     @Test
     fun threadsParsingAtOnceDoNotShareState() {
         // Each thread keeps its own reader; four threads over the same events must each get
-        // exactly what Jackson builds.
+        // exactly what one thread alone builds.
         val events = sample(SAMPLE_SIZE)
-        val expected = events.map { JacksonMapper.fromJson(it) }
+        val expected = events.map { NostrJsonReader.readEvent(it) }
         val failures = AtomicInteger()
         val threads =
             List(4) { t ->
@@ -201,13 +182,12 @@ class NostrJsonReaderJacksonParityTest {
     fun everyTruncationIsRejected() {
         val t = Tally()
         for (json in sample(60)) for (k in 0 until json.length) compare(json.substring(0, k), t)
-        assertParity("truncations", t)
-        assertEquals(0, t.same)
-        assertEquals(0, t.onlyJackson)
+        assertPinned("truncations", t)
+        assertEquals(0, t.accepted)
     }
 
     @Test
-    fun randomEditsNeverParseDifferently() {
+    fun randomEditsParseAsPinned() {
         val rnd = Random(20261021)
         val events = sample(SAMPLE_SIZE)
         val t = Tally()
@@ -231,12 +211,12 @@ class NostrJsonReaderJacksonParityTest {
                 compare(sb.toString(), t)
             }
         }
-        assertParity("random edits", t)
-        assertTrue(t.same > 10_000)
+        assertPinned("random edits", t)
+        assertTrue(t.accepted > 10_000)
     }
 
     companion object {
-        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        /** See [Pin]: recorded while every outcome was also compared with Jackson. */
         private val PINS =
             mapOf(
                 "captured events" to "8d14fbe28335faba96c5be2ee89c3e54fc1fe4416521cc1c085cef5201cb26c4",

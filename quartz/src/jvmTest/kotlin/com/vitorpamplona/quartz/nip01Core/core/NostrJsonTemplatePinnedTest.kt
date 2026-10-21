@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import java.util.zip.GZIPInputStream
@@ -29,11 +28,12 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * Event templates, bare tag arrays and filters read and written by Quartz's reader and writer,
- * against the Jackson (de)serializers they replace: every captured event as a template and as
- * its tags, hand-picked odd inputs, and every prefix of a sample.
+ * Event templates, bare tag arrays and filters read and written by Quartz's reader and writer:
+ * every captured event as a template and as its tags, hand-picked odd inputs, and every prefix
+ * of a sample. The pins were recorded while every outcome was also compared with the Jackson
+ * (de)serializers they replaced; the two agreed wherever Jackson accepted the input.
  */
-class NostrJsonTemplateParityTest {
+class NostrJsonTemplatePinnedTest {
     private fun <T> run(block: () -> T): Result<T> =
         try {
             Result.success(block())
@@ -49,46 +49,31 @@ class NostrJsonTemplateParityTest {
 
     private class Tally {
         val pin = Pin("")
-        var same = 0
-        var bothReject = 0
-        var onlyJackson = 0
-        val readerOnly = ArrayList<String>()
-        val different = ArrayList<String>()
+        var accepted = 0
+        var rejected = 0
     }
 
     private fun compare(
         input: String,
-        jackson: (String) -> String,
         reader: (String) -> String,
         t: Tally,
     ) {
-        val j = run { jackson(input) }
         val r = run { reader(input) }
         t.pin.add(r.getOrNull())
-        when {
-            j.isSuccess && r.isSuccess -> if (j.getOrNull() == r.getOrNull()) t.same++ else t.different += "$input\n  J=${j.getOrNull()}\n  R=${r.getOrNull()}"
-            j.isFailure && r.isFailure -> t.bothReject++
-            j.isSuccess -> t.onlyJackson++
-            else -> t.readerOnly += input
-        }
+        if (r.isSuccess) t.accepted++ else t.rejected++
     }
 
-    private fun assertParity(
+    private fun assertPinned(
         name: String,
         t: Tally,
     ) {
         t.pin.name = name
+        println("$name: accepted ${t.accepted}, rejected ${t.rejected}")
         t.pin.check(PINS.getValue(name))
-        println("$name: same ${t.same}, both reject ${t.bothReject}, only Jackson ${t.onlyJackson}, only reader ${t.readerOnly.size}, different ${t.different.size}")
-        if (t.different.isNotEmpty()) fail("$name: ${t.different.size} differ, e.g. ${t.different.first().take(600)}")
-        if (t.readerOnly.isNotEmpty()) fail("$name: ${t.readerOnly.size} only the reader accepts, e.g. ${t.readerOnly.first().take(300)}")
     }
 
-    private val templateJackson = { s: String -> describe(JacksonMapper.fromJsonToEventTemplate(s)) }
     private val templateReader = { s: String -> describe(NostrJsonReader.readEventTemplate(s)) }
-    private val tagsJackson = { s: String -> describe(JacksonMapper.fromJsonToTagArray(s)) }
     private val tagsReader = { s: String -> describe(NostrJsonReader.readTagArray(s)) }
-    private val filterJackson = { s: String -> describe(JacksonMapper.fromJsonTo<Filter>(s)) }
     private val filterReader = { s: String -> describe(NostrJsonReader.readFilter(s)) }
 
     private fun capturedEvents(limit: Int): List<String> {
@@ -146,17 +131,17 @@ class NostrJsonTemplateParityTest {
         val tags = Tally()
         val written = Tally()
         for (json in capturedEvents(Int.MAX_VALUE)) {
-            compare(json, templateJackson, templateReader, templates)
-            val e = JacksonMapper.fromJson(json)
-            val tagsJson = JacksonMapper.toJson(e.tags)
-            compare(tagsJson, tagsJackson, tagsReader, tags)
+            compare(json, templateReader, templates)
+            val e = NostrJsonReader.readEvent(json)
+            val tagsJson = NostrJsonWriter.toJson(e.tags)
+            compare(tagsJson, tagsReader, tags)
             val template = EventTemplate<Event>(e.createdAt, e.kind, e.tags, e.content)
-            compare("", { JacksonMapper.toJson(template) }, { NostrJsonWriter.toJson(template) }, written)
+            compare("", { NostrJsonWriter.toJson(template) }, written)
         }
-        assertParity("templates", templates)
-        assertParity("tag arrays", tags)
-        assertParity("written templates", written)
-        assertTrue(templates.same > 200_000)
+        assertPinned("templates", templates)
+        assertPinned("tag arrays", tags)
+        assertPinned("written templates", written)
+        assertTrue(templates.accepted > 200_000)
     }
 
     private val oddTemplates =
@@ -191,11 +176,11 @@ class NostrJsonTemplateParityTest {
     @Test
     fun oddTemplatesTagsAndFilters() {
         val t = Tally()
-        for (s in oddTemplates) compare(s, templateJackson, templateReader, t)
-        assertParity("odd templates", t)
+        for (s in oddTemplates) compare(s, templateReader, t)
+        assertPinned("odd templates", t)
 
-        // Tags of the wrong shape, and every prefix of a real template, are rejected. These are
-        // checked against the reader alone: the replaced deserializer is no oracle for them.
+        // Tags of the wrong shape, and every prefix of a real template, are rejected. These were
+        // always checked against the reader alone: the replaced deserializer was no oracle for them.
         for (bad in listOf("""{"tags":{}}""", """{"tags":null}""", """{"tags":[{"a":1}]}""", """{"tags":["a"]}""", """{"tags":[[{}]]}""", """{"tags":[[["nested"]]]}""")) {
             if (run { NostrJsonReader.readEventTemplate(bad) }.isSuccess) fail("accepted malformed tags: $bad")
         }
@@ -208,8 +193,8 @@ class NostrJsonTemplateParityTest {
         val tags = Tally()
         val oddTags =
             listOf("[]", "[[]]", """[["a","b"],["c"]]""", """[["a",null,1,true,-2.5e3]]""", "", """ [ [ "a" ] ] x""")
-        for (s in oddTags) compare(s, tagsJackson, tagsReader, tags)
-        assertParity("odd tag arrays", tags)
+        for (s in oddTags) compare(s, tagsReader, tags)
+        assertPinned("odd tag arrays", tags)
         for (bad in listOf("[", """[["a"],""", """[["a""", """[["a",""", "[[[]]]", """[{"a":1}]""", """["a"]""", "{}")) {
             if (run { NostrJsonReader.readTagArray(bad) }.isSuccess) fail("accepted a malformed tag array: $bad")
         }
@@ -225,12 +210,12 @@ class NostrJsonTemplateParityTest {
                 "",
                 """{"kinds":[1}""",
             )
-        for (s in oddFilters) compare(s, filterJackson, filterReader, filters)
-        assertParity("filters", filters)
+        for (s in oddFilters) compare(s, filterReader, filters)
+        assertPinned("filters", filters)
     }
 
     companion object {
-        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        /** See [Pin]: recorded while every outcome was also compared with Jackson. */
         private val PINS =
             mapOf(
                 "templates" to "9768c546eec3ec796c9559ed3c38bd2dad90928e7b68e6e932f6332aadd58d64",

@@ -18,30 +18,22 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip59Giftwrap.rumors.jackson
+package com.vitorpamplona.quartz.nip01Core.core
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
+import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import kotlinx.coroutines.runBlocking
+import kotlin.test.Test
+import kotlin.test.assertNull
 
-class RumorSerializer : StdSerializer<Rumor>(Rumor::class.java) {
-    override fun serialize(
-        event: Rumor,
-        gen: JsonGenerator,
-        provider: SerializerProvider,
-    ) {
-        gen.writeStartObject()
-        event.id?.let { gen.writeStringField("id", it) }
-        event.pubKey?.let { gen.writeStringField("pubkey", it) }
-        event.createdAt?.let { gen.writeNumberField("created_at", it) }
-        event.kind?.let { gen.writeNumberField("kind", it) }
-        event.tags?.let {
-            gen.writeArrayFieldStart("tags")
-            event.tags.forEach { tag -> gen.writeArray(tag, 0, tag.size) }
-            gen.writeEndArray()
-        }
-        event.content?.let { gen.writeStringField("content", it) }
-        gen.writeEndObject()
+/** An event cut short before its closing brace fails instead of reading as an event. */
+class EventTruncationTest {
+    @Test
+    fun aTruncatedObjectFailsInsteadOfLooping() {
+        val event = runBlocking { NostrSignerInternal(KeyPair()).sign(TextNoteEvent.build("cut short")) }
+        val truncated = event.toJson().substringBefore(",\"sig\"")
+
+        assertNull(Event.fromJsonOrNull(truncated))
     }
 }

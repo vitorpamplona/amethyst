@@ -46,7 +46,7 @@ import kotlin.test.assertTrue
  * reflectively while native used kotlinx. There is one backend now — [OptimizedJsonMapper]
  * routes CLINK at kotlinx on every target — so the cross-check is instead that the
  * serializers agree with the PLATFORM ENTRY POINT the app actually calls, which is what
- * catches a routing mistake in OptimizedJsonMapper.jvmAndroid.
+ * catches a routing mistake in OptimizedJsonMapper.
  */
 class ClinkKotlinSerializationTest {
     @Test
@@ -66,8 +66,8 @@ class ClinkKotlinSerializationTest {
         assertEquals("coffee", parsed.offer)
         assertEquals(21000L, parsed.amount_sats)
         assertEquals("a@b.c", parsed.payer_data?.get("email"))
-        // payer_data is an opaque pass-through map; numeric boxing differs between
-        // backends (Jackson: Int, kotlinx via toAnyValue(): Double), so compare values.
+        // payer_data is an opaque pass-through map whose numbers may come back boxed as
+        // any Number type, so compare values.
         assertEquals(2L, (parsed.payer_data?.get("count") as Number).toLong())
         assertEquals("{...}", parsed.zap)
         assertEquals(3600L, parsed.expires_in_seconds)
@@ -163,7 +163,7 @@ class ClinkKotlinSerializationTest {
         assertEquals(1500L, parsed.offer?.fields?.price_sats)
         assertEquals(listOf("email", "name"), parsed.offer?.fields?.payer_data)
 
-        // Jackson reads the kotlinx output identically.
+        // The platform entry point reads the kotlinx output identically.
         val platformParsed = OptimizedJsonMapper.fromJsonTo<ManageRequest>(json)
         assertEquals("Coffee", platformParsed.offer?.fields?.label)
     }

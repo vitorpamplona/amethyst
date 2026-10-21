@@ -29,10 +29,11 @@ import kotlin.test.assertNull
 import kotlin.test.fail
 
 /**
- * [Nip55Json] against the Jackson mapper it replaces. The one intended difference: a permission's
+ * [Nip55Json]'s reads and writes, pinned. The pins were recorded while every outcome was also
+ * compared with the Jackson mapper it replaced. The one intended difference: a permission's
  * `"kind": null` reads as no kind, where Jackson read kind 0.
  */
-class Nip55JsonParityTest {
+class Nip55JsonPinnedTest {
     private val pin = Pin("nip55")
 
     private fun describe(p: Permission) = "${p.type}|${p.kind}"
@@ -46,19 +47,11 @@ class Nip55JsonParityTest {
             Result.failure(e)
         }
 
-    private fun same(
+    private fun read(
         input: String,
-        jackson: (String) -> String,
         ours: (String) -> String,
     ) {
-        val j = run { jackson(input) }
-        val o = run { ours(input) }
-        pin.add(o.getOrNull())
-        when {
-            j.isSuccess && o.isSuccess -> assertEquals(j.getOrNull(), o.getOrNull(), input)
-            o.isSuccess -> fail("only the new reader accepts: $input")
-            j.isSuccess -> fail("only Jackson accepts: $input (${o.exceptionOrNull()?.message})")
-        }
+        pin.add(run { ours(input) }.getOrNull())
     }
 
     private val results =
@@ -85,15 +78,15 @@ class Nip55JsonParityTest {
         )
 
     @Test
-    fun readsTheSame() {
-        for (s in results) same(s, { describe(JsonMapperNip55.fromJsonToIntentResult(it)) }, { describe(Nip55Json.fromJsonToIntentResult(it)) })
+    fun readsAsPinned() {
+        for (s in results) read(s) { describe(Nip55Json.fromJsonToIntentResult(it)) }
         val list = "[" + results.joinToString(",") + "]"
-        same(list, { JsonMapperNip55.fromJsonToIntentResultList(it).joinToString("\n") { r -> describe(r) } }, { Nip55Json.fromJsonToIntentResultList(it).joinToString("\n") { r -> describe(r) } })
-        same("[]", { JsonMapperNip55.fromJsonToIntentResultList(it).size.toString() }, { Nip55Json.fromJsonToIntentResultList(it).size.toString() })
+        read(list) { Nip55Json.fromJsonToIntentResultList(it).joinToString("\n") { r -> describe(r) } }
+        read("[]") { Nip55Json.fromJsonToIntentResultList(it).size.toString() }
 
-        for (s in permissions) same(s, { describe(JsonMapperNip55.fromJsonToPermission(it)) }, { describe(Nip55Json.fromJsonToPermission(it)) })
+        for (s in permissions) read(s) { describe(Nip55Json.fromJsonToPermission(it)) }
         val array = "[" + permissions.joinToString(",") + "]"
-        same(array, { JsonMapperNip55.fromJsonToPermissionArray(it).joinToString("\n") { p -> describe(p) } }, { Nip55Json.fromJsonToPermissionArray(it).joinToString("\n") { p -> describe(p) } })
+        read(array) { Nip55Json.fromJsonToPermissionArray(it).joinToString("\n") { p -> describe(p) } }
 
         pin.check(PIN_READS)
 
@@ -111,7 +104,7 @@ class Nip55JsonParityTest {
     }
 
     @Test
-    fun writesTheSame() {
+    fun writesAsPinned() {
         val perms =
             listOf(
                 Permission(CommandType.SIGN_EVENT, 1),
@@ -121,11 +114,9 @@ class Nip55JsonParityTest {
             )
         for (p in perms) {
             pin.add(Nip55Json.toJson(p))
-            assertEquals(JsonMapperNip55.toJson(p), Nip55Json.toJson(p))
         }
         pin.add(Nip55Json.toJson(perms))
-        assertEquals(JsonMapperNip55.toJson(perms), Nip55Json.toJson(perms))
-        assertEquals(JsonMapperNip55.toJson(emptyList<Permission>()), Nip55Json.toJson(emptyList()))
+        assertEquals("[]", Nip55Json.toJson(emptyList<Permission>()))
 
         val rs =
             listOf(
@@ -136,13 +127,12 @@ class Nip55JsonParityTest {
             )
         for (r in rs) {
             pin.add(Nip55Json.toJson(r))
-            assertEquals(JsonMapperNip55.toJson(r), Nip55Json.toJson(r))
         }
         pin.check(PIN_WRITES)
     }
 
     companion object {
-        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        /** See [Pin]: recorded while every outcome was also compared with Jackson. */
         private const val PIN_READS = "0196167e0a2f6211eb3eaf7e9cf9f93c3a456043a7b7f96d510db721b9b889f6"
         private const val PIN_WRITES = "c6e6d4c71c4f5f7b51578bec76d1b38319c9c1e5b0a6419b38741cfd90da87bb"
     }

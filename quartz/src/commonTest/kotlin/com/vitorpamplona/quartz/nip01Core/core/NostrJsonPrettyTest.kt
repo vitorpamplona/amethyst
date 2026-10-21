@@ -18,26 +18,14 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.nip01Core.jackson
+package com.vitorpamplona.quartz.nip01Core.core
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class InliningTagArrayPrettyPrinterTest {
-    val mapper =
-        ObjectMapper().apply {
-            setDefaultPrettyPrinter(InliningTagArrayPrettyPrinter())
-        }
-
+class NostrJsonPrettyTest {
     @Test
     fun test() {
-        val writer = mapper.writerWithDefaultPrettyPrinter()
-
-        val data =
-            mapOf(
-                "tags" to arrayOf(intArrayOf(1, 2, 3), intArrayOf(4, 5, 6), intArrayOf(7, 8, 9)),
-            )
         val expected =
             """
             {
@@ -48,13 +36,8 @@ class InliningTagArrayPrettyPrinterTest {
               ]
             }
             """.trimIndent()
-        val json = writer.writeValueAsString(data)
-        assertEquals(expected.replace("\r\n", "\n"), json.replace("\r\n", "\n"))
+        assertEquals(expected, NostrJsonPretty.format("""{"tags":[[1,2,3],[4,5,6],[7,8,9]]}"""))
 
-        val data2 =
-            mapOf(
-                "tags" to arrayOf(arrayOf(intArrayOf(1, 2), intArrayOf(3, 4)), arrayOf(intArrayOf(5, 6), intArrayOf(7, 8))),
-            )
         val expected2 =
             """
             {
@@ -64,8 +47,7 @@ class InliningTagArrayPrettyPrinterTest {
               ]
             }
             """.trimIndent()
-        val json2 = writer.writeValueAsString(data2)
-        assertEquals(expected2.replace("\r\n", "\n"), json2.replace("\r\n", "\n"))
+        assertEquals(expected2, NostrJsonPretty.format("""{"tags":[[[1,2],[3,4]],[[5,6],[7,8]]]}"""))
     }
 
     @Test
@@ -86,10 +68,6 @@ class InliningTagArrayPrettyPrinterTest {
             }
             """.trimIndent()
 
-        val tree = mapper.readTree(nostrObject)
-
-        val prettified = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(tree)
-
-        assertEquals(nostrObject.replace("\r\n", "\n"), prettified.replace("\r\n", "\n"))
+        assertEquals(nostrObject, NostrJsonWriter.toPrettyJson(Event.fromJson(nostrObject)))
     }
 }

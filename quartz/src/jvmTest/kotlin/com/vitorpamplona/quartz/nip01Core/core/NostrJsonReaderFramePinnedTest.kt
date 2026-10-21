@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.AuthMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.ClosedMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
@@ -48,19 +47,19 @@ import java.util.zip.GZIPInputStream
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import kotlin.test.fail
 
 /**
- * [NostrJsonReader] against Quartz's Jackson deserializers for everything besides a bare event:
- * every relay message type, every client command type with its filters, rumors and event lists.
- * Each type gets hand-written frames covering its optional elements and odd values, real events
- * from the startup capture, and random edits of all of them.
+ * [NostrJsonReader] for everything besides a bare event: every relay message type, every client
+ * command type with its filters, rumors and event lists. Each type gets hand-written frames
+ * covering its optional elements and odd values, real events from the startup capture, and
+ * random edits of all of them, each set pinned by a [Pin].
  *
- * Whenever both accept a frame they must build the same thing; the reader must never accept a
- * frame Jackson rejects. The reader may reject what Jackson accepts only where Jackson builds
- * garbage or reads on inside a value of the wrong shape; every such case is printed.
+ * The pins were recorded while every outcome was also compared with the Jackson deserializers
+ * the reader replaced: whenever both accepted a frame they built the same thing, and the reader
+ * never accepted a frame Jackson rejected. It rejects some frames Jackson accepted, only where
+ * Jackson built garbage or read on inside a value of the wrong shape.
  */
-class NostrJsonReaderFrameParityTest {
+class NostrJsonReaderFramePinnedTest {
     private fun describe(e: Event): String = "${e::class.simpleName}(${e.id},${e.pubKey},${e.createdAt},${e.kind},${e.tags.joinToString("|") { it.joinToString(",") }},${e.content},${e.sig})"
 
     private fun describe(f: Filter): String = "Filter(${f.ids},${f.authors},${f.kinds},${f.tags},${f.tagsAll},${f.since},${f.until},${f.limit},${f.search})"
@@ -100,16 +99,8 @@ class NostrJsonReaderFrameParityTest {
         val name: String,
     ) {
         val pin = Pin(name)
-        var same = 0
-        var bothReject = 0
-        val onlyJackson = ArrayList<String>()
-        val readerOnly = ArrayList<String>()
-        val different = ArrayList<String>()
-
-        fun report() {
-            println("$name: same $same, both reject $bothReject, only Jackson ${onlyJackson.size}, only reader ${readerOnly.size}, different ${different.size}")
-            onlyJackson.take(12).forEach { println("    only Jackson: ${it.take(220)}") }
-        }
+        var accepted = 0
+        var rejected = 0
     }
 
     private fun <T> run(block: () -> T): T? =
@@ -122,25 +113,16 @@ class NostrJsonReaderFrameParityTest {
     private fun compare(
         input: String,
         t: Tally,
-        jackson: (String) -> String?,
         reader: (String) -> String?,
     ) {
-        val j = jackson(input)
         val r = reader(input)
         t.pin.add(r)
-        when {
-            j != null && r != null -> if (j == r) t.same++ else t.different += "$input\n      jackson: $j\n      reader:  $r"
-            j == null && r == null -> t.bothReject++
-            j != null -> t.onlyJackson += input
-            else -> t.readerOnly += "$input\n      reader: $r"
-        }
+        if (r != null) t.accepted++ else t.rejected++
     }
 
-    private fun assertParity(t: Tally) {
-        t.report()
+    private fun assertPinned(t: Tally) {
+        println("${t.name}: accepted ${t.accepted}, rejected ${t.rejected}")
         t.pin.check(PINS.getValue(t.name))
-        if (t.different.isNotEmpty()) fail("${t.name}: ${t.different.size} frames build different results, e.g.\n${t.different.take(5).joinToString("\n")}")
-        if (t.readerOnly.isNotEmpty()) fail("${t.name}: ${t.readerOnly.size} frames only the reader accepts, e.g.\n${t.readerOnly.take(5).joinToString("\n")}")
     }
 
     private fun mutate(
@@ -348,21 +330,20 @@ class NostrJsonReaderFrameParityTest {
     }
 
     @Test
-    fun everyMessageTypeParsesTheSame() {
+    fun everyMessageTypeParsesAsPinned() {
         val events = capturedEvents(400)
         val frames = messageFrames(events)
-        val jackson = { s: String -> run { describe(JacksonMapper.fromJsonToMessage(s)) } }
         val reader = { s: String -> run { describe(NostrJsonReader.readMessage(s)) } }
 
         val base = Tally("message frames")
-        frames.forEach { compare(it, base, jackson, reader) }
-        assertParity(base)
-        assertTrue(base.same > 200)
+        frames.forEach { compare(it, base, reader) }
+        assertPinned(base)
+        assertTrue(base.accepted > 200)
 
         val edits = Tally("message frame edits")
-        mutate(frames.drop(140), 150, 1).forEach { compare(it, edits, jackson, reader) }
-        mutate(frames.take(140), 10, 2).forEach { compare(it, edits, jackson, reader) }
-        assertParity(edits)
+        mutate(frames.drop(140), 150, 1).forEach { compare(it, edits, reader) }
+        mutate(frames.take(140), 10, 2).forEach { compare(it, edits, reader) }
+        assertPinned(edits)
     }
 
     // ---- commands
@@ -370,7 +351,7 @@ class NostrJsonReaderFrameParityTest {
     private fun commandFrames(events: List<String>): List<String> {
         val ev = events.first()
         val auth = """{"id":"ab","pubkey":"79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798","created_at":1700000000,"kind":22242,"tags":[["relay","wss://r.example"],["challenge","c1"]],"content":"","sig":"cd"}"""
-        val parsed = events.take(60).map { JacksonMapper.fromJson(it) }
+        val parsed = events.take(60).map { NostrJsonReader.readEvent(it) }
         val f = ArrayList<String>()
         parsed.forEach { e ->
             val p = e.tags.firstOrNull { it.size > 1 && it[0] == "p" }?.get(1) ?: e.pubKey
@@ -447,64 +428,61 @@ class NostrJsonReaderFrameParityTest {
     }
 
     @Test
-    fun everyCommandTypeParsesTheSame() {
+    fun everyCommandTypeParsesAsPinned() {
         val events = capturedEvents(400)
         val frames = commandFrames(events)
-        val jackson = { s: String -> run { describe(JacksonMapper.fromJsonToCommand(s)) } }
         val reader = { s: String -> run { describe(NostrJsonReader.readCommand(s)) } }
 
         val base = Tally("command frames")
-        frames.forEach { compare(it, base, jackson, reader) }
-        assertParity(base)
-        assertTrue(base.same > 100)
+        frames.forEach { compare(it, base, reader) }
+        assertPinned(base)
+        assertTrue(base.accepted > 100)
 
         val edits = Tally("command frame edits")
-        mutate(frames.drop(120), 150, 3).forEach { compare(it, edits, jackson, reader) }
-        mutate(frames.take(120), 10, 4).forEach { compare(it, edits, jackson, reader) }
-        assertParity(edits)
+        mutate(frames.drop(120), 150, 3).forEach { compare(it, edits, reader) }
+        mutate(frames.take(120), 10, 4).forEach { compare(it, edits, reader) }
+        assertPinned(edits)
     }
 
     // ---- rumors and event lists
 
     @Test
-    fun rumorsParseTheSame() {
+    fun rumorsParseAsPinned() {
         val events = capturedEvents(600)
         val rumors = ArrayList<String>()
         events.forEach { rumors += it.replace(Regex(""","sig":"[0-9a-f]*""""), "") }
         rumors += listOf("{}", """{"content":"x"}""", """{"kind":1,"tags":[]}""", """{"sig":"abc","kind":"x"}""", """{"pubkey":null}""", "[]", "null")
 
-        val jackson = { s: String -> run { describe(JacksonMapper.fromJsonToRumor(s)) } }
         val reader = { s: String -> run { describe(NostrJsonReader.readRumor(s)) } }
         val base = Tally("rumors")
-        rumors.forEach { compare(it, base, jackson, reader) }
-        assertParity(base)
-        assertTrue(base.same > 500)
+        rumors.forEach { compare(it, base, reader) }
+        assertPinned(base)
+        assertTrue(base.accepted > 500)
 
         val edits = Tally("rumor edits")
-        mutate(rumors.take(300), 30, 5).forEach { compare(it, edits, jackson, reader) }
-        assertParity(edits)
+        mutate(rumors.take(300), 30, 5).forEach { compare(it, edits, reader) }
+        assertPinned(edits)
     }
 
     @Test
-    fun eventListsParseTheSame() {
+    fun eventListsParseAsPinned() {
         val events = capturedEvents(300)
         val lists = ArrayList<String>()
         events.chunked(10).forEach { lists += it.joinToString(",", "[", "]") }
         lists += listOf("[]", " [ ] ", events.first(), "[${events.first()}] trailing", "[null]", "[1]", "[${events.first()},]", "{}", "5")
 
-        val jackson = { s: String -> run { JacksonMapper.fromJsonToEventList(s).joinToString("\n") { describe(it) } } }
         val reader = { s: String -> run { NostrJsonReader.readEventList(s).joinToString("\n") { describe(it) } } }
         val base = Tally("event lists")
-        lists.forEach { compare(it, base, jackson, reader) }
-        assertParity(base)
+        lists.forEach { compare(it, base, reader) }
+        assertPinned(base)
 
         val edits = Tally("event list edits")
-        mutate(lists, 100, 6).forEach { compare(it, edits, jackson, reader) }
-        assertParity(edits)
+        mutate(lists, 100, 6).forEach { compare(it, edits, reader) }
+        assertPinned(edits)
     }
 
     companion object {
-        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        /** See [Pin]: recorded while every outcome was also compared with Jackson. */
         private val PINS =
             mapOf(
                 "message frames" to "857c9897f5b03e31b03d88fa198bdeb1eb4c8017346a8268dd555821820f5238",

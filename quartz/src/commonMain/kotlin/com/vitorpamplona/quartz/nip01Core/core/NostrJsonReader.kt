@@ -41,7 +41,7 @@ import kotlin.reflect.KClass
  * without escapes is one `substring`. Event keys are matched by length and characters, never
  * built. Only values with escapes go through a `StringBuilder`.
  *
- * Every type follows what Quartz's Jackson deserializers accept and build (`EventDeserializer`,
+ * Every type follows what Quartz's former Jackson deserializers accepted and built (`EventDeserializer`,
  * `RumorDeserializer`, `MessageDeserializer`, `CommandDeserializer`, `ManualFilterDeserializer`,
  * the COUNT and LIMITS readers): the same optional elements, the same defaults and the same
  * lenient fields. It follows the JSON grammar everywhere, including values it skips, and never
@@ -784,7 +784,7 @@ internal expect fun threadNostrJsonReader(): NostrJsonReader?
 
 /**
  * [json] read as [type] when it is one of the types [NostrJsonReader] knows, else null so the
- * caller can hand it to another reader. Exact classes, like the Jackson registrations it replaces.
+ * caller can hand it to another reader. Exact classes, like the Jackson registrations it replaced.
  */
 @PublishedApi
 internal fun readKnownType(

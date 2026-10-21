@@ -193,15 +193,10 @@ kotlin {
                 dependsOn(commonMain.get())
 
                 dependencies {
-                    // Performant Parser of JSONs into Events.
-                    //
-                    // jackson-databind, NOT jackson-module-kotlin: the module exists to bind
-                    // Kotlin classes reflectively off their constructor parameter names, and
-                    // nothing in the app does that any more — every wire format goes through a
-                    // hand-written serializer or kotlinx. Dropping it takes kotlin-reflect with
-                    // it, which is ~1,000 classes of DEX the app never called. `cli` still
-                    // declares the module itself: it genuinely binds its config files
-                    // reflectively, and is never minified.
+                    // Quartz itself no longer uses Jackson: its JSON is NostrJsonReader,
+                    // NostrJsonWriter, Nip55Json and kotlinx, on every target. It is still
+                    // exported here only for the modules that use it through Quartz, until they
+                    // move to kotlinx; then this line goes.
                     api(libs.jackson.databind)
 
                     // Websockets API

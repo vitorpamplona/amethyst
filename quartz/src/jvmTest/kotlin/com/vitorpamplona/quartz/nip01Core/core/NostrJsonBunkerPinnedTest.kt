@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
@@ -29,11 +28,12 @@ import kotlin.test.assertEquals
 import kotlin.test.fail
 
 /**
- * NIP-46 messages read and written by Quartz's reader and writer against the Jackson
- * (de)serializers they replace. The only intended difference: a JSON `null` in `id`, `method`,
- * `result` or `error` reads as absent, where Jackson read the text "null".
+ * NIP-46 messages read and written by Quartz's reader and writer. The pins were recorded while
+ * every outcome was also compared with the Jackson (de)serializers they replaced. The only
+ * intended difference: a JSON `null` in `id`, `method`, `result` or `error` reads as absent,
+ * where Jackson read the text "null".
  */
-class NostrJsonBunkerParityTest {
+class NostrJsonBunkerPinnedTest {
     private fun describe(m: BunkerMessage): String =
         when (m) {
             is BunkerRequest -> "${m::class.simpleName}|${m.id}|${m.method}|${m.params.joinToString("\u00A6")}"
@@ -95,33 +95,27 @@ class NostrJsonBunkerParityTest {
     private val broken =
         listOf("", "{", "[]", "\"x\"", """{"id":"1","method":"ping",}""", """{"id":"1","method":"ping"""", """{"method":"ping"}""", """{"result":"ack"}""")
 
+    /** Pins the message read of [input], and checks the [typed] read builds the same. */
     private fun compare(
         input: String,
-        jackson: (String) -> String,
+        typed: (String) -> BunkerMessage,
     ) {
-        val j = run { jackson(input) }
         val r = run { describe(NostrJsonReader.readBunkerMessage(input)) }
         readPin.add(r.getOrNull())
-        if (j.isSuccess && r.isSuccess) {
-            assertEquals(j.getOrNull(), r.getOrNull(), input)
-        } else if (r.isSuccess) {
-            fail("only the reader accepts: $input")
-        } else if (j.isSuccess) {
-            fail("only Jackson accepts: $input (${r.exceptionOrNull()?.message})")
-        }
+        assertEquals(r.getOrNull(), run { describe(typed(input)) }.getOrNull(), input)
     }
 
     private val readPin = Pin("bunker reads")
 
     @Test
-    fun requestsAndResponsesReadTheSame() {
+    fun requestsAndResponsesReadAsPinned() {
         for (s in requests) {
-            compare(s) { describe(JacksonMapper.fromJsonTo<BunkerMessage>(it)) }
-            compare(s) { describe(JacksonMapper.fromJsonTo<BunkerRequest>(it)) }
+            compare(s) { OptimizedJsonMapper.fromJsonTo<BunkerMessage>(it) }
+            compare(s) { OptimizedJsonMapper.fromJsonTo<BunkerRequest>(it) }
         }
         for (s in responses) {
-            compare(s) { describe(JacksonMapper.fromJsonTo<BunkerMessage>(it)) }
-            compare(s) { describe(JacksonMapper.fromJsonTo<BunkerResponse>(it)) }
+            compare(s) { OptimizedJsonMapper.fromJsonTo<BunkerMessage>(it) }
+            compare(s) { OptimizedJsonMapper.fromJsonTo<BunkerResponse>(it) }
         }
         for (s in broken) {
             if (run { NostrJsonReader.readBunkerMessage(s) }.isSuccess) fail("accepted $s")
@@ -153,7 +147,7 @@ class NostrJsonBunkerParityTest {
     }
 
     @Test
-    fun writesTheSame() {
+    fun writesAsPinned() {
         val values =
             requests.map { NostrJsonReader.readBunkerRequest(it) } +
                 responses.map { NostrJsonReader.readBunkerResponse(it) } +
@@ -161,13 +155,13 @@ class NostrJsonBunkerParityTest {
         val pin = Pin("bunker writes")
         for (v in values) {
             pin.add(NostrJsonWriter.toJsonOrNull(v))
-            assertEquals(JacksonMapper.toJson(v), NostrJsonWriter.toJsonOrNull(v), describe(v as BunkerMessage))
+            assertEquals(OptimizedJsonMapper.toJson(v), NostrJsonWriter.toJsonOrNull(v), describe(v as BunkerMessage))
         }
         pin.check(PIN_WRITES)
     }
 
     companion object {
-        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        /** See [Pin]: recorded while every outcome was also compared with Jackson. */
         private const val PIN_READS = "b492b25982eaca844ef64c7c8d1f551e92de87dfbdca3d3db59a3f4641354bb0"
         private const val PIN_WRITES = "787f168266c0fdbbc05aeddaaa52d9c42e05aab50955aaa5881b4a3e40c86f97"
     }

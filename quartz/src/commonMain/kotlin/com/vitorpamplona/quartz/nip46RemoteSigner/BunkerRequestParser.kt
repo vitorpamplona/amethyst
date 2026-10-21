@@ -24,8 +24,8 @@ import kotlinx.coroutines.CancellationException
 
 /**
  * Turns a decoded NIP-46 request envelope into its typed [BunkerRequest]. Shared by
- * every JSON backend (kotlinx and Jackson) so they agree on the method table and on
- * how bad params are handled.
+ * every JSON reader (NostrJsonReader and kotlinx) so they agree on the method table
+ * and on how bad params are handled.
  *
  * A known method with bad params never throws: it yields a [BunkerRequestInvalid]
  * so the remote signer can reply with an error the client can correlate. Unknown

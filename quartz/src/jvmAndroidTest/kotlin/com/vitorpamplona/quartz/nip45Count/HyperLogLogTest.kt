@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip45Count
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountResultDeserializer
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CountMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -90,7 +90,7 @@ class HyperLogLogTest {
 
     @Test
     fun testShortHllInACountReplyIsDropped() {
-        val reply = CountResultDeserializer.fromJson(ObjectMapper().readTree("""{"count":1,"hll":"00"}"""))
+        val reply = (Message.fromJson("""["COUNT","q",{"count":1,"hll":"00"}]""") as CountMessage).result
         assertEquals(1, reply.count)
         assertNull(reply.hll)
     }

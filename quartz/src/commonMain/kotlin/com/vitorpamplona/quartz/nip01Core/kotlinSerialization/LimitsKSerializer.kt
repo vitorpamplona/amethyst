@@ -37,8 +37,7 @@ import kotlinx.serialization.json.putJsonArray
 /** kotlinx-serialization codec for the `LIMITS` object payload. */
 object LimitsKSerializer {
     // Tolerant readers so a malformed/mistyped field degrades to null instead of
-    // throwing: this is the iOS/native incoming-parse path, and it must match the
-    // leniency of the Jackson path (LimitsDeserializer) used on jvmAndroid.
+    // throwing, like the LIMITS reader in NostrJsonReader.
     private fun JsonObject.bool(key: String): Boolean? = (this[key] as? JsonPrimitive)?.booleanOrNull
 
     private fun JsonObject.int(key: String): Int? = (this[key] as? JsonPrimitive)?.intOrNull

@@ -41,8 +41,8 @@ import kotlinx.serialization.json.put
  * 'Any' is not found` at runtime for every populated map. This walks the value instead.
  *
  * DECLARED AT nip01Core LEVEL, beside the other kotlinx serializers, because [RawJson]
- * is: it is registered globally on the Jackson side, so a per-NIP copy of this function
- * would leave the kotlinx backend supporting raw JSON in some packages and silently
+ * is: a per-NIP copy of this function would leave raw JSON supported in some packages
+ * and silently
  * quoting it into a string in others — the exact corruption [RawJson] exists to prevent.
  */
 fun anyToJsonElement(value: Any?): JsonElement =

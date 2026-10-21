@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.nip01Core.store.fs
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -82,7 +82,7 @@ class FsEventToJsonTest {
             val store =
                 FsEventStore(
                     root,
-                    eventToJson = JacksonMapper::toJsonPretty,
+                    eventToJson = NostrJsonWriter::toPrettyJson,
                 )
             try {
                 val n =

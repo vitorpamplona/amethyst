@@ -20,13 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp.okhttp
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
 import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip03Timestamp.ots.exceptions.UrlException
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.asInt
+import com.vitorpamplona.quartz.utils.asText
+import com.vitorpamplona.quartz.utils.get
+import com.vitorpamplona.quartz.utils.parseJsonTree
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
@@ -63,7 +66,7 @@ class OkHttpBitcoinExplorer(
             if (it.isSuccessful) {
                 Log.d("OkHttpBlockstreamExplorer") { "$baseAPI/block/$hash" }
 
-                val jsonObject = JacksonMapper.mapper.readTree(it.body.string())
+                val jsonObject = parseJsonTree(it.body.string())
 
                 val merkleRoot = jsonObject["merkle_root"].asText()
                 val time = jsonObject["timestamp"].asInt().toString()
