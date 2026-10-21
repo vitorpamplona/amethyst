@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.account
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorage
 import com.vitorpamplona.amethyst.commons.keystorage.SecureStorageException
 import com.vitorpamplona.amethyst.commons.model.account.AccountInfo
@@ -31,6 +29,9 @@ import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.RandomAccessFile
 import java.nio.file.Files
@@ -97,7 +98,6 @@ class DesktopAccountStorage(
         private const val GCM_TAG_BITS = 128
     }
 
-    private val mapper = jacksonObjectMapper()
     private val amethystDir by lazy { File(homeDir, ".amethyst") }
 
     // In-memory cache: read from disk once, then serve from memory
@@ -191,7 +191,7 @@ class DesktopAccountStorage(
 
         return try {
             val decrypted = decrypt(encrypted)
-            mapper.readValue<AccountMetadata>(decrypted)
+            AccountMetadata.decode(decrypted)
         } catch (e: javax.crypto.AEADBadTagException) {
             // Genuine ciphertext corruption or lost/rotated AES key.
             Log.e("DesktopAccountStorage", "GCM auth tag mismatch, file corrupted or key lost", e)
@@ -204,7 +204,7 @@ class DesktopAccountStorage(
             val backup = backupCorruptFile(file, ".corrupt")
             onCorruption(StorageCorruption.FileCorrupted(backup))
             AccountMetadata()
-        } catch (e: com.fasterxml.jackson.core.JacksonException) {
+        } catch (e: SerializationException) {
             // Schema mismatch: decrypted cleanly but the JSON does not fit our shape.
             // Distinct suffix so operators can tell it apart from ciphertext corruption.
             Log.e("DesktopAccountStorage", "JSON malformed after decryption", e)
@@ -240,7 +240,7 @@ class DesktopAccountStorage(
 
     private suspend fun writeMetadataToDisk(metadata: AccountMetadata) {
         ensureDir()
-        val json = mapper.writeValueAsBytes(metadata)
+        val json = metadata.encode()
         val encrypted = encrypt(json)
 
         val file = getAccountsFile()
@@ -399,12 +399,32 @@ class DesktopAccountStorage(
 /**
  * Internal DTO for JSON serialization.
  * Uses flat fields instead of polymorphic SignerType to keep serialization simple.
+ *
+ * The file format is what Jackson wrote before: every field, nulls included, in declaration
+ * order, so a file written by this version still opens in an older one and the other way round.
+ * Unknown keys (a newer version's fields) are skipped and a `null` where a default exists reads
+ * as that default, instead of resetting the accounts as malformed.
  */
+@Serializable
 internal data class AccountMetadata(
     val accounts: List<AccountInfoDto> = emptyList(),
     val activeNpub: String? = null,
-)
+) {
+    fun encode(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
 
+    companion object {
+        private val json =
+            Json {
+                encodeDefaults = true
+                ignoreUnknownKeys = true
+                coerceInputValues = true
+            }
+
+        fun decode(bytes: ByteArray): AccountMetadata = json.decodeFromString(serializer(), bytes.decodeToString())
+    }
+}
+
+@Serializable
 internal data class AccountInfoDto(
     val npub: String,
     val signerKind: String, // "internal", "remote", "viewonly"

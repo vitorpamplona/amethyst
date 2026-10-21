@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads.nip96
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
@@ -31,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip96FileStorage.actions.DeleteResult
@@ -41,6 +41,8 @@ import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -158,9 +160,9 @@ class Nip96Uploader {
 
                     val errorMessage =
                         try {
-                            val tree = ObjectMapper().readTree(msg)
-                            val status = tree.get("status")?.asText()
-                            val message = tree.get("message")?.asText()
+                            val tree = Json.parseToJsonElement(msg) as? JsonObject
+                            val status = tree?.stringOrNull("status")
+                            val message = tree?.stringOrNull("message")
                             if (status == "error" && message != null) {
                                 message
                             } else {

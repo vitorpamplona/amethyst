@@ -102,7 +102,6 @@ dependencies {
     api(project(":quartz"))
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.jackson.module.kotlin)
     implementation(libs.kotlinx.serialization.json)
 
     // Outbound WebSockets for the [[mirror]] upstream streams (quartz's

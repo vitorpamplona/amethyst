@@ -33,11 +33,7 @@ import com.vitorpamplona.quartz.utils.UrlEncoder
 import com.vitorpamplona.quartz.utils.toLongValue
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
-import kotlinx.serialization.json.longOrNull
 import kotlin.coroutines.cancellation.CancellationException
 
 /** LNURL-pay (LUD-06/16) for zaps and payments, over whatever [transport] the platform supplies. */
@@ -247,24 +243,4 @@ private fun parseJson(body: String): JsonElement? =
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         null
-    }
-
-// Jackson's JsonNode readers, which LNURL servers' loosely-typed replies were written against:
-// asText() gives a scalar's text and "" for a container; asBoolean() reads true, a non-zero
-// number or the text "true". JSON null reads as absent rather than as the text "null".
-
-private fun JsonElement.asText(): String? =
-    when (this) {
-        is JsonNull -> null
-        is JsonPrimitive -> content
-        else -> ""
-    }
-
-private fun JsonElement.isBoolean(): Boolean = this is JsonPrimitive && !isString && booleanOrNull != null
-
-private fun JsonElement.asBoolean(): Boolean =
-    when {
-        this !is JsonPrimitive || this is JsonNull -> false
-        isString -> content.trim() == "true"
-        else -> booleanOrNull ?: longOrNull?.let { it != 0L } ?: false
     }

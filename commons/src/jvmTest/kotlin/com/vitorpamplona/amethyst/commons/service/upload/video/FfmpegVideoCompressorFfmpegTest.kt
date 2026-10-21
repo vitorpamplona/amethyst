@@ -20,12 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.notices.UploadNotice
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.intOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objectListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.AfterTest
@@ -152,18 +157,19 @@ class FfmpegVideoCompressorFfmpegTest {
                 "json",
                 file.absolutePath,
             )
-        val root: JsonNode = ObjectMapper().readTree(json)
-        val video = root.path("streams").first { it.path("codec_type").asText() == "video" }
-        val tags = root.path("format").path("tags")
+        val root = Json.parseToJsonElement(json).jsonObject
+        val streams = root.objectListOrNull("streams").orEmpty()
+        val video = streams.first { it.stringOrNull("codec_type") == "video" }
+        val tags = root.objOrNull("format")?.objOrNull("tags")
         return Probed(
-            width = video.path("width").asInt(),
-            height = video.path("height").asInt(),
-            codec = video.path("codec_name").asText(),
-            bitRate = video.path("bit_rate").asLong(),
-            hasSideData = video.has("side_data_list"),
-            streamTypes = root.path("streams").map { it.path("codec_type").asText() },
-            title = tags.get("title")?.asText(),
-            location = tags.get("location")?.asText(),
+            width = video.intOrNull("width") ?: 0,
+            height = video.intOrNull("height") ?: 0,
+            codec = video.stringOrNull("codec_name") ?: "",
+            bitRate = video.longOrNull("bit_rate") ?: 0L,
+            hasSideData = "side_data_list" in video,
+            streamTypes = streams.map { it.stringOrNull("codec_type") ?: "" },
+            title = tags?.stringOrNull("title"),
+            location = tags?.stringOrNull("location"),
         )
     }
 

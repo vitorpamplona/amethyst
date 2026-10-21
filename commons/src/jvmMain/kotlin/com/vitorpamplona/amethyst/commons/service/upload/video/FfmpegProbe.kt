@@ -20,9 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.service.upload.video
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.arrayOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.intOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import java.io.File
 
 /** What `ffprobe` tells about a video: the table key, the duration for progress and the HDR flag. */
@@ -34,24 +39,18 @@ data class ProbeResult(
 
 /** Parses the JSON of the `ffprobe` call in [FfmpegProbe]. */
 object FfprobeOutputParser {
-    private val mapper = ObjectMapper()
     private val hdrTransfers = setOf("smpte2084", "arib-std-b67")
 
     /** Null when the JSON is not JSON or has no video stream. */
     fun parse(json: String): ProbeResult? {
-        val root = runCatching { mapper.readTree(json) }.getOrNull() ?: return null
-        val stream = root.path("streams").firstOrNull() ?: return null
-        val width = stream.path("width").asInt(0)
-        val height = stream.path("height").asInt(0)
+        val root = runCatching { Json.parseToJsonElement(json) }.getOrNull() as? JsonObject ?: return null
+        val stream = root.arrayOrNull("streams")?.firstOrNull() as? JsonObject ?: return null
+        val width = stream.intOrNull("width") ?: 0
+        val height = stream.intOrNull("height") ?: 0
         if (width <= 0 || height <= 0) return null
-        val framerate = parseFramerate(stream.path("avg_frame_rate").asText(""))
-        val duration =
-            root
-                .path("format")
-                .path("duration")
-                .asText("")
-                .toDoubleOrNull()
-        val isHdr = stream.path("color_transfer").asText("") in hdrTransfers
+        val framerate = parseFramerate(stream.stringOrNull("avg_frame_rate") ?: "")
+        val duration = root.objOrNull("format")?.stringOrNull("duration")?.toDoubleOrNull()
+        val isHdr = stream.stringOrNull("color_transfer") in hdrTransfers
         return ProbeResult(VideoInfo(VideoResolution(width, height), framerate), duration, isHdr)
     }
 

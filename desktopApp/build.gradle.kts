@@ -12,6 +12,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
+    alias(libs.plugins.serialization)
 }
 
 // RPM rejects dashes in version strings — replace with tilde (~) which RPM uses
@@ -70,7 +71,7 @@ dependencies {
     implementation(libs.okhttpCoroutines)
 
     // JSON
-    implementation(libs.jackson.module.kotlin)
+    implementation(libs.kotlinx.serialization.json)
 
     // Image loading (Coil3 — explicit because commons uses implementation, not api)
     implementation(libs.coil.compose)
