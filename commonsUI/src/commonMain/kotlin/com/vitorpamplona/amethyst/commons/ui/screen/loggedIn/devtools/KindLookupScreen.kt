@@ -245,7 +245,13 @@ private fun SampleStatus(
     if (state.phase == KindSamplerPhase.IDLE) return
 
     Text(
-        stringRes(Res.string.devtools_kind_sample_status, state.events, state.relaysWithEvents, state.relaysTotal),
+        pluralStringRes(
+            Res.plurals.devtools_kind_sample_status,
+            state.relaysTotal,
+            pluralStringRes(Res.plurals.devtools_kind_events, state.events, state.events),
+            state.relaysWithEvents,
+            state.relaysTotal,
+        ),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
