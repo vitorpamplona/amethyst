@@ -124,7 +124,7 @@ class ExitCodeContractTest {
                 .lines()
                 .filter { it.isNotBlank() && it.startsWith("{") }
         assertEquals(1, errLines.size, "expected exactly one JSON error object on stderr, got: ${r.stderr}")
-        val parsed = Output.mapper.readTree(errLines.single())
+        val parsed = JsonNode.parse(errLines.single())
         assertEquals("bad_args", parsed["error"].asText())
     }
 

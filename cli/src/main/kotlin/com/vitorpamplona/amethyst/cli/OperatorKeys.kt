@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import com.vitorpamplona.crypto.sha2.sha256
@@ -30,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.serialization.Serializable
 import java.io.File
 
 /**
@@ -64,10 +64,12 @@ class OperatorKeys(
     private val dir = File(amyHome, DIR_NAME)
     private val configFile = File(dir, CONFIG_NAME)
 
+    @Serializable
     data class ProviderRecord(
         val providerPubKey: HexKey = "",
     )
 
+    @Serializable
     data class Config(
         val masterPubKey: HexKey = "",
         val master: IdentitySecret? = null,
@@ -75,11 +77,11 @@ class OperatorKeys(
         val providers: MutableMap<HexKey, ProviderRecord> = mutableMapOf(),
     )
 
-    private fun load(): Config? = if (configFile.exists()) Output.mapper.readValue<Config>(configFile.readText()) else null
+    private fun load(): Config? = if (configFile.exists()) CliJson.files.decodeFromString<Config>(configFile.readText()) else null
 
     private fun save(cfg: Config) {
         SecureFileIO.secureMkdirs(dir)
-        configFile.writeText(Output.mapper.writeValueAsString(cfg))
+        configFile.writeText(CliJson.files.encodeToString(cfg))
         SecureFileIO.tighten(configFile)
     }
 
@@ -184,7 +186,7 @@ class OperatorKeys(
         fun peek(amyHome: File): Config? =
             File(File(amyHome, DIR_NAME), CONFIG_NAME)
                 .takeIf { it.isFile }
-                ?.let { runCatching { Output.mapper.readValue<Config>(it.readText()) }.getOrNull() }
+                ?.let { runCatching { CliJson.files.decodeFromString<Config>(it.readText()) }.getOrNull() }
                 ?.takeIf { it.masterPubKey.isNotEmpty() }
 
         private const val DERIVATION_LABEL = "graperank-provider:"

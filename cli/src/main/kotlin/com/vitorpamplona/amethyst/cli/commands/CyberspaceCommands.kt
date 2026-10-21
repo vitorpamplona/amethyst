@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.cyberspace.CantorTree
 import com.vitorpamplona.quartz.cyberspace.CyberspaceBagContents
@@ -285,7 +286,7 @@ object CyberspaceCommands {
                                         // §7.6: authorship only when this is true.
                                         "verified" to item.verified,
                                         "coord" to item.coordinate(),
-                                        "event" to Output.mapper.readTree(item.event.toJson()),
+                                        "event" to CliJson.parse(item.event.toJson()),
                                     )
                                 },
                         ),

@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlin.test.AfterTest
@@ -53,8 +51,9 @@ class OutputListStreamTest {
         stream.item({ """{"id":"1"}""" }, { mapOf("id" to "1") })
         stream.abort("relay pool failed", mapOf("relay_errors" to mapOf("wss://b/" to mapOf("reason" to "closed", "message" to "blocked: nope"))))
 
-        val json: Map<String, Any?> = jacksonObjectMapper().readValue(captured.toString(Charsets.UTF_8).trim())
-        assertEquals(1, json["count"])
+        @Suppress("UNCHECKED_CAST")
+        val json = CliJson.toPlain(CliJson.parse(captured.toString(Charsets.UTF_8).trim())) as Map<String, Any?>
+        assertEquals(1L, json["count"])
         assertEquals(listOf(mapOf("id" to "1")), json["events"])
         assertEquals(mapOf("wss://b/" to mapOf("reason" to "closed", "message" to "blocked: nope")), json["relay_errors"])
         assertEquals(mapOf("code" to "aborted", "detail" to "relay pool failed"), json["error"])

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -42,7 +41,7 @@ class StatusCommandTest {
         val r = amy("--json", "status")
         assertEquals(0, r.exit, "status should always exit 0, stderr: ${r.stderr}")
         assertEquals(1, r.stdoutLines.size, "expected exactly one stdout line, got: ${r.stdout}")
-        return Output.mapper.readTree(r.stdoutLines.single())
+        return JsonNode.parse(r.stdoutLines.single())
     }
 
     private fun initAccount(name: String) {
@@ -134,9 +133,9 @@ class StatusCommandTest {
         withSharedAmyHome { home ->
             initAccount("alice")
             val aliases = File(home, ".amy/alice/aliases.json")
-            val map = Output.mapper.readValue(aliases, Map::class.java).toMutableMap()
+            val map = CliJson.files.decodeFromString<Map<String, String>>(aliases.readText()).toMutableMap()
             map["bob"] = "npub1ngs0702f9mzph9j8csd22vj8ycg97q3jxzcs4qvdymmmet079nqsr4f60n"
-            aliases.writeText(Output.mapper.writeValueAsString(map))
+            aliases.writeText(CliJson.files.encodeToString<Map<String, String>>(map))
 
             assertEquals(1, accountNamed(statusJson(), "alice")["saved"]["contacts"].asInt())
         }

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -195,7 +196,7 @@ object FetchCommand {
             val capped = if (effectiveLimit != null) ordered.take(effectiveLimit) else ordered
             val events =
                 capped
-                    .map { Output.mapper.readTree(it.toJson()) }
+                    .map { CliJson.parse(it.toJson()) }
                     .toList()
 
             return emitWithRelayErrors(
@@ -586,7 +587,7 @@ object FetchCommand {
                     .distinctBy { it.id }
                     .sortedByDescending { it.createdAt }
                     .take(limit)
-                    .map { Output.mapper.readTree(it.toJson()) }
+                    .map { CliJson.parse(it.toJson()) }
                     .toList()
 
             return emitWithRelayErrors(

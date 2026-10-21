@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.AwaitTimeout
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -275,7 +275,7 @@ object AwaitCommands {
                 for (line in msgs.asReversed()) {
                     val obj =
                         try {
-                            Output.mapper.readValue<Map<String, Any?>>(line)
+                            CliJson.toPlain(CliJson.parse(line)) as? Map<*, *>
                         } catch (_: Exception) {
                             null
                         } ?: continue

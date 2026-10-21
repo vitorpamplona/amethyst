@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.relaybench.relays
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.vitorpamplona.relaybench.BenchJson
+import com.vitorpamplona.relaybench.asText
+import com.vitorpamplona.relaybench.get
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -108,7 +110,7 @@ class RunningRelay(
                     .header("Accept", "application/nostr+json")
                     .build()
             http.newCall(request).execute().use { response ->
-                val node = jacksonObjectMapper().readTree(response.body.string())
+                val node = BenchJson.parse(response.body.string())
                 Nip11Info(
                     software = node["software"]?.asText()?.substringAfterLast('/')?.removeSuffix(".git"),
                     version = node["version"]?.asText(),

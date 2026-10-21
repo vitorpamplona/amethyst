@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.core.JacksonException
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
@@ -35,7 +32,16 @@ import com.vitorpamplona.amethyst.commons.appupdate.ReleaseFilesException
 import com.vitorpamplona.amethyst.commons.appupdate.SignedRelease
 import com.vitorpamplona.amethyst.commons.appupdate.ZapstoreConfig
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import org.yaml.snakeyaml.DumperOptions
+import org.yaml.snakeyaml.LoaderOptions
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
+import org.yaml.snakeyaml.error.YAMLException
+import org.yaml.snakeyaml.nodes.Tag
+import org.yaml.snakeyaml.representer.Representer
+import org.yaml.snakeyaml.resolver.Resolver
 import java.io.File
+import java.util.regex.Pattern
 
 /**
  * `amy releases publish` — announce a release on Nostr (NIP-82), signed with Amethyst's key:
@@ -138,8 +144,8 @@ object ReleasesCommands {
                             if (yaml.isFile) {
                                 try {
                                     ZapstoreConfig.fromMap(readYaml(yaml))
-                                } catch (e: JacksonException) {
-                                    return Output.error("bad_args", "$yaml is not valid YAML: ${e.originalMessage}")
+                                } catch (e: YAMLException) {
+                                    return Output.error("bad_args", "$yaml is not valid YAML: ${e.message}")
                                 }
                             } else {
                                 ZapstoreConfig()
@@ -218,5 +224,29 @@ object ReleasesCommands {
     private val APPS = listOf("desktop", "android", "flatpak")
 
     @Suppress("UNCHECKED_CAST")
-    private fun readYaml(file: File): Map<String, Any?> = ObjectMapper(YAMLFactory()).readValue(file, Map::class.java) as Map<String, Any?>
+    private fun readYaml(file: File): Map<String, Any?> =
+        yamlLoader().load<Any?>(file.readText()) as? Map<String, Any?>
+            ?: throw YAMLException("the top level is not a mapping")
+
+    /**
+     * SnakeYAML's safe loader, minus its timestamp type: a date-like value (`2024-01-01`) stays the
+     * text it was written as, which is what Jackson's YAML reader gave and what [ZapstoreConfig]
+     * reads.
+     */
+    private fun yamlLoader(): Yaml {
+        val loader = LoaderOptions()
+        val dumper = DumperOptions()
+        return Yaml(SafeConstructor(loader), Representer(dumper), dumper, loader, NoTimestampResolver())
+    }
+
+    private class NoTimestampResolver : Resolver() {
+        override fun addImplicitResolver(
+            tag: Tag,
+            regexp: Pattern,
+            first: String?,
+            limit: Int,
+        ) {
+            if (tag != Tag.TIMESTAMP) super.addImplicitResolver(tag, regexp, first, limit)
+        }
+    }
 }
