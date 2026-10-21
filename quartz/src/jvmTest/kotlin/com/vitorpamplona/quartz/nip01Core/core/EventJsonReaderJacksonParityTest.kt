@@ -22,6 +22,7 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.GZIPInputStream
 import kotlin.random.Random
 import kotlin.test.Test
@@ -164,6 +165,30 @@ class EventJsonReaderJacksonParityTest {
                 cachedSample = out
             }
         return all.subList(0, count)
+    }
+
+    @Test
+    fun threadsParsingAtOnceDoNotShareState() {
+        // Each thread keeps its own reader; four threads over the same events must each get
+        // exactly what Jackson builds.
+        val events = sample(SAMPLE_SIZE)
+        val expected = events.map { JacksonMapper.fromJson(it) }
+        val failures = AtomicInteger()
+        val threads =
+            List(4) { t ->
+                Thread {
+                    repeat(5) { round ->
+                        for (k in events.indices) {
+                            val idx = (k * 7 + t * 13 + round) % events.size
+                            val got = EventJsonReader.readEvent(events[idx])
+                            if (!sameEvent(expected[idx], got)) failures.incrementAndGet()
+                        }
+                    }
+                }
+            }
+        threads.forEach { it.start() }
+        threads.forEach { it.join() }
+        assertEquals(0, failures.get())
     }
 
     @Test

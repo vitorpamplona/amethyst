@@ -40,20 +40,44 @@ import com.vitorpamplona.quartz.utils.EventFactory
  * inside a tag, and a non-array inside `tags` throw instead of producing garbage. Every
  * failure is an [IllegalArgumentException].
  *
- * One reader per parse: it holds the cursor and scratch buffers, so it is not thread-safe.
+ * A reader holds the cursor and scratch buffers, so one parse at a time uses it. On JVM and
+ * Android each thread reuses its own (see [threadEventJsonReader]), so the decode buffer and
+ * tag scratch are allocated once per thread, not once per event; a nested parse on the same
+ * thread, and every parse on native, gets a fresh one.
  */
-internal class EventJsonReader private constructor(
-    private val s: String,
-) {
-    private val n = s.length
+internal class EventJsonReader {
+    private var s = ""
+    private var n = 0
     private var i = 0
 
     /** Position of the next backslash at or after the cursor, or [n] when there is none. */
-    private var nextEscape = s.indexOf('\\').let { if (it < 0) n else it }
+    private var nextEscape = 0
 
+    private var inUse = false
     private var sb: StringBuilder? = null
     private var tagScratch: Array<String?>? = null
     private var tagsScratch: Array<Array<String>?>? = null
+
+    private inline fun <T> parse(
+        json: String,
+        read: () -> T,
+    ): T {
+        s = json
+        n = json.length
+        i = 0
+        nextEscape = json.indexOf('\\').let { if (it < 0) n else it }
+        inUse = true
+        try {
+            return read()
+        } finally {
+            s = ""
+            inUse = false
+            // Don't let one huge event pin its buffers to the thread.
+            if ((sb?.length ?: 0) > MAX_KEPT_CHARS) sb = null
+            if ((tagsScratch?.size ?: 0) > MAX_KEPT_TAGS) tagsScratch = null
+            if ((tagScratch?.size ?: 0) > MAX_KEPT_TAGS) tagScratch = null
+        }
+    }
 
     private fun fail(msg: String): Nothing = throw IllegalArgumentException("$msg at offset $i")
 
@@ -205,7 +229,7 @@ internal class EventJsonReader private constructor(
         }
 
         // Escapes: decode run by run from the first backslash.
-        val sb = sb ?: StringBuilder(q - start + 16).also { sb = it }
+        val sb = sb ?: StringBuilder(256).also { sb = it }
         sb.setLength(0)
         sb.appendRange(s, start, esc)
         i = esc
@@ -349,7 +373,9 @@ internal class EventJsonReader private constructor(
             fail("expected ',' or ']' in tags")
         }
         @Suppress("UNCHECKED_CAST")
-        return outer.copyOf(count) as TagArray
+        val tags = outer.copyOf(count) as TagArray
+        outer.fill(null, 0, count)
+        return tags
     }
 
     private fun readTag(): Array<String> {
@@ -387,7 +413,9 @@ internal class EventJsonReader private constructor(
             fail("expected ',' or ']' in a tag")
         }
         @Suppress("UNCHECKED_CAST")
-        return buf.copyOf(count) as Array<String>
+        val tag = buf.copyOf(count) as Array<String>
+        buf.fill(null, 0, count)
+        return tag
     }
 
     private fun literal(
@@ -491,17 +519,29 @@ internal class EventJsonReader private constructor(
         /** Jackson's default nesting limit (StreamReadConstraints). */
         private const val MAX_DEPTH = 1000
 
+        /** Scratch kept on a thread between parses; bigger buffers are dropped after use. */
+        private const val MAX_KEPT_CHARS = 16 * 1024
+        private const val MAX_KEPT_TAGS = 1024
+
         private val EMPTY_TAGS: TagArray = emptyArray()
         private val EMPTY_TAG = emptyArray<String>()
 
+        private fun acquire(): EventJsonReader {
+            val local = threadEventJsonReader()
+            return if (local == null || local.inUse) EventJsonReader() else local
+        }
+
         /** One event object; throws [IllegalArgumentException] on malformed input or a missing pubkey. */
-        fun readEvent(json: String): Event = EventJsonReader(json).readEvent()
+        fun readEvent(json: String): Event = acquire().run { parse(json) { readEvent() } }
 
         /**
          * One relay frame when it is `["EVENT", subId, event, …]`; null when it is another
          * message type, for the caller to parse its own way. Throws [IllegalArgumentException]
          * on a malformed EVENT frame.
          */
-        fun readEventMessage(json: String): EventMessage? = EventJsonReader(json).readEventMessage()
+        fun readEventMessage(json: String): EventMessage? = acquire().run { parse(json) { readEventMessage() } }
     }
 }
+
+/** This thread's reusable reader, or null where readers are not kept per thread (native). */
+internal expect fun threadEventJsonReader(): EventJsonReader?
