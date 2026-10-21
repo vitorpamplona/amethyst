@@ -122,6 +122,12 @@ class TrustNetworkState(
     /** The provider choice [network] was last matched against, once that has happened. */
     private val applied = MutableStateFlow<ResolvedProvider?>(null)
 
+    /**
+     * The provider choice fully handled: [applied], and its due sync started (into [running]) or
+     * found not due. [awaitReady] waits on this one, so an [awaitIdle] after it sees that sync.
+     */
+    private val handled = MutableStateFlow<ResolvedProvider?>(null)
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val control = Dispatchers.Default.limitedParallelism(1)
 
@@ -271,10 +277,11 @@ class TrustNetworkState(
 
     /**
      * Waits until the index has been read and matched against the resolved provider, so
-     * [network] is final. For one-shot callers; the apps use [awaitLoaded].
+     * [network] is final, and the sync that match made due has started: [awaitIdle] then waits
+     * for it. For one-shot callers; the apps use [awaitLoaded].
      */
     suspend fun awaitReady(timeoutMs: Long = 10_000) {
-        withTimeoutOrNull(timeoutMs) { applied.first { it != null && it === rankProvider.value } }
+        withTimeoutOrNull(timeoutMs) { handled.first { it != null && it === rankProvider.value } }
     }
 
     private suspend fun onProvider(choice: ResolvedProvider) {
@@ -284,7 +291,10 @@ class TrustNetworkState(
             if (running?.isActive == true && runningFor != choice.provider) running?.cancel()
         }
         commitLock.withLock { applyProvider(choice) }
-        if (autoSync) syncIfStale()
+        // Started here rather than queued (syncIfStale): a caller woken by [handled] must find it
+        // in [running], or its awaitIdle returns before the sync has begun.
+        if (autoSync) withContext(control) { start(requested = null, force = false) }
+        handled.value = choice
     }
 
     private suspend fun applyProvider(choice: ResolvedProvider) {
