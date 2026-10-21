@@ -208,10 +208,11 @@ class PoolEventOutbox {
         success: Boolean,
         message: String,
         retryAfterMs: Long? = null,
+        authMayLand: () -> Boolean = { true },
     ) {
         val waiting = eventOutbox.get(id)
         if (waiting != null) {
-            waiting.newResponse(url, success, message, retryAfterMs)
+            waiting.newResponse(url, success, message, retryAfterMs, authMayLand)
             if (waiting.isDone()) {
                 eventOutbox.remove(waiting.event.id)
                 onRemoved()
@@ -233,12 +234,14 @@ class PoolEventOutbox {
         }
     }
 
+    /** [authMayLand] is asked only for an `auth-required:`; see [PoolEventOutboxState.newResponse]. */
     fun onIncomingMessage(
         relay: NormalizedRelayUrl,
         msg: Message,
+        authMayLand: () -> Boolean = { true },
     ) {
         if (msg is OkMessage) {
-            newResponse(msg.eventId, relay, msg.success, msg.message, msg.retryAfterMs)
+            newResponse(msg.eventId, relay, msg.success, msg.message, msg.retryAfterMs, authMayLand)
         }
     }
 

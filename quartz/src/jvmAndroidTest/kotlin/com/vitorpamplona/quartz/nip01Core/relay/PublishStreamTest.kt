@@ -34,14 +34,18 @@ import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebSocketListener
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.WebsocketBuilder
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -189,6 +193,50 @@ class PublishStreamTest {
             assertFalse(result.stalled)
             assertEquals(100, result.answered)
             assertEquals(100, relay.eventFrames.get(), "a window sent into a connecting socket goes out twice")
+        }
+
+    @Test
+    fun anOpenSocketDoesNotWaitOnTheFirstVerdict() =
+        runBlocking {
+            // The relay holds its first OK until a second EVENT arrives, or 2s pass: a stream that
+            // sends its first event alone and waits only gets past that hold on the timeout.
+            val secondBeforeFirstOk = CompletableDeferred<Boolean>()
+            val relay =
+                object : WebsocketBuilder {
+                    val events = AtomicInteger()
+                    val secondSent = CompletableDeferred<Unit>()
+
+                    override fun build(
+                        url: NormalizedRelayUrl,
+                        out: WebSocketListener,
+                    ): WebSocket {
+                        val holding =
+                            object : WebSocketListener by out {
+                                override suspend fun onMessage(text: String) {
+                                    if (text.startsWith("[\"OK\"") && !secondBeforeFirstOk.isCompleted) {
+                                        secondBeforeFirstOk.complete(withTimeoutOrNull(2_000) { secondSent.await() } != null)
+                                    }
+                                    out.onMessage(text)
+                                }
+                            }
+                        val inner = hub.build(url, holding)
+                        return object : WebSocket by inner {
+                            override fun send(msg: String): Boolean {
+                                if (msg.startsWith("[\"EVENT\"") && events.incrementAndGet() == 2) secondSent.complete(Unit)
+                                return inner.send(msg)
+                            }
+                        }
+                    }
+                }
+            val client = NostrClient(relay, scope)
+            client.keepConnected(InProcessRelays.DEFAULT_URL)
+            withTimeout(10_000) { client.connectedRelaysFlow().first { InProcessRelays.DEFAULT_URL in it } }
+
+            val result = client.publishStream(InProcessRelays.DEFAULT_URL, notes(20).asFlow(), maxInFlight = 8) { _, _ -> }
+            client.disconnect()
+
+            assertEquals(20, result.answered)
+            assertTrue(secondBeforeFirstOk.await(), "on an open socket the window opens without waiting for the first OK")
         }
 
     @Test

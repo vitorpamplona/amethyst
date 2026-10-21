@@ -78,9 +78,11 @@ class StreamPublishResult(
  * events (a follow list runs to hundreds of KB) inside the socket's send queue; an event
  * larger than the whole budget is sent alone.
  *
- * The first event goes out alone and the window opens on its verdict: until the socket
- * is up, the pool both queues an EVENT and flushes its outbox on connect, so a full
- * window sent into a connecting socket would reach the relay twice.
+ * Unless the socket is already open, the first event goes out alone and the window opens
+ * on its verdict: until the socket is up, the pool both queues an EVENT and flushes its
+ * outbox on connect, so a full window sent into a connecting socket would reach the relay
+ * twice. On an open socket (a caller that holds it with [INostrClient.keepConnected], say)
+ * there is no such flush to race, and waiting would only cost a round trip per call.
  *
  * Delivery leans on the pool: an event whose socket dropped stays in the outbox and is
  * re-sent on reconnect, and a `rate-limited:` refusal that states its back-off is
@@ -155,7 +157,10 @@ private suspend fun INostrClient.publishOutgoing(
     val lock = Mutex()
     val inFlight = LinkedHashMap<HexKey, StreamInFlight>()
     val clock = IdleClock()
-    val firstVerdict = CompletableDeferred<Unit>()
+    // Already open: no connect-time flush can send the window a second time. (A stream that
+    // starts in the instant between the socket opening and its replay ending can still send an
+    // event twice, as a first event alone could; the second OK finds nothing outstanding.)
+    val firstVerdict = CompletableDeferred<Unit>().apply { if (target in connectedRelaysFlow().value) complete(Unit) }
     // Signalled on every settle; the reader waits on it while the window is full by bytes.
     val roomFreed = Channel<Unit>(Channel.CONFLATED)
     var bytesInFlight = 0L
