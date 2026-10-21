@@ -20,5 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-// Native keeps no reader per thread: every parse gets a fresh one.
-internal actual fun threadEventJsonReader(): EventJsonReader? = null
+private val threadReader = ThreadLocal.withInitial { NostrJsonReader() }
+
+// Android's SDK annotates ThreadLocal.get() as nullable; withInitial never yields null.
+internal actual fun threadNostrJsonReader(): NostrJsonReader? = threadReader.get()

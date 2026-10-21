@@ -20,16 +20,16 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
 import com.vitorpamplona.quartz.nip57Zaps.LnZapEvent
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class EventJsonReaderTest {
+class NostrJsonReaderEventTest {
     private val id = "0a5b8e8f2b4b0a6b1f0b64e5d0e9a8f7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a291"
     private val pubkey = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
     private val sig = "908a15e46fb4d8675bab026fc230a0e3542bfade63da02d542fb78b2a8513fcd0092619a2c8c1221e581946e0191f2af505dfdf8657a414dbca329186f009262"
@@ -42,7 +42,7 @@ class EventJsonReaderTest {
         extra: String = "",
     ) = """{"id":"$id","pubkey":"$pubkey","created_at":$createdAt,"kind":$kind,"tags":$tags,"content":$content,"sig":"$sig"$extra}"""
 
-    private fun read(json: String) = EventJsonReader.readEvent(json)
+    private fun read(json: String) = NostrJsonReader.readEvent(json)
 
     private fun contentOf(raw: String) = read(event(content = raw)).content
 
@@ -218,8 +218,8 @@ class EventJsonReaderTest {
         // Jackson's limit is 1,000 levels, the event object included; an EVENT frame's array adds one.
         assertEquals(sig, read(event(extra = ",\"x\":${nested(999)}")).sig)
         assertFailsWith<IllegalArgumentException> { read(event(extra = ",\"x\":${nested(1000)}")) }
-        assertEquals(sig, EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(998)}")}]")!!.event.sig)
-        assertFailsWith<IllegalArgumentException> { EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(999)}")}]") }
+        assertEquals(sig, frame("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(998)}")}]").event.sig)
+        assertFailsWith<IllegalArgumentException> { NostrJsonReader.readMessage("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(999)}")}]") }
         val objects = "{\"a\":".repeat(999) + "1" + "}".repeat(999)
         assertEquals(sig, read(event(extra = ",\"x\":$objects")).sig)
         // Deep nesting is a counter, not recursion: far past the limit it still fails cleanly.
@@ -274,38 +274,33 @@ class EventJsonReaderTest {
         }
     }
 
+    private fun frame(json: String) = NostrJsonReader.readMessage(json) as EventMessage
+
     @Test
     fun readsEventFrames() {
-        val msg = EventJsonReader.readEventMessage("[\"EVENT\",\"sub1\",${event()}]")!!
+        val msg = frame("[\"EVENT\",\"sub1\",${event()}]")
         assertEquals("sub1", msg.subId)
         assertEquals(id, msg.event.id)
 
-        val spaced = EventJsonReader.readEventMessage(" [ \"EVENT\" , \"sub\\\"2\" , ${event()} ] ")!!
+        val spaced = frame(" [ \"EVENT\" , \"sub\\\"2\" , ${event()} ] ")
         assertEquals("sub\"2", spaced.subId)
 
-        // Extra elements are skipped; a frame cut after the event is still taken, like MessageDeserializer.
-        assertEquals("s", EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event()},{\"x\":[1]},\"y\"]")!!.subId)
-        assertEquals("s", EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event()}")!!.subId)
+        // Extra elements are skipped, like MessageDeserializer; trailing data after the frame is ignored.
+        assertEquals("s", frame("[\"EVENT\",\"s\",${event()},{\"x\":[1]},\"y\"]").subId)
+        assertEquals("s", frame("[\"EVENT\",\"s\",${event()}] trailing").subId)
     }
 
     @Test
     fun readsAnEscapedEventLabel() {
-        assertEquals("s", EventJsonReader.readEventMessage("[\"EV\\u0045NT\",\"s\",${event()}]")!!.subId)
-        assertNull(EventJsonReader.readEventMessage("[\"EV\\u0045NTS\",\"s\",${event()}]"))
-    }
-
-    @Test
-    fun leavesOtherMessagesToTheirParser() {
-        assertNull(EventJsonReader.readEventMessage("[\"EOSE\",\"sub1\"]"))
-        assertNull(EventJsonReader.readEventMessage("[\"OK\",\"$id\",true,\"\"]"))
-        assertNull(EventJsonReader.readEventMessage("[\"NOTICE\",\"hi\"]"))
-        assertNull(EventJsonReader.readEventMessage("[1,2]"))
+        assertEquals("s", frame("[\"EV\\u0045NT\",\"s\",${event()}]").subId)
+        assertFailsWith<IllegalArgumentException> { NostrJsonReader.readMessage("[\"EV\\u0045NTS\",\"s\",${event()}]") }
     }
 
     @Test
     fun rejectsMalformedEventFrames() {
-        for (bad in listOf("{}", "", "[\"EVENT\"]", "[\"EVENT\",1,{}]", "[\"EVENT\",\"s\"]", "[\"EVENT\",\"s\",{}]", "[\"EVENT\",\"s\",${event()},]", "[\"EVENT\",\"s\",${event()} x]")) {
-            assertFailsWith<IllegalArgumentException>(bad) { EventJsonReader.readEventMessage(bad) }
+        // A frame cut before its closing bracket fails, as in Jackson.
+        for (bad in listOf("{}", "", "[\"EVENT\"]", "[\"EVENT\",1,{}]", "[\"EVENT\",\"s\"]", "[\"EVENT\",\"s\",{}]", "[\"EVENT\",\"s\",${event()},]", "[\"EVENT\",\"s\",${event()} x]", "[\"EVENT\",\"s\",${event()}", "[\"EVENT\",\"s\",${event()},")) {
+            assertFailsWith<IllegalArgumentException>(bad) { NostrJsonReader.readMessage(bad) }
         }
     }
 

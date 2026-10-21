@@ -28,26 +28,15 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlinx.serialization.SerializationException
 
 actual object OptimizedJsonMapper {
-    actual fun fromJson(json: String): Event = EventJsonReader.readEvent(json)
+    actual fun fromJson(json: String): Event = NostrJsonReader.readEvent(json)
 
     actual fun toJson(event: Event): String = KotlinSerializationMapper.toJson(event)
 
-    // EVENT frames, nearly all of a relay's traffic, take the fast reader; every other
-    // message type goes through KotlinSerializationMapper.
-    actual fun fromJsonToMessage(json: String): Message =
-        EventJsonReader.readEventMessage(json)
-            ?: try {
-                KotlinSerializationMapper.fromJsonToMessage(json)
-            } catch (e: SerializationException) {
-                throw IllegalArgumentException(e.message, e)
-            }
+    // Everything a WebSocket carries (relay messages, client commands, the events, rumors and
+    // event lists inside them) goes through Quartz's own reader; see NostrJsonReader.
+    actual fun fromJsonToMessage(json: String): Message = NostrJsonReader.readMessage(json)
 
-    actual fun fromJsonToCommand(json: String): Command =
-        try {
-            KotlinSerializationMapper.fromJsonToCommand(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToCommand(json: String): Command = NostrJsonReader.readCommand(json)
 
     actual fun fromJsonToTagArray(json: String): Array<Array<String>> =
         try {
@@ -63,19 +52,9 @@ actual object OptimizedJsonMapper {
             throw IllegalArgumentException(e.message, e)
         }
 
-    actual fun fromJsonToEventList(json: String): List<Event> =
-        try {
-            KotlinSerializationMapper.fromJsonToEventList(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToEventList(json: String): List<Event> = NostrJsonReader.readEventList(json)
 
-    actual fun fromJsonToRumor(json: String): Rumor =
-        try {
-            KotlinSerializationMapper.fromJsonToRumor(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToRumor(json: String): Rumor = NostrJsonReader.readRumor(json)
 
     actual fun toJson(tags: Array<Array<String>>): String = KotlinSerializationMapper.toJson(tags)
 

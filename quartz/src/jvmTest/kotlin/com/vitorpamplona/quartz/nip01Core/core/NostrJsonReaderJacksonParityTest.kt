@@ -31,7 +31,7 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * [EventJsonReader] against Quartz's Jackson path, which it replaces: every event of the
+ * [NostrJsonReader] against Quartz's Jackson path, which it replaces: every event of the
  * recorded startup capture, as an event and as an EVENT frame, every prefix of a sample, and
  * random edits of real events.
  *
@@ -39,7 +39,7 @@ import kotlin.test.fail
  * Jackson accepts (its stricter cases, and a jackson-core quirk that takes any character whose
  * low byte is a hex digit inside a \u escape) but must never accept what Jackson rejects.
  */
-class EventJsonReaderJacksonParityTest {
+class NostrJsonReaderJacksonParityTest {
     private fun jackson(json: String): Event? =
         try {
             JacksonMapper.fromJson(json)
@@ -49,7 +49,7 @@ class EventJsonReaderJacksonParityTest {
 
     private fun reader(json: String): Event? =
         try {
-            EventJsonReader.readEvent(json)
+            NostrJsonReader.readEvent(json)
         } catch (e: IllegalArgumentException) {
             null
         }
@@ -146,7 +146,7 @@ class EventJsonReaderJacksonParityTest {
 
             val frame = "[\"EVENT\",\"sub\",$json]"
             val viaJackson = JacksonMapper.fromJsonToMessage(frame) as EventMessage
-            val viaReader = EventJsonReader.readEventMessage(frame)!!
+            val viaReader = NostrJsonReader.readMessage(frame) as EventMessage
             assertEquals(viaJackson.subId, viaReader.subId)
             assertTrue(sameEvent(viaJackson.event, viaReader.event), "EVENT frame differs: ${json.take(300)}")
             frames++
@@ -180,7 +180,7 @@ class EventJsonReaderJacksonParityTest {
                     repeat(5) { round ->
                         for (k in events.indices) {
                             val idx = (k * 7 + t * 13 + round) % events.size
-                            val got = EventJsonReader.readEvent(events[idx])
+                            val got = NostrJsonReader.readEvent(events[idx])
                             if (!sameEvent(expected[idx], got)) failures.incrementAndGet()
                         }
                     }

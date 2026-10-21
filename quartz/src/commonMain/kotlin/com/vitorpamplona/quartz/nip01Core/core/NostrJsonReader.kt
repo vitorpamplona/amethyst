@@ -20,35 +20,42 @@
  */
 package com.vitorpamplona.quartz.nip01Core.core
 
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EventMessage
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.EventFactory
 
 /**
- * Reads one Nostr event, or one `["EVENT", subId, event]` relay frame, straight off the
- * frame's `String`, about twice as fast as Jackson and with ~40% less garbage.
+ * Reads what travels over a Nostr WebSocket straight off the frame's `String`: relay messages
+ * ([readMessage]), client commands ([readCommand]), and the events, rumors and event lists inside
+ * them. About twice as fast as Jackson on events, with ~40% less garbage.
  *
  * It finds the end of every string value with `String.indexOf('"')`, an intrinsic on HotSpot
  * and ART, and tracks the next backslash in the frame (also found with `indexOf`), so a value
- * without escapes is one `substring`. Keys are matched by length and characters, never
+ * without escapes is one `substring`. Event keys are matched by length and characters, never
  * built. Only values with escapes go through a `StringBuilder`.
  *
- * It accepts what Jackson accepts with Quartz's mapper settings (raw control characters in
- * strings, unknown fields of any shape, `null` tag values as "", trailing data after the
- * event), follows the JSON grammar for numbers and skipped values, and fails the way
- * `EventDeserializer` does on a missing pubkey. It is stricter in three places, all on events
- * that could never verify: a non-string `id`, `pubkey`, `content` or `sig`, an array or object
- * inside a tag, and a non-array inside `tags` throw instead of producing garbage. Every
- * failure is an [IllegalArgumentException].
+ * Every type follows what Quartz's Jackson deserializers accept and build (`EventDeserializer`,
+ * `RumorDeserializer`, `MessageDeserializer`, `CommandDeserializer`, `ManualFilterDeserializer`,
+ * the COUNT and LIMITS readers): the same optional elements, the same defaults and the same
+ * lenient fields. It follows the JSON grammar everywhere, including values it skips, and never
+ * accepts a frame Jackson rejects. It is stricter only where Jackson builds garbage or depends
+ * on token order: a non-string `id`, `pubkey`, `content` or `sig`; an array or object inside a
+ * tag, or where a frame element should be a string or number; a missing closing bracket is
+ * rejected by both. Keys are matched by their text, where `EventDeserializer` matched hashes.
+ * Every failure is an [IllegalArgumentException].
  *
  * A reader holds the cursor and scratch buffers, so one parse at a time uses it. On JVM and
- * Android each thread reuses its own (see [threadEventJsonReader]), so the decode buffer and
+ * Android each thread reuses its own (see [threadNostrJsonReader]), so the decode buffer and
  * tag scratch are allocated once per thread, not once per event; a nested parse on the same
  * thread, and every parse on native, gets a fresh one.
  */
-internal class EventJsonReader {
-    private var s = ""
-    private var n = 0
-    private var i = 0
+internal class NostrJsonReader {
+    internal var s = ""
+    internal var n = 0
+
+    /** The cursor. */
+    internal var i = 0
 
     /**
      * Position of the next backslash at or after the cursor, or [n] when there is none. -1 until
@@ -56,8 +63,8 @@ internal class EventJsonReader {
      */
     private var nextEscape = -1
 
-    /** Nesting depth of the value being read: 1 inside the event object, 2 inside an EVENT frame's event. */
-    private var baseDepth = 1
+    /** Whether the frame being read reached its closing bracket. */
+    private var frameClosed = false
 
     private var inUse = false
     private var sb: StringBuilder? = null
@@ -73,7 +80,7 @@ internal class EventJsonReader {
         n = json.length
         i = 0
         nextEscape = -1
-        baseDepth = 1
+        frameClosed = false
         inUse = true
         var done = false
         try {
@@ -94,103 +101,216 @@ internal class EventJsonReader {
         }
     }
 
-    private fun fail(msg: String): Nothing = throw IllegalArgumentException("$msg at offset $i")
+    internal fun fail(msg: String): Nothing = throw IllegalArgumentException("$msg at offset $i")
 
-    private fun ws() {
+    internal fun ws() {
         while (i < n) {
             val c = s[i]
             if (c == ' ' || c == '\n' || c == '\r' || c == '\t') i++ else return
         }
     }
 
-    private fun expect(c: Char) {
+    internal fun expect(c: Char) {
         ws()
         if (i >= n || s[i] != c) fail("expected '$c'")
         i++
     }
 
-    /** `["EVENT", subId, event, …]`, or null when the frame is another message type. */
-    private fun readEventMessage(): EventMessage? {
-        expect('[')
-        ws()
-        if (i >= n || s[i] != '"') return null
-        i++
-        if (s.startsWith(EVENT_LABEL_QUOTE, i)) {
-            i += EVENT_LABEL_QUOTE.length
-        } else {
-            // Another message type, unless its label spells EVENT with escapes.
-            val q = quoteAfter(i)
-            if (q < 0) return null
-            var escaped = false
-            for (k in i until q) if (s[k] == '\\') escaped = true
-            if (!escaped || readStringBody() != EventMessage.LABEL) return null
-        }
-        expect(',')
+    /** The next character after whitespace; fails at the end of input. */
+    internal fun peek(): Char {
         ws()
         if (i >= n) fail("unexpected end of input")
-        val subId = readString()
-        expect(',')
-        baseDepth = 2
-        val event = readEvent()
-        baseDepth = 1
-        // Like MessageDeserializer: extra elements are skipped, and a frame that ends here
-        // without its closing bracket is still taken.
-        while (true) {
-            ws()
-            if (i >= n) break
-            val c = s[i++]
-            if (c == ']') break
-            if (c != ',') fail("expected ',' or ']'")
-            ws()
-            if (i >= n) fail("unexpected end of input")
-            skipValue(1)
-        }
-        return EventMessage(subId, event)
+        return s[i]
     }
 
-    private fun readEvent(): Event {
-        var id = ""
-        var pubKey = ""
-        var createdAt = 0L
-        var kind = 0
-        var tags = EMPTY_TAGS
-        var content = ""
-        var sig = ""
+    // ---- frames: ["LABEL", element, element, …]
+
+    /**
+     * Opens a frame and reads its label, or returns null when its first element is not a
+     * string (Jackson reads that as an unsupported type).
+     */
+    internal fun openFrame(): String? {
+        expect('[')
+        if (peek() != '"') return null
+        i++
+        // Most frames are EVENTs: skip decoding their label.
+        if (s.startsWith(EVENT_LABEL_QUOTE, i)) {
+            i += EVENT_LABEL_QUOTE.length
+            return EVENT_LABEL
+        }
+        return readStringBody()
+    }
+
+    /**
+     * Steps to the frame's next element and returns true, with the cursor on it, or returns false
+     * at the frame's closing bracket (and on every call after). A frame must close: one cut short
+     * fails, as in Jackson.
+     */
+    internal fun nextElement(): Boolean {
+        if (frameClosed) return false
+        val c = peek()
+        i++
+        if (c == ',') {
+            peek()
+            return true
+        }
+        if (c == ']') {
+            frameClosed = true
+            return false
+        }
+        i--
+        fail("expected ',' or ']'")
+    }
+
+    /** Skips the frame's remaining elements, checking them, through its closing bracket. */
+    internal fun finishFrame() {
+        while (nextElement()) skipValue(1)
+    }
+
+    /** The next element, which must be a string (Jackson's `nextTextValue()` into a non-null field). */
+    internal fun requiredString(): String {
+        if (!nextElement()) fail("missing element")
+        return readString()
+    }
+
+    /** The next element, which must be an object; the cursor ends past it. */
+    internal fun requiredObjectStart() {
+        if (!nextElement()) fail("missing element")
+        if (s[i] != '{') fail("expected an object")
+    }
+
+    // ---- events, rumors
+
+    private var fId: String? = null
+    private var fPubKey: String? = null
+    private var fCreatedAt = 0L
+    private var fHasCreatedAt = false
+    private var fKind = 0
+    private var fHasKind = false
+    private var fTags: TagArray? = null
+    private var fContent: String? = null
+    private var fSig: String? = null
+
+    /**
+     * Reads an event-shaped object into the f* fields. [base] is its nesting depth (1 at the top
+     * level, 2 inside a frame or a list), for Jackson's nesting limit on skipped values.
+     */
+    private fun readEventFields(
+        base: Int,
+        withSig: Boolean,
+    ) {
+        fId = null
+        fPubKey = null
+        fHasCreatedAt = false
+        fHasKind = false
+        fTags = null
+        fContent = null
+        fSig = null
 
         expect('{')
         ws()
         if (i < n && s[i] == '}') {
             i++
-        } else {
-            while (true) {
-                ws()
-                if (i >= n || s[i] != '"') fail("expected a field name")
-                i++
-                val field = readKey()
-                expect(':')
-                ws()
-                if (i >= n) fail("unexpected end of input")
-                when (field) {
-                    F_ID -> id = readString()
-                    F_PUBKEY -> pubKey = readString()
-                    F_CREATED_AT -> createdAt = readLong()
-                    F_KIND -> kind = readInt()
-                    F_TAGS -> tags = readTags()
-                    F_CONTENT -> content = readString()
-                    F_SIG -> sig = readString()
-                    else -> skipValue(baseDepth)
-                }
-                ws()
-                if (i >= n) fail("unexpected end of input inside an object")
-                val c = s[i++]
-                if (c == ',') continue
-                if (c == '}') break
-                fail("expected ',' or '}'")
-            }
+            return
         }
+        while (true) {
+            ws()
+            if (i >= n || s[i] != '"') fail("expected a field name")
+            i++
+            val field = readKey()
+            expect(':')
+            ws()
+            if (i >= n) fail("unexpected end of input")
+            when (field) {
+                F_ID -> fId = readString()
+                F_PUBKEY -> fPubKey = readString()
+                F_CREATED_AT -> {
+                    fCreatedAt = readLong()
+                    fHasCreatedAt = true
+                }
+                F_KIND -> {
+                    fKind = readInt()
+                    fHasKind = true
+                }
+                F_TAGS -> fTags = readTags()
+                F_CONTENT -> fContent = readString()
+                F_SIG -> if (withSig) fSig = readString() else skipValue(base)
+                else -> skipValue(base)
+            }
+            ws()
+            if (i >= n) fail("unexpected end of input inside an object")
+            val c = s[i++]
+            if (c == ',') continue
+            if (c == '}') return
+            fail("expected ',' or '}'")
+        }
+    }
 
-        if (pubKey.isEmpty()) throw IllegalArgumentException("Event not found")
-        return EventFactory.create(id, pubKey, createdAt, kind, tags, content, sig)
+    /** One event object, like `EventDeserializer`: absent fields read as empty, a missing pubkey fails. */
+    internal fun readEventObject(base: Int): Event {
+        readEventFields(base, withSig = true)
+        val pubKey = fPubKey
+        if (pubKey.isNullOrEmpty()) throw IllegalArgumentException("Event not found")
+        val event =
+            EventFactory.create<Event>(
+                fId ?: "",
+                pubKey,
+                if (fHasCreatedAt) fCreatedAt else 0L,
+                if (fHasKind) fKind else 0,
+                fTags ?: EMPTY_TAGS,
+                fContent ?: "",
+                fSig ?: "",
+            )
+        clearFields()
+        return event
+    }
+
+    /** One rumor object, like `RumorDeserializer`: every field optional, `sig` ignored. */
+    internal fun readRumorObject(base: Int): Rumor {
+        readEventFields(base, withSig = false)
+        val rumor =
+            Rumor(
+                fId,
+                fPubKey,
+                if (fHasCreatedAt) fCreatedAt else null,
+                if (fHasKind) fKind else null,
+                fTags,
+                fContent,
+            )
+        clearFields()
+        return rumor
+    }
+
+    private fun clearFields() {
+        fId = null
+        fPubKey = null
+        fTags = null
+        fContent = null
+        fSig = null
+    }
+
+    /**
+     * A JSON array of events, or one event object (Quartz's Jackson mapper accepts a single
+     * value as an array).
+     */
+    internal fun readEventList(): List<Event> {
+        if (peek() == '{') return listOf(readEventObject(1))
+        expect('[')
+        if (peek() == ']') {
+            i++
+            return emptyList()
+        }
+        val list = ArrayList<Event>()
+        while (true) {
+            if (peek() != '{') fail("expected an event object")
+            list.add(readEventObject(2))
+            val c = peek()
+            i++
+            if (c == ',') continue
+            if (c == ']') return list
+            i--
+            fail("expected ',' or ']'")
+        }
     }
 
     /** Closing quote of the string body starting at [from], or -1 when the input ends first. */
@@ -237,14 +357,14 @@ internal class EventJsonReader {
             else -> F_OTHER
         }
 
-    private fun readString(): String {
+    internal fun readString(): String {
         if (s[i] != '"') fail("expected a string")
         i++
         return readStringBody()
     }
 
     /** The cursor is just past the opening quote; returns the decoded value and leaves the cursor past the closing one. */
-    private fun readStringBody(): String {
+    internal fun readStringBody(): String {
         val start = i
         val q = quoteAfter(start)
         if (q < 0) fail("unexpected end of input in a string")
@@ -313,7 +433,7 @@ internal class EventJsonReader {
         }
 
     /** Scans one JSON number with the exact grammar; returns true when it has a fraction or an exponent. */
-    private fun scanNumber(): Boolean {
+    internal fun scanNumber(): Boolean {
         if (i < n && s[i] == '-') i++
         if (i >= n) fail("expected a number")
         val first = s[i]
@@ -352,7 +472,7 @@ internal class EventJsonReader {
     }
 
     /** A JSON number as a long. Like Jackson's longValue: a fraction is truncated, out of range fails. */
-    private fun readLong(): Long {
+    internal fun readLong(): Long {
         val start = i
         if (!scanNumber()) {
             if (i - start <= 18) return digitsValue(start)
@@ -364,7 +484,7 @@ internal class EventJsonReader {
     }
 
     /** A JSON number as an int. Like Jackson's intValue: a fraction is truncated, out of range fails. */
-    private fun readInt(): Int {
+    internal fun readInt(): Int {
         val start = i
         if (!scanNumber()) {
             val v = if (i - start <= 18) digitsValue(start) else s.substring(start, i).toLongOrNull() ?: fail("number out of range of int")
@@ -447,7 +567,7 @@ internal class EventJsonReader {
         return tag
     }
 
-    private fun literal(
+    internal fun literal(
         word: String,
         value: String,
     ): String {
@@ -456,7 +576,7 @@ internal class EventJsonReader {
         return value
     }
 
-    private fun numberText(): String {
+    internal fun numberText(): String {
         val start = i
         scanNumber()
         return s.substring(start, i)
@@ -465,9 +585,9 @@ internal class EventJsonReader {
     /**
      * Skips one value of any shape, checking its grammar, without building anything. Iterative:
      * a hostile relay's deep nesting costs a counter, not stack frames. Fails past Jackson's
-     * nesting limit, counted from [baseDepth] the way Jackson counts it.
+     * nesting limit, counted from [base] (the depth of the value itself) the way Jackson counts it.
      */
-    private fun skipValue(base: Int) {
+    internal fun skipValue(base: Int) {
         var depth = 0
         var stack = skipStack ?: BooleanArray(16).also { skipStack = it }
         while (true) {
@@ -534,7 +654,7 @@ internal class EventJsonReader {
     }
 
     /** Like [readStringBody], checking escapes without building the value. */
-    private fun skipStringBody() {
+    internal fun skipStringBody() {
         var quote = quoteAfter(i)
         if (quote < 0) fail("unexpected end of input in a string")
         var esc = escapeAtOrAfter(i)
@@ -561,6 +681,7 @@ internal class EventJsonReader {
         /** Jackson's default nesting limit (StreamReadConstraints). */
         private const val MAX_DEPTH = 1000
 
+        private const val EVENT_LABEL = "EVENT"
         private const val EVENT_LABEL_QUOTE = "EVENT\""
 
         /** Scratch kept on a thread between parses; bigger buffers are dropped after use. */
@@ -570,22 +691,27 @@ internal class EventJsonReader {
         private val EMPTY_TAGS: TagArray = emptyArray()
         private val EMPTY_TAG = emptyArray<String>()
 
-        private fun acquire(): EventJsonReader {
-            val local = threadEventJsonReader()
-            return if (local == null || local.inUse) EventJsonReader() else local
+        private fun acquire(): NostrJsonReader {
+            val local = threadNostrJsonReader()
+            return if (local == null || local.inUse) NostrJsonReader() else local
         }
 
         /** One event object; throws [IllegalArgumentException] on malformed input or a missing pubkey. */
-        fun readEvent(json: String): Event = acquire().run { parse(json) { readEvent() } }
+        fun readEvent(json: String): Event = acquire().run { parse(json) { readEventObject(1) } }
 
-        /**
-         * One relay frame when it is `["EVENT", subId, event, …]`; null when it is another
-         * message type, for the caller to parse its own way. Throws [IllegalArgumentException]
-         * on a malformed EVENT frame.
-         */
-        fun readEventMessage(json: String): EventMessage? = acquire().run { parse(json) { readEventMessage() } }
+        /** One rumor (an unsigned event, NIP-59); every field optional. */
+        fun readRumor(json: String): Rumor = acquire().run { parse(json) { readRumorObject(1) } }
+
+        /** A JSON array of events, or one event object. */
+        fun readEventList(json: String): List<Event> = acquire().run { parse(json) { readEventList() } }
+
+        /** One relay-to-client frame; throws [IllegalArgumentException] on malformed or unsupported frames. */
+        fun readMessage(json: String): Message = acquire().run { parse(json) { readMessageFrame() } }
+
+        /** One client-to-relay frame; throws [IllegalArgumentException] on malformed or unsupported frames. */
+        fun readCommand(json: String): Command = acquire().run { parse(json) { readCommandFrame() } }
     }
 }
 
 /** This thread's reusable reader, or null where readers are not kept per thread (native). */
-internal expect fun threadEventJsonReader(): EventJsonReader?
+internal expect fun threadNostrJsonReader(): NostrJsonReader?
