@@ -4720,14 +4720,7 @@
     <string name="desktop_notification_reaction">%1$s reagoval</string>
     <string name="desktop_notification_follow">%1$s vás začal sledovat</string>
     <string name="desktop_upload_server_not_supported">Nahrávání z počítače jde na servery Blossom. Vyberte jeden v nastavení mediálních serverů.</string>
-    <string name="desktop_menu_file">Soubor</string>
-    <string name="desktop_menu_go">Přejít</string>
     <string name="desktop_menu_help">Nápověda</string>
-    <string name="desktop_menu_quit">Ukončit Amethyst</string>
-    <string name="desktop_menu_home">Domů</string>
-    <string name="desktop_menu_messages">Zprávy</string>
-    <string name="desktop_menu_notifications">Upozornění</string>
-    <string name="desktop_menu_about">O aplikaci Amethyst</string>
     <string name="desktop_menu_report_issue">Nahlásit problém</string>
     <string name="login_with_remote_signer">Přihlásit se vzdáleným podepisovatelem</string>
     <string name="login_with_signer_app">Přihlásit se přes %1$s</string>

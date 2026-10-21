@@ -4596,14 +4596,7 @@
     <string name="desktop_notification_reaction">%1$s reagiu</string>
     <string name="desktop_notification_follow">%1$s seguiu você</string>
     <string name="desktop_upload_server_not_supported">Os envios no desktop vão para servidores Blossom. Escolha um nas configurações de servidor de mídia.</string>
-    <string name="desktop_menu_file">Arquivo</string>
-    <string name="desktop_menu_go">Ir</string>
     <string name="desktop_menu_help">Ajuda</string>
-    <string name="desktop_menu_quit">Sair do Amethyst</string>
-    <string name="desktop_menu_home">Início</string>
-    <string name="desktop_menu_messages">Mensagens</string>
-    <string name="desktop_menu_notifications">Notificações</string>
-    <string name="desktop_menu_about">Sobre o Amethyst</string>
     <string name="desktop_menu_report_issue">Relatar um problema</string>
     <string name="login_with_remote_signer">Entrar com um assinador remoto</string>
     <string name="login_with_signer_app">Entrar com %1$s</string>

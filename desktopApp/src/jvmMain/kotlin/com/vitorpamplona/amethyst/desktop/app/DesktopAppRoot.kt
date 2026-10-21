@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
@@ -42,10 +43,14 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_title
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
+import com.vitorpamplona.amethyst.commons.ui.keystorage.LocalKeyStorage
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.LocalNavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.jvmDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.buildSettingsCatalog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.Dispatchers
@@ -153,13 +158,39 @@ class DesktopAppRoot(
         nav: Nav,
         sessionManager: AccountSessionManager,
     ) {
-        DisposableEffect(nav, accountViewModel) {
+        // The menu bar mirrors the drawer and the Settings screen, so it takes what they read here.
+        val destinations = LocalNavDestinations.current
+        val uriHandler = LocalUriHandler.current
+        val platform = LocalAppPlatform.current
+        val hasKeyStorage = LocalKeyStorage.current != null
+        val settingsCatalog =
+            remember(accountViewModel, nav, destinations, uriHandler, platform, hasKeyStorage) {
+                buildSettingsCatalog(
+                    nav = nav,
+                    uriHandler = uriHandler,
+                    hasPrivateKey = accountViewModel.account.settings.keyPair.privKey != null,
+                    legal = platform.legalSettingsCategory(uriHandler),
+                    // Its confirmation dialog belongs to the Settings screen; a menu has none.
+                    onResetMarmot = null,
+                    canOpen = { route -> destinations?.has(route) ?: true },
+                    hasKeyStorage = hasKeyStorage,
+                )
+            }
+
+        DisposableEffect(nav, accountViewModel, destinations, settingsCatalog) {
             navigator.nav = nav
             navigator.userPubKeyHex = accountViewModel.account.signer.pubKey
+            navigator.accountViewModel = accountViewModel
+            navigator.destinations = destinations
+            navigator.settingsCatalog = settingsCatalog
+            navigator.isDebugBuild = platform.isDebugBuild
             onDispose {
                 if (navigator.nav === nav) {
                     navigator.nav = null
                     navigator.userPubKeyHex = null
+                    navigator.accountViewModel = null
+                    navigator.destinations = null
+                    navigator.settingsCatalog = emptyList()
                 }
             }
         }
