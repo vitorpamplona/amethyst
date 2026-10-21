@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_note_id
 import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
+import com.vitorpamplona.amethyst.commons.resources.devtools_inspect_event
 import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_post
@@ -240,6 +241,15 @@ fun noteActionSections(
                     }
                 },
             )
+            // A rumor is unsigned by design, so the inspector would only report a bad signature.
+            if (!isPrivateRumor && note.event != null) {
+                add(
+                    NoteAction(MaterialSymbols.Code, stringRes(Res.string.devtools_inspect_event), group = NoteActionGroup.COPY) {
+                        nav.nav(Route.DevToolsEventInspector(note.idHex))
+                        handlers.onDismiss()
+                    },
+                )
+            }
             // Highlight this note/article as its source: opens the NIP-84 composer with the
             // nostr source pre-tagged (`a` for an addressable article, else `e`) plus the author,
             // and the passage left for the user to type or paste. Prose kinds only, and never a
