@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.timeAgoNoDot
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -183,7 +184,7 @@ private fun RelayProbeList(
 
                     RelayProbePhase.PROBING, RelayProbePhase.DONE -> {
                         Text(
-                            stringRes(Res.string.devtools_probe_progress, state.finished, state.total, state.found),
+                            pluralStringRes(Res.plurals.devtools_probe_progress, state.total, state.finished, state.total, state.found),
                             style = MaterialTheme.typography.bodySmall,
                         )
                         if (running && state.total > 0) {

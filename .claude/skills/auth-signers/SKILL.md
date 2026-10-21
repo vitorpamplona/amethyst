@@ -100,5 +100,5 @@ implemented in `amethyst/.../ui/platform/AndroidAppPlatform.kt`).
 
 - `references/nip46-remote-signer.md` — bunker request/response taxonomy, connection flow.
 - `references/nip55-android-signer.md` — foreground/background transports, command types.
-- Related skills: `nostr-expert` (crypto under the signers), `account-state` (`Account`),
+- Related skills: quartz's `nostr-expert` (crypto under the signers), `account-state` (`Account`),
   `android-expert` (activity/intent plumbing).

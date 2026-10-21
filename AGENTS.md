@@ -3,15 +3,16 @@
 ## Project Overview
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
-over to a Kotlin Multiplatform project. The main modules are: `quartz`, `commons`, `commonsUI`, `amethyst`,
-`desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. Quartz should
-contain implementations of Nostr specifications and utilities to help implement them — NIPs under
-`nipXX` packages, and whole non-NIP protocol families beside them: `marmot/` (MLS over Nostr,
-`mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
-`concord/` (`cordXX`), `openagents/` (OpenAgents NIP-CAP/NIP-EXT, `nipXxx`), `buzz/`. A new
-protocol over Nostr belongs here as a package, not as a Gradle module; `nestsClient`/`marmotQuic`
-are modules because they are transports with no Nostr in them. MLS itself is
-vitorpamplona/mls-kmp (`libs.mls.kmp`, `-PmlsKmpDir`). Commons stores
+over to a Kotlin Multiplatform project. The main modules are: `commons`, `commonsUI`, `amethyst`,
+`desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. The Nostr protocol library, **Quartz**,
+lives in its own repo, <https://github.com/vitorpamplona/quartz>, and comes from Maven Central as
+`com.vitorpamplona.quartz:quartz` (`libs.quartz`): NIPs under `nipXX` packages and whole protocol
+families (`marmot/`, `cordn/`, `contextvm/`, `concord/`, `openagents/`, `buzz/`). A new protocol over
+Nostr is a package there, not a Gradle module here; `nestsClient`/`marmotQuic` are modules because
+they are transports with no Nostr in them. Protocol work is a quartz PR, with its own rules and skills
+(`nostr-expert`, `event-store-semantics`); this repo then bumps `quartzKmp`. Until the release is out,
+build a checkout beside this repo with `-PquartzDir=../quartz`. A `quartz/…` path in these docs names a
+file in that repo. MLS is vitorpamplona/mls-kmp (`-PmlsKmpDir`). Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
@@ -26,8 +27,8 @@ Java QUIC library exists) lives in <https://github.com/vitorpamplona/quic-kmp> w
 and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). To change
 QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
 (`settings.gradle.kts`). Crypto primitives live in <https://github.com/vitorpamplona/crypto-kmp>
-(`libs.crypto`, `com.vitorpamplona.crypto.*`), used by `quartz` and quic-kmp; secp256k1 stays in
-`quartz`. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+(`libs.crypto`, `com.vitorpamplona.crypto.*`), used by quartz and quic-kmp; secp256k1 stays in
+quartz. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
@@ -42,7 +43,7 @@ implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
 
 Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — fetch
-`<NN>.md` from there for a specific one (the `nostr-expert` skill shows how to map
+`<NN>.md` from there for a specific one (quartz's `nostr-expert` skill shows how to map
 it to Quartz).
 
 ## Verify, Don't Guess
@@ -81,12 +82,6 @@ Android-only code (`amethyst/`) still needs a device or emulator.
 
 ```
 amethyst/
-├── quartz/         # Nostr KMP library (protocol only, no UI)
-│   └── src/
-│       ├── commonMain/    # Shared Nostr protocol, data models
-│       ├── androidMain/   # Android-specific (crypto, storage)
-│       ├── jvmMain/       # Desktop JVM-specific
-│       └── iosMain/       # iOS-specific
 ├── commons/        # Shared HEADLESS layer (models, state, ViewModels, relay client) — CLI-safe
 │   └── src/
 │       ├── commonMain/    # Domain models, state holders, ViewModels, services
@@ -110,7 +105,7 @@ amethyst/
 ```
 
 **Sharing Philosophy:**
-- `quartz/` = Nostr business logic, protocol, data (no UI)
+- quartz (vitorpamplona/quartz, `libs.quartz`) = Nostr business logic, protocol, data (no UI)
 - `commons/` = Shared **headless** code for every front end (Android, Desktop,
   iOS, and the headless `cli`): domain models, state holders, ViewModels, the
   relay client, shared services. It may use the Compose *runtime*
@@ -128,7 +123,7 @@ amethyst/
 - `nestsClient/` = MoQ + audio-rooms client; takes quic-kmp (`libs.quic`) as transport,
   Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
 - `marmotQuic/` = Marmot's raw-QUIC binding for agent text stream previews.
-  Takes quic-kmp for the connection and `:quartz` for the record/envelope
+  Takes quic-kmp for the connection and quartz for the record/envelope
   codecs. Not WebTransport — the binding has its own ALPNs and writes frames
   straight onto QUIC streams, so it deliberately does not reuse
   `nestsClient`'s `WebTransportSession`.
@@ -156,7 +151,7 @@ Application class (there is no per-process Application in the manifest) in **bot
   is **left unset** (touching it throws `UninitializedPropertyAccessException`).
   The sandbox runtime lives in its own module **`:nappletHost`** (depends on
   `:commons`, `:commonsUI` — the shell's web contract and Compose resources — and
-  `:quartz`; **never** `:amethyst`) so it *cannot* import
+  quartz; **never** `:amethyst`) so it *cannot* import
   `Amethyst`/`LocalCache`/`Account` — the broker-side (signer, gateways, registry)
   stays in `:amethyst` and the two halves talk over Messenger IPC.
 
@@ -202,9 +197,10 @@ skills out of the list. If a skill you need isn't in the list, open
 are changing. They cover the repo-specific knowledge only (where things live,
 house conventions, traps), not general Kotlin, Compose, Android or Nostr:
 `account-state`, `amy-expert`, `android-expert`, `auth-signers`, `compose-expert`,
-`desktop-expert`, `event-store-semantics`, `find-missing-translations`,
+`desktop-expert`, `find-missing-translations`,
 `kotlin-coroutines`, `kotlin-multiplatform`, `ngit-pr`, `nip85-trusted-assertions`,
-`nostr-expert`, `relay-client`.
+`relay-client`. Protocol skills (`nostr-expert`, `event-store-semantics`) live in the
+quartz repo with the code they describe.
 
 ## Feature Workflow
 
@@ -232,7 +228,8 @@ etc. instead of re-implementing them.
 
 **Share vs keep platform-native:**
 
-- **Share** → `quartz/commonMain/` (business logic, data models, protocol),
+- **Share** → quartz's `commonMain` (business logic, data models, protocol; a change
+  in the quartz repo),
   `commons/commonMain/` (**ViewModels** — cross-feature ones under
   `viewmodels/`, a feature's own in `<feature>/` — plus state holders, relay
   client, services — headless) and `commonsUI/commonMain/` (major UI
@@ -268,7 +265,7 @@ etc. instead of re-implementing them.
 When extracting a composable: move it to `commonsUI/commonMain/` (see
 `/compose-expert`), add expect/actual for any platform behavior (see
 `/kotlin-multiplatform`), then point both Android and Desktop at the shared
-version. `quartz/` is protocol-only — no composables.
+version. Quartz is protocol-only — no composables.
 
 ## Build Commands
 
@@ -281,23 +278,18 @@ tools/desktop-run/run-headless.sh start
 # Run Android app
 ./gradlew :amethyst:installDebug
 
-# Build Quartz for all targets
-./gradlew :quartz:build
+# Build against a local quartz checkout (../quartz) instead of the published artifact
+./gradlew -PquartzDir=../quartz :commons:jvmTest
 
 # Run the JVM tests of every module, KMP ones included. KMP modules register no
 # `test` task of their own; the root build aliases it onto their jvmTest.
 ./gradlew test
 
 # A single module. For a KMP module name jvmTest directly:
-./gradlew :quartz:jvmTest --tests "com.vitorpamplona.quartz.nip52Calendar.*"
+./gradlew :commons:jvmTest --tests "com.vitorpamplona.amethyst.commons.model.*"
 
-# NOT covered by `test`: each KMP module's OTHER targets, notably
-# :quartz:testAndroidHostTest (~3.9k tests, its own androidHostTest source set).
-# Nothing runs it today - not `test`, not pre-push, not CI - and it has 4 known
-# failures on main (NostrServerTest x3, LiveNegentropyIndexStoreTest x1), which
-# is why the alias maps to jvmTest rather than allTests. Run it explicitly when
-# touching relay-server or store code:
-./gradlew :quartz:testAndroidHostTest
+# NOT covered by `test`: each KMP module's OTHER targets (androidHostTest, the
+# native targets). CI names the ones it runs, e.g. :commonsUI:testAndroidHostTest.
 
 # Format code
 ./gradlew spotlessApply
@@ -306,7 +298,7 @@ tools/desktop-run/run-headless.sh start
 ## Dependency Licensing
 
 **MANDATORY whenever you introduce a new third-party dependency** — in *any*
-module (`quartz`, `commons`, `commonsUI`, `amethyst`, `desktopApp`, `cli`,
+module (`commons`, `commonsUI`, `amethyst`, `desktopApp`, `cli`,
 `nestsClient`, …), whether you add it to `gradle/libs.versions.toml` or to a
 module's `build.gradle.kts`: determine its license **before** wiring it in.
 Amethyst ships under the **MIT** license, so a copyleft dependency linked into a
@@ -334,11 +326,12 @@ For any GPL-family hit the decisive question is always **"is there a linking
 (Example: TarsosDSP, GPLv3 with no exception, was removed from `amethyst` and
 replaced with an in-house pitch shifter for exactly this reason.)
 
-## Quartz KMP Structure
+## Quartz
 
-Quartz uses expect/actual for platform-specific implementations (e.g. crypto
-backed by `secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on
-JVM). See `/kotlin-multiplatform` for the expect/actual and source-set patterns.
+Quartz uses expect/actual for platform-specific implementations (e.g. crypto backed by
+`secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on JVM), so app modules
+declare the JNI variant they ship, at quartz's secp256k1 version. Its client tests that need a
+real socket relay (`KtorRelay`) live in `geode/src/test`. See `/kotlin-multiplatform`.
 
 ## Strings
 
@@ -547,10 +540,7 @@ Both agents read the same rules, skills and checks. Keep it that way:
 - **Shared checks live in `tools/agent-hooks/`.** `.claude/settings.json` and
   `.codex/hooks.json` both run the same pre-push scripts there (spotless, orphaned
   translations, Compose escaping), and CI runs the same Python checks.
-- **`quartz/agent-skill/quartz/`** is a skill for *other* projects that depend on Quartz
-  (they copy it into their own skills folder; it isn't loaded here). Update it, and
-  `quartz/CLIENT.md`, when Quartz's public API changes, and compile any code you add
-  to either.
 - `tools/agent-hooks/agent_config_check.py` enforces the above (symlinks, imports,
-  descriptions, their combined size, and that every path a skill cites exists).
+  descriptions, their combined size, and that every path a skill cites exists; a
+  `quartz/…` path is checked against `../quartz` when that checkout exists).
   It runs before every push and in CI.

@@ -202,10 +202,10 @@ private fun UnknownContentLine(content: ContentShape) {
             is ContentShape.Encrypted -> stringRes(Res.string.unknown_kind_encrypted, content.scheme.name.let { it.substring(0, 3) + "-" + it.substring(3) })
             is ContentShape.Encoded ->
                 when (content.encoding) {
-                    BlobEncoding.HEX -> stringRes(Res.string.unknown_kind_encoded_hex, content.length)
-                    BlobEncoding.BASE64 -> stringRes(Res.string.unknown_kind_encoded_base64, content.length)
-                    BlobEncoding.JSON -> stringRes(Res.string.unknown_kind_encoded_json, content.length)
-                    BlobEncoding.OPAQUE -> stringRes(Res.string.unknown_kind_encoded_opaque, content.length)
+                    BlobEncoding.HEX -> pluralStringRes(Res.plurals.unknown_kind_encoded_hex, content.length, content.length)
+                    BlobEncoding.BASE64 -> pluralStringRes(Res.plurals.unknown_kind_encoded_base64, content.length, content.length)
+                    BlobEncoding.JSON -> pluralStringRes(Res.plurals.unknown_kind_encoded_json, content.length, content.length)
+                    BlobEncoding.OPAQUE -> pluralStringRes(Res.plurals.unknown_kind_encoded_opaque, content.length, content.length)
                 }
             is ContentShape.Json -> if (content.isArray) pluralStringRes(Res.plurals.unknown_kind_json_items, content.size, content.size) else null
             else -> null

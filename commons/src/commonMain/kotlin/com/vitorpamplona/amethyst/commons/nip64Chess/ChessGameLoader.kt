@@ -20,13 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
-import com.vitorpamplona.quartz.nip64Chess.ChessEngine
-import com.vitorpamplona.quartz.nip64Chess.ChessStateReconstructor
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
-import com.vitorpamplona.quartz.nip64Chess.ReconstructedGameState
-import com.vitorpamplona.quartz.nip64Chess.ReconstructionResult
-import com.vitorpamplona.quartz.nip64Chess.ViewerRole
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.utils.Log
 
@@ -96,8 +90,8 @@ object ChessGameLoader {
             gameState.markMovesAsReceived(state.appliedMoveNumbers)
 
             // Mark finished if the game has ended
-            if (state.isFinished() && state.gameStatus is com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished) {
-                val gameResult = (state.gameStatus as com.vitorpamplona.quartz.nip64Chess.GameStatus.Finished).result
+            if (state.isFinished() && state.gameStatus is GameStatus.Finished) {
+                val gameResult = (state.gameStatus as GameStatus.Finished).result
                 Log.d("chessdebug") { "[GameLoader] Marking game ${state.startEventId.take(8)} as finished: $gameResult" }
                 gameState.markAsFinished(gameResult)
             }

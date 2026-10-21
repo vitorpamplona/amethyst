@@ -77,7 +77,7 @@ dbus-java's ServiceLoader transport, and drop the signatures of jars it rewrites
 - Packages land in `desktopApp/build/compose/binaries/main/` (release variants in `main-release/`).
 - **Stop a running app before rebuilding shared modules.** A build rewrites the jars the running
   `:desktopApp:run` JVM loaded and it crashes with `NoClassDefFoundError`. Relaunch it afterwards.
-- Build fails? Check `java -version` (21+), then that `./gradlew :quartz:build` compiles.
+- Build fails? Check `java -version` (21+), then that `./gradlew :commons:compileKotlinJvm` resolves quartz and compiles.
 
 ## Verify a UI change by running it (headless too)
 

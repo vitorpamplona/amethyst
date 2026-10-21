@@ -30,14 +30,11 @@ TASKS=(
     # kotlinx.coroutines.IO import, AutoCloseable.use on skia or okio types) still resolve.
     # The metadata compiles reject them, so a break that only iOS would hit fails here on any
     # host. Keep this list in sync with the lint job in .github/workflows/build.yml.
-    :quartz:verifyKmpPurity
     :commons:verifyKmpPurity
     :commonsUI:verifyKmpPurity
-    :quartz:compileCommonMainKotlinMetadata
     :commons:compileCommonMainKotlinMetadata
     :commonsUI:compileCommonMainKotlinMetadata
     :commonsUI:compileSkikoMainKotlinMetadata
-    :quartz:jvmTest
     :commons:jvmTest
     :commonsUI:jvmTest
     # Android-only commonsUI code (e.g. SafeImeInsets) is tested here, not in jvmTest.

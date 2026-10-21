@@ -46,7 +46,7 @@ dependencies {
     implementation(libs.jetbrains.compose.components.resources)
 
     // Quartz Nostr library (will use JVM target)
-    implementation(project(":quartz"))
+    implementation(libs.quartz)
 
     // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))

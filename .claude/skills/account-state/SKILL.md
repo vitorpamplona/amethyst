@@ -48,7 +48,8 @@ Full catalog of properties, classes, kinds and packages: `references/account-sta
 ### Adding an account-scoped setting or list
 
 1. Persisted as a Nostr event? Pick the kind (NIP-51 list, NIP-78 app data, a relay list) and make
-   sure quartz has the event class (see `nostr-expert`).
+   sure quartz has the event class (see quartz's `nostr-expert` skill; a new one is a quartz
+   change, built here with `-PquartzDir=../quartz`).
 2. Add `commons/…/model/nipXX…/XState.kt` modeled on `MuteListState` (encrypted) or
    `nip51Lists/BookmarkListState.kt` (plain): pin, flow, suspend mutation helpers that build the
    event with the quartz class and sign it.
@@ -107,5 +108,5 @@ real code and traps: `references/feeds.md`.
 - `references/account-state-flow.md` — catalog of `Account` state objects, kinds and packages.
 - `references/local-cache.md` — `EventCache` structures, insertion path, lookups, pruning.
 - `references/feeds.md` — adding a feed: filter, state holder, invalidation, rendering, tests.
-- Related skills: `nostr-expert` (event classes, `EventFactory`), `relay-client` (subscriptions),
+- Related skills: quartz's `nostr-expert` (event classes, `EventFactory`), `relay-client` (subscriptions),
   `auth-signers` (how mutations sign), `compose-expert` (rendering).
