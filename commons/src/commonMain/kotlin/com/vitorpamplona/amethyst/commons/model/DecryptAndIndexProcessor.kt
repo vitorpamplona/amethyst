@@ -277,20 +277,30 @@ class DraftEventHandler(
         eventNote: Note,
         publicNote: Note,
     ) {
-        if (event.pubKey == account.signer.pubKey && !event.isDeleted() && !LocalCache.deletionIndex.hasBeenDeleted(event)) {
-            awaitPrefetch(event)
-            val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event) ?: return
+        if (event.pubKey != account.signer.pubKey || event.isDeleted() || isGone(event, eventNote)) return
 
-            // Sending a message deletes its draft in the same second as the last auto-save, so
-            // another device gets both together, and the decrypt above can take seconds with an
-            // external signer. A deletion that landed meanwhile found nothing indexed to remove:
-            // check again, and once more after indexing, since it may land in between.
-            if (LocalCache.deletionIndex.hasBeenDeleted(event)) return
-            indexDraftAsRealEvent(eventNote, rumor)
-            if (LocalCache.deletionIndex.hasBeenDeleted(event)) unindexDraft(eventNote)
-        }
+        // Sending a message deletes its draft in the same second as the last auto-save, so another
+        // device gets both together, and with an external signer the decrypt takes seconds. A
+        // deletion or a newer version that lands meanwhile found nothing indexed to replace, so
+        // each wait is followed by a check. The one before the decrypt spares the signer a prompt.
+        awaitPrefetch(event)
+        if (isGone(event, eventNote)) return
+
+        val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event) ?: return
+        if (isGone(event, eventNote)) return
+
+        indexDraftAsRealEvent(eventNote, rumor)
+        // A deletion landing between the check and the add would find the note in no room yet.
+        if (cache.deletionIndex.hasBeenDeleted(event)) unindexDraft(eventNote)
     }
 
+    /** [event] was deleted, or [eventNote] has moved on to a newer version that indexes itself. */
+    private fun isGone(
+        event: DraftWrapEvent,
+        eventNote: Note,
+    ) = cache.deletionIndex.hasBeenDeleted(event) || eventNote.event?.id != event.id
+
+    /** Reverts exactly what [indexDraftAsRealEvent] linked; the deletion already dropped the note itself. */
     private fun unindexDraft(draftEventWrap: Note) {
         draftEventWrap.replyTo?.forEach { it.removeNote(draftEventWrap) }
         draftEventWrap.inGatherers?.forEach { it.removeNote(draftEventWrap) }

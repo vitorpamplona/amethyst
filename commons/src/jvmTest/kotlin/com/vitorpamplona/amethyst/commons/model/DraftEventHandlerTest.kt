@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import com.vitorpamplona.amethyst.commons.drafts.signDraftDeletion
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedToggles
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
@@ -81,7 +82,8 @@ class DraftEventHandlerTest {
         return draft
     }
 
-    // What Account.deleteDraftInner signs when the message goes out.
+    // What the sending phone signed before signDraftDeletion: the same second as the draft, e-tagging
+    // only the empty replacement. Phones still receive these from older builds.
     private suspend fun deletionOf(draft: DraftWrapEvent): DeletionRequestEvent {
         val emptied = DraftWrapEvent.createDeletedEvent(draft.dTag(), signer, createdAt = draft.createdAt)
         return signer.sign(DeletionRequestEvent.build(listOf(emptied), createdAt = draft.createdAt))
@@ -113,6 +115,35 @@ class DraftEventHandlerTest {
             handler.add(draft, note, note)
 
             assertFalse(note in roomMessages(), "a deleted draft was put in the chat room")
+        }
+
+    @Test
+    fun aDeletionFromThisBuildThatArrivesWhileTheDraftDecryptsKeepsItOutOfTheRoom() =
+        runTest {
+            val draft = savedDraft()
+            val note = noteOf(draft)
+            val deletion = signDraftDeletion(draft, signer, now = draft.createdAt).deletion
+
+            val handler = DraftEventHandler(account(), LocalCache) { LocalCache.justConsume(deletion, null, true) }
+            handler.add(draft, note, note)
+
+            assertFalse(note in roomMessages(), "a deleted draft was put in the chat room")
+        }
+
+    @Test
+    fun aNewerVersionThatArrivesWhileTheDraftDecryptsKeepsTheOldOneOutOfItsRoom() =
+        runTest {
+            val draft = savedDraft()
+            val note = noteOf(draft)
+            val other = KeyPair().pubKey.toHexKey()
+            // The user changed the recipient on another device: same d-tag, another room.
+            val rumor = RumorAssembler.assembleRumor(signer.pubKey, ChatMessageEvent.build("hello", listOf(PTag(other))))
+            val newer = DraftWrapEvent.create(draft.dTag(), rumor, signer, createdAt = draft.createdAt + 1)
+
+            val handler = DraftEventHandler(account(), LocalCache) { LocalCache.justConsume(newer, null, true) }
+            handler.add(draft, note, note)
+
+            assertFalse(note in roomMessages(), "an outdated version was put in its old room")
         }
 
     @Test

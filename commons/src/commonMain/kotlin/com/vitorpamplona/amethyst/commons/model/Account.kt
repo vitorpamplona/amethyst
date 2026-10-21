@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.defaults.Constants
+import com.vitorpamplona.amethyst.commons.drafts.signDraftDeletion
 import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
 import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
 import com.vitorpamplona.amethyst.commons.marmot.MarmotPushCoordinator
@@ -3025,24 +3026,18 @@ class Account(
         val draftEvent = draftNote?.event as? DraftWrapEvent
         if (draftEvent == null || draftEvent.isDeleted()) return
 
-        val draftTag = draftNote.dTag()
         val extraRelays = draftNote.relays
 
-        // Strictly newer than the draft: Post often lands in the same second as the last auto-save,
-        // and on a created_at tie the lower id wins, so a relay that ignores the kind-5's `a` tag
-        // could keep the draft over its empty replacement.
-        val createdAt = maxOf(TimeUtils.now(), draftEvent.createdAt + 1)
-        val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer, createdAt)
-        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(deletedDraft), createdAt))
+        val signed = signDraftDeletion(draftEvent, signer)
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
 
-        cache.justConsumeMyOwnEvent(deletedDraft)
-        cache.justConsumeMyOwnEvent(deletionEvent)
+        cache.justConsumeMyOwnEvent(signed.emptied)
+        cache.justConsumeMyOwnEvent(signed.deletion)
 
         if (relayList.isNotEmpty()) {
-            client.publish(deletedDraft, relayList)
-            client.publish(deletionEvent, relayList)
+            client.publish(signed.emptied, relayList)
+            client.publish(signed.deletion, relayList)
         }
     }
 
