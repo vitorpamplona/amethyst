@@ -82,6 +82,21 @@ interface INostrClient : AutoCloseable {
      */
     fun ensureInPool(url: NormalizedRelayUrl) { }
 
+    /**
+     * Keeps [url] connected whatever else wants it: the client dials it, holds the socket while
+     * nothing is subscribed, counted or pending there, and redials it after the relay hangs up,
+     * as it does for a relay with an open subscription. For a caller that talks to one relay in
+     * bursts, a publisher forwarding batches say, which otherwise loses its socket between two of
+     * them and pays a fresh dial (and, on a NIP-42 relay, a fresh AUTH) for the next.
+     *
+     * Counted: each call needs its own [releaseConnection], and the relay is let go when the last
+     * one is released. Defaults to a no-op for a client without a pool.
+     */
+    fun keepConnected(url: NormalizedRelayUrl) { }
+
+    /** Undoes one [keepConnected]; once none is left, [url] stays only while something else wants it. */
+    fun releaseConnection(url: NormalizedRelayUrl) { }
+
     fun isActive(): Boolean
 
     /**

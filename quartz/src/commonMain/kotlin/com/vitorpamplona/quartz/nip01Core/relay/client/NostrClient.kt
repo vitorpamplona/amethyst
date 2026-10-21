@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
@@ -152,6 +153,9 @@ class NostrClient(
     // calls [disconnect].
     private val isActiveFlow = MutableStateFlow(true)
 
+    /** Relays [keepConnected] holds, with how many holds each has; wanted like a subscription's. */
+    private val keptRelays = MutableStateFlow(mapOf<NormalizedRelayUrl, Int>())
+
     /**
      * Whatches for any changes in the relay list from subscriptions or outbox
      * and updates the relayPool as needed.
@@ -162,8 +166,9 @@ class NostrClient(
             activeRequests.desiredRelays,
             activeCounts.relays,
             eventOutbox.relays,
-        ) { reqs, counts, outbox ->
-            reqs + counts + outbox
+            keptRelays,
+        ) { reqs, counts, outbox, kept ->
+            reqs + counts + outbox + kept.keys
         }.sample(300)
             .onEach {
                 // The sample only says when to look. What the pool keeps is read now, and read
@@ -177,14 +182,18 @@ class NostrClient(
             }.stateIn(
                 scope,
                 SharingStarted.Eagerly,
-                activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value,
+                wantedRelays(),
             )
 
-    /** Every relay a subscription, a count or a pending publish wants, as of now. */
-    private fun wantedRelays(): Set<NormalizedRelayUrl> = activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value
+    /** Every relay a subscription, a count, a pending publish or a [keepConnected] wants, as of now. */
+    private fun wantedRelays(): Set<NormalizedRelayUrl> = activeRequests.desiredRelays.value + activeCounts.relays.value + eventOutbox.relays.value + keptRelays.value.keys
 
     /** [wantedRelays] for one relay, without building the union. */
-    private fun isWanted(relay: NormalizedRelayUrl): Boolean = relay in activeRequests.desiredRelays.value || relay in activeCounts.relays.value || relay in eventOutbox.relays.value
+    private fun isWanted(relay: NormalizedRelayUrl): Boolean =
+        relay in activeRequests.desiredRelays.value ||
+            relay in activeCounts.relays.value ||
+            relay in eventOutbox.relays.value ||
+            relay in keptRelays.value
 
     // Reconnects all relays that may have disconnected
     override fun connect() {
@@ -321,6 +330,22 @@ class NostrClient(
         // Membership only. Connecting is reconnect()'s job, and going through the pool's
         // own create keeps the relay client identical to the one publish would have made.
         relayPool.createRelayIfAbsent(url)
+    }
+
+    override fun keepConnected(url: NormalizedRelayUrl) {
+        keptRelays.update { it + (url to (it[url] ?: 0) + 1) }
+        // Joining the pool (published, so availableRelaysFlow lists it) does not dial; the
+        // reconnect does, as it does for a new subscription.
+        relayPool.addRelay(url)
+        if (isActive()) reconnect(onlyIfChanged = true)
+    }
+
+    override fun releaseConnection(url: NormalizedRelayUrl) {
+        // The next sample drops the relay if nothing else wants it.
+        keptRelays.update { kept ->
+            val holds = kept[url] ?: return@update kept
+            if (holds <= 1) kept - url else kept + (url to holds - 1)
+        }
     }
 
     override fun subscribe(
@@ -479,7 +504,7 @@ class NostrClient(
     ) {
         activeRequests.onIncomingMessage(relay, msg)
         activeCounts.onIncomingMessage(relay, msg)
-        eventOutbox.onIncomingMessage(relay.url, msg)
+        eventOutbox.onIncomingMessage(relay.url, msg) { authMayLand(relay.url) }
 
         // NIP-01: a `rate-limited:` refusal may say how long to back off. Hand the refused REQ
         // or EVENT straight back to the relay, whose [RateLimitGate] holds it until the back-off
@@ -564,6 +589,12 @@ class NostrClient(
     }
 
     override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
+
+    /**
+     * Whether an AUTH for [relay] can still land, so that its `auth-required:` refusal means
+     * "later": someone answers challenges, and this relay's last AUTH did not fail.
+     */
+    private fun authMayLand(relay: NormalizedRelayUrl): Boolean = authResponders.value.any { it.authSnapshot(relay).phase != RelayAuthSnapshot.Phase.AUTH_FAILED }
 
     override fun authResponders(): Set<IAuthStatus> = authResponders.value
 

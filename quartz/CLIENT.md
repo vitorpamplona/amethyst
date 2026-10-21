@@ -462,6 +462,8 @@ Things worth knowing:
 6. On disconnection, exponential backoff retries the connection
 7. On reconnection, filters are re-sent and events re-delivered
 
+A relay stays in the pool only while something wants it: an open subscription, a pending COUNT, or an EVENT still waiting for its `OK`. Once none is left it is dropped at the next pool update (a few hundred ms), which is right for an app that touches many relays briefly. A caller that talks to one relay in bursts, and would otherwise redial (and re-AUTH) between them, holds it with `client.keepConnected(url)`: the relay is dialed, kept, and redialed after it hangs up, until a matching `client.releaseConnection(url)`. Holds are counted, so two owners of one relay each release their own.
+
 `NostrClient` starts active by default and connects on demand — there's no need to call `client.connect()` at startup. That method only matters for resuming after a prior `disconnect()` (e.g., a user-toggled offline mode). Conversely, `client.disconnect()` is what you want when the app is going to background or being shut down: it tears down every socket and stops the auto-reconnect loop.
 
 ### Subscription Flow

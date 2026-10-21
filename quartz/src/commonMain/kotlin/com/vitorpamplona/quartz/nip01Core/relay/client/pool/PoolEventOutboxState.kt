@@ -58,6 +58,9 @@ class PoolEventOutboxState(
     // Guarded by [lock]; created on the first `rate-limited:` refusal with a back-off. See [newResponse].
     private var backOffs: HashMap<NormalizedRelayUrl, Int>? = null
 
+    // Guarded by [lock]; created on the first `auth-required:` that keeps the event. See [newResponse].
+    private var authWaits: HashMap<NormalizedRelayUrl, Int>? = null
+
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
         lock.withLock {
             remaining.clear()
@@ -120,12 +123,19 @@ class PoolEventOutboxState(
      * Two answers say "later", not "no", and keep the event pending: `auth-required:`, re-sent once
      * the AUTH lands, and a `rate-limited:` that states its back-off, re-sent after it (bounded by
      * [MAX_BACK_OFFS]).
+     *
+     * An `auth-required:` is "later" only while an AUTH can still land: [authMayLand] says whether
+     * anyone will answer this relay's challenge (a responder is attached, and this relay's last
+     * AUTH did not fail). Without that it is the verdict. Even with it, at most [MAX_AUTH_WAITS]
+     * such answers keep the event: each one used to reset the retry budget, so a relay demanding an
+     * AUTH nobody signs kept the event in memory, and re-sent it on every reconnect, forever.
      */
     fun newResponse(
         url: NormalizedRelayUrl,
         success: Boolean,
         message: String,
         retryAfterMs: Long? = null,
+        authMayLand: () -> Boolean = { true },
     ) {
         lock.withLock {
             if (!success && retryAfterMs != null && (backOffs?.get(url) ?: 0) < MAX_BACK_OFFS) {
@@ -137,7 +147,7 @@ class PoolEventOutboxState(
                 val b = backOffs ?: HashMap<NormalizedRelayUrl, Int>(2).also { backOffs = it }
                 b[url] = (b[url] ?: 0) + 1
                 failures?.remove(url)
-            } else if (!success && message.isAuthRequired()) {
+            } else if (!success && message.isAuthRequired() && (authWaits?.get(url) ?: 0) < MAX_AUTH_WAITS && authMayLand()) {
                 // NIP-42 AUTH challenge in flight. The relay responded, so it's up and simply wants
                 // auth first: RelayAuthenticator signs, the relay re-issues OK, and syncFilters()
                 // re-pumps this outbox to retry the publish. Reset the retry budget for this relay
@@ -145,11 +155,14 @@ class PoolEventOutboxState(
                 // the cap and drop the event before AUTH lands: newTry() (the send path) grows
                 // `tries` and is NOT auth-aware. The relay stays in [remaining]: the event must stay
                 // pending for this relay until AUTH unlocks it.
+                val w = authWaits ?: HashMap<NormalizedRelayUrl, Int>(2).also { authWaits = it }
+                w[url] = (w[url] ?: 0) + 1
                 failures?.remove(url)
             } else {
                 drop(url)
                 failures?.remove(url)
                 backOffs?.remove(url)
+                authWaits?.remove(url)
             }
         }
     }
@@ -157,6 +170,9 @@ class PoolEventOutboxState(
     companion object {
         /** `rate-limited:` back-offs one relay may state for one event before they count as failures. */
         const val MAX_BACK_OFFS = 10
+
+        /** `auth-required:` answers that keep one event pending for one relay before it is refused for good. */
+        const val MAX_AUTH_WAITS = 10
     }
 
     /**
