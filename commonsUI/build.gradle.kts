@@ -281,20 +281,21 @@ tasks.named("compileAndroidMain") { mustRunAfter("compileKotlinJvm") }
 // NoteComposeKindCoverageTest checks that every class quartz's EventFactory builds has a feed card,
 // and reads that list from EventFactory's source. quartz lives in its own repo, so the test gets the
 // source from the checkout -PquartzDir builds, or else from quartz's published JVM sources jar.
-val quartzSources: Configuration by configurations.creating {
-    isCanBeConsumed = false
-    isTransitive = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
-        attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
-        attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
-        attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
-        attribute(KotlinPlatformType.attribute, KotlinPlatformType.jvm)
+val quartzSources =
+    configurations.register("quartzSources") {
+        isCanBeConsumed = false
+        isTransitive = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
+            attribute(KotlinPlatformType.attribute, KotlinPlatformType.jvm)
+        }
     }
-}
 
 dependencies {
-    quartzSources(libs.quartz)
+    "quartzSources"(libs.quartz)
 }
 
 tasks.named<Test>("jvmTest") {
@@ -304,7 +305,7 @@ tasks.named<Test>("jvmTest") {
             checkout
         } else {
             inputs.files(quartzSources)
-            quartzSources.elements.map { it.single().asFile.path }
+            quartzSources.flatMap { it.elements }.map { it.single().asFile.path }
         }
     jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dquartz.sources=${sources.get()}") })
 }
