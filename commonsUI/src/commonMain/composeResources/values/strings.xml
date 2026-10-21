@@ -4651,14 +4651,11 @@
     <string name="desktop_notification_reaction">%1$s reacted</string>
     <string name="desktop_notification_follow">%1$s followed you</string>
     <string name="desktop_upload_server_not_supported">Desktop uploads go to Blossom servers. Pick one in your media server settings.</string>
-    <string name="desktop_menu_file">File</string>
-    <string name="desktop_menu_go">Go</string>
     <string name="desktop_menu_help">Help</string>
-    <string name="desktop_menu_quit">Quit Amethyst</string>
-    <string name="desktop_menu_home">Home</string>
-    <string name="desktop_menu_messages">Messages</string>
-    <string name="desktop_menu_notifications">Notifications</string>
-    <string name="desktop_menu_about">About Amethyst</string>
+    <string name="desktop_menu_website">Amethyst Website</string>
+    <string name="desktop_menu_window">Window</string>
+    <string name="desktop_menu_minimize">Minimize</string>
+    <string name="desktop_menu_zoom">Zoom</string>
     <string name="desktop_menu_report_issue">Report an issue</string>
     <string name="login_with_remote_signer">Login with a remote signer</string>
     <string name="login_with_signer_app">Login with %1$s</string>
@@ -7550,10 +7547,22 @@
     <string name="unknown_kind_title">Kind %1$d</string>
     <string name="unknown_kind_unsupported">Unsupported</string>
     <string name="unknown_kind_encrypted">Encrypted content (%1$s)</string>
-    <string name="unknown_kind_encoded_hex">Hex data, %1$d characters</string>
-    <string name="unknown_kind_encoded_base64">Base64 data, %1$d characters</string>
-    <string name="unknown_kind_encoded_json">JSON data, %1$d characters</string>
-    <string name="unknown_kind_encoded_opaque">Encoded data, %1$d characters</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hex data, %1$d character</item>
+        <item quantity="other">Hex data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Base64 data, %1$d character</item>
+        <item quantity="other">Base64 data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">JSON data, %1$d character</item>
+        <item quantity="other">JSON data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Encoded data, %1$d character</item>
+        <item quantity="other">Encoded data, %1$d characters</item>
+    </plurals>
     <plurals name="unknown_kind_json_items">
         <item quantity="one">JSON list with %1$d item</item>
         <item quantity="other">JSON list with %1$d items</item>
@@ -8277,23 +8286,16 @@
     <string name="devtools_kind_lookup_desc">Type a kind number to see its name and every way clients encode it, with real examples</string>
     <string name="devtools_kind_lookup_field">Kind number</string>
     <string name="devtools_kind_lookup_button">Look up</string>
-    <string name="devtools_kind_lookup_explainer">Samples recent events of this kind from many relays and groups them by the client that wrote them, or by shape (tag names and content format), to show every way the kind is encoded.</string>
-    <string name="devtools_kind_sampled">%1$d events from %2$d relays (%3$d of %4$d answered)</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s from %2$d of %3$d relay</item>
+        <item quantity="other">%1$s from %2$d of %3$d relays</item>
+    </plurals>
     <string name="devtools_kind_by_client">By client</string>
     <string name="devtools_kind_by_shape">By shape</string>
     <string name="devtools_kind_no_client">No client tag</string>
     <string name="devtools_kind_shape_n">Shape %1$d</string>
     <string name="devtools_kind_from_clients">From: %1$s</string>
-    <string name="devtools_kind_content">Content: %1$s</string>
-    <string name="devtools_kind_tag_values">values: %1$s</string>
     <string name="devtools_kind_more">+%1$d more</string>
-    <string name="devtools_kind_hide_rare">Hide rare tags</string>
-    <plurals name="devtools_kind_rare_tags">
-        <item quantity="one">+%1$d rare tag</item>
-        <item quantity="other">+%1$d rare tags</item>
-    </plurals>
-    <string name="devtools_kind_show_example">Show example</string>
-    <string name="devtools_kind_hide_example">Hide example</string>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d event</item>
         <item quantity="other">%1$d events</item>
@@ -8302,11 +8304,6 @@
         <item quantity="one">%1$d author</item>
         <item quantity="other">%1$d authors</item>
     </plurals>
-    <string name="devtools_format_empty">empty</string>
-    <string name="devtools_format_json_object">JSON object</string>
-    <string name="devtools_format_json_array">JSON array</string>
-    <string name="devtools_format_encrypted">encrypted</string>
-    <string name="devtools_format_text">text</string>
     <string name="devtools_kind_custom">Crawl kind %1$d</string>
     <string name="devtools_kind_usage_title">Kind %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>
@@ -8314,7 +8311,10 @@
     <string name="devtools_probe_start">Crawl</string>
     <string name="devtools_probe_stop">Stop</string>
     <string name="devtools_probe_discovering">Finding relays from NIP-66 monitors…</string>
-    <string name="devtools_probe_progress">%1$d of %2$d relays answered, found on %3$d</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d of %2$d relay answered, found on %3$d</item>
+        <item quantity="other">%1$d of %2$d relays answered, found on %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Newest event</string>
     <string name="devtools_probe_none_found">No relay returned a matching event</string>
     <string name="devtools_probe_found_only">Only relays that have it</string>

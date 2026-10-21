@@ -10,7 +10,7 @@ accompanistAdaptive = "0.37.3"
 # LargeCache/ConcurrentHashCache — they read those views directly and through the
 # stdlib Map operators (filter/map/groupBy/associate/count). Bumping needs a port to
 # the new forEach/forEachKey/forEachValue API, verified on an Apple target.
-composeMultiplatform = "1.12.1"
+composeMultiplatform = "1.12.2"
 activityCompose = "1.13.0"
 # 9.4.0's PerModuleBundleTask rejects an AAB entry whose name contains a colon, which every
 # .kotlin_module named after a Gradle project path has. Worked around in amethyst/build.gradle.kts
@@ -28,29 +28,28 @@ biometricKtx = "1.4.0-alpha02"
 coil = "3.6.3"
 composeBom = "2026.09.00"
 tracingPerfetto = "1.0.1"
-composeRuntimeAnnotation = "1.12.1"
 coreKtx = "1.19.1"
 datastore = "1.2.1"
 espressoCore = "3.7.0"
-firebaseBom = "34.19.0"
+firebaseBom = "35.0.2"
 fragmentKtx = "1.9.1"
 gms = "4.5.0"
 healthConnect = "1.1.0"
-jackson = "2.22.3"
-jacksonModuleKotlin = "2.22.3"
+jackson = "2.22.4"
+jacksonModuleKotlin = "2.22.4"
 jna = "5.19.1"
 # Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
-lucene = "10.5.1"
+lucene = "10.5.2"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
 kodeinEmoji = "2.5.0"
 junit = "4.13.2"
 kchesslib = "1.0.5"
-kotlin = "2.4.20"
+kotlin = "2.4.21"
 kotlinxCollectionsImmutable = "0.5.2"
 kotlinxCoroutinesCore = "1.11.0"
-kotlinxSerialization = "1.11.0"
+kotlinxSerialization = "1.12.0"
 genaiProofreading = "1.0.0-beta1"
 genaiPrompt = "1.0.0-beta4"
 genaiRewriting = "1.0.0-beta1"
@@ -75,12 +74,12 @@ material3 = "1.12.0-alpha03"
 media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
-negentropyKmp = "v1.2.0"
-# RFC 9420 MLS engine, split out of quartz/mls into vitorpamplona/mls-kmp.
-mlsKmp = "1.0.0"
-# Crypto primitives (SHA, HMAC, HKDF, AES, ChaCha20, X25519, Ed25519), split out of quartz into
-# vitorpamplona/crypto-kmp.
+# The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
+quartzKmp = "2.0.0"
+# Crypto primitives (vitorpamplona/crypto-kmp) and the MLS engine (vitorpamplona/mls-kmp) come with
+# quartz; commons also declares them because it imports them directly. Keep them at quartz's versions.
 cryptoKmp = "1.0.0"
+mlsKmp = "1.0.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.0.1"
 # Navigation 3, the Compose Multiplatform build (Apache-2.0): Android, desktop and iOS. The
@@ -92,17 +91,18 @@ lifecycleNavigation3 = "2.11.0"
 okhttp = "5.5.0"
 osmdroid = "6.1.20"
 runner = "1.7.0"
+# The JNI bindings must match the secp256k1-kmp version quartz is built against (its secp256k1Kmp).
 secp256k1KmpJniAndroid = "0.24.0"
 schnorr256k1Kmp = "1.0.5"
 securityCryptoKtx = "1.1.0"
 slf4j = "2.0.20"
 sonarqubeGradlePlugin = "7.5.0.8588"
-spotless = "8.10.3"
+spotless = "8.10.4"
 streamWebrtcAndroid = "1.3.10"
 translate = "17.0.3"
-jetbrainsCompose = "1.12.1"
+jetbrainsCompose = "1.12.2"
 unifiedpush = "3.0.10"
-playServicesCast = "22.3.1"
+playServicesCast = "23.0.0"
 vico-charts-compose = "3.3.1"
 zelory = "3.0.1"
 pdfbox = "3.0.8"
@@ -118,12 +118,11 @@ privacysandboxUi = "1.0.0-alpha17"
 windowCoreAndroid = "1.5.1"
 workRuntime = "2.12.0"
 androidxCamera = "1.6.2"
-androidxCollection = "1.6.0"
+androidxCollection = "1.7.0"
 androidxProfileinstaller = "1.4.1"
 androidxExifinterface = "1.4.2"
-kotlinTest = "2.4.20"
+kotlinTest = "2.4.21"
 core = "1.7.0"
-mavenPublish = "0.37.0"
 sqlite = "2.7.1"
 ktor = "3.6.0"
 fourkoma = "1.2.0"
@@ -160,7 +159,6 @@ androidx-compose-runtime-tracing = { group = "androidx.compose.runtime", name = 
 androidx-tracing-perfetto = { group = "androidx.tracing", name = "tracing-perfetto", version.ref = "tracingPerfetto" }
 androidx-tracing-perfetto-binary = { group = "androidx.tracing", name = "tracing-perfetto-binary", version.ref = "tracingPerfetto" }
 androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
-androidx-compose-runtime-annotation = { group = "androidx.compose.runtime", name = "runtime-annotation", version.ref = "composeRuntimeAnnotation" }
 androidx-collection = { group = "androidx.collection", name = "collection", version.ref = "androidxCollection" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "androidxExifinterface" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -223,7 +221,6 @@ google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewri
 google-mlkit-genai-image-description = { group = "com.google.mlkit", name = "genai-image-description", version.ref = "genaiImageDescription" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
-jackson-databind = { group = "com.fasterxml.jackson.core", name = "jackson-databind", version.ref = "jackson" }
 jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
 jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
 apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "agp" }
@@ -234,7 +231,6 @@ kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", versio
 kmp-tor-resource-exec-tor = { group = "io.matthewnelson.kmp-tor", name = "resource-exec-tor", version.ref = "kmpTorResource" }
 kodein-emoji-compose-m3 = { group = "org.kodein.emoji", name = "emoji-compose-m3", version.ref = "kodeinEmoji" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
-kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 kotlinx-collections-immutable = { group = "org.jetbrains.kotlinx", name = "kotlinx-collections-immutable", version.ref = "kotlinxCollectionsImmutable" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinxCoroutinesCore" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinxCoroutinesCore" }
@@ -253,10 +249,11 @@ okio = { group = "com.squareup.okio", name = "okio", version.ref = "okio" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
-negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", version.ref = "negentropyKmp" }
-mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
+quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartzKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
+mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
 quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
+kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }
@@ -264,7 +261,6 @@ ktor-server-core = { group = "io.ktor", name = "ktor-server-core", version.ref =
 ktor-server-cio = { group = "io.ktor", name = "ktor-server-cio", version.ref = "ktor" }
 ktor-server-websockets = { group = "io.ktor", name = "ktor-server-websockets", version.ref = "ktor" }
 fourkoma = { module = "cc.ekblad:4koma", version.ref = "fourkoma" }
-secp256k1-kmp-common = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-android = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-android", version.ref = "secp256k1KmpJniAndroid" }
 secp256k1-kmp-jni-jvm = { group = "fr.acinq.secp256k1", name = "secp256k1-kmp-jni-jvm", version.ref = "secp256k1KmpJniAndroid" }
 schnorr256k1-kmp = { group = "com.vitorpamplona.schnorr256k1", name = "schnorr256k1-kmp", version.ref = "schnorr256k1Kmp" }
@@ -288,7 +284,6 @@ kotlin-stdlib = { group = "org.jetbrains.kotlin", name = "kotlin-stdlib", versio
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlinTest" }
 androidx-core = { group = "androidx.test", name = "core", version.ref = "core" }
 androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
-androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-bundled-jvm = { module = "androidx.sqlite:sqlite-bundled-jvm", version.ref = "sqlite" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "workRuntime" }
 androidx-health-connect-client = { group = "androidx.health.connect", name = "connect-client", version.ref = "healthConnect" }
@@ -306,6 +301,5 @@ jetbrainsComposeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version
 serialization = { id = 'org.jetbrains.kotlin.plugin.serialization', version.ref = 'kotlin' }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 androidKotlinMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-vanniktech-mavenPublish = { id = "com.vanniktech.maven.publish", version.ref = "mavenPublish" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 googleKsp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

@@ -4652,14 +4652,7 @@
     <string name="desktop_notification_reaction">%1$s zareagował</string>
     <string name="desktop_notification_follow">%1$s zaczął cię obserwować</string>
     <string name="desktop_upload_server_not_supported">Pliki przesyłane z komputera trafiają na serwery Blossom. Wybierz jeden z nich w ustawieniach serwera multimediów.</string>
-    <string name="desktop_menu_file">Plik</string>
-    <string name="desktop_menu_go">Przejdź</string>
     <string name="desktop_menu_help">Pomoc</string>
-    <string name="desktop_menu_quit">Zamknij Ametyst</string>
-    <string name="desktop_menu_home">Strona główna</string>
-    <string name="desktop_menu_messages">Wiadomości</string>
-    <string name="desktop_menu_notifications">Powiadomienia</string>
-    <string name="desktop_menu_about">O aplikacji Amethyst</string>
     <string name="desktop_menu_report_issue">Zgłoś problem</string>
     <string name="login_with_remote_signer">Zaloguj się przy użyciu zdalnego sygnatariusza</string>
     <string name="login_with_signer_app">Zaloguj się za pomocą %1$s</string>

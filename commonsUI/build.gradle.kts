@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 
 // `:commonsUI` is the Compose half of the shared layer: every composable,
 // icon, theme, Coil fetcher and Compose-resource (strings/fonts/files) that the
@@ -73,7 +74,9 @@ kotlin {
                 // The headless half. `api` because every composable here takes
                 // or returns commons types (Note, User, ViewModels, states).
                 api(project(":commons"))
-                api(project(":quartz"))
+                api(libs.quartz)
+                // Imported directly; see the same line in commons/build.gradle.kts.
+                implementation(libs.crypto)
 
                 // Compose Multiplatform
                 implementation(libs.jetbrains.compose.ui)
@@ -274,3 +277,35 @@ apply(from = rootProject.file("gradle/kmp-purity.gradle.kts"))
 // and needed twice the heap: CI's 4g Kotlin daemon (build.yml, test-and-build-android) ran out of
 // memory on a cold build, and even 8g thrashed in full GCs. In sequence each one fits.
 tasks.named("compileAndroidMain") { mustRunAfter("compileKotlinJvm") }
+
+// NoteComposeKindCoverageTest checks that every class quartz's EventFactory builds has a feed card,
+// and reads that list from EventFactory's source. quartz lives in its own repo, so the test gets the
+// source from the checkout -PquartzDir builds, or else from quartz's published JVM sources jar.
+val quartzSources =
+    configurations.register("quartzSources") {
+        isCanBeConsumed = false
+        isTransitive = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.DOCUMENTATION))
+            attribute(DocsType.DOCS_TYPE_ATTRIBUTE, objects.named(DocsType.SOURCES))
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage.JAVA_RUNTIME))
+            attribute(TargetJvmEnvironment.TARGET_JVM_ENVIRONMENT_ATTRIBUTE, objects.named(TargetJvmEnvironment.STANDARD_JVM))
+            attribute(KotlinPlatformType.attribute, KotlinPlatformType.jvm)
+        }
+    }
+
+dependencies {
+    "quartzSources"(libs.quartz)
+}
+
+tasks.named<Test>("jvmTest") {
+    val checkout = providers.gradleProperty("quartzDir").map { rootProject.file(it).resolve("quartz/src/commonMain/kotlin").path }
+    val sources: Provider<String> =
+        if (checkout.isPresent) {
+            checkout
+        } else {
+            inputs.files(quartzSources)
+            quartzSources.flatMap { it.elements }.map { it.single().asFile.path }
+        }
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dquartz.sources=${sources.get()}") })
+}

@@ -95,15 +95,6 @@ allprojects {
 }
 
 subprojects {
-    // The published quic artifact depends on the published quartz. Resolve that to this
-    // checkout's :quartz so every module builds against one quartz, the one in this tree,
-    // instead of carrying a second copy of its classes from Maven Central.
-    configurations.configureEach {
-        resolutionStrategy.dependencySubstitution {
-            substitute(module("com.vitorpamplona.quartz:quartz")).using(project(":quartz"))
-        }
-    }
-
     afterEvaluate {
         // The Kotlin Multiplatform plugin never registers a plain `test` task: it creates one
         // task per target (jvmTest, androidUnitTest, linuxX64Test, ...) plus the `allTests`
@@ -120,10 +111,9 @@ subprojects {
         // pre-push hook and CI already run for these modules, so the alias matches the coverage
         // they expect rather than inventing a third definition of "the tests".
         //
-        // The flip side: a KMP module's non-JVM targets stay outside `test`. :quartz's
-        // androidHostTest source set (~3.9k tests) is the big one - nothing runs it today and it
-        // is red on main, so aliasing onto allTests would have turned `test` red for everyone
-        // rather than fixing anything. Tracked in AGENTS.md's Build Commands section.
+        // The flip side: a KMP module's non-JVM targets stay outside `test` (CI names the ones
+        // it runs, like :commonsUI:testAndroidHostTest). quartz, whose androidHostTest suite was
+        // the reason this is not allTests, now lives in vitorpamplona/quartz.
         if (plugins.hasPlugin("org.jetbrains.kotlin.multiplatform") &&
             tasks.findByName("test") == null &&
             tasks.findByName("jvmTest") != null

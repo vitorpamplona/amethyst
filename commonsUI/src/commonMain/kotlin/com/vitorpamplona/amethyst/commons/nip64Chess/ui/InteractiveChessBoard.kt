@@ -50,7 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
 import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor

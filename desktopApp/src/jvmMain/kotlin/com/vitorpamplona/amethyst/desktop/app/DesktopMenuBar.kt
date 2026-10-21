@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.desktop.app
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -37,9 +40,9 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.MenuScope
+import androidx.compose.ui.window.WindowPlacement
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.bookmarks
 import com.vitorpamplona.amethyst.commons.resources.deck_add_column
 import com.vitorpamplona.amethyst.commons.resources.deck_close_column
 import com.vitorpamplona.amethyst.commons.resources.deck_focus_column
@@ -47,26 +50,25 @@ import com.vitorpamplona.amethyst.commons.resources.deck_mode
 import com.vitorpamplona.amethyst.commons.resources.deck_move_left
 import com.vitorpamplona.amethyst.commons.resources.deck_move_right
 import com.vitorpamplona.amethyst.commons.resources.deck_save_workspace
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_about
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_file
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_go
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_help
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_home
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_messages
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_notifications
-import com.vitorpamplona.amethyst.commons.resources.desktop_menu_quit
+import com.vitorpamplona.amethyst.commons.resources.desktop_menu_minimize
 import com.vitorpamplona.amethyst.commons.resources.desktop_menu_report_issue
-import com.vitorpamplona.amethyst.commons.resources.drafts
-import com.vitorpamplona.amethyst.commons.resources.new_post
-import com.vitorpamplona.amethyst.commons.resources.profile
-import com.vitorpamplona.amethyst.commons.resources.screen_search_title
-import com.vitorpamplona.amethyst.commons.resources.settings
+import com.vitorpamplona.amethyst.commons.resources.desktop_menu_website
+import com.vitorpamplona.amethyst.commons.resources.desktop_menu_window
+import com.vitorpamplona.amethyst.commons.resources.desktop_menu_zoom
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommand
 import com.vitorpamplona.amethyst.commons.ui.navigation.deck.DeckCommandBus
+import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.DrawerSectionsNavigateFirst
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.platform.Platform
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
+import com.vitorpamplona.quartz.utils.Log
+import java.awt.Desktop
+import java.awt.desktop.QuitStrategy
 
 /**
  * The window's navigator, once a logged-in shell exists: [DesktopAppRoot] sets it from inside the
@@ -75,6 +77,16 @@ import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 class DesktopNavigator {
     var nav by mutableStateOf<INav?>(null)
     var userPubKeyHex by mutableStateOf<String?>(null)
+
+    /** What the menu bar mirrors the drawer from: the shell's account and the screens it has. */
+    var accountViewModel by mutableStateOf<AccountViewModel?>(null)
+    var destinations by mutableStateOf<NavDestinations?>(null)
+
+    /** The Settings screen's categories, built inside the shell where its links and platform live. */
+    var settingsCatalog by mutableStateOf<List<SettingsCategory>>(emptyList())
+
+    /** Debug builds list the chess row under Create, as the drawer does. */
+    var isDebugBuild by mutableStateOf(false)
 
     // The last shortcut run and when it last fired, to tell a held key's auto-repeat from a press.
     internal var lastShortcut: Key? = null
@@ -88,13 +100,21 @@ class DesktopNavigator {
     fun goTop(route: Route) {
         nav?.navBottomBar(route)
     }
+
+    /** A destination picked from the drawer, opened the way its drawer row opens it. */
+    fun goDrawer(route: () -> Route) {
+        nav?.run {
+            closeDrawer()
+            navDrawer { route() }
+        }
+    }
 }
 
 /**
  * What the menu bar and the keyboard shortcuts do: Cmd+key on macOS, Ctrl+key elsewhere. Everything
  * but quitting needs a logged-in shell.
  */
-private enum class Command(
+internal enum class Command(
     val key: Key,
     val shift: Boolean = false,
     val alt: Boolean = false,
@@ -200,6 +220,9 @@ fun DesktopNavigator.handleShortcut(
  * The macOS menu bar, at the top of the screen. Linux and Windows get none: Swing would draw it
  * inside the window, in a look neither OS uses (GNOME apps have no menu bar), and everything in it
  * is in the drawer; their shortcuts go through [handleShortcut].
+ *
+ * Once logged in, each drawer section is a menu ([drawerMenus]), with the settings categories as
+ * submenus of System. Settings… and Quit are the app menu's own (see [installAppMenuHandlers]).
  */
 @Composable
 fun FrameWindowScope.DesktopMenuBar(
@@ -208,47 +231,123 @@ fun FrameWindowScope.DesktopMenuBar(
 ) {
     if (!isMac) return
 
-    val loggedIn = navigator.nav != null
+    DisposableEffect(navigator) {
+        installAppMenuHandlers(navigator, onQuit)
+        onDispose { removeAppMenuHandlers() }
+    }
+
+    val accountViewModel = navigator.accountViewModel
+    val drawer =
+        if (accountViewModel != null) {
+            val hidden by remember(accountViewModel) { accountViewModel.hiddenDrawerItemsFlow() }.collectAsState()
+            val destinations = navigator.destinations
+            val settings = navigator.settingsCatalog
+            val isDebug = navigator.isDebugBuild
+            remember(accountViewModel, hidden, destinations, settings, isDebug, navigator) {
+                drawerMenus(
+                    sections = DrawerSectionsNavigateFirst,
+                    hidden = hidden,
+                    settings = settings,
+                    canOpen = { route -> destinations?.has(route) ?: true },
+                    resolveRoute = { def -> def.resolveRoute(accountViewModel) },
+                    showChess = isDebug,
+                    actions = navigator.menuActions(onQuit),
+                )
+            }
+        } else {
+            emptyList()
+        }
+
+    val deckListeners by DeckCommandBus.listeners.collectAsState()
+    val deckEnabled = navigator.nav != null && deckListeners > 0
 
     @Composable
     fun MenuScope.CommandItem(
         label: String,
         command: Command,
-    ) = Item(label, enabled = loggedIn || !command.needsLogin, shortcut = command.shortcut) { navigator.run(command, onQuit) }
+    ) = Item(label, enabled = deckEnabled || !command.forDeck, shortcut = command.shortcut) { navigator.run(command, onQuit) }
 
     MenuBar {
-        Menu(stringRes(Res.string.desktop_menu_file)) {
-            CommandItem(stringRes(Res.string.new_post), Command.NEW_POST)
-            CommandItem(stringRes(Res.string.settings), Command.SETTINGS)
-            Separator()
-            CommandItem(stringRes(Res.string.desktop_menu_quit), Command.QUIT)
+        drawer.forEach { menu -> Menu(stringRes(menu.label)) { MenuEntries(menu.entries) } }
+        if (drawer.isNotEmpty()) {
+            Menu(stringRes(Res.string.deck_mode)) {
+                CommandItem(stringRes(Res.string.deck_add_column), Command.ADD_COLUMN)
+                CommandItem(stringRes(Res.string.deck_close_column), Command.CLOSE_COLUMN)
+                CommandItem(stringRes(Res.string.deck_move_left), Command.MOVE_COLUMN_LEFT)
+                CommandItem(stringRes(Res.string.deck_move_right), Command.MOVE_COLUMN_RIGHT)
+                Separator()
+                CommandItem(stringRes(Res.string.deck_save_workspace), Command.SAVE_WORKSPACE)
+                Separator()
+                Command.entries.filter { it.column >= 0 }.forEach { command ->
+                    CommandItem(stringRes(Res.string.deck_focus_column, command.column + 1), command)
+                }
+            }
         }
-        Menu(stringRes(Res.string.desktop_menu_go)) {
-            CommandItem(stringRes(Res.string.desktop_menu_home), Command.HOME)
-            CommandItem(stringRes(Res.string.desktop_menu_messages), Command.MESSAGES)
-            CommandItem(stringRes(Res.string.desktop_menu_notifications), Command.NOTIFICATIONS)
-            CommandItem(stringRes(Res.string.screen_search_title), Command.SEARCH)
-            Separator()
-            CommandItem(stringRes(Res.string.profile), Command.PROFILE)
-            CommandItem(stringRes(Res.string.bookmarks), Command.BOOKMARKS)
-            CommandItem(stringRes(Res.string.drafts), Command.DRAFTS)
-        }
-        Menu(stringRes(Res.string.deck_mode)) {
-            CommandItem(stringRes(Res.string.deck_add_column), Command.ADD_COLUMN)
-            CommandItem(stringRes(Res.string.deck_close_column), Command.CLOSE_COLUMN)
-            CommandItem(stringRes(Res.string.deck_move_left), Command.MOVE_COLUMN_LEFT)
-            CommandItem(stringRes(Res.string.deck_move_right), Command.MOVE_COLUMN_RIGHT)
-            Separator()
-            CommandItem(stringRes(Res.string.deck_save_workspace), Command.SAVE_WORKSPACE)
-            Separator()
-            Command.entries.filter { it.column >= 0 }.forEach { command ->
-                CommandItem(stringRes(Res.string.deck_focus_column, command.column + 1), command)
+        Menu(stringRes(Res.string.desktop_menu_window)) {
+            Item(stringRes(Res.string.desktop_menu_minimize), shortcut = KeyShortcut(Key.M, meta = true)) { window.isMinimized = true }
+            Item(stringRes(Res.string.desktop_menu_zoom)) {
+                window.placement = if (window.placement == WindowPlacement.Maximized) WindowPlacement.Floating else WindowPlacement.Maximized
             }
         }
         Menu(stringRes(Res.string.desktop_menu_help)) {
-            Item(stringRes(Res.string.desktop_menu_about)) { DesktopBrowser.open(PROJECT_URL) }
+            Item(stringRes(Res.string.desktop_menu_website)) { DesktopBrowser.open(PROJECT_URL) }
             Item(stringRes(Res.string.desktop_menu_report_issue)) { DesktopBrowser.open("$PROJECT_URL/issues") }
         }
+    }
+}
+
+/** Renders a menu's [entries], submenus included. */
+@Composable
+private fun MenuScope.MenuEntries(entries: List<MenuEntry>) {
+    entries.forEach { entry ->
+        when (entry) {
+            is MenuEntry.Action -> Item(stringRes(entry.label), shortcut = entry.command?.shortcut, onClick = entry.onClick)
+            is MenuEntry.Submenu -> Menu(stringRes(entry.label)) { MenuEntries(entry.entries) }
+            MenuEntry.Separator -> Separator()
+        }
+    }
+}
+
+private fun DesktopNavigator.menuActions(onQuit: () -> Unit) =
+    object : DrawerMenuActions {
+        override fun openItem(route: () -> Route) = goDrawer(route)
+
+        override fun run(command: Command) = this@menuActions.run(command, onQuit)
+
+        override fun open(route: Route) = go(route)
+    }
+
+/**
+ * The app menu (the one under the app's name) is AppKit's, not Swing's: its Settings… item stays
+ * greyed out until a handler is set, and its Quit (Cmd+Q, and the dock's Quit) ends the JVM with
+ * `System.exit` unless told otherwise. Closing the windows instead runs the window's
+ * `onCloseRequest`, which quits the way the updater does.
+ */
+private fun installAppMenuHandlers(
+    navigator: DesktopNavigator,
+    onQuit: () -> Unit,
+) {
+    try {
+        if (!Desktop.isDesktopSupported()) return
+        val desktop = Desktop.getDesktop()
+        if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) {
+            desktop.setPreferencesHandler { navigator.run(Command.SETTINGS, onQuit) }
+        }
+        if (desktop.isSupported(Desktop.Action.APP_QUIT_STRATEGY)) {
+            desktop.setQuitStrategy(QuitStrategy.CLOSE_ALL_WINDOWS)
+        }
+    } catch (e: Exception) {
+        Log.w("DesktopMenuBar", "Could not set up the app menu", e)
+    }
+}
+
+private fun removeAppMenuHandlers() {
+    try {
+        if (!Desktop.isDesktopSupported()) return
+        val desktop = Desktop.getDesktop()
+        if (desktop.isSupported(Desktop.Action.APP_PREFERENCES)) desktop.setPreferencesHandler(null)
+    } catch (e: Exception) {
+        Log.w("DesktopMenuBar", "Could not reset the app menu", e)
     }
 }
 

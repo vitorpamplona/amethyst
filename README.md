@@ -15,7 +15,7 @@ Join the social network you control.
 
 [![Last Version](https://img.shields.io/github/release/vitorpamplona/amethyst.svg?maxAge=3600&label=Stable&labelColor=06599d&color=043b69)](https://github.com/vitorpamplona/amethyst)
 [![Maven Central](https://img.shields.io/maven-central/v/com.vitorpamplona.quartz/quartz?label=Quartz%20%28Maven%20Central%29&labelColor=27303D&color=0877d2)](https://central.sonatype.com/artifact/com.vitorpamplona.quartz/quartz)
-[![JitPack snapshots](https://img.shields.io/badge/Quartz%20snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/amethyst)
+[![JitPack snapshots](https://img.shields.io/badge/Quartz%20snapshots-JitPack-27303D?labelColor=27303D&color=0877d2)](https://jitpack.io/#vitorpamplona/quartz)
 [![CI](https://img.shields.io/github/actions/workflow/status/vitorpamplona/amethyst/build.yml?labelColor=27303D)](https://github.com/vitorpamplona/amethyst/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/github/license/vitorpamplona/amethyst?labelColor=27303D&color=0877d2)](/LICENSE)
 
@@ -219,9 +219,9 @@ Information shared on Nostr can be re-broadcasted to other servers and should be
 
 # Development Overview
 
-This repository is split between Amethyst, Quartz, Commons, and DesktopApp:
+This repository is split between Amethyst, Commons, and DesktopApp, on top of Quartz:
 - **Amethyst** - Native Android app with Kotlin and Jetpack Compose
-- **Quartz** - Nostr-commons KMP library for protocol classes shared across platforms
+- **Quartz** - Nostr-commons KMP library for protocol classes shared across platforms, in its own repo: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)
 - **Commons** - Kotlin Multiplatform module with shared UI components (icons, robohash, blurhash, composables)
 - **DesktopApp** - Compose Multiplatform Desktop application reusing commons and quartz
 
@@ -312,164 +312,10 @@ and Maven artifact, and Homebrew + Winget auto-bump on stable tags.
 
 ## Using the Quartz library
 
-### Installing
-
-Add Maven Central and Google Maven to your repositories:
-
-```gradle
-repositories {
-    mavenCentral()
-    google()
-}
-```
-
-Add the following line to your `commonMain` dependencies:
-
-```gradle
-implementation('com.vitorpamplona.quartz:quartz:1.19.0')
-```
-
-Variations to each platform are also available:
-
-```gradle
-implementation('com.vitorpamplona.quartz:quartz-android:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-jvm:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-iosarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-iossimulatorarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-macosarm64:1.19.0')
-implementation('com.vitorpamplona.quartz:quartz-linuxx64:1.19.0')
-```
-
-Check versions on [MavenCentral](https://central.sonatype.com/search?q=com.vitorpamplona.quartz)
-
-Using a coding agent (Claude Code, Codex, Cursor, …)? Install the [Quartz agent skill](quartz/agent-skill/README.md) so it reaches for Quartz's helpers instead of re-implementing them.
-
-#### Snapshots (JitPack)
-
-Tagged releases go to Maven Central. For **pre-release / snapshot** builds —
-e.g. to test an unreleased fix straight from `main` or a feature branch — use
-[JitPack](https://jitpack.io/#vitorpamplona/amethyst), which builds the module
-on demand from any git ref:
-
-```gradle
-repositories {
-    maven { url = uri("https://jitpack.io") }
-}
-
-dependencies {
-    // version can be a tag, a commit hash, or "<branch>-SNAPSHOT"
-    implementation("com.github.vitorpamplona.amethyst:quartz:main-SNAPSHOT")
-}
-```
-
-The resolvable refs and the exact module coordinates are listed on the
-[JitPack page](https://jitpack.io/#vitorpamplona/amethyst). Prefer a Maven
-Central release for anything shipping to production — JitPack snapshots are not
-guaranteed stable.
-
-### How to use
-
-Manage logged in users with the `KeyPair` class
-
-```kt
-val keyPair = KeyPair() // creates a random key
-val keyPair = KeyPair("hex...".hexToByteArray())
-val keyPair = KeyPair("nsec1...".bechToBytes())
-val keyPair = KeyPair(Nip06().privateKeyFromMnemonic("<mnemonic>"))
-val readOnly = KeyPair(pubKey = "hex...".hexToByteArray())
-val readOnly = KeyPair(pubKey = "npub1...".bechToBytes())
-```
-
-Create signers that can be Internal, when you have the private key or a read-only public key,
-or External, when it is controlled by Amber in NIP-55.
-
-Use either the `NostrSignerInternal` or `NostrSignerExternal` class:
-
-```kt
-val signer = NostrSignerInternal(keyPair)
-val amberSigner = NostrSignerExternal(
-    pubKey = keyPair.pubKey.toHexKey(),
-    packageName = signerPackageName, // Amber package name
-    contentResolver = appContext.contentResolver,
-)
-```
-
-Create a single `NostrClient` for the entire application and control which relays it will access by
-registering subscriptions and sending events. The pool will automatically change based on filters +
-outbox events.
-
-You will need a coroutine scope to process events and if you are using OKHttp, we offer a basic
-wrapper to create the socket connections themselves.
-
-```kt
-val appScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-val rootClient = OkHttpClient.Builder().build()
-val socketBuilder = BasicOkHttpWebSocket.Builder { url -> rootClient }
-
-val client = NostrClient(socketBuilder, appScope)
-```
-
-If you want to auth, given a logged-in `signer`:
-
-```kt
-val authCoordinator = RelayAuthenticator(client, appScope) { authTemplate ->
-    listOf(
-        // for each signed-in user, return an event
-        signer.sign(authTemplate)
-    )
-}
-```
-
-To make a request subscription simply do:
-
-```kt
-val metadataSub = client.req(
-    relay = "wss://nos.lol",
-    filter = Filter(
-        kinds = listOf(MetadataEvent.KIND),
-        authors = listOf(signer.pubkey)
-    )
-) { event ->
-    /* consume event */
-}
-```
-
-The client will add the relay to the pool, connect to it and start receiving events. The
-`metadataSub` will be active until you call `metadataSub.close()`. If the client disconnects
-and reconnects, the sub will be active again.
-
-To manage subscriptions that change over time, the simplest approach is to build mutable
-subscriptions with a filters lambda that you can change at will.
-
-```kt
-val metadataSub = client.req(
-    filters = {
-        // Let's say you have a list of users that need to be rendered
-        val users = pubkeysSeeingInTheScreen()
-        // And a cache repository with their outbox relays
-        val outboxRelays = outboxRelays(users)
-
-        val filters = listOf(
-            Filter(
-                kinds = listOf(MetadataEvent.KIND),
-                authors = users
-            )
-        )
-
-        outboxRelays.associateWith { filters }
-    }
-) { event ->
-    /* consume event */
-}
-```
-
-In that way, you can simply call `metadataSub.updateFilter()` when you need to update
-subscriptions to all relays. Or call `metadataSub.close()` to stop the sub
-without deleting it.
-
-When your app goes to the background, you can use NostrClient's `connect` and `disconnect`
-methods to stop all communication to relays. Add the `connect` to your `onResume` and `disconnect`
-to `onPause` methods.
+Quartz, the Nostr library behind Amethyst, lives in its own repo:
+[vitorpamplona/quartz](https://github.com/vitorpamplona/quartz). Its README covers installing it from
+Maven Central (`com.vitorpamplona.quartz:quartz`), snapshots and usage. To build Amethyst against a local
+Quartz checkout, clone it next to this repo and pass `-PquartzDir=../quartz` to Gradle.
 
 ## Contributing
 

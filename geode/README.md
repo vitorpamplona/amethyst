@@ -7,7 +7,7 @@ protocol plus NIP-11 (info doc), NIP-42 (AUTH), NIP-45 (COUNT), NIP-50
 NIP-FE (REQ/COUNT/EVENT over plain HTTP), stores events in SQLite (or a filesystem backend), and can mirror upstream
 relays strfry-router style.
 
-geode depends only on `:quartz` — no Android, no Compose. `amy serve` (the
+geode depends only on quartz — no Android, no Compose. `amy serve` (the
 Amethyst CLI) embeds the same engine in-process.
 
 ## Install
