@@ -509,7 +509,7 @@ ksp {
 
 // TODO: until google merges and unifiedpush updates https://github.com/tink-crypto/tink-java-apps/pull/5
 configurations.all {
-    val tink = "com.google.crypto.tink:tink-android:1.23.0"
+    val tink = "com.google.crypto.tink:tink-android:1.24.0"
     resolutionStrategy {
         force(tink)
         dependencySubstitution {
