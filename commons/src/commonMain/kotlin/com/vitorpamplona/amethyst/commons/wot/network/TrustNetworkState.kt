@@ -366,9 +366,14 @@ class TrustNetworkState(
      * (its provider was replaced while it unwound), on [control] after it: that one is waited for too.
      */
     suspend fun awaitIdle() {
+        var joined: Deferred<TrustNetworkRun>? = null
         while (true) {
             val run = withContext(control) { running } ?: return
+            // Its completion, queued on [control] before this read, did not clear it: the scope
+            // is cancelled, so nothing will. Looping would spin on a finished run.
+            if (run === joined) return
             run.join()
+            joined = run
         }
     }
 

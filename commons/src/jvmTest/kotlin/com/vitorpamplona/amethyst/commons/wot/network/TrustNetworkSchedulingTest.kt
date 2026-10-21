@@ -479,6 +479,19 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
+    fun awaitIdleReturnsOnceTheScopeIsCancelled() =
+        runBlocking {
+            // A cancelled scope never runs the completion that clears the finished sync: waiting
+            // for "no sync" must still end (an account logged out mid-download).
+            val source = FakeSource().apply { downloadGate = CompletableDeferred() }
+            val wot = state(MutableStateFlow(ResolvedProvider(providerA)), source)
+            wot.awaitReady()
+            withTimeout(5_000) { while (source.calls.isEmpty()) delay(10) }
+            scope.cancel()
+            withTimeout(3_000) { wot.awaitIdle() }
+        }
+
+    @Test
     fun filteringStaysOffUntilTheWholeSetIsDownloaded() =
         runBlocking {
             val source = FakeSource().apply { downloadGate = CompletableDeferred() }
