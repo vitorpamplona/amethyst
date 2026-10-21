@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertContentEquals

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
-import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking

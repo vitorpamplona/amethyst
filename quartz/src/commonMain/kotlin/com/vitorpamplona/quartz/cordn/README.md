@@ -10,9 +10,10 @@ in the KDoc of the code that implements it.
 
 ## Where it sits
 
-Beside `marmot/` — the other MLS-over-Nostr binding — and on top of `mls/` (the
-RFC 9420 engine) and `contextvm/` (MCP over Nostr). All four are quartz
-packages, which is what lets cordn use the engine and the transport directly.
+Beside `marmot/` — the other MLS-over-Nostr binding — and on top of the RFC 9420
+engine (`com.vitorpamplona.mls`, from vitorpamplona/mls-kmp, which quartz exposes
+as an `api` dependency) and `contextvm/` (MCP over Nostr), which is what lets
+cordn use the engine and the transport directly.
 
 It briefly lived in a `:cordn` Gradle module. The stated reason was that it
 needed `:contextvm` and quartz could not depend on that without a cycle — true,

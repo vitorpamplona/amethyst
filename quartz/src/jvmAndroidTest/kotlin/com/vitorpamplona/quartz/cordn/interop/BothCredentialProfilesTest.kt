@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.cordn.interop
 
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test

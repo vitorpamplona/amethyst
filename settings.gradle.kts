@@ -66,3 +66,14 @@ providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
         }
     }
 }
+
+// The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes from Maven Central, like
+// quic. To change it alongside Marmot or cordn, build a local checkout instead of the artifact:
+//   ./gradlew -PmlsKmpDir=../mls-kmp :quartz:jvmTest
+providers.gradleProperty("mlsKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.mls:mls")).using(project(":mls"))
+        }
+    }
+}

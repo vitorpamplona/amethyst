@@ -23,7 +23,7 @@ package com.vitorpamplona.quartz.marmot.appComponents
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /** One `locator <kind> <value>` field of an `encrypted-media-v2` reference. */

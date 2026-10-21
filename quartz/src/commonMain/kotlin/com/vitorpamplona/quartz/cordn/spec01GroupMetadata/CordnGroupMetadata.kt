@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.cordn.spec01GroupMetadata
 
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.tree.Extension
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

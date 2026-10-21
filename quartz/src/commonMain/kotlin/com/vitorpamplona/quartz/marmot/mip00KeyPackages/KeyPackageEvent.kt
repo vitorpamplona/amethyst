@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.AppComponentsTag
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.tags.MlsProposalsTag
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.components.ComponentsList
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder

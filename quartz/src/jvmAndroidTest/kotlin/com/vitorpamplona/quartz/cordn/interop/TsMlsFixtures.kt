@@ -21,11 +21,11 @@
 package com.vitorpamplona.quartz.cordn.interop
 
 import com.vitorpamplona.crypto.curve25519.Ed25519
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.KeyPackageBundle
+import com.vitorpamplona.mls.messages.MlsKeyPackage
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 

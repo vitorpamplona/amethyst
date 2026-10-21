@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentData
 import com.vitorpamplona.quartz.TestResourceLoader
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.components.ComponentData
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -63,7 +63,7 @@ class MarmotGroupStateVectorTest {
 
     private val vector: Vector =
         JsonMapper.jsonInstance.decodeFromString<Vector>(
-            TestResourceLoader().loadString("mls/marmot-current-profile.json"),
+            TestResourceLoader().loadString("marmot/marmot-current-profile.json"),
         )
 
     private val dictionary: AppDataDictionary by lazy {

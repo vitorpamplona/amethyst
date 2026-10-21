@@ -23,11 +23,11 @@ package com.vitorpamplona.quartz.marmot
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.mls.codec.TlsReader
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.marmot.mip01Groups.Mip01ImageCrypto
-import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test

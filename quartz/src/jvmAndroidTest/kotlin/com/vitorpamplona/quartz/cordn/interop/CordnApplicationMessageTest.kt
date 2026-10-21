@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.cordn.interop
 
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnApplicationMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

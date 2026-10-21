@@ -22,17 +22,17 @@ package com.vitorpamplona.quartz.marmot.appComponents
 
 import com.vitorpamplona.crypto.curve25519.Ed25519
 import com.vitorpamplona.crypto.curve25519.Ed25519KeyPair
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentData
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.KeyPackageBundle
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
 import com.vitorpamplona.quartz.marmot.groups.MarmotCapabilities
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.components.ComponentData
-import com.vitorpamplona.quartz.mls.components.ComponentsList
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.mls.tree.Extension
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 

@@ -380,28 +380,28 @@ class MarmotPipelineTest {
             // The framedCommitBytes must decode as an MlsMessage(PublicMessage(commit))
             val framed = commitResult.framedCommitBytes
             val mlsMessage =
-                com.vitorpamplona.quartz.mls.framing.MlsMessage
+                com.vitorpamplona.mls.framing.MlsMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.mls.codec
+                        com.vitorpamplona.mls.codec
                             .TlsReader(framed),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                com.vitorpamplona.mls.framing.WireFormat.PUBLIC_MESSAGE,
                 mlsMessage.wireFormat,
             )
 
             val publicMessage =
-                com.vitorpamplona.quartz.mls.framing.PublicMessage
+                com.vitorpamplona.mls.framing.PublicMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.mls.codec
+                        com.vitorpamplona.mls.codec
                             .TlsReader(mlsMessage.payload),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.mls.framing.ContentType.COMMIT,
+                com.vitorpamplona.mls.framing.ContentType.COMMIT,
                 publicMessage.contentType,
             )
             assertEquals(
-                com.vitorpamplona.quartz.mls.framing.SenderType.MEMBER,
+                com.vitorpamplona.mls.framing.SenderType.MEMBER,
                 publicMessage.sender.senderType,
             )
             assertNotNull(publicMessage.confirmationTag, "confirmation_tag must be present on a commit")
@@ -431,13 +431,13 @@ class MarmotPipelineTest {
             val exporterKey = manager.exporterSecret(groupId)
             val mlsBytes = GroupEventEncryption.decrypt(event.content, exporterKey)
             val mlsMessage =
-                com.vitorpamplona.quartz.mls.framing.MlsMessage
+                com.vitorpamplona.mls.framing.MlsMessage
                     .decodeTls(
-                        com.vitorpamplona.quartz.mls.codec
+                        com.vitorpamplona.mls.codec
                             .TlsReader(mlsBytes),
                     )
             assertEquals(
-                com.vitorpamplona.quartz.mls.framing.WireFormat.PUBLIC_MESSAGE,
+                com.vitorpamplona.mls.framing.WireFormat.PUBLIC_MESSAGE,
                 mlsMessage.wireFormat,
             )
         }

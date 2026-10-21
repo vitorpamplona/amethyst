@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.cordn.spec00Coordinator
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamPublisher
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRecordV1
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamStart
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextSt
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.PreviewStatus
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.RecordOutcome
-import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

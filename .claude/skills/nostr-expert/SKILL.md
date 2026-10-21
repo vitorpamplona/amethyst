@@ -8,7 +8,7 @@ description: Quartz Nostr code: event classes, kinds, tags, TagArrayBuilder, Eve
 Quartz (`quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/`) has one package per
 NIP — about 95 `nipXX<Name>/` directories (hex ids too: `nip5aStaticWebsites`,
 `nipB7Blossom`, `nipXX…` for unnumbered drafts) — plus `experimental/` and the non-NIP
-protocol families (`marmot/`, `concord/`, `cordn/`, `contextvm/`, `buzz/`, `mls/`, …)
+protocol families (`marmot/`, `concord/`, `cordn/`, `contextvm/`, `buzz/`, …)
 listed in AGENTS.md › Project Overview. `references/nip-catalog.md` maps every package
 to its event classes and kinds.
 

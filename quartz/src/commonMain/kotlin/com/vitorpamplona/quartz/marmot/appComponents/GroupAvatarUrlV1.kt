@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
 
 /**
  * `marmot.group.avatar-url.v1`, component `0x8007` — a group avatar behind an

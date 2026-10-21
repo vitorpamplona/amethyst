@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.MlsKeyPackage
+import com.vitorpamplona.mls.tree.Capabilities
+import com.vitorpamplona.mls.tree.Credential
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.mls.tree.Capabilities
-import com.vitorpamplona.quartz.mls.tree.Credential
-import com.vitorpamplona.quartz.mls.tree.Extension
 
 /**
  * The MLS capability sets that identify a group as Marmot's.
