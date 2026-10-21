@@ -50,13 +50,20 @@ internal class EventJsonReader {
     private var n = 0
     private var i = 0
 
-    /** Position of the next backslash at or after the cursor, or [n] when there is none. */
-    private var nextEscape = 0
+    /**
+     * Position of the next backslash at or after the cursor, or [n] when there is none. -1 until
+     * the first string asks, so a frame that is not an EVENT is never scanned.
+     */
+    private var nextEscape = -1
+
+    /** Nesting depth of the value being read: 1 inside the event object, 2 inside an EVENT frame's event. */
+    private var baseDepth = 1
 
     private var inUse = false
     private var sb: StringBuilder? = null
     private var tagScratch: Array<String?>? = null
     private var tagsScratch: Array<Array<String>?>? = null
+    private var skipStack: BooleanArray? = null
 
     private inline fun <T> parse(
         json: String,
@@ -65,15 +72,23 @@ internal class EventJsonReader {
         s = json
         n = json.length
         i = 0
-        nextEscape = json.indexOf('\\').let { if (it < 0) n else it }
+        nextEscape = -1
+        baseDepth = 1
         inUse = true
+        var done = false
         try {
-            return read()
+            val result = read()
+            done = true
+            return result
         } finally {
             s = ""
             inUse = false
+            if (!done) {
+                // A parse that failed inside the tags left references in the scratch.
+                tagsScratch?.fill(null)
+                tagScratch?.fill(null)
+            }
             // Don't let one huge event pin its buffers to the thread.
-            if ((sb?.length ?: 0) > MAX_KEPT_CHARS) sb = null
             if ((tagsScratch?.size ?: 0) > MAX_KEPT_TAGS) tagsScratch = null
             if ((tagScratch?.size ?: 0) > MAX_KEPT_TAGS) tagScratch = null
         }
@@ -100,13 +115,24 @@ internal class EventJsonReader {
         ws()
         if (i >= n || s[i] != '"') return null
         i++
-        if (readStringBody() != EventMessage.LABEL) return null
+        if (s.startsWith(EVENT_LABEL_QUOTE, i)) {
+            i += EVENT_LABEL_QUOTE.length
+        } else {
+            // Another message type, unless its label spells EVENT with escapes.
+            val q = quoteAfter(i)
+            if (q < 0) return null
+            var escaped = false
+            for (k in i until q) if (s[k] == '\\') escaped = true
+            if (!escaped || readStringBody() != EventMessage.LABEL) return null
+        }
         expect(',')
         ws()
         if (i >= n) fail("unexpected end of input")
         val subId = readString()
         expect(',')
+        baseDepth = 2
         val event = readEvent()
+        baseDepth = 1
         // Like MessageDeserializer: extra elements are skipped, and a frame that ends here
         // without its closing bracket is still taken.
         while (true) {
@@ -152,7 +178,7 @@ internal class EventJsonReader {
                     F_TAGS -> tags = readTags()
                     F_CONTENT -> content = readString()
                     F_SIG -> sig = readString()
-                    else -> skipValue(1)
+                    else -> skipValue(baseDepth)
                 }
                 ws()
                 if (i >= n) fail("unexpected end of input inside an object")
@@ -222,57 +248,60 @@ internal class EventJsonReader {
         val start = i
         val q = quoteAfter(start)
         if (q < 0) fail("unexpected end of input in a string")
-        val esc = escapeAtOrAfter(start)
-        if (q < esc) {
+        val esc0 = escapeAtOrAfter(start)
+        if (q < esc0) {
             i = q + 1
             return s.substring(start, q)
         }
 
-        // Escapes: decode run by run from the first backslash.
+        // Escapes: decode run by run. [quote] and [esc] are the next quote and backslash at or
+        // after the cursor, each searched again only once the cursor passes it, so a value with
+        // thousands of escapes is still read in one pass.
         val sb = sb ?: StringBuilder(256).also { sb = it }
         sb.setLength(0)
-        sb.appendRange(s, start, esc)
-        i = esc
-        while (true) {
-            if (i >= n) fail("unexpected end of input in a string")
-            val c = s[i]
-            if (c == '"') {
-                i++
-                break
-            }
-            if (c == '\\') {
-                if (i + 1 >= n) fail("unexpected end of input in an escape")
-                when (s[i + 1]) {
-                    '"' -> sb.append('"')
-                    '\\' -> sb.append('\\')
-                    '/' -> sb.append('/')
-                    'b' -> sb.append('\b')
-                    'f' -> sb.append('\u000C')
-                    'n' -> sb.append('\n')
-                    'r' -> sb.append('\r')
-                    't' -> sb.append('\t')
-                    'u' -> {
-                        if (i + 6 > n) fail("unexpected end of input in a \\u escape")
-                        val v = (hex(s[i + 2]) shl 12) or (hex(s[i + 3]) shl 8) or (hex(s[i + 4]) shl 4) or hex(s[i + 5])
-                        sb.append(v.toChar())
-                        i += 4
-                    }
-                    else -> fail("bad escape")
-                }
-                i += 2
-            } else {
-                // A run up to the next quote or backslash.
-                val runQuote = quoteAfter(i)
-                if (runQuote < 0) fail("unexpected end of input in a string")
-                var runEscape = s.indexOf('\\', i)
-                if (runEscape < 0) runEscape = n
-                val end = if (runQuote < runEscape) runQuote else runEscape
-                sb.appendRange(s, i, end)
-                i = end
-            }
+        var quote = q
+        var esc = esc0
+        var from = start
+        while (esc < quote) {
+            sb.appendRange(s, from, esc)
+            i = esc
+            sb.append(readEscape())
+            from = i
+            if (quote < i) quote = quoteAfter(i).also { if (it < 0) fail("unexpected end of input in a string") }
+            esc = s.indexOf('\\', i).let { if (it < 0) n else it }
         }
-        nextEscape = s.indexOf('\\', i).let { if (it < 0) n else it }
-        return sb.toString()
+        sb.appendRange(s, from, quote)
+        i = quote + 1
+        nextEscape = esc
+        val value = sb.toString()
+        // Don't let one huge value pin its buffer to the thread.
+        if (sb.length > MAX_KEPT_CHARS) this.sb = null
+        return value
+    }
+
+    /** Decodes the escape at the cursor (a backslash) and moves past it. */
+    private fun readEscape(): Char {
+        if (i + 1 >= n) fail("unexpected end of input in an escape")
+        val c =
+            when (s[i + 1]) {
+                '"' -> '"'
+                '\\' -> '\\'
+                '/' -> '/'
+                'b' -> '\b'
+                'f' -> '\u000C'
+                'n' -> '\n'
+                'r' -> '\r'
+                't' -> '\t'
+                'u' -> {
+                    if (i + 6 > n) fail("unexpected end of input in a \\u escape")
+                    val v = (hex(s[i + 2]) shl 12) or (hex(s[i + 3]) shl 8) or (hex(s[i + 4]) shl 4) or hex(s[i + 5])
+                    i += 4
+                    v.toChar()
+                }
+                else -> fail("bad escape")
+            }
+        i += 2
+        return c
     }
 
     private fun hex(c: Char): Int =
@@ -433,77 +462,90 @@ internal class EventJsonReader {
         return s.substring(start, i)
     }
 
-    private fun skipValue(depth: Int) {
-        when (s[i]) {
-            '"' -> {
-                i++
-                skipStringBody()
+    /**
+     * Skips one value of any shape, checking its grammar, without building anything. Iterative:
+     * a hostile relay's deep nesting costs a counter, not stack frames. Fails past Jackson's
+     * nesting limit, counted from [baseDepth] the way Jackson counts it.
+     */
+    private fun skipValue(base: Int) {
+        var depth = 0
+        var stack = skipStack ?: BooleanArray(16).also { skipStack = it }
+        while (true) {
+            // One value. A non-empty container is opened here and its first value read next turn.
+            var complete = true
+            when (s[i]) {
+                '"' -> {
+                    i++
+                    skipStringBody()
+                }
+                '{', '[' -> {
+                    val isObject = s[i] == '{'
+                    if (base + depth + 1 > MAX_DEPTH) fail("nested too deeply")
+                    i++
+                    ws()
+                    if (i < n && s[i] == (if (isObject) '}' else ']')) {
+                        i++
+                    } else {
+                        if (depth == stack.size) {
+                            stack = stack.copyOf(depth * 2)
+                            skipStack = stack
+                        }
+                        stack[depth++] = isObject
+                        if (isObject) skipKeyAndColon()
+                        ws()
+                        if (i >= n) fail("unexpected end of input")
+                        complete = false
+                    }
+                }
+                't' -> literal("true", "")
+                'f' -> literal("false", "")
+                'n' -> literal("null", "")
+                else -> scanNumber()
             }
-            '{' -> skipObject(depth + 1)
-            '[' -> skipArray(depth + 1)
-            't' -> literal("true", "")
-            'f' -> literal("false", "")
-            'n' -> literal("null", "")
-            else -> scanNumber()
+            if (!complete) continue
+            // After a value: separators and closing brackets, until the next value or the end.
+            while (true) {
+                if (depth == 0) return
+                ws()
+                if (i >= n) fail("unexpected end of input")
+                val c = s[i++]
+                val isObject = stack[depth - 1]
+                if (c == ',') {
+                    if (isObject) skipKeyAndColon()
+                    ws()
+                    if (i >= n) fail("unexpected end of input")
+                    break
+                }
+                if (c == (if (isObject) '}' else ']')) {
+                    depth--
+                    continue
+                }
+                fail(if (isObject) "expected ',' or '}'" else "expected ',' or ']'")
+            }
         }
     }
 
-    /** Like [readStringBody], without building the value when it has no escapes. */
+    private fun skipKeyAndColon() {
+        ws()
+        if (i >= n || s[i] != '"') fail("expected a field name")
+        i++
+        skipStringBody()
+        expect(':')
+    }
+
+    /** Like [readStringBody], checking escapes without building the value. */
     private fun skipStringBody() {
-        val q = quoteAfter(i)
-        if (q < 0) fail("unexpected end of input in a string")
-        if (q < escapeAtOrAfter(i)) {
-            i = q + 1
-        } else {
-            readStringBody()
+        var quote = quoteAfter(i)
+        if (quote < 0) fail("unexpected end of input in a string")
+        var esc = escapeAtOrAfter(i)
+        while (esc < quote) {
+            i = esc
+            readEscape()
+            if (quote < i) quote = quoteAfter(i).also { if (it < 0) fail("unexpected end of input in a string") }
+            esc = s.indexOf('\\', i).let { if (it < 0) n else it }
         }
-    }
-
-    private fun skipArray(depth: Int) {
-        if (depth > MAX_DEPTH) fail("nested too deeply")
-        i++
-        ws()
-        if (i < n && s[i] == ']') {
-            i++
-            return
-        }
-        while (true) {
-            ws()
-            if (i >= n) fail("unexpected end of input in an array")
-            skipValue(depth)
-            ws()
-            if (i >= n) fail("unexpected end of input in an array")
-            val c = s[i++]
-            if (c == ',') continue
-            if (c == ']') return
-            fail("expected ',' or ']'")
-        }
-    }
-
-    private fun skipObject(depth: Int) {
-        if (depth > MAX_DEPTH) fail("nested too deeply")
-        i++
-        ws()
-        if (i < n && s[i] == '}') {
-            i++
-            return
-        }
-        while (true) {
-            ws()
-            if (i >= n || s[i] != '"') fail("expected a field name")
-            i++
-            skipStringBody()
-            expect(':')
-            ws()
-            if (i >= n) fail("unexpected end of input in an object")
-            skipValue(depth)
-            ws()
-            if (i >= n) fail("unexpected end of input in an object")
-            val c = s[i++]
-            if (c == ',') continue
-            if (c == '}') return
-            fail("expected ',' or '}'")
-        }
+        i = quote + 1
+        nextEscape = esc
     }
 
     companion object {
@@ -518,6 +560,8 @@ internal class EventJsonReader {
 
         /** Jackson's default nesting limit (StreamReadConstraints). */
         private const val MAX_DEPTH = 1000
+
+        private const val EVENT_LABEL_QUOTE = "EVENT\""
 
         /** Scratch kept on a thread between parses; bigger buffers are dropped after use. */
         private const val MAX_KEPT_CHARS = 16 * 1024

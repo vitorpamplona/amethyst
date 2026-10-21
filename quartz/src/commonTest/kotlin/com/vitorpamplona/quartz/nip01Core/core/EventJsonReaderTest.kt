@@ -120,6 +120,24 @@ class EventJsonReaderTest {
     }
 
     @Test
+    fun readsLongContentFullOfEscapes() {
+        val line = "a line of text with a \\\"quote\\\" and \\u00e9\\n"
+        val decoded = "a line of text with a \"quote\" and \u00e9\n"
+        val e = read(event(content = "\"" + line.repeat(5000) + "\""))
+        assertEquals(decoded.repeat(5000), e.content)
+        assertEquals(sig, e.sig)
+    }
+
+    @Test
+    fun skipsEscapedUnknownValuesAndChecksThem() {
+        assertEquals(sig, read(event(extra = ",\"x\":\"a\\\"b\\\\\\u00e9\\n\"")).sig)
+        assertEquals(sig, read(event(extra = ",\"x\":{\"k\\\"ey\":[\"v\\\\\",\"w\"]}")).sig)
+        for (bad in listOf("\"x\\q\"", "\"x\\u12G4\"", "[\"\\\"]", "{\"a\\\":1}")) {
+            assertFailsWith<IllegalArgumentException>(bad) { read(event(extra = ",\"x\":$bad")) }
+        }
+    }
+
+    @Test
     fun rejectsBadEscapes() {
         for (bad in listOf("\"x\\u\"", "\"x\\u12\"", "\"x\\uZZZZ\"", "\"x\\q\"", "\"x\\", "\"unterminated", "\"x\\u00\u2730\u2731\"")) {
             assertFailsWith<IllegalArgumentException>(bad) { contentOf(bad) }
@@ -191,10 +209,21 @@ class EventJsonReaderTest {
         for (bad in listOf("[1,]", "{\"a\"}", "{\"a\":}", "tru", "01", "[\"a\" \"b\"]", "{a:1}")) {
             assertFailsWith<IllegalArgumentException>(bad) { read(event(extra = ",\"extra\":$bad")) }
         }
-        val deep = "[".repeat(1001) + "]".repeat(1001)
-        assertFailsWith<IllegalArgumentException> { read(event(extra = ",\"extra\":$deep")) }
-        val fine = "[".repeat(999) + "]".repeat(999)
-        assertEquals(sig, read(event(extra = ",\"extra\":$fine")).sig)
+    }
+
+    private fun nested(k: Int) = "[".repeat(k) + "]".repeat(k)
+
+    @Test
+    fun nestsAsDeepAsJackson() {
+        // Jackson's limit is 1,000 levels, the event object included; an EVENT frame's array adds one.
+        assertEquals(sig, read(event(extra = ",\"x\":${nested(999)}")).sig)
+        assertFailsWith<IllegalArgumentException> { read(event(extra = ",\"x\":${nested(1000)}")) }
+        assertEquals(sig, EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(998)}")}]")!!.event.sig)
+        assertFailsWith<IllegalArgumentException> { EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event(extra = ",\"x\":${nested(999)}")}]") }
+        val objects = "{\"a\":".repeat(999) + "1" + "}".repeat(999)
+        assertEquals(sig, read(event(extra = ",\"x\":$objects")).sig)
+        // Deep nesting is a counter, not recursion: far past the limit it still fails cleanly.
+        assertFailsWith<IllegalArgumentException> { read(event(extra = ",\"x\":${nested(100_000)}")) }
     }
 
     @Test
@@ -257,6 +286,12 @@ class EventJsonReaderTest {
         // Extra elements are skipped; a frame cut after the event is still taken, like MessageDeserializer.
         assertEquals("s", EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event()},{\"x\":[1]},\"y\"]")!!.subId)
         assertEquals("s", EventJsonReader.readEventMessage("[\"EVENT\",\"s\",${event()}")!!.subId)
+    }
+
+    @Test
+    fun readsAnEscapedEventLabel() {
+        assertEquals("s", EventJsonReader.readEventMessage("[\"EV\\u0045NT\",\"s\",${event()}]")!!.subId)
+        assertNull(EventJsonReader.readEventMessage("[\"EV\\u0045NTS\",\"s\",${event()}]"))
     }
 
     @Test
