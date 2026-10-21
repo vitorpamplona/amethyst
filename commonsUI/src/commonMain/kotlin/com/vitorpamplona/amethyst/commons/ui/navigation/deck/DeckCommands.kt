@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The deck column the user last pressed in, or null once they press in the main screen. Back and
@@ -67,6 +68,9 @@ object DeckCommandBus {
 
     /** Whether a deck is on screen to take commands; while not, their keys stay with the text fields. */
     val active: Boolean get() = flow.subscriptionCount.value > 0
+
+    /** How many decks listen, as a flow: the menu bar greys the deck's items out while none does. */
+    val listeners: StateFlow<Int> get() = flow.subscriptionCount
 
     fun send(command: DeckCommand) {
         flow.tryEmit(command)

@@ -4730,14 +4730,7 @@
     <string name="desktop_notification_reaction">%1$s se je odzval/a</string>
     <string name="desktop_notification_follow">%1$s ti je začel/a slediti</string>
     <string name="desktop_upload_server_not_supported">Nalaganje z namizja poteka na strežnike Blossom. Izberi enega v nastavitvah medijskega strežnika.</string>
-    <string name="desktop_menu_file">Datoteka</string>
-    <string name="desktop_menu_go">Pojdi</string>
     <string name="desktop_menu_help">Pomoč</string>
-    <string name="desktop_menu_quit">Zapri Amethyst</string>
-    <string name="desktop_menu_home">Domov</string>
-    <string name="desktop_menu_messages">Sporočila</string>
-    <string name="desktop_menu_notifications">Obvestila</string>
-    <string name="desktop_menu_about">O Amethystu</string>
     <string name="desktop_menu_report_issue">Prijavi težavo</string>
     <string name="login_with_remote_signer">Prijava z oddaljenim podpisnikom</string>
     <string name="login_with_signer_app">Prijava z %1$s</string>

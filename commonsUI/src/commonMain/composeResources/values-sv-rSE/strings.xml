@@ -4596,14 +4596,7 @@
     <string name="desktop_notification_reaction">%1$s reagerade</string>
     <string name="desktop_notification_follow">%1$s började följa dig</string>
     <string name="desktop_upload_server_not_supported">Uppladdningar från datorn går till Blossom-servrar. Välj en i inställningarna för mediaservrar.</string>
-    <string name="desktop_menu_file">Arkiv</string>
-    <string name="desktop_menu_go">Gå</string>
     <string name="desktop_menu_help">Hjälp</string>
-    <string name="desktop_menu_quit">Avsluta Amethyst</string>
-    <string name="desktop_menu_home">Hem</string>
-    <string name="desktop_menu_messages">Meddelanden</string>
-    <string name="desktop_menu_notifications">Aviseringar</string>
-    <string name="desktop_menu_about">Om Amethyst</string>
     <string name="desktop_menu_report_issue">Rapportera ett problem</string>
     <string name="login_with_remote_signer">Logga in med en fjärrsignatär</string>
     <string name="login_with_signer_app">Logga in med %1$s</string>
