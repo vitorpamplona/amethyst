@@ -22,37 +22,46 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,11 +77,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.devtools.ConsoleConnection
 import com.vitorpamplona.amethyst.commons.devtools.ConsoleFrame
+import com.vitorpamplona.amethyst.commons.devtools.ConsoleLink
 import com.vitorpamplona.amethyst.commons.devtools.ConsoleSystemEvent
 import com.vitorpamplona.amethyst.commons.devtools.EventInspectResult
 import com.vitorpamplona.amethyst.commons.devtools.EventInspector
@@ -90,36 +103,41 @@ import com.vitorpamplona.amethyst.commons.resources.devtools_console_auth_body
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_auth_review
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_auth_sign
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_auth_title
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_build
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_clear
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_close_sub
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_closed
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_composer
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_composer_offline
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_connect
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_connected
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_connecting
-import com.vitorpamplona.amethyst.commons.resources.devtools_console_count_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_disconnect
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_edit_as_text
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_empty
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_event_field
-import com.vitorpamplona.amethyst.commons.resources.devtools_console_event_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_failed
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_invalid_url
-import com.vitorpamplona.amethyst.commons.resources.devtools_console_message
-import com.vitorpamplona.amethyst.commons.resources.devtools_console_no_open_subs
-import com.vitorpamplona.amethyst.commons.resources.devtools_console_req_title
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_open_subs
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_preview
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_send_failed
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_tor
 import com.vitorpamplona.amethyst.commons.resources.devtools_console_url
+import com.vitorpamplona.amethyst.commons.resources.devtools_console_your_relays
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_invalid
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_unparseable
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_valid
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_any
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_authors
+import com.vitorpamplona.amethyst.commons.resources.devtools_filter_authors_hint
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_day
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_hour
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_ids
+import com.vitorpamplona.amethyst.commons.resources.devtools_filter_ids_hint
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_invalid
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_kinds
+import com.vitorpamplona.amethyst.commons.resources.devtools_filter_kinds_hint
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_limit
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_me
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_month
@@ -129,27 +147,36 @@ import com.vitorpamplona.amethyst.commons.resources.devtools_filter_tag
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_tag_values
 import com.vitorpamplona.amethyst.commons.resources.devtools_filter_week
 import com.vitorpamplona.amethyst.commons.resources.send
+import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
 import org.jetbrains.compose.resources.StringResource
 
-private enum class ConsoleDialog {
-    REQ,
-    COUNT,
-    EVENT,
-    AUTH,
+/** What the builder sheet is building. REQ and COUNT share the filter form. */
+private enum class BuilderMode(
+    val verb: String,
+) {
+    REQ("REQ"),
+    COUNT("COUNT"),
+    EVENT("EVENT"),
 }
 
 /**
  * A websocketking.com for relays: one raw socket, every frame both ways as the relay sent it.
- * The action row builds REQ and COUNT from a form, closes open subscriptions, publishes a pasted
- * signed event and answers AUTH, which always asks first. The text field sends anything else.
+ *
+ * Laid out like a chat. A connection bar on top (an address field until connected, then one line
+ * of status), the frame log, the subscriptions still open as closable chips, and a composer: type
+ * a raw frame, or tap + to build a REQ, COUNT or EVENT in a sheet that previews the exact frame.
+ * AUTH is never automatic: the bar offers it and a dialog confirms who signs.
  */
 @Composable
 fun RelayConsoleScreen(
@@ -163,27 +190,30 @@ fun RelayConsoleScreen(
         }
     val frames by viewModel.frames.collectAsStateWithLifecycle()
     val connection by viewModel.connection.collectAsStateWithLifecycle()
+    val link by viewModel.link.collectAsStateWithLifecycle()
     val challenge by viewModel.pendingChallenge.collectAsStateWithLifecycle()
     val openSubs by viewModel.openSubs.collectAsStateWithLifecycle()
 
-    var url by rememberSaveable { mutableStateOf(initialUrl ?: "wss://") }
-    var message by rememberSaveable { mutableStateOf("") }
-    var dialog by remember { mutableStateOf<ConsoleDialog?>(null) }
-    var draft by remember { mutableStateOf(FilterDraft(kinds = "1", limit = "5")) }
-    var closeMenu by remember { mutableStateOf(false) }
-    val listState = rememberLazyListState()
-    val connected = connection == ConsoleConnection.CONNECTED
-    val myPubKey = accountViewModel.account.signer.pubKey
+    val myRelays =
+        remember {
+            (accountViewModel.account.homeRelays.flow.value + accountViewModel.account.outboxRelays.flow.value)
+                .sortedBy { it.url }
+                .toImmutableList()
+        }
 
-    LaunchedEffect(frames.size) {
-        if (frames.isNotEmpty()) listState.animateScrollToItem(frames.lastIndex)
-    }
+    var url by rememberSaveable { mutableStateOf(initialUrl ?: "") }
+    var composer by rememberSaveable { mutableStateOf("") }
+    var builderOpen by remember { mutableStateOf(false) }
+    var authDialog by remember { mutableStateOf(false) }
+    val connected = connection == ConsoleConnection.CONNECTED
 
     Scaffold(
         topBar = {
             TopBarWithBackButton(stringRes(Res.string.devtools_console_title), nav) {
-                IconButton(onClick = viewModel::clear) {
-                    Icon(MaterialSymbols.DeleteSweep, contentDescription = stringRes(Res.string.devtools_console_clear))
+                if (frames.isNotEmpty()) {
+                    IconButton(onClick = viewModel::clear) {
+                        Icon(MaterialSymbols.DeleteSweep, contentDescription = stringRes(Res.string.devtools_console_clear))
+                    }
                 }
             }
         },
@@ -192,319 +222,571 @@ fun RelayConsoleScreen(
             Modifier
                 .padding(padding)
                 .imePadding()
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+                .fillMaxSize(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ConnectionDot(connection)
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text(stringRes(Res.string.devtools_console_url)) },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    modifier = Modifier.weight(1f),
+            val current = link
+            if (current != null) {
+                ConnectedBar(
+                    link = current,
+                    openSubs = openSubs.size,
+                    authPending = challenge != null && viewModel.canSign,
+                    onReviewAuth = { authDialog = true },
+                    onDisconnect = viewModel::disconnect,
                 )
-                if (connection == ConsoleConnection.DISCONNECTED) {
-                    Button(onClick = { viewModel.connect(url) }) { Text(stringRes(Res.string.devtools_console_connect)) }
-                } else {
-                    OutlinedButton(onClick = viewModel::disconnect) { Text(stringRes(Res.string.devtools_console_disconnect)) }
-                }
-            }
-
-            if (challenge != null && viewModel.canSign) {
-                Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.tertiaryContainer) {
-                    Row(Modifier.fillMaxWidth().padding(start = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringRes(Res.string.devtools_console_auth), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                        TextButton(onClick = { dialog = ConsoleDialog.AUTH }) { Text(stringRes(Res.string.devtools_console_auth_review)) }
-                    }
-                }
-            }
-
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-            ) {
-                if (frames.isEmpty()) {
-                    Text(
-                        stringRes(Res.string.devtools_console_empty),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(16.dp),
-                    )
-                }
-                LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                    items(frames, key = { it.id }) { FrameRow(it) }
-                }
-            }
-
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                AssistChip(enabled = connected, onClick = { dialog = ConsoleDialog.REQ }, label = { Text("REQ") })
-                AssistChip(enabled = connected, onClick = { dialog = ConsoleDialog.COUNT }, label = { Text("COUNT") })
-                Box {
-                    AssistChip(
-                        enabled = connected && openSubs.isNotEmpty(),
-                        onClick = { if (openSubs.size == 1) viewModel.close(openSubs.first()) else closeMenu = true },
-                        label = { Text(if (openSubs.isEmpty()) "CLOSE" else "CLOSE (${openSubs.size})") },
-                    )
-                    DropdownMenu(expanded = closeMenu, onDismissRequest = { closeMenu = false }) {
-                        if (openSubs.isEmpty()) {
-                            DropdownMenuItem(text = { Text(stringRes(Res.string.devtools_console_no_open_subs)) }, onClick = { closeMenu = false }, enabled = false)
-                        }
-                        openSubs.reversed().forEach { sub ->
-                            DropdownMenuItem(
-                                text = { Text(sub, fontFamily = FontFamily.Monospace) },
-                                onClick = {
-                                    viewModel.close(sub)
-                                    closeMenu = false
-                                },
-                            )
-                        }
-                    }
-                }
-                AssistChip(enabled = connected, onClick = { dialog = ConsoleDialog.EVENT }, label = { Text("EVENT") })
-                AssistChip(
-                    enabled = connected && challenge != null && viewModel.canSign,
-                    onClick = { dialog = ConsoleDialog.AUTH },
-                    label = { Text("AUTH") },
-                    colors =
-                        if (challenge != null) {
-                            AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer)
-                        } else {
-                            AssistChipDefaults.assistChipColors()
-                        },
+            } else {
+                AddressBar(
+                    url = url,
+                    connecting = connection == ConsoleConnection.CONNECTING,
+                    suggestions = myRelays,
+                    onUrlChange = { url = it },
+                    onConnect = { viewModel.connect(url) },
+                    onPick = {
+                        url = it.url
+                        viewModel.connect(it.url)
+                    },
                 )
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = message,
-                    onValueChange = { message = it },
-                    label = { Text(stringRes(Res.string.devtools_console_message)) },
-                    textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                    maxLines = 6,
-                    modifier = Modifier.weight(1f),
-                )
-                Button(
-                    onClick = { if (viewModel.send(message)) message = "" },
-                    enabled = connected && message.isNotBlank(),
-                ) {
-                    Text(stringRes(Res.string.send))
-                }
+            FrameLog(frames, Modifier.weight(1f))
+
+            if (openSubs.isNotEmpty()) {
+                OpenSubscriptions(openSubs, onClose = viewModel::close)
             }
+
+            Composer(
+                text = composer,
+                enabled = connected,
+                onTextChange = { composer = it },
+                onBuild = { builderOpen = true },
+                onSend = { if (viewModel.send(composer)) composer = "" },
+            )
         }
     }
 
-    when (dialog) {
-        ConsoleDialog.REQ, ConsoleDialog.COUNT -> {
-            val isReq = dialog == ConsoleDialog.REQ
-            FilterBuilderDialog(
-                title = if (isReq) Res.string.devtools_console_req_title else Res.string.devtools_console_count_title,
-                draft = draft,
-                myPubKey = myPubKey,
-                onDraftChange = { draft = it },
-                onSend = { filter ->
-                    if (isReq) viewModel.sendReq(filter) else viewModel.sendCount(filter)
-                    dialog = null
-                },
-                onEditAsText = { filter ->
-                    message = (if (isReq) "[\"REQ\",\"console\"," else "[\"COUNT\",\"console\",") + filter.toJson() + "]"
-                    dialog = null
-                },
-                onDismiss = { dialog = null },
-            )
-        }
+    if (builderOpen) {
+        BuilderSheet(
+            myPubKey = accountViewModel.account.signer.pubKey,
+            viewModel = viewModel,
+            onSent = { builderOpen = false },
+            onEditInComposer = {
+                composer = it
+                builderOpen = false
+            },
+            onDismiss = { builderOpen = false },
+        )
+    }
 
-        ConsoleDialog.EVENT ->
-            EventPublishDialog(
-                onSend = { event ->
-                    viewModel.sendEvent(event)
-                    dialog = null
-                },
-                onDismiss = { dialog = null },
-            )
-
-        ConsoleDialog.AUTH -> {
-            val current = challenge
-            if (current == null) {
-                dialog = null
-            } else {
-                AlertDialog(
-                    onDismissRequest = { dialog = null },
-                    title = { Text(stringRes(Res.string.devtools_console_auth_title)) },
-                    text = { Text(stringRes(Res.string.devtools_console_auth_body, url.trim(), current, NPub.create(myPubKey))) },
-                    confirmButton = {
-                        Button(onClick = {
-                            viewModel.answerAuth()
-                            dialog = null
-                        }) { Text(stringRes(Res.string.devtools_console_auth_sign)) }
-                    },
-                    dismissButton = { TextButton(onClick = { dialog = null }) { Text(stringRes(Res.string.cancel)) } },
-                )
-            }
-        }
-
-        null -> {}
+    val pending = challenge
+    if (authDialog && pending != null) {
+        AuthConfirmDialog(
+            relay = link?.relay?.url ?: url,
+            challenge = pending,
+            npub = NPub.create(accountViewModel.account.signer.pubKey),
+            onConfirm = {
+                viewModel.answerAuth()
+                authDialog = false
+            },
+            onDismiss = { authDialog = false },
+        )
     }
 }
 
-/** REQ/COUNT from a form: every field optional, the built frame previewed as it will be sent. */
+// ---- top: the connection bar ----
+
+/** Disconnected: one address field with Connect inside it, and the user's own relays one tap away. */
 @Composable
-private fun FilterBuilderDialog(
-    title: StringResource,
-    draft: FilterDraft,
+private fun AddressBar(
+    url: String,
+    connecting: Boolean,
+    suggestions: ImmutableList<NormalizedRelayUrl>,
+    onUrlChange: (String) -> Unit,
+    onConnect: () -> Unit,
+    onPick: (NormalizedRelayUrl) -> Unit,
+) {
+    Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
+        OutlinedTextField(
+            value = url,
+            onValueChange = onUrlChange,
+            placeholder = { Text(stringRes(Res.string.devtools_console_url)) },
+            singleLine = true,
+            enabled = !connecting,
+            shape = RoundedCornerShape(28.dp),
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            leadingIcon = { Icon(MaterialSymbols.Dns, contentDescription = null, modifier = Modifier.size(20.dp)) },
+            trailingIcon = {
+                if (connecting) {
+                    CircularProgressIndicator(Modifier.size(20.dp).padding(end = 4.dp), strokeWidth = 2.dp)
+                } else {
+                    TextButton(onClick = onConnect, enabled = url.isNotBlank(), modifier = Modifier.padding(end = 4.dp)) {
+                        Text(stringRes(Res.string.devtools_console_connect))
+                    }
+                }
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { if (url.isNotBlank()) onConnect() }),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+        )
+
+        if (suggestions.isNotEmpty() && !connecting) {
+            Text(
+                stringRes(Res.string.devtools_console_your_relays),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, top = 8.dp),
+            )
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(suggestions, key = { it.url }) { relay ->
+                    SuggestionChip(
+                        onClick = { onPick(relay) },
+                        label = { Text(relay.displayUrl(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        modifier = Modifier.widthIn(max = 220.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Connected: one line of status, plus the AUTH offer when the relay asks for it. */
+@Composable
+private fun ConnectedBar(
+    link: ConsoleLink,
+    openSubs: Int,
+    authPending: Boolean,
+    onReviewAuth: () -> Unit,
+    onDisconnect: () -> Unit,
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Column {
+            Row(Modifier.padding(start = 16.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(
+                        link.relay.displayUrl(),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontFamily = FontFamily.Monospace,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val details =
+                        buildList {
+                            add("${link.pingMillis} ms")
+                            if (link.compression) add("deflate")
+                            if (openSubs > 0) add(stringRes(Res.string.devtools_console_open_subs, openSubs))
+                        }
+                    Text(
+                        details.joinToString(" · "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDisconnect) {
+                    Icon(MaterialSymbols.Close, contentDescription = stringRes(Res.string.devtools_console_disconnect))
+                }
+            }
+            if (authPending) {
+                Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(start = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(MaterialSymbols.Lock, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(
+                            stringRes(Res.string.devtools_console_auth),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f).padding(start = 12.dp),
+                        )
+                        TextButton(onClick = onReviewAuth) { Text(stringRes(Res.string.devtools_console_auth_review)) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ---- middle: the log ----
+
+@Composable
+private fun FrameLog(
+    frames: ImmutableList<ConsoleFrame>,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+    LaunchedEffect(frames.size) {
+        if (frames.isNotEmpty()) listState.animateScrollToItem(frames.lastIndex)
+    }
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp)),
+    ) {
+        if (frames.isEmpty()) {
+            Text(
+                stringRes(Res.string.devtools_console_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp),
+            )
+        }
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize().padding(8.dp)) {
+            items(frames, key = { it.id }) { FrameRow(it) }
+        }
+    }
+}
+
+// ---- bottom: open subscriptions and the composer ----
+
+/** The REQs still open, newest first; the x sends their CLOSE. */
+@Composable
+private fun OpenSubscriptions(
+    subs: ImmutableList<String>,
+    onClose: (String) -> Unit,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(top = 8.dp),
+    ) {
+        items(subs.reversed(), key = { it }) { sub ->
+            val closeLabel = stringRes(Res.string.devtools_console_close_sub, sub)
+            InputChip(
+                selected = false,
+                onClick = { onClose(sub) },
+                label = { Text(sub, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelMedium) },
+                leadingIcon = { Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape)) },
+                trailingIcon = { Icon(MaterialSymbols.Close, contentDescription = closeLabel, modifier = Modifier.size(InputChipDefaults.IconSize)) },
+            )
+        }
+    }
+}
+
+/** A chat-style input: + opens the builder, the field takes any raw frame, the arrow sends it. */
+@Composable
+private fun Composer(
+    text: String,
+    enabled: Boolean,
+    onTextChange: (String) -> Unit,
+    onBuild: () -> Unit,
+    onSend: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        FilledTonalIconButton(onClick = onBuild, enabled = enabled, modifier = Modifier.padding(bottom = 4.dp)) {
+            Icon(MaterialSymbols.Add, contentDescription = stringRes(Res.string.devtools_console_build))
+        }
+        OutlinedTextField(
+            value = text,
+            onValueChange = onTextChange,
+            enabled = enabled,
+            placeholder = {
+                Text(
+                    stringRes(if (enabled) Res.string.devtools_console_composer else Res.string.devtools_console_composer_offline),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            shape = RoundedCornerShape(24.dp),
+            textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+            maxLines = 6,
+            modifier = Modifier.weight(1f),
+        )
+        FilledIconButton(onClick = onSend, enabled = enabled && text.isNotBlank(), modifier = Modifier.padding(bottom = 4.dp)) {
+            Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = stringRes(Res.string.send))
+        }
+    }
+}
+
+// ---- the builder sheet ----
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BuilderSheet(
     myPubKey: String,
-    onDraftChange: (FilterDraft) -> Unit,
-    onSend: (Filter) -> Unit,
-    onEditAsText: (Filter) -> Unit,
+    viewModel: RelayConsoleViewModel,
+    onSent: () -> Unit,
+    onEditInComposer: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var mode by rememberSaveable { mutableStateOf(BuilderMode.REQ) }
+    var draft by remember { mutableStateOf(FilterDraft(kinds = "1", limit = "10")) }
+    var eventJson by rememberSaveable { mutableStateOf("") }
+    // One id per sheet, so the preview and the sent frame agree.
+    val subId = remember { RelayConsoleViewModel.newSubId() }
+
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            Modifier
+                .navigationBarsPadding()
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                BuilderMode.entries.forEachIndexed { index, it ->
+                    SegmentedButton(
+                        selected = mode == it,
+                        onClick = { mode = it },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = BuilderMode.entries.size),
+                    ) { Text(it.verb) }
+                }
+            }
+
+            if (mode == BuilderMode.EVENT) {
+                EventForm(
+                    json = eventJson,
+                    onJsonChange = { eventJson = it },
+                    onSend = {
+                        viewModel.sendEvent(it)
+                        onSent()
+                    },
+                    onEditInComposer = { onEditInComposer("[\"EVENT\"," + it.toJson() + "]") },
+                )
+            } else {
+                FilterForm(
+                    verb = mode.verb,
+                    subId = subId,
+                    draft = draft,
+                    myPubKey = myPubKey,
+                    viewModel = viewModel,
+                    onDraftChange = { draft = it },
+                    onSend = {
+                        viewModel.send(it)
+                        onSent()
+                    },
+                    onEditInComposer = onEditInComposer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterForm(
+    verb: String,
+    subId: String,
+    draft: FilterDraft,
+    myPubKey: String,
+    viewModel: RelayConsoleViewModel,
+    onDraftChange: (FilterDraft) -> Unit,
+    onSend: (String) -> Unit,
+    onEditInComposer: (String) -> Unit,
+) {
     val result = remember(draft) { draft.build() }
-    val filter = (result as? FilterDraft.Result.Ok)?.filter
+    val invalid = result as? FilterDraft.Result.Invalid
+    val frame = (result as? FilterDraft.Result.Ok)?.let { viewModel.frameFor(verb, subId, it.filter) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringRes(title)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FormField(Res.string.devtools_filter_kinds, draft.kinds, result, FilterField.KINDS) { onDraftChange(draft.copy(kinds = it)) }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FormField(Res.string.devtools_filter_authors, draft.authors, result, FilterField.AUTHORS, Modifier.weight(1f)) {
-                        onDraftChange(draft.copy(authors = it))
-                    }
-                    TextButton(onClick = { onDraftChange(draft.copy(authors = (draft.authors.trim() + " " + NPub.create(myPubKey)).trim())) }) {
-                        Text(stringRes(Res.string.devtools_filter_me))
-                    }
-                }
-                FormField(Res.string.devtools_filter_ids, draft.ids, result, FilterField.IDS) { onDraftChange(draft.copy(ids = it)) }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FormField(Res.string.devtools_filter_tag, draft.tagName, result, FilterField.TAG, Modifier.width(72.dp)) {
-                        onDraftChange(draft.copy(tagName = it.take(2)))
-                    }
-                    FormField(Res.string.devtools_filter_tag_values, draft.tagValues, null, FilterField.TAG, Modifier.weight(1f)) {
-                        onDraftChange(draft.copy(tagValues = it))
-                    }
-                }
-                Text(stringRes(Res.string.devtools_filter_since), style = MaterialTheme.typography.labelMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SinceChip(Res.string.devtools_filter_any, draft.since == null) { onDraftChange(draft.copy(since = null)) }
-                    SinceChip(Res.string.devtools_filter_hour, draft.since == SinceWindow.HOUR) { onDraftChange(draft.copy(since = SinceWindow.HOUR)) }
-                    SinceChip(Res.string.devtools_filter_day, draft.since == SinceWindow.DAY) { onDraftChange(draft.copy(since = SinceWindow.DAY)) }
-                    SinceChip(Res.string.devtools_filter_week, draft.since == SinceWindow.WEEK) { onDraftChange(draft.copy(since = SinceWindow.WEEK)) }
-                    SinceChip(Res.string.devtools_filter_month, draft.since == SinceWindow.MONTH) { onDraftChange(draft.copy(since = SinceWindow.MONTH)) }
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FormField(Res.string.devtools_filter_limit, draft.limit, result, FilterField.LIMIT, Modifier.width(96.dp)) {
-                        onDraftChange(draft.copy(limit = it.filter(Char::isDigit)))
-                    }
-                    FormField(Res.string.devtools_filter_search, draft.search, null, FilterField.KINDS, Modifier.weight(1f)) {
-                        onDraftChange(draft.copy(search = it))
-                    }
-                }
-
-                when (result) {
-                    is FilterDraft.Result.Invalid ->
-                        Text(
-                            stringRes(Res.string.devtools_filter_invalid, result.token),
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-
-                    is FilterDraft.Result.Ok -> DevToolsCodeBlock(result.filter.toJson(), maxHeight = 120)
-                }
+    // Ascii, not Number: a numeric keyboard has no comma to separate kinds with.
+    FormField(Res.string.devtools_filter_kinds, Res.string.devtools_filter_kinds_hint, draft.kinds, invalid, FilterField.KINDS, KeyboardType.Ascii) {
+        onDraftChange(draft.copy(kinds = it))
+    }
+    FormField(
+        Res.string.devtools_filter_authors,
+        Res.string.devtools_filter_authors_hint,
+        draft.authors,
+        invalid,
+        FilterField.AUTHORS,
+        trailing = {
+            IconButton(onClick = { onDraftChange(draft.copy(authors = (draft.authors.trim() + " " + NPub.create(myPubKey)).trim())) }) {
+                Icon(MaterialSymbols.Person, contentDescription = stringRes(Res.string.devtools_filter_me))
             }
         },
-        confirmButton = {
-            Button(onClick = { filter?.let(onSend) }, enabled = filter != null) { Text(stringRes(Res.string.send)) }
-        },
-        dismissButton = {
-            Row {
-                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) }
-                TextButton(onClick = { filter?.let(onEditAsText) }, enabled = filter != null) {
-                    Text(stringRes(Res.string.devtools_console_edit_as_text))
-                }
+    ) { onDraftChange(draft.copy(authors = it)) }
+    FormField(Res.string.devtools_filter_ids, Res.string.devtools_filter_ids_hint, draft.ids, invalid, FilterField.IDS) {
+        onDraftChange(draft.copy(ids = it))
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = draft.tagName.removePrefix("#"),
+            onValueChange = { onDraftChange(draft.copy(tagName = it.removePrefix("#").take(1))) },
+            label = { Text(stringRes(Res.string.devtools_filter_tag)) },
+            prefix = { Text("#") },
+            singleLine = true,
+            isError = invalid?.field == FilterField.TAG,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            modifier = Modifier.width(88.dp),
+        )
+        OutlinedTextField(
+            value = draft.tagValues,
+            onValueChange = { onDraftChange(draft.copy(tagValues = it)) },
+            label = { Text(stringRes(Res.string.devtools_filter_tag_values)) },
+            singleLine = true,
+            isError = invalid?.field == FilterField.TAG,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringRes(Res.string.devtools_filter_since), style = MaterialTheme.typography.labelLarge)
+        val windows = listOf(null to Res.string.devtools_filter_any) + SinceWindow.entries.map { it to it.label() }
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            windows.forEachIndexed { index, (window, label) ->
+                SegmentedButton(
+                    selected = draft.since == window,
+                    onClick = { onDraftChange(draft.copy(since = window)) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = windows.size),
+                    icon = {},
+                ) { Text(stringRes(label), maxLines = 1) }
             }
-        },
+        }
+    }
+
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FormField(Res.string.devtools_filter_limit, null, draft.limit, invalid, FilterField.LIMIT, KeyboardType.Number, Modifier.width(112.dp)) {
+            onDraftChange(draft.copy(limit = it.filter(Char::isDigit)))
+        }
+        FormField(Res.string.devtools_filter_search, null, draft.search, null, FilterField.KINDS, modifier = Modifier.weight(1f)) {
+            onDraftChange(draft.copy(search = it))
+        }
+    }
+
+    // The other fields say what is wrong right under themselves; the tag pair has no room to.
+    if (invalid?.field == FilterField.TAG) {
+        Text(stringRes(Res.string.devtools_filter_invalid, invalid.token), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+    }
+
+    Preview(frame)
+
+    SheetActions(
+        sendLabel = verb,
+        enabled = frame != null,
+        onEditInComposer = { frame?.let(onEditInComposer) },
+        onSend = { frame?.let(onSend) },
+    )
+}
+
+@Composable
+private fun EventForm(
+    json: String,
+    onJsonChange: (String) -> Unit,
+    onSend: (Event) -> Unit,
+    onEditInComposer: (Event) -> Unit,
+) {
+    val result = remember(json) { EventInspector.inspect(json) }
+    val parsed = (result as? EventInspectResult.Parsed)?.inspection
+
+    DevToolsInput(json, onJsonChange, stringRes(Res.string.devtools_console_event_field), minLines = 6, maxLines = 12)
+    when {
+        result is EventInspectResult.Unparseable ->
+            DevToolsCheckRow(MaterialSymbols.ErrorOutline, stringRes(Res.string.devtools_event_unparseable, result.message), MaterialTheme.colorScheme.error)
+
+        // An invalid event can still go out: seeing the relay reject it is the point.
+        parsed != null ->
+            DevToolsCheckRow(
+                if (parsed.isValid) MaterialSymbols.CheckCircle else MaterialSymbols.Error,
+                stringRes(if (parsed.isValid) Res.string.devtools_event_valid else Res.string.devtools_event_invalid),
+                if (parsed.isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+            )
+    }
+
+    SheetActions(
+        sendLabel = BuilderMode.EVENT.verb,
+        enabled = parsed != null,
+        onEditInComposer = { parsed?.let { onEditInComposer(it.event) } },
+        onSend = { parsed?.let { onSend(it.event) } },
     )
 }
 
 @Composable
 private fun FormField(
     label: StringResource,
+    hint: StringResource?,
     value: String,
-    result: FilterDraft.Result?,
+    invalid: FilterDraft.Result.Invalid?,
     field: FilterField,
-    modifier: Modifier = Modifier,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    trailing: (@Composable () -> Unit)? = null,
     onChange: (String) -> Unit,
 ) {
+    val isError = invalid?.field == field
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(stringRes(label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        isError = (result as? FilterDraft.Result.Invalid)?.field == field,
+        label = { Text(stringRes(label), maxLines = 1) },
+        placeholder = hint?.let { { Text(stringRes(it), maxLines = 1, overflow = TextOverflow.Ellipsis) } },
+        trailingIcon = trailing,
+        isError = isError,
+        supportingText = if (isError) ({ Text(stringRes(Res.string.devtools_filter_invalid, invalid.token)) }) else null,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-        modifier = modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        modifier = modifier,
     )
 }
 
+/** The exact frame the Send button puts on the wire, wrapped so nothing is hidden. */
 @Composable
-private fun SinceChip(
-    label: StringResource,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    FilterChip(selected = selected, onClick = onClick, label = { Text(stringRes(label)) })
+private fun Preview(frame: String?) {
+    if (frame == null) return
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(stringRes(Res.string.devtools_console_preview), style = MaterialTheme.typography.labelLarge)
+        Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(8.dp)) {
+            Text(
+                frame,
+                style = MaterialTheme.typography.bodySmall,
+                fontFamily = FontFamily.Monospace,
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
+            )
+        }
+    }
 }
 
-/** Publish an already-signed event: checked with the inspector before the Send button lights up. */
 @Composable
-private fun EventPublishDialog(
-    onSend: (Event) -> Unit,
+private fun SheetActions(
+    sendLabel: String,
+    enabled: Boolean,
+    onEditInComposer: () -> Unit,
+    onSend: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+        TextButton(onClick = onEditInComposer, enabled = enabled) { Text(stringRes(Res.string.devtools_console_edit_as_text)) }
+        Button(onClick = onSend, enabled = enabled, modifier = Modifier.padding(start = 8.dp)) {
+            Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(stringRes(Res.string.send) + " " + sendLabel, modifier = Modifier.padding(start = 8.dp))
+        }
+    }
+}
+
+private fun SinceWindow.label(): StringResource =
+    when (this) {
+        SinceWindow.HOUR -> Res.string.devtools_filter_hour
+        SinceWindow.DAY -> Res.string.devtools_filter_day
+        SinceWindow.WEEK -> Res.string.devtools_filter_week
+        SinceWindow.MONTH -> Res.string.devtools_filter_month
+    }
+
+@Composable
+private fun AuthConfirmDialog(
+    relay: String,
+    challenge: String,
+    npub: String,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var json by rememberSaveable { mutableStateOf("") }
-    val result = remember(json) { EventInspector.inspect(json) }
-    val parsed = (result as? EventInspectResult.Parsed)?.inspection
-
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringRes(Res.string.devtools_console_event_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                DevToolsInput(json, { json = it }, stringRes(Res.string.devtools_console_event_field), minLines = 4, maxLines = 10)
-                when {
-                    result is EventInspectResult.Unparseable ->
-                        Text(stringRes(Res.string.devtools_event_unparseable, result.message), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-
-                    parsed != null ->
-                        DevToolsCheckRow(
-                            if (parsed.isValid) MaterialSymbols.CheckCircle else MaterialSymbols.Error,
-                            stringRes(if (parsed.isValid) Res.string.devtools_event_valid else Res.string.devtools_event_invalid),
-                            if (parsed.isValid) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-                        )
-                }
-            }
-        },
-        // An invalid event still goes out if the developer insists: seeing the relay reject it is the point.
-        confirmButton = { Button(onClick = { parsed?.let { onSend(it.event) } }, enabled = parsed != null) { Text(stringRes(Res.string.send)) } },
+        icon = { Icon(MaterialSymbols.Lock, contentDescription = null) },
+        title = { Text(stringRes(Res.string.devtools_console_auth_title)) },
+        text = { Text(stringRes(Res.string.devtools_console_auth_body, relay, challenge, npub)) },
+        confirmButton = { Button(onClick = onConfirm) { Text(stringRes(Res.string.devtools_console_auth_sign)) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.cancel)) } },
     )
 }
 
-@Composable
-private fun ConnectionDot(connection: ConsoleConnection) {
-    val color =
-        when (connection) {
-            ConsoleConnection.CONNECTED -> MaterialTheme.colorScheme.primary
-            ConsoleConnection.CONNECTING -> MaterialTheme.colorScheme.tertiary
-            ConsoleConnection.DISCONNECTED -> MaterialTheme.colorScheme.outline
-        }
-    Box(Modifier.size(12.dp).background(color, CircleShape))
-}
+// ---- frames ----
 
 /** One frame; long ones show six lines until tapped. */
 @Composable
@@ -539,6 +821,7 @@ private fun FrameRow(frame: ConsoleFrame) {
             Text(
                 it,
                 style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
                 color = labelColor(it),
                 modifier = Modifier.padding(start = 4.dp, end = 6.dp),
             )

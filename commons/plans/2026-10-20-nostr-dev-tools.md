@@ -119,7 +119,7 @@ Screens in `commonsUI/…/ui/screen/loggedIn/devtools/`:
 | `DevToolsKinds` | `KindBrowserScreen`: search by number, name or NIP; an unknown number still offers a crawl |
 | `DevToolsKindUsage(kind?)` | `KindLookupScreen`: type a kind number. It shows the name and NIP when the registry knows the kind (or says it doesn't), then one card per client or per shape, each with tag chips (share, value counts; tags under 5% folded) and a "Show example" |
 | `DevToolsEventFinder(eventId)` | `EventFinderScreen`: the same table for one event id |
-| `DevToolsRelayConsole(url?)` | `RelayConsoleScreen` |
+| `DevToolsRelayConsole(url?)` | `RelayConsoleScreen`, laid out like a chat. On top, a connection bar: an address field with Connect and the user's relays as suggestions, then one status line (relay, ping, deflate, open subs) with Disconnect and the AUTH offer. Then the frame log. At the bottom, closable chips for open REQs, then a composer: + opens a builder sheet (REQ, COUNT or EVENT tabs, errors on the field, exact frame previewed) and the field sends raw frames. |
 
 Tor: the desktop and Android socket builders do not dial a Tor-routed relay until Tor is up
 (`WebsocketBuilder.canConnect`). With the default "Untrusted Relays → Tor", every relay outside

@@ -83,6 +83,14 @@ enum class ConsoleConnection {
     CONNECTED,
 }
 
+/** The live socket, for the connection bar: which relay, how fast it opened, whether it compresses. */
+@Immutable
+data class ConsoleLink(
+    val relay: NormalizedRelayUrl,
+    val pingMillis: Int,
+    val compression: Boolean,
+)
+
 /**
  * A manual WebSocket console for one relay, in the spirit of websocketking.com: open a socket,
  * type any frame, see every frame both ways, unparsed. It deliberately bypasses the app's
@@ -101,6 +109,9 @@ class RelayConsoleViewModel(
 
     private val _connection = MutableStateFlow(ConsoleConnection.DISCONNECTED)
     val connection: StateFlow<ConsoleConnection> = _connection
+
+    private val _link = MutableStateFlow<ConsoleLink?>(null)
+    val link: StateFlow<ConsoleLink?> = _link
 
     /** REQ subscriptions sent and not yet closed by either side, newest last: what CLOSE offers. */
     private val _openSubs = MutableStateFlow<ImmutableList<String>>(persistentListOf())
@@ -138,6 +149,7 @@ class RelayConsoleViewModel(
                     compression: Boolean,
                 ) {
                     _connection.value = ConsoleConnection.CONNECTED
+                    _link.value = ConsoleLink(normalized, pingMillis, compression)
                     system(ConsoleSystemEvent.CONNECTED, "${pingMillis}ms" + if (compression) ", deflate" else "")
                 }
 
@@ -153,6 +165,7 @@ class RelayConsoleViewModel(
                     reason: String,
                 ) {
                     _connection.value = ConsoleConnection.DISCONNECTED
+                    _link.value = null
                     system(ConsoleSystemEvent.CLOSED, "$code $reason".trim())
                 }
 
@@ -162,6 +175,7 @@ class RelayConsoleViewModel(
                     response: String?,
                 ) {
                     _connection.value = ConsoleConnection.DISCONNECTED
+                    _link.value = null
                     system(ConsoleSystemEvent.FAILED, listOfNotNull(code?.toString(), t.message, response).joinToString(" "))
                 }
             }
@@ -176,6 +190,7 @@ class RelayConsoleViewModel(
         socket = null
         _pendingChallenge.value = null
         _openSubs.value = persistentListOf()
+        _link.value = null
         _connection.value = ConsoleConnection.DISCONNECTED
     }
 
@@ -197,9 +212,12 @@ class RelayConsoleViewModel(
         return sent
     }
 
-    fun sendReq(filter: Filter) = send(ReqCmd(newSubId(), listOf(filter)).toJson())
-
-    fun sendCount(filter: Filter) = send(CountCmd(newSubId(), listOf(filter)).toJson())
+    /** A REQ or COUNT frame for [filter], built by the same serializer [send] puts on the wire. */
+    fun frameFor(
+        verb: String,
+        subId: String,
+        filter: Filter,
+    ) = if (verb == "COUNT") CountCmd(subId, listOf(filter)).toJson() else ReqCmd(subId, listOf(filter)).toJson()
 
     fun close(subId: String) = send(CloseCmd(subId).toJson())
 
@@ -263,6 +281,6 @@ class RelayConsoleViewModel(
         /** The second element of a REQ, COUNT, CLOSE or CLOSED frame. */
         fun subIdOf(frame: String): String? = SUB_ID.find(frame)?.groupValues?.get(1)
 
-        private fun newSubId() = "console-" + RandomInstance.int(100000)
+        fun newSubId() = "console-" + RandomInstance.int(100000)
     }
 }
