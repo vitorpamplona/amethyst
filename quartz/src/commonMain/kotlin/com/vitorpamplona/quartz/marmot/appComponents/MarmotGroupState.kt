@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.tree.Extension
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamQuicPolicyV1
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.components.ComponentsList
-import com.vitorpamplona.quartz.mls.tree.Extension
 
 /**
  * The current profile's read view of a GroupContext `app_data_dictionary` — the

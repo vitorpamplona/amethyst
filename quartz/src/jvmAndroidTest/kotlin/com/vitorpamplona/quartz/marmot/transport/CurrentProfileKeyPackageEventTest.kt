@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.quartz.marmot.transport
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.framing.MlsMessage
+import com.vitorpamplona.mls.messages.MlsKeyPackage
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -63,7 +63,7 @@ class CurrentProfileKeyPackageEventTest {
 
     private val vector: Vector =
         JsonMapper.jsonInstance.decodeFromString<Vector>(
-            TestResourceLoader().loadString("mls/marmot-current-profile.json"),
+            TestResourceLoader().loadString("marmot/marmot-current-profile.json"),
         )
 
     /** The MDK-shaped KeyPackage, re-wrapped as the base64 a kind:30443 carries. */

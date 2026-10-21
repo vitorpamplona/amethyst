@@ -18,18 +18,20 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.quartz.mls.components
+package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentData
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.framing.MlsMessage
+import com.vitorpamplona.mls.framing.WireFormat
+import com.vitorpamplona.mls.messages.MlsKeyPackage
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.TestResourceLoader
-import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.mls.framing.WireFormat
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -78,7 +80,7 @@ class AppDataDictionaryInteropTest {
 
     private val vector: Vector =
         JsonMapper.jsonInstance.decodeFromString<Vector>(
-            TestResourceLoader().loadString("mls/marmot-current-profile.json"),
+            TestResourceLoader().loadString("marmot/marmot-current-profile.json"),
         )
 
     private val keyPackage: MlsKeyPackage by lazy {

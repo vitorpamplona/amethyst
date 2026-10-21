@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.EchoState
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.cordn.sync.PendingEpochOperation
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.codec.TlsWriter
 
 /**
  * Local storage for cordn group state, keyed by the delivery `gid`.

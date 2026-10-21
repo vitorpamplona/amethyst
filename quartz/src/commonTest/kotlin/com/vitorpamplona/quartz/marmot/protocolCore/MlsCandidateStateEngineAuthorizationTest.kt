@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertFalse

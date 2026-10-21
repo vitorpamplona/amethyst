@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.cordn
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Request

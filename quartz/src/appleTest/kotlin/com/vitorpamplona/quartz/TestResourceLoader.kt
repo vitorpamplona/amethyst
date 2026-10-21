@@ -25,7 +25,6 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
-import kotlinx.io.files.FileNotFoundException
 import platform.Foundation.NSData
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
@@ -51,7 +50,7 @@ actual class TestResourceLoader {
     fun loadFileData(file: String): ByteArray {
         val resourceDir = getenv("TEST_RESOURCES_ROOT")?.toKString()
         val filePath = "$resourceDir/$file"
-        return NSData.dataWithContentsOfFile(filePath)?.toByteArray() ?: throw FileNotFoundException("Resource $file was not found.")
+        return NSData.dataWithContentsOfFile(filePath)?.toByteArray() ?: throw IllegalArgumentException("Resource not found: $filePath")
     }
 }
 

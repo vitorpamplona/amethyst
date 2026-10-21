@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.codec.TlsReader
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.components.ComponentsList
+import com.vitorpamplona.mls.framing.MlsMessage
+import com.vitorpamplona.mls.messages.MlsKeyPackage
+import com.vitorpamplona.mls.tree.Credential
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.marmot.appComponents.accountIdentityProof.AccountIdentityProofV2
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRoles
@@ -28,12 +34,6 @@ import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.marmot.groups.isLocalAdmin
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
 import com.vitorpamplona.quartz.marmot.mip01Groups.MlsCiphersuite
-import com.vitorpamplona.quartz.mls.codec.TlsReader
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.components.ComponentsList
-import com.vitorpamplona.quartz.mls.framing.MlsMessage
-import com.vitorpamplona.quartz.mls.messages.MlsKeyPackage
-import com.vitorpamplona.quartz.mls.tree.Credential
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -77,7 +77,7 @@ class CurrentProfileGroupFactoryTest {
 
     private val vector: Vector =
         JsonMapper.jsonInstance.decodeFromString<Vector>(
-            TestResourceLoader().loadString("mls/marmot-current-profile.json"),
+            TestResourceLoader().loadString("marmot/marmot-current-profile.json"),
         )
 
     private val signer = NostrSignerInternal(KeyPair())

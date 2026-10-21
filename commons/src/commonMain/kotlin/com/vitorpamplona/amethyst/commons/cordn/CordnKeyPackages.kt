@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.messages.KeyPackageBundle
+import com.vitorpamplona.mls.messages.KeyPackageBundleCodec
 import com.vitorpamplona.quartz.cordn.groups.CordnCredential
 import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.AvailableKeyPackage
 import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundleCodec
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.TimeUtils

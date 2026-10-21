@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.mls.messages.KeyPackageBundle
 import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.mls.messages.KeyPackageBundle
 import kotlinx.coroutines.test.runTest
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.test.Test

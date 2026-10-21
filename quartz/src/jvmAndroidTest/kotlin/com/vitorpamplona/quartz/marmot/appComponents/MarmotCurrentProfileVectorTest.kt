@@ -89,7 +89,7 @@ class MarmotCurrentProfileVectorTest {
 
     private val vector: Vector =
         JsonMapper.jsonInstance.decodeFromString<Vector>(
-            TestResourceLoader().loadString("mls/marmot-current-profile.json"),
+            TestResourceLoader().loadString("marmot/marmot-current-profile.json"),
         )
 
     private val ciphersuite = MlsCiphersuite.DEFAULT

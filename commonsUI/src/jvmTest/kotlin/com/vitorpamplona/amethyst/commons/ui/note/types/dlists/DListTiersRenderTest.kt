@@ -42,9 +42,11 @@ import com.vitorpamplona.quartz.utils.EventFactory
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skiko.MainUIDispatcher
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -190,19 +192,26 @@ class DListTiersRenderTest {
         val nav = mockk<INav>(relaxed = true)
         val density = 2f
         val scene =
-            ImageComposeScene(width = (900 * density).toInt(), height = (heightDp * density).toInt(), density = Density(density)) {
-                ThemeComparisonRow {
-                    val background = remember { mutableStateOf(Color.Transparent) }
-                    Column(Modifier.padding(12.dp).fillMaxWidth()) {
-                        RenderDListItem(note, 3, background, mockAccountViewModel(), nav, isPage = isPage)
+            onUiThread {
+                ImageComposeScene(
+                    width = (900 * density).toInt(),
+                    height = (heightDp * density).toInt(),
+                    density = Density(density),
+                    coroutineContext = MainUIDispatcher,
+                ) {
+                    ThemeComparisonRow {
+                        val background = remember { mutableStateOf(Color.Transparent) }
+                        Column(Modifier.padding(12.dp).fillMaxWidth()) {
+                            RenderDListItem(note, 3, background, mockAccountViewModel(), nav, isPage = isPage)
+                        }
                     }
                 }
             }
         try {
-            var image = scene.render(0)
+            var image = onUiThread { scene.render(0) }
             repeat(SETTLE_FRAMES) { frame ->
                 Thread.sleep(FRAME_MILLIS)
-                image = scene.render((frame + 1) * FRAME_MILLIS * 1_000_000L)
+                image = onUiThread { scene.render((frame + 1) * FRAME_MILLIS * 1_000_000L) }
             }
             val png = image.encodeToData(EncodedImageFormat.PNG) ?: error("could not encode")
             File(outDir, "$name.png").writeBytes(png.bytes)
@@ -212,9 +221,19 @@ class DListTiersRenderTest {
             for (y in 0 until image.height step 7) for (x in 0 until image.width step 7) distinct += pixels.getColor(x, y)
             assertTrue(distinct.size > 20, "$name rendered almost nothing (${distinct.size} colours)")
         } finally {
-            scene.close()
+            onUiThread { scene.close() }
         }
     }
+
+    /**
+     * Runs [block] on the AWT event thread. Compose desktop assumes that thread owns every scene:
+     * RectManager's throttled layout callbacks are posted there (`postDelayed` on skiko's
+     * [MainUIDispatcher]) and reorder its rect list. Driving the scene from the test thread let
+     * such a callback run in the middle of `render` or `close`, and `close` then failed with
+     * "LayoutNode … not found in RectList". Frames still sleep on the test thread, so the callbacks
+     * run between frames, never during one.
+     */
+    private fun <T> onUiThread(block: () -> T): T = runBlocking(MainUIDispatcher) { block() }
 
     private companion object {
         const val SETTLE_FRAMES = 12

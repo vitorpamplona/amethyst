@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.mls.components.ComponentsList
+import com.vitorpamplona.mls.components.ComponentsList
 
 /**
  * Marmot app-component ids, from the spec's `foundation/registries.md`.

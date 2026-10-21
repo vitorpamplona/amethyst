@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.mls.components.AppDataDictionary
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.appComponents.AppComponentIds
 import com.vitorpamplona.quartz.marmot.appComponents.CurrentProfileGroupFactory
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
-import com.vitorpamplona.quartz.mls.components.AppDataDictionary
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.runBlocking

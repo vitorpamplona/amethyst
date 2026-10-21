@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.marmot.protocolCore
 
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupState
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals

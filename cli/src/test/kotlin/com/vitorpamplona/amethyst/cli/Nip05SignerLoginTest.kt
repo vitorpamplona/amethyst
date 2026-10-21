@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
@@ -36,16 +38,20 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Fetcher
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequestConnect
+import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.BunkerRequestProcessor
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46ConnectDecision
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.Nip46RequestAuthorizer
 import com.vitorpamplona.quartz.nip46RemoteSigner.server.NostrConnectSignerService
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -90,8 +96,20 @@ class Nip05SignerLoginTest {
         val http = OkHttpClient.Builder().build()
         val client = NostrClient(BasicOkHttpWebSocket.Builder { _ -> http }, scope)
         val relays = setOf(RelayUrlNormalizer.normalize(relay.url))
-        val service = NostrConnectSignerService(client, user, BunkerRequestProcessor(user, { relays }, AllowAll), relays)
+        val listening = CompletableDeferred<Unit>()
+        val service =
+            NostrConnectSignerService(client, user, BunkerRequestProcessor(user, { relays }, AllowAll), relays, onListening = { listening.complete(Unit) })
         scope.launch(start = CoroutineStart.UNDISPATCHED) { service.run() }
+
+        // The relay keeps no kind-24133 event, so a login request that lands before the signer's REQ is
+        // lost, and the client's retry 67 s later is past the signer's 30 s age window. A query on the
+        // signer's own socket answers only after the relay has taken that REQ.
+        runBlocking {
+            withTimeout(10_000) {
+                listening.await()
+                client.fetchAll(relay.url, Filter(kinds = listOf(NostrConnectEvent.KIND), limit = 1))
+            }
+        }
 
         nostrJson = """{"names":{"bob":"${user.pubKey}"},"nip46":{"${user.pubKey}":["${relay.url}"]}}"""
         LoginCommand.nip05ClientBuilder = {

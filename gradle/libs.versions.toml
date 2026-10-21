@@ -76,6 +76,8 @@ media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 negentropyKmp = "v1.2.0"
+# RFC 9420 MLS engine, split out of quartz/mls into vitorpamplona/mls-kmp.
+mlsKmp = "1.0.0"
 # Crypto primitives (SHA, HMAC, HKDF, AES, ChaCha20, X25519, Ed25519), split out of quartz into
 # vitorpamplona/crypto-kmp.
 cryptoKmp = "1.0.0"
@@ -252,6 +254,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 negentropy-kmp = { module = "com.vitorpamplona.negentropy:kmp-negentropy", version.ref = "negentropyKmp" }
+mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }

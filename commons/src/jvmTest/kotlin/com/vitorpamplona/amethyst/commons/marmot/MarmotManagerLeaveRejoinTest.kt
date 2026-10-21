@@ -39,7 +39,7 @@ import kotlin.test.assertTrue
 /**
  * End-to-end leave + rejoin round-trip at the [MarmotManager] layer.
  *
- * One level above [com.vitorpamplona.quartz.mls.MlsGroupManagerTest.testLeaveAndRejoin_SameGroupIdEndToEnd]
+ * One level above [com.vitorpamplona.mls.MlsGroupManagerTest.testLeaveAndRejoin_SameGroupIdEndToEnd]
  * in quartz, which only exercises the MLS engine. This one drives the full
  * commons-layer pipeline:
  *

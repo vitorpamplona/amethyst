@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.group.MlsGroup
+import com.vitorpamplona.mls.group.MlsGroupPolicy
 import com.vitorpamplona.quartz.marmot.appComponents.AdminPolicyV1
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.NostrRoutingV1
-import com.vitorpamplona.quartz.mls.group.MlsGroup
-import com.vitorpamplona.quartz.mls.group.MlsGroupPolicy
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import kotlin.test.Test
 import kotlin.test.assertEquals

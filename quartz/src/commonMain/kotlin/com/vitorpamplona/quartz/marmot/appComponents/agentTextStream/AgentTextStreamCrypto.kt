@@ -21,7 +21,7 @@
 package com.vitorpamplona.quartz.marmot.appComponents.agentTextStream
 
 import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
-import com.vitorpamplona.quartz.mls.crypto.MlsCryptoProvider
+import com.vitorpamplona.mls.crypto.MlsCryptoProvider
 
 /**
  * The context every agent-text-stream key derivation is bound to.

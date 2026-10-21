@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.groups
 
+import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.quartz.marmot.appComponents.MarmotGroupState
 import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
-import com.vitorpamplona.quartz.mls.group.MlsGroup
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 // Marmot's reads of an MlsGroup's GroupContext.

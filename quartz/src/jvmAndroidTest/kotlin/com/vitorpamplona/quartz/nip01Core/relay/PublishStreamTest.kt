@@ -184,10 +184,10 @@ class PublishStreamTest {
             // relay, and the socket only starts connecting once the first event is published.
             val slow =
                 flow {
-                    delay(1_200)
+                    delay(3_000)
                     events.forEach { emit(it) }
                 }
-            val result = client.publishStream(InProcessRelays.DEFAULT_URL, slow, idleTimeoutMs = 400) { _, _ -> }
+            val result = client.publishStream(InProcessRelays.DEFAULT_URL, slow, idleTimeoutMs = 2_000) { _, _ -> }
             client.disconnect()
 
             assertFalse(result.stalled)
