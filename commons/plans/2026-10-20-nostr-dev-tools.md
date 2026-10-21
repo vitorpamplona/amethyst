@@ -85,8 +85,10 @@ Headless code in `commons/…/devtools/` (CLI-safe, unit-tested in `DevToolsInsp
     - by the NIP-89 `client` tag, exact string (so "Yakihonne", "YakiHonne" and "yakihonne.com"
       stay apart: that difference is itself an encoding);
     - by shape: the set of tag names plus the content format.
-  - Each group reports events, authors, content formats, and per tag the share of events carrying
-    it and the tag lengths seen.
+  - Each group reports events, authors, the clients behind it and its newest event. A group's
+    snapshot is rebuilt only after it gains an event, so the progress publishes every 300 ms cost
+    a sort, not a fold (5,000 events in ~4,900 shapes: ~16 ms down to ~0.5 ms per publish on the
+    JVM).
   - Content format is one of empty, JSON object, JSON array, encrypted (NIP-04 `?iv=` or a NIP-44
     base64 payload) or text.
   - The relay set is the relays the app is connected to plus the account's search relays (kind

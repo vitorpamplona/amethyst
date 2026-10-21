@@ -35,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class DevToolsInspectorsTest {
@@ -176,21 +177,36 @@ class DevToolsInspectorsTest {
             val amethyst = byClient.first()
             assertEquals(2, amethyst.count)
             assertEquals(b.id, amethyst.example.id)
-            assertEquals(listOf(2), amethyst.tags.first { it.name == "client" }.lengths)
-            assertEquals(listOf(4), amethyst.tags.first { it.name == "e" }.lengths)
-            assertEquals(1, amethyst.tags.first { it.name == "t" }.events)
 
-            // a, b and c each carry a different tag-name set, and c's content is empty.
+            // a, b and c each carry a different tag-name set.
             val byShape = collector.variants(KindVariantGrouping.SHAPE)
             assertEquals(3, byShape.size)
-            assertEquals(
-                ContentFormat.EMPTY,
-                byShape
-                    .first { it.example.id == c.id }
-                    .formats
-                    .single()
-                    .first,
-            )
+            assertEquals(listOf<String?>(null), byShape.first { it.example.id == c.id }.clients.map { it.first })
+
+            // Same tag names, but c's content is empty and d's is text: two shapes, not one.
+            val d = signer.sign<TextNoteEvent>(1_003, TextNoteEvent.KIND, arrayOf(arrayOf("t", "nostr")), "text")
+            collector.add(d)
+            assertEquals(4, collector.variants(KindVariantGrouping.SHAPE).size)
+        }
+
+    @Test
+    fun unchangedGroupsKeepTheirSnapshot() =
+        runTest {
+            val a = signer.sign<TextNoteEvent>(1_000, TextNoteEvent.KIND, arrayOf(arrayOf("client", "Amethyst")), "hi")
+            val b = signer.sign<TextNoteEvent>(1_001, TextNoteEvent.KIND, arrayOf(arrayOf("client", "Damus")), "hi")
+            val c = signer.sign<TextNoteEvent>(1_002, TextNoteEvent.KIND, arrayOf(arrayOf("client", "Damus")), "yo")
+
+            val collector = KindVariantCollector()
+            collector.add(a)
+            collector.add(b)
+            val before = collector.variants(KindVariantGrouping.CLIENT).associateBy { it.client }
+            collector.add(c)
+            val after = collector.variants(KindVariantGrouping.CLIENT).associateBy { it.client }
+
+            // Amethyst gained nothing: the same instance, so the screen skips its card.
+            assertSame(before["Amethyst"], after["Amethyst"])
+            assertEquals(2, after.getValue("Damus").count)
+            assertEquals(c.id, after.getValue("Damus").example.id)
         }
 
     @Test

@@ -44,6 +44,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.concurrent.Volatile
 
 enum class KindSamplerPhase {
     IDLE,
@@ -83,9 +84,20 @@ class KindSamplerViewModel(
 
     private var job: Job? = null
 
+    /**
+     * The run allowed to write [state]. Cancelling a run does not stop a [publish] it is already
+     * inside, so without this a stopped sample could flip back to running, or a re-run of the same
+     * kind could show the old run's counts.
+     */
+    @Volatile
+    private var currentRun: Any? = null
+
     /** Samples [kind], cancelling any sample still running: one crawl per screen, never a pile of them. */
     fun start(kind: Int) {
         job?.cancel()
+        // Before the reset below: a stale publish retrying its update then sees it is stale.
+        val run = Any()
+        currentRun = run
         val targets = relays().filter(canDial)
         // Reset now, not when the new crawl starts, so the old kind's groups never show under the new number.
         _state.value = KindSamplerState(kind = kind, phase = KindSamplerPhase.SAMPLING, relaysTotal = targets.size)
@@ -93,7 +105,7 @@ class KindSamplerViewModel(
             viewModelScope.launch(Dispatchers.IO) {
                 val client = clientBuilder()
                 try {
-                    run(kind, client, targets)
+                    run(kind, client, targets, run)
                 } finally {
                     client.close()
                 }
@@ -102,7 +114,8 @@ class KindSamplerViewModel(
 
     fun cancel() {
         job?.cancel()
-        _state.value = _state.value.copy(phase = KindSamplerPhase.DONE)
+        currentRun = null
+        _state.update { it.copy(phase = KindSamplerPhase.DONE) }
     }
 
     override fun onCleared() {
@@ -114,6 +127,7 @@ class KindSamplerViewModel(
         kind: Int,
         client: INostrClient,
         relays: List<NormalizedRelayUrl>,
+        run: Any,
     ) {
         val collector = KindVariantCollector()
         val lock = Mutex()
@@ -152,7 +166,7 @@ class KindSamplerViewModel(
                             val now = TimeUtils.nowMillis()
                             if (now - lastPublish >= PUBLISH_EVERY_MS) {
                                 lastPublish = now
-                                publish(kind, collector, answered, withEvents, relays.size, KindSamplerPhase.SAMPLING)
+                                publish(run, kind, collector, answered, withEvents, relays.size, KindSamplerPhase.SAMPLING)
                             }
                         }
                     }
@@ -160,10 +174,11 @@ class KindSamplerViewModel(
             }
         }
 
-        lock.withLock { publish(kind, collector, answered, withEvents, relays.size, KindSamplerPhase.DONE) }
+        lock.withLock { publish(run, kind, collector, answered, withEvents, relays.size, KindSamplerPhase.DONE) }
     }
 
     private fun publish(
+        run: Any,
         kind: Int,
         collector: KindVariantCollector,
         answered: Int,
@@ -182,8 +197,7 @@ class KindSamplerViewModel(
                 byClient = collector.variants(KindVariantGrouping.CLIENT),
                 byShape = collector.variants(KindVariantGrouping.SHAPE),
             )
-        // A crawl cancelled by a newer lookup may still be finishing a fold on another thread.
-        _state.update { if (it.kind == kind) next else it }
+        _state.update { if (currentRun === run) next else it }
     }
 
     companion object {
