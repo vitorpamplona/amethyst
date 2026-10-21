@@ -279,9 +279,21 @@ class DraftEventHandler(
     ) {
         if (event.pubKey == account.signer.pubKey && !event.isDeleted() && !LocalCache.deletionIndex.hasBeenDeleted(event)) {
             awaitPrefetch(event)
-            val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event)
-            rumor?.let { indexDraftAsRealEvent(eventNote, it) }
+            val rumor = account.draftsDecryptionCache.preCachedDraft(event) ?: account.draftsDecryptionCache.cachedDraft(event) ?: return
+
+            // Sending a message deletes its draft in the same second as the last auto-save, so
+            // another device gets both together, and the decrypt above can take seconds with an
+            // external signer. A deletion that landed meanwhile found nothing indexed to remove:
+            // check again, and once more after indexing, since it may land in between.
+            if (LocalCache.deletionIndex.hasBeenDeleted(event)) return
+            indexDraftAsRealEvent(eventNote, rumor)
+            if (LocalCache.deletionIndex.hasBeenDeleted(event)) unindexDraft(eventNote)
         }
+    }
+
+    private fun unindexDraft(draftEventWrap: Note) {
+        draftEventWrap.replyTo?.forEach { it.removeNote(draftEventWrap) }
+        draftEventWrap.inGatherers?.forEach { it.removeNote(draftEventWrap) }
     }
 
     fun indexDraftAsRealEvent(

@@ -3028,8 +3028,12 @@ class Account(
         val draftTag = draftNote.dTag()
         val extraRelays = draftNote.relays
 
-        val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer)
-        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(deletedDraft)))
+        // Strictly newer than the draft: Post often lands in the same second as the last auto-save,
+        // and on a created_at tie the lower id wins, so a relay that ignores the kind-5's `a` tag
+        // could keep the draft over its empty replacement.
+        val createdAt = maxOf(TimeUtils.now(), draftEvent.createdAt + 1)
+        val deletedDraft = DraftWrapEvent.createDeletedEvent(draftTag, signer, createdAt)
+        val deletionEvent = signer.sign(DeletionRequestEvent.build(listOf(deletedDraft), createdAt))
 
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
 
