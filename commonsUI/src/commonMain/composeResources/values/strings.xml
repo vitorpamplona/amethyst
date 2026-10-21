@@ -8283,16 +8283,7 @@
     <string name="devtools_kind_no_client">No client tag</string>
     <string name="devtools_kind_shape_n">Shape %1$d</string>
     <string name="devtools_kind_from_clients">From: %1$s</string>
-    <string name="devtools_kind_content">Content: %1$s</string>
-    <string name="devtools_kind_tag_values">values: %1$s</string>
     <string name="devtools_kind_more">+%1$d more</string>
-    <string name="devtools_kind_hide_rare">Hide rare tags</string>
-    <plurals name="devtools_kind_rare_tags">
-        <item quantity="one">+%1$d rare tag</item>
-        <item quantity="other">+%1$d rare tags</item>
-    </plurals>
-    <string name="devtools_kind_show_example">Show example</string>
-    <string name="devtools_kind_hide_example">Hide example</string>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d event</item>
         <item quantity="other">%1$d events</item>
@@ -8301,11 +8292,6 @@
         <item quantity="one">%1$d author</item>
         <item quantity="other">%1$d authors</item>
     </plurals>
-    <string name="devtools_format_empty">empty</string>
-    <string name="devtools_format_json_object">JSON object</string>
-    <string name="devtools_format_json_array">JSON array</string>
-    <string name="devtools_format_encrypted">encrypted</string>
-    <string name="devtools_format_text">text</string>
     <string name="devtools_kind_custom">Crawl kind %1$d</string>
     <string name="devtools_kind_usage_title">Kind %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>

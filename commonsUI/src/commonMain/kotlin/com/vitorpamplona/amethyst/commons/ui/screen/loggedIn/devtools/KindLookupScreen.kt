@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,7 +42,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,40 +57,27 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.devtools.ContentFormat
 import com.vitorpamplona.amethyst.commons.devtools.KindSamplerPhase
 import com.vitorpamplona.amethyst.commons.devtools.KindSamplerState
 import com.vitorpamplona.amethyst.commons.devtools.KindSamplerViewModel
 import com.vitorpamplona.amethyst.commons.devtools.KindVariant
 import com.vitorpamplona.amethyst.commons.devtools.KindVariantGrouping
-import com.vitorpamplona.amethyst.commons.devtools.TagUsage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.devtools_format_empty
-import com.vitorpamplona.amethyst.commons.resources.devtools_format_encrypted
-import com.vitorpamplona.amethyst.commons.resources.devtools_format_json_array
-import com.vitorpamplona.amethyst.commons.resources.devtools_format_json_object
-import com.vitorpamplona.amethyst.commons.resources.devtools_format_text
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_authors
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_by_client
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_by_shape
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_content
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_events
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_from_clients
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_hide_example
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_hide_rare
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_button
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_field
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_more
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_nip
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_no_client
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_rare_tags
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_sample_status
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_shape_n
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_show_example
-import com.vitorpamplona.amethyst.commons.resources.devtools_kind_tag_values
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_usage_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_none_found
 import com.vitorpamplona.amethyst.commons.resources.devtools_probe_stop
@@ -107,7 +92,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.kinds.KindNames
-import org.jetbrains.compose.resources.StringResource
 
 /**
  * Type a kind number and see every way it is written: recent events sampled from the connected
@@ -273,7 +257,7 @@ private fun SampleStatus(
     }
 }
 
-/** One way the kind is written: who writes it, which tags and content it carries, an example. */
+/** One way the kind is written: who writes it, how much of the sample it is, and its newest event as JSON. */
 @Composable
 private fun VariantCard(
     index: Int,
@@ -281,7 +265,6 @@ private fun VariantCard(
     total: Int,
     grouping: KindVariantGrouping,
 ) {
-    var showExample by rememberSaveable(variant.key) { mutableStateOf(false) }
     val noClient = stringRes(Res.string.devtools_kind_no_client)
 
     OutlinedCard(Modifier.fillMaxWidth()) {
@@ -312,57 +295,8 @@ private fun VariantCard(
                 Text(stringRes(Res.string.devtools_kind_from_clients, clients), style = MaterialTheme.typography.bodySmall)
             }
 
-            val formats = variant.formats.map { (format, count) -> stringRes(format.label()) + if (variant.formats.size > 1) " " + percent(count, variant.count) else "" }
-            Text(stringRes(Res.string.devtools_kind_content, formats.joinToString(", ")), style = MaterialTheme.typography.bodySmall)
-
-            // A client group's long tail of one-off tags buries the ones every event carries.
-            var showRare by rememberSaveable(variant.key) { mutableStateOf(false) }
-            val common = variant.tags.filter { it.events * 100 >= variant.count * COMMON_TAG_PERCENT }
-            val rare = variant.tags.size - common.size
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                (if (showRare) variant.tags else common).forEach { TagUsageChip(it, variant.count, showShare = grouping == KindVariantGrouping.CLIENT) }
-            }
-
-            Row {
-                TextButton(onClick = { showExample = !showExample }) {
-                    Text(stringRes(if (showExample) Res.string.devtools_kind_hide_example else Res.string.devtools_kind_show_example))
-                }
-                if (rare > 0) {
-                    TextButton(onClick = { showRare = !showRare }) {
-                        Text(if (showRare) stringRes(Res.string.devtools_kind_hide_rare) else pluralStringRes(Res.plurals.devtools_kind_rare_tags, rare, rare))
-                    }
-                }
-            }
-            if (showExample) {
-                val json = remember(variant.example) { variant.example.toPrettyJson() }
-                DevToolsCodeBlock(json, maxHeight = 320)
-            }
-        }
-    }
-}
-
-/**
- * `title` 100%, `p` 40% · values: 1/3: how often a tag appears and, when it is not the usual
- * single value, how many values it carries.
- */
-@Composable
-private fun TagUsageChip(
-    usage: TagUsage,
-    groupSize: Int,
-    showShare: Boolean,
-) {
-    val values = if (usage.lengths == SINGLE_VALUE) null else stringRes(Res.string.devtools_kind_tag_values, usage.lengths.joinToString("/") { (it - 1).toString() })
-    val detail = listOfNotNull(if (showShare) percent(usage.events, groupSize) else null, values).joinToString(" · ")
-    Surface(shape = RoundedCornerShape(6.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-        Row(Modifier.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(usage.name, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
-            if (detail.isNotEmpty()) {
-                Text(
-                    " $detail",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            val json = remember(variant.example) { variant.example.toPrettyJson() }
+            DevToolsCodeBlock(json, maxHeight = 320)
         }
     }
 }
@@ -376,12 +310,6 @@ private fun SmallChip(text: String) {
 
 private const val MAX_CLIENTS = 6
 
-/** A tag that is always `[name, value]`. */
-private val SINGLE_VALUE = listOf(2)
-
-/** Tags on fewer than this share of a group's events fold behind "+N rare tags". */
-private const val COMMON_TAG_PERCENT = 5
-
 private fun percent(
     part: Int,
     whole: Int,
@@ -390,12 +318,3 @@ private fun percent(
     val rounded = (part * 100 + whole / 2) / whole
     return if (rounded == 0) "<1%" else "$rounded%"
 }
-
-private fun ContentFormat.label(): StringResource =
-    when (this) {
-        ContentFormat.EMPTY -> Res.string.devtools_format_empty
-        ContentFormat.JSON_OBJECT -> Res.string.devtools_format_json_object
-        ContentFormat.JSON_ARRAY -> Res.string.devtools_format_json_array
-        ContentFormat.ENCRYPTED -> Res.string.devtools_format_encrypted
-        ContentFormat.TEXT -> Res.string.devtools_format_text
-    }
