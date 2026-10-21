@@ -26,7 +26,7 @@ kotlin {
 
 dependencies {
     // The MLS engine and the Marmot codecs under test.
-    implementation(project(":quartz"))
+    implementation(libs.quartz)
     // MarmotManager — the app-level entry points MDK's engine benches measure.
     implementation(project(":commons"))
 

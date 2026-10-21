@@ -23,7 +23,7 @@
 # --- build stage ------------------------------------------------------------
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /src
-# Copy the whole repo (geode depends only on :quartz, but the Gradle build needs
+# Copy the whole repo (geode depends only on quartz, but the Gradle build needs
 # settings.gradle.kts, the version catalog, and the wrapper). .dockerignore keeps
 # build outputs and VCS metadata out of the context.
 COPY . .

@@ -22,8 +22,6 @@ package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.GameStatus
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

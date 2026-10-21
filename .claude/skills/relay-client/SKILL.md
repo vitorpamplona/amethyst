@@ -118,8 +118,8 @@ Events arrive in `LocalCache`; the screen renders from `LocalCache`/`Account` fl
 - No raw `client.subscribe` or `Filter` in a composable — put it in a sub-assembler.
 - A one-shot read (fetch once, page back, count) is not a compose subscription: use the
   `INostrClient` accessories or `relayClient/oneshot/` (`ProfileLoader`, `ThreadLoader`, …).
-- New kinds a screen subscribes to also need `LocalCache` dispatch (see `nostr-expert`
-  › `references/event-factory.md`), or they arrive and are dropped.
+- New kinds a screen subscribes to also need `LocalCache` dispatch (see quartz's `nostr-expert`
+  skill, [event-factory.md](https://github.com/vitorpamplona/quartz/blob/main/.claude/skills/nostr-expert/references/event-factory.md)), or they arrive and are dropped.
 
-Related skills: `account-state` (`LocalCache`, feeds), `nostr-expert` (filters, kinds),
+Related skills: `account-state` (`LocalCache`, feeds), quartz's `nostr-expert` (filters, kinds),
 `kotlin-coroutines` (flows, dispatchers).

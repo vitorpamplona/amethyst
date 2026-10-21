@@ -22,9 +22,9 @@ The layout this enforces (see "Agent Configuration" in AGENTS.md):
   path must exist in that skill (or in another skill, for a cross-reference), a
   `.claude/skills/<name>/…` path must exist, and so must any full repo path (one
   that contains `/src/`). Shorthand like `commons/ui/StringRes.kt` is not checked.
-- Skills shipped for other projects (`quartz/agent-skill/<name>/`) get the same
-  name/description checks, and their links back into this repo (GitHub URLs on
-  `main`) must point at files that exist.
+  A `quartz/…` path names a file in vitorpamplona/quartz (its library module is
+  `quartz/` there too): it is checked against a checkout next to this one
+  (`../quartz`, or `$QUARTZ_DIR`) when there is one, and skipped otherwise.
 
 Exit 0 = consistent. Exit 1 = prints every problem found.
 """
@@ -48,9 +48,8 @@ CODEX_FALLBACK_SKILL_LIST = 8000
 # What this repo's entries (name + description + `.agents/skills/<name>/SKILL.md`)
 # may use of that, leaving the rest for the user's own and built-in skills.
 SKILL_LIST_CAP = 6000
-# Skills shipped for OTHER projects to install (not loaded here, so not symlinked or
-# budgeted). They link to this repo by GitHub URL, which must point at a real file.
-DISTRIBUTED_SKILLS = ROOT / "quartz" / "agent-skill"
+# vitorpamplona/quartz, checked out beside this repo (what -PquartzDir=../quartz builds).
+QUARTZ_ROOT = Path(os.environ.get("QUARTZ_DIR") or ROOT.parent / "quartz")
 REPO_URLS = (
     "https://github.com/vitorpamplona/amethyst/blob/main/",
     "https://github.com/vitorpamplona/amethyst/tree/main/",
@@ -146,19 +145,6 @@ SKILL_LOCAL = ("references/", "scripts/", "assets/")
 NOT_A_PATH = re.compile(r"[…*<>{}$|]|\.\.\.")
 
 
-def check_distributed_skills(problems):
-    if not DISTRIBUTED_SKILLS.is_dir():
-        return
-    for skill in sorted(d for d in DISTRIBUTED_SKILLS.iterdir() if (d / "SKILL.md").is_file()):
-        where = (skill / "SKILL.md").relative_to(ROOT)
-        declared, description = description_of((skill / "SKILL.md").read_text(encoding="utf-8"))
-        if declared != skill.name:
-            problems.append(f"{where}: frontmatter `name` is {declared!r}, expected {skill.name!r}")
-        if not description or not MIN_DESCRIPTION <= len(description) <= MAX_DESCRIPTION:
-            problems.append(f"{where}: description must be {MIN_DESCRIPTION}-{MAX_DESCRIPTION} characters")
-    check_skill_paths(problems, DISTRIBUTED_SKILLS)
-
-
 def check_skill_paths(problems, root=SKILLS):
     skill_dirs = [d for d in root.iterdir() if (d / "SKILL.md").is_file()]
     for skill in skill_dirs:
@@ -172,6 +158,10 @@ def check_skill_paths(problems, root=SKILLS):
                     continue
                 elif token.startswith(SKILL_LOCAL):
                     found = (doc.parent / token).exists() or any((d / token).exists() for d in skill_dirs)
+                elif token.startswith("quartz/") and "/src/" in token:
+                    if not (QUARTZ_ROOT / "quartz" / "src").is_dir():
+                        continue
+                    found = (QUARTZ_ROOT / token).exists()
                 elif token.startswith(".claude/skills/") or token.startswith(".agents/skills/") or "/src/" in token:
                     found = (ROOT / token).exists()
                 else:
@@ -211,7 +201,6 @@ def main():
     problems = []
     check_skills(problems)
     check_skill_paths(problems)
-    check_distributed_skills(problems)
     check_guidance(problems)
     if problems:
         print("Agent configuration is out of sync between Claude Code and Codex:", file=sys.stderr)
