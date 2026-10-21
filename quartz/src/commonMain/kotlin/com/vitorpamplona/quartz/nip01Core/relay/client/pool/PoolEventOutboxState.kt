@@ -61,6 +61,9 @@ class PoolEventOutboxState(
     // Guarded by [lock]; created on the first `auth-required:` that keeps the event. See [newResponse].
     private var authWaits: HashMap<NormalizedRelayUrl, Int>? = null
 
+    // Guarded by [lock]; created on the first failed connection while the event was pending. See [cannotConnect].
+    private var connectFailures: HashMap<NormalizedRelayUrl, Int>? = null
+
     fun updateRelays(newRelays: Set<NormalizedRelayUrl>) {
         lock.withLock {
             remaining.clear()
@@ -163,9 +166,37 @@ class PoolEventOutboxState(
                 failures?.remove(url)
                 backOffs?.remove(url)
                 authWaits?.remove(url)
+                connectFailures?.remove(url)
             }
         }
     }
+
+    /**
+     * A connection to [url] failed, while connecting or under a socket that was open: the relay said
+     * nothing about this event, so it is not a verdict, and the event stays pending to be re-sent on
+     * the next connection — what the outbox is for. It used to arrive here as a refusal and, since
+     * any OK ends delivery, one failed dial dropped every event outstanding at the relay: a writer
+     * whose relay restarted lost its whole window and heard nothing until its own timeout. Bounded
+     * so a relay that never comes back is given up on: the [MAX_CONNECT_FAILURES]th failure in a row
+     * (the pool's reconnect back-off doubles from a second to five minutes, so about thirteen
+     * minutes unreachable) drops it. Returns true when it did.
+     */
+    fun cannotConnect(url: NormalizedRelayUrl): Boolean =
+        lock.withLock {
+            if (url !in remaining) return@withLock false
+            val c = connectFailures ?: HashMap<NormalizedRelayUrl, Int>(2).also { connectFailures = it }
+            val n = (c[url] ?: 0) + 1
+            if (n < MAX_CONNECT_FAILURES) {
+                c[url] = n
+                return@withLock false
+            }
+            drop(url)
+            c.remove(url)
+            failures?.remove(url)
+            backOffs?.remove(url)
+            authWaits?.remove(url)
+            true
+        }
 
     companion object {
         /** `rate-limited:` back-offs one relay may state for one event before they count as failures. */
@@ -173,6 +204,9 @@ class PoolEventOutboxState(
 
         /** `auth-required:` answers that keep one event pending for one relay before it is refused for good. */
         const val MAX_AUTH_WAITS = 10
+
+        /** Failed connections in a row to one relay that keep one event pending before it is given up on there. */
+        const val MAX_CONNECT_FAILURES = 10
     }
 
     /**

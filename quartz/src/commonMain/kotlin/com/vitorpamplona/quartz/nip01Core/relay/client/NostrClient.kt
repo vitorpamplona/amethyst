@@ -583,7 +583,8 @@ class NostrClient(
     ) {
         activeRequests.onCannotConnect(relay.url, errorMessage)
         activeCounts.onCannotConnect(relay.url, errorMessage)
-        eventOutbox.onCannotConnect(relay.url, errorMessage)
+        // Kept pending to be re-sent on reconnect; only what this failure gave up on is reported.
+        eventOutbox.onCannotConnect(relay.url).forEach { gaveUp -> listeners.value.forEach { it.onEventGaveUp(relay, gaveUp) } }
 
         listeners.value.forEach { it.onCannotConnect(relay, errorMessage) }
     }

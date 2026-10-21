@@ -286,17 +286,25 @@ class PoolEventOutbox {
     }
 
     /**
-     * If cannot connect, closes subs
+     * A connection to [relay] failed. Every event owed to it stays pending, to be re-sent when it
+     * connects again ([PoolEventOutboxState.cannotConnect]); returns the events given up on at
+     * [relay] because it has failed too many times in a row, which the client reports as gave-ups.
      */
-    fun onCannotConnect(
-        relay: NormalizedRelayUrl,
-        errorMessage: String,
-    ) {
-        eventOutbox.forEach { id, outboxCache ->
-            if (outboxCache.isSupposedToGo(relay)) {
-                newResponse(id, relay, false, errorMessage)
+    fun onCannotConnect(relay: NormalizedRelayUrl): List<Event> {
+        var gaveUp: MutableList<Event>? = null
+        eventOutbox.forEach { _, outboxCache ->
+            if (outboxCache.cannotConnect(relay)) {
+                (gaveUp ?: ArrayList<Event>().also { gaveUp = it }).add(outboxCache.event)
             }
         }
+        gaveUp?.forEach { event ->
+            val waiting = eventOutbox.get(event.id)
+            if (waiting != null && waiting.isDone()) {
+                eventOutbox.remove(event.id)
+                onRemoved()
+            }
+        }
+        return gaveUp.orEmpty()
     }
 
     fun destroy() {

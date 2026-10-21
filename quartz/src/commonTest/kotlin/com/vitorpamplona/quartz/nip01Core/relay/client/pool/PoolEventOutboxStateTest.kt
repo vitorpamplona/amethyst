@@ -144,4 +144,33 @@ class PoolEventOutboxStateTest {
         state.newResponse(relay, success = false, message = "auth-required: sign in")
         assertTrue(state.isDone())
     }
+
+    @Test
+    fun aFailedConnectionIsNotAVerdictAndKeepsTheEventPending() {
+        // A relay that restarts fails a dial or two: the event must still be there to re-send.
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        state.newTry(relay)
+        repeat(PoolEventOutboxState.MAX_CONNECT_FAILURES - 1) {
+            assertFalse(state.cannotConnect(relay), "failure ${it + 1} gives up nothing")
+        }
+        assertContains(state.relaysLeft(), relay)
+        assertFalse(state.isDone())
+    }
+
+    @Test
+    fun aRelayThatNeverComesBackIsGivenUpOn() {
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        repeat(PoolEventOutboxState.MAX_CONNECT_FAILURES - 1) { state.cannotConnect(relay) }
+        assertTrue(state.cannotConnect(relay), "the last failure in the budget gives up on the relay")
+        assertTrue(state.isDone())
+        assertFalse(state.cannotConnect(relay), "and a relay it is no longer owed to is nothing to give up")
+    }
+
+    @Test
+    fun theRelaysAnswerAfterAFailedConnectionStillDecides() {
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        state.cannotConnect(relay)
+        state.newResponse(relay, success = true, message = "")
+        assertTrue(state.isDone(), "an OK on the next connection ends delivery as always")
+    }
 }
