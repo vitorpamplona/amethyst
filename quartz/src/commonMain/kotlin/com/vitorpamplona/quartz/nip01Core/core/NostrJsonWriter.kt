@@ -43,8 +43,8 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
  *
  * Each string costs a check and one bulk copy in the common case where it has nothing to
  * escape: in text mode `String.indexOf` (an intrinsic on the JVM) looks for `"` and `\` and a
- * loop for control chars; in UTF-8 mode one loop proves the string is printable ASCII and
- * [copyAsciiInto] copies it in one call.
+ * loop for control chars; in UTF-8 mode each run of printable ASCII goes through
+ * [copyAsciiInto] in one call and only the chars between runs are encoded one by one.
  *
  * Not thread-safe. On the JVM and Android each thread reuses its own (see
  * [threadNostrJsonWriter]), so the buffers are allocated once per thread, not once per write;
@@ -308,100 +308,117 @@ class NostrJsonWriter internal constructor() {
         } while (v != 0L)
     }
 
+    /**
+     * [s] as a quoted UTF-8 JSON string. Runs of printable ASCII, which need no escaping and are
+     * their own UTF-8, are copied in bulk; only the chars between them go one at a time, so a
+     * note with a newline or an emoji in it still copies most of its text in a few calls.
+     */
     private fun string8(s: String) {
         byte('"')
-        if (isPrintableAscii(s)) {
-            val n = s.length
-            grow(n)
-            copyAsciiInto(s, buf, pos)
-            pos += n
-        } else {
-            escapedBody8(s)
+        val n = s.length
+        var k = 0
+        while (k < n) {
+            val start = k
+            while (k < n && isPlainAscii(s[k])) k++
+            if (k > start) asciiRun8(s, start, k)
+            if (k < n) k = escapedChar8(s, k)
         }
         byte('"')
     }
 
-    private fun escapedBody8(s: String) {
-        val n = s.length
-        var o = buf
+    private fun asciiRun8(
+        s: String,
+        start: Int,
+        end: Int,
+    ) {
+        val len = end - start
+        grow(len)
+        if (len >= BULK_COPY_MIN) {
+            copyAsciiInto(s, start, end, buf, pos)
+            pos += len
+        } else {
+            val o = buf
+            var p = pos
+            for (k in start until end) o[p++] = s[k].code.toByte()
+            pos = p
+        }
+    }
+
+    /** Writes the char at [k], which is not [isPlainAscii] (or a surrogate pair starting there); returns the next index. */
+    private fun escapedChar8(
+        s: String,
+        k: Int,
+    ): Int {
+        grow(6)
+        val o = buf
         var p = pos
-        var k = 0
-        while (k < n) {
-            if (p + 6 > o.size) {
-                pos = p
-                grow(6)
-                o = buf
-            }
-            val c = s[k++]
-            val code = c.code
-            if (code < 0x80) {
-                if (code >= 0x20 && c != '"' && c != '\\') {
-                    o[p++] = code.toByte()
-                    continue
+        var next = k + 1
+        val c = s[k]
+        val code = c.code
+        if (code < 0x80) {
+            o[p++] = BACKSLASH
+            when (c) {
+                '"' -> {
+                    o[p++] = '"'.code.toByte()
                 }
-                o[p++] = BACKSLASH
-                when (c) {
-                    '"' -> {
-                        o[p++] = '"'.code.toByte()
-                    }
 
-                    '\\' -> {
-                        o[p++] = BACKSLASH
-                    }
-
-                    '\b' -> {
-                        o[p++] = 'b'.code.toByte()
-                    }
-
-                    '\u000C' -> {
-                        o[p++] = 'f'.code.toByte()
-                    }
-
-                    '\n' -> {
-                        o[p++] = 'n'.code.toByte()
-                    }
-
-                    '\r' -> {
-                        o[p++] = 'r'.code.toByte()
-                    }
-
-                    '\t' -> {
-                        o[p++] = 't'.code.toByte()
-                    }
-
-                    else -> {
-                        o[p++] = 'u'.code.toByte()
-                        o[p++] = '0'.code.toByte()
-                        o[p++] = '0'.code.toByte()
-                        o[p++] = HEX[code shr 4].code.toByte()
-                        o[p++] = HEX[code and 0xF].code.toByte()
-                    }
-                }
-            } else if (code < 0x800) {
-                o[p++] = (0xC0 or (code shr 6)).toByte()
-                o[p++] = (0x80 or (code and 0x3F)).toByte()
-            } else if (c.isSurrogate()) {
-                if (c.isHighSurrogate() && k < n && s[k].isLowSurrogate()) {
-                    val cp = 0x10000 + ((code - 0xD800) shl 10) + (s[k++].code - 0xDC00)
-                    o[p++] = (0xF0 or (cp shr 18)).toByte()
-                    o[p++] = (0x80 or ((cp shr 12) and 0x3F)).toByte()
-                    o[p++] = (0x80 or ((cp shr 6) and 0x3F)).toByte()
-                    o[p++] = (0x80 or (cp and 0x3F)).toByte()
-                } else {
+                '\\' -> {
                     o[p++] = BACKSLASH
+                }
+
+                '\b' -> {
+                    o[p++] = 'b'.code.toByte()
+                }
+
+                '\u000C' -> {
+                    o[p++] = 'f'.code.toByte()
+                }
+
+                '\n' -> {
+                    o[p++] = 'n'.code.toByte()
+                }
+
+                '\r' -> {
+                    o[p++] = 'r'.code.toByte()
+                }
+
+                '\t' -> {
+                    o[p++] = 't'.code.toByte()
+                }
+
+                else -> {
                     o[p++] = 'u'.code.toByte()
-                    o[p++] = HEX[code shr 12].code.toByte()
-                    o[p++] = HEX[(code shr 8) and 0xF].code.toByte()
-                    o[p++] = HEX[(code shr 4) and 0xF].code.toByte()
+                    o[p++] = '0'.code.toByte()
+                    o[p++] = '0'.code.toByte()
+                    o[p++] = HEX[code shr 4].code.toByte()
                     o[p++] = HEX[code and 0xF].code.toByte()
                 }
-            } else {
-                o[p++] = (0xE0 or (code shr 12)).toByte()
-                o[p++] = (0x80 or ((code shr 6) and 0x3F)).toByte()
-                o[p++] = (0x80 or (code and 0x3F)).toByte()
             }
+        } else if (code < 0x800) {
+            o[p++] = (0xC0 or (code shr 6)).toByte()
+            o[p++] = (0x80 or (code and 0x3F)).toByte()
+        } else if (c.isSurrogate()) {
+            if (c.isHighSurrogate() && next < s.length && s[next].isLowSurrogate()) {
+                val cp = 0x10000 + ((code - 0xD800) shl 10) + (s[next++].code - 0xDC00)
+                o[p++] = (0xF0 or (cp shr 18)).toByte()
+                o[p++] = (0x80 or ((cp shr 12) and 0x3F)).toByte()
+                o[p++] = (0x80 or ((cp shr 6) and 0x3F)).toByte()
+                o[p++] = (0x80 or (cp and 0x3F)).toByte()
+            } else {
+                o[p++] = BACKSLASH
+                o[p++] = 'u'.code.toByte()
+                o[p++] = HEX[code shr 12].code.toByte()
+                o[p++] = HEX[(code shr 8) and 0xF].code.toByte()
+                o[p++] = HEX[(code shr 4) and 0xF].code.toByte()
+                o[p++] = HEX[code and 0xF].code.toByte()
+            }
+        } else {
+            o[p++] = (0xE0 or (code shr 12)).toByte()
+            o[p++] = (0x80 or ((code shr 6) and 0x3F)).toByte()
+            o[p++] = (0x80 or (code and 0x3F)).toByte()
         }
         pos = p
+        return next
     }
 
     /** `[0,pubkey,created_at,kind,tags,content]` as UTF-8 into [buf], NIP-01's id preimage. */
@@ -455,14 +472,11 @@ class NostrJsonWriter internal constructor() {
             return true
         }
 
-        /** Every char in 0x20..0x7E and none of them `"` or `\`: the string is its own UTF-8 JSON body. */
-        private fun isPrintableAscii(s: String): Boolean {
-            for (k in s.indices) {
-                val c = s[k]
-                if ((c.code - 0x20) !in 0 until 0x5F || c == '"' || c == '\\') return false
-            }
-            return true
-        }
+        /** Shorter ASCII runs are copied by a loop; a bulk copy's fixed cost only pays off past this. */
+        private const val BULK_COPY_MIN = 16
+
+        /** In 0x20..0x7F (DEL included, as Jackson writes it) and not `"` or `\`: its own single UTF-8 byte. */
+        private fun isPlainAscii(c: Char): Boolean = (c.code - 0x20) in 0 until 0x60 && c != '"' && c != '\\'
 
         private fun acquire(): NostrJsonWriter {
             val local = threadNostrJsonWriter()
@@ -571,9 +585,11 @@ internal expect fun sha256Of(
     length: Int,
 ): ByteArray
 
-/** Copies [s], which is all ASCII, into [dest] at [at], one byte per char. */
+/** Copies `s[start until end]`, which is all ASCII, into [dest] at [at], one byte per char. */
 internal expect fun copyAsciiInto(
     s: String,
+    start: Int,
+    end: Int,
     dest: ByteArray,
     at: Int,
 )

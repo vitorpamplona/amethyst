@@ -31,10 +31,12 @@ internal actual fun threadNostrJsonWriter(): NostrJsonWriter? = threadWriter.get
 @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "DEPRECATION")
 internal actual fun copyAsciiInto(
     s: String,
+    start: Int,
+    end: Int,
     dest: ByteArray,
     at: Int,
 ) {
-    (s as java.lang.String).getBytes(0, s.length, dest, at)
+    (s as java.lang.String).getBytes(start, end, dest, at)
 }
 
 // MessageDigest.digest() resets it for the next caller on this thread.

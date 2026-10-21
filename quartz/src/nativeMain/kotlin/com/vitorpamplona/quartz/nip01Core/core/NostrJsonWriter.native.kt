@@ -27,10 +27,12 @@ internal actual fun threadNostrJsonWriter(): NostrJsonWriter? = null
 
 internal actual fun copyAsciiInto(
     s: String,
+    start: Int,
+    end: Int,
     dest: ByteArray,
     at: Int,
 ) {
-    for (k in s.indices) dest[at + k] = s[k].code.toByte()
+    for (k in start until end) dest[at + k - start] = s[k].code.toByte()
 }
 
 // crypto-kmp has no public streaming SHA-256 on native, so this hashes a copy.
