@@ -21,7 +21,6 @@
 package com.vitorpamplona.quartz.nip01Core.core
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import kotlin.random.Random
@@ -54,31 +53,42 @@ class NostrJsonPrettyJacksonParityTest {
         assertEquals(JacksonMapper.toJsonPretty(t).replace("\r\n", "\n"), NostrJsonPretty.format(JacksonMapper.toJson(t)))
     }
 
+    // Strings as compact JSON: plain, with escapes, with structural chars, and non-ASCII.
+    private val strings = listOf("\"\"", "\"x\"", "\"a\\\"b\"", "\"line\\nbreak\"", "\"{[,:]}\"", "\"\u00e9\u6f22\"")
+
+    /** A random JSON document, as compact text. */
     private fun randomTree(
         random: Random,
         depth: Int,
-    ): JsonNode {
-        val f = JsonNodeFactory.instance
+    ): String {
         val pick = if (depth > 5) random.nextInt(4) else random.nextInt(7)
         return when (pick) {
-            0 -> f.textNode(listOf("", "x", "a\"b", "line\nbreak", "{[,:]}", "é漢").random(random))
-            1 -> f.numberNode(random.nextInt(-1000, 1000))
-            2 -> f.booleanNode(random.nextBoolean())
-            3 -> f.nullNode()
-            4, 5 -> f.arrayNode().apply { repeat(random.nextInt(0, 4)) { add(randomTree(random, depth + 1)) } }
-            else -> f.objectNode().apply { repeat(random.nextInt(0, 4)) { set<JsonNode>("k$it", randomTree(random, depth + 1)) } }
+            0 -> strings.random(random)
+            1 -> random.nextInt(-1000, 1000).toString()
+            2 -> random.nextBoolean().toString()
+            3 -> "null"
+            4, 5 -> (0 until random.nextInt(0, 4)).joinToString(",", "[", "]") { randomTree(random, depth + 1) }
+            else -> (0 until random.nextInt(0, 4)).joinToString(",", "{", "}") { "\"k$it\":" + randomTree(random, depth + 1) }
         }
     }
 
     @Test
     fun randomTrees() {
         val random = Random(55)
+        val pin = Pin("pretty random trees")
         repeat(5_000) {
-            val tree = randomTree(random, 0)
-            val compact = JacksonMapper.mapper.writeValueAsString(tree)
-            assertEquals(jacksonPretty(tree), NostrJsonPretty.format(compact), compact)
+            val compact = randomTree(random, 0)
+            val formatted = NostrJsonPretty.format(compact)
+            pin.add(formatted)
+            assertEquals(jacksonPretty(JacksonMapper.mapper.readTree(compact)), formatted, compact)
             // Whitespace in the input changes nothing.
-            assertEquals(jacksonPretty(tree), NostrJsonPretty.format(jacksonPretty(tree)), compact)
+            assertEquals(formatted, NostrJsonPretty.format(formatted), compact)
         }
+        pin.check(PIN_RANDOM_TREES)
+    }
+
+    companion object {
+        /** See [Pin]: recorded while every output was also checked against Jackson. */
+        private const val PIN_RANDOM_TREES = "8b7a2a57ab3d98fbbc1dbfc420fc3b7dca680bbb3ccaad5ae52bc1e289fb7bf9"
     }
 }

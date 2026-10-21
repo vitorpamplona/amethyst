@@ -101,6 +101,7 @@ class NostrJsonBunkerParityTest {
     ) {
         val j = run { jackson(input) }
         val r = run { describe(NostrJsonReader.readBunkerMessage(input)) }
+        readPin.add(r.getOrNull())
         if (j.isSuccess && r.isSuccess) {
             assertEquals(j.getOrNull(), r.getOrNull(), input)
         } else if (r.isSuccess) {
@@ -109,6 +110,8 @@ class NostrJsonBunkerParityTest {
             fail("only Jackson accepts: $input (${r.exceptionOrNull()?.message})")
         }
     }
+
+    private val readPin = Pin("bunker reads")
 
     @Test
     fun requestsAndResponsesReadTheSame() {
@@ -123,6 +126,8 @@ class NostrJsonBunkerParityTest {
         for (s in broken) {
             if (run { NostrJsonReader.readBunkerMessage(s) }.isSuccess) fail("accepted $s")
         }
+        readPin.check(PIN_READS)
+
         // Every prefix of a real request and response is rejected.
         for (s in listOf(requests[0], requests[1], responses[6])) {
             for (k in s.indices) {
@@ -153,8 +158,17 @@ class NostrJsonBunkerParityTest {
             requests.map { NostrJsonReader.readBunkerRequest(it) } +
                 responses.map { NostrJsonReader.readBunkerResponse(it) } +
                 listOf(BunkerResponse("x", null, null), BunkerResponse("y", null, "e\n\"r\""), BunkerRequest("z", "m\u0001", arrayOf("", "\u2028", "\uD83D\uDE00")))
+        val pin = Pin("bunker writes")
         for (v in values) {
+            pin.add(NostrJsonWriter.toJsonOrNull(v))
             assertEquals(JacksonMapper.toJson(v), NostrJsonWriter.toJsonOrNull(v), describe(v as BunkerMessage))
         }
+        pin.check(PIN_WRITES)
+    }
+
+    companion object {
+        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        private const val PIN_READS = "b492b25982eaca844ef64c7c8d1f551e92de87dfbdca3d3db59a3f4641354bb0"
+        private const val PIN_WRITES = "787f168266c0fdbbc05aeddaaa52d9c42e05aab50955aaa5881b4a3e40c86f97"
     }
 }

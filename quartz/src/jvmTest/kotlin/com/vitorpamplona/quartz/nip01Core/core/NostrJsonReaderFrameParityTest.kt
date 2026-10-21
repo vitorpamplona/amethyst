@@ -99,6 +99,7 @@ class NostrJsonReaderFrameParityTest {
     private class Tally(
         val name: String,
     ) {
+        val pin = Pin(name)
         var same = 0
         var bothReject = 0
         val onlyJackson = ArrayList<String>()
@@ -126,6 +127,7 @@ class NostrJsonReaderFrameParityTest {
     ) {
         val j = jackson(input)
         val r = reader(input)
+        t.pin.add(r)
         when {
             j != null && r != null -> if (j == r) t.same++ else t.different += "$input\n      jackson: $j\n      reader:  $r"
             j == null && r == null -> t.bothReject++
@@ -136,6 +138,7 @@ class NostrJsonReaderFrameParityTest {
 
     private fun assertParity(t: Tally) {
         t.report()
+        t.pin.check(PINS.getValue(t.name))
         if (t.different.isNotEmpty()) fail("${t.name}: ${t.different.size} frames build different results, e.g.\n${t.different.take(5).joinToString("\n")}")
         if (t.readerOnly.isNotEmpty()) fail("${t.name}: ${t.readerOnly.size} frames only the reader accepts, e.g.\n${t.readerOnly.take(5).joinToString("\n")}")
     }
@@ -501,6 +504,19 @@ class NostrJsonReaderFrameParityTest {
     }
 
     companion object {
+        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        private val PINS =
+            mapOf(
+                "message frames" to "857c9897f5b03e31b03d88fa198bdeb1eb4c8017346a8268dd555821820f5238",
+                "message frame edits" to "d696141ddf629b3faf296afc3ec0ee8008d7837e91f06585f107944e9a24d302",
+                "command frames" to "274107586724de359085c7abb4f00c1dbf4ee1be9d63c8afbeb534aff051be40",
+                "command frame edits" to "327098acc72ad8e4f4346495161ab28efe936738b2554422fb34c30be5259907",
+                "rumors" to "0f51ada32bfbe4ccf0356b0335b390bd54526b106ab85c796b3eb635da926e17",
+                "rumor edits" to "0e3c68c521cba9077d702072ae58518bd236ae038501e71483c5fe7301fd7665",
+                "event lists" to "2822098140d55ebc0b5567fa33a6315839e92523cbacb0883726cea05d17a043",
+                "event list edits" to "35c84027a3a169a30c9a90c89d79cf07e93c623fc1dcb1113923f16bed6719b0",
+            )
+
         const val CORPUS = "nostr_vitor_startup_data.json.gz"
         const val MUTATION_CHARS = "\"\\{}[],: \n\tau0-9.eE+nlftré\uD83D❤"
     }

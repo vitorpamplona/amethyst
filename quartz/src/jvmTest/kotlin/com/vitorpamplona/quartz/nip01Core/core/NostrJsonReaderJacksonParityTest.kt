@@ -67,7 +67,10 @@ class NostrJsonReaderJacksonParityTest {
             a.content == b.content &&
             a.sig == b.sig
 
+    private fun describe(e: Event): String = "${e::class.simpleName}|${e.id}|${e.pubKey}|${e.createdAt}|${e.kind}|${e.tags.joinToString("|") { it.joinToString(",") }}|${e.content}|${e.sig}"
+
     private class Tally {
+        val pin = Pin("")
         var same = 0
         var bothReject = 0
         var onlyJackson = 0
@@ -81,6 +84,7 @@ class NostrJsonReaderJacksonParityTest {
     ) {
         val j = jackson(json)
         val r = reader(json)
+        t.pin.add(r?.let { describe(it) })
         when {
             j != null && r != null -> if (sameEvent(j, r)) t.same++ else t.different += json
             j == null && r == null -> t.bothReject++
@@ -93,6 +97,8 @@ class NostrJsonReaderJacksonParityTest {
         name: String,
         t: Tally,
     ) {
+        t.pin.name = name
+        t.pin.check(PINS.getValue(name))
         println("$name: same ${t.same}, both reject ${t.bothReject}, only Jackson ${t.onlyJackson}, only reader ${t.readerOnly.size}, different ${t.different.size}")
         if (t.different.isNotEmpty()) fail("$name: ${t.different.size} inputs build different events, e.g. ${t.different.first().take(300)}")
         if (t.readerOnly.isNotEmpty()) fail("$name: ${t.readerOnly.size} inputs only the reader accepts, e.g. ${t.readerOnly.first().take(300)}")
@@ -230,6 +236,14 @@ class NostrJsonReaderJacksonParityTest {
     }
 
     companion object {
+        /** See [Pin]: recorded while every outcome was also checked against Jackson. */
+        private val PINS =
+            mapOf(
+                "captured events" to "8d14fbe28335faba96c5be2ee89c3e54fc1fe4416521cc1c085cef5201cb26c4",
+                "truncations" to "d7c2f5c951128648f9af1c91c7d6820694cb3c9c045fbe8b08a9018fe98899eb",
+                "random edits" to "45aa82e140702ef8bcdd0ed3a26dad73a4dd9cf5ca6d0b1328e83384430eedcc",
+            )
+
         const val CORPUS = "nostr_vitor_startup_data.json.gz"
         const val SAMPLE_SIZE = 2_000
         private var cachedSample: List<String>? = null

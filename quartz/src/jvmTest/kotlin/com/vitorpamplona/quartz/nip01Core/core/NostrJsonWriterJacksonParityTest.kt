@@ -48,11 +48,14 @@ import com.vitorpamplona.quartz.nip77Negentropy.NegErrMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgCmd
 import com.vitorpamplona.quartz.nip77Negentropy.NegMsgMessage
 import com.vitorpamplona.quartz.nip77Negentropy.NegOpenCmd
+import org.junit.Rule
+import org.junit.rules.TestName
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.GZIPInputStream
 import kotlin.random.Random
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -66,6 +69,17 @@ import kotlin.test.fail
  * message and command type.
  */
 class NostrJsonWriterJacksonParityTest {
+    @get:Rule val testName = TestName()
+
+    private val pin = Pin("")
+
+    @AfterTest
+    fun checkPin() {
+        val name = testName.methodName.substringBefore('[')
+        pin.name = name
+        pin.check(PINS.getValue(name))
+    }
+
     // What EventHasherSerializer did on the JVM before the writer: a tree for the text and a
     // UTF-8 generator combining surrogate pairs for the bytes.
     private fun jacksonIdJson(
@@ -121,6 +135,11 @@ class NostrJsonWriterJacksonParityTest {
     /** Every way the writer serializes [e], each checked against Jackson. */
     private fun assertSameAsJackson(e: Event) {
         val label = { "for ${JacksonMapper.toJson(e).take(300)}" }
+        pin.add(NostrJsonWriter.toJson(e))
+        pin.add(NostrJsonWriter.toJson(e.tags))
+        pin.add(EventHasherSerializer.makeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content))
+        pin.add(EventHasherSerializer.fastMakeJsonForId(e.pubKey, e.createdAt, e.kind, e.tags, e.content).toHexKey())
+        pin.add(NostrJsonWriter.toJson(Rumor.create(e)))
         assertEquals(JacksonMapper.toJson(e), NostrJsonWriter.toJson(e), "event ${label()}")
         assertEquals(JacksonMapper.mapper.writeValueAsString(e), NostrJsonWriter.toJson(e), "EventSerializer ${label()}")
         assertEquals(JacksonMapper.toJson(e.tags), NostrJsonWriter.toJson(e.tags), "tags ${label()}")
@@ -197,8 +216,10 @@ class NostrJsonWriterJacksonParityTest {
             if (sha.digest(jacksonIdBytes(e.pubKey, e.createdAt, e.kind, e.tags, e.content)).toHexKey() == e.id) validIdsJackson++
 
             val frame = EventMessage("sub", e)
+            pin.add(NostrJsonWriter.toJsonOrNull(frame))
             assertEquals(JacksonMapper.toJson(frame), NostrJsonWriter.toJsonOrNull(frame))
             val cmd = EventCmd(e)
+            pin.add(NostrJsonWriter.toJsonOrNull(cmd))
             assertEquals(JacksonMapper.toJson(cmd), NostrJsonWriter.toJsonOrNull(cmd))
             count++
         }
@@ -367,6 +388,7 @@ class NostrJsonWriterJacksonParityTest {
     @Test
     fun everyMessageTypeWritesTheSame() {
         for (msg in messages) {
+            pin.add(NostrJsonWriter.toJsonOrNull(msg))
             assertEquals(JacksonMapper.toJson(msg), NostrJsonWriter.toJsonOrNull(msg), msg::class.simpleName)
             // The type's own toJson, fast paths included.
             assertEquals(JacksonMapper.toJson(msg), msg.toJson(), msg::class.simpleName)
@@ -376,6 +398,7 @@ class NostrJsonWriterJacksonParityTest {
     @Test
     fun everyCommandTypeWritesTheSame() {
         for (cmd in commands) {
+            pin.add(NostrJsonWriter.toJsonOrNull(cmd))
             assertEquals(JacksonMapper.toJson(cmd), NostrJsonWriter.toJsonOrNull(cmd), cmd::class.simpleName)
             assertEquals(JacksonMapper.toJson(cmd), cmd.toJson(), cmd::class.simpleName)
         }
@@ -384,6 +407,7 @@ class NostrJsonWriterJacksonParityTest {
     @Test
     fun filtersAndRumorsWriteTheSame() {
         for (f in filters) {
+            pin.add(NostrJsonWriter.toJson(f))
             assertEquals(JacksonMapper.toJson(f), NostrJsonWriter.toJson(f))
             assertEquals(JacksonMapper.toJson(f), f.toJson())
         }
@@ -395,6 +419,7 @@ class NostrJsonWriterJacksonParityTest {
                 Rumor.create(sampleEvent),
             )
         for (r in rumors) {
+            pin.add(NostrJsonWriter.toJson(r))
             assertEquals(JacksonMapper.toJson(r), NostrJsonWriter.toJson(r))
             assertEquals(JacksonMapper.toJson(r), Rumor.toJson(r))
         }
@@ -436,6 +461,20 @@ class NostrJsonWriterJacksonParityTest {
     }
 
     companion object {
+        /** See [Pin]: recorded while every output was also checked against Jackson. */
+        private val PINS =
+            mapOf(
+                "everyCapturedEventWritesTheSame" to "9e5eaceae7542873dc146c65e6d90a835f443a3ab89eb3490b9d3f0ddd01250e",
+                "oddStringsWriteTheSame" to "04e18de89fa95d22a9f73f09ea2843a2d3a5874fcb8173c31fa764bf6d4ac797",
+                "randomStringsWriteTheSame" to "8659a51ab78aa485ffbbf486ebdae79d9eda546133e90b294a45da77a5c4191e",
+                "bigEventsGrowAndReleaseTheBuffers" to "c9a492b36f5020abcced842d40ce912c10b056b38b292acc403bf63e7a4c3932",
+                "everyMessageTypeWritesTheSame" to "58f694b89e08afa1372c740b77173796ad04dcfc45e280af661612c82a8f2baa",
+                "everyCommandTypeWritesTheSame" to "ed5ef44394d23eaed7d6877c8454d61bebfe7092cb2db7d11e36e72e8d943bea",
+                "filtersAndRumorsWriteTheSame" to "ac358d4667a389f04205e5a31bd4114464faafc7869377885a70cd45ebf80ece",
+                "threadsWritingAtOnceDoNotShareState" to "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "unknownTypesAreLeftToJackson" to "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            )
+
         const val CORPUS = "nostr_vitor_startup_data.json.gz"
     }
 }
