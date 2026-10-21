@@ -277,8 +277,8 @@ class TrustNetworkState(
 
     /**
      * Waits until the index has been read and matched against the resolved provider, so
-     * [network] is final, and the sync that match made due has started: [awaitIdle] then waits
-     * for it. For one-shot callers; the apps use [awaitLoaded].
+     * [network] is final, and (with [autoSync]) the sync that match made due has started:
+     * [awaitIdle] then waits for it. For one-shot callers; the apps use [awaitLoaded].
      */
     suspend fun awaitReady(timeoutMs: Long = 10_000) {
         withTimeoutOrNull(timeoutMs) { handled.first { it != null && it === rankProvider.value } }
@@ -361,9 +361,15 @@ class TrustNetworkState(
         return withContext(control) { start(requested = null, force = false) ?: running }?.awaitRun()
     }
 
-    /** Suspends until the running sync, if any, finishes. */
+    /**
+     * Suspends until no sync runs. A run that ends can start the next one from its completion
+     * (its provider was replaced while it unwound), on [control] after it: that one is waited for too.
+     */
     suspend fun awaitIdle() {
-        withContext(control) { running }?.join()
+        while (true) {
+            val run = withContext(control) { running } ?: return
+            run.join()
+        }
     }
 
     /**

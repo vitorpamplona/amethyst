@@ -458,6 +458,27 @@ class TrustNetworkSchedulingTest {
         }
 
     @Test
+    fun awaitIdleWaitsForTheSyncAProviderSwitchStartsOnceTheOldOneUnwinds() =
+        runBlocking {
+            // A's cancelled download still unwinds when B is applied, so B's download only starts
+            // from A's completion: idle means after that one too.
+            val source =
+                FakeSource().apply {
+                    downloadGate = CompletableDeferred()
+                    unwindMs = 300
+                }
+            val rankProvider = MutableStateFlow<ResolvedProvider?>(ResolvedProvider(providerA))
+            val wot = state(rankProvider, source)
+            wot.awaitReady()
+            withTimeout(5_000) { while (source.calls.isEmpty()) delay(10) }
+            source.downloadGate = null
+            rankProvider.value = ResolvedProvider(providerB)
+            wot.awaitReady()
+            wot.awaitIdle()
+            assertEquals(listOf("download:${providerA.pubkey}", "download:${providerB.pubkey}"), source.calls.toList())
+        }
+
+    @Test
     fun filteringStaysOffUntilTheWholeSetIsDownloaded() =
         runBlocking {
             val source = FakeSource().apply { downloadGate = CompletableDeferred() }
