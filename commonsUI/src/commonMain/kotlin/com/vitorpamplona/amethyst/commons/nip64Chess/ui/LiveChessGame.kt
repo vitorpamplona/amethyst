@@ -63,12 +63,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.quartz.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
-import com.vitorpamplona.quartz.nip64Chess.GameStatus
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**

@@ -26,7 +26,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.LiveChessGameState
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 import com.vitorpamplona.quartz.utils.Log

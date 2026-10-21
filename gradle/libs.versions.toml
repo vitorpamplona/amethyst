@@ -36,6 +36,7 @@ fragmentKtx = "1.9.1"
 gms = "4.5.0"
 healthConnect = "1.1.0"
 jackson = "2.22.3"
+kchesslib = "1.0.5"
 jacksonModuleKotlin = "2.22.3"
 jna = "5.19.1"
 # Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
@@ -252,6 +253,7 @@ quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartzKmp"
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
 quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
+kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttpCoroutines = { group = "com.squareup.okhttp3", name = "okhttp-coroutines", version.ref = "okhttp" }
 osmdroid-android = { group = "org.osmdroid", name = "osmdroid-android", version.ref = "osmdroid" }

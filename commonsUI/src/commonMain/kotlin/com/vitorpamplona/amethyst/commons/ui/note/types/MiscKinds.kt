@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -154,7 +155,6 @@ import com.vitorpamplona.quartz.nip23LongContent.draft.LongFormDraftEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
-import com.vitorpamplona.quartz.nip64Chess.ChessEngine
 import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent

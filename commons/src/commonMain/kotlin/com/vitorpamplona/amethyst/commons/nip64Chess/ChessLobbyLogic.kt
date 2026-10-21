@@ -26,7 +26,6 @@ import com.vitorpamplona.quartz.nip64Chess.ChessGameEnd
 import com.vitorpamplona.quartz.nip64Chess.ChessMoveEvent
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
-import com.vitorpamplona.quartz.nip64Chess.GameStatus
 import com.vitorpamplona.quartz.nip64Chess.PieceType
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
