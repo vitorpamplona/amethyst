@@ -79,6 +79,13 @@
     <!-- Reusable geohash location picker (shared, not group-specific) -->
     <!-- Same, where this viewer cannot start one: not a member, or a Buzz chat channel (forum posts belong to forum channels). -->
     <string name="share_target_as_dm">DM sifatida yuborish</string>
+    <string name="share_target_as_highlight">Yangi ajratib ko‘rsatish</string>
+    <string name="share_target_as_picture">Yangi Rasm</string>
+    <string name="share_target_as_short_video">Yangi Short</string>
+    <string name="share_target_as_video">Yangi Video</string>
+    <string name="share_target_scan_qr">QR-kodni skanerlash</string>
+    <string name="shortcut_scan_qr_short">QR-ni skanerlash</string>
+    <string name="shortcut_scan_qr_long">QR-kodni skanerlash</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <!-- Onchain zap send dialog -->
@@ -117,19 +124,65 @@
         <item quantity="other">%1$d relay\'larga ulangan</item>
     </plurals>
     <string name="always_on_notif_connecting">Kirish relaylariga ulanilmoqda…</string>
+    <string name="always_on_notif_hide_details">Batafsil ma\'lumotni yashirish</string>
+    <string name="always_on_notif_show_details">Batafsil ma\'lumotni ko‘rsatish</string>
+    <string name="always_on_notif_tile_subtitle_off">O‘chirilgan</string>
+    <string name="always_on_notif_tile_subtitle_on">Yoqilgan</string>
     <string name="always_on_notif_title">Amethyst Bildirishnomalari Faol</string>
+    <string name="blossom_sync_cancel">Bekor qilish</string>
+    <string name="blossom_sync_channel_description">Fayllaringiz Blossom serverlari o‘rtasida nusxalanayotganda jarayon holatini ko‘rsatadi.</string>
+    <string name="blossom_sync_channel_name">Blossom sinxronlash</string>
     <string name="call_ongoing">Qo\'ng\'iroqlar</string>
     <string name="call_ongoing_description">Davom etayotgan qo\'ng\'iroq bildirishномаsi</string>
     <string name="call_with">%1$s bilan qo\'ng\'iroq</string>
+    <string name="pow_notification_channel_description">Ilovadan chiqqaningizdan keyin ham yakunlanishi uchun NIP-13 ish isboti hisoblanishi davom etayotgan postlarni ko‘rsatadi.</string>
+    <string name="pow_notification_channel_name">Ish isboti hisoblanish</string>
+    <string name="pow_notification_send_without_pow">Hozir yuborish</string>
+    <string name="blossom_syncing">Fayllaringiz serverlar o‘rtasida nusxalanmoqda……</string>
     <string name="call_hangup">Tugatish</string>
+    <plurals name="pow_mining_job">
+        <item quantity="one">%1$s • %2$d bit tezlikda hisoblanmoqda</item>
+        <item quantity="other">%1$s • %2$d bits tezlikda hisoblanmoqda</item>
+    </plurals>
+    <plurals name="pow_mining_progress">
+        <item quantity="one">Bajarilgan ish isboti qazib olinmoqda… (navbatda %1$d ta post)</item>
+        <item quantity="other">Bajarilgan ish isboti qazib olinmoqda… (navbatda %1$d ta post)
+</item>
+    </plurals>
+    <string name="pow_mining_title">Bajarilgan ish isboti qazib olinmoqda</string>
+    <string name="pow_notification_sending">Relay serverlariga yuborilmoqda…</string>
+    <string name="pow_notification_cancel_all">Bekor qilish</string>
+    <string name="pow_time_left">≈ %1$s qoldi</string>
+    <string name="pow_time_left_soon">mana-mana</string>
+    <string name="pow_estimate_instant">&lt;1 s</string>
+    <plurals name="pow_estimate_seconds">
+        <item quantity="one">%1$d soniya</item>
+        <item quantity="other">%1$d soniyalar</item>
+    </plurals>
+    <plurals name="pow_estimate_minutes">
+        <item quantity="one">%1$d daqiqa</item>
+        <item quantity="other">%1$d daqiqalar</item>
+    </plurals>
+    <plurals name="pow_estimate_hours">
+        <item quantity="one">%1$d soat</item>
+        <item quantity="other">%1$d soatlar</item>
+    </plurals>
+    <plurals name="pow_estimate_days">
+        <item quantity="one">%1$d kun</item>
+        <item quantity="other">%1$d kunlar</item>
+    </plurals>
     <string name="reaction">Reaksiya</string>
     <string name="boost">Targʻib qilish</string>
+    <string name="post">Post</string>
     <string name="voice_post">Ovozli post</string>
     <string name="voice_reply">Ovozli javob</string>
+    <string name="pow_kind_report">Xabar berish</string>
     <!-- Emoji packs -->
+    <string name="health_connect_rationale_activity_label">Health Connect va Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Shaxsiy Xabar</string>
+    <string name="pow_kind_chat_message">Chat xabari</string>
     <string name="nest_notification_broadcasting">Nest — Jonli</string>
     <string name="nest_notification_channel">Nestlar</string>
     <string name="nest_notification_channel_description">Xona ochiq bo\'lganda audio ijrosini davom ettiradi.</string>
@@ -144,6 +197,7 @@
     <string name="napplet_cap_identity">Shaxsiyat</string>
     <string name="napplet_cap_keys">Klaviatura amallari</string>
     <string name="napplet_cap_relay">Relaylar</string>
+    <string name="napplet_cap_signer">Shifrlash</string>
     <string name="napplet_cap_storage">Saqlash</string>
     <string name="napplet_cap_value">To\'lovlar</string>
     <string name="napplet_cap_resource">Tarmoq</string>
