@@ -269,4 +269,28 @@ class FsMaintenanceTest {
             val got = store.query<TextNoteEvent>(Filter(authors = listOf(signer.pubKey))).map { it.id }.toSet()
             assertEquals(events.map { it.id }.toSet(), got)
         }
+
+    // ------------------------------------------------------------------
+    // A corrupt event file is skipped, not thrown
+    // ------------------------------------------------------------------
+
+    @Test
+    fun `a truncated event file is skipped by scrub and queries`() =
+        runBlocking {
+            val good = note("good", 1)
+            val bad = note("bad", 2)
+            store.insert(good)
+            store.insert(bad)
+
+            // A crash mid-write, or a disk error, leaves half an event behind.
+            val badFile =
+                Files.walk(root.resolve("events")).use { paths ->
+                    paths.filter { Files.isRegularFile(it) && Files.readString(it).contains(bad.id) }.findFirst().get()
+                }
+            Files.writeString(badFile, Files.readString(badFile).take(40))
+
+            store.scrub()
+            val got = store.query<TextNoteEvent>(Filter(authors = listOf(signer.pubKey))).map { it.id }
+            assertEquals(listOf(good.id), got)
+        }
 }

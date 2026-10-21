@@ -81,7 +81,7 @@ internal class FsTombstones(
             Event.fromJson(path.readText()).pubKey
         } catch (_: java.io.IOException) {
             null
-        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
     }
@@ -98,7 +98,7 @@ internal class FsTombstones(
             Event.fromJson(path.readText()).createdAt
         } catch (_: java.io.IOException) {
             null
-        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
     }
@@ -163,7 +163,7 @@ internal class FsTombstones(
             Event.fromJson(path.readText()).createdAt
         } catch (_: java.io.IOException) {
             null
-        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
     }

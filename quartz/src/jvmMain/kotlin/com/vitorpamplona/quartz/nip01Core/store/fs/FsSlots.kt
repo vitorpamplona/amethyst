@@ -97,7 +97,7 @@ internal class FsSlots(
             Event.fromJson(slot.readText())
         } catch (_: java.io.IOException) {
             null
-        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+        } catch (_: IllegalArgumentException) {
             null
         }
     }

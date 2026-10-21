@@ -480,7 +480,7 @@ open class FsEventStore(
                             Event.fromJson(Files.readString(path))
                         } catch (_: java.io.IOException) {
                             continue
-                        } catch (_: com.fasterxml.jackson.core.JacksonException) {
+                        } catch (_: IllegalArgumentException) {
                             continue
                         }
                     indexer.link(event, path)
