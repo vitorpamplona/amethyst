@@ -4604,14 +4604,7 @@
     <string name="desktop_notification_reaction">%1$s reagált</string>
     <string name="desktop_notification_follow">%1$s követi Önt</string>
     <string name="desktop_upload_server_not_supported">Az asztali feltöltések Blossom kiszolgálókra töltődnek fel. Válasszon egyet a médiakiszolgáló-beállításaiban.</string>
-    <string name="desktop_menu_file">Fájl</string>
-    <string name="desktop_menu_go">Ugrás</string>
     <string name="desktop_menu_help">Súgó</string>
-    <string name="desktop_menu_quit">Kilépés az Amethystből</string>
-    <string name="desktop_menu_home">Kezdőlap</string>
-    <string name="desktop_menu_messages">Üzenetek</string>
-    <string name="desktop_menu_notifications">Értesítések</string>
-    <string name="desktop_menu_about">Az Amethyst névjegye</string>
     <string name="desktop_menu_report_issue">Hibajelentés</string>
     <string name="login_with_remote_signer">Bejelentkezés távoli aláíróval</string>
     <string name="login_with_signer_app">Bejelentkezés a következővel: %1$s</string>
@@ -8186,23 +8179,12 @@
     <string name="devtools_kind_lookup_desc">Írjon be egy típusszámot, hogy lássa a nevét és minden módot, ahogy a kliensek kódolják, valós példákkal</string>
     <string name="devtools_kind_lookup_field">Típusszám</string>
     <string name="devtools_kind_lookup_button">Keresés</string>
-    <string name="devtools_kind_lookup_explainer">Mintát vesz ebből a típusból sok átjátszóról a közelmúlt eseményeiből, és aszerint csoportosítja őket, hogy melyik kliens írta őket, vagy az alakjuk szerint (címkenevek és tartalomformátum), hogy megmutassa a típus minden kódolási módját.</string>
-    <string name="devtools_kind_sampled">%1$d esemény %2$d átjátszóról (%3$d / %4$d válaszolt)</string>
     <string name="devtools_kind_by_client">Kliens szerint</string>
     <string name="devtools_kind_by_shape">Alak szerint</string>
     <string name="devtools_kind_no_client">Nincs klienscímke</string>
     <string name="devtools_kind_shape_n">%1$d. alak</string>
     <string name="devtools_kind_from_clients">Innen: %1$s</string>
-    <string name="devtools_kind_content">Tartalom: %1$s</string>
-    <string name="devtools_kind_tag_values">értékek: %1$s</string>
     <string name="devtools_kind_more">+%1$d további</string>
-    <string name="devtools_kind_hide_rare">Ritka címkék elrejtése</string>
-    <plurals name="devtools_kind_rare_tags">
-        <item quantity="one">+%1$d ritka címke</item>
-        <item quantity="other">+%1$d ritka címke</item>
-    </plurals>
-    <string name="devtools_kind_show_example">Példa megjelenítése</string>
-    <string name="devtools_kind_hide_example">Példa elrejtése</string>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d esemény</item>
         <item quantity="other">%1$d esemény</item>
@@ -8211,11 +8193,6 @@
         <item quantity="one">%1$d szerző</item>
         <item quantity="other">%1$d szerző</item>
     </plurals>
-    <string name="devtools_format_empty">üres</string>
-    <string name="devtools_format_json_object">JSON-objektum</string>
-    <string name="devtools_format_json_array">JSON-tömb</string>
-    <string name="devtools_format_encrypted">titkosított</string>
-    <string name="devtools_format_text">szöveg</string>
     <string name="devtools_kind_custom">%1$d típus bejárása</string>
     <string name="devtools_kind_usage_title">%1$d típus</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>

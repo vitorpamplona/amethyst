@@ -126,6 +126,7 @@ import org.jetbrains.compose.resources.StringResource
  * Assembles the full settings catalog. Not composable: actions close over [nav],
  * [uriHandler], and [onResetMarmot]; conditional rows are included via [hasPrivateKey], and a row
  * whose screen this front end doesn't have ([canOpen] false: Resource usage on desktop) is left out.
+ * A null [onResetMarmot] drops that row, for a menu with no confirmation dialog to show.
  * The blank-query render of this catalog must match the legacy hardcoded screen.
  */
 fun buildSettingsCatalog(
@@ -133,7 +134,7 @@ fun buildSettingsCatalog(
     uriHandler: UriHandler,
     hasPrivateKey: Boolean,
     legal: SettingsCategory?,
-    onResetMarmot: () -> Unit,
+    onResetMarmot: (() -> Unit)?,
     canOpen: (Route) -> Boolean = { true },
     hasKeyStorage: Boolean = false,
 ): List<SettingsCategory> {
@@ -261,15 +262,17 @@ fun buildSettingsCatalog(
                             isDanger = true,
                         ) { nav.nav(Route.VanishEvents) },
                     )
-                    add(
-                        SettingsEntry(
-                            titleRes = Res.string.reset_marmot_state,
-                            icon = SettingsIcon.Symbol(MaterialSymbols.DeleteSweep),
-                            keywordsRes = Res.string.reset_marmot_search_keywords,
-                            isDanger = true,
-                            onClick = onResetMarmot,
-                        ),
-                    )
+                    if (onResetMarmot != null) {
+                        add(
+                            SettingsEntry(
+                                titleRes = Res.string.reset_marmot_state,
+                                icon = SettingsIcon.Symbol(MaterialSymbols.DeleteSweep),
+                                keywordsRes = Res.string.reset_marmot_search_keywords,
+                                isDanger = true,
+                                onClick = onResetMarmot,
+                            ),
+                        )
+                    }
                 },
         )
 
