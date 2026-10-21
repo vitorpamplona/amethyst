@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -62,7 +63,7 @@ object NoteShowCommand {
                     "source" to located.source,
                     "seen_on" to located.seenOn.map { it.url },
                     "note" to NoteSupport.render(located.event, renderCtx),
-                    "event" to if (raw) Output.mapper.readTree(located.event.toJson()) else null,
+                    "event" to if (raw) CliJson.parse(located.event.toJson()) else null,
                 ),
             )
             return 0

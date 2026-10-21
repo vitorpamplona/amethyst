@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
@@ -47,8 +48,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class OkHttpLnurlEndpointResolver(
     private val okHttpClient: (String) -> OkHttpClient,
 ) : LnurlEndpointResolver {
-    private val mapper = ObjectMapper()
-
     override suspend fun resolve(lnurlpUrl: String): LnurlEndpointInfo? = LnurlEndpointCache.getOrFetch(lnurlpUrl, ::fetch)
 
     private suspend fun fetch(url: String): LnurlEndpointInfo? =
@@ -59,7 +58,7 @@ class OkHttpLnurlEndpointResolver(
                 client.newCall(request).executeAsync().use { response ->
                     if (!response.isSuccessful) return@use null
                     val body = response.body.string()
-                    val root = mapper.readTree(body) ?: return@use null
+                    val root = Json.parseToJsonElement(body) as? JsonObject ?: return@use null
                     LnurlEndpointInfo(
                         nostrPubkey = root.get("nostrPubkey")?.asText()?.ifBlank { null },
                         allowsNostr = root.get("allowsNostr")?.asBoolean() ?: false,

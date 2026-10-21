@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
+    alias(libs.plugins.serialization)
     application
 }
 
@@ -30,7 +31,7 @@ dependencies {
     implementation(libs.quartz)
 
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.jackson.module.kotlin)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
 
     // JNI secp256k1 backend quartz needs at runtime on plain JVM.

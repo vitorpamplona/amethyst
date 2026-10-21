@@ -6,6 +6,7 @@ import java.util.zip.ZipOutputStream
 
 plugins {
     alias(libs.plugins.jetbrainsKotlinJvm)
+    alias(libs.plugins.serialization)
     application
 }
 
@@ -59,9 +60,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
     implementation(libs.okhttpCoroutines)
-    implementation(libs.jackson.module.kotlin)
-    // Reads zapstore.yaml for `amy releases publish` (Apache-2.0, with SnakeYAML, Apache-2.0).
-    implementation(libs.jackson.dataformat.yaml)
+    // Reads zapstore.yaml for `amy releases publish` (Apache-2.0).
+    implementation(libs.snakeyaml)
     implementation(libs.slf4j.nop)
 
     testImplementation(libs.kotlin.test)

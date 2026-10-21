@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -89,7 +90,7 @@ object GiftCommands {
             val peer = ctx.requireUserHex(to)
             val seal = SealEvent.create(event = inner, encryptTo = peer, signer = ctx.signer)
             val giftWrap = GiftWrapEvent.create(event = seal, recipientPubKey = peer)
-            val wrapNode = Output.mapper.readTree(giftWrap.toJson())
+            val wrapNode = CliJson.parse(giftWrap.toJson())
 
             val targets = RawEventSupport.relayFlag(args)
             args.rejectUnknown()
@@ -135,7 +136,7 @@ object GiftCommands {
                 }
             // The wrap holds a seal (kind:13); unseal it to recover the rumor.
             val inner = if (unwrapped is SealEvent) unwrapped.unsealThrowing(ctx.signer) else unwrapped
-            Output.emit(mapOf("event" to Output.mapper.readTree(inner.toJson())))
+            Output.emit(mapOf("event" to CliJson.parse(inner.toJson())))
             return 0
         }
     }

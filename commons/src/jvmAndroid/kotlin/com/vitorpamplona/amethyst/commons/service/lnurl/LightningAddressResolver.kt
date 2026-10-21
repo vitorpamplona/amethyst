@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
@@ -28,6 +27,8 @@ import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointInfo
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
@@ -48,8 +49,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class LightningAddressResolver(
     private val httpClient: OkHttpClient,
 ) {
-    private val mapper = ObjectMapper()
-
     /**
      * Result of resolving a lightning address to a BOLT11 invoice.
      */
@@ -103,7 +102,7 @@ class LightningAddressResolver(
 
                 val lnurlp =
                     try {
-                        mapper.readTree(lnurlJson)
+                        Json.parseToJsonElement(lnurlJson) as? JsonObject
                     } catch (e: Exception) {
                         return@withContext Result.Error("Failed to parse LNURL response")
                     }
@@ -138,7 +137,7 @@ class LightningAddressResolver(
 
                 val invoiceResponse =
                     try {
-                        mapper.readTree(invoiceJson)
+                        Json.parseToJsonElement(invoiceJson) as? JsonObject
                     } catch (e: Exception) {
                         return@withContext Result.Error("Failed to parse invoice response")
                     }

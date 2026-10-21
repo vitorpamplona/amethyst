@@ -20,9 +20,8 @@
  */
 package com.vitorpamplona.amethyst.cli.secrets
 
-import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.annotation.JsonSubTypes
-import com.fasterxml.jackson.annotation.JsonTypeInfo
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /**
  * Where the private key physically lives. Persisted inside `identity.json`
@@ -42,24 +41,27 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
  *  - [Plaintext] — opt-in escape hatch for dev scripts that want to diff
  *    identity.json. Equivalent to the old pre-hardening behaviour plus the
  *    0600 file mode from `SecureFileIO`.
+ *
+ * Written as `{"type":"keychain",…}`: kotlinx's default class discriminator is "type".
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-@JsonSubTypes(
-    JsonSubTypes.Type(value = IdentitySecret.Keychain::class, name = "keychain"),
-    JsonSubTypes.Type(value = IdentitySecret.Ncryptsec::class, name = "ncryptsec"),
-    JsonSubTypes.Type(value = IdentitySecret.Plaintext::class, name = "plaintext"),
-)
+@Serializable
 sealed interface IdentitySecret {
+    @Serializable
+    @SerialName("keychain")
     data class Keychain(
         val backend: String,
         val service: String,
         val account: String,
     ) : IdentitySecret
 
+    @Serializable
+    @SerialName("ncryptsec")
     data class Ncryptsec(
         val ncryptsec: String,
     ) : IdentitySecret
 
+    @Serializable
+    @SerialName("plaintext")
     data class Plaintext(
         val privKeyHex: String,
     ) : IdentitySecret
@@ -70,8 +72,10 @@ sealed interface IdentitySecret {
  * the private key is stored indirectly via [secret]. The two `legacy*` fields
  * are honoured when reading a pre-secret-store file so existing users are
  * auto-migrated on the next save-capable command.
+ *
+ * Written without its null fields ([com.vitorpamplona.amethyst.cli.CliJson.sparseFiles]), as Jackson's NON_NULL did.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@Serializable
 data class IdentityFile(
     val pubKeyHex: String,
     val npub: String,
@@ -90,8 +94,10 @@ data class IdentityFile(
  * NIP-46 bunker connection persisted in `identity.json`. The transport
  * (client) private key lives in [IdentityFile.secret]; this records where
  * to reach the remote signer and the optional connect secret.
+ *
+ * Written without its null fields ([com.vitorpamplona.amethyst.cli.CliJson.sparseFiles]), as Jackson's NON_NULL did.
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
+@Serializable
 data class BunkerFile(
     val remotePubkey: String,
     val relays: List<String>,

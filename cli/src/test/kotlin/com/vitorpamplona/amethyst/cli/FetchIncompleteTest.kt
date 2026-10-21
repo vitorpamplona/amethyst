@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -78,7 +77,7 @@ class FetchIncompleteTest {
         val r = amy("--json", "fetch", "--kind", "1", "--paginate", "--limit", "0", "--relay", relay.url, "--timeout", "3")
 
         assertEquals(1, r.exit, "a partial walk is not a success: ${r.stdout} ${r.stderr}")
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(notes.map { it.id }.toSet(), result["events"].map { it["id"].asText() }.toSet(), "what arrived is still written: $result")
         assertEquals("closed", result["relay_errors"][relay.url.normalized()]["reason"].asText(), "$result")
         assertIncomplete(jsonErrorOf(r), count = 3)
@@ -96,10 +95,10 @@ class FetchIncompleteTest {
                 out
                     .readLines()
                     .filter { it.isNotBlank() }
-                    .map { Output.mapper.readTree(it)["id"].asText() }
+                    .map { JsonNode.parse(it)["id"].asText() }
                     .toSet(),
             )
-            assertEquals(3, Output.mapper.readTree(r.stdoutLines.single())["count"].asInt(), r.stdout)
+            assertEquals(3, JsonNode.parse(r.stdoutLines.single())["count"].asInt(), r.stdout)
             val error = jsonErrorOf(r)
             assertIncomplete(error, count = 3)
             assertEquals(out.path, error["out"].asText(), "$error")
@@ -113,7 +112,7 @@ class FetchIncompleteTest {
         val r = amy("--json", "fetch", "--kind", "1", "--paginate", "--limit", "10", "--relay", relay.url, "--timeout", "3")
 
         assertEquals(1, r.exit, "${r.stdout} ${r.stderr}")
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(notes.sortedByDescending { it.createdAt }.map { it.id }, result["events"].map { it["id"].asText() }, "$result")
         assertIncomplete(jsonErrorOf(r), count = 3)
     }
@@ -140,7 +139,7 @@ class FetchIncompleteTest {
         assertEquals(REASON, refusal["message"].asText(), "$error")
     }
 
-    private fun jsonErrorOf(r: CliResult): JsonNode = Output.mapper.readTree(r.stderr.lines().single { it.startsWith("{") })
+    private fun jsonErrorOf(r: CliResult): JsonNode = JsonNode.parse(r.stderr.lines().single { it.startsWith("{") })
 
     private fun String.normalized() = normalizeRelayUrl().url
 

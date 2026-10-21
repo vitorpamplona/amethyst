@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.secrets.BunkerFile
 import com.vitorpamplona.amethyst.cli.secrets.IdentityFile
 import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
@@ -33,6 +32,7 @@ import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.serialization.Serializable
 import java.io.File
 
 private const val TAG = "Config"
@@ -52,11 +52,9 @@ data class Identity(
     val npub: String,
     val bunker: Bunker? = null,
 ) {
-    @get:com.fasterxml.jackson.annotation.JsonIgnore
     val hasPrivateKey: Boolean get() = privKeyHex != null
 
     /** Whether this identity can sign — directly (local key) or via a bunker. */
-    @get:com.fasterxml.jackson.annotation.JsonIgnore
     val canSign: Boolean get() = privKeyHex != null || bunker != null
 
     fun keyPair(): KeyPair =
@@ -183,13 +181,13 @@ data class Bunker(
     val remotePubkey: String,
     val relays: List<String>,
     val connectSecret: String?,
-    @get:com.fasterxml.jackson.annotation.JsonIgnore
     val clientPrivKeyHex: String,
     /** When the signer was last asked NIP-46 `switch_relays` (unix seconds). */
     val relaysCheckedAt: Long? = null,
 )
 
 /** Opaque per-run state (subscription cursors, etc). Stored alongside identity. */
+@Serializable
 data class RunState(
     var giftWrapSince: Long? = null,
     val groupSince: MutableMap<String, Long> = mutableMapOf(),
@@ -311,7 +309,7 @@ class DataDir(
      * for "does an identity exist?" / "what's the npub?" checks that must
      * not pop a keychain prompt or ask for a passphrase.
      */
-    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) Output.mapper.readValue(identityFile.readText()) else null
+    fun loadIdentityFileOrNull(): IdentityFile? = if (identityFile.exists()) CliJson.sparseFiles.decodeFromString<IdentityFile>(identityFile.readText()) else null
 
     fun identityExists(): Boolean = identityFile.exists()
 
@@ -365,12 +363,12 @@ class DataDir(
                     secret = secret,
                     bunker = BunkerFile(id.bunker.remotePubkey, id.bunker.relays, id.bunker.connectSecret, id.bunker.relaysCheckedAt),
                 )
-            SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
+            SecureFileIO.writeTextAtomic(identityFile, CliJson.sparseFiles.encodeToString(file))
             return
         }
         val secret: IdentitySecret? = id.privKeyHex?.let { secrets.store(id.pubKeyHex, it) }
         val file = IdentityFile(pubKeyHex = id.pubKeyHex, npub = id.npub, secret = secret)
-        SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(file))
+        SecureFileIO.writeTextAtomic(identityFile, CliJson.sparseFiles.encodeToString(file))
     }
 
     /**
@@ -385,14 +383,14 @@ class DataDir(
         val file = loadIdentityFileOrNull() ?: return
         val bunker = file.bunker ?: return
         val updated = file.copy(bunker = bunker.copy(relays = relays, relaysCheckedAt = checkedAt))
-        SecureFileIO.writeTextAtomic(identityFile, Output.mapper.writeValueAsString(updated))
+        SecureFileIO.writeTextAtomic(identityFile, CliJson.sparseFiles.encodeToString(updated))
     }
 
     /** Remove the identity file and any backend-held secret. */
     fun deleteIdentity() {
         if (identityFile.exists()) {
             runCatching {
-                val file = Output.mapper.readValue<IdentityFile>(identityFile.readText())
+                val file = CliJson.sparseFiles.decodeFromString<IdentityFile>(identityFile.readText())
                 file.secret?.let { secrets.delete(it) }
             }
             if (!identityFile.delete() && identityFile.exists()) {
@@ -401,10 +399,10 @@ class DataDir(
         }
     }
 
-    fun loadRunState(): RunState = if (stateFile.exists()) Output.mapper.readValue(stateFile.readText()) else RunState()
+    fun loadRunState(): RunState = if (stateFile.exists()) CliJson.files.decodeFromString<RunState>(stateFile.readText()) else RunState()
 
     fun saveRunState(s: RunState) {
-        SecureFileIO.writeTextAtomic(stateFile, Output.mapper.writeValueAsString(s))
+        SecureFileIO.writeTextAtomic(stateFile, CliJson.files.encodeToString(s))
     }
 
     companion object {

@@ -20,15 +20,19 @@
  */
 package com.vitorpamplona.amethyst.desktop.update
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.amethyst.commons.appupdate.AvailableUpdate
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopAssetNames
 import com.vitorpamplona.amethyst.commons.appupdate.DesktopRelease
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateSource
 import com.vitorpamplona.amethyst.commons.appupdate.UpdateTarget
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.shared.Nip82VersionComparator
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.booleanOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.objectListOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -61,35 +65,29 @@ class GitHubReleaseSource(
         }
 
     companion object {
-        private val mapper = ObjectMapper()
-
         /** The release, when it is newer and has a file for [platform] (an Intel Mac has no DMG to get). */
         internal fun parse(
             json: String,
             currentVersion: String,
             platform: String,
         ): AvailableUpdate? {
-            val release = mapper.readTree(json)
-            if (release.path("draft").asBoolean(false) || release.path("prerelease").asBoolean(false)) return null
+            val release = Json.parseToJsonElement(json) as? JsonObject ?: return null
+            if (release.booleanOrNull("draft") == true || release.booleanOrNull("prerelease") == true) return null
             val version =
-                release
-                    .path("tag_name")
-                    .asText("")
+                (release.stringOrNull("tag_name") ?: "")
                     .removePrefix("v")
                     .ifBlank { return null }
             if (Nip82VersionComparator.compare(version, currentVersion) <= 0) return null
-            val hasBuild = release.path("assets").any { DesktopAssetNames.classify(it.path("name").asText(""), version)?.platform == platform }
+            val hasBuild = release.objectListOrNull("assets").orEmpty().any { DesktopAssetNames.classify(it.stringOrNull("name") ?: "", version)?.platform == platform }
             if (!hasBuild) return null
             val publishedAt =
-                release
-                    .path("published_at")
-                    .asText("")
+                (release.stringOrNull("published_at") ?: "")
                     .let { runCatching { Instant.parse(it).epochSecond }.getOrNull() } ?: 0L
             return AvailableUpdate(
                 version = version,
                 releaseNotes = "",
                 asset = null,
-                pageUrl = release.path("html_url").asText("").takeIf { it.startsWith("https://github.com/") } ?: DesktopRelease.releasePage(version),
+                pageUrl = release.stringOrNull("html_url")?.takeIf { it.startsWith("https://github.com/") } ?: DesktopRelease.releasePage(version),
                 publishedAt = publishedAt,
             )
         }
