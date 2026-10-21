@@ -217,8 +217,8 @@ class UnknownEventDigest(
                         "description", "about" -> v != null && descriptionTag == null && true.also { descriptionTag = tag }
                         "d" -> identifier == null && true.also { identifier = v }
                         "image", "thumb", "picture", "banner", "cover" ->
-                            v != null && v.isWebUrl() && media.putIfAbsent(v, DigestMedia(v, null, null, tag.getOrNull(2), null)) == null
-                        "imeta" -> parseImeta(tag)?.let { media.putIfAbsent(it.url, it) == null } ?: false
+                            v != null && v.isWebUrl() && media.addIfNew(DigestMedia(v, null, null, tag.getOrNull(2), null))
+                        "imeta" -> parseImeta(tag)?.let { media.addIfNew(it) } ?: false
                         "p" -> v != null && Hex.isHex64(v) && true.also { people += DigestPerson(v, tag.getOrNull(3)?.ifBlank { null }) }
                         "e", "q" ->
                             if (v != null && Hex.isHex64(v)) {
@@ -295,6 +295,13 @@ class UnknownEventDigest(
                 otherTags = other,
                 tagCount = event.tags.size,
             )
+        }
+
+        /** Adds [item] under its url unless that url is already there (putIfAbsent is JVM-only). */
+        private fun MutableMap<String, DigestMedia>.addIfNew(item: DigestMedia): Boolean {
+            if (item.url in this) return false
+            this[item.url] = item
+            return true
         }
 
         private fun parseImeta(tag: Array<String>): DigestMedia? {
