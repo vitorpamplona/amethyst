@@ -28,21 +28,19 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import kotlinx.serialization.SerializationException
 
 actual object OptimizedJsonMapper {
-    actual fun fromJson(json: String): Event =
-        try {
-            KotlinSerializationMapper.fromJson(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJson(json: String): Event = EventJsonReader.readEvent(json)
 
     actual fun toJson(event: Event): String = KotlinSerializationMapper.toJson(event)
 
+    // EVENT frames, nearly all of a relay's traffic, take the fast reader; every other
+    // message type goes through KotlinSerializationMapper.
     actual fun fromJsonToMessage(json: String): Message =
-        try {
-            KotlinSerializationMapper.fromJsonToMessage(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+        EventJsonReader.readEventMessage(json)
+            ?: try {
+                KotlinSerializationMapper.fromJsonToMessage(json)
+            } catch (e: SerializationException) {
+                throw IllegalArgumentException(e.message, e)
+            }
 
     actual fun fromJsonToCommand(json: String): Command =
         try {
