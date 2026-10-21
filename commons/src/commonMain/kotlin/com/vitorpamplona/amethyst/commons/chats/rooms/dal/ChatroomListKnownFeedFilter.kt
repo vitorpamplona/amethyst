@@ -55,6 +55,7 @@ import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
 import com.vitorpamplona.quartz.nip29RelayGroups.groupId
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupChatContent
 import com.vitorpamplona.quartz.nip29RelayGroups.isGroupScoped
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 
 class ChatroomListKnownFeedFilter(
     val account: Account,
@@ -71,11 +72,35 @@ class ChatroomListKnownFeedFilter(
 
     private fun pinnedPlaceholder(room: ChatroomKey): PinnedChatroomNote = placeholderLock.withLock { pinnedPlaceholders.getOrPut(room) { PinnedChatroomNote(room) } }
 
-    /** The DM room a row stands for: a real NIP-04/NIP-17 message, or a pinned room with nothing loaded. */
+    /**
+     * The DM room a row stands for: a real NIP-04/NIP-17 message, an unsent draft of one (a room's
+     * newest entry can be my NIP-37 draft wrap, which the row renders by its rumor), or a pinned room
+     * with nothing loaded.
+     */
     private fun privateRoomKeyOf(
         note: Note,
         myPubKey: HexKey,
-    ): ChatroomKey? = (note as? PinnedChatroomNote)?.room ?: (note.event as? ChatroomKeyable)?.chatroomKey(myPubKey)
+    ): ChatroomKey? {
+        if (note is PinnedChatroomNote) return note.room
+        val event = note.event
+        if (event !is DraftWrapEvent) return (event as? ChatroomKeyable)?.chatroomKey(myPubKey)
+
+        val rumor = account.draftsDecryptionCache.preCachedDraft(event) as? ChatroomKeyable
+        return rumor?.chatroomKey(myPubKey) ?: draftRoomKeyOf(note)
+    }
+
+    /**
+     * The room an indexed draft sits in, for when its rumor has dropped out of the decryption cache.
+     * Without it the row would flip between pinned and unpinned as the cache evicts and re-decrypts.
+     */
+    private fun draftRoomKeyOf(note: Note): ChatroomKey? {
+        val gatherers = note.inGatherers ?: return null
+        var found: ChatroomKey? = null
+        account.chatroomList.rooms.forEach { key, room ->
+            if (found == null && room in gatherers) found = key
+        }
+        return found
+    }
 
     // returns the last Note of each user.
     override fun feed(): List<Note> {
