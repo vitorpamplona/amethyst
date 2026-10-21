@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.nip55AndroidSigner.api.foreground.intents.resul
 
 import android.content.Intent
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedSerializable
-import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
+import com.vitorpamplona.quartz.nip55AndroidSigner.Nip55Json
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -33,7 +33,7 @@ data class IntentResult(
     val id: String? = null,
     val rejected: Boolean? = false,
 ) : OptimizedSerializable {
-    fun toJson(): String = JsonMapperNip55.toJson(this)
+    fun toJson(): String = Nip55Json.toJson(this)
 
     fun toIntent(): Intent {
         val intent = Intent()
@@ -55,8 +55,8 @@ data class IntentResult(
                 rejected = data.extras?.containsKey("rejected"),
             )
 
-        fun fromJson(json: String): IntentResult = JsonMapperNip55.fromJsonToIntentResult(json)
+        fun fromJson(json: String): IntentResult = Nip55Json.fromJsonToIntentResult(json)
 
-        fun fromJsonArray(json: String): List<IntentResult> = JsonMapperNip55.fromJsonToIntentResultList(json)
+        fun fromJsonArray(json: String): List<IntentResult> = Nip55Json.fromJsonToIntentResultList(json)
     }
 }

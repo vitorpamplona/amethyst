@@ -24,6 +24,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
 /**
@@ -516,6 +518,13 @@ class NostrJsonWriter internal constructor() {
                 sb.append('}')
             }
 
+        fun toJson(request: BunkerRequest): String = acquire().text { bunkerRequest(request) }
+
+        fun toJson(response: BunkerResponse): String = acquire().text { bunkerResponse(response) }
+
+        /** Runs [write] with this thread's writer and returns the text, for formats written outside this package. */
+        internal fun write(write: NostrJsonWriter.() -> Unit): String = acquire().text(write)
+
         /** The event laid out for people to read; see [NostrJsonPretty]. */
         fun toPrettyJson(event: Event): String = NostrJsonPretty.format(toJson(event))
 
@@ -543,6 +552,8 @@ class NostrJsonWriter internal constructor() {
                 is Filter -> toJson(value)
                 is Rumor -> toJson(value)
                 is EventTemplate<*> -> toJson(value)
+                is BunkerRequest -> toJson(value)
+                is BunkerResponse -> toJson(value)
                 is Message -> toJsonOrNull(value)
                 is Command -> toJsonOrNull(value)
                 else -> null

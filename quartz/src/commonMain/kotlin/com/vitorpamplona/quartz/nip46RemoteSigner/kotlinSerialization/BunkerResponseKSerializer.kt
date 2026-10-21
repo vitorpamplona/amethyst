@@ -21,13 +21,6 @@
 package com.vitorpamplona.quartz.nip46RemoteSigner.kotlinSerialization
 
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseAck
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseError
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseEvent
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponseGetRelays
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePong
-import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponsePublicKey
-import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
@@ -75,50 +68,6 @@ object BunkerResponseKSerializer : KSerializer<BunkerResponse> {
         val result = jsonObject["result"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
         val error = jsonObject["error"]?.let { if (it is JsonNull) null else it.jsonPrimitive.content }
 
-        // NIP-46 auth challenge: `{"result":"auth_url","error":"<url>"}`. It carries
-        // an `error` (the URL) but is NOT a failure — keep both fields so the client
-        // can surface the URL and keep waiting for the real response. Must precede the
-        // generic error branch below, which would otherwise drop the `auth_url` marker.
-        if (result == BunkerResponse.RESULT_AUTH_URL) {
-            return BunkerResponse(id, result, error)
-        }
-
-        if (error != null) {
-            return BunkerResponseError.parse(id, result, error)
-        }
-
-        if (result != null) {
-            when (result) {
-                BunkerResponseAck.RESULT -> {
-                    return BunkerResponseAck.parse(id, result, error)
-                }
-
-                BunkerResponsePong.RESULT -> {
-                    return BunkerResponsePong.parse(id, result, error)
-                }
-
-                else -> {
-                    if (result.length == 64 && Hex.isHex(result)) {
-                        return BunkerResponsePublicKey.parse(id, result)
-                    }
-
-                    if (result.isNotEmpty() && result[0] == '{') {
-                        try {
-                            return BunkerResponseEvent.parse(id, result)
-                        } catch (_: Exception) {
-                        }
-
-                        try {
-                            return BunkerResponseGetRelays.parse(id, result)
-                        } catch (_: Exception) {
-                        }
-                    }
-
-                    return BunkerResponse(id, result, error)
-                }
-            }
-        }
-
-        return BunkerResponse(id, result, error)
+        return BunkerResponse.parse(id, result, error)
     }
 }

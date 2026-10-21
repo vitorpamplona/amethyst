@@ -24,6 +24,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerMessage
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerResponse
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.reflect.KClass
@@ -748,6 +751,19 @@ internal class NostrJsonReader {
                 }
             }
 
+        /** A NIP-46 request or response; see [readBunkerObject]. */
+        fun readBunkerMessage(json: String): BunkerMessage = acquire().run { parse(json) { readBunkerObject() } }
+
+        fun readBunkerRequest(json: String): BunkerRequest = readBunkerMessage(json) as? BunkerRequest ?: throw IllegalArgumentException("not a NIP-46 request")
+
+        fun readBunkerResponse(json: String): BunkerResponse = readBunkerMessage(json) as? BunkerResponse ?: throw IllegalArgumentException("not a NIP-46 response")
+
+        /** Runs [read] on [json] with this thread's reader, for formats read outside this package. */
+        internal fun <T> read(
+            json: String,
+            read: NostrJsonReader.() -> T,
+        ): T = acquire().run { parse(json) { read() } }
+
         /** A tag array on its own. */
         fun readTagArray(json: String): TagArray = acquire().run { parse(json) { readTagArray() } }
 
@@ -782,5 +798,8 @@ internal fun readKnownType(
         Command::class -> NostrJsonReader.readCommand(json)
         Rumor::class -> NostrJsonReader.readRumor(json)
         EventTemplate::class -> NostrJsonReader.readEventTemplate(json)
+        BunkerMessage::class -> NostrJsonReader.readBunkerMessage(json)
+        BunkerRequest::class -> NostrJsonReader.readBunkerRequest(json)
+        BunkerResponse::class -> NostrJsonReader.readBunkerResponse(json)
         else -> null
     }

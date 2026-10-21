@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAut
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.relayClient.auth.relayAuthTargets
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -100,7 +100,7 @@ object Nip46ConsentInfoBuilder {
             }
         val rawData =
             when {
-                request is BunkerRequestSign -> JacksonMapper.toJsonPretty(request.event)
+                request is BunkerRequestSign -> NostrJsonWriter.toPrettyJson(request.event)
                 // Only worth a "show more" toggle when the preview actually truncated it.
                 plaintext != null && plaintext.length > PREVIEW_MAX_CHARS -> plaintext
                 else -> ""

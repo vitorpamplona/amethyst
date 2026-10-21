@@ -66,7 +66,10 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonPretty
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.intOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.longOrNull
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.stringOrNull
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -78,6 +81,10 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /**
  * A kind-22242 that names no relay is a web app proving to its own server who you are (Brainstorm
@@ -108,27 +115,21 @@ fun sealContents(
 ): SealContents? {
     if (kind != SealEvent.KIND) return null
     val entry = recent?.lookup(content) ?: return null
+    // The sealed rumor, read loosely: it is only shown, and a field of the wrong shape should not
+    // hide the rest. A kind is the one thing it cannot do without.
+    val parsed = runCatching { Json.parseToJsonElement(entry.plaintext) }.getOrNull()
+    val node = parsed as? JsonObject
     val rumor =
-        runCatching {
-            val node = JacksonMapper.mapper.readTree(entry.plaintext)
-            val tags =
-                node
-                    .get("tags")
-                    ?.map { tag -> tag.map { it.asText() }.toTypedArray() }
-                    ?.toTypedArray() ?: emptyArray()
+        node?.let {
+            val kind = it.intOrNull("kind") ?: return@let null
             EventTemplate<Event>(
-                createdAt = node.get("created_at")?.asLong() ?: 0L,
-                kind = node.get("kind")?.asInt() ?: return@runCatching null,
-                tags = tags,
-                content = node.get("content")?.asText() ?: "",
+                createdAt = it.longOrNull("created_at") ?: 0L,
+                kind = kind,
+                tags = (it["tags"] as? JsonArray)?.map { tag -> (tag as? JsonArray)?.map { item -> (item as? JsonPrimitive)?.content ?: "" }?.toTypedArray() ?: emptyArray() }?.toTypedArray() ?: emptyArray(),
+                content = it.stringOrNull("content") ?: "",
             )
-        }.getOrNull()
-    val pretty =
-        runCatching {
-            JacksonMapper.mapper
-                .writerWithDefaultPrettyPrinter()
-                .writeValueAsString(JacksonMapper.mapper.readTree(entry.plaintext))
-        }.getOrDefault(entry.plaintext)
+        }
+    val pretty = if (parsed != null) NostrJsonPretty.format(entry.plaintext) else entry.plaintext
     return SealContents(entry.recipient, rumor, pretty)
 }
 

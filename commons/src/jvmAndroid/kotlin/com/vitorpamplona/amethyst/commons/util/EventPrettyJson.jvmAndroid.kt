@@ -21,6 +21,6 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 
-actual fun Event.toPrettyJson(): String = JacksonMapper.toJsonPretty(this)
+actual fun Event.toPrettyJson(): String = NostrJsonWriter.toPrettyJson(this)

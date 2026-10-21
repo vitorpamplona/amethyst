@@ -20,18 +20,18 @@
  */
 package com.vitorpamplona.quartz.nip55AndroidSigner.api.permission
 
-import com.vitorpamplona.quartz.nip55AndroidSigner.JsonMapperNip55
+import com.vitorpamplona.quartz.nip55AndroidSigner.Nip55Json
 import com.vitorpamplona.quartz.nip55AndroidSigner.api.CommandType
 
 class Permission(
     val type: CommandType?,
     val kind: Int? = null,
 ) {
-    fun toJson(): String = JsonMapperNip55.toJson(this)
+    fun toJson(): String = Nip55Json.toJson(this)
 
     companion object {
-        fun fromJson(json: String): Permission = JsonMapperNip55.fromJsonToPermission(json)
+        fun fromJson(json: String): Permission = Nip55Json.fromJsonToPermission(json)
 
-        fun fromJsonArray(json: String): Array<Permission> = JsonMapperNip55.fromJsonToPermissionArray(json)
+        fun fromJsonArray(json: String): Array<Permission> = Nip55Json.fromJsonToPermissionArray(json)
     }
 }

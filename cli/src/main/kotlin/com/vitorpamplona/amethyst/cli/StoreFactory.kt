@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import com.vitorpamplona.quartz.nip01Core.store.IEventStore
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
 import com.vitorpamplona.quartz.nip01Core.store.sqlite.EventStore
@@ -84,7 +84,7 @@ object StoreFactory {
             StoreBackend.FS ->
                 FsEventStore(
                     root = Path(dataDir.eventsDir.absolutePath),
-                    eventToJson = JacksonMapper::toJsonPretty,
+                    eventToJson = NostrJsonWriter::toPrettyJson,
                 )
         }
 
@@ -109,6 +109,6 @@ object StoreFactory {
                 DataDir
                     .sharedEventsDir(rootBase)
                     .takeIf { it.isDirectory }
-                    ?.let { FsEventStore(root = Path(it.absolutePath), eventToJson = JacksonMapper::toJsonPretty) }
+                    ?.let { FsEventStore(root = Path(it.absolutePath), eventToJson = NostrJsonWriter::toPrettyJson) }
         }
 }

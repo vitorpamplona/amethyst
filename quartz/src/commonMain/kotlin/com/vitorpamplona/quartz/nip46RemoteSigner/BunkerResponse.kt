@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip46RemoteSigner
 
+import com.vitorpamplona.quartz.utils.Hex
+
 open class BunkerResponse(
     val id: String,
     val result: String?,
@@ -28,5 +30,58 @@ open class BunkerResponse(
     companion object {
         /** NIP-46 auth-challenge marker: `result == "auth_url"`, with the URL carried in `error`. */
         const val RESULT_AUTH_URL = "auth_url"
+
+        /** The typed response a signer's `{id, result, error}` stands for. */
+        fun parse(
+            id: String,
+            result: String?,
+            error: String?,
+        ): BunkerResponse {
+            // NIP-46 auth challenge: `{"result":"auth_url","error":"<url>"}`. It carries
+            // an `error` (the URL) but is NOT a failure — keep both fields so the client
+            // can surface the URL and keep waiting for the real response. Must precede the
+            // generic error branch below, which would otherwise drop the `auth_url` marker.
+            if (result == RESULT_AUTH_URL) {
+                return BunkerResponse(id, result, error)
+            }
+
+            if (error != null) {
+                return BunkerResponseError.parse(id, result, error)
+            }
+
+            if (result != null) {
+                when (result) {
+                    BunkerResponseAck.RESULT -> {
+                        return BunkerResponseAck.parse(id, result, error)
+                    }
+
+                    BunkerResponsePong.RESULT -> {
+                        return BunkerResponsePong.parse(id, result, error)
+                    }
+
+                    else -> {
+                        if (result.length == 64 && Hex.isHex(result)) {
+                            return BunkerResponsePublicKey.parse(id, result)
+                        }
+
+                        if (result.isNotEmpty() && result[0] == '{') {
+                            try {
+                                return BunkerResponseEvent.parse(id, result)
+                            } catch (_: Exception) {
+                            }
+
+                            try {
+                                return BunkerResponseGetRelays.parse(id, result)
+                            } catch (_: Exception) {
+                            }
+                        }
+
+                        return BunkerResponse(id, result, error)
+                    }
+                }
+            }
+
+            return BunkerResponse(id, result, error)
+        }
     }
 }

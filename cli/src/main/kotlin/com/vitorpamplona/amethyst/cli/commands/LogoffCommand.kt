@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerLogoutUseCase
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.store.fs.FsEventStore
@@ -213,7 +213,7 @@ object LogoffCommand {
         val store =
             FsEventStore(
                 root = dataDir.eventsDir.toPath(),
-                eventToJson = JacksonMapper::toJsonPretty,
+                eventToJson = NostrJsonWriter::toPrettyJson,
             )
         try {
             return body(store)
