@@ -47,7 +47,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 enum class KindSamplerPhase {
     IDLE,
-    DISCOVERING,
     SAMPLING,
     DONE,
 }
@@ -65,16 +64,17 @@ data class KindSamplerState(
 )
 
 /**
- * Kind Lookup's engine: samples recent events of one kind from many relays and folds them into
- * the ways the kind is written ([KindVariantCollector]). Breadth over depth, since different
- * clients publish to different relays: a few dozen recent events from each of hundreds of relays
- * surface more encodings than thousands from a few big ones.
+ * Kind Lookup's engine: samples recent events of one kind from the account's relays and folds
+ * them into the ways the kind is written ([KindVariantCollector]).
+ *
+ * [relays] is read on every [start] (the connected pool plus the search relays), so a lookup asks
+ * the relays the app is using right now, never a list of strangers.
  *
  * Runs on a throwaway crawl client (events stay out of LocalCache) and skips relays the socket
  * builder will not dial yet (Tor-routed while Tor is down).
  */
 class KindSamplerViewModel(
-    private val seedRelays: Set<NormalizedRelayUrl>,
+    private val relays: () -> Set<NormalizedRelayUrl>,
     private val clientBuilder: () -> INostrClient,
     private val canDial: (NormalizedRelayUrl) -> Boolean,
 ) : ViewModel() {
@@ -84,18 +84,16 @@ class KindSamplerViewModel(
     private var job: Job? = null
 
     /** Samples [kind], cancelling any sample still running: one crawl per screen, never a pile of them. */
-    fun start(
-        kind: Int,
-        includeDiscovered: Boolean,
-    ) {
+    fun start(kind: Int) {
         job?.cancel()
+        val targets = relays().filter(canDial)
         // Reset now, not when the new crawl starts, so the old kind's groups never show under the new number.
-        _state.value = KindSamplerState(kind = kind, phase = KindSamplerPhase.DISCOVERING)
+        _state.value = KindSamplerState(kind = kind, phase = KindSamplerPhase.SAMPLING, relaysTotal = targets.size)
         job =
             viewModelScope.launch(Dispatchers.IO) {
                 val client = clientBuilder()
                 try {
-                    run(kind, client, includeDiscovered)
+                    run(kind, client, targets)
                 } finally {
                     client.close()
                 }
@@ -115,18 +113,12 @@ class KindSamplerViewModel(
     private suspend fun run(
         kind: Int,
         client: INostrClient,
-        includeDiscovered: Boolean,
+        relays: List<NormalizedRelayUrl>,
     ) {
-        _state.value = KindSamplerState(kind = kind, phase = KindSamplerPhase.DISCOVERING)
-        val discovered = if (includeDiscovered) RelayProbeViewModel.discoverRelays(client) else emptySet()
-        // Seeds first: the big relays answer fast and give the screen something to show early.
-        val relays = (seedRelays + discovered).filter(canDial)
-
         val collector = KindVariantCollector()
         val lock = Mutex()
         var answered = 0
         var withEvents = 0
-        _state.value = KindSamplerState(kind = kind, phase = KindSamplerPhase.SAMPLING, relaysTotal = relays.size)
         var lastPublish = 0L
 
         val filter = Filter(kinds = listOf(kind), limit = PER_RELAY)
@@ -195,8 +187,8 @@ class KindSamplerViewModel(
     }
 
     companion object {
-        /** Recent events asked of each relay. */
-        const val PER_RELAY = 50
+        /** Recent events asked of each relay: a few dozen relays, so each is asked for a real sample. */
+        const val PER_RELAY = 200
 
         /** Enough to see every common encoding; past this the screen stops asking new relays. */
         const val MAX_EVENTS = 5_000

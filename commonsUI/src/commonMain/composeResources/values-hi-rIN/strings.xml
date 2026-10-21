@@ -8186,8 +8186,6 @@
     <string name="devtools_kind_lookup_desc">एक प्रकार संख्या का टंकण करें उसके नाम तथा ग्राहकों द्वारा उसका अक्षरराशिकरण के सभी विधि देखने के लिए। वास्तविक उदाहरणों के साथ</string>
     <string name="devtools_kind_lookup_field">प्रकार संख्या</string>
     <string name="devtools_kind_lookup_button">खोज</string>
-    <string name="devtools_kind_lookup_explainer">निकटकाल घटनाओं से इस प्रकार के उदाहरण लेता है अनेक पुनःप्रसारकों से तथा उन्हें समूहबद्ध करता है ग्राहक अनुसार जिसने उन्हें लिखा। अथवा आकार अनुसार (सूचक नाम तथा विषयवस्तु प्रारूप)। प्रकार के अक्षरराशिकरण के सभी विधि दिखाने के लिए।</string>
-    <string name="devtools_kind_sampled">%1$d घटनाएँ %2$d पुनःप्रसारकों से। %4$d में से %3$d के लिए उत्तर प्रदत्त</string>
     <string name="devtools_kind_by_client">ग्राहक अनुसार</string>
     <string name="devtools_kind_by_shape">आकार अनुसार</string>
     <string name="devtools_kind_no_client">कोई ग्राहक सूचक नहीं</string>

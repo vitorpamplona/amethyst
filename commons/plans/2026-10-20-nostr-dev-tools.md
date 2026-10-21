@@ -79,9 +79,8 @@ Headless code in `commons/…/devtools/` (CLI-safe, unit-tested in `DevToolsInsp
   - It recomputes the id and reports a mismatch with the computed value, and checks the signature.
   - It flags a `created_at` in the future and kinds missing from the registry.
 - `KindSamplerViewModel` + `KindVariantCollector` are behind Kind Lookup.
-  - The sampler asks each relay for its 50 newest events of the kind, 24 relays at a time, and
-    stops starting new relays at 5,000 events. Breadth over depth: different clients publish to
-    different relays.
+  - The sampler asks each relay for its 200 newest events of the kind, 24 relays at a time, and
+    stops starting new relays at 5,000 events.
   - The collector keeps only aggregates and the newest example per group, in two groupings:
     - by the NIP-89 `client` tag, exact string (so "Yakihonne", "YakiHonne" and "yakihonne.com"
       stay apart: that difference is itself an encoding);
@@ -90,11 +89,14 @@ Headless code in `commons/…/devtools/` (CLI-safe, unit-tested in `DevToolsInsp
     it and the tag lengths seen.
   - Content format is one of empty, JSON object, JSON array, encrypted (NIP-04 `?iv=` or a NIP-44
     base64 payload) or text.
-  - The relay set is the app's pool, the indexer, search and finder defaults, and, by default,
-    every relay NIP-66 monitors reported on in the last day. The monitors are read from
-    `relay.nostr.watch`, `relaypag.es` and `monitorlizard.nostr1.com`; on 2026-10-20 each returned
-    ~390 relays from 11–13 monitors.
+  - The relay set is the relays the app is connected to plus the account's search relays (kind
+    10007, or the defaults), read when the lookup starts. It never asks NIP-66 monitors for more:
+    a lookup should not open sockets to hundreds of relays the user never chose.
 - `RelayProbeViewModel` is "find this event on relays".
+  - Its relay set is the app's pool, the indexer, search and finder defaults, and, behind a
+    switch that is on by default, every relay NIP-66 monitors reported on in the last day. The
+    monitors are read from `relay.nostr.watch`, `relaypag.es` and `monitorlizard.nostr1.com`; on
+    2026-10-20 each returned ~390 relays from 11–13 monitors.
   - It sends one `{ids:[id]}` REQ per relay, 24 relays in parallel, with a 6 s idle timeout and a
     20 s cap.
   - Each relay ends as one of found / none / auth required / refused / offline / timed out /
@@ -117,7 +119,7 @@ Screens in `commonsUI/…/ui/screen/loggedIn/devtools/`:
 | `DevToolsNip19(input?)` | `Nip19ToolScreen`: decode, re-encode, open in Amethyst, crawl the kind |
 | `DevToolsEventInspector(noteKey?)` | `EventInspectorScreen`: verdict, fields, tag chips, content, JSON, then find on relays / crawl kind / open |
 | `DevToolsKinds` | `KindBrowserScreen`: search by number, name or NIP; an unknown number still offers a crawl |
-| `DevToolsKindUsage(kind?)` | `KindLookupScreen`: type a kind number. It shows the name and NIP when the registry knows the kind (or says it doesn't), then one card per client or per shape, each with tag chips (share, value counts; tags under 5% folded) and a "Show example" |
+| `DevToolsKindUsage(kind?)` | `KindLookupScreen`: a kind field whose one action is search (stop while that kind is running; searching the same kind again re-runs it). Then the kind's name and NIP when the registry knows it, one status line with a progress bar, and one card per client or per shape, each with its share, tag chips (share, value counts; tags under 5% folded), "Show example" and "+N rare tags" |
 | `DevToolsEventFinder(eventId)` | `EventFinderScreen`: the same table for one event id |
 | `DevToolsRelayConsole(url?)` | `RelayConsoleScreen`, laid out like a chat. On top, a connection bar: an address field with Connect and the user's relays as suggestions, then one status line (relay, ping, deflate, open subs) with Disconnect and the AUTH offer. Then the frame log. At the bottom, closable chips for open REQs, then a composer: + opens a builder sheet (REQ, COUNT or EVENT tabs, errors on the field, exact frame previewed) and the field sends raw frames. |
 
@@ -131,8 +133,9 @@ Checked by hand on the desktop app at phone size, read-only npub login:
 - The note menu opens the inspector on that note, which reports a valid id and signature.
 - The NIP-19 converter decodes an nevent and re-encodes it.
 - The kind browser search works.
-- Kind Lookup on 30023 with Tor off sampled ~3k events from ~220 relays within a minute, in 66
-  client groups.
+- Kind Lookup on 30023 sampled 587 events from 4 of 10 relays (7 connected + 3 search) in about
+  2 s, in 34 client groups; kind 1 gave ~570 events in 31 groups. (Before 2026-10-21 it also crawled
+  every NIP-66-reported relay: ~3k events from ~220 relays in about a minute.)
 - The relay console built and exchanged REQ (npub converted to hex, since applied), COUNT and
   CLOSE with nos.lol.
 - AUTH could not be exercised: a read-only login cannot sign.

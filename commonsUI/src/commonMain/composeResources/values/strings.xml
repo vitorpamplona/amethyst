@@ -8277,8 +8277,7 @@
     <string name="devtools_kind_lookup_desc">Type a kind number to see its name and every way clients encode it, with real examples</string>
     <string name="devtools_kind_lookup_field">Kind number</string>
     <string name="devtools_kind_lookup_button">Look up</string>
-    <string name="devtools_kind_lookup_explainer">Samples recent events of this kind from many relays and groups them by the client that wrote them, or by shape (tag names and content format), to show every way the kind is encoded.</string>
-    <string name="devtools_kind_sampled">%1$d events from %2$d relays (%3$d of %4$d answered)</string>
+    <string name="devtools_kind_sample_status">%1$d events from %2$d of %3$d relays</string>
     <string name="devtools_kind_by_client">By client</string>
     <string name="devtools_kind_by_shape">By shape</string>
     <string name="devtools_kind_no_client">No client tag</string>
