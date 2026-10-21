@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.contextvm.cep22OversizedTransfer
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.contextvm.transfer.ProgressToken
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Splits an oversized serialized JSON-RPC message into CEP-22 frames.

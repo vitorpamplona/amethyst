@@ -26,8 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
@@ -112,7 +112,7 @@ class MultiOrchestrator(
         alt: String?,
         contentWarningReason: String?,
         mediaQuality: CompressorQuality,
-        cipher: NostrCipher,
+        cipher: SymmetricCipher,
         server: ServerName,
         account: Account,
         uploader: MediaUploader,

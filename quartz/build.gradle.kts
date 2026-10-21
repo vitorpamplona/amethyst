@@ -169,6 +169,10 @@ kotlin {
 
                 // RFC 9420 MLS engine under Marmot and cordn (vitorpamplona/mls-kmp)
                 api(libs.mls.kmp)
+
+                // SHA, HMAC, HKDF, AES, ChaCha20, X25519, Ed25519 and secure random, from
+                // vitorpamplona/crypto-kmp. api: Quartz's own API takes and returns its types.
+                api(libs.crypto)
             }
         }
 

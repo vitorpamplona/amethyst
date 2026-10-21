@@ -10,9 +10,8 @@ contain implementations of Nostr specifications and utilities to help implement 
 `mipXX`), `cordn/` (MLS over an MCP coordinator, `specXX`), `contextvm/` (MCP over Nostr, `cepXX`),
 `concord/` (`cordXX`), `openagents/` (OpenAgents NIP-CAP/NIP-EXT, `nipXxx`), `buzz/`. A new
 protocol over Nostr belongs here as a package, not as a Gradle module; `nestsClient`/`marmotQuic`
-are modules because they are transports with no Nostr in them. The RFC 9420 MLS engine under
-`marmot/` and `cordn/` lives in vitorpamplona/mls-kmp (`com.vitorpamplona.mls`, `libs.mls.kmp`,
-an `api` dep of `quartz`); build against a checkout with `-PmlsKmpDir=../mls-kmp`. Commons stores
+are modules because they are transports with no Nostr in them. MLS itself is
+vitorpamplona/mls-kmp (`libs.mls.kmp`, `-PmlsKmpDir`). Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
@@ -24,10 +23,11 @@ a non-interactive JVM command-line client that drives the same `quartz` + `commo
 humans, agents, and interop tests. QUIC itself is no longer in this repo: the from-scratch pure-Kotlin
 QUIC v1 + HTTP/3 + WebTransport client (no JNI, no BouncyCastle, built because no Android-compatible
 Java QUIC library exists) lives in <https://github.com/vitorpamplona/quic-kmp> with its interop runner
-and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). It depends on
-the published `quartz`, which the root build substitutes with this checkout's `:quartz`. To change
+and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). To change
 QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
-(`settings.gradle.kts`). `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+(`settings.gradle.kts`). Crypto primitives live in <https://github.com/vitorpamplona/crypto-kmp>
+(`libs.crypto`, `com.vitorpamplona.crypto.*`), used by `quartz` and quic-kmp; secp256k1 stays in
+`quartz`. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/

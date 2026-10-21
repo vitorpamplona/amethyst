@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.quartz.marmot.mip04EncryptedMedia
 
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.utils.RandomInstance

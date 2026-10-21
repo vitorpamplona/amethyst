@@ -233,7 +233,7 @@ class Secp256k1CBenchmark {
     fun sha256Kotlin() {
         // Kotlin SHA-256 (uses platform MessageDigest on Android)
         benchmarkRule.measureRepeated {
-            com.vitorpamplona.quartz.utils.sha256
+            com.vitorpamplona.crypto.sha2
                 .sha256(sha256Input)
         }
     }

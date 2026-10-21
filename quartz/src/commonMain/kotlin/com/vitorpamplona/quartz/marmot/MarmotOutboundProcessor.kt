@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.marmot.groups.MlsGroupManager
 import com.vitorpamplona.quartz.marmot.groups.currentGroupState
@@ -33,7 +34,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip40Expiration.expiration
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Result of building an outbound GroupEvent.

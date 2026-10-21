@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.se
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import com.vitorpamplona.crypto.aes.AESGCM
 
 @Stable
 class SuccessfulUploads(

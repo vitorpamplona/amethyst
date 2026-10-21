@@ -127,6 +127,13 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.newComm
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.contactList.ContactListUsersScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.customFeeds.CustomFeedsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.customFeeds.EditCustomFeedScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.DevToolsHubScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.EventFinderScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.EventInspectorScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.KindBrowserScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.KindLookupScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.Nip19ToolScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.devtools.RelayConsoleScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.DiscoverScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
@@ -468,6 +475,13 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen(accountViewModel, nav) }
     composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
+    composableFromEnd<Route.DevTools> { DevToolsHubScreen(nav) }
+    composableFromEndArgs<Route.DevToolsNip19> { Nip19ToolScreen(it.input, accountViewModel, nav) }
+    composableFromEndArgs<Route.DevToolsEventInspector> { EventInspectorScreen(it.noteKey, nav) }
+    composableFromEnd<Route.DevToolsKinds> { KindBrowserScreen(nav) }
+    composableFromEndArgs<Route.DevToolsKindUsage> { KindLookupScreen(it.kind, accountViewModel, nav) }
+    composableFromEndArgs<Route.DevToolsEventFinder> { EventFinderScreen(it.eventId, accountViewModel, nav) }
+    composableFromEndArgs<Route.DevToolsRelayConsole>(capWidth = false) { RelayConsoleScreen(it.url, accountViewModel, nav) }
     composableFromEnd<Route.RequestToVanish> { RequestToVanishScreen(accountViewModel, nav) }
     composableFromEnd<Route.VanishEvents> { VanishEventsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.EditMediaServers> { AllMediaServersScreen(accountViewModel, nav) }

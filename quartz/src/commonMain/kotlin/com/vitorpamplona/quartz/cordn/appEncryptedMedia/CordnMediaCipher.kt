@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.cordn.appEncryptedMedia
 
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 
 /**
- * cordn's encrypted media as a [NostrCipher], so the ordinary media pipeline
+ * cordn's encrypted media as a [SymmetricCipher], so the ordinary media pipeline
  * can open it.
  *
  * Registering one of these against a blob URL in the encryption key cache is
@@ -45,7 +45,7 @@ class CordnMediaCipher(
     val mimeType: String,
     /** The `filename` field, byte-for-byte, for the same reason. */
     val filename: String,
-) : NostrCipher {
+) : SymmetricCipher {
     var nonce: ByteArray = ByteArray(0)
         private set
 

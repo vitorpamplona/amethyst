@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.drawing
 
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.cord03Channels
 
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.ChannelTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.EpochTag
 import com.vitorpamplona.quartz.concord.cord03Channels.tags.MsTag
@@ -43,7 +44,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.BlurhashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.OriginalHashTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 /**
  * Chat Plane message binding (CORD-03).

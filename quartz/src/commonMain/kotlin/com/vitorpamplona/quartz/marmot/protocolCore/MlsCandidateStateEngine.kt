@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.mls.codec.TlsReader
 import com.vitorpamplona.mls.framing.ContentType
 import com.vitorpamplona.mls.framing.MlsMessage
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.marmot.groups.MarmotGroupPolicy
 import com.vitorpamplona.quartz.marmot.groups.currentAdminIdentities
 import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * [CandidateStateEngine] backed by real MLS groups.

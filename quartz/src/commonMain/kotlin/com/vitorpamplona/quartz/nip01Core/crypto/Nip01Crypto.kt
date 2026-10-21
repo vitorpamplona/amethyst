@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
 
 object Nip01Crypto {

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot
 
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageUtils
 import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData
@@ -30,7 +31,6 @@ import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04ParseResult
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.parseMip04
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi

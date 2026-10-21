@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Bech32
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12ProofBuilder
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Values
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.TlvRecord
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.TlvStream
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Builds matched BOLT12 offers and payer proofs for tests, minting spec-compliant

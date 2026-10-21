@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.mls.framing.ContentType
 import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.mls.group.MlsGroupState
@@ -29,7 +30,6 @@ import com.vitorpamplona.quartz.marmot.groups.currentGroupState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex

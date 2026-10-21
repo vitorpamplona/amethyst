@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.mip01Groups
 
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Marmot group image (avatar) encryption — MIP-01 v2.

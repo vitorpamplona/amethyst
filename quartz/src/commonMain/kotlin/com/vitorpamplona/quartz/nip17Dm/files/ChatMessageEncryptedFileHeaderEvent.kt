@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.nip17Dm.files
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.experimental.audio.header.tags.WaveformTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.TagArrayBuilder
@@ -44,7 +45,6 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.SizeTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.SummaryTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.ThumbhashTag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 
 @Immutable
 class ChatMessageEncryptedFileHeaderEvent(

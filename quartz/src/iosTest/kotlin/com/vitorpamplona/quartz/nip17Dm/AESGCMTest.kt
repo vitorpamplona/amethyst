@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip17Dm
 
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

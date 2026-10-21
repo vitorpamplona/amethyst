@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.experimental.bitchat.identity
 
+import com.vitorpamplona.crypto.mac.MacInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.mac.MacInstance
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Derives a stable-but-unlinkable Nostr identity per geohash channel, mirroring

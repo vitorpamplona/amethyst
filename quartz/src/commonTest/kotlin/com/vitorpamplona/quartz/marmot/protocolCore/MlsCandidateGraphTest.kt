@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.protocolCore
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.mls.group.MlsGroup
 import com.vitorpamplona.mls.group.MlsGroupState
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals

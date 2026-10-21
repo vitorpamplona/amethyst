@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSuppor
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.upload
+import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.buzz.media.BuzzMediaSanitizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -59,7 +60,6 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -103,7 +103,7 @@ class AndroidMediaUploader(
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         useH265: Boolean,
@@ -646,7 +646,7 @@ class AndroidMediaUploader(
             alt: String?,
             contentWarningReason: String?,
             compressionQuality: CompressorQuality,
-            encrypt: NostrCipher,
+            encrypt: SymmetricCipher,
             server: ServerName,
             account: Account,
             context: Context,

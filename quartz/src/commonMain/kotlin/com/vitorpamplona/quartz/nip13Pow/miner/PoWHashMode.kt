@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip13Pow.miner
 
+import com.vitorpamplona.crypto.sha2.Sha256Midstate
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 

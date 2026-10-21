@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
 
 object Secp256k1InstanceKotlin {

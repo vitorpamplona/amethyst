@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.mintApi
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * NUT-20 mint-quote signing.

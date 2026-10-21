@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.EventFactory
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 object EventAssembler {
     fun <T : Event> hashAndSign(

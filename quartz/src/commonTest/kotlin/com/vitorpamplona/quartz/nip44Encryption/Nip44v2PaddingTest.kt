@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.crypto.random.RandomInstance
 import kotlin.io.encoding.Base64
 import kotlin.math.floor
 import kotlin.math.log2

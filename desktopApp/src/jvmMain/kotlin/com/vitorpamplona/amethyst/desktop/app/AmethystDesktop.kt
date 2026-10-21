@@ -50,6 +50,7 @@ import androidx.compose.ui.window.application
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
@@ -153,6 +154,7 @@ fun main(args: Array<String>) {
 
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
+    QuicLogBridge.install()
 
     val filesDir =
         File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)

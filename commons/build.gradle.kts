@@ -129,6 +129,9 @@ kotlin {
                     // Phase 5 lands.
                     implementation(project(":nestsClient"))
 
+                    // QuicLogBridge routes quic-kmp's QuicLog into Quartz's Log.
+                    implementation(libs.quic)
+
                     // OkHttp (+ coroutines bridge) for the link-preview fetcher
                     // (service/preview/UrlPreview). JVM-only; iOS will swap to
                     // Ktor when its UI ships.

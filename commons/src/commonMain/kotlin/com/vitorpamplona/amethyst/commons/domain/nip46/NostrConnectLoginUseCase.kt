@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.domain.nip46
 
+import com.vitorpamplona.crypto.random.SecureRandom
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -40,7 +41,6 @@ import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectEvent
 import com.vitorpamplona.quartz.nip46RemoteSigner.NostrConnectURI
 import com.vitorpamplona.quartz.nip46RemoteSigner.signer.NostrSignerRemote
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.SecureRandom
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.withTimeoutOrNull

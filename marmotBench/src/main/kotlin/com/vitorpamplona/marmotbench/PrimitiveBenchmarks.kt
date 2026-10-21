@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.marmotbench
 
-import com.vitorpamplona.mls.crypto.Ed25519
-import com.vitorpamplona.mls.crypto.X25519
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.curve25519.X25519
 
 // The elliptic-curve primitives on their own.
 //

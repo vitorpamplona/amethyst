@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip36SensitiveContent.ContentWarningTag
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -37,7 +38,6 @@ import com.vitorpamplona.quartz.nip96FileStorage.actions.PartialEvent
 import com.vitorpamplona.quartz.nip96FileStorage.actions.UploadResult
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext

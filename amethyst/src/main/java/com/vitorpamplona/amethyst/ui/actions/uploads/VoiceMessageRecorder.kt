@@ -25,8 +25,8 @@ import android.media.MediaRecorder
 import android.os.Build
 import androidx.media3.common.MimeTypes
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

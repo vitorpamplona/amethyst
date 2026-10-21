@@ -81,6 +81,7 @@ in `NostrClient` completion — import them by name:
 | NIP-77 sync | `negentropySync`, `negentropySyncOrFetch` |
 | Publish and wait for `OK` | `publishAndConfirm(event, relays)`, `publishAndConfirmDetailed` |
 | Publish many events to one relay | `publishStream(relay, events, maxInFlight) { event, ok -> }`; `publishRawStream` for events already held as JSON |
+| Keep one relay's socket between bursts | `client.keepConnected(relay)` … `client.releaseConnection(relay)` (counted holds; a member method, not an extension) |
 
 Their waits are **idle windows** (`idleTimeoutMs`) that reset on real progress, never
 wall-clock deadlines; wrap a call in `withTimeoutOrNull` for a hard bound. Relay URLs are

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
+import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.PBKDF.pbkdf2
-import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
  * An implementation of the [](http://www.tarsnap.com/scrypt/scrypt.pdf)scrypt

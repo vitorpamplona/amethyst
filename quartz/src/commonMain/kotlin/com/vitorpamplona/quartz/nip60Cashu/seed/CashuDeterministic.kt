@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip60Cashu.seed
 
+import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip06KeyDerivation.Bip32SeedDerivation
 import com.vitorpamplona.quartz.nip06KeyDerivation.Hardener
 import com.vitorpamplona.quartz.nip06KeyDerivation.KeyPath
-import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
  * NUT-13 deterministic secret and blinding-factor derivation.

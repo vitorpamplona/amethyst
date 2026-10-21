@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.TestResourceLoader
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlin.test.DefaultAsserter.assertTrue
 import kotlin.test.Test
 

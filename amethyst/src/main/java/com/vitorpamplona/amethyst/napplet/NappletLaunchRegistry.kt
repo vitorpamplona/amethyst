@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.napplet
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * Main-process registry that binds a sandbox launch to its **trusted** identity + declared capability

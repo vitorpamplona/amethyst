@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.service
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import okhttp3.EventListener
 import okhttp3.OkHttpClient
 import okhttp3.Protocol

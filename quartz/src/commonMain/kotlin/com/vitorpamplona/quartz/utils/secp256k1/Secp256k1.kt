@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.quartz.utils.secp256k1
 
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.crypto.sha2.sha256Into
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.ecdhXOnly
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.privKeyTweakAdd
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.pubKeyCompress
@@ -29,8 +31,6 @@ import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.secKeyVerify
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorr
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.signSchnorrWithPubKey
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1.verifySchnorr
-import com.vitorpamplona.quartz.utils.sha256.sha256
-import com.vitorpamplona.quartz.utils.sha256.sha256Into
 
 /**
  * Pure Kotlin implementation of secp256k1 elliptic curve operations for Nostr.

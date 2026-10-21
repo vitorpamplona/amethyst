@@ -38,8 +38,8 @@ import com.vitorpamplona.amethyst.commons.service.image.encodeArgbAsPng
 import com.vitorpamplona.amethyst.commons.thumbhash.toThumbhash
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.util.platformTempDirectory
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

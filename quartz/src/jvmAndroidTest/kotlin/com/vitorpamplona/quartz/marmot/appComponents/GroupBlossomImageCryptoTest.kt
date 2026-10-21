@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.sha2.sha256
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

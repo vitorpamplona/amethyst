@@ -641,6 +641,33 @@ sealed class Route {
 
     @Serializable object EventSync : Route()
 
+    /** Developer tools hub: NIP-19 converter, event inspector, kind crawler, relay console. */
+    @Serializable object DevTools : Route()
+
+    @Serializable data class DevToolsNip19(
+        val input: String? = null,
+    ) : Route()
+
+    /** [noteKey] is a cached note's id or address, pre-filled into the inspector. */
+    @Serializable data class DevToolsEventInspector(
+        val noteKey: String? = null,
+    ) : Route()
+
+    @Serializable object DevToolsKinds : Route()
+
+    /** Kind lookup: name, newest example and per-relay usage. [kind] null opens it empty. */
+    @Serializable data class DevToolsKindUsage(
+        val kind: Int? = null,
+    ) : Route()
+
+    @Serializable data class DevToolsEventFinder(
+        val eventId: HexKey,
+    ) : Route()
+
+    @Serializable data class DevToolsRelayConsole(
+        val url: String? = null,
+    ) : Route()
+
     @Serializable object RequestToVanish : Route()
 
     @Serializable object VanishEvents : Route()

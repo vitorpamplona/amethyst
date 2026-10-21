@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.mip00KeyPackages
 
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.curve25519.X25519
 import com.vitorpamplona.mls.codec.TlsReader
 import com.vitorpamplona.mls.codec.TlsWriter
-import com.vitorpamplona.mls.crypto.Ed25519
 import com.vitorpamplona.mls.crypto.MlsCryptoProvider
-import com.vitorpamplona.mls.crypto.X25519
 import com.vitorpamplona.mls.messages.KeyPackageBundle
 import com.vitorpamplona.mls.messages.MlsKeyPackage
 import com.vitorpamplona.mls.tree.Credential

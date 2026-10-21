@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.mls.codec.TlsReader
 import com.vitorpamplona.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.SCrypt
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * A passphrase-encrypted export of one account's cordn state.

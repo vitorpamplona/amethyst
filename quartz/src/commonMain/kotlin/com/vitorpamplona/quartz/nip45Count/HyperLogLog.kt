@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.nip45Count
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.math.ln
 import kotlin.math.pow
 

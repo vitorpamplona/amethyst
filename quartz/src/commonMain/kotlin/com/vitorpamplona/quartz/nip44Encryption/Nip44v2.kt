@@ -20,12 +20,14 @@
  */
 package com.vitorpamplona.quartz.nip44Encryption
 
+import com.vitorpamplona.crypto.chacha.ChaCha20
+import com.vitorpamplona.crypto.equalsConstantTime
+import com.vitorpamplona.crypto.kdf.Hkdf
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.quartz.nip44Encryption.crypto.MessageKey
+import com.vitorpamplona.quartz.nip44Encryption.crypto.fastExpand
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.equalsConstantTime
 import kotlinx.coroutines.CancellationException
 import kotlin.io.encoding.Base64
 import kotlin.math.floor
@@ -110,7 +112,7 @@ class Nip44v2(
     ): String = decrypt(EncryptedInfo.decodePayload(payload, maxPayloadLength), conversationKey)
 
     fun checkHMacAad(
-        messageKey: Hkdf.MessageKey,
+        messageKey: MessageKey,
         decoded: EncryptedInfo,
     ) {
         val calculatedMac = hmacAad(messageKey.hmacKey, decoded.ciphertext, decoded.nonce)
@@ -257,12 +259,12 @@ class Nip44v2(
     fun getMessageKeys(
         conversationKey: ByteArray,
         nonce: ByteArray,
-    ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, nonce)
+    ): MessageKey = hkdf.fastExpand(conversationKey, nonce)
 
     fun checkMessageKeys(
         conversationKey: ByteArray,
         decoded: EncryptedInfo,
-    ): Hkdf.MessageKey = hkdf.fastExpand(conversationKey, decoded.nonce, decoded.ciphertext, decoded.mac)
+    ): MessageKey = hkdf.fastExpand(conversationKey, decoded.nonce, decoded.ciphertext, decoded.mac)
 
     /** @return 32B shared secret */
     fun computeConversationKey(

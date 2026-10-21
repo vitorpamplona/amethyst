@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.zapstore.identityProof
 
-import com.vitorpamplona.mls.crypto.Ed25519
+import com.vitorpamplona.crypto.curve25519.Ed25519
 import java.io.ByteArrayInputStream
 import java.security.GeneralSecurityException
 import java.security.NoSuchAlgorithmException

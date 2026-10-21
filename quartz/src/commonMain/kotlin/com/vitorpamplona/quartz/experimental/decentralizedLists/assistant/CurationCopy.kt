@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.experimental.decentralizedLists.assistant
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.CommentsTag
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.tags.NameTag
@@ -39,7 +40,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.kinds.KindTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Tapestry Assistant Designation, *curation copies*: how an empowered assistant fills the list

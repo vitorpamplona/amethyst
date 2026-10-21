@@ -68,9 +68,9 @@ Hex.isEqual(hex, bytes)        // compare without decoding
 ```kotlin
 TimeUtils.now()             // utils/TimeUtils.kt — Unix SECONDS for created_at
 TimeUtils.oneHourAgo()      // relative bounds (…Ago / …FromNow), also seconds
-RandomInstance.bytes(32)    // utils/RandomInstance.kt — secure random, not kotlin.random
+RandomInstance.bytes(32)    // com.vitorpamplona.crypto.random (crypto-kmp) — secure random, not kotlin.random
 RandomInstance.randomChars()     // 16-char subscription id
-sha256(bytes)               // utils/sha256/Sha256.kt
+sha256(bytes)               // com.vitorpamplona.crypto.sha2.sha256 (crypto-kmp)
 EventHasher.hashId(pubKey, createdAt, kind, tags, content)          // nip01Core/crypto/
 EventHasher.hashIdCheck(id, pubKey, createdAt, kind, tags, content) // verify untrusted ids
 ```

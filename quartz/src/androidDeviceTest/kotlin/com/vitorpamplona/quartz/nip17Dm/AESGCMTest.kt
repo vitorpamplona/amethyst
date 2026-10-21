@@ -21,8 +21,8 @@
 package com.vitorpamplona.quartz.nip17Dm
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith

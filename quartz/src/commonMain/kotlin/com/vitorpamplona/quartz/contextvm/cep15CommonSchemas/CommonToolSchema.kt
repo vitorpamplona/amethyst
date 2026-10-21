@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.contextvm.cep15CommonSchemas
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.contextvm.core.CvmTags
 import com.vitorpamplona.quartz.contextvm.json.toPlainJson
 import com.vitorpamplona.quartz.nip01Core.core.Tag
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.jcs.JsonCanonicalization
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject

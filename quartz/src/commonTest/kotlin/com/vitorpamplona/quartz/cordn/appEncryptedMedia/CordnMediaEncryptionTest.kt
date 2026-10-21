@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.cordn.appEncryptedMedia
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.Mip04MediaEncryption
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.nip57Zaps
 
+import com.vitorpamplona.crypto.aes.AESCBC
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.crypto.Nip04
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.ciphers.AESCBC
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.coroutines.CancellationException
 
 class PrivateZapEncryption {
