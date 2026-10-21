@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.crypto
 
-import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
@@ -47,7 +47,7 @@ object EventHasher {
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): ByteArray = sha256(EventHasherSerializer.fastMakeJsonForId(pubKey, createdAt, kind, tags, content))
+    ): ByteArray = NostrJsonWriter.idHash(pubKey, createdAt, kind, tags, content)
 
     /** The event id as a lower-case 64-char hex string. */
     fun hashId(

@@ -30,7 +30,7 @@ import kotlinx.serialization.SerializationException
 actual object OptimizedJsonMapper {
     actual fun fromJson(json: String): Event = NostrJsonReader.readEvent(json)
 
-    actual fun toJson(event: Event): String = KotlinSerializationMapper.toJson(event)
+    actual fun toJson(event: Event): String = NostrJsonWriter.toJson(event)
 
     // Everything a WebSocket carries (relay messages, client commands, the events, rumors and
     // event lists inside them) goes through Quartz's own reader; see NostrJsonReader.
@@ -56,7 +56,7 @@ actual object OptimizedJsonMapper {
 
     actual fun fromJsonToRumor(json: String): Rumor = NostrJsonReader.readRumor(json)
 
-    actual fun toJson(tags: Array<Array<String>>): String = KotlinSerializationMapper.toJson(tags)
+    actual fun toJson(tags: Array<Array<String>>): String = NostrJsonWriter.toJson(tags)
 
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
         try {
@@ -65,5 +65,5 @@ actual object OptimizedJsonMapper {
             throw IllegalArgumentException(e.message, e)
         }
 
-    actual fun toJson(value: OptimizedSerializable): String = KotlinSerializationMapper.toJson(value)
+    actual fun toJson(value: OptimizedSerializable): String = NostrJsonWriter.toJsonOrNull(value) ?: KotlinSerializationMapper.toJson(value)
 }

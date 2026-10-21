@@ -21,18 +21,22 @@
 package com.vitorpamplona.quartz.nip01Core.crypto
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
+import com.vitorpamplona.quartz.utils.Hex
 
 /**
- * This class converts event properties into the JSON and UTF-8 byte array of that json according to NIP-01
+ * This class converts event properties into the JSON and UTF-8 byte array of that json according to NIP-01.
+ *
+ * Every target writes the same bytes, through [NostrJsonWriter]; see it for the escaping rule.
  */
-expect object EventHasherSerializer {
+object EventHasherSerializer {
     fun makeJsonForId(
         pubKey: HexKey,
         createdAt: Long,
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): String
+    ): String = NostrJsonWriter.idPreimageJson(pubKey, createdAt, kind, tags, content)
 
     fun fastMakeJsonForId(
         pubKey: HexKey,
@@ -40,8 +44,9 @@ expect object EventHasherSerializer {
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): ByteArray
+    ): ByteArray = NostrJsonWriter.idPreimageBytes(pubKey, createdAt, kind, tags, content)
 
+    /** Hashes the preimage straight from the writer's reused buffer, then compares it to [id] without hex-encoding it. */
     fun makeJsonForIdHashAndCheck(
         id: HexKey,
         pubKey: HexKey,
@@ -49,5 +54,5 @@ expect object EventHasherSerializer {
         kind: Int,
         tags: Array<Array<String>>,
         content: String,
-    ): Boolean
+    ): Boolean = Hex.isEqual(id, NostrJsonWriter.idHash(pubKey, createdAt, kind, tags, content))
 }

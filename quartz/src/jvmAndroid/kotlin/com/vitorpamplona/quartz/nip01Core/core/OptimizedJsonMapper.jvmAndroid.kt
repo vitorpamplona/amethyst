@@ -44,7 +44,7 @@ import kotlinx.serialization.SerializationException
 actual object OptimizedJsonMapper {
     actual fun fromJson(json: String): Event = NostrJsonReader.readEvent(json)
 
-    actual fun toJson(event: Event) = JacksonMapper.toJson(event)
+    actual fun toJson(event: Event): String = NostrJsonWriter.toJson(event)
 
     // Everything a WebSocket carries (relay messages, client commands, the events, rumors and
     // event lists inside them) goes through Quartz's own reader; see NostrJsonReader.
@@ -70,7 +70,7 @@ actual object OptimizedJsonMapper {
 
     actual fun fromJsonToEventList(json: String): List<Event> = NostrJsonReader.readEventList(json)
 
-    actual fun toJson(tags: Array<Array<String>>): String = JacksonMapper.toJson(tags)
+    actual fun toJson(tags: Array<Array<String>>): String = NostrJsonWriter.toJson(tags)
 
     /**
      * NIP-47 and CLINK read and write through kotlinx on every target, including this
@@ -86,8 +86,8 @@ actual object OptimizedJsonMapper {
      *    nip01Core.kotlinSerialization.LenientJson); Jackson raised
      *    MismatchedInputException and lost the whole response over one bad field.
      *
-     * Everything else stays on Jackson, which is faster on the event hot path and is
-     * already non-reflective there.
+     * Events and relay frames go through Quartz's own reader and writer; the remaining
+     * types (templates, NIP-46) stay on Jackson, which is non-reflective there.
      */
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
         when (T::class) {
@@ -122,6 +122,7 @@ actual object OptimizedJsonMapper {
             is ManageRequest, is ManageResponse,
             -> KotlinSerializationMapper.toJson(value)
 
-            else -> JacksonMapper.toJson(value)
+            // Events, filters, rumors and every relay frame go through Quartz's own writer.
+            else -> NostrJsonWriter.toJsonOrNull(value) ?: JacksonMapper.toJson(value)
         }
 }
