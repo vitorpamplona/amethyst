@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.service.notifications
 
+import android.app.ActivityManager
 import android.app.AlarmManager
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
@@ -99,11 +100,38 @@ class NotificationRelayService : Service() {
 
         const val ACTION_AUTO_RESTART = "com.vitorpamplona.amethyst.AUTO_RESTART_NOTIFICATION_SERVICE"
 
+        /**
+         * True while this process's instance is promoted to the foreground. Process-local on
+         * purpose: a fresh process starts with no service, so false is the right default.
+         */
+        @Volatile
+        private var isForeground = false
+
         fun start(context: Context) {
+            // Every startForegroundService() arms a 10s "must call startForeground()" deadline
+            // that only the main thread can meet, in onStartCommand. The restart layers call
+            // this on every resume, worker run and watchdog tick, so a running service would
+            // keep re-arming it, and a main thread busy for 10s (cold-start ingest on a slow
+            // device) crashed the app with ForegroundServiceDidNotStartInTimeException.
+            if (isForeground) return
+
             val intent =
                 Intent(context, NotificationRelayService::class.java).apply {
                     action = ACTION_START
                 }
+
+            // While the app is on screen a plain startService() is allowed and carries no
+            // deadline; onCreate still promotes the service with startForeground().
+            if (isAppInForeground()) {
+                try {
+                    context.startService(intent)
+                    return
+                } catch (e: IllegalStateException) {
+                    // Left the foreground between the check and the call: fall through.
+                    Log.w(TAG, "Plain service start refused, using a foreground start", e)
+                }
+            }
+
             try {
                 ContextCompat.startForegroundService(context, intent)
             } catch (e: Exception) {
@@ -124,7 +152,15 @@ class NotificationRelayService : Service() {
             }
         }
 
+        private fun isAppInForeground(): Boolean {
+            val info = ActivityManager.RunningAppProcessInfo()
+            ActivityManager.getMyMemoryState(info)
+            return info.importance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
+        }
+
         fun stop(context: Context) {
+            // Cleared now, not in onDestroy: a start() right after a stop() must not be skipped.
+            isForeground = false
             context.stopService(Intent(context, NotificationRelayService::class.java))
         }
 
@@ -229,6 +265,7 @@ class NotificationRelayService : Service() {
      */
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
+        isForeground = false
         Amethyst.instance.alwaysOnSession.setActive(false)
         relayServiceCollectorJob?.cancel()
         scope.cancel()
@@ -269,8 +306,10 @@ class NotificationRelayService : Service() {
                     0
                 },
             )
+            isForeground = true
             return true
         } catch (e: Exception) {
+            isForeground = false
             // Any failure to promote to the foreground leaves the service in a
             // "started but not foregrounded" zombie state. Once startForegroundService()
             // has been called, Android expects startForeground() within the timeout; if it
