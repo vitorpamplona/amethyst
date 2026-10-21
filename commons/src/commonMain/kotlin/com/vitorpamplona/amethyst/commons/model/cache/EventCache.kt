@@ -59,6 +59,8 @@ import com.vitorpamplona.amethyst.commons.model.observables.NoteListMatchingFilt
 import com.vitorpamplona.amethyst.commons.model.observables.Observable
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.model.redirectStrayRelayGroupContent
+import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKind
+import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
@@ -1786,9 +1788,18 @@ open class EventCache :
     ): Boolean {
         // TODO: Redo the Event sctructure in Quartz to avoid this check
         check(event is AddressableEvent) { "Event must be addressable: ${event.kind}" }
+        return consumeAtAddress(event, event.address(), relay, wasVerified)
+    }
 
+    /** Stores [event] as the newest version at [address], and by its id as one version of it. */
+    private fun consumeAtAddress(
+        event: Event,
+        address: Address,
+        relay: NormalizedRelayUrl?,
+        wasVerified: Boolean,
+    ): Boolean {
         val version = getOrCreateNote(event.id)
-        val replaceableNote = getOrCreateAddressableNote(event.address())
+        val replaceableNote = getOrCreateAddressableNote(address)
         val author = getOrCreateUser(event.pubKey)
 
         val isVerified =
@@ -4359,7 +4370,20 @@ open class EventCache :
                 -> consumeRegularEvent(event, relay, wasVerified)
 
                 else -> {
-                    Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    if (isStorableUnknownKind(event)) {
+                        // A kind quartz has no class for, kept so a quote, a notification or a link
+                        // to it draws the fallback card instead of nothing. A replaceable or
+                        // addressable one lives at its address, like a typed one, so an naddr finds
+                        // it and a newer version replaces it.
+                        val address = unknownKindAddress(event)
+                        if (address != null) {
+                            consumeAtAddress(event, address, relay, wasVerified)
+                        } else {
+                            consumeRegularEvent(event, relay, wasVerified)
+                        }
+                    } else {
+                        Log.w("Event Not Supported") { "From ${relay?.url}: ${event.toJson()}" }.let { false }
+                    }
                 }
             }
         } catch (e: Exception) {
