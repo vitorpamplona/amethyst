@@ -7452,10 +7452,22 @@
     <string name="unknown_kind_title">%1$d típus</string>
     <string name="unknown_kind_unsupported">Nem támogatott</string>
     <string name="unknown_kind_encrypted">Titkosított tartalom (%1$s)</string>
-    <string name="unknown_kind_encoded_hex">Hexadecimális adat, %1$d karakter</string>
-    <string name="unknown_kind_encoded_base64">Base64-adat, %1$d karakter</string>
-    <string name="unknown_kind_encoded_json">JSON-adat, %1$d karakter</string>
-    <string name="unknown_kind_encoded_opaque">Kódolt adat, %1$d karakter</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hexadecimális adat, %1$d karakter</item>
+        <item quantity="other">Hexadecimális adat, %1$d karakter</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Base64-adat, %1$d karakter</item>
+        <item quantity="other">Base64-adat, %1$d karakter</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">JSON-adat, %1$d karakter</item>
+        <item quantity="other">JSON-adat, %1$d karakter</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Kódolt adat, %1$d karakter</item>
+        <item quantity="other">Kódolt adat, %1$d karakter</item>
+    </plurals>
     <plurals name="unknown_kind_json_items">
         <item quantity="one">JSON-lista %1$d elemmel</item>
         <item quantity="other">JSON-lista %1$d elemmel</item>
@@ -8200,7 +8212,10 @@
     <string name="devtools_probe_start">Bejárás</string>
     <string name="devtools_probe_stop">Leállítás</string>
     <string name="devtools_probe_discovering">Átjátszók keresése NIP-66 figyelőkből…</string>
-    <string name="devtools_probe_progress">%1$d / %2$d átjátszó válaszolt, %3$d helyen található</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d / %2$d átjátszó válaszolt, %3$d helyen található</item>
+        <item quantity="other">%1$d / %2$d átjátszó válaszolt, %3$d helyen található</item>
+    </plurals>
     <string name="devtools_probe_newest">Legújabb esemény</string>
     <string name="devtools_probe_none_found">Egyetlen átjátszó sem adott vissza megfelelő eseményt</string>
     <string name="devtools_probe_found_only">Csak azok az átjátszók, amelyeknél megvan</string>

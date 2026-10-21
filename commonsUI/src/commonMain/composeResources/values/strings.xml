@@ -7547,10 +7547,22 @@
     <string name="unknown_kind_title">Kind %1$d</string>
     <string name="unknown_kind_unsupported">Unsupported</string>
     <string name="unknown_kind_encrypted">Encrypted content (%1$s)</string>
-    <string name="unknown_kind_encoded_hex">Hex data, %1$d characters</string>
-    <string name="unknown_kind_encoded_base64">Base64 data, %1$d characters</string>
-    <string name="unknown_kind_encoded_json">JSON data, %1$d characters</string>
-    <string name="unknown_kind_encoded_opaque">Encoded data, %1$d characters</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hex data, %1$d character</item>
+        <item quantity="other">Hex data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Base64 data, %1$d character</item>
+        <item quantity="other">Base64 data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">JSON data, %1$d character</item>
+        <item quantity="other">JSON data, %1$d characters</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Encoded data, %1$d character</item>
+        <item quantity="other">Encoded data, %1$d characters</item>
+    </plurals>
     <plurals name="unknown_kind_json_items">
         <item quantity="one">JSON list with %1$d item</item>
         <item quantity="other">JSON list with %1$d items</item>
@@ -8274,7 +8286,10 @@
     <string name="devtools_kind_lookup_desc">Type a kind number to see its name and every way clients encode it, with real examples</string>
     <string name="devtools_kind_lookup_field">Kind number</string>
     <string name="devtools_kind_lookup_button">Look up</string>
-    <string name="devtools_kind_sample_status">%1$d events from %2$d of %3$d relays</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s from %2$d of %3$d relay</item>
+        <item quantity="other">%1$s from %2$d of %3$d relays</item>
+    </plurals>
     <string name="devtools_kind_by_client">By client</string>
     <string name="devtools_kind_by_shape">By shape</string>
     <string name="devtools_kind_no_client">No client tag</string>
@@ -8296,7 +8311,10 @@
     <string name="devtools_probe_start">Crawl</string>
     <string name="devtools_probe_stop">Stop</string>
     <string name="devtools_probe_discovering">Finding relays from NIP-66 monitors…</string>
-    <string name="devtools_probe_progress">%1$d of %2$d relays answered, found on %3$d</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d of %2$d relay answered, found on %3$d</item>
+        <item quantity="other">%1$d of %2$d relays answered, found on %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Newest event</string>
     <string name="devtools_probe_none_found">No relay returned a matching event</string>
     <string name="devtools_probe_found_only">Only relays that have it</string>

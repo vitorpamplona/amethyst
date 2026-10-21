@@ -7452,10 +7452,22 @@
     <string name="unknown_kind_title">प्रकार %1$d</string>
     <string name="unknown_kind_unsupported">अनावलम्बित</string>
     <string name="unknown_kind_encrypted">रहस्यीकृत विषयवस्तु (%1$s)</string>
-    <string name="unknown_kind_encoded_hex">षोडशांक अभिलेख। %1$d अक्षर</string>
-    <string name="unknown_kind_encoded_base64">चतुःषष्ठ्यांक अभिलेख। %1$d अक्षर</string>
-    <string name="unknown_kind_encoded_json">जेसोन अभिलेख। %1$d अक्षर</string>
-    <string name="unknown_kind_encoded_opaque">अक्षरराशिकृत अभिलेख। %1$d अक्षर</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">षोडशांक अभिलेख। %1$d अक्षर</item>
+        <item quantity="other">षोडशांक अभिलेख। %1$d अक्षर</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">चतुःषष्ठ्यांक अभिलेख। %1$d अक्षर</item>
+        <item quantity="other">चतुःषष्ठ्यांक अभिलेख। %1$d अक्षर</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">जेसोन अभिलेख। %1$d अक्षर</item>
+        <item quantity="other">जेसोन अभिलेख। %1$d अक्षर</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">अक्षरराशिकृत अभिलेख। %1$d अक्षर</item>
+        <item quantity="other">अक्षरराशिकृत अभिलेख। %1$d अक्षर</item>
+    </plurals>
     <plurals name="unknown_kind_json_items">
         <item quantity="one">जेसोन सूची जिसमें %1$d वस्तु</item>
         <item quantity="other">जेसोन सूची जिसमें %1$d वस्तुएँ</item>
@@ -8200,7 +8212,10 @@
     <string name="devtools_probe_start">खोज</string>
     <string name="devtools_probe_stop">रोकें</string>
     <string name="devtools_probe_discovering">निप॰छियासठ परिवीक्षकों से पुनःप्रसारकों का खोज…</string>
-    <string name="devtools_probe_progress">%2$d में से %1$d पुनःप्रसारकों ने उत्तर दिए। %3$d पर प्राप्त</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%2$d में से %1$d पुनःप्रसारकों ने उत्तर दिए। %3$d पर प्राप्त</item>
+        <item quantity="other">%2$d में से %1$d पुनःप्रसारकों ने उत्तर दिए। %3$d पर प्राप्त</item>
+    </plurals>
     <string name="devtools_probe_newest">नवीनतम घटना</string>
     <string name="devtools_probe_none_found">किसी भी पुनःप्रसारक ने अनुकूल घटना लौटाया नहीं</string>
     <string name="devtools_probe_found_only">पुनःप्रसारक जिनके पास वह है</string>
