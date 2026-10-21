@@ -121,4 +121,27 @@ class PoolEventOutboxStateTest {
         assertEquals(emptySet(), state.relaysLeft())
         assertTrue(state.isDone())
     }
+
+    @Test
+    fun anAuthRequiredNobodyCanAnswerIsTheVerdict() {
+        // No responder attached, or this relay's last AUTH failed: no AUTH will ever unlock the event.
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        state.newTry(relay)
+        state.newResponse(relay, success = false, message = "auth-required: sign in", authMayLand = { false })
+        assertTrue(state.isDone())
+    }
+
+    @Test
+    fun anAuthRequiredThatNeverLandsIsTakenAtItsWord() {
+        // Each answer used to reset the budget, so an AUTH nobody signs kept the event forever.
+        val state = PoolEventOutboxState(fakeEvent(), setOf(relay))
+        repeat(PoolEventOutboxState.MAX_AUTH_WAITS) {
+            assertFalse(state.newTry(relay), "the send budget is not what ends it")
+            state.newResponse(relay, success = false, message = "auth-required: sign in")
+        }
+        assertContains(state.relaysLeft(), relay)
+        state.newTry(relay)
+        state.newResponse(relay, success = false, message = "auth-required: sign in")
+        assertTrue(state.isDone())
+    }
 }

@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.relay.client
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.IAuthStatus
+import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolCounts
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.PoolEventOutbox
@@ -503,7 +504,7 @@ class NostrClient(
     ) {
         activeRequests.onIncomingMessage(relay, msg)
         activeCounts.onIncomingMessage(relay, msg)
-        eventOutbox.onIncomingMessage(relay.url, msg)
+        eventOutbox.onIncomingMessage(relay.url, msg) { authMayLand(relay.url) }
 
         // NIP-01: a `rate-limited:` refusal may say how long to back off. Hand the refused REQ
         // or EVENT straight back to the relay, whose [RateLimitGate] holds it until the back-off
@@ -588,6 +589,12 @@ class NostrClient(
     }
 
     override fun getOrCreateRelay(url: NormalizedRelayUrl): IRelayClient = relayPool.getOrCreateRelay(url)
+
+    /**
+     * Whether an AUTH for [relay] can still land, so that its `auth-required:` refusal means
+     * "later": someone answers challenges, and this relay's last AUTH did not fail.
+     */
+    private fun authMayLand(relay: NormalizedRelayUrl): Boolean = authResponders.value.any { it.authSnapshot(relay).phase != RelayAuthSnapshot.Phase.AUTH_FAILED }
 
     override fun authResponders(): Set<IAuthStatus> = authResponders.value
 
