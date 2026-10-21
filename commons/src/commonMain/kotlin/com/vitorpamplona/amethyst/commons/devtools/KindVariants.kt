@@ -35,15 +35,6 @@ enum class ContentFormat {
     TEXT,
 }
 
-/** One tag name inside a variant: how many of its events carry it, and with how many values. */
-@Immutable
-data class TagUsage(
-    val name: String,
-    val events: Int,
-    /** Distinct tag lengths seen, counting the name: `["e", id]` is 2, `["e", id, relay, marker]` is 4. */
-    val lengths: ImmutableList<Int>,
-)
-
 /**
  * A group of sampled events that are written the same way: all from one client
  * ([KindVariantGrouping.CLIENT]) or all with the same tag names and content format
@@ -56,8 +47,6 @@ data class KindVariant(
     val client: String?,
     val count: Int,
     val authors: Int,
-    val formats: ImmutableList<Pair<ContentFormat, Int>>,
-    val tags: ImmutableList<TagUsage>,
     /** For a shape group, the clients that produced it; for a client group, just that client. */
     val clients: ImmutableList<Pair<String?, Int>>,
     /** The newest event of the group. */
@@ -72,8 +61,9 @@ enum class KindVariantGrouping {
 /**
  * Folds a sample of events of one kind into the ways that kind is actually written: once by the
  * client that published each event (its NIP-89 `client` tag) and once by shape (the set of tag
- * names plus the content format). Keeps only aggregates and one example per group, so a sample of
- * thousands of events costs little more than its ids.
+ * names plus the content format). Keeps only counts and one example per group, so a sample of
+ * thousands of events costs little more than its ids, and a group's [KindVariant] is rebuilt only
+ * after it gained an event, so publishing the groups while a sample runs costs a sort, not a fold.
  */
 class KindVariantCollector {
     private val seen = HashSet<HexKey>()
@@ -87,8 +77,8 @@ class KindVariantCollector {
         if (!seen.add(event.id)) return false
         val client = clientOf(event)
         val format = contentFormatOf(event.content)
-        byClient.getOrPut(client ?: NO_CLIENT) { Accumulator(client) }.add(event, client, format)
-        byShape.getOrPut(shapeOf(event, format)) { Accumulator(null) }.add(event, client, format)
+        byClient.getOrPut(client ?: NO_CLIENT) { Accumulator(client) }.add(event, client)
+        byShape.getOrPut(shapeOf(event, format)) { Accumulator(null) }.add(event, client)
         return true
     }
 
@@ -105,57 +95,38 @@ class KindVariantCollector {
     ) {
         var count = 0
         val authors = HashSet<HexKey>()
-        val formats = HashMap<ContentFormat, Int>()
-        val tagEvents = HashMap<String, Int>()
-        val tagLengths = HashMap<String, MutableSet<Int>>()
         val clients = HashMap<String?, Int>()
         var example: Event? = null
+
+        /** The last snapshot, until the next event changes the group. */
+        private var snapshot: KindVariant? = null
 
         fun add(
             event: Event,
             client: String?,
-            format: ContentFormat,
         ) {
             count++
             authors.add(event.pubKey)
-            formats[format] = (formats[format] ?: 0) + 1
             clients[client] = (clients[client] ?: 0) + 1
-
-            val namesInEvent = HashSet<String>()
-            event.tags.forEach { tag ->
-                val name = tag.getOrNull(0) ?: return@forEach
-                namesInEvent.add(name)
-                tagLengths.getOrPut(name) { mutableSetOf() }.add(tag.size)
-            }
-            namesInEvent.forEach { tagEvents[it] = (tagEvents[it] ?: 0) + 1 }
 
             val current = example
             if (current == null || event.createdAt > current.createdAt) example = event
+            snapshot = null
         }
 
         fun snapshot(key: String) =
-            KindVariant(
+            snapshot ?: KindVariant(
                 key = key,
                 client = client,
                 count = count,
                 authors = authors.size,
-                formats =
-                    formats.entries
-                        .sortedByDescending { it.value }
-                        .map { it.key to it.value }
-                        .toImmutableList(),
-                tags =
-                    tagEvents.entries
-                        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
-                        .map { TagUsage(it.key, it.value, tagLengths[it.key].orEmpty().sorted().toImmutableList()) }
-                        .toImmutableList(),
                 clients =
                     clients.entries
                         .sortedByDescending { it.value }
                         .map { it.key to it.value }
                         .toImmutableList(),
                 example = example!!,
-            )
+            ).also { snapshot = it }
     }
 
     companion object {

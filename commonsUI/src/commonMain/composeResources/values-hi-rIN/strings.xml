@@ -8179,23 +8179,12 @@
     <string name="devtools_kind_lookup_desc">एक प्रकार संख्या का टंकण करें उसके नाम तथा ग्राहकों द्वारा उसका अक्षरराशिकरण के सभी विधि देखने के लिए। वास्तविक उदाहरणों के साथ</string>
     <string name="devtools_kind_lookup_field">प्रकार संख्या</string>
     <string name="devtools_kind_lookup_button">खोज</string>
-    <string name="devtools_kind_lookup_explainer">निकटकाल घटनाओं से इस प्रकार के उदाहरण लेता है अनेक पुनःप्रसारकों से तथा उन्हें समूहबद्ध करता है ग्राहक अनुसार जिसने उन्हें लिखा। अथवा आकार अनुसार (सूचक नाम तथा विषयवस्तु प्रारूप)। प्रकार के अक्षरराशिकरण के सभी विधि दिखाने के लिए।</string>
-    <string name="devtools_kind_sampled">%1$d घटनाएँ %2$d पुनःप्रसारकों से। %4$d में से %3$d के लिए उत्तर प्रदत्त</string>
     <string name="devtools_kind_by_client">ग्राहक अनुसार</string>
     <string name="devtools_kind_by_shape">आकार अनुसार</string>
     <string name="devtools_kind_no_client">कोई ग्राहक सूचक नहीं</string>
     <string name="devtools_kind_shape_n">आकार %1$d</string>
     <string name="devtools_kind_from_clients">से। %1$s</string>
-    <string name="devtools_kind_content">विषयवस्तु। %1$s</string>
-    <string name="devtools_kind_tag_values">मूल्य। %1$s</string>
     <string name="devtools_kind_more">स %1$d अधिक</string>
-    <string name="devtools_kind_hide_rare">विरल सूचक छिपाएँ</string>
-    <plurals name="devtools_kind_rare_tags">
-        <item quantity="one">स %1$d विरल सूचक</item>
-        <item quantity="other">स %1$d विरल सूचक</item>
-    </plurals>
-    <string name="devtools_kind_show_example">उदाहरण दिखाएँ</string>
-    <string name="devtools_kind_hide_example">उदाहरण छिपाएँ</string>
     <plurals name="devtools_kind_events">
         <item quantity="one">%1$d घटना</item>
         <item quantity="other">%1$d घटनाएँ</item>
@@ -8204,11 +8193,6 @@
         <item quantity="one">%1$d कर्ता</item>
         <item quantity="other">%1$d कर्ता</item>
     </plurals>
-    <string name="devtools_format_empty">रिक्त</string>
-    <string name="devtools_format_json_object">जेसोन वस्तु</string>
-    <string name="devtools_format_json_array">जेसोन व्यूह</string>
-    <string name="devtools_format_encrypted">रहस्यीकृत</string>
-    <string name="devtools_format_text">लेख</string>
     <string name="devtools_kind_custom">खोज प्रकार %1$d</string>
     <string name="devtools_kind_usage_title">प्रकार %1$d</string>
     <string name="devtools_kind_nip">निप॰%1$s</string>
