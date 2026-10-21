@@ -1961,6 +1961,7 @@
     <string name="relay_group_join_code_label">Kod zaproszenia</string>
     <string name="relay_group_join_code_hint">Ta grupa jest dostępna wyłącznie z zaproszeniem. Wpisz otrzymany kod.</string>
     <string name="relay_group_join_confirm">Dołącz</string>
+    <string name="relay_group_join_invite_confirm">Dołączyć do %1$s, korzystając z kodu zaproszenia z tego linku? Twoja lista grup jest publiczna.</string>
     <string name="relay_group_pending">Wysłano prośbę</string>
     <string name="relay_group_role_admin">Admin</string>
     <string name="relay_group_role_moderator">Moderator</string>
@@ -2773,6 +2774,11 @@
     <string name="git_repo_settings_web_urls">Adresy internetowe (jeden na linię)</string>
     <string name="git_repo_settings_topics">Tematy (oddzielone przecinkami)</string>
     <string name="git_repo_settings_save">Zapisz</string>
+    <string name="git_new_repository">Nowe repozytorium</string>
+    <string name="git_new_repository_untitled">Repozytorium bez nazwy</string>
+    <string name="git_new_repository_section_about">O nas</string>
+    <string name="git_new_repository_name_placeholder">Mój projekt</string>
+    <string name="git_new_repository_identifier">Identyfikator</string>
     <string name="profile_tab_apps">Aplikacje &amp; Witryny</string>
     <string name="profile_tab_repos">Repozytorium</string>
     <string name="edit_article">Redaguj artykuł</string>
