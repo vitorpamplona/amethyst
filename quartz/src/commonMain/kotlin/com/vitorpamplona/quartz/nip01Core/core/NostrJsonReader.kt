@@ -22,8 +22,11 @@ package com.vitorpamplona.quartz.nip01Core.core
 
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 import com.vitorpamplona.quartz.utils.EventFactory
+import kotlin.reflect.KClass
 
 /**
  * Reads what travels over a Nostr WebSocket straight off the frame's `String`: relay messages
@@ -198,6 +201,7 @@ internal class NostrJsonReader {
     private fun readEventFields(
         base: Int,
         withSig: Boolean,
+        withIdentity: Boolean = true,
     ) {
         fId = null
         fPubKey = null
@@ -222,8 +226,8 @@ internal class NostrJsonReader {
             ws()
             if (i >= n) fail("unexpected end of input")
             when (field) {
-                F_ID -> fId = readString()
-                F_PUBKEY -> fPubKey = readString()
+                F_ID -> if (withIdentity) fId = readString() else skipValue(base)
+                F_PUBKEY -> if (withIdentity) fPubKey = readString() else skipValue(base)
                 F_CREATED_AT -> {
                     fCreatedAt = readLong()
                     fHasCreatedAt = true
@@ -279,6 +283,30 @@ internal class NostrJsonReader {
             )
         clearFields()
         return rumor
+    }
+
+    /**
+     * An event template (`created_at`, `kind`, `tags`, `content`), like `EventTemplateDeserializer`:
+     * absent fields read as zero or empty, and anything else (an `id`, a `pubkey`) is skipped.
+     */
+    internal fun readEventTemplateObject(base: Int): EventTemplate<Event> {
+        readEventFields(base, withSig = false, withIdentity = false)
+        val template =
+            EventTemplate<Event>(
+                if (fHasCreatedAt) fCreatedAt else 0L,
+                if (fHasKind) fKind else 0,
+                fTags ?: EMPTY_TAGS,
+                fContent ?: "",
+            )
+        clearFields()
+        return template
+    }
+
+    /** A bare tag array, `[["e","…"],["p","…"]]`, read like `TagArrayDeserializer`. */
+    internal fun readTagArray(): TagArray {
+        ws()
+        if (i >= n) fail("unexpected end of input")
+        return readTags()
     }
 
     private fun clearFields() {
@@ -710,8 +738,49 @@ internal class NostrJsonReader {
 
         /** One client-to-relay frame; throws [IllegalArgumentException] on malformed or unsupported frames. */
         fun readCommand(json: String): Command = acquire().run { parse(json) { readCommandFrame() } }
+
+        /** An unsigned event template, as NIP-46 `sign_event` and NIP-55 carry it. */
+        fun readEventTemplate(json: String): EventTemplate<Event> =
+            acquire().run {
+                parse(json) {
+                    ws()
+                    readEventTemplateObject(1)
+                }
+            }
+
+        /** A tag array on its own. */
+        fun readTagArray(json: String): TagArray = acquire().run { parse(json) { readTagArray() } }
+
+        /** One filter object, read like `ManualFilterDeserializer`. */
+        fun readFilter(json: String): Filter =
+            acquire().run {
+                parse(json) {
+                    ws()
+                    if (i >= n || s[i] != '{') fail("expected a filter object")
+                    readFilterObject(1)
+                }
+            }
     }
 }
 
 /** This thread's reusable reader, or null where readers are not kept per thread (native). */
 internal expect fun threadNostrJsonReader(): NostrJsonReader?
+
+/**
+ * [json] read as [type] when it is one of the types [NostrJsonReader] knows, else null so the
+ * caller can hand it to another reader. Exact classes, like the Jackson registrations it replaces.
+ */
+@PublishedApi
+internal fun readKnownType(
+    type: KClass<*>,
+    json: String,
+): OptimizedSerializable? =
+    when (type) {
+        Event::class -> NostrJsonReader.readEvent(json)
+        Filter::class -> NostrJsonReader.readFilter(json)
+        Message::class -> NostrJsonReader.readMessage(json)
+        Command::class -> NostrJsonReader.readCommand(json)
+        Rumor::class -> NostrJsonReader.readRumor(json)
+        EventTemplate::class -> NostrJsonReader.readEventTemplate(json)
+        else -> null
+    }

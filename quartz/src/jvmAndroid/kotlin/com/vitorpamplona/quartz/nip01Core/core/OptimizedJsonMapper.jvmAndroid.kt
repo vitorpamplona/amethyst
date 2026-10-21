@@ -52,21 +52,11 @@ actual object OptimizedJsonMapper {
 
     actual fun fromJsonToCommand(json: String): Command = NostrJsonReader.readCommand(json)
 
-    actual fun fromJsonToTagArray(json: String): Array<Array<String>> =
-        try {
-            JacksonMapper.fromJsonToTagArray(json)
-        } catch (e: JsonParseException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToTagArray(json: String): Array<Array<String>> = NostrJsonReader.readTagArray(json)
 
     actual fun fromJsonToRumor(json: String): Rumor = NostrJsonReader.readRumor(json)
 
-    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> =
-        try {
-            JacksonMapper.fromJsonToEventTemplate(json)
-        } catch (e: JsonParseException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = NostrJsonReader.readEventTemplate(json)
 
     actual fun fromJsonToEventList(json: String): List<Event> = NostrJsonReader.readEventList(json)
 
@@ -90,7 +80,7 @@ actual object OptimizedJsonMapper {
      * types (templates, NIP-46) stay on Jackson, which is non-reflective there.
      */
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
-        when (T::class) {
+        readKnownType(T::class, json) as T? ?: when (T::class) {
             Request::class, Response::class, Notification::class,
             OfferRequest::class, OfferResponse::class, OfferReceipt::class,
             DebitRequest::class, DebitResponse::class,

@@ -38,19 +38,9 @@ actual object OptimizedJsonMapper {
 
     actual fun fromJsonToCommand(json: String): Command = NostrJsonReader.readCommand(json)
 
-    actual fun fromJsonToTagArray(json: String): Array<Array<String>> =
-        try {
-            KotlinSerializationMapper.fromJsonToTagArray(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToTagArray(json: String): Array<Array<String>> = NostrJsonReader.readTagArray(json)
 
-    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> =
-        try {
-            KotlinSerializationMapper.fromJsonToEventTemplate(json)
-        } catch (e: SerializationException) {
-            throw IllegalArgumentException(e.message, e)
-        }
+    actual fun fromJsonToEventTemplate(json: String): EventTemplate<Event> = NostrJsonReader.readEventTemplate(json)
 
     actual fun fromJsonToEventList(json: String): List<Event> = NostrJsonReader.readEventList(json)
 
@@ -59,7 +49,7 @@ actual object OptimizedJsonMapper {
     actual fun toJson(tags: Array<Array<String>>): String = NostrJsonWriter.toJson(tags)
 
     actual inline fun <reified T : OptimizedSerializable> fromJsonTo(json: String): T =
-        try {
+        readKnownType(T::class, json) as T? ?: try {
             KotlinSerializationMapper.fromJsonTo<T>(json)
         } catch (e: SerializationException) {
             throw IllegalArgumentException(e.message, e)

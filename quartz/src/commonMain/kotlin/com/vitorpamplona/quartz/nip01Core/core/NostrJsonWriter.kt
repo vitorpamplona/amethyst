@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.nip01Core.core
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.Command
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.Rumor
 
 /**
@@ -501,6 +502,26 @@ class NostrJsonWriter internal constructor() {
 
         fun toJson(rumor: Rumor): String = acquire().text { rumor(rumor) }
 
+        /** `{"created_at":…,"kind":…,"tags":…,"content":…}`, as `EventTemplateSerializer` writes it. */
+        fun toJson(template: EventTemplate<*>): String =
+            acquire().text {
+                sb.append("{\"created_at\":")
+                sb.append(template.createdAt)
+                sb.append(",\"kind\":")
+                sb.append(template.kind)
+                sb.append(",\"tags\":")
+                tagArray(template.tags)
+                sb.append(",\"content\":")
+                string(template.content)
+                sb.append('}')
+            }
+
+        /** The event laid out for people to read; see [NostrJsonPretty]. */
+        fun toPrettyJson(event: Event): String = NostrJsonPretty.format(toJson(event))
+
+        /** The template laid out for people to read; see [NostrJsonPretty]. */
+        fun toPrettyJson(template: EventTemplate<*>): String = NostrJsonPretty.format(toJson(template))
+
         fun toJson(filter: Filter): String = acquire().text { filter(filter) }
 
         /** The frame, or null for a [Message] type this writer does not know. */
@@ -521,6 +542,7 @@ class NostrJsonWriter internal constructor() {
                 is Event -> toJson(value)
                 is Filter -> toJson(value)
                 is Rumor -> toJson(value)
+                is EventTemplate<*> -> toJson(value)
                 is Message -> toJsonOrNull(value)
                 is Command -> toJsonOrNull(value)
                 else -> null
