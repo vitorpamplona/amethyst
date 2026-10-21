@@ -143,11 +143,6 @@ holds **47 assets**, per the asset-name contract:
 - **Relay (10):** the `geode` artifacts, same matrix as `amy`. The geode Docker
   image is **not** a release asset — it goes to the registry, so don't count it
   here.
-- **Maven Central:** `com.vitorpamplona.quartz:quartz:<version>` published.
-  `repo1.maven.org` lags the publish by tens of minutes — a 404 right after the
-  run is normal. Confirm the step's log says "Deployment is being published to
-  Maven Central", and compare against the *previous* version's POM before
-  concluding anything is broken.
 
 ---
 

@@ -13,12 +13,12 @@ adds the source-set mechanics and the build traps.
 
 ## Modules
 
-`settings.gradle.kts` includes 14: `amethyst`, `nappletHost`, `benchmark`,
-`baselineprofile`, `quartz`, `geode`, `commons`, `commonsUI`, `nestsClient`,
-`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. QUIC is the
-external `libs.quic` (vitorpamplona/quic-kmp); its published `quartz` dependency is
-substituted with `:quartz` in the root `build.gradle.kts`, and `-PquicKmpDir=../quic-kmp`
-builds a local checkout instead.
+`settings.gradle.kts` includes 13: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`,
+`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. Quartz is the
+external `libs.quartz` (vitorpamplona/quartz) and QUIC the external `libs.quic`
+(vitorpamplona/quic-kmp); `-PquartzDir=../quartz` / `-PquicKmpDir=../quic-kmp` build a
+local checkout instead (an included build, so quic's own quartz dependency follows).
 
 ## Source sets
 
@@ -60,28 +60,28 @@ iOS-compiled sets, which the purity gate enforces.
 
 ## Purity gate: `verifyKmpPurity`
 
-`gradle/kmp-purity.gradle.kts`, applied by `quartz`, `commons` and `commonsUI` and
+`gradle/kmp-purity.gradle.kts`, applied by `commons` and `commonsUI` (quartz keeps a copy) and
 wired into `check`, scans every iOS/native-compiled source set (`commonMain`,
 `iosMain`, `skikoMain`, …, and their tests) and fails on `com.fasterxml.jackson`,
 `okhttp3`, `System.currentTimeMillis` (use `TimeUtils.now()`), `Thread.sleep`,
 `java.util.UUID` (use `kotlin.uuid.Uuid`), `kotlin.jvm.Synchronized` or bare
 `synchronized(` (use `KmpLock`), `kotlin.jvm.Volatile` (use
 `kotlin.concurrent.Volatile`). CI runs it on Linux in the lint job; the macOS
-`test-quartz-ios` job (`:quartz:iosSimulatorArm64Test`,
-`:quartz:compileTestKotlinIosArm64`) is authoritative. Run
-`./gradlew :quartz:verifyKmpPurity :commons:verifyKmpPurity :commonsUI:verifyKmpPurity`
-after touching `commonMain`.
+`test-commons-ios` / `test-commonsui-ios` jobs are authoritative. Run
+`./gradlew :commons:verifyKmpPurity :commonsUI:verifyKmpPurity`
+after touching `commonMain`. Quartz has its own copy of the task and its own iOS CI.
 
 ## Gradle traps
 
 - **Versions live only in `gradle/libs.versions.toml`.** Add the library there and
   reference `libs.*`; never hardcode a version or copy one into docs. Check the
   license first (`AGENTS.md` › Dependency Licensing).
-- **`test` is an alias for each KMP module's `jvmTest`.** `:quartz:testAndroidHostTest`
-  is a separate suite that nothing runs; see `AGENTS.md` › Build Commands.
+- **`test` is an alias for each KMP module's `jvmTest`.** Other targets
+  (`:commonsUI:testAndroidHostTest`, the native ones) run only when named; see
+  `AGENTS.md` › Build Commands.
 - **testFixtures in KMP:** the source-set `dependencies { }` block
   (`KotlinDependencyHandler`) has no `testFixtures(...)`. Use a top-level block with
-  the configuration name as a string, as `quartz/build.gradle.kts` does:
+  the configuration name as a string:
   `dependencies { "jvmAndroidTestImplementation"(testFixtures(project(":geode"))) }`.
 - **secp256k1 variants:** `secp256k1-kmp-common` in `commonMain`,
   `secp256k1-kmp-jni-android` in `androidMain`, `secp256k1-kmp-jni-jvm` in `jvmMain`

@@ -27,7 +27,7 @@ val live: LocalCacheFlow = LocalCacheFlow()
 `LargeSoftCache` (`LargeSoftCache.kt`) holds **weak references** (a `ConcurrentSkipListMap` of weak
 refs on JVM/Android). A `Note` or `User` nobody holds strongly can be collected, which is why every
 account state object keeps its note in a field. Channel maps are plain `LargeCache` (quartz `utils/cache/LargeCache.kt`; see
-`nostr-expert`).
+quartz's `nostr-expert` skill).
 
 ## Insertion path
 

@@ -68,7 +68,14 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":quartz"))
+                implementation(libs.quartz)
+
+                // Imported directly (sha256, AESGCM, RandomInstance, MLS types), so declared directly.
+                // Through quartz's api alone, a -PcryptoKmpDir / -PmlsKmpDir checkout never reaches
+                // the common metadata compile: it does not see an included build that it reaches
+                // only transitively through a module.
+                implementation(libs.crypto)
+                implementation(libs.mls.kmp)
 
                 // Compose *runtime* only — @Stable/@Immutable annotations and
                 // snapshot state (mutableStateOf, State) used by state holders.

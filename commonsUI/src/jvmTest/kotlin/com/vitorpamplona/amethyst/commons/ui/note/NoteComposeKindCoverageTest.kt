@@ -28,6 +28,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
+import java.util.zip.ZipFile
 
 /**
  * Every class Quartz's `EventFactory` can build gets a card of its own in the feed.
@@ -52,7 +53,8 @@ class NoteComposeKindCoverageTest {
                 GitReplyEvent::class.java,
             )
 
-        private const val EVENT_FACTORY = "quartz/src/commonMain/kotlin/com/vitorpamplona/quartz/utils/EventFactory.kt"
+        /** EventFactory.kt within quartz's sources: a `commonMain/kotlin` dir, or a sources jar (`commonMain/…`). */
+        private const val EVENT_FACTORY = "com/vitorpamplona/quartz/utils/EventFactory.kt"
         private const val NOTE_COMPOSE = "commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/note/NoteCompose.kt"
 
         /** The functions whose `when (event)` decide which card a feed row draws. */
@@ -62,8 +64,22 @@ class NoteComposeKindCoverageTest {
     private val repoRoot: File by lazy {
         // Resolved rather than assumed: a wrong root would read nothing and pass for the wrong reason.
         generateSequence(File(".").absoluteFile) { it.parentFile }
-            .firstOrNull { File(it, EVENT_FACTORY).isFile && File(it, NOTE_COMPOSE).isFile }
+            .firstOrNull { File(it, NOTE_COMPOSE).isFile }
             ?: fail("cannot locate the repository root from ${File(".").absolutePath}") as Nothing
+    }
+
+    /** quartz lives in its own repo; commonsUI's build passes its sources (checkout dir or sources jar). */
+    private val eventFactorySource: String by lazy {
+        val path = System.getProperty("quartz.sources") ?: fail("quartz.sources is not set; run this test through Gradle") as Nothing
+        val sources = File(path)
+        if (sources.isDirectory) {
+            File(sources, EVENT_FACTORY).readText()
+        } else {
+            ZipFile(sources).use { zip ->
+                val entry = zip.getEntry("commonMain/$EVENT_FACTORY") ?: fail("$path has no commonMain/$EVENT_FACTORY") as Nothing
+                zip.getInputStream(entry).use { it.readBytes().decodeToString() }
+            }
+        }
     }
 
     private val loader = javaClass.classLoader
@@ -107,7 +123,7 @@ class NoteComposeKindCoverageTest {
 
     /** The classes `EventFactory.create` constructs: every `Foo(id, …)` in its body, `Event` itself excluded. */
     private fun factoryClasses(): Set<Class<*>> {
-        val source = File(repoRoot, EVENT_FACTORY).readText()
+        val source = eventFactorySource
         val start = source.indexOf("fun <T : Event> create(")
         val end = source.indexOf("fun isKnownKind(", start)
         assertTrue("EventFactory.create not found", start >= 0 && end > start)

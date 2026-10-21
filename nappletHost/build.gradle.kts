@@ -41,7 +41,7 @@ dependencies {
     // reach for Amethyst.instance / LocalCache / Account (which don't exist in that process).
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
-    implementation(project(":quartz"))
+    implementation(libs.quartz)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity)

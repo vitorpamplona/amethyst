@@ -344,8 +344,9 @@ tool fetched after explicit opt-in; it is never linked into shipped artifacts.
 
 ## Release runbook
 
-The release flow is driven by a tag push. Every cut ships Android + Desktop +
-Quartz library in one pipeline.
+The release flow is driven by a tag push. Every cut ships Android + Desktop in
+one pipeline. The Quartz library releases from its own repo
+([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)).
 
 1. **Bump the app version and Android `versionCode`** in
    `gradle/libs.versions.toml` (`appCode` is a monotonic integer — it must
@@ -456,10 +457,6 @@ provided automatically; everything else you set yourself.)
 | `KEY_ALIAS` | Keystore key alias | Same Android signing step |
 | `KEY_STORE_PASSWORD` | Keystore password | Same |
 | `KEY_PASSWORD` | Key password | Same |
-| `SONATYPE_USERNAME` | Maven Central (Sonatype) user token name | Publishing the `quartz` library |
-| `SONATYPE_PASSWORD` | Maven Central user token password | Same |
-| `SIGNING_PRIVATE_KEY` | **GPG/PGP** private key, ASCII-armored | Signs the Maven artifacts (Central requires it) |
-| `SIGNING_PASSWORD` | Passphrase for that GPG key | Same |
 | `MAC_CERTIFICATE_P12` | Base64 of your **Apple Developer ID Application** cert (`.p12`, includes the private key) | Signs the macOS desktop **DMG** and the macOS **amy** jlink tarball |
 | `MAC_CERTIFICATE_PASSWORD` | Password set when exporting the `.p12` | Imports the cert into the CI keychain |
 | `MAC_SIGN_IDENTITY` | Full identity string, e.g. `Developer ID Application: Your Name (TEAMID)` | The `codesign` identity to sign with |
@@ -534,10 +531,8 @@ security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY st
 # (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
-`SONATYPE_USERNAME`/`SONATYPE_PASSWORD` are a **user token** from
-<https://central.sonatype.com> (Account → Generate User Token), not your login.
-A fork that doesn't publish a library can drop the `Publish Quartz Lib` step and
-the four Sonatype/GPG secrets.
+Publishing Quartz to Maven Central (the Sonatype and GPG secrets) is set up in
+the quartz repo's `create-release.yml`, not here.
 
 ---
 
@@ -550,7 +545,6 @@ distributes; the official Amethyst rollout for each is in
 | Channel | How it ships | Push or pull |
 |---|---|---|
 | **GitHub Releases** | The release workflow builds + signs all assets and attaches them to the tag's Release | Automatic (CI) |
-| **Maven Central** | Same workflow runs `publishAllPublicationsToMavenCentral` for `quartz` — a *step* at the end of the `deploy-android` job, not a job of its own, so it does not appear in a job list | Automatic (CI) |
 | **Google Play** | Download the signed `amethyst-googleplay-<version>.aab` from the GH Release and upload it in Play Console | **Manual push** |
 | **F-Droid** | F-Droid's build server detects the new tag and **builds the `fdroid` flavor from source** per its recipe in the external [`fdroiddata`](https://gitlab.com/fdroid/fdroiddata) repo, then signs + publishes itself | **Pull (build-from-source)** |
 | **Zapstore** | `amy releases publish` reads [`zapstore.yaml`](zapstore.yaml), as the [`zsp`](https://github.com/zapstore/zsp) CLI did, and publishes the APK's Nostr software-release events signed with the app's nsec | **Manual push (Nostr)** |

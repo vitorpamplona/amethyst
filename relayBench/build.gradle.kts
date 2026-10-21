@@ -27,7 +27,7 @@ kotlin {
 dependencies {
     // Event model, Schnorr signing, Filter + wire-format JSON. The harness
     // reuses quartz so the corpus is byte-identical to what Amethyst emits.
-    implementation(project(":quartz"))
+    implementation(libs.quartz)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.jackson.module.kotlin)
