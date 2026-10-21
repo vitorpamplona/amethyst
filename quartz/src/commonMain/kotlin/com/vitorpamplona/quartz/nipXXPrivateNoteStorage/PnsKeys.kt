@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipXXPrivateNoteStorage
 
+import com.vitorpamplona.crypto.kdf.Hkdf
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
 
 /**
  * The key material of NIP-PNS (Private Note Storage, draft nostr-protocol/nips#1893) for one

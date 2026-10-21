@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.service.pow
 
+import com.vitorpamplona.crypto.sha2.Sha256Midstate
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip13Pow.miner.Sha256Midstate
 import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import kotlin.test.Test

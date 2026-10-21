@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.utils
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals

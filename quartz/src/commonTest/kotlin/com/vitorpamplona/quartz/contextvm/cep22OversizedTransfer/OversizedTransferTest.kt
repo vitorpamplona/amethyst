@@ -341,7 +341,7 @@ class OversizedTransferTest {
 
     private fun digestOf(text: String) =
         OversizedFrame.DIGEST_PREFIX_SHA256 +
-            com.vitorpamplona.quartz.utils.sha256
+            com.vitorpamplona.crypto.sha2
                 .sha256(text.encodeToByteArray())
                 .let { bytes -> bytes.joinToString("") { b -> (b.toInt() and 0xFF).toString(16).padStart(2, '0') } }
 }

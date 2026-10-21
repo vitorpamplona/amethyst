@@ -21,6 +21,7 @@
 package com.vitorpamplona.quartz.experimental.decentralizedLists.taggings
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.experimental.decentralizedLists.description
 import com.vitorpamplona.quartz.experimental.decentralizedLists.header.names
 import com.vitorpamplona.quartz.experimental.decentralizedLists.item.AddressableListItemEvent
@@ -36,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /** What an event tagging is about: an addressable event (`a`) or a plain one (`e`). */
 @Immutable

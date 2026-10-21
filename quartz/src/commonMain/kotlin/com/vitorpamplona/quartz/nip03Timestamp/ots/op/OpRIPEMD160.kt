@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp.ots.op
 
+import com.vitorpamplona.crypto.digest.RIPEMD160Digest
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.nip03Timestamp.ots.crypto.RIPEMD160Digest
 
 /**
  * Cryptographic RIPEMD160 operation.

@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.marmot.mip01Groups
 
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
 
 /**
- * [NostrCipher] for a Marmot group avatar, implementing the MIP-01 v2 scheme (see
+ * [SymmetricCipher] for a Marmot group avatar, implementing the MIP-01 v2 scheme (see
  * [MarmotGroupImageEncryption]) — byte-for-byte interoperable with mdk/whitenoise.
  *
  * The same instance serves two paths:
@@ -42,7 +42,7 @@ class MarmotGroupImageCipher(
     val imageKey: ByteArray,
     /** 12-byte nonce. */
     val imageNonce: ByteArray,
-) : NostrCipher {
+) : SymmetricCipher {
     override fun name(): String = "mip01-image-encryption-v2"
 
     override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 
 /**
- * `encrypted-media-v2` as a [NostrCipher], so the existing upload pipeline can
+ * `encrypted-media-v2` as a [SymmetricCipher], so the existing upload pipeline can
  * encrypt with it without knowing anything about Marmot.
  *
  * The pipeline compresses and strips metadata before handing bytes over, and
@@ -43,7 +43,7 @@ class EncryptedMediaV2Cipher(
     /** Canonical media type — the `m` field, byte-for-byte. */
     val mediaType: String,
     val filename: String,
-) : NostrCipher {
+) : SymmetricCipher {
     var nonce: ByteArray = ByteArray(0)
         private set
 

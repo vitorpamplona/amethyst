@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.quartz.nip13Pow
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -28,7 +29,6 @@ import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
 import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.test.Test
 import kotlin.test.assertEquals

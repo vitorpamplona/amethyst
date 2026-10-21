@@ -20,13 +20,14 @@
  */
 package com.vitorpamplona.quartz.mls.crypto
 
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.kdf.Hkdf
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsSerializable
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Cryptographic provider for MLS ciphersuite 0x0001:
@@ -172,7 +173,7 @@ object MlsCryptoProvider {
 
         for (i in 1..n) {
             val mac =
-                com.vitorpamplona.quartz.utils.mac
+                com.vitorpamplona.crypto.mac
                     .MacInstance("HmacSHA256", prk)
             mac.update(prev)
             mac.update(info)

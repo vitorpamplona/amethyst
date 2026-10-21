@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12
 
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.crypto.sha2.sha256
 
 /**
  * BOLT12 "Signature Calculation" merkle root and the message digest that BOLT12

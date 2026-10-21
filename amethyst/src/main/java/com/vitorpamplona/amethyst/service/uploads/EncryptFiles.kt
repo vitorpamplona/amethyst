@@ -23,9 +23,9 @@ package com.vitorpamplona.amethyst.service.uploads
 import android.content.Context
 import android.net.Uri
 import androidx.core.net.toUri
+import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 class EncryptFilesResult(
@@ -40,7 +40,7 @@ class EncryptFiles {
     fun encryptFile(
         context: Context,
         inputFile: Uri,
-        cipher: NostrCipher,
+        cipher: SymmetricCipher,
     ): EncryptFilesResult {
         val resolver = context.contentResolver
 

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.marmot
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.InMemoryPushStateStore
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationRequestEvent
@@ -45,7 +46,6 @@ import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

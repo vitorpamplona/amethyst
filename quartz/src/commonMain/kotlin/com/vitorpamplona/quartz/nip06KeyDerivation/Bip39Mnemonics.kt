@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip49PrivKeyEnc.PBKDF
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 // CODE FROM: https://github.com/ACINQ/bitcoin-kmp/
 

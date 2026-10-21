@@ -166,6 +166,10 @@ kotlin {
 
                 // Negentropy set reconciliation (NIP-77)
                 api(libs.negentropy.kmp)
+
+                // SHA, HMAC, HKDF, AES, ChaCha20, X25519, Ed25519 and secure random, from
+                // vitorpamplona/crypto-kmp. api: Quartz's own API takes and returns its types.
+                api(libs.crypto)
             }
         }
 

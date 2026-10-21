@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip04Dm.crypto
 
-import com.vitorpamplona.quartz.utils.RandomInstance
+import com.vitorpamplona.crypto.aes.AESCBC
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.ciphers.AESCBC
 
 class Encryption {
     fun encrypt(

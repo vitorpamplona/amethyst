@@ -20,12 +20,13 @@
  */
 package com.vitorpamplona.quartz.nip13Pow.miner
 
+import com.vitorpamplona.crypto.sha2.Sha256Midstate
+import com.vitorpamplona.crypto.sha2.sha256Into
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
-import com.vitorpamplona.quartz.utils.sha256.sha256Into
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers

@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.mip05PushNotifications
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * The canonical `SignedRecord` bytes of a push token record or removal

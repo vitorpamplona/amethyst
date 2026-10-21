@@ -28,11 +28,11 @@ import com.fasterxml.jackson.core.util.ByteArrayBuilder
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.vitorpamplona.crypto.sha2.threadLocalDigest
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.fastForEach
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.threadLocalDigest
 import java.io.IOException
 
 actual object EventHasherSerializer {

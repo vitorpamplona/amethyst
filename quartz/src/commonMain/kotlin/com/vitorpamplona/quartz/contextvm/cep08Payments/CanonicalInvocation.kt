@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.contextvm.cep08Payments
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.contextvm.json.toPlainJson
 import com.vitorpamplona.quartz.contextvm.jsonrpc.JsonRpcRequest
 import com.vitorpamplona.quartz.contextvm.mcp.McpParams
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.jcs.JsonCanonicalization
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 

@@ -203,6 +203,9 @@ import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.crypto.aes.AES_GCM_NAME
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -376,10 +379,7 @@ import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.DualCase
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
-import com.vitorpamplona.quartz.utils.ciphers.AES_GCM_NAME
 import com.vitorpamplona.quartz.utils.containsAny
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CoroutineScope

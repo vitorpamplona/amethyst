@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip03Timestamp.ots.op
 
+import com.vitorpamplona.crypto.digest.KeccakDigest
 import com.vitorpamplona.quartz.nip03Timestamp.ots.StreamDeserializationContext
-import com.vitorpamplona.quartz.nip03Timestamp.ots.crypto.KeccakDigest
 
 /**
  * Cryptographic Keccak256 operation.

@@ -23,11 +23,11 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.crypto.chacha.ChaCha20
+import com.vitorpamplona.crypto.mac.FixedKey
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.mac.FixedKey
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

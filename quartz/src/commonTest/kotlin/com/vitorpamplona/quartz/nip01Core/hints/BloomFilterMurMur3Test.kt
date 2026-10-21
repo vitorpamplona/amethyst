@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.hints.bloom.BloomFilterMurMur3
-import com.vitorpamplona.quartz.utils.RandomInstance
 import kotlin.test.DefaultAsserter.assertTrue
 import kotlin.test.Test
 import kotlin.test.assertEquals

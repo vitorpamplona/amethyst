@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.mip04EncryptedMedia
 
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 
 /**
- * NostrCipher implementation for MIP-04 media encryption.
+ * SymmetricCipher implementation for MIP-04 media encryption.
  *
  * Used as an adapter to integrate MIP-04 encryption into the existing
  * [EncryptFiles] upload pipeline. After calling [encrypt], the [nonce]
@@ -38,7 +38,7 @@ class Mip04NostrCipher(
     val exporterSecret: ByteArray,
     val mimeType: String,
     val filename: String,
-) : NostrCipher {
+) : SymmetricCipher {
     var nonce: ByteArray = ByteArray(0)
         private set
 

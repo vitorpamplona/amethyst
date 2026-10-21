@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.marmot.appComponents
 
+import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.chacha.ChaCha20Poly1305
+import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20Poly1305
-import com.vitorpamplona.quartz.utils.RandomInstance
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * The current-profile group-avatar scheme for
@@ -141,14 +141,14 @@ object GroupBlossomImageCrypto {
         }
 
     /**
-     * A [NostrCipher] view for the display path, where the blob cache decrypts
+     * A [SymmetricCipher] view for the display path, where the blob cache decrypts
      * a fetched URL transparently.
      */
-    fun cipher(component: GroupBlossomImageV1): NostrCipher = ComponentCipher(component)
+    fun cipher(component: GroupBlossomImageV1): SymmetricCipher = ComponentCipher(component)
 
     private class ComponentCipher(
         private val component: GroupBlossomImageV1,
-    ) : NostrCipher {
+    ) : SymmetricCipher {
         override fun name(): String = "marmot-group-image-v1"
 
         override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {

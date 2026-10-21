@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nip01Core.relay.client.reqs
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 class DynamicSubscription(
     val client: INostrClient,

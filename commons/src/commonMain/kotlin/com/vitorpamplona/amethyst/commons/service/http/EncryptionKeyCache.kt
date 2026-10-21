@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.service.http
 
 import androidx.collection.LruCache
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 
 /**
  * Neigther ExoPlayer, nor Coil support passing key and nonce to the Interceptor via
@@ -44,7 +44,7 @@ class EncryptionKeyCache {
 
     fun add(
         url: String?,
-        cipher: NostrCipher,
+        cipher: SymmetricCipher,
         expectedMimeType: String?,
     ) = add(url, DecryptInformation(cipher, expectedMimeType))
 
@@ -57,6 +57,6 @@ class EncryptionKeyCache {
 }
 
 class DecryptInformation(
-    val cipher: NostrCipher,
+    val cipher: SymmetricCipher,
     val mimeType: String?,
 )

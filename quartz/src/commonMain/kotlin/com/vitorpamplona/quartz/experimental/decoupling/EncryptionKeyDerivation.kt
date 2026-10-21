@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.experimental.decoupling
 
+import com.vitorpamplona.crypto.kdf.Hkdf
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 class EncryptionKeyDerivation {
     companion object {

@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.mls.group
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.mls.codec.TlsReader
 import com.vitorpamplona.quartz.mls.codec.TlsWriter
 import com.vitorpamplona.quartz.mls.messages.GroupContext
 import com.vitorpamplona.quartz.mls.messages.Proposal
 import com.vitorpamplona.quartz.mls.schedule.EpochSecrets
 import com.vitorpamplona.quartz.mls.schedule.SenderRatchetState
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Serializable snapshot of an MLS group's complete state.

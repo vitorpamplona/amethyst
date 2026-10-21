@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuCommands
 import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagingDiagnostics
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
@@ -142,6 +143,7 @@ fun runCli(argv: Array<String>): Int {
     // even startup logging is gated.
     val verbose = argv.any { it == "--verbose" || it == "-v" }
     Log.minLevel = if (verbose) LogLevel.DEBUG else LogLevel.WARN
+    QuicLogBridge.install()
     // --verbose also reports how each relay ordered and repeated a paged walk's events.
     PagingDiagnostics.enabled = verbose
 

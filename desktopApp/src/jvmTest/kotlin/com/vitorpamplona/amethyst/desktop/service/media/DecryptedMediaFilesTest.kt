@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.media
 
 import com.vitorpamplona.amethyst.commons.service.http.EncryptedBlobInterceptor
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
-import com.vitorpamplona.quartz.utils.ciphers.AESGCM
+import com.vitorpamplona.crypto.aes.AESGCM
 import kotlinx.coroutines.test.runTest
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType

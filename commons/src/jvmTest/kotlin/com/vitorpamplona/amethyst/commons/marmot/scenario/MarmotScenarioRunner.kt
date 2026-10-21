@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.marmot.SnapshotBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.SnapshotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.SnapshotStateStore
 import com.vitorpamplona.amethyst.commons.marmot.ingest
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -34,7 +35,6 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * Replays a CGKA conformance scenario vector against our own MLS stack.

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip06KeyDerivation
 
+import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.quartz.utils.Secp256k1Instance
-import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /*
  Simplified from: https://github.com/ACINQ/bitcoin-kmp/

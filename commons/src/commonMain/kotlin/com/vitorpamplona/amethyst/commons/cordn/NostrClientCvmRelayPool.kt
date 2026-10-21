@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.contextvm.transport.CvmRelayPool
 import com.vitorpamplona.quartz.contextvm.transport.CvmSubscription
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -31,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.RandomInstance
 
 /**
  * A Nostr relay client, as the [CvmRelayPool] ContextVM expects.

@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.cli
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.secrets.IdentitySecret
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 
 /**

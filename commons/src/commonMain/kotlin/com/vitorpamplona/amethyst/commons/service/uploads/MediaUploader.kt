@@ -25,8 +25,8 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
+import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
 
 /**
  * The platform's media pipeline: compresses, strips metadata from, optionally encrypts, and
@@ -58,7 +58,7 @@ interface MediaUploader {
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         useH265: Boolean,
@@ -164,7 +164,7 @@ object UnavailableMediaUploader : MediaUploader {
         alt: String?,
         contentWarningReason: String?,
         compressionQuality: CompressorQuality,
-        encrypt: NostrCipher,
+        encrypt: SymmetricCipher,
         server: ServerName,
         account: Account,
         useH265: Boolean,

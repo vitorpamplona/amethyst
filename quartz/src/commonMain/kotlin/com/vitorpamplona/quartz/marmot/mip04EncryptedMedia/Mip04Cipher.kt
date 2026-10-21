@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.quartz.marmot.mip04EncryptedMedia
 
-import com.vitorpamplona.quartz.utils.ciphers.NostrCipher
+import com.vitorpamplona.crypto.SymmetricCipher
 
 /**
- * NostrCipher adapter for MIP-04 encrypted media decryption.
+ * SymmetricCipher adapter for MIP-04 encrypted media decryption.
  *
  * This wraps the MIP-04 decryption parameters so encrypted media can be
  * decrypted by the existing [EncryptedBlobInterceptor] OkHttp interceptor.
@@ -39,7 +39,7 @@ class Mip04Cipher(
     val originalFileHash: ByteArray,
     val mimeType: String,
     val filename: String,
-) : NostrCipher {
+) : SymmetricCipher {
     override fun name(): String = Mip04MediaEncryption.VERSION
 
     override fun encrypt(bytesToEncrypt: ByteArray): ByteArray {

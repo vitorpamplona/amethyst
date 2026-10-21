@@ -24,9 +24,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 

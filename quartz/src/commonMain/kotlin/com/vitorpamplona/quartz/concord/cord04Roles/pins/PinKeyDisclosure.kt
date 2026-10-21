@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.quartz.concord.cord04Roles.pins
 
+import com.vitorpamplona.crypto.chacha.ChaCha20
+import com.vitorpamplona.crypto.equalsConstantTime
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArrayOrNull
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip44Encryption.Nip44
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
-import com.vitorpamplona.quartz.nip44Encryption.crypto.ChaCha20
-import com.vitorpamplona.quartz.nip44Encryption.crypto.Hkdf
-import com.vitorpamplona.quartz.utils.equalsConstantTime
+import com.vitorpamplona.quartz.nip44Encryption.crypto.MessageKey
 
 /**
  * NIP-44 v2 per-message key disclosure — the primitive a Concord Pin is built on (CORD-04 §7).
@@ -43,13 +43,13 @@ object PinKeyDisclosure {
     private val chaCha = ChaCha20()
 
     /** The 76-byte lowercase-hex wire form of [keys]. */
-    fun encode(keys: Hkdf.MessageKey): String = (keys.chachaKey + keys.chachaNonce + keys.hmacKey).toHexKey()
+    fun encode(keys: MessageKey): String = (keys.chachaKey + keys.chachaNonce + keys.hmacKey).toHexKey()
 
     /** Parses a disclosure; null unless it is exactly 152 lowercase hex characters. */
-    fun decode(hex: String): Hkdf.MessageKey? {
+    fun decode(hex: String): MessageKey? {
         if (!HEX.matches(hex)) return null
         val bytes = hex.hexToByteArrayOrNull() ?: return null
-        return Hkdf.MessageKey(bytes.copyOfRange(0, 32), bytes.copyOfRange(32, 44), bytes.copyOfRange(44, 76))
+        return MessageKey(bytes.copyOfRange(0, 32), bytes.copyOfRange(32, 44), bytes.copyOfRange(44, 76))
     }
 
     private fun decodePayload(payload: String): Nip44v2.EncryptedInfo? =
@@ -63,7 +63,7 @@ object PinKeyDisclosure {
     fun discloseFor(
         payload: String,
         conversationKey: ByteArray,
-    ): Hkdf.MessageKey? {
+    ): MessageKey? {
         val decoded = decodePayload(payload) ?: return null
         return Nip44.v2.getMessageKeys(conversationKey, decoded.nonce)
     }
@@ -75,7 +75,7 @@ object PinKeyDisclosure {
      */
     fun decryptWith(
         payload: String,
-        keys: Hkdf.MessageKey,
+        keys: MessageKey,
     ): String? {
         val decoded = decodePayload(payload) ?: return null
         val mac =

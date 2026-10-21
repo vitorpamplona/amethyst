@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.buzz.aeEngrams
 
+import com.vitorpamplona.crypto.mac.MacInstance
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.mac.MacInstance
 
 /**
  * Derivation of the blinded `d` tag for an Agent Engram (NIP-AE, `kind:30174`).

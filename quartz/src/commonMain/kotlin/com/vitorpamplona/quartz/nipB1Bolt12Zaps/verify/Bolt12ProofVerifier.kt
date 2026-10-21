@@ -20,11 +20,11 @@
  */
 package com.vitorpamplona.quartz.nipB1Bolt12Zaps.verify
 
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12Merkle
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.Bolt12PayerProof
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.bolt12.TlvRecord
-import com.vitorpamplona.quartz.utils.sha256.sha256
 
 /**
  * Cryptographic verification of a BOLT12 `lnp` payer proof, per lightning/bolts#1346:

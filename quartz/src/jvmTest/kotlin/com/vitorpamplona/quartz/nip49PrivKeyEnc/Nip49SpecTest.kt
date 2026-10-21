@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.quartz.nip49PrivKeyEnc
 
+import com.vitorpamplona.crypto.chacha.XChaCha20Poly1305
 import com.vitorpamplona.quartz.nip19Bech32.Bech32Transcription
 import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
-import com.vitorpamplona.quartz.nip44Encryption.crypto.XChaCha20Poly1305
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

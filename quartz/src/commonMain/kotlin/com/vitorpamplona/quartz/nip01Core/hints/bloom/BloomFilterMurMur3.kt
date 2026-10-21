@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.quartz.nip01Core.hints.bloom
 
+import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.utils.BitSet
-import com.vitorpamplona.quartz.utils.RandomInstance
 import com.vitorpamplona.quartz.utils.bitSetValueOf
 import kotlin.io.encoding.Base64
 

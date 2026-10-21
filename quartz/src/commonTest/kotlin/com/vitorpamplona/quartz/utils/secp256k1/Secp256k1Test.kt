@@ -329,10 +329,10 @@ class Secp256k1Test {
             com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
                 .taggedHash(tag, msg)
         val tagHash =
-            com.vitorpamplona.quartz.utils.sha256
+            com.vitorpamplona.crypto.sha2
                 .sha256(tag.encodeToByteArray())
         val expected =
-            com.vitorpamplona.quartz.utils.sha256
+            com.vitorpamplona.crypto.sha2
                 .sha256(tagHash + tagHash + msg)
         assertEquals(expected.toHexKey(), result.toHexKey())
     }

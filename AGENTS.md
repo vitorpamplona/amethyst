@@ -23,10 +23,11 @@ a non-interactive JVM command-line client that drives the same `quartz` + `commo
 humans, agents, and interop tests. QUIC itself is no longer in this repo: the from-scratch pure-Kotlin
 QUIC v1 + HTTP/3 + WebTransport client (no JNI, no BouncyCastle, built because no Android-compatible
 Java QUIC library exists) lives in <https://github.com/vitorpamplona/quic-kmp> with its interop runner
-and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). It depends on
-the published `quartz`, which the root build substitutes with this checkout's `:quartz`. To change
+and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). To change
 QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
-(`settings.gradle.kts`). `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+(`settings.gradle.kts`). Crypto primitives live in <https://github.com/vitorpamplona/crypto-kmp>
+(`libs.crypto`, `com.vitorpamplona.crypto.*`), used by `quartz` and quic-kmp; secp256k1 stays in
+`quartz`. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/

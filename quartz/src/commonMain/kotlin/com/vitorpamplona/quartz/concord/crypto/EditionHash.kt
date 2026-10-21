@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.quartz.concord.crypto
 
-import com.vitorpamplona.quartz.utils.sha256.sha256
+import com.vitorpamplona.crypto.sha2.sha256
 
 /**
  * Edition-hash chain for Control Plane editions (CORD-04 §1).

@@ -24,8 +24,8 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.vitorpamplona.crypto.sha2.Sha256Hasher
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.utils.sha256.Sha256Hasher
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith

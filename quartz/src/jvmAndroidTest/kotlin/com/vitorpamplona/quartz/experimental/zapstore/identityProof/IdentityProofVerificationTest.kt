@@ -20,12 +20,12 @@
  */
 package com.vitorpamplona.quartz.experimental.zapstore.identityProof
 
-import com.vitorpamplona.quartz.mls.crypto.Ed25519
+import com.vitorpamplona.crypto.curve25519.Ed25519
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.TagArray
 import com.vitorpamplona.quartz.utils.EventFactory
 import com.vitorpamplona.quartz.utils.Hex
-import com.vitorpamplona.quartz.utils.sha256.sha256
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.PrivateKey

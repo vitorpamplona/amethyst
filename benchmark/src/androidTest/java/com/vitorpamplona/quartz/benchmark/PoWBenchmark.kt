@@ -23,6 +23,7 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.vitorpamplona.crypto.sha2.Sha256Midstate
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.EventHasherSerializer
@@ -32,7 +33,6 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip13Pow.miner.MiningBuffer
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWRankEvaluator
-import com.vitorpamplona.quartz.nip13Pow.miner.Sha256Midstate
 import com.vitorpamplona.quartz.nip13Pow.miner.indexOf
 import com.vitorpamplona.quartz.nip13Pow.tags.PoWTag
 import org.junit.Assert.assertEquals
