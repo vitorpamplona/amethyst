@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.relaybench
 
+import kotlinx.serialization.Serializable
+
 /** Latency distribution summary, in milliseconds. */
+@Serializable
 data class Percentiles(
     val samples: Int,
     val mean: Double,

@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Output
 
 /**
@@ -52,7 +53,7 @@ object FilterCommand {
         val args = Args(rest)
         val filter = RawEventSupport.buildFilter(args)
         args.rejectUnknown()
-        Output.emit(Output.mapper.readTree(filter.toJson()))
+        Output.emit(CliJson.parse(filter.toJson()))
         return 0
     }
 }

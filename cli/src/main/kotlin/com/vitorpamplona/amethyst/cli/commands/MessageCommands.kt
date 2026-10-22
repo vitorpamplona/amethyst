@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.cli.commands
 
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -130,7 +130,7 @@ object MessageCommands {
                     .map { line ->
                         try {
                             @Suppress("UNCHECKED_CAST")
-                            val obj = Output.mapper.readValue<Map<String, Any?>>(line)
+                            val obj = CliJson.toPlain(CliJson.parse(line)) as Map<*, *>
                             val id = obj["id"] as? String
                             val edited = overlays[id]
                             val retracted = id != null && id in deleted

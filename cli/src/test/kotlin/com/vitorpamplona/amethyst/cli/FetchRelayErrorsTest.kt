@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -159,10 +158,10 @@ class FetchRelayErrorsTest {
             val r = amy("--json", "fetch", "--kind", "1", "--relay", "${silent.url},${serving.url}", "--timeout", "2")
 
             assertEquals(0, r.exit, r.stderr)
-            val result = Output.mapper.readTree(r.stdoutLines.single())
+            val result = JsonNode.parse(r.stdoutLines.single())
             assertEquals(1, result["count"].asInt(), "$result")
             assertEquals("timeout", result["relay_errors"][silent.url.normalized()]["reason"].asText(), "$result")
-            assertNull(result["relay_errors"][serving.url.normalized()], "the serving relay answered: $result")
+            assertNull(result["relay_errors"][serving.url.normalized()].element, "the serving relay answered: $result")
             assertTrue(r.stderr.contains("warning: ${silent.url.normalized()} stopped answering"), r.stderr)
         }
     }
@@ -172,14 +171,14 @@ class FetchRelayErrorsTest {
         val r = amy("--json", "fetch", "--kind", "1", "--limit", "100", "--relay", "${refusing.url},${serving.url}", "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(1, result["count"].asInt(), "the serving relay's note: $result ${r.stderr}")
         assertEquals(note.id, result["events"][0]["id"].asText())
 
         val errors = result["relay_errors"]
         assertEquals(1, errors.size(), "only the refusing relay is listed: $errors")
         assertRefusal(errors, refusing.url)
-        assertNull(errors[serving.url.normalized()], "the serving relay answered")
+        assertNull(errors[serving.url.normalized()].element, "the serving relay answered")
         assertTrue(r.stderr.contains("closed the request: $REASON"), "a human-readable warning on stderr: ${r.stderr}")
     }
 
@@ -189,7 +188,7 @@ class FetchRelayErrorsTest {
         val r = amy("--json", "fetch", "--kind", "1", "--limit", "50", "--relay", refusing.url, "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(0, result["count"].asInt())
         assertFalse(result.has("relay_errors"), "no relay refused: $result")
         assertFalse(r.stderr.contains("warning:"), r.stderr)
@@ -197,7 +196,7 @@ class FetchRelayErrorsTest {
 
     private fun jsonErrorOf(r: CliResult): JsonNode {
         val line = r.stderr.lines().single { it.startsWith("{") }
-        return Output.mapper.readTree(line)
+        return JsonNode.parse(line)
     }
 
     private fun assertRefusal(

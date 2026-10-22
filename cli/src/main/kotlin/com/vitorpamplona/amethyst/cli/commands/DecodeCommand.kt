@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -89,7 +90,7 @@ object DecodeCommand {
                         "relays" to entity.relay.map { it.url },
                     )
                 is NRelay -> mapOf("type" to "nrelay", "relays" to entity.relay)
-                is NEmbed -> mapOf("type" to "nembed", "event" to Output.mapper.readTree(entity.event.toJson()))
+                is NEmbed -> mapOf("type" to "nembed", "event" to CliJson.parse(entity.event.toJson()))
                 else -> return Output.error("bad_args", "unsupported entity type")
             }
 

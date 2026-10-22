@@ -81,7 +81,7 @@ class FetchUnpagedSearchTest {
             val r = amy("--json", "fetch", "--kind", "1", "--search", "absent", "--paginate", "--limit", limit, "--relay", relay.url, "--timeout", "5")
 
             assertEquals(0, r.exit, r.stderr)
-            val result = Output.mapper.readTree(r.stdoutLines.single())
+            val result = JsonNode.parse(r.stdoutLines.single())
             assertEquals(0, result["count"].asInt(), "--limit $limit: $result")
             assertEquals(listOf(relay.url.normalizeRelayUrl().url), result["unpaged_relays"]?.map { it.asText() }, "--limit $limit: $result")
         }
@@ -93,7 +93,7 @@ class FetchUnpagedSearchTest {
         val r = amy("--json", "fetch", "--kind", "1", "--search", "include:spam", "--paginate", "--limit", "0", "--relay", relay.url, "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(1, result["count"].asInt(), "$result ${r.stderr}")
         assertFalse(result.has("unpaged_relays"), "nothing to rank, so nothing left unpaged: $result")
         assertFalse(r.stderr.contains("warning:"), r.stderr)
@@ -104,7 +104,7 @@ class FetchUnpagedSearchTest {
         val r = amy("--json", "fetch", "--kind", "1", "--paginate", "--limit", "0", "--relay", relay.url, "--timeout", "5")
 
         assertEquals(0, r.exit, r.stderr)
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(1, result["count"].asInt(), "$result ${r.stderr}")
         assertFalse(result.has("unpaged_relays"), "a time walk pages to the end: $result")
         assertFalse(r.stderr.contains("warning:"), r.stderr)
@@ -112,7 +112,7 @@ class FetchUnpagedSearchTest {
 
     private fun assertUnpaged(r: CliResult) {
         assertEquals(0, r.exit, r.stderr)
-        val result = Output.mapper.readTree(r.stdoutLines.single())
+        val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(1, result["count"].asInt(), "the search still returns its hits: $result ${r.stderr}")
         val unpaged = result["unpaged_relays"]
         assertTrue(unpaged != null && unpaged.isArray, "the relay that could not be paged is listed: $result")

@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
 import com.vitorpamplona.amethyst.cli.commands.LoginCommand
 import com.vitorpamplona.geode.KtorRelay
 import com.vitorpamplona.geode.RelayEngine
@@ -128,7 +127,7 @@ class Nip05SignerLoginTest {
         relay.stop()
     }
 
-    private fun json(r: CliResult): JsonNode = Output.mapper.readTree(r.stdoutLines.last())
+    private fun json(r: CliResult): JsonNode = JsonNode.parse(r.stdoutLines.last())
 
     @Test
     fun anAddressWithASignerLogsInAsTheAddressAndCanSign() {

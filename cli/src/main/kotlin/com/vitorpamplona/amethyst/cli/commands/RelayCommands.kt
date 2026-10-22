@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.cli.commands
 
 import com.vitorpamplona.amethyst.cli.Args
+import com.vitorpamplona.amethyst.cli.CliJson
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
@@ -304,7 +305,7 @@ object RelayCommands {
                     mapOf(
                         "relay" to normalized.url,
                         "url" to httpUrl,
-                        "info" to Output.mapper.readTree(relayInfo.toJson()),
+                        "info" to CliJson.parse(relayInfo.toJson()),
                     ),
                 )
                 0

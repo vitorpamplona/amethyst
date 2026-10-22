@@ -21,8 +21,6 @@
 package com.vitorpamplona.amethyst.ui.tor
 
 import android.content.Context
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +37,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.JsonElement
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -202,11 +201,11 @@ class TorService(
     private fun guardsFile() = File(File(File(artiDataDir(), "state"), "state"), "guards.json")
 
     /** Reads and parses [guardsFile], or null if it is absent/unreadable. */
-    private fun readGuardsTree(): JsonNode? {
+    private fun readGuardsTree(): JsonElement? {
         val file = guardsFile()
         if (!file.exists()) return null
         return try {
-            ObjectMapper().readTree(file)
+            ArtiGuardState.parse(file.readText())
         } catch (e: Exception) {
             Log.w("TorService") { "Could not inspect guards.json: ${e.message}" }
             null

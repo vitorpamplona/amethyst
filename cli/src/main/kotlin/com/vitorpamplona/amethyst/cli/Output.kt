@@ -20,9 +20,7 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import kotlinx.serialization.json.JsonElement
 import java.io.BufferedWriter
 import java.io.OutputStreamWriter
 import java.time.Instant
@@ -53,11 +51,9 @@ object Output {
 
     @Volatile var mode: Mode = Mode.TEXT
 
-    val mapper: ObjectMapper = jacksonObjectMapper()
-
     fun emit(result: Any?) {
         when (mode) {
-            Mode.JSON -> println(mapper.writeValueAsString(result))
+            Mode.JSON -> println(CliJson.encode(result))
             Mode.TEXT -> println(renderText(result))
         }
     }
@@ -80,7 +76,7 @@ object Output {
         text: (Ansi) -> String,
     ) {
         when (mode) {
-            Mode.JSON -> println(mapper.writeValueAsString(result))
+            Mode.JSON -> println(CliJson.encode(result))
             Mode.TEXT -> println(text(Ansi.forStream(isStderr = false)))
         }
     }
@@ -127,12 +123,12 @@ object Output {
                 Mode.JSON -> {
                     out.write("{")
                     for ((k, v) in head) {
-                        out.write(mapper.writeValueAsString(k))
+                        out.write(CliJson.encode(k))
                         out.write(":")
-                        out.write(mapper.writeValueAsString(v))
+                        out.write(CliJson.encode(v))
                         out.write(",")
                     }
-                    out.write(mapper.writeValueAsString(listKey))
+                    out.write(CliJson.encode(listKey))
                     out.write(":[")
                 }
 
@@ -192,12 +188,12 @@ object Output {
                     out.write(items.toString())
                     extra.forEach { (key, value) ->
                         out.write(",")
-                        out.write(mapper.writeValueAsString(key))
+                        out.write(CliJson.encode(key))
                         out.write(":")
-                        out.write(mapper.writeValueAsString(value))
+                        out.write(CliJson.encode(value))
                     }
                     out.write(",\"error\":")
-                    out.write(mapper.writeValueAsString(mapOf("code" to "aborted", "detail" to reason)))
+                    out.write(CliJson.encode(mapOf("code" to "aborted", "detail" to reason)))
                     out.write("}\n")
                 }
 
@@ -224,9 +220,9 @@ object Output {
                     out.write("]")
                     for ((k, v) in tail) {
                         out.write(",")
-                        out.write(mapper.writeValueAsString(k))
+                        out.write(CliJson.encode(k))
                         out.write(":")
-                        out.write(mapper.writeValueAsString(v))
+                        out.write(CliJson.encode(v))
                     }
                     out.write("}\n")
                 }
@@ -258,7 +254,7 @@ object Output {
                 val payload = mutableMapOf<String, Any?>("error" to code)
                 if (detail != null) payload["detail"] = detail
                 payload.putAll(cleanExtra)
-                System.err.println(mapper.writeValueAsString(payload))
+                System.err.println(CliJson.encode(payload))
             }
 
             Mode.TEXT -> {
@@ -313,16 +309,16 @@ object Output {
     }
 
     /**
-     * Convert any embedded Jackson [JsonNode] into plain Java types
-     * (`LinkedHashMap` / `ArrayList` / boxed primitives) so the generic
+     * Convert any embedded [JsonElement] into plain Kotlin values
+     * (maps / lists / boxed primitives) so the generic
      * renderer can descend into it. Plain Maps / Lists / scalars are
      * returned unchanged. Walks recursively because callers commonly
-     * mix a JsonNode subtree into a hand-built Map (e.g. profile show
+     * mix a parsed subtree into a hand-built Map (e.g. profile show
      * stuffing the parsed kind:0 content under a `metadata` key).
      */
     private fun unwrap(value: Any?): Any? =
         when (value) {
-            is JsonNode -> mapper.convertValue(value, Any::class.java)
+            is JsonElement -> CliJson.toPlain(value)
             is Map<*, *> -> value.mapValues { (_, v) -> unwrap(v) }
             is List<*> -> value.map { unwrap(it) }
             else -> value

@@ -20,8 +20,6 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.fasterxml.jackson.module.kotlin.readValue
-
 /**
  * Per-account `aliases.json` — short human-friendly names that map to
  * npubs. Today it's only populated by `init --name X` (a self-entry so
@@ -37,7 +35,7 @@ object Aliases {
     fun load(dataDir: DataDir): MutableMap<String, String> {
         val f = dataDir.aliasesFile
         if (!f.exists()) return linkedMapOf()
-        return Output.mapper.readValue(f.readText())
+        return CliJson.files.decodeFromString<Map<String, String>>(f.readText()).toMutableMap()
     }
 
     /** Upsert one entry. Idempotent. */
@@ -48,6 +46,6 @@ object Aliases {
     ) {
         val map = load(dataDir)
         map[name] = npub
-        SecureFileIO.writeTextAtomic(dataDir.aliasesFile, Output.mapper.writeValueAsString(map))
+        SecureFileIO.writeTextAtomic(dataDir.aliasesFile, CliJson.files.encodeToString<Map<String, String>>(map))
     }
 }
