@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClien
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
+import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -116,7 +117,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -338,7 +338,7 @@ class DesktopAppModules(
     // REQ, COUNT and publish here, once.
     val client: INostrClient =
         BlockedRelayFilteringClient(
-            NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder()),
+            NostrClient(websocketBuilder, applicationIOScope, relayFrameDecoder()),
             blockedRelays = {
                 sessionManager
                     .loggedInAccount()
