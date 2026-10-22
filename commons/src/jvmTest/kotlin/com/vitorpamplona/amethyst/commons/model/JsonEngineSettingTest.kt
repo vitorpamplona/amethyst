@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -39,7 +40,9 @@ class JsonEngineSettingTest {
 
     @Test
     fun theStoredChoiceIsAppliedBeforeAnythingIsCollected() {
-        val scope = CoroutineScope(Dispatchers.Unconfined)
+        // A dispatcher that is never advanced: the collector never runs, so only the
+        // synchronous assignment in followJsonEngine can have set the engine.
+        val scope = CoroutineScope(StandardTestDispatcher())
         try {
             UiSettingsFlow.build(UiSettings(handWrittenJson = true)).followJsonEngine(scope)
             assertEquals(JsonEngine.HAND_WRITTEN, JsonEngine.current)
