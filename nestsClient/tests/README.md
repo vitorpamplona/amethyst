@@ -23,7 +23,7 @@ Run **both suites locally before merging** any change that touches:
 - `nestsClient/src/.../audio/` (capture, encoder/decoder, broadcaster, player)
 - `nestsClient/src/.../MoqLiteNestsSpeaker.kt` / `MoqLiteNestsListener.kt`
 - `nestsClient/src/.../ReconnectingNests*.kt`
-- `:quic` (WebTransport, packet header protection, key updates, stream demux)
+- a quic-kmp (`libs.quic`) version bump (WebTransport, packet header protection, key updates, stream demux)
 - The hang/browser sidecars themselves
 
 Skip if the change is documentation, UI-only, build-script-only, or otherwise

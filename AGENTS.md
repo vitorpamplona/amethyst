@@ -180,7 +180,7 @@ there rather than trusting a number copied here).
 | **UI** | Compose Multiplatform |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
-| **Serialization** | Jackson |
+| **Serialization** | kotlinx.serialization (Jackson only inside quartz's JVM code) |
 | **DI** | Manual / Koin |
 | **Build** | Gradle + Kotlin Multiplatform |
 

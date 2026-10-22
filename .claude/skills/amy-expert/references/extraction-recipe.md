@@ -64,7 +64,8 @@ Walk the imports. The usual offenders:
 
 ```bash
 # Target location depends on what it is:
-# - Protocol → quartz/src/commonMain/kotlin/…
+# - Protocol → a PR to vitorpamplona/quartz (quartz/src/commonMain/kotlin/… there),
+#   built here with -PquartzDir=../quartz until it ships; not a git mv in this repo
 # - Business logic → commons/src/commonMain/kotlin/…
 # - UI → commonsUI/src/commonMain/… (needs Compose Multiplatform; never used by amy)
 git mv amethyst/src/main/java/com/.../<ClassName>.kt \
