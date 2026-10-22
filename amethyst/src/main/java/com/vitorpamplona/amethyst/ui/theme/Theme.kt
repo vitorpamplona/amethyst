@@ -55,12 +55,20 @@ import com.vitorpamplona.amethyst.ui.components.FlavorTranslationPlatform
 import com.vitorpamplona.amethyst.ui.note.platform.AndroidNotePlatform
 import com.vitorpamplona.amethyst.ui.platform.AndroidAppPlatform
 import com.vitorpamplona.amethyst.ui.platform.AndroidAppServices
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
+/**
+ * The app theme. A null [accountPubKey] draws with the logged-in account's accent; a screen acting
+ * for one specific account (a signer request, a call) passes its pubkey to keep that account's color.
+ */
 @Composable
-fun AmethystTheme(content: @Composable () -> Unit) {
+fun AmethystTheme(
+    accountPubKey: HexKey? = null,
+    content: @Composable () -> Unit,
+) {
     val uiPrefs = Amethyst.instance.uiPrefs.value
     val theme by uiPrefs.theme.collectAsStateWithLifecycle()
-    val accentColor = collectAccentColor(Amethyst.instance.sessionManager, uiPrefs.accentColor)
+    val accentColor = collectAccentColor(Amethyst.instance.sessionManager, uiPrefs.accentColor, accountPubKey)
     val fontFamily by uiPrefs.fontFamily.collectAsStateWithLifecycle()
     val fontSize by uiPrefs.fontSize.collectAsStateWithLifecycle()
     val displaySettings = collectDisplaySettings(Amethyst.instance.uiState)

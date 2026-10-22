@@ -124,18 +124,17 @@ class SignerConsentActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AmethystTheme {
-                // The signer services requests concurrently, so more than one may await consent. We never
-                // mix accounts in one sheet: render only the requests for the OLDEST-pending account as a
-                // group. When that account's group clears, the next account's requests render (a fresh
-                // per-account sheet). One request → the rich dialog; several → a batched list. When the
-                // whole queue empties, close.
-                val pending by SignerConsentCoordinator.pending.collectAsStateWithLifecycle()
-                val group =
-                    run {
-                        val account = pending.firstOrNull()?.info?.accountPubKey
-                        pending.filter { it.info.accountPubKey == account }
-                    }
+            // The signer services requests concurrently, so more than one may await consent. We never
+            // mix accounts in one sheet: render only the requests for the OLDEST-pending account as a
+            // group. When that account's group clears, the next account's requests render (a fresh
+            // per-account sheet). One request → the rich dialog; several → a batched list. When the
+            // whole queue empties, close.
+            val pending by SignerConsentCoordinator.pending.collectAsStateWithLifecycle()
+            val groupAccount = pending.firstOrNull()?.info?.accountPubKey
+            val group = pending.filter { it.info.accountPubKey == groupAccount }
+
+            // The sheet wears the color of the account it signs for, which need not be the logged-in one.
+            AmethystTheme(accountPubKey = groupAccount) {
                 LaunchedEffect(pending.isEmpty()) { if (pending.isEmpty()) finish() }
                 when {
                     group.isEmpty() -> Unit

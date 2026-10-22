@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.account
 
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,20 +31,38 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 
 /**
- * The accent color the app should draw with: the logged-in account's own choice, or [appDefault]
- * (the app-wide setting) when it has none or nobody is logged in.
+ * The accent color the app should draw with: the account's own choice, or [appDefault] (the
+ * app-wide setting) when it has none or there is no account.
+ *
+ * A null [accountPubKey] means the logged-in account. A screen acting for one specific account
+ * (a signer request, a call) passes its pubkey, so it keeps that account's color even when the
+ * logged-in account is another one; an account that is not loaded gets [appDefault].
  */
-fun AccountSessionManager.currentAccentColor(appDefault: StateFlow<AccentColorType>): AccentColorType = loggedInAccount()?.settings?.accentColor?.value ?: appDefault.value
+fun AccountSessionManager.currentAccentColor(
+    appDefault: StateFlow<AccentColorType>,
+    accountPubKey: HexKey? = null,
+): AccentColorType = accountFor(accountPubKey)?.settings?.accentColor?.value ?: appDefault.value
 
 /** [currentAccentColor] as it changes: on login, logout, account switch, or either setting changing. */
 @OptIn(ExperimentalCoroutinesApi::class)
-fun AccountSessionManager.accentColorFlow(appDefault: StateFlow<AccentColorType>): Flow<AccentColorType> =
-    accountContent
-        .flatMapLatest { state ->
-            val accountAccent = (state as? AccountState.LoggedIn)?.account?.settings?.accentColor
-            if (accountAccent == null) {
-                appDefault
-            } else {
-                combine(accountAccent, appDefault) { mine, app -> mine ?: app }
-            }
-        }.distinctUntilChanged()
+fun AccountSessionManager.accentColorFlow(
+    appDefault: StateFlow<AccentColorType>,
+    accountPubKey: HexKey? = null,
+): Flow<AccentColorType> =
+    if (accountPubKey != null) {
+        accentColorFlow(accountsCache.loadedAccount(accountPubKey), appDefault)
+    } else {
+        accountContent.flatMapLatest { state ->
+            accentColorFlow((state as? AccountState.LoggedIn)?.account, appDefault)
+        }
+    }.distinctUntilChanged()
+
+private fun AccountSessionManager.accountFor(accountPubKey: HexKey?): Account? = if (accountPubKey != null) accountsCache.loadedAccount(accountPubKey) else loggedInAccount()
+
+private fun accentColorFlow(
+    account: Account?,
+    appDefault: StateFlow<AccentColorType>,
+): Flow<AccentColorType> {
+    val accountAccent = account?.settings?.accentColor ?: return appDefault
+    return combine(accountAccent, appDefault) { mine, app -> mine ?: app }
+}

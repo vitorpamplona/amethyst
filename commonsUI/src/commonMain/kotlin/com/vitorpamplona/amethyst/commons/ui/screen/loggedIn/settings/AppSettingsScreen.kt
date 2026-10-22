@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accent_color
 import com.vitorpamplona.amethyst.commons.resources.accent_color_account_description
+import com.vitorpamplona.amethyst.commons.resources.accent_color_default
 import com.vitorpamplona.amethyst.commons.resources.accent_color_description
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
@@ -436,10 +438,10 @@ private fun AccentColorTile(
     sharedPrefs: UiSettingsFlow,
     accountSettings: AccountSettings?,
 ) {
-    // Logged in, the pick belongs to the account; an account that never picked shows the app-wide one.
+    // Logged in, the pick belongs to the account. "Default" (null) follows the app-wide accent, and
+    // is what an account that never picked shows.
     val appAccent by sharedPrefs.accentColor.collectAsState()
     val accountAccent = accountSettings?.accentColor?.collectAsState()?.value
-    val accent = accountAccent ?: appAccent
     val dark = !MaterialTheme.colorScheme.isLight
 
     SettingsBlockTile(
@@ -457,11 +459,18 @@ private fun AccentColorTile(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (accountSettings != null) {
+                AccentColorDefaultSwatch(
+                    color = appAccent.previewColor(dark),
+                    selected = accountAccent == null,
+                    onClick = { accountSettings.updateAccentColor(null) },
+                )
+            }
             AccentColorType.entries.forEach { option ->
                 AccentColorSwatch(
                     color = option.previewColor(dark),
                     label = stringRes(option.resourceId),
-                    selected = option == accent,
+                    selected = if (accountSettings != null) option == accountAccent else option == appAccent,
                     onClick = {
                         if (accountSettings != null) {
                             accountSettings.updateAccentColor(option)
@@ -540,6 +549,48 @@ fun getLanguageIndex(
     }
     if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
     return languageIndex
+}
+
+// A pill in the app-wide accent, labelled, so it reads as "follow the default" rather than as a
+// seventh color that happens to match one of the swatches beside it.
+@Composable
+private fun AccentColorDefaultSwatch(
+    color: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val contentColor = contentColorOnAccent(color)
+    Row(
+        modifier =
+            Modifier
+                .height(36.dp)
+                .clip(CircleShape)
+                .background(color)
+                .then(
+                    if (selected) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
+                    } else {
+                        Modifier
+                    },
+                ).clickable(onClick = onClick)
+                .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (selected) {
+            Icon(
+                symbol = MaterialSymbols.Done,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        Text(
+            text = stringRes(Res.string.accent_color_default),
+            color = contentColor,
+            style = MaterialTheme.typography.labelLarge,
+        )
+    }
 }
 
 @Composable

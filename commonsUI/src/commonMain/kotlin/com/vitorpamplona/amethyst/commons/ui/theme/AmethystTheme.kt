@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.StateFlow
 
 // The accent color (primary/secondary/tertiary) is user-selectable in Settings -> Accent Color.
@@ -80,16 +81,18 @@ private fun accentSecondary(
 fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dark)
 
 /**
- * The accent the theme draws with: the logged-in account's own color, else the app-wide
- * [appDefault]. Starts on the current value, so an account's color shows from the first frame.
+ * The accent the theme draws with: the account's own color, else the app-wide [appDefault]. A null
+ * [accountPubKey] follows the logged-in account; a screen acting for one account passes its pubkey.
+ * Starts on the current value, so an account's color shows from the first frame.
  */
 @Composable
 fun collectAccentColor(
     sessionManager: AccountSessionManager,
     appDefault: StateFlow<AccentColorType>,
+    accountPubKey: HexKey? = null,
 ): AccentColorType {
-    val flow = remember(sessionManager, appDefault) { sessionManager.accentColorFlow(appDefault) }
-    return flow.collectAsState(sessionManager.currentAccentColor(appDefault)).value
+    val flow = remember(sessionManager, appDefault, accountPubKey) { sessionManager.accentColorFlow(appDefault, accountPubKey) }
+    return flow.collectAsState(sessionManager.currentAccentColor(appDefault, accountPubKey)).value
 }
 
 fun amethystDarkColors(accent: AccentColorType): ColorScheme =

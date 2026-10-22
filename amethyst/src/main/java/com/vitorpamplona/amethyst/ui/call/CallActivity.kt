@@ -138,7 +138,8 @@ class CallActivity : AppCompatActivity() {
         handleIntent(intent)
 
         setContent {
-            AmethystTheme {
+            // The call's account, not whichever account is logged in if the user switches mid-call.
+            AmethystTheme(accountPubKey = account.pubKey) {
                 // Pauses relay services when the app pauses
                 ManageRelayServices()
                 ManageWebOkHttp()
