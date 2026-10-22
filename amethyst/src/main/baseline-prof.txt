@@ -9,7 +9,7 @@
 # The cause was profile coverage: the shipped assets/dexopt/baseline.prof was
 # 11,425 bytes containing ZERO references to com/vitorpamplona — it was only
 # the androidx/Compose profiles AGP merges in automatically. None of the relay
-# client, decoder, LocalCache or Jackson paths were AOT-compiled on a fresh
+# client, decoder, LocalCache or JSON paths were AOT-compiled on a fresh
 # install, so they ran interpreted through exactly the burst that matters.
 #
 # Rules are wildcarded per package rather than per method because the ingest
@@ -55,10 +55,8 @@ HPLcom/vitorpamplona/amethyst/service/okhttp/**->**(**)**
 HPLcom/vitorpamplona/amethyst/commons/model/**->**(**)**
 HPLcom/vitorpamplona/amethyst/commons/richtext/**->**(**)**
 
-# --- JSON: every frame is parsed through Jackson ---
-HPLcom/fasterxml/jackson/core/**->**(**)**
-HPLcom/fasterxml/jackson/databind/**->**(**)**
-HPLcom/fasterxml/jackson/module/kotlin/**->**(**)**
+# --- JSON: every frame is parsed by Quartz's NostrJsonReader, covered by the
+# nip01Core rule above ---
 
 # --- Transport: the socket read path under the relay client ---
 HPLokhttp3/internal/ws/**->**(**)**

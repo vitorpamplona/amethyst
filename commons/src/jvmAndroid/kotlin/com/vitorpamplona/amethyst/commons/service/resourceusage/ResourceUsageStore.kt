@@ -30,7 +30,7 @@ import java.io.File
 /**
  * Durable daily buckets for the resource-usage ledger, one JSON file in the
  * app's private filesDir. Same persistence idiom as ScheduledPostStore:
- * Jackson + Mutex + write-to-tmp-then-rename + version envelope.
+ * kotlinx + Mutex + write-to-tmp-then-rename + version envelope.
  *
  * Day keys are UTC epoch-days (stringified for JSON). Buckets older than
  * [keepDays] are pruned on every merge, so the file stays small (a few KB, on a

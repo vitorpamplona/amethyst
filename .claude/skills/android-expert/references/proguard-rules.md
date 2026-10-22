@@ -68,15 +68,13 @@ What does **not** need a keep, and where the temptation usually comes from:
 # What makes a crash report retraceable.
 -keepattributes SourceFile,LineNumberTable
 
-# jackson-module-kotlin reads @kotlin.Metadata; R8 requires InnerClasses and
-# EnclosingMethod alongside Signature.
+# R8 requires InnerClasses and EnclosingMethod alongside Signature.
 -keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 ```
 
 `LocalVariableTable`, `LocalVariableTypeTable`, `MethodParameters` and
-`-keepparameternames` are debug metadata that nothing in the app reads —
-jackson-module-kotlin takes parameter names from `@kotlin.Metadata`, not from
-`MethodParameters`. They were removed; don't add them back.
+`-keepparameternames` are debug metadata that nothing in the app reads. They were
+removed; don't add them back.
 
 `-renamesourcefileattribute` is deliberately **not** set, and the reason is not
 the usual one.

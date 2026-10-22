@@ -602,8 +602,8 @@ actual class SecureKeyStorage private actual constructor() {
      * The [schemaVersion] field reserves room for future migrations. Values
      * are base64-encoded so alias/secret contents that contain quotes,
      * backslashes, control chars, or non-ASCII round-trip cleanly through the
-     * hand-rolled JSON codec (kept hand-rolled to avoid pulling Jackson into
-     * the keystorage module; Jackson lives in desktopApp / quartz).
+     * hand-rolled JSON codec (kept hand-rolled so the keystorage module needs no
+     * JSON library).
      */
     private fun encodeVault(map: Map<String, String>): String {
         val sb = StringBuilder("{\"schemaVersion\":1,\"entries\":{")

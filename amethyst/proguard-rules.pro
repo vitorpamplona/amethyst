@@ -13,7 +13,7 @@
 #     optimization. Hence 0% obfuscation / 13% optimization.
 #
 #  2. Anything the runtime reaches by NAME rather than by reference has to keep
-#     that name: JNI symbols, Jackson's reflective data binding, enum constants
+#     that name: JNI symbols, enum constants
 #     persisted into DataStore, class names written into a manifest meta-data
 #     value or into WorkManager's database.
 #
@@ -67,29 +67,17 @@
 #
 # Signature carries the generic type arguments R8 would otherwise erase.
 #
-# It is NOT enough to make `object : TypeReference<T>() {}` work under full mode
-# (android.enableR8.fullMode=true). Measured on device: JacksonMapper's <clinit>
-# built its JavaTypes through jacksonTypeRefOf() and threw
-#
-#   IllegalArgumentException: Internal error: TypeReference constructed without
-#   actual type information
-#
-# which poisons the class -- every later use is NoClassDefFoundError, so nothing
-# could be signed or sent. Keeping the anonymous subclasses did not help either
-# (tried -keep,allowobfuscation and a full -keep ... { *; }). The fix was to stop
-# asking Jackson to read the type back off the class: JacksonMapper now builds
-# those JavaTypes with TypeFactory.constructType/constructCollectionType/
-# constructParametricType, which take the Class objects directly.
-#
-# Anything else that still resolves a generic type reflectively is exposed the
-# same way -- notably JacksonMapper.fromJsonTo<T>, JsonMapperNip55 (NIP-55) and
-# the NIP-46 bunker path, which were not reachable in this test run.
+# It is NOT enough to make `object : TypeReference<T>() {}`-style reflection work
+# under full mode (android.enableR8.fullMode=true): Jackson's TypeReference threw
+# "TypeReference constructed without actual type information" on device, which is
+# part of why Quartz and the app no longer use Jackson. Nothing we ship resolves a
+# generic type reflectively now; a library that does needs more than this line.
 #
 # All three are ALSO in AGP's proguard-android-optimize.txt, which keeps
 # AnnotationDefault, EnclosingMethod, InnerClasses, Signature and the three
 # RuntimeVisible* annotation attributes. They stay spelled out here anyway: the
 # duplicate is free (measured at 0 bytes) and it means a change to AGP's default
-# file cannot quietly take Signature away from Jackson.
+# file cannot quietly take Signature away from a library that reads it.
 #
 # Two attributes this line used to carry are gone, both measured on the arm64
 # release DEX:
@@ -103,17 +91,11 @@
 #   * `Exceptions` — @Throws metadata for 31 methods in shipped code, read by
 #     Java-interop compilers and by nothing at runtime. Worth 692 bytes.
 #
-# For the record, since it was wrong here for a while: this line used to credit
-# jackson-module-kotlin with reading @kotlin.Metadata through it. That module no
-# longer ships, and the Jackson mixins it also named were deleted along with the
-# NWC Jackson path.
 -keepattributes Signature,InnerClasses,EnclosingMethod
 
 # LocalVariableTable, LocalVariableTypeTable, MethodParameters and
 # -keepparameternames used to be kept here as well. They are debug metadata:
-# nothing in the app reads them (jackson-module-kotlin takes parameter names
-# from @kotlin.Metadata, not from MethodParameters), and they are pure DEX
-# weight in a release build.
+# nothing in the app reads them, and they are pure DEX weight in a release build.
 
 -keepdirectories libs
 
@@ -159,7 +141,7 @@
 # An enum constant's NAME is persisted data in this app. The preference stores
 # write `enum.name` into DataStore and read it back with `Type.valueOf(string)`
 # (see model/preferences/UISharedPreferences.kt, TorSharedPreferences.kt,
-# NamecoinSharedPreferences.kt), and Jackson serialises enums by name too.
+# NamecoinSharedPreferences.kt).
 # Enum.valueOf resolves that string against the static FIELD name, so renaming
 # the constants would reset every user's theme/font/Tor/connectivity setting on
 # the first launch after an update.
@@ -176,24 +158,16 @@
 }
 
 # -----------------------------------------------------------------------------
-# Jackson — reflective data binding only
+# JSON — no keeps
 # -----------------------------------------------------------------------------
-# Most of Quartz's wire format does NOT need a keep. Event, Filter, Message,
-# Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker messages and the
-# NIP-55 intent results all go through hand-written StdSerializer/StdDeserializer
-# pairs registered on JacksonMapper / JsonMapperNip55, which read and write
-# property names as string literals. Renaming their fields changes nothing on
-# the wire.
+# Nothing ships Jackson any more. Quartz reads and writes Nostr JSON (events,
+# filters, relay messages and commands, NIP-46, NIP-55) with its own
+# NostrJsonReader/NostrJsonWriter/Nip55Json, and everything else is kotlinx.
+# Both name every JSON key as a string literal, so renaming a field changes
+# nothing on the wire.
 #
-# What remains is the code Jackson data-binds REFLECTIVELY — `treeToValue(...)`
-# and `readValue<T>()` with no custom deserializer. There the JSON property
-# names come from the Kotlin constructor parameter names, so a renamed field is
-# a changed wire format.
-
 # NIP-47 and CLINK used to need a package keep each, because Jackson bound their
-# ~106 concrete classes reflectively. Both are gone: OptimizedJsonMapper routes
-# those types at the hand-written kotlinx serializers, which name every field as a
-# string literal. Nothing to keep, nothing to verify.
+# ~106 concrete classes reflectively. They go through kotlinx serializers now.
 
 # The on-disk stores (scheduled posts, pending PoW jobs, resource usage) used to
 # need a keep each, because Jackson derived their JSON keys from the Kotlin

@@ -193,7 +193,7 @@ compose.desktop {
                 "java.instrument",   // Runtime instrumentation (agent/profiler hooks)
                 "java.management",   // Required by kmp-tor TorRuntime
                 "java.prefs",        // java.util.prefs (desktop persistence)
-                "java.sql",          // JDBC metadata (Jackson, SQLite driver)
+                "java.sql",          // JDBC metadata (SQLite driver)
                 "jdk.security.auth", // JAAS authentication callbacks
                 "jdk.unsupported",   // sun.misc.Unsafe (secp256k1-kmp-jni-jvm, JNA)
                 "jdk.localedata",    // CLDR data for the shared app's date and number formatters
@@ -284,7 +284,7 @@ compose.desktop {
         // rules (see `amethyst/proguard-rules.pro`). We mirror that strategy in
         // `compose-rules.pro` so the desktop release survives JNI callbacks
         // (secp256k1-kmp, sqlite-bundled, jkeychain, kdroidFilter native)
-        // and reflection-heavy libraries (Jackson, JNA) without renaming.
+        // and reflection-heavy libraries (JNA) without renaming.
         //
         // Shrink and optimize stay ON. One ProGuard optimize sub-pass is
         // disabled in `compose-rules.pro` to avoid a generated okio bridge

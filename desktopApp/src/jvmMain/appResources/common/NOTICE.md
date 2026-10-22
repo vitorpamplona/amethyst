@@ -39,8 +39,7 @@ The distributed binary includes the following third-party components:
 ## Other Apache-2.0 / MIT transitive dependencies
 
 Compose Multiplatform (JetBrains, Apache-2.0), Kotlin stdlib (JetBrains,
-Apache-2.0), OkHttp (Square, Apache-2.0), Jackson (FasterXML, Apache-2.0),
-Coil (Apache-2.0), kmp-tor (MIT), and others, plus the bundled OpenJDK
+Apache-2.0), OkHttp (Square, Apache-2.0), Coil (Apache-2.0), kmp-tor (MIT), and others, plus the bundled OpenJDK
 runtime (GPLv2 + Classpath Exception). Their license texts are reproduced
 under `licenses/` alongside this NOTICE.
 

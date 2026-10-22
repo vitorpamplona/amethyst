@@ -25,7 +25,7 @@ local checkout instead (an included build, so quic's own quartz dependency follo
 | Source set | Holds | Targets |
 |---|---|---|
 | `commonMain` | Pure Kotlin. Compiled for iOS/native too, so no JVM APIs | all |
-| `jvmAndroid` | JVM libraries shared by Android + Desktop: Jackson (`jackson.databind`), OkHttp | android, jvm |
+| `jvmAndroid` | JVM libraries shared by Android + Desktop: OkHttp | android, jvm |
 | `androidMain` / `jvmMain` | Platform actuals (Keystore/DataStore vs keyring, Coil bridges) | one each |
 | `iosMain`, `appleMain`, `nativeMain`, `linuxMain`, `macosMain` | quartz only (plus `iosMain` in commons/commonsUI) | Apple / native |
 | `skikoMain` | commonsUI code shared by Desktop and iOS | jvm, ios |
@@ -39,9 +39,10 @@ no `iosX64`.
 before `androidMain`/`jvmMain` depend on it (see `quartz/build.gradle.kts`).
 Prefer the most common set that compiles: `commonMain` → `jvmAndroid` → platform.
 
-Jackson and OkHttp are the house JSON and HTTP stack (`AGENTS.md` › Tech Stack).
-Don't migrate JVM code to kotlinx.serialization or Ktor. They are only banned in
-iOS-compiled sets, which the purity gate enforces.
+kotlinx.serialization and OkHttp are the house JSON and HTTP stack (`AGENTS.md` ›
+Tech Stack); Nostr JSON goes through Quartz's own reader and writer. Jackson is gone
+from every module: don't add it back. OkHttp is banned in iOS-compiled sets, which
+the purity gate enforces.
 
 ## expect/actual vs ports and slots
 
