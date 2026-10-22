@@ -588,6 +588,8 @@ sealed class Route {
 
     @Serializable object AudioVisualizerSettings : Route()
 
+    @Serializable object AccentColorSettings : Route()
+
     @Serializable object BottomBarSettings : Route()
 
     @Serializable object DrawerSettings : Route()

@@ -165,7 +165,7 @@ class NestActivity : AppCompatActivity() {
             packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
 
         setContent {
-            AmethystTheme {
+            AmethystTheme(accountPubKey = accountViewModel.account.pubKey) {
                 // Pauses relay services when the app pauses
                 ManageRelayServices()
                 ManageWebOkHttp()

@@ -31,12 +31,16 @@ import androidx.compose.material3.RippleDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Density
+import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.account.accentColorFlow
+import com.vitorpamplona.amethyst.commons.account.currentAccentColor
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbolsDefaults
 import com.vitorpamplona.amethyst.commons.icons.symbols.ProvideAppIcons
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
@@ -47,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalAnimationsEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalProfilePictureCache
 import com.vitorpamplona.amethyst.commons.ui.screen.DisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import kotlinx.coroutines.flow.StateFlow
 
 // The accent color (primary/secondary/tertiary) is user-selectable in Settings -> Accent Color.
 // Purple keeps the original Amethyst look (purple primary + teal secondary). Every other accent
@@ -73,6 +79,21 @@ private fun accentSecondary(
 // same primary the theme would apply for the given light/dark mode, so the swatch previews the
 // real result.
 fun AccentColorType.previewColor(dark: Boolean): Color = accentPrimary(this, dark)
+
+/**
+ * The accent the theme draws with: the account's own color, else the app-wide [appDefault]. A null
+ * [accountPubKey] follows the logged-in account; a screen acting for one account passes its pubkey.
+ * Starts on the current value, so an account's color shows from the first frame.
+ */
+@Composable
+fun collectAccentColor(
+    sessionManager: AccountSessionManager,
+    appDefault: StateFlow<AccentColorType>,
+    accountPubKey: HexKey? = null,
+): AccentColorType {
+    val flow = remember(sessionManager, appDefault, accountPubKey) { sessionManager.accentColorFlow(appDefault, accountPubKey) }
+    return flow.collectAsState(sessionManager.currentAccentColor(appDefault, accountPubKey)).value
+}
 
 fun amethystDarkColors(accent: AccentColorType): ColorScheme =
     amethystDarkColorScheme(

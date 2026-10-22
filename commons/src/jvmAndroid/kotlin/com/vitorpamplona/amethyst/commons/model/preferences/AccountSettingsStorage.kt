@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.preferences
 import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinition
 import com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer
+import com.vitorpamplona.amethyst.commons.model.AccentColorType
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.amethyst.commons.model.backups.BackupConflictStorage
@@ -184,6 +185,7 @@ class AccountSettingsStores(
                         .ifEmpty { null }
                         ?.let { FeedDefinitionSerializer.serializeList(it) },
                 deckLayoutJson = settings.deck.value.toJson(),
+                accentColor = settings.accentColor.value?.name,
             ),
         )
         notificationPrefs(npub).save(
@@ -568,6 +570,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             customFeeds = MutableStateFlow(inboxPrefs.customFeeds),
             deck = MutableStateFlow(inboxPrefs.deck),
             concordViewMode = MutableStateFlow(inboxPrefs.concordViewMode),
+            accentColor = MutableStateFlow(inboxPrefs.accentColor),
             enabledChatFeeds = MutableStateFlow(inboxPrefs.enabledChatFeeds),
             enabledHomeFeedTypes = MutableStateFlow(inboxPrefs.enabledHomeFeedTypes),
             relayAuthTrustMyRelaysAndVenues = MutableStateFlow(inboxPrefs.relayAuthTrustMyRelays),
@@ -746,6 +749,7 @@ private class InboxPrefs(
     val relayAuthTrustMessageStrangers: Boolean,
     val customFeeds: List<FeedDefinition>,
     val deck: DeckLayout,
+    val accentColor: AccentColorType?,
 )
 
 private fun readInboxPrefs(
@@ -768,4 +772,5 @@ private fun readInboxPrefs(
     relayAuthTrustMessageStrangers = relayAuth.trustMessageStrangers,
     customFeeds = feedVisibility.customFeedsJson?.let { FeedDefinitionSerializer.deserializeList(it) }.orEmpty(),
     deck = feedVisibility.deckLayoutJson?.let { DeckLayout.fromJson(it) } ?: DeckLayout(),
+    accentColor = feedVisibility.accentColor?.let { name -> AccentColorType.entries.firstOrNull { it.name == name } },
 )

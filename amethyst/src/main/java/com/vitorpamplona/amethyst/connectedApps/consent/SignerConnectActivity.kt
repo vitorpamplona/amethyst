@@ -95,7 +95,8 @@ class SignerConnectActivity : ComponentActivity() {
         }
 
         setContent {
-            AmethystTheme {
+            // The account the app asks to connect to, which need not be the logged-in one.
+            AmethystTheme(accountPubKey = info.accountPubKey) {
                 SignerConnectScreen(
                     info = info,
                     onConnect = { policy ->

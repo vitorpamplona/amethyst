@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
+import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
@@ -347,7 +348,7 @@ private fun DesktopTheme(
 ) {
     val prefs = modules.uiPrefs
     val theme by prefs.theme.collectAsState()
-    val accentColor by prefs.accentColor.collectAsState()
+    val accentColor = collectAccentColor(modules.sessionManager, prefs.accentColor)
     val fontFamily by prefs.fontFamily.collectAsState()
     val fontSize by prefs.fontSize.collectAsState()
     val displaySettings = collectDisplaySettings(modules.uiState)

@@ -158,6 +158,20 @@ class AccountSettingStoresTest {
             assertEquals(true, loaded.callsEnabled)
         }
 
+    /** No stored accent means the account follows the app-wide one; a pick survives a reload and can be cleared. */
+    @Test
+    fun feedVisibilityAccentColorRoundTrip() =
+        runTest {
+            val store = FeedVisibilityStore(raw())
+            assertNull(store.load().accentColor)
+
+            store.save(FeedVisibility(accentColor = "GREEN"))
+            assertEquals("GREEN", store.load().accentColor)
+
+            store.save(FeedVisibility(accentColor = null))
+            assertNull(store.load().accentColor)
+        }
+
     @Test
     fun notificationPrefsDefaults() =
         runTest {

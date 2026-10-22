@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.first
 import okio.IOException
 
 /**
- * Which feeds this account shows and how they are laid out.
+ * Which feeds this account shows, how they are laid out, and the account's accent color.
 
  * The two "disabled" keys store what is switched OFF, not what is on, so an
  * absent value means everything is enabled and a feed type added later defaults
@@ -51,6 +51,8 @@ data class FeedVisibility(
     val customFeedsJson: String? = null,
     /** The deck's workspaces and columns, as [com.vitorpamplona.amethyst.commons.model.deck.DeckLayout] JSON. */
     val deckLayoutJson: String? = null,
+    /** The [com.vitorpamplona.amethyst.commons.model.AccentColorType] name; null follows the app-wide accent. */
+    val accentColor: String? = null,
 )
 
 /** Reads and writes [FeedVisibility] in the account's DataStore. */
@@ -65,6 +67,7 @@ class FeedVisibilityStore(
         val callsEnabled = booleanPreferencesKey("calls_enabled")
         val customFeedsJson = stringPreferencesKey("custom_feeds")
         val deckLayoutJson = stringPreferencesKey("deck_layout")
+        val accentColor = stringPreferencesKey("accent_color")
 
         /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
         val legacyTable =
@@ -94,6 +97,7 @@ class FeedVisibilityStore(
             callsEnabled = prefs[callsEnabled] ?: true,
             customFeedsJson = prefs[customFeedsJson],
             deckLayoutJson = prefs[deckLayoutJson],
+            accentColor = prefs[accentColor],
         )
     }
 
@@ -107,6 +111,7 @@ class FeedVisibilityStore(
             prefs[callsEnabled] = value.callsEnabled
             value.customFeedsJson.let { if (it != null) prefs[customFeedsJson] = it else prefs.remove(customFeedsJson) }
             value.deckLayoutJson.let { if (it != null) prefs[deckLayoutJson] = it else prefs.remove(deckLayoutJson) }
+            value.accentColor.let { if (it != null) prefs[accentColor] = it else prefs.remove(accentColor) }
         }
     }
 }
