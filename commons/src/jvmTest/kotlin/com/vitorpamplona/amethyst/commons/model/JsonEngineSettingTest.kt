@@ -44,8 +44,8 @@ class JsonEngineSettingTest {
         // synchronous assignment in followJsonEngine can have set the engine.
         val scope = CoroutineScope(StandardTestDispatcher())
         try {
-            UiSettingsFlow.build(UiSettings(handWrittenJson = true)).followJsonEngine(scope)
-            assertEquals(JsonEngine.HAND_WRITTEN, JsonEngine.current)
+            UiSettingsFlow.build(UiSettings(kiteJson = true)).followJsonEngine(scope)
+            assertEquals(JsonEngine.KITE, JsonEngine.current)
         } finally {
             scope.cancel()
         }
@@ -60,10 +60,10 @@ class JsonEngineSettingTest {
                 settings.followJsonEngine(scope)
                 assertEquals(JsonEngine.DEFAULT, JsonEngine.current)
 
-                settings.handWrittenJson.tryEmit(true)
-                waitFor(JsonEngine.HAND_WRITTEN)
+                settings.kiteJson.tryEmit(true)
+                waitFor(JsonEngine.KITE)
 
-                settings.handWrittenJson.tryEmit(false)
+                settings.kiteJson.tryEmit(false)
                 waitFor(JsonEngine.DEFAULT)
             } finally {
                 scope.cancel()

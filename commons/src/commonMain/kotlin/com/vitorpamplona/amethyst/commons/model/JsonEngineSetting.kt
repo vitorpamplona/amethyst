@@ -27,13 +27,13 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 /**
- * Points Quartz's process-wide [JsonEngine] at the "hand-written JSON" developer setting:
+ * Points Quartz's process-wide [JsonEngine] at the "Kite JSON engine" developer setting:
  * once right away, so the first relay frames after launch already use the chosen engine, then
  * on every change. Quartz reads the flag on each call, so a change applies to the next parse.
  */
 fun UiSettingsFlow.followJsonEngine(scope: CoroutineScope): Job {
-    JsonEngine.current = jsonEngineFor(handWrittenJson.value)
-    return handWrittenJson.onEach { JsonEngine.current = jsonEngineFor(it) }.launchIn(scope)
+    JsonEngine.current = jsonEngineFor(kiteJson.value)
+    return kiteJson.onEach { JsonEngine.current = jsonEngineFor(it) }.launchIn(scope)
 }
 
-fun jsonEngineFor(handWritten: Boolean): JsonEngine = if (handWritten) JsonEngine.HAND_WRITTEN else JsonEngine.DEFAULT
+fun jsonEngineFor(kite: Boolean): JsonEngine = if (kite) JsonEngine.KITE else JsonEngine.DEFAULT

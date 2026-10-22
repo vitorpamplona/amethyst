@@ -48,12 +48,12 @@ import com.vitorpamplona.amethyst.commons.resources.devtools_console_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_event_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_explainer
-import com.vitorpamplona.amethyst.commons.resources.devtools_hand_written_json_desc
-import com.vitorpamplona.amethyst.commons.resources.devtools_hand_written_json_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_title
+import com.vitorpamplona.amethyst.commons.resources.devtools_kite_json_desc
+import com.vitorpamplona.amethyst.commons.resources.devtools_kite_json_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_section_data
@@ -129,21 +129,21 @@ fun DevToolsHubScreen(
             }
 
             SettingsSection(Res.string.devtools_section_experimental) {
-                HandWrittenJsonTile(uiSettings)
+                KiteJsonTile(uiSettings)
             }
         }
     }
 }
 
 @Composable
-private fun HandWrittenJsonTile(uiSettings: UiSettingsFlow) {
-    val handWritten by uiSettings.handWrittenJson.collectAsState()
+private fun KiteJsonTile(uiSettings: UiSettingsFlow) {
+    val kite by uiSettings.kiteJson.collectAsState()
     SettingsSwitchTile(
         icon = MaterialSymbols.Science,
-        title = Res.string.devtools_hand_written_json_title,
-        description = Res.string.devtools_hand_written_json_desc,
-        checked = handWritten,
-        onCheckedChange = { uiSettings.handWrittenJson.tryEmit(it) },
+        title = Res.string.devtools_kite_json_title,
+        description = Res.string.devtools_kite_json_desc,
+        checked = kite,
+        onCheckedChange = { uiSettings.kiteJson.tryEmit(it) },
     )
 }
 

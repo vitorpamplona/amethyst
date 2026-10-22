@@ -87,7 +87,7 @@ class UiSharedPreferences(
                 prefs.theme,
             )
 
-    /** Applies the "hand-written JSON" developer setting to Quartz, now and on every change. */
+    /** Applies the "Kite JSON engine" developer setting to Quartz, now and on every change. */
     val jsonEngineUpdate = value.followJsonEngine(scope)
 
     /**

@@ -190,7 +190,7 @@ class DesktopAppModules(
     val uiPrefs: UiSettingsFlow =
         UiSettingsFlow.build(runBlocking { UiSettingsStore(sharedSettingsStore).load() } ?: UiSettingsFlow().toSettings())
 
-    /** Applies the "hand-written JSON" developer setting to Quartz, now and on every change. */
+    /** Applies the "Kite JSON engine" developer setting to Quartz, now and on every change. */
     private val jsonEngineUpdate = uiPrefs.followJsonEngine(applicationIOScope)
 
     @OptIn(FlowPreview::class)

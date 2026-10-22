@@ -96,7 +96,7 @@ class UiSettingsStoreTest {
             assertFalse(settings.dontShowPushNotificationSelector)
             assertFalse(settings.dontAskForNotificationPermissions)
             assertFalse(settings.dontShowOnchainPublicWarning)
-            assertFalse(settings.handWrittenJson)
+            assertFalse(settings.kiteJson)
         }
 
     /**
@@ -142,7 +142,7 @@ class UiSettingsStoreTest {
                     showOnchainWallet = false,
                     showPayToZapChip = false,
                     spellCheck = SpellCheckType.BUILT_IN,
-                    handWrittenJson = true,
+                    kiteJson = true,
                 )
 
             store.save(settings)
