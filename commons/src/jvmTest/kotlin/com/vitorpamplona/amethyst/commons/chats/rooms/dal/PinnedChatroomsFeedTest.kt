@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.chats
+package com.vitorpamplona.amethyst.commons.chats.rooms.dal
 
-import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListKnownFeedFilter
-import com.vitorpamplona.amethyst.commons.chats.rooms.dal.ChatroomListNewFeedFilter
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountChatPreferences
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -35,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip37Drafts.DraftEventCache
+import com.vitorpamplona.quartz.nip37Drafts.DraftWrapEvent
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -75,6 +75,14 @@ class PinnedChatroomsFeedTest {
 
     private val toggles by lazy { ChatFeedToggles(settings, chatroomList, draftRumor = { null }, findCachedNotes = { emptyList() }, reindexDraft = {}) }
 
+    // Draft wrap -> its rumor, standing in for the drafts decryption cache.
+    private val draftRumors = HashMap<DraftWrapEvent, ChatMessageEvent>()
+
+    private val draftCache =
+        mockk<DraftEventCache>().also {
+            every { it.preCachedDraft(any()) } answers { draftRumors[firstArg()] }
+        }
+
     private fun user(hex: HexKey) = mockk<User>(relaxed = true).also { every { it.pubkeyHex } returns hex }
 
     private val account =
@@ -84,6 +92,7 @@ class PinnedChatroomsFeedTest {
             every { it.chatroomList } returns chatroomList
             every { it.settings } returns settings
             every { it.chatFeedToggles } returns toggles
+            every { it.draftsDecryptionCache } returns draftCache
             every { it.isAllHidden(any()) } answers { firstArg<Set<HexKey>>().all { key -> key == hidden } }
             // The real Known rule (pins included), with no Web of Trust network.
             every { it.isKnownChatroom(any(), any(), any()) } answers { callOriginal() }
@@ -103,6 +112,20 @@ class PinnedChatroomsFeedTest {
         return Note(event.id).also {
             it.loadEvent(event, user(author), emptyList())
             chatroomList.add(event, it)
+        }
+    }
+
+    // An unsent draft is indexed into its room as the wrap's Note, so it can be the room's newest entry.
+    private fun draftTo(
+        to: HexKey,
+        createdAt: Long,
+    ): Note {
+        val rumor = ChatMessageEvent(createdAt.toString().padStart(64, '2'), me, createdAt, arrayOf(arrayOf("p", to)), "draft", sig)
+        val wrap = DraftWrapEvent(createdAt.toString().padStart(64, '3'), me, createdAt, arrayOf(arrayOf("d", "draft-$to")), "enc", sig)
+        draftRumors[wrap] = rumor
+        return Note(wrap.id).also {
+            it.loadEvent(wrap, user(me), emptyList())
+            chatroomList.add(rumor, it)
         }
     }
 
@@ -146,6 +169,40 @@ class PinnedChatroomsFeedTest {
         assertEquals(2, feed.size)
         assertTrue(feed[0] is PinnedChatroomNote)
         assertSame(mine, feed[1])
+    }
+
+    // The row draws a draft by its rumor, pin badge included, so the sort must see the same room.
+    @Test
+    fun pinnedRoomWhoseNewestEntryIsADraftSortsOnTop() {
+        messageFrom(quiet, 1_000)
+        val draft = draftTo(quiet, 2_000)
+        val newer = messageFrom(me, 3_000, to = stranger)
+        pin(quietRoom)
+
+        assertEquals(listOf(draft, newer), ChatroomListKnownFeedFilter(account).feed())
+    }
+
+    // The rumor cache is an LRU: an evicted draft must not flip its row back to unpinned.
+    @Test
+    fun pinnedDraftRowStaysOnTopAfterItsRumorIsEvicted() {
+        messageFrom(quiet, 1_000)
+        val draft = draftTo(quiet, 2_000)
+        val newer = messageFrom(me, 3_000, to = stranger)
+        pin(quietRoom)
+        draftRumors.clear()
+
+        assertEquals(listOf(draft, newer), ChatroomListKnownFeedFilter(account).feed())
+    }
+
+    @Test
+    fun arrivingMessageReplacesTheDraftRow() {
+        messageFrom(quiet, 1_000)
+        draftTo(quiet, 2_000)
+        val filter = ChatroomListKnownFeedFilter(account)
+        val old = filter.feed()
+
+        val msg = messageFrom(quiet, 3_000)
+        assertEquals(listOf(msg), filter.updateListWith(old, filter.applyFilter(setOf(msg))))
     }
 
     @Test
