@@ -90,7 +90,7 @@ class AppSpecificState(
     suspend fun saveNewAppSpecificData(): AppSpecificDataEvent {
         val (toInternal, createdAt) =
             stampOrder.withLock {
-                val snapshot = settings.syncedSettings.toInternal(settings.mutedPublicChats.value)
+                val snapshot = settings.toSyncedSettingsInternal()
                 val stamp = awaitCreatedAtToSupersede(maxOf(lastPublishedAt, amethystSettingsNote.event?.createdAt ?: 0L))
                 lastPublishedAt = stamp
                 snapshot to stamp

@@ -157,6 +157,75 @@ class AccountSyncedSettingsInternal(
     val chats: AccountChatPreferencesInternal = AccountChatPreferencesInternal(),
     val proofOfWork: AccountPoWPreferencesInternal = AccountPoWPreferencesInternal(),
     val navigation: AccountNavigationPreferencesInternal = AccountNavigationPreferencesInternal(),
+    // The groups below came later and live in AccountSettings rather than AccountSyncedSettings.
+    // Each is nullable so that a blob without it (one an older version wrote) reads as "this
+    // version did not know", and the device keeps its own values instead of resetting them to
+    // defaults. Enum-like values are stored as names or codes and unknown ones are dropped on
+    // read, so a newer version's value cannot fail the whole blob's decode.
+    var appearance: AccountAppearancePreferencesInternal? = null,
+    var messages: AccountMessagesPreferencesInternal? = null,
+    var feeds: AccountFeedPreferencesInternal? = null,
+    var relayAuth: AccountRelayAuthPreferencesInternal? = null,
+    var uploads: AccountUploadPreferencesInternal? = null,
+    var calls: AccountCallPreferencesInternal? = null,
+)
+
+@Serializable
+class AccountAppearancePreferencesInternal(
+    /** An [AccentColorType] name, or null to follow the application accent color. */
+    val accentColor: String? = null,
+)
+
+@Serializable
+class AccountMessagesPreferencesInternal(
+    /** A [com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode] name. */
+    val relayGroupViewMode: String? = null,
+    /** A [com.vitorpamplona.amethyst.commons.model.concord.ConcordViewMode] name. */
+    val concordViewMode: String? = null,
+    /** The chat feeds switched OFF, as [com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType.encode] codes, so a new feed type defaults to on. */
+    val disabledChatFeeds: String = "",
+)
+
+@Serializable
+class AccountFeedPreferencesInternal(
+    /** The home tabs switched OFF, as [HomeFeedType.encode] codes, so a new tab defaults to on. */
+    val disabledHomeFeedTypes: String = "",
+    /** Each screen's selected filter: [com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot] name to TopFilter JSON. */
+    val feedFilters: Map<String, String> = emptyMap(),
+    /** The feeds the user built, as [com.vitorpamplona.amethyst.commons.feeds.custom.FeedDefinitionSerializer] JSON. */
+    val customFeeds: String = "",
+    val hideCommunityRulesViolations: Boolean = false,
+)
+
+@Serializable
+class AccountRelayAuthPreferencesInternal(
+    /** A [com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy] name. */
+    val policy: String? = null,
+    val trustMyRelaysAndVenues: Boolean = true,
+    val trustReadFollows: Boolean = true,
+    val trustMessageFollows: Boolean = true,
+    val trustMessageStrangers: Boolean = false,
+)
+
+@Serializable
+class AccountUploadPreferencesInternal(
+    val defaultFileServer: SyncedFileServer? = null,
+    val stripLocation: Boolean = true,
+    val mirrorToAllServers: Boolean = true,
+    val optimizeMedia: Boolean = false,
+)
+
+/** A [com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName] with its type as a name, so an unknown type drops this value only. */
+@Serializable
+class SyncedFileServer(
+    val name: String,
+    val baseUrl: String,
+    val type: String,
+)
+
+@Serializable
+class AccountCallPreferencesInternal(
+    val callsEnabled: Boolean = true,
 )
 
 @Serializable

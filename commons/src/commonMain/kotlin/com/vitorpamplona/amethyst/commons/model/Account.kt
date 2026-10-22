@@ -4564,6 +4564,26 @@ class Account(
             }
         }
 
+        // The NIP-78 settings that live in AccountSettings publish on their own, so their many
+        // setters (and the screens calling them) need no Account wrapper: a second after the last
+        // change, or 30 s for top-bar feed filters. One wait serves both, so a feed switch never
+        // holds back a setting changed just before it, and a pending feed switch rides along with
+        // the next publish. See syncedSettingsPublishes. The publish runs on its own so a new
+        // change cannot cancel it halfway through a remote signer's round trip.
+        scope.launch(Dispatchers.IO) {
+            syncedSettingsPublishes(settings.syncedChanges, settings.slowSyncedChanges).collect {
+                if (!settings.isWriteable()) return@collect
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        sendNewAppSpecificData()
+                    } catch (e: Exception) {
+                        if (e is CancellationException) throw e
+                        Log.w("Account", "Could not publish the synced settings", e)
+                    }
+                }
+            }
+        }
+
         scope.launch(Dispatchers.IO) {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {
