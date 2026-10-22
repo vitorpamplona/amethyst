@@ -41,7 +41,6 @@ import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.MemoryTrimmingService
-import com.vitorpamplona.amethyst.commons.model.followJsonEngine
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -189,9 +188,6 @@ class DesktopAppModules(
     /** The UI preferences, read before the first frame so the theme and language do not blink. */
     val uiPrefs: UiSettingsFlow =
         UiSettingsFlow.build(runBlocking { UiSettingsStore(sharedSettingsStore).load() } ?: UiSettingsFlow().toSettings())
-
-    /** Applies the "Kite JSON engine" developer setting to Quartz, now and on every change. */
-    private val jsonEngineUpdate = uiPrefs.followJsonEngine(applicationIOScope)
 
     @OptIn(FlowPreview::class)
     private val uiPrefsSaving =

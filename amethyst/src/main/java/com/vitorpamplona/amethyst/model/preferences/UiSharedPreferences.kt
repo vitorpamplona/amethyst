@@ -32,7 +32,6 @@ import androidx.datastore.preferences.core.Preferences
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettings
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
-import com.vitorpamplona.amethyst.commons.model.followJsonEngine
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -86,9 +85,6 @@ class UiSharedPreferences(
                 SharingStarted.Eagerly,
                 prefs.theme,
             )
-
-    /** Applies the "Kite JSON engine" developer setting to Quartz, now and on every change. */
-    val jsonEngineUpdate = value.followJsonEngine(scope)
 
     /**
      * Mirrors the in-app theme choice into the system's *per-application* night mode, so the

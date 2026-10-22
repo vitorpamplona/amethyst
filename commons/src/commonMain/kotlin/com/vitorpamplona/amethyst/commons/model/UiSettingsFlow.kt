@@ -61,7 +61,6 @@ class UiSettingsFlow(
     val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
     val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val spellCheck: MutableStateFlow<SpellCheckType> = MutableStateFlow(SpellCheckType.AUTOMATIC),
-    val kiteJson: MutableStateFlow<Boolean> = MutableStateFlow(false),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -98,7 +97,6 @@ class UiSettingsFlow(
             searchEngine,
             deckMode,
             spellCheck,
-            kiteJson,
         )
 
     // emits at every change in any of the propertyes.
@@ -139,7 +137,6 @@ class UiSettingsFlow(
                 flows[30] as String,
                 flows[31] as Boolean,
                 flows[32] as SpellCheckType,
-                flows[33] as Boolean,
             )
         }
 
@@ -178,7 +175,6 @@ class UiSettingsFlow(
             searchEngine.value,
             deckMode.value,
             spellCheck.value,
-            kiteJson.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -316,10 +312,6 @@ class UiSettingsFlow(
             spellCheck.tryEmit(torSettings.spellCheck)
             any = true
         }
-        if (kiteJson.value != torSettings.kiteJson) {
-            kiteJson.tryEmit(torSettings.kiteJson)
-            any = true
-        }
 
         return any
     }
@@ -378,7 +370,6 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.searchEngine),
                 MutableStateFlow(uiSettings.deckMode),
                 MutableStateFlow(uiSettings.spellCheck),
-                MutableStateFlow(uiSettings.kiteJson),
             )
     }
 }

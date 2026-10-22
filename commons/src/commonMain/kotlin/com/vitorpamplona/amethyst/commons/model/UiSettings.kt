@@ -71,8 +71,6 @@ data class UiSettings(
     val deckMode: Boolean = false,
     // Which engine underlines misspellings in the composers, on platforms that offer one (desktop).
     val spellCheck: SpellCheckType = SpellCheckType.AUTOMATIC,
-    // Developer setting: read and write Nostr JSON with Kite, Quartz's own engine, instead of Jackson. Off by default.
-    val kiteJson: Boolean = false,
 )
 
 /**

@@ -30,15 +30,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.active_subs_title
@@ -52,12 +49,9 @@ import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_title
-import com.vitorpamplona.amethyst.commons.resources.devtools_kite_json_desc
-import com.vitorpamplona.amethyst.commons.resources.devtools_kite_json_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_section_data
-import com.vitorpamplona.amethyst.commons.resources.devtools_section_experimental
 import com.vitorpamplona.amethyst.commons.resources.devtools_section_network
 import com.vitorpamplona.amethyst.commons.resources.devtools_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -66,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsControlRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDivider
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSwitchTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import org.jetbrains.compose.resources.StringResource
@@ -78,10 +71,7 @@ import org.jetbrains.compose.resources.StringResource
  * subscriptions) are linked here too, so a developer finds everything in one place.
  */
 @Composable
-fun DevToolsHubScreen(
-    uiSettings: UiSettingsFlow,
-    nav: INav,
-) {
+fun DevToolsHubScreen(nav: INav) {
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_title), nav) },
     ) { padding ->
@@ -127,24 +117,8 @@ fun DevToolsHubScreen(
                     nav.nav(Route.ActiveSubscriptions)
                 }
             }
-
-            SettingsSection(Res.string.devtools_section_experimental) {
-                KiteJsonTile(uiSettings)
-            }
         }
     }
-}
-
-@Composable
-private fun KiteJsonTile(uiSettings: UiSettingsFlow) {
-    val kite by uiSettings.kiteJson.collectAsState()
-    SettingsSwitchTile(
-        icon = MaterialSymbols.Science,
-        title = Res.string.devtools_kite_json_title,
-        description = Res.string.devtools_kite_json_desc,
-        checked = kite,
-        onCheckedChange = { uiSettings.kiteJson.tryEmit(it) },
-    )
 }
 
 @Composable
@@ -173,6 +147,6 @@ private fun HubEntry(
 @Composable
 fun DevToolsHubScreenPreview() {
     ThemeComparisonColumn {
-        DevToolsHubScreen(UiSettingsFlow(), EmptyNav())
+        DevToolsHubScreen(EmptyNav())
     }
 }

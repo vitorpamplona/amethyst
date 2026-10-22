@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
+import com.vitorpamplona.quartz.nip01Core.core.JsonEngine
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.Dispatchers
@@ -116,6 +117,9 @@ import kotlin.system.exitProcess
  */
 @OptIn(ExperimentalComposeUiApi::class, FlowPreview::class)
 fun main(args: Array<String>) {
+    // Quartz's hand-written JSON engine, set before any path below parses or signs an event.
+    JsonEngine.current = JsonEngine.KITE
+
     // The OS timer relaunches the app this way to publish scheduled posts while it is closed: no
     // window, no keyring, just the pre-signed posts that are due.
     if (args.contains("--publish-scheduled")) exitProcess(runHeadlessPublish())
