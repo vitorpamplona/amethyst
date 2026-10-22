@@ -289,6 +289,8 @@ class AccountSettings(
     val defaultRelayAuthPolicy: MutableStateFlow<RelayAuthPolicy> = MutableStateFlow(RelayAuthPolicy.ALWAYS),
     val relayGroupViewMode: MutableStateFlow<RelayGroupViewMode> = MutableStateFlow(RelayGroupViewMode.DEFAULT),
     val concordViewMode: MutableStateFlow<ConcordViewMode> = MutableStateFlow(ConcordViewMode.DEFAULT),
+    /** This account's accent color; null follows the app-wide one in [UiSettings.accentColor]. */
+    val accentColor: MutableStateFlow<AccentColorType?> = MutableStateFlow(null),
     // Which conversation protocols the Messages inbox loads and shows. A disabled type is both hidden
     // from the inbox and dropped from the always-on downloading routes. Defaults to everything on.
     val enabledChatFeeds: MutableStateFlow<Set<ChatFeedType>> = MutableStateFlow(ChatFeedType.ALL),
@@ -330,6 +332,13 @@ class AccountSettings(
     fun updateConcordViewMode(mode: ConcordViewMode) {
         if (concordViewMode.value != mode) {
             concordViewMode.tryEmit(mode)
+            saveAccountSettings()
+        }
+    }
+
+    fun updateAccentColor(color: AccentColorType?) {
+        if (accentColor.value != color) {
+            accentColor.tryEmit(color)
             saveAccountSettings()
         }
     }

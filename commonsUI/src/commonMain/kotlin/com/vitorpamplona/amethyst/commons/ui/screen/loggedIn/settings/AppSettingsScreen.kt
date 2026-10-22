@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AccentColorType
+import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
@@ -76,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accent_color
+import com.vitorpamplona.amethyst.commons.resources.accent_color_account_description
 import com.vitorpamplona.amethyst.commons.resources.accent_color_description
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
@@ -148,7 +150,7 @@ fun SettingsScreen(
             TopBarWithBackButton(stringRes(id = Res.string.application_preferences), nav)
         },
     ) {
-        SettingsScreen(accountViewModel.settings.uiSettingsFlow, Modifier.padding(it))
+        SettingsScreen(accountViewModel.settings.uiSettingsFlow, Modifier.padding(it), accountViewModel.account.settings)
     }
 }
 
@@ -172,6 +174,7 @@ fun SettingsScreenPreview() {
 fun SettingsScreen(
     sharedPrefs: UiSettingsFlow,
     modifier: Modifier = Modifier,
+    accountSettings: AccountSettings? = null,
 ) {
     Column(
         modifier =
@@ -184,7 +187,7 @@ fun SettingsScreen(
         SettingsSection(Res.string.settings_section_appearance) {
             ThemeTile(sharedPrefs)
             SettingsDivider()
-            AccentColorTile(sharedPrefs)
+            AccentColorTile(sharedPrefs, accountSettings)
             SettingsDivider()
             FontFamilyTile(sharedPrefs)
             SettingsDivider()
@@ -429,14 +432,23 @@ private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
-    val accent by sharedPrefs.accentColor.collectAsState()
+private fun AccentColorTile(
+    sharedPrefs: UiSettingsFlow,
+    accountSettings: AccountSettings?,
+) {
+    // Logged in, the pick belongs to the account; an account that never picked shows the app-wide one.
+    val appAccent by sharedPrefs.accentColor.collectAsState()
+    val accountAccent = accountSettings?.accentColor?.collectAsState()?.value
+    val accent = accountAccent ?: appAccent
     val dark = !MaterialTheme.colorScheme.isLight
 
     SettingsBlockTile(
         icon = MaterialSymbols.Circle,
         title = stringRes(Res.string.accent_color),
-        description = stringRes(Res.string.accent_color_description),
+        description =
+            stringRes(
+                if (accountSettings != null) Res.string.accent_color_account_description else Res.string.accent_color_description,
+            ),
     ) {
         // FlowRow so every swatch stays visible (wraps to a second line on narrow screens) instead
         // of scrolling the last ones off-edge with no affordance.
@@ -450,7 +462,13 @@ private fun AccentColorTile(sharedPrefs: UiSettingsFlow) {
                     color = option.previewColor(dark),
                     label = stringRes(option.resourceId),
                     selected = option == accent,
-                    onClick = { sharedPrefs.accentColor.tryEmit(option) },
+                    onClick = {
+                        if (accountSettings != null) {
+                            accountSettings.updateAccentColor(option)
+                        } else {
+                            sharedPrefs.accentColor.tryEmit(option)
+                        }
+                    },
                 )
             }
         }

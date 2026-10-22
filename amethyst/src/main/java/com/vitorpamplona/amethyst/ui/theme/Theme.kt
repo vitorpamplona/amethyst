@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.amethystDarkColors
 import com.vitorpamplona.amethyst.commons.ui.theme.amethystLightColors
+import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.transparentBackground
 import com.vitorpamplona.amethyst.ui.components.AndroidRichTextPlatform
@@ -59,7 +60,7 @@ import com.vitorpamplona.amethyst.ui.platform.AndroidAppServices
 fun AmethystTheme(content: @Composable () -> Unit) {
     val uiPrefs = Amethyst.instance.uiPrefs.value
     val theme by uiPrefs.theme.collectAsStateWithLifecycle()
-    val accentColor by uiPrefs.accentColor.collectAsStateWithLifecycle()
+    val accentColor = collectAccentColor(Amethyst.instance.sessionManager, uiPrefs.accentColor)
     val fontFamily by uiPrefs.fontFamily.collectAsStateWithLifecycle()
     val fontSize by uiPrefs.fontSize.collectAsStateWithLifecycle()
     val displaySettings = collectDisplaySettings(Amethyst.instance.uiState)
