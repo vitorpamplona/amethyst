@@ -1872,8 +1872,9 @@
     <string name="language">Language</string>
     <string name="accent_color">Accent Color</string>
     <string name="accent_color_description">Main color used across buttons and links</string>
-    <string name="accent_color_account_description">Main color used across buttons and links. Each account keeps its own.</string>
-    <string name="accent_color_default">Default</string>
+    <string name="accent_color_account_description">Overrides the application accent color for this account. Pick Application to follow it again.</string>
+    <string name="accent_color_application">Application</string>
+    <string name="accent_color_search_keywords" translatable="false">accent color, colour, theme, appearance, account color, override</string>
     <string name="action_unmute">Unmute</string>
     <string name="picture_in_picture">Picture-in-Picture</string>
     <string name="search_button">Search local and remote records</string>

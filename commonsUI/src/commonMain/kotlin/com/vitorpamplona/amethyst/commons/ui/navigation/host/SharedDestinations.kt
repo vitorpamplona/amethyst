@@ -225,6 +225,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.Reque
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.vanish.VanishEventsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.scheduledposts.ScheduledPostsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.search.SearchScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AccentColorSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AllSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.AudioVisualizerSettingsScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.BlockedUsersScreen
@@ -457,6 +458,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.ReactionsSettings> { ReactionsSettingsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.UpdateReactionType> { UpdateReactionTypeScreen(accountViewModel, nav) }
     composableFromEnd<Route.MessagesSettings> { MessagesSettingsScreen(accountViewModel, nav) }
+    composableFromEnd<Route.AccentColorSettings> { AccentColorSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.AudioVisualizerSettings> { AudioVisualizerSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.BottomBarSettings> { BottomBarSettingsScreen(accountViewModel, nav) }
     composableFromEnd<Route.DrawerSettings> { DrawerSettingsScreen(accountViewModel, nav) }

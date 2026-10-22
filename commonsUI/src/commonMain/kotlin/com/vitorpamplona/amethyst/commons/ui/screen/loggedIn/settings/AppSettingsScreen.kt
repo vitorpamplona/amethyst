@@ -20,23 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
@@ -51,10 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,8 +54,6 @@ import com.vitorpamplona.amethyst.commons.appupdate.ui.LocalAppUpdates
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.AccentColorType
-import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.BooleanType
 import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
@@ -77,10 +63,6 @@ import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.accent_color
-import com.vitorpamplona.amethyst.commons.resources.accent_color_account_description
-import com.vitorpamplona.amethyst.commons.resources.accent_color_default
-import com.vitorpamplona.amethyst.commons.resources.accent_color_description
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars_description
@@ -132,9 +114,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsDi
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSection
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
-import com.vitorpamplona.amethyst.commons.ui.theme.contentColorOnAccent
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
-import com.vitorpamplona.amethyst.commons.ui.theme.previewColor
 import com.vitorpamplona.amethyst.commons.ui.theme.toFontFamily
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.collections.immutable.ImmutableMap
@@ -152,7 +131,7 @@ fun SettingsScreen(
             TopBarWithBackButton(stringRes(id = Res.string.application_preferences), nav)
         },
     ) {
-        SettingsScreen(accountViewModel.settings.uiSettingsFlow, Modifier.padding(it), accountViewModel.account.settings)
+        SettingsScreen(accountViewModel.settings.uiSettingsFlow, Modifier.padding(it))
     }
 }
 
@@ -176,7 +155,6 @@ fun SettingsScreenPreview() {
 fun SettingsScreen(
     sharedPrefs: UiSettingsFlow,
     modifier: Modifier = Modifier,
-    accountSettings: AccountSettings? = null,
 ) {
     Column(
         modifier =
@@ -189,7 +167,7 @@ fun SettingsScreen(
         SettingsSection(Res.string.settings_section_appearance) {
             ThemeTile(sharedPrefs)
             SettingsDivider()
-            AccentColorTile(sharedPrefs, accountSettings)
+            AccentColorTile(sharedPrefs.accentColor, accountSettings = null)
             SettingsDivider()
             FontFamilyTile(sharedPrefs)
             SettingsDivider()
@@ -432,58 +410,6 @@ private fun DeckModeTile(sharedPrefs: UiSettingsFlow) {
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun AccentColorTile(
-    sharedPrefs: UiSettingsFlow,
-    accountSettings: AccountSettings?,
-) {
-    // Logged in, the pick belongs to the account. "Default" (null) follows the app-wide accent, and
-    // is what an account that never picked shows.
-    val appAccent by sharedPrefs.accentColor.collectAsState()
-    val accountAccent = accountSettings?.accentColor?.collectAsState()?.value
-    val dark = !MaterialTheme.colorScheme.isLight
-
-    SettingsBlockTile(
-        icon = MaterialSymbols.Circle,
-        title = stringRes(Res.string.accent_color),
-        description =
-            stringRes(
-                if (accountSettings != null) Res.string.accent_color_account_description else Res.string.accent_color_description,
-            ),
-    ) {
-        // FlowRow so every swatch stays visible (wraps to a second line on narrow screens) instead
-        // of scrolling the last ones off-edge with no affordance.
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (accountSettings != null) {
-                AccentColorDefaultSwatch(
-                    color = appAccent.previewColor(dark),
-                    selected = accountAccent == null,
-                    onClick = { accountSettings.updateAccentColor(null) },
-                )
-            }
-            AccentColorType.entries.forEach { option ->
-                AccentColorSwatch(
-                    color = option.previewColor(dark),
-                    label = stringRes(option.resourceId),
-                    selected = if (accountSettings != null) option == accountAccent else option == appAccent,
-                    onClick = {
-                        if (accountSettings != null) {
-                            accountSettings.updateAccentColor(option)
-                        } else {
-                            sharedPrefs.accentColor.tryEmit(option)
-                        }
-                    },
-                )
-            }
-        }
-    }
-}
-
 // Language can't be a segmented row (50+ locales), so it reads as a disclosure row — icon + title +
 // the current language on the right + a chevron — and tapping anywhere opens the picker dialog. That
 // matches the app's other "opens a picker" rows instead of leaving a lone text-field dropdown here.
@@ -549,80 +475,4 @@ fun getLanguageIndex(
     }
     if (languageIndex == -1) languageIndex = languageEntries.values.toTypedArray().indexOf("en")
     return languageIndex
-}
-
-// A pill in the app-wide accent, labelled, so it reads as "follow the default" rather than as a
-// seventh color that happens to match one of the swatches beside it.
-@Composable
-private fun AccentColorDefaultSwatch(
-    color: Color,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val contentColor = contentColorOnAccent(color)
-    Row(
-        modifier =
-            Modifier
-                .height(36.dp)
-                .clip(CircleShape)
-                .background(color)
-                .then(
-                    if (selected) {
-                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                    } else {
-                        Modifier
-                    },
-                ).clickable(onClick = onClick)
-                .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        if (selected) {
-            Icon(
-                symbol = MaterialSymbols.Done,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(18.dp),
-            )
-        }
-        Text(
-            text = stringRes(Res.string.accent_color_default),
-            color = contentColor,
-            style = MaterialTheme.typography.labelLarge,
-        )
-    }
-}
-
-@Composable
-private fun AccentColorSwatch(
-    color: Color,
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier =
-            Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(color)
-                .then(
-                    if (selected) {
-                        Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape)
-                    } else {
-                        Modifier
-                    },
-                ).clickable(onClick = onClick)
-                .semantics { contentDescription = label },
-        contentAlignment = Alignment.Center,
-    ) {
-        if (selected) {
-            Icon(
-                symbol = MaterialSymbols.Done,
-                contentDescription = null,
-                tint = contentColorOnAccent(color),
-                modifier = Modifier.size(20.dp),
-            )
-        }
-    }
 }

@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.accent_color
+import com.vitorpamplona.amethyst.commons.resources.accent_color_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.account_settings
 import com.vitorpamplona.amethyst.commons.resources.active_subs_search_keywords
 import com.vitorpamplona.amethyst.commons.resources.active_subs_title
@@ -176,6 +178,7 @@ fun buildSettingsCatalog(
                     symEntry(Res.string.messages_settings, MaterialSymbols.Mail, Res.string.messages_settings_search_keywords, Route.MessagesSettings),
                     symEntry(Res.string.bottom_bar_settings, MaterialSymbols.Dashboard, Res.string.bottom_bar_search_keywords, Route.BottomBarSettings),
                     symEntry(Res.string.drawer_settings, MaterialSymbols.AutoMirrored.ViewList, Res.string.drawer_search_keywords, Route.DrawerSettings),
+                    symEntry(Res.string.accent_color, MaterialSymbols.Circle, Res.string.accent_color_search_keywords, Route.AccentColorSettings),
                     symEntry(Res.string.video_player_settings, MaterialSymbols.VideoSettings, Res.string.video_player_search_keywords, Route.VideoPlayerSettings),
                     symEntry(Res.string.audio_visualizer_settings, MaterialSymbols.MusicNote, Res.string.audio_visualizer_search_keywords, Route.AudioVisualizerSettings),
                     symEntry(Res.string.now_playing_settings, MaterialSymbols.MusicNote, Res.string.now_playing_search_keywords, Route.NowPlayingSettings),
