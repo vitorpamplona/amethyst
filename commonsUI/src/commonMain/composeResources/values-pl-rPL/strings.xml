@@ -1887,6 +1887,8 @@
     <string name="language">Język</string>
     <string name="accent_color">Kolor akcentujący</string>
     <string name="accent_color_description">Główny kolor używany przez przyciski i linki</string>
+    <string name="accent_color_account_description">Zastępuje kolor akcentujący aplikacji dla tego konta. Wybierz opcję „Aplikacja”, aby ponownie zastosować ten kolor.</string>
+    <string name="accent_color_application">Aplikacja</string>
     <string name="action_unmute">Odblokuj</string>
     <string name="picture_in_picture">Obraz w Obrazie</string>
     <string name="search_button">Wyszukiwanie lokalne i zdalne</string>
@@ -3313,6 +3315,12 @@
     <string name="emoji_import_too_large">Zbyt duży</string>
     <string name="emoji_import_unsupported">To nie jest obrazek lub .zip</string>
     <string name="emoji_import_unreadable">Nie można otworzyć</string>
+    <string name="emoji_import_truncated">Tylko częściowo zaimportowane</string>
+    <string name="emoji_import_truncated_hint">Archiwum jest odczytywane do %1$d obrazów lub %2$d MB z nich.</string>
+    <string name="emoji_import_more">+%1$d więcej</string>
+    <string name="emoji_import_cta">Importuj zdjęcia lub .zip</string>
+    <string name="emoji_pack_empty_title">Ten pakiet jest pusty</string>
+    <string name="emoji_pack_empty_body">Dodawaj emotikony pojedynczo lub zaimportuj od razu cały zestaw obrazków albo plik .zip.</string>
     <string name="gif">Gif</string>
     <string name="community_rules_violation_icon">Naruszenie Zasad Społeczności</string>
     <string name="community_rules_violation_author_denied">Jesteś na czarnej liście tej społeczności. Posty nie zostaną zaakceptowane.</string>
@@ -4196,6 +4204,12 @@
         <item quantity="many">%1$d minut</item>
         <item quantity="other">%1$d minuty</item>
     </plurals>
+    <plurals name="duration_seconds">
+        <item quantity="one">%1$d sekunda</item>
+        <item quantity="few">%1$d sekund</item>
+        <item quantity="many">%1$d sekund</item>
+        <item quantity="other">%1$d sekundy</item>
+    </plurals>
     <plurals name="duration_months">
         <item quantity="one">%1$d miesiąc</item>
         <item quantity="few">%1$d miesięcy</item>
@@ -4711,6 +4725,9 @@
     <string name="desktop_notification_follow">%1$s zaczął cię obserwować</string>
     <string name="desktop_upload_server_not_supported">Pliki przesyłane z komputera trafiają na serwery Blossom. Wybierz jeden z nich w ustawieniach serwera multimediów.</string>
     <string name="desktop_menu_help">Pomoc</string>
+    <string name="desktop_menu_window">Okno</string>
+    <string name="desktop_menu_minimize">Zminimalizuj</string>
+    <string name="desktop_menu_zoom">Powiększ</string>
     <string name="desktop_menu_report_issue">Zgłoś problem</string>
     <string name="login_with_remote_signer">Zaloguj się przy użyciu zdalnego sygnatariusza</string>
     <string name="login_with_signer_app">Zaloguj się za pomocą %1$s</string>
@@ -4725,6 +4742,12 @@
     <string name="remote_signer_login_failed">Nie udało się zalogować przy użyciu zdalnego sygnatariusza: %1$s</string>
     <string name="remote_signer_relay_label">Jeden z transmiterów Twojej skrzynki odbiorczej</string>
     <string name="remote_signer_relay_hint">Sygnatariusz nie łączy się? Skorzystaj zamiast tego z jednego z transmiterów skrzynki odbiorczej swojego konta.</string>
+    <string name="remote_signer_auth_title">Zatwierdź w swoim sygnatariuszu</string>
+    <string name="remote_signer_auth_body">Zdalny sygnatariusz wymaga, abyś zalogował się lub wyraził zgodę na jego stronie. Amethyst czeka, aż to zrobisz, a potem kontynuuje działanie.</string>
+    <string name="remote_signer_auth_open">Otwórz stronę</string>
+    <string name="remote_signer_auth_later">Nie teraz</string>
+    <string name="remote_signer_auth_for_account">Dla %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Żadna z dostępnych tutaj aplikacji nie może otworzyć tej strony. Skopiuj adres do przeglądarki.</string>
     <string name="remote_signer_relay_apply">Użyj transmitera</string>
     <string name="remote_signer_default_relays">Użyj domyślnych transmiterów</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Używasz klucza publicznego, a klucze publiczne są tylko do odczytu. Zaloguj się za pomocą klucza prywatnego, aby zwiększyć liczbę postów</string>
@@ -5607,6 +5630,10 @@
     <string name="rating_stars_out_of_five">Ocena: %1$s na 5</string>
     <string name="reaction">Reakcję</string>
     <string name="reactions">Reakcje</string>
+    <string name="reaction_choices_mine">Twoje reakcje (%1$d)</string>
+    <string name="reaction_choices_remove">Usuń reakcję</string>
+    <string name="reaction_choices_add">Dodaj reakcje</string>
+    <string name="reaction_choices_manage_packs">Pakiety emotikonów</string>
     <string name="reactions_settings">Ustawienia reakcji</string>
     <string name="read_from_relay">Odczytaj z Transmitera</string>
     <string name="read_from_relay_description">Ilość w bajtach, która została otrzymana z tego transmitera, w tym filtry i wydarzenia</string>
@@ -7044,6 +7071,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Nic nie pojawia się z tych grup. Amethyst nieustannie próbuje.</string>
     <string name="cordn_groups_manage">Koordynatorzy</string>
+    <string name="cordn_groups_menu_invitations">Zaproszenia</string>
     <string name="cordn_groups_none">Brak grup cordn</string>
     <string name="cordn_groups_none_detail">Grupa typu „cordn” opiera się na jednym koordynatorze, który zarządza listą członków i przekazuje wiadomości, nie mając przy tym wglądu w treść wpisów poszczególnych użytkowników.</string>
     <string name="cordn_groups_start">Otwórz grupę</string>
@@ -7850,6 +7878,17 @@
     <string name="open_markets_rating_delivery">Dostawa</string>
     <string name="open_markets_rating_communication">Komunikacja</string>
     <string name="open_markets_product_not_found">Szukam produktu…</string>
+    <string name="kind_card_private_pill">Prywatne</string>
+    <string name="kind_card_sats">%1$s Satoszy</string>
+    <string name="kind_card_private_relays_hidden">Jego transmitery są zaszyfrowane: widzi je wyłącznie autor.</string>
+    <string name="kind_card_linked_event">Powiązane wydarzenie</string>
+    <string name="kind_card_more">+%1$d</string>
+    <string name="unknown_kind_title">Typ %1$d</string>
+    <string name="unknown_kind_unsupported">Nieobsługiwany</string>
+    <string name="unknown_kind_encrypted">Zaszyfrowana treść (%1$s)</string>
+    <string name="unknown_kind_hide_tags">Ukryj tagi</string>
+    <string name="unknown_kind_identifier">Identyfikator</string>
+    <string name="unknown_kind_published">Opublikowany</string>
     <string name="unknown_kind_links">Linki</string>
     <string name="unknown_kind_kinds">Typy</string>
     <string name="unknown_kind_relays">Transmitery</string>
@@ -7899,6 +7938,7 @@
     <string name="kc_dvm_param_since">Od</string>
     <string name="kc_dvm_param_until">Do</string>
     <string name="kc_dvm_param_group">Grupa</string>
+    <string name="kc_dev_ci_secrets">Sekrety</string>
     <string name="kc_dev_grasp_title">Serwery hostingowe Git</string>
     <string name="kc_agent_profile_title">Profil agenta</string>
     <string name="kc_agent_policy_anyone">Każdy</string>
