@@ -35,6 +35,8 @@ firebaseBom = "35.0.2"
 fragmentKtx = "1.9.1"
 gms = "4.5.0"
 healthConnect = "1.1.0"
+jackson = "2.22.4"
+jacksonModuleKotlin = "2.22.4"
 snakeyaml = "2.5"
 jna = "5.19.1"
 # Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
@@ -220,6 +222,8 @@ google-mlkit-genai-rewriting = { group = "com.google.mlkit", name = "genai-rewri
 google-mlkit-genai-image-description = { group = "com.google.mlkit", name = "genai-image-description", version.ref = "genaiImageDescription" }
 google-mlkit-language-id = { group = "com.google.mlkit", name = "language-id", version.ref = "languageId" }
 google-mlkit-translate = { group = "com.google.mlkit", name = "translate", version.ref = "translate" }
+jackson-module-kotlin = { group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version.ref = "jacksonModuleKotlin" }
+jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version.ref = "jackson" }
 snakeyaml = { group = "org.yaml", name = "snakeyaml", version.ref = "snakeyaml" }
 apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "agp" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }

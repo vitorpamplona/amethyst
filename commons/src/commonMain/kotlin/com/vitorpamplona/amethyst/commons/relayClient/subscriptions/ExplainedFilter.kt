@@ -38,9 +38,10 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  *
  * ## It never reaches a relay
  *
- * Quartz's `NostrJsonWriter` writes any [Filter] as an explicit protocol field list
- * (`kinds`/`ids`/`authors`/`#tags`/`&tagsAll`/`since`/`until`/`limit`/`search`), subclasses
- * included, so an [ExplainedFilter] serializes to byte-identical JSON — the purpose is dropped at the wire boundary by construction, not by an
+ * `FilterSerializer` is registered against [Filter] and writes an explicit protocol field list
+ * (`kinds`/`ids`/`authors`/`#tags`/`&tagsAll`/`since`/`until`/`limit`/`search`). Jackson applies a
+ * serializer registered for a class to its subclasses, so an [ExplainedFilter] serializes to
+ * byte-identical JSON — the purpose is dropped at the wire boundary by construction, not by an
  * annotation someone can forget. `ExplainedFilterTest` pins that.
  *
  * This matters beyond tidiness: telling relays what each REQ is *for* would hand them a

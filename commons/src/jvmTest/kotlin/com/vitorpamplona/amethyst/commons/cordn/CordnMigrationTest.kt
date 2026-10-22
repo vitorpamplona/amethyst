@@ -33,8 +33,8 @@ import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
 import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.listeners.RelayConnectionListener
@@ -367,7 +367,7 @@ class CordnMigrationTest {
                     createdAt = TimeUtils.now(),
                     kind = CordnDeviceTip.OUTER_KIND,
                     tags = arrayOf(arrayOf("d", "mismatched-d")),
-                    content = account.nip44Encrypt(OptimizedJsonMapper.toJson(inner), account.pubKey),
+                    content = account.nip44Encrypt(JacksonMapper.toJson(inner), account.pubKey),
                 )
             client.publish(outer, setOf(relay))
         }
@@ -411,7 +411,7 @@ class CordnMigrationTest {
                     createdAt = TimeUtils.now(),
                     kind = CordnDeviceTip.OUTER_KIND,
                     tags = arrayOf(arrayOf("d", "theirs-d")),
-                    content = account.nip44Encrypt(OptimizedJsonMapper.toJson(inner), account.pubKey),
+                    content = account.nip44Encrypt(JacksonMapper.toJson(inner), account.pubKey),
                 )
             client.publish(outer, setOf(relay))
         }
@@ -421,7 +421,8 @@ class CordnMigrationTest {
             val inner = account.nip44Decrypt(published.last().content, account.pubKey)
             val parsed =
                 CordnDeviceTip.parse(
-                    OptimizedJsonMapper.fromJson(inner),
+                    com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+                        .fromJson(inner),
                 )
             return KeyPair(privKey = parsed.dekPrivateKey.hexToByteArray())
         }

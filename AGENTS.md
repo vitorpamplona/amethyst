@@ -180,7 +180,7 @@ there rather than trusting a number copied here).
 | **UI** | Compose Multiplatform |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
-| **Serialization** | kotlinx.serialization; Nostr JSON through Quartz's `NostrJsonReader`/`NostrJsonWriter` |
+| **Serialization** | Jackson |
 | **DI** | Manual / Koin |
 | **Build** | Gradle + Kotlin Multiplatform |
 

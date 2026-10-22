@@ -34,9 +34,9 @@ import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.viewmodels.thread.ThreadFeedFilter
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -175,7 +175,7 @@ class ThreadDualAxisChartAssemblerTest {
     fun threadOrderTest() =
         runBlocking {
             val eventArray =
-                OptimizedJsonMapper.fromJsonToEventList(db) + Event.fromJson(header)
+                JacksonMapper.mapper.readValue<List<Event>>(db, JacksonMapper.eventListTypeInstance) + Event.fromJson(header)
 
             var counter = 0
             eventArray.forEach {

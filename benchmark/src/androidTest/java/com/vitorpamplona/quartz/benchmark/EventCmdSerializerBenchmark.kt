@@ -23,9 +23,9 @@ package com.vitorpamplona.quartz.benchmark
 import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.vitorpamplona.crypto.sha2.Sha256Hasher
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.NostrJsonWriter
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -41,7 +41,7 @@ class EventCmdSerializerBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun eventSerializerTest() {
+    fun eventSerializerJacksonTest() {
         val event = Event.fromJson(largeKind1Event)
 
         benchmarkRule.measureRepeated {
@@ -52,21 +52,20 @@ class EventCmdSerializerBenchmark {
     val specialEncoders =
         "Test\b\bTest\n\nTest\t\tTest\u000c\u000cTest\r\rTest\\Test\\\\Test\"Test/Test//Test"
 
-    // The string inside a one-tag array: the writer's escaping on a value full of escapes.
-    val specialEncodersTags = arrayOf(arrayOf(specialEncoders))
-
     @Test
-    fun jsonStringEncoder() {
+    fun jsonStringEncoderJackson() {
+        val jsonMapper = ObjectMapper()
         benchmarkRule.measureRepeated {
-            NostrJsonWriter.toJson(specialEncodersTags)
+            jsonMapper.writeValueAsString(specialEncoders)
         }
     }
 
     @Test
-    fun jsonStringEncoderSha256() {
+    fun jsonStringEncoderSha256Jackson() {
+        val jsonMapper = ObjectMapper()
         benchmarkRule.measureRepeated {
             val digest = Sha256Hasher()
-            digest.hash(NostrJsonWriter.toJson(specialEncodersTags).toByteArray())
+            digest.hash(jsonMapper.writeValueAsString(specialEncoders).toByteArray())
         }
     }
 }

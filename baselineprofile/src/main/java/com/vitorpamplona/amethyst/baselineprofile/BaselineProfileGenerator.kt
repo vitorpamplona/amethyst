@@ -36,7 +36,7 @@ import org.junit.Test
  * interpreter** and only 10.5% in compiled app code — the app was spending 36x more
  * CPU interpreting bytecode than verifying signatures, because the shipped profile
  * covered only androidx/Compose and none of the relay client, decoder, LocalCache or
- * JSON paths.
+ * Jackson paths.
  *
  * So the journey is deliberately NOT just a startup trace. It launches cold and then
  * sits on the feed while events stream in, because the expensive path is ingest, and

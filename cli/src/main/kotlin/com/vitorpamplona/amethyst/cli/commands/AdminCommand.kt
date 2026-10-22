@@ -177,7 +177,7 @@ object AdminCommand {
             val retriever = Nip86Retriever { _ -> http }
             val response = retriever.execute(client, request)
             if (response.error != null) return Output.error("relay_error", response.error)
-            // Reparse the kotlinx JSON result through CliJson so it renders as
+            // Reparse the kotlinx JSON result through Jackson so it renders as
             // structured JSON (text + --json) instead of a toString blob.
             val resultNode = response.result?.toString()?.let { CliJson.parse(it) }
             Output.emit(mapOf("relay" to relay.url, "method" to method, "result" to resultNode))

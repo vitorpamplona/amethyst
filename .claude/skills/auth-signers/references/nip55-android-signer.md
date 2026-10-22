@@ -18,7 +18,7 @@ Another Android app (Amber, …) holds the key; Amethyst asks it through `Intent
   `newResponse`, `hasForegroundActivity`), `IsExternalSignerInstalled.kt`
   (`isExternalSignerInstalled(context)`, `getExternalSignersInstalled(context)`),
   `handlers/BackgroundRequestHandler` + `ForegroundRequestHandler`.
-- `SignString.kt`, `Nip55Json.kt` (hand-written JSON for permissions and intent results).
+- `SignString.kt`, `JsonMapperNip55.kt`.
 
 ## Flow
 

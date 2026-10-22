@@ -24,6 +24,7 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import junit.framework.TestCase.assertNotNull
 import org.junit.Rule
 import org.junit.Test
@@ -55,7 +56,7 @@ class TagArraySerializerBenchmark {
 
     @Test
     fun deserializeCommonTagArray() {
-        val serialized = OptimizedJsonMapper.toJson(tags)
+        val serialized = JacksonMapper.toJson(tags)
         benchmarkRule.measureRepeated { assertNotNull(OptimizedJsonMapper.fromJsonToTagArray(serialized)) }
     }
 }

@@ -45,8 +45,8 @@ What does **not** need a keep, and where the temptation usually comes from:
 
 - **Quartz events and tags.** `Event`, `Filter`, `Message`, `Command`, `Rumor`,
   `EventTemplate`, `TagArray`, the NIP-46 Bunker messages and the NIP-55 intent
-  results all go through Quartz's hand-written `NostrJsonReader` /
-  `NostrJsonWriter` and `Nip55Json`. Those read and write
+  results all go through hand-written `StdSerializer`/`StdDeserializer` pairs
+  registered on `JacksonMapper` / `JsonMapperNip55`. Those read and write
   property names as string literals, and `EventFactory` dispatches on kind with
   a `when`, not by reflection. Renaming their fields changes nothing on the wire.
 - **`@Serializable` (kotlinx) classes**, including the type-safe navigation
@@ -68,13 +68,15 @@ What does **not** need a keep, and where the temptation usually comes from:
 # What makes a crash report retraceable.
 -keepattributes SourceFile,LineNumberTable
 
-# R8 requires InnerClasses and EnclosingMethod alongside Signature.
+# jackson-module-kotlin reads @kotlin.Metadata; R8 requires InnerClasses and
+# EnclosingMethod alongside Signature.
 -keepattributes *Annotation*,Signature,Exceptions,InnerClasses,EnclosingMethod
 ```
 
 `LocalVariableTable`, `LocalVariableTypeTable`, `MethodParameters` and
-`-keepparameternames` are debug metadata that nothing in the app reads. They were
-removed; don't add them back.
+`-keepparameternames` are debug metadata that nothing in the app reads —
+jackson-module-kotlin takes parameter names from `@kotlin.Metadata`, not from
+`MethodParameters`. They were removed; don't add them back.
 
 `-renamesourcefileattribute` is deliberately **not** set, and the reason is not
 the usual one.

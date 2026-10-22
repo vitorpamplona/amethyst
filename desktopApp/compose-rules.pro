@@ -20,7 +20,7 @@
 #
 # Plus per-library `-keep` rules for JNA, libsodium, libscrypt, and the
 # first-party (`com.vitorpamplona.**`) JSON-mapped types. We replicate that
-# verbatim here, then add desktop-only rules for VLCj, OkHttp,
+# verbatim here, then add desktop-only rules for Jackson, VLCj, OkHttp,
 # and SLF4J that the mobile build does not need (those code paths are
 # Android-stripped on mobile but compiled on desktop).
 
@@ -49,7 +49,7 @@
 # still attempt with obfuscate off (e.g. on synthetic inner classes).
 -keepnames class ** { *; }
 
-# Keep all enums whole — Kotlin serialization and many libraries
+# Keep all enums whole — Jackson, Kotlin serialization, and many libraries
 # enumerate features via `Class.getEnumConstants()` -> `values()`. Stripping
 # `values()` / `valueOf(String)` returns null and crashes initialisation.
 -keep enum ** { *; }
@@ -154,6 +154,20 @@
 # between multiple optimization passes is the root cause. Shrink (dead
 # code removal) remains ON and provides the bulk of the size win.
 -dontoptimize
+
+# ============================================================================
+# Desktop-only: Jackson — mobile module does not ship Jackson on Android
+# ============================================================================
+# Jackson uses reflection extensively at construction time (ObjectMapper,
+# JsonMapper, SerializationConfig, DeserializationConfig). The
+# `-keep enum **` rule above already covers `values()`/`valueOf()`; this
+# block also keeps the annotation/databind/core/kotlin-module classes
+# intact and silences value-class MethodHandle warnings.
+-keep class com.fasterxml.jackson.databind.** { *; }
+-keep class com.fasterxml.jackson.annotation.** { *; }
+-keep class com.fasterxml.jackson.core.** { *; }
+-keep class com.fasterxml.jackson.module.kotlin.** { *; }
+-dontwarn com.fasterxml.jackson.module.kotlin.**
 
 # ============================================================================
 # Desktop-only: full JNA — mobile narrows JNA because Android has no AWT
@@ -261,7 +275,7 @@
 # ============================================================================
 # Desktop-only: SLF4J — used reflectively by transitive deps
 # ============================================================================
-# A few transitive deps `Class.forName("org.slf4j.LoggerFactory")`
+# jackson-databind and a few other deps `Class.forName("org.slf4j.LoggerFactory")`
 # to detect logging. We ship slf4j-nop; keep it intact so detection succeeds.
 -keep class org.slf4j.** { *; }
 -dontwarn org.slf4j.**
