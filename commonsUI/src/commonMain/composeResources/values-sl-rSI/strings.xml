@@ -1887,6 +1887,8 @@
     <string name="language">Jezik</string>
     <string name="accent_color">Poudarjena barva</string>
     <string name="accent_color_description">Poudarjena barva: Glavna barva za gumbe in povezave</string>
+    <string name="accent_color_account_description">Preglasi poudarjeno barvo aplikacije za ta račun. Izberi Aplikacija, da znova sledi barvi aplikacije.</string>
+    <string name="accent_color_application">Aplikacija</string>
     <string name="action_unmute">Vklopi zvok</string>
     <string name="picture_in_picture">Slika v sliki</string>
     <string name="search_button">Išči po lokalnih in zunanjih arhivskih zapisih</string>
