@@ -225,8 +225,9 @@ else. What makes that hold:
   for a fixed version + inputs, so the minified output is stable. Build with the
   same JDK 21 you see in `BUILDING.md` / CI.
 - **No build-time clock.** Nothing injects `System.currentTimeMillis()` /
-  build dates into `BuildConfig` (a Spotless rule bans the call in `quartz` and
-  `commons`), and AGP normalizes ZIP entry timestamps, so two builds an hour
+  build dates into `BuildConfig` (`verifyKmpPurity` bans the call in the shared
+  source sets of `commons` and `commonsUI`, and quartz keeps its own copy of that
+  gate), and AGP normalizes ZIP entry timestamps, so two builds an hour
   apart are identical.
 - **Deterministic version name.** `generateVersionName` only appends a branch
   suffix off feature branches; a release tag builds in detached-`HEAD` (or from a

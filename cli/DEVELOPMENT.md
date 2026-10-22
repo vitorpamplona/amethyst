@@ -123,7 +123,7 @@ cli/src/main/kotlin/com/vitorpamplona/amethyst/cli/
                                #   `--help` and the README are kept in sync with.
 ```
 
-**Dependencies:** `:quartz` + `:commons` (+ `:geode` for `amy serve`) +
+**Dependencies:** quartz (`libs.quartz`) + `:commons` (+ `:geode` for `amy serve`) +
 kotlinx-coroutines + kotlinx-serialization + OkHttp + SnakeYAML. **No Android, no Compose.** Amy
 compiles on any JDK 21 host. Never add a Gradle dependency on `:amethyst`
 or `:desktopApp`.

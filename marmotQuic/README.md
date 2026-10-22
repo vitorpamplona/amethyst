@@ -1,11 +1,12 @@
 # marmotQuic
 
 Marmot's raw QUIC transport binding for agent text stream previews
-(`transports/quic.md`), on top of the repo's own pure-Kotlin `:quic` stack.
+(`transports/quic.md`), on top of the pure-Kotlin QUIC stack from
+[quic-kmp](https://github.com/vitorpamplona/quic-kmp) (`libs.quic`).
 
 ## Why this is not `nestsClient`'s WebTransport
 
-Both features move bytes over `:quic`, but they enter it at different layers.
+Both features move bytes over quic-kmp, but they enter it at different layers.
 
 `nestsClient` speaks **WebTransport**: HTTP/3, an Extended CONNECT handshake, a
 `:protocol` pseudo-header, QPACK, SETTINGS negotiation. Its
@@ -37,7 +38,7 @@ byte.
 
 Note the direct path's connection direction: the **receiver** listens and the
 **sender** dials, inverted from the broker path where both ends dial the
-broker. Only the sender half is here; `:quic` is a client stack with no server
+broker. Only the sender half is here; quic-kmp is a client stack with no server
 role, so this module cannot expose a direct-path endpoint of its own.
 
 The codecs — control envelope, frame reader/writer with both caps, `quic://`
@@ -56,7 +57,7 @@ and a candidate that points somewhere hostile still cannot forge a record.
 
 Preview endpoints and brokers are commonly self-signed, and the binding says so:
 a client MAY pin the endpoint certificate by exact DER or SHA-256 fingerprint
-instead of chaining to a CA. `PinnedCertificateValidator` (in `:quic`) is that
+instead of chaining to a CA. `PinnedCertificateValidator` (in quic-kmp) is that
 pin. It replaces the chain and the hostname check and nothing else — the peer
 still has to sign the TLS transcript with the pinned certificate's private key,
 so copying a public certificate off the wire buys an attacker nothing.
@@ -137,7 +138,7 @@ Turning the live path on is re-adding the watcher to `MarmotGroupChatView`.
   an agent's job, and no agent runs in the app yet. Only `amy` publishes one.
 - The desktop app has no Marmot chat screen at all, so there is nothing to
   render a preview into. The watcher it would use already lives in `commons`.
-- The direct path's **receiving** half. `:quic` has no server role, so this
+- The direct path's **receiving** half. quic-kmp has no server role, so this
   module can dial a direct receiver but cannot be one. v1 also defines no
   start-payload candidate format for the direct path, so a sender only reaches
   a receiver whose endpoint it already knows out of band.

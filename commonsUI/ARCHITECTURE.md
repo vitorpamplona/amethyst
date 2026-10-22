@@ -27,7 +27,7 @@ subclass of `commons`' `BaseAccountViewModel`: it adds the `ToastManager` that h
 bridges. See `commons/plans/2026-09-27-one-ui-android-desktop.md` and
 `commons/plans/2026-10-09-headless-account-viewmodel.md`.
 
-It depends on `:commons` (and `:quartz`) as **`api`**, so a consumer that adds
+It depends on `:commons` (and quartz, `libs.quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,
 `nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`
 must never.
