@@ -134,6 +134,7 @@ class UiSettingsStore(
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
         val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
         val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
+        val UI_HAND_WRITTEN_JSON = booleanPreferencesKey("ui.hand_written_json")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -183,6 +184,7 @@ class UiSettingsStore(
                 spellCheck =
                     preferences[UI_SPELL_CHECK]?.let { name -> SpellCheckType.entries.firstOrNull { it.name == name } }
                         ?: SpellCheckType.AUTOMATIC,
+                handWrittenJson = preferences[UI_HAND_WRITTEN_JSON] ?: false,
             )
         }
 
@@ -228,6 +230,7 @@ class UiSettingsStore(
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
             preferences[UI_DECK_MODE] = sharedSettings.deckMode
             preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
+            preferences[UI_HAND_WRITTEN_JSON] = sharedSettings.handWrittenJson
         }
 
         /**

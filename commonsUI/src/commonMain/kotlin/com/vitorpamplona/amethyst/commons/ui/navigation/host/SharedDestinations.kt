@@ -475,7 +475,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.EditRelays> { AllRelayListScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ActiveSubscriptions> { ActiveSubscriptionsScreen(accountViewModel, nav) }
     composableFromEnd<Route.EventSync> { EventSyncScreen(accountViewModel, nav) }
-    composableFromEnd<Route.DevTools> { DevToolsHubScreen(nav) }
+    composableFromEnd<Route.DevTools> { DevToolsHubScreen(accountViewModel.settings.uiSettingsFlow, nav) }
     composableFromEndArgs<Route.DevToolsNip19> { Nip19ToolScreen(it.input, accountViewModel, nav) }
     composableFromEndArgs<Route.DevToolsEventInspector> { EventInspectorScreen(it.noteKey, nav) }
     composableFromEnd<Route.DevToolsKinds> { KindBrowserScreen(nav) }

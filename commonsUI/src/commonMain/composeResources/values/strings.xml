@@ -8239,6 +8239,9 @@
     <string name="devtools_console_title">Relay Console</string>
     <string name="devtools_console_desc">Open a raw WebSocket to a relay and send frames by hand</string>
     <string name="devtools_active_subs_desc">Every subscription the app holds open right now, and why</string>
+    <string name="devtools_section_experimental">Experimental</string>
+    <string name="devtools_hand_written_json_title">Quartz JSON engine</string>
+    <string name="devtools_hand_written_json_desc">Read and write Nostr JSON with Quartz's own hand-written parser instead of Jackson. Faster, but still being tested: turn it off if events stop loading or signing fails.</string>
     <string name="devtools_event_finder_title">Find Event on Relays</string>
     <string name="devtools_inspect_event">Inspect event</string>
     <string name="devtools_paste">Paste</string>
