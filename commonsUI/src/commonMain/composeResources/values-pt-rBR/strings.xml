@@ -2873,6 +2873,14 @@
     <string name="contact_list_containing_label">Lista de seguidos contendo %1$d usuário(s):</string>
     <string name="contact_list_screen_title">Lista de seguidos</string>
     <string name="contact_list_screen_title_with_count">Lista de seguidos (%1$d)</string>
+    <string name="relay_list_screen_title">Relays</string>
+    <string name="relay_list_show_all">Mostrar todos os relays</string>
+    <string name="relay_list_add_to_my_relays">Adicionar aos meus relays</string>
+    <string name="relay_list_in_my_relays">Nos meus relays</string>
+    <plurals name="relay_list_section_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
     <string name="follow_pack_creation_name_label">Nome do pacote</string>
     <string name="follow_pack_copy_name_label">Novo nome do pacote</string>
     <string name="follow_pack_creation_desc_label">Descrição do pacote</string>
@@ -4597,6 +4605,10 @@
     <string name="desktop_notification_follow">%1$s seguiu você</string>
     <string name="desktop_upload_server_not_supported">Os envios no desktop vão para servidores Blossom. Escolha um nas configurações de servidor de mídia.</string>
     <string name="desktop_menu_help">Ajuda</string>
+    <string name="desktop_menu_website">Site do Amethyst</string>
+    <string name="desktop_menu_window">Janela</string>
+    <string name="desktop_menu_minimize">Minimizar</string>
+    <string name="desktop_menu_zoom">Zoom</string>
     <string name="desktop_menu_report_issue">Relatar um problema</string>
     <string name="login_with_remote_signer">Entrar com um assinador remoto</string>
     <string name="login_with_signer_app">Entrar com %1$s</string>
@@ -4611,6 +4623,12 @@
     <string name="remote_signer_login_failed">Não foi possível entrar com o assinador remoto: %1$s</string>
     <string name="remote_signer_relay_label">Um dos seus relays de caixa de entrada</string>
     <string name="remote_signer_relay_hint">O assinador não conecta? Use um dos relays de caixa de entrada da sua conta.</string>
+    <string name="remote_signer_auth_title">Aprove no seu assinador</string>
+    <string name="remote_signer_auth_body">Seu assinador remoto precisa que você entre ou aprove na página dele. O Amethyst continua esperando e segue assim que você fizer isso.</string>
+    <string name="remote_signer_auth_open">Abrir página</string>
+    <string name="remote_signer_auth_later">Agora não</string>
+    <string name="remote_signer_auth_for_account">Para %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Nenhum app aqui consegue abrir esta página. Copie o endereço para um navegador.</string>
     <string name="remote_signer_relay_apply">Usar relay</string>
     <string name="remote_signer_default_relays">Usar os relays padrão</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Faça login com uma chave privada para poder impulsionar postagens</string>
@@ -6689,6 +6707,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Nada está chegando destes grupos. O Amethyst continua tentando.</string>
     <string name="cordn_groups_manage">Coordenadores</string>
+    <string name="cordn_groups_menu_invitations">Convites</string>
     <string name="cordn_groups_none">Nenhum grupo cordn ainda</string>
     <string name="cordn_groups_none_detail">Um grupo cordn fica em um coordenador que guarda a lista de membros e repassa as mensagens, sem nunca ver o que alguém escreve.</string>
     <string name="cordn_groups_start">Criar um</string>
@@ -7434,6 +7453,43 @@
     <string name="kind_card_private_relays_hidden">Os relays são criptografados: só o autor pode vê-los.</string>
     <string name="kind_card_linked_event">Evento vinculado</string>
     <string name="kind_card_more">+%1$d</string>
+    <string name="unknown_kind_title">Tipo %1$d</string>
+    <string name="unknown_kind_unsupported">Sem suporte</string>
+    <string name="unknown_kind_encrypted">Conteúdo criptografado (%1$s)</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Dados hex, %1$d caractere</item>
+        <item quantity="other">Dados hex, %1$d caracteres</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Dados Base64, %1$d caractere</item>
+        <item quantity="other">Dados Base64, %1$d caracteres</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">Dados JSON, %1$d caractere</item>
+        <item quantity="other">Dados JSON, %1$d caracteres</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Dados codificados, %1$d caractere</item>
+        <item quantity="other">Dados codificados, %1$d caracteres</item>
+    </plurals>
+    <plurals name="unknown_kind_json_items">
+        <item quantity="one">Lista JSON com %1$d item</item>
+        <item quantity="other">Lista JSON com %1$d itens</item>
+    </plurals>
+    <plurals name="unknown_kind_show_tags">
+        <item quantity="one">Mostrar %1$d tag</item>
+        <item quantity="other">Mostrar %1$d tags</item>
+    </plurals>
+    <string name="unknown_kind_hide_tags">Ocultar tags</string>
+    <string name="unknown_kind_identifier">Identificador</string>
+    <string name="unknown_kind_published">Publicado</string>
+    <string name="unknown_kind_starts">Começa</string>
+    <string name="unknown_kind_ends">Termina</string>
+    <string name="unknown_kind_location">Localização</string>
+    <string name="unknown_kind_links">Links</string>
+    <string name="unknown_kind_kinds">Tipos</string>
+    <string name="unknown_kind_relays">Relays</string>
+    <string name="unknown_kind_client">Publicado com</string>
     <string name="kc_proto_offer">Oferta</string>
     <string name="kc_proto_nwc_methods">Métodos</string>
     <string name="kc_proto_nwc_notifications">Notificações</string>
@@ -8078,34 +8134,6 @@
     <string name="drawing_discard_message">Ele ainda não foi adicionado à sua publicação.</string>
     <string name="drawing_discard">Descartar</string>
     <string name="drawing_keep_drawing">Continuar desenhando</string>
-    <string name="relay_list_screen_title">Relays</string>
-    <string name="relay_list_show_all">Mostrar todos os relays</string>
-    <string name="relay_list_add_to_my_relays">Adicionar aos meus relays</string>
-    <string name="relay_list_in_my_relays">Nos meus relays</string>
-    <string name="desktop_menu_website">Site do Amethyst</string>
-    <string name="desktop_menu_window">Janela</string>
-    <string name="desktop_menu_minimize">Minimizar</string>
-    <string name="desktop_menu_zoom">Zoom</string>
-    <string name="remote_signer_auth_title">Aprove no seu assinador</string>
-    <string name="remote_signer_auth_body">Seu assinador remoto precisa que você entre ou aprove na página dele. O Amethyst continua esperando e segue assim que você fizer isso.</string>
-    <string name="remote_signer_auth_open">Abrir página</string>
-    <string name="remote_signer_auth_later">Agora não</string>
-    <string name="remote_signer_auth_for_account">Para %1$s</string>
-    <string name="remote_signer_auth_cannot_open">Nenhum app aqui consegue abrir esta página. Copie o endereço para um navegador.</string>
-    <string name="cordn_groups_menu_invitations">Convites</string>
-    <string name="unknown_kind_title">Tipo %1$d</string>
-    <string name="unknown_kind_unsupported">Sem suporte</string>
-    <string name="unknown_kind_encrypted">Conteúdo criptografado (%1$s)</string>
-    <string name="unknown_kind_hide_tags">Ocultar tags</string>
-    <string name="unknown_kind_identifier">Identificador</string>
-    <string name="unknown_kind_published">Publicado</string>
-    <string name="unknown_kind_starts">Começa</string>
-    <string name="unknown_kind_ends">Termina</string>
-    <string name="unknown_kind_location">Localização</string>
-    <string name="unknown_kind_links">Links</string>
-    <string name="unknown_kind_kinds">Tipos</string>
-    <string name="unknown_kind_relays">Relays</string>
-    <string name="unknown_kind_client">Publicado com</string>
     <string name="devtools_title">Ferramentas de desenvolvedor</string>
     <string name="devtools_search_keywords">desenvolvedor, depuração, developer, debug, nostr, nip-19, bech32, npub, nevent, hex, evento, event, json, assinatura, signature, verificar, verify, tipo, kind, varredura, crawl, relay, websocket, console, req</string>
     <string name="devtools_explainer">Ferramentas para inspecionar dados do Nostr e falar diretamente com relays. Elas leem dos relays e nunca publicam nada por você; o console de relay envia só os frames que você monta ou digita, e pergunta antes de se autenticar.</string>
@@ -8159,16 +8187,32 @@
     <string name="devtools_event_kind_nip">%1$s, NIP-%2$s</string>
     <string name="devtools_event_find_on_relays">Encontrar nos relays</string>
     <string name="devtools_kinds_search">Pesquisar por número, nome ou NIP</string>
+    <plurals name="devtools_kinds_count">
+        <item quantity="one">%1$d tipo conhecido</item>
+        <item quantity="other">%1$d tipos conhecidos</item>
+    </plurals>
     <string name="devtools_kind_lookup_title">Consulta de tipo</string>
     <string name="devtools_kind_lookup_desc">Digite o número de um tipo para ver o nome e todas as formas como os clientes o codificam, com exemplos reais</string>
     <string name="devtools_kind_lookup_field">Número do tipo</string>
     <string name="devtools_kind_lookup_button">Consultar</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s de %2$d de %3$d relay</item>
+        <item quantity="other">%1$s de %2$d de %3$d relays</item>
+    </plurals>
     <string name="devtools_kind_by_client">Por cliente</string>
     <string name="devtools_kind_by_shape">Por formato</string>
     <string name="devtools_kind_no_client">Sem tag de cliente</string>
     <string name="devtools_kind_shape_n">Formato %1$d</string>
     <string name="devtools_kind_from_clients">De: %1$s</string>
     <string name="devtools_kind_more">+%1$d a mais</string>
+    <plurals name="devtools_kind_events">
+        <item quantity="one">%1$d evento</item>
+        <item quantity="other">%1$d eventos</item>
+    </plurals>
+    <plurals name="devtools_kind_authors">
+        <item quantity="one">%1$d autor</item>
+        <item quantity="other">%1$d autores</item>
+    </plurals>
     <string name="devtools_kind_custom">Varrer o tipo %1$d</string>
     <string name="devtools_kind_usage_title">Tipo %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>
@@ -8176,6 +8220,10 @@
     <string name="devtools_probe_start">Varrer</string>
     <string name="devtools_probe_stop">Parar</string>
     <string name="devtools_probe_discovering">Procurando relays nos monitores NIP-66…</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d de %2$d relay respondeu, encontrado em %3$d</item>
+        <item quantity="other">%1$d de %2$d relays responderam, encontrado em %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Evento mais recente</string>
     <string name="devtools_probe_none_found">Nenhum relay retornou um evento correspondente</string>
     <string name="devtools_probe_found_only">Só os relays que o têm</string>
@@ -8233,52 +8281,4 @@
     <string name="devtools_console_invalid_url">Não é uma URL de relay: %1$s</string>
     <string name="devtools_console_tor">%1$s passa pelo Tor, que ainda não está conectado. Tente de novo quando o Tor estiver ativo, ou altere a configuração de Tor do relay.</string>
     <string name="devtools_console_send_failed">Não conectado, frame não enviado</string>
-    <plurals name="relay_list_section_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="other">%1$d relays</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_hex">
-        <item quantity="one">Dados hex, %1$d caractere</item>
-        <item quantity="other">Dados hex, %1$d caracteres</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_base64">
-        <item quantity="one">Dados Base64, %1$d caractere</item>
-        <item quantity="other">Dados Base64, %1$d caracteres</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_json">
-        <item quantity="one">Dados JSON, %1$d caractere</item>
-        <item quantity="other">Dados JSON, %1$d caracteres</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_opaque">
-        <item quantity="one">Dados codificados, %1$d caractere</item>
-        <item quantity="other">Dados codificados, %1$d caracteres</item>
-    </plurals>
-    <plurals name="unknown_kind_json_items">
-        <item quantity="one">Lista JSON com %1$d item</item>
-        <item quantity="other">Lista JSON com %1$d itens</item>
-    </plurals>
-    <plurals name="unknown_kind_show_tags">
-        <item quantity="one">Mostrar %1$d tag</item>
-        <item quantity="other">Mostrar %1$d tags</item>
-    </plurals>
-    <plurals name="devtools_kinds_count">
-        <item quantity="one">%1$d tipo conhecido</item>
-        <item quantity="other">%1$d tipos conhecidos</item>
-    </plurals>
-    <plurals name="devtools_kind_sample_status">
-        <item quantity="one">%1$s de %2$d de %3$d relay</item>
-        <item quantity="other">%1$s de %2$d de %3$d relays</item>
-    </plurals>
-    <plurals name="devtools_kind_events">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventos</item>
-    </plurals>
-    <plurals name="devtools_kind_authors">
-        <item quantity="one">%1$d autor</item>
-        <item quantity="other">%1$d autores</item>
-    </plurals>
-    <plurals name="devtools_probe_progress">
-        <item quantity="one">%1$d de %2$d relay respondeu, encontrado em %3$d</item>
-        <item quantity="other">%1$d de %2$d relays responderam, encontrado em %3$d</item>
-    </plurals>
 </resources>

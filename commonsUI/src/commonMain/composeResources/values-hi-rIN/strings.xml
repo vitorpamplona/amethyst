@@ -4605,6 +4605,10 @@
     <string name="desktop_notification_follow">%1$s ने आपका अनुगमन किया</string>
     <string name="desktop_upload_server_not_supported">लेखनपीठ संगणक से आरोहण जाते हैं ब्लोस्सम सेवासंगणक पर। एक का चयन करें अपने श्रव्यदृश्याभिलेख सेवासंगणक स्थापना विकल्पों में।</string>
     <string name="desktop_menu_help">सहायता</string>
+    <string name="desktop_menu_website">अमेथिस्ट जालस्थान</string>
+    <string name="desktop_menu_window">गवाक्ष</string>
+    <string name="desktop_menu_minimize">लघु आकार</string>
+    <string name="desktop_menu_zoom">अनुकूल वीक्षण</string>
     <string name="desktop_menu_report_issue">समस्या का वृत्तान्त भेजें</string>
     <string name="login_with_remote_signer">दूरस्थ हस्ताक्षरकर्ता द्वारा प्रवेशांकन</string>
     <string name="login_with_signer_app">%1$s के साथ प्रवेशांकन</string>
@@ -8191,6 +8195,10 @@
     <string name="devtools_kind_lookup_desc">एक प्रकार संख्या का टंकण करें उसके नाम तथा ग्राहकों द्वारा उसका अक्षरराशिकरण के सभी विधि देखने के लिए। वास्तविक उदाहरणों के साथ</string>
     <string name="devtools_kind_lookup_field">प्रकार संख्या</string>
     <string name="devtools_kind_lookup_button">खोज</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%3$d में से %2$d पुनःप्रसारक से %1$s</item>
+        <item quantity="other">%3$d में से %2$d पुनःप्रसारकों से %1$s</item>
+    </plurals>
     <string name="devtools_kind_by_client">ग्राहक अनुसार</string>
     <string name="devtools_kind_by_shape">आकार अनुसार</string>
     <string name="devtools_kind_no_client">कोई ग्राहक सूचक नहीं</string>
@@ -8213,7 +8221,7 @@
     <string name="devtools_probe_stop">रोकें</string>
     <string name="devtools_probe_discovering">निप॰छियासठ परिवीक्षकों से पुनःप्रसारकों का खोज…</string>
     <plurals name="devtools_probe_progress">
-        <item quantity="one">%2$d में से %1$d पुनःप्रसारकों ने उत्तर दिए। %3$d पर प्राप्त</item>
+        <item quantity="one">%2$d में से %1$d पुनःप्रसारक ने उत्तर दिया। %3$d पर प्राप्त</item>
         <item quantity="other">%2$d में से %1$d पुनःप्रसारकों ने उत्तर दिए। %3$d पर प्राप्त</item>
     </plurals>
     <string name="devtools_probe_newest">नवीनतम घटना</string>

@@ -2873,6 +2873,14 @@
     <string name="contact_list_containing_label">Följlista som innehåller %1$d användare:</string>
     <string name="contact_list_screen_title">Följlista</string>
     <string name="contact_list_screen_title_with_count">Följlista (%1$d)</string>
+    <string name="relay_list_screen_title">Reläer</string>
+    <string name="relay_list_show_all">Visa alla reläer</string>
+    <string name="relay_list_add_to_my_relays">Lägg till i mina reläer</string>
+    <string name="relay_list_in_my_relays">I mina reläer</string>
+    <plurals name="relay_list_section_count">
+        <item quantity="one">%1$d relä</item>
+        <item quantity="other">%1$d reläer</item>
+    </plurals>
     <string name="follow_pack_creation_name_label">Paketnamn</string>
     <string name="follow_pack_copy_name_label">Nytt paketnamn</string>
     <string name="follow_pack_creation_desc_label">Paketbeskrivning</string>
@@ -4597,6 +4605,10 @@
     <string name="desktop_notification_follow">%1$s började följa dig</string>
     <string name="desktop_upload_server_not_supported">Uppladdningar från datorn går till Blossom-servrar. Välj en i inställningarna för mediaservrar.</string>
     <string name="desktop_menu_help">Hjälp</string>
+    <string name="desktop_menu_website">Amethysts webbplats</string>
+    <string name="desktop_menu_window">Fönster</string>
+    <string name="desktop_menu_minimize">Minimera</string>
+    <string name="desktop_menu_zoom">Zooma</string>
     <string name="desktop_menu_report_issue">Rapportera ett problem</string>
     <string name="login_with_remote_signer">Logga in med en fjärrsignatär</string>
     <string name="login_with_signer_app">Logga in med %1$s</string>
@@ -4611,6 +4623,12 @@
     <string name="remote_signer_login_failed">Kunde inte logga in med fjärrsignatären: %1$s</string>
     <string name="remote_signer_relay_label">Ett av dina inkorgsreläer</string>
     <string name="remote_signer_relay_hint">Ansluter inte signeraren? Använd ett av ditt kontos inkorgsreläer i stället.</string>
+    <string name="remote_signer_auth_title">Godkänn i din signatär</string>
+    <string name="remote_signer_auth_body">Din fjärrsignatär behöver att du loggar in eller godkänner på dess sida. Amethyst fortsätter vänta och går vidare så snart du har gjort det.</string>
+    <string name="remote_signer_auth_open">Öppna sidan</string>
+    <string name="remote_signer_auth_later">Inte nu</string>
+    <string name="remote_signer_auth_for_account">För %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Ingen app här kan öppna den här sidan. Kopiera adressen till en webbläsare.</string>
     <string name="remote_signer_relay_apply">Använd relä</string>
     <string name="remote_signer_default_relays">Använd standardreläerna</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Logga in med en privat nyckel för att kunna boosta inlägg</string>
@@ -6689,6 +6707,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Inget kommer fram från de här grupperna. Amethyst fortsätter att försöka.</string>
     <string name="cordn_groups_manage">Koordinatorer</string>
+    <string name="cordn_groups_menu_invitations">Inbjudningar</string>
     <string name="cordn_groups_none">Inga cordn-grupper ännu</string>
     <string name="cordn_groups_none_detail">En cordn-grupp finns hos en koordinator som håller reda på medlemskapet och skickar meddelanden vidare, utan att någonsin se vad någon skriver.</string>
     <string name="cordn_groups_start">Starta en</string>
@@ -7434,6 +7453,43 @@
     <string name="kind_card_private_relays_hidden">Dess reläer är krypterade: bara författaren kan se dem.</string>
     <string name="kind_card_linked_event">Länkad händelse</string>
     <string name="kind_card_more">+%1$d</string>
+    <string name="unknown_kind_title">Typ %1$d</string>
+    <string name="unknown_kind_unsupported">Stöds inte</string>
+    <string name="unknown_kind_encrypted">Krypterat innehåll (%1$s)</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hex-data, %1$d tecken</item>
+        <item quantity="other">Hex-data, %1$d tecken</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Base64-data, %1$d tecken</item>
+        <item quantity="other">Base64-data, %1$d tecken</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">JSON-data, %1$d tecken</item>
+        <item quantity="other">JSON-data, %1$d tecken</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Kodad data, %1$d tecken</item>
+        <item quantity="other">Kodad data, %1$d tecken</item>
+    </plurals>
+    <plurals name="unknown_kind_json_items">
+        <item quantity="one">JSON-lista med %1$d post</item>
+        <item quantity="other">JSON-lista med %1$d poster</item>
+    </plurals>
+    <plurals name="unknown_kind_show_tags">
+        <item quantity="one">Visa %1$d tagg</item>
+        <item quantity="other">Visa %1$d taggar</item>
+    </plurals>
+    <string name="unknown_kind_hide_tags">Dölj taggar</string>
+    <string name="unknown_kind_identifier">Identifierare</string>
+    <string name="unknown_kind_published">Publicerad</string>
+    <string name="unknown_kind_starts">Börjar</string>
+    <string name="unknown_kind_ends">Slutar</string>
+    <string name="unknown_kind_location">Plats</string>
+    <string name="unknown_kind_links">Länkar</string>
+    <string name="unknown_kind_kinds">Typer</string>
+    <string name="unknown_kind_relays">Reläer</string>
+    <string name="unknown_kind_client">Postad med</string>
     <string name="kc_proto_offer">Erbjudande</string>
     <string name="kc_proto_nwc_methods">Metoder</string>
     <string name="kc_proto_nwc_notifications">Notifieringar</string>
@@ -8078,34 +8134,6 @@
     <string name="drawing_discard_message">Den har inte lagts till i ditt inlägg än.</string>
     <string name="drawing_discard">Kasta</string>
     <string name="drawing_keep_drawing">Fortsätt rita</string>
-    <string name="relay_list_screen_title">Reläer</string>
-    <string name="relay_list_show_all">Visa alla reläer</string>
-    <string name="relay_list_add_to_my_relays">Lägg till i mina reläer</string>
-    <string name="relay_list_in_my_relays">I mina reläer</string>
-    <string name="desktop_menu_website">Amethysts webbplats</string>
-    <string name="desktop_menu_window">Fönster</string>
-    <string name="desktop_menu_minimize">Minimera</string>
-    <string name="desktop_menu_zoom">Zooma</string>
-    <string name="remote_signer_auth_title">Godkänn i din signatär</string>
-    <string name="remote_signer_auth_body">Din fjärrsignatär behöver att du loggar in eller godkänner på dess sida. Amethyst fortsätter vänta och går vidare så snart du har gjort det.</string>
-    <string name="remote_signer_auth_open">Öppna sidan</string>
-    <string name="remote_signer_auth_later">Inte nu</string>
-    <string name="remote_signer_auth_for_account">För %1$s</string>
-    <string name="remote_signer_auth_cannot_open">Ingen app här kan öppna den här sidan. Kopiera adressen till en webbläsare.</string>
-    <string name="cordn_groups_menu_invitations">Inbjudningar</string>
-    <string name="unknown_kind_title">Typ %1$d</string>
-    <string name="unknown_kind_unsupported">Stöds inte</string>
-    <string name="unknown_kind_encrypted">Krypterat innehåll (%1$s)</string>
-    <string name="unknown_kind_hide_tags">Dölj taggar</string>
-    <string name="unknown_kind_identifier">Identifierare</string>
-    <string name="unknown_kind_published">Publicerad</string>
-    <string name="unknown_kind_starts">Börjar</string>
-    <string name="unknown_kind_ends">Slutar</string>
-    <string name="unknown_kind_location">Plats</string>
-    <string name="unknown_kind_links">Länkar</string>
-    <string name="unknown_kind_kinds">Typer</string>
-    <string name="unknown_kind_relays">Reläer</string>
-    <string name="unknown_kind_client">Postad med</string>
     <string name="devtools_title">Utvecklarverktyg</string>
     <string name="devtools_search_keywords">utvecklare, felsökning, developer, debug, nostr, nip-19, bech32, npub, nevent, hex, händelse, event, json, signatur, signature, verifiera, verify, typ, kind, genomsök, crawl, relä, relay, websocket, konsol, console, req</string>
     <string name="devtools_explainer">Verktyg för att granska Nostr-data och prata direkt med reläer. De läser från reläer och publicerar aldrig något åt dig; reläkonsolen skickar bara de ramar du bygger eller skriver, och frågar innan den autentiserar.</string>
@@ -8159,16 +8187,32 @@
     <string name="devtools_event_kind_nip">%1$s, NIP-%2$s</string>
     <string name="devtools_event_find_on_relays">Hitta på reläer</string>
     <string name="devtools_kinds_search">Sök på nummer, namn eller NIP</string>
+    <plurals name="devtools_kinds_count">
+        <item quantity="one">%1$d känd typ</item>
+        <item quantity="other">%1$d kända typer</item>
+    </plurals>
     <string name="devtools_kind_lookup_title">Typuppslag</string>
     <string name="devtools_kind_lookup_desc">Skriv ett typnummer för att se dess namn och alla sätt klienter kodar den på, med riktiga exempel</string>
     <string name="devtools_kind_lookup_field">Typnummer</string>
     <string name="devtools_kind_lookup_button">Slå upp</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s från %2$d av %3$d relä</item>
+        <item quantity="other">%1$s från %2$d av %3$d reläer</item>
+    </plurals>
     <string name="devtools_kind_by_client">Per klient</string>
     <string name="devtools_kind_by_shape">Per form</string>
     <string name="devtools_kind_no_client">Ingen klient-tagg</string>
     <string name="devtools_kind_shape_n">Form %1$d</string>
     <string name="devtools_kind_from_clients">Från: %1$s</string>
     <string name="devtools_kind_more">+%1$d till</string>
+    <plurals name="devtools_kind_events">
+        <item quantity="one">%1$d händelse</item>
+        <item quantity="other">%1$d händelser</item>
+    </plurals>
+    <plurals name="devtools_kind_authors">
+        <item quantity="one">%1$d författare</item>
+        <item quantity="other">%1$d författare</item>
+    </plurals>
     <string name="devtools_kind_custom">Genomsök typ %1$d</string>
     <string name="devtools_kind_usage_title">Typ %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>
@@ -8176,6 +8220,10 @@
     <string name="devtools_probe_start">Genomsök</string>
     <string name="devtools_probe_stop">Stoppa</string>
     <string name="devtools_probe_discovering">Hittar reläer via NIP-66-övervakare…</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d av %2$d relä svarade, hittad på %3$d</item>
+        <item quantity="other">%1$d av %2$d reläer svarade, hittad på %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Nyaste händelsen</string>
     <string name="devtools_probe_none_found">Inget relä returnerade en matchande händelse</string>
     <string name="devtools_probe_found_only">Bara reläer som har den</string>
@@ -8233,52 +8281,4 @@
     <string name="devtools_console_invalid_url">Inte en relä-URL: %1$s</string>
     <string name="devtools_console_tor">%1$s går via Tor, som inte är anslutet än. Försök igen när Tor är igång, eller ändra reläets Tor-inställning.</string>
     <string name="devtools_console_send_failed">Inte ansluten, ramen skickades inte</string>
-    <plurals name="relay_list_section_count">
-        <item quantity="one">%1$d relä</item>
-        <item quantity="other">%1$d reläer</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_hex">
-        <item quantity="one">Hex-data, %1$d tecken</item>
-        <item quantity="other">Hex-data, %1$d tecken</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_base64">
-        <item quantity="one">Base64-data, %1$d tecken</item>
-        <item quantity="other">Base64-data, %1$d tecken</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_json">
-        <item quantity="one">JSON-data, %1$d tecken</item>
-        <item quantity="other">JSON-data, %1$d tecken</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_opaque">
-        <item quantity="one">Kodad data, %1$d tecken</item>
-        <item quantity="other">Kodad data, %1$d tecken</item>
-    </plurals>
-    <plurals name="unknown_kind_json_items">
-        <item quantity="one">JSON-lista med %1$d post</item>
-        <item quantity="other">JSON-lista med %1$d poster</item>
-    </plurals>
-    <plurals name="unknown_kind_show_tags">
-        <item quantity="one">Visa %1$d tagg</item>
-        <item quantity="other">Visa %1$d taggar</item>
-    </plurals>
-    <plurals name="devtools_kinds_count">
-        <item quantity="one">%1$d känd typ</item>
-        <item quantity="other">%1$d kända typer</item>
-    </plurals>
-    <plurals name="devtools_kind_sample_status">
-        <item quantity="one">%1$s från %2$d av %3$d relä</item>
-        <item quantity="other">%1$s från %2$d av %3$d reläer</item>
-    </plurals>
-    <plurals name="devtools_kind_events">
-        <item quantity="one">%1$d händelse</item>
-        <item quantity="other">%1$d händelser</item>
-    </plurals>
-    <plurals name="devtools_kind_authors">
-        <item quantity="one">%1$d författare</item>
-        <item quantity="other">%1$d författare</item>
-    </plurals>
-    <plurals name="devtools_probe_progress">
-        <item quantity="one">%1$d av %2$d relä svarade, hittad på %3$d</item>
-        <item quantity="other">%1$d av %2$d reläer svarade, hittad på %3$d</item>
-    </plurals>
 </resources>

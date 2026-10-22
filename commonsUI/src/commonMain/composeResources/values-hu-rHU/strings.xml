@@ -1069,7 +1069,7 @@
     <string name="page_error_proxy_down_body">Ez az oldal a TOR-hálózaton keresztül érhető el, de a TOR-hálózat még nem áll készen. Próbálja újra egy pillanat múlva.</string>
     <string name="page_error_timed_out_title">Ez az oldal túl lassan válaszolt</string>
     <string name="page_error_timed_out_body">A(z) %1$s oldal nem válaszolt időben.</string>
-    <string name="page_error_offline_title">Nincs internetkapcsolat</string>
+    <string name="page_error_offline_title">Ön jelenleg offline van</string>
     <string name="page_error_offline_body">Ellenőrizze az internetkapcsolatát, és próbálja újra.</string>
     <string name="page_error_insecure_title">Ez a kapcsolat nem privát</string>
     <string name="page_error_insecure_body">A(z) %1$s oldal nem adott érvényes tanúsítványt, ezért az oldal nem töltődött be.</string>
@@ -1139,7 +1139,7 @@
     <string name="nip46_signer_rotate_confirm_title">Új címet állít elő?</string>
     <string name="nip46_signer_rotate_confirm_message">Ez egy új bunker címet hoz létre, és minden jelenleg kapcsolódó alkalmazást leválaszt. Bárki, aki rendelkezik a régi címmel — beleértve a spammereket is — többé nem érheti el Önt. Kapcsolja össze újra a saját alkalmazásait az új kód beolvasásával.</string>
     <string name="nip46_signer_rotate_confirm_button">Előállítás</string>
-    <string name="nip46_signer_cancel">Mégsem</string>
+    <string name="nip46_signer_cancel">Mégse</string>
     <string name="nip46_signer_connect_label">Alkalmazás kapcsolása</string>
     <string name="nip46_signer_connect_hint">Illesszen be egy nostrconnect:// hivatkozást</string>
     <string name="nip46_signer_connect_button">Kapcsolódás</string>
@@ -4605,6 +4605,10 @@
     <string name="desktop_notification_follow">%1$s követi Önt</string>
     <string name="desktop_upload_server_not_supported">Az asztali feltöltések Blossom kiszolgálókra töltődnek fel. Válasszon egyet a médiakiszolgáló-beállításaiban.</string>
     <string name="desktop_menu_help">Súgó</string>
+    <string name="desktop_menu_website">Az Amethyst weboldala</string>
+    <string name="desktop_menu_window">Ablak</string>
+    <string name="desktop_menu_minimize">Minimalizálás</string>
+    <string name="desktop_menu_zoom">Nagyítás</string>
     <string name="desktop_menu_report_issue">Hibajelentés</string>
     <string name="login_with_remote_signer">Bejelentkezés távoli aláíróval</string>
     <string name="login_with_signer_app">Bejelentkezés a következővel: %1$s</string>
@@ -8191,6 +8195,10 @@
     <string name="devtools_kind_lookup_desc">Írjon be egy típusszámot, hogy lássa a nevét és minden módot, ahogy a kliensek kódolják, valós példákkal</string>
     <string name="devtools_kind_lookup_field">Típusszám</string>
     <string name="devtools_kind_lookup_button">Keresés</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s %2$d / %3$d átjátszóról</item>
+        <item quantity="other">%1$s %2$d / %3$d átjátszóról</item>
+    </plurals>
     <string name="devtools_kind_by_client">Kliens szerint</string>
     <string name="devtools_kind_by_shape">Alak szerint</string>
     <string name="devtools_kind_no_client">Nincs klienscímke</string>
