@@ -80,10 +80,15 @@ jobs:
       # Linux legs build on the JetBrains Runtime: jlink/jpackage bundle the JDK Gradle runs on,
       # and only JBR's AWT can draw natively on Wayland (WLToolkit; see
       # desktopApp/.../platform/WaylandDisplay.kt). macOS and Windows keep Temurin.
+      - name: Set up JDK 21 (JetBrains Runtime)
+        if: startsWith(matrix.family, 'linux')
+        uses: ./.github/actions/setup-jbr
+
       - name: Set up JDK 21
+        if: ${{ !startsWith(matrix.family, 'linux') }}
         uses: actions/setup-java@v6.0.1
         with:
-          distribution: ${{ startsWith(matrix.family, 'linux') && 'jetbrains' || 'temurin' }}
+          distribution: 'temurin'
           java-version: 21
 
       - name: Resolve tag + version
