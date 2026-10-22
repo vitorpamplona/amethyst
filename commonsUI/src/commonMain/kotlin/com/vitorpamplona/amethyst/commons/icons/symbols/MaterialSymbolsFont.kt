@@ -62,12 +62,13 @@ fun ProvideMaterialSymbols(
     weight: Int = MaterialSymbolsDefaults.WEIGHT,
     content: @Composable () -> Unit,
 ) {
-    val font = symbolFont(weight, MaterialSymbolsDefaults.FILL)
-    val filledFont = symbolFont(weight, MaterialSymbolsDefaults.FILL_ON)
+    val adjustment = systemFontWeightAdjustment()
+    val font = symbolFont(weight, MaterialSymbolsDefaults.FILL, adjustment)
+    val filledFont = symbolFont(weight, MaterialSymbolsDefaults.FILL_ON, adjustment)
     // Keyless remember is safe only when weight is stable; key on weight so a platform-
     // preview override swap actually rebuilds the FontFamily.
-    val fontFamily = remember(weight) { FontFamily(font) }
-    val filledFontFamily = remember(weight) { FontFamily(filledFont) }
+    val fontFamily = remember(weight, adjustment) { FontFamily(font) }
+    val filledFontFamily = remember(weight, adjustment) { FontFamily(filledFont) }
     val textMeasurer = rememberTextMeasurer(cacheSize = TEXT_MEASURER_CACHE_SIZE)
     CompositionLocalProvider(
         LocalMaterialSymbolsFontFamily provides fontFamily,
@@ -89,16 +90,19 @@ internal fun materialSymbolsTextMeasurer(): TextMeasurer =
     LocalMaterialSymbolsTextMeasurer.current
         ?: rememberTextMeasurer(cacheSize = TEXT_MEASURER_CACHE_SIZE)
 
+// Android adds the system bold-text [adjustment] to the wght axis when it loads the font, so
+// the axis is set that much lower to land on [weight].
 @Composable
 private fun symbolFont(
     weight: Int,
     fill: Float,
+    adjustment: Int,
 ) = Font(
     resource = Res.font.material_symbols_outlined,
     weight = FontWeight(weight),
     variationSettings =
         FontVariation.Settings(
-            FontVariation.weight(weight),
+            FontVariation.weight((weight - adjustment).coerceIn(1, 1000)),
             FontVariation.Setting("FILL", fill),
             FontVariation.Setting("opsz", MaterialSymbolsDefaults.OPTICAL_SIZE),
             FontVariation.Setting("GRAD", MaterialSymbolsDefaults.GRADE),
@@ -107,6 +111,7 @@ private fun symbolFont(
 
 @Composable
 private fun fontFamilyFallback(fill: Float): FontFamily {
-    val font = symbolFont(MaterialSymbolsDefaults.WEIGHT, fill)
-    return remember(fill) { FontFamily(font) }
+    val adjustment = systemFontWeightAdjustment()
+    val font = symbolFont(MaterialSymbolsDefaults.WEIGHT, fill, adjustment)
+    return remember(fill, adjustment) { FontFamily(font) }
 }
