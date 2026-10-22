@@ -328,9 +328,21 @@ class AccountSettings(
      */
     val syncedChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
+    /**
+     * Like [syncedChanges], for the feed filter each screen's top bar shows. It only remembers
+     * where the user was on that screen, and switching it is part of browsing, so [Account] waits
+     * 30 s before publishing it: a session of switches costs one signature, not one per switch.
+     */
+    val slowSyncedChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
     private fun saveAndSync() {
         saveAccountSettings()
         syncedChanges.tryEmit(Unit)
+    }
+
+    private fun saveAndSyncLater() {
+        saveAccountSettings()
+        slowSyncedChanges.tryEmit(Unit)
     }
 
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null || usesRemoteSigner()
@@ -813,7 +825,7 @@ class AccountSettings(
             }
         }
 
-        if (changed) saveAndSync()
+        if (changed) saveAndSyncLater()
     }
 
     // ---
@@ -980,217 +992,217 @@ class AccountSettings(
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
         if (defaultStoriesFollowList.value != name) {
             defaultStoriesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
         if (defaultDiscoveryFollowList.value != name) {
             defaultDiscoveryFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
         if (defaultCommunitiesFollowList.value != name) {
             defaultCommunitiesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
         if (defaultRelayGroupsDiscoveryFollowList.value != name) {
             defaultRelayGroupsDiscoveryFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
         if (defaultNsitesFollowList.value != name) {
             defaultNsitesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
         if (defaultGitRepositoriesFollowList.value != name) {
             defaultGitRepositoriesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
         if (defaultCalendarsFollowList.value != name) {
             defaultCalendarsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
         if (defaultGeocachesFollowList.value != name) {
             defaultGeocachesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
         if (defaultPublicChatsFollowList.value != name) {
             defaultPublicChatsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
         if (defaultNestsFollowList.value != name) {
             defaultNestsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
         if (defaultMusicPlaylistsFollowList.value != name) {
             defaultMusicPlaylistsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
         if (defaultPodcastsFollowList.value != name) {
             defaultPodcastsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
         if (defaultBadgesFollowList.value != name) {
             defaultBadgesFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
         if (defaultAppRecommendationsFollowList.value != name) {
             defaultAppRecommendationsFollowList.tryEmit(name)
-            saveAndSync()
+            saveAndSyncLater()
         }
     }
 

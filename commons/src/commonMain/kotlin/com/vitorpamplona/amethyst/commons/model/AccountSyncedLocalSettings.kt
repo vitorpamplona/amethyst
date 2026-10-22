@@ -32,6 +32,12 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -158,3 +164,25 @@ fun decodeFileServer(synced: SyncedFileServer?): ServerName? {
     val type = ServerType.entries.firstOrNull { it.name == synced.type } ?: return null
     return ServerName(synced.name, synced.baseUrl, type)
 }
+
+/**
+ * When to publish the NIP-78 blob for the changes it is told about: [settingDelayMs] after the
+ * last [settingChanges], or [feedFilterDelayMs] after the last [feedFilterChanges]. One wait
+ * serves both, so a feed switch never holds back a setting changed just before it, and a pending
+ * feed switch rides along with the next publish instead of costing one of its own.
+ */
+fun syncedSettingsPublishes(
+    settingChanges: Flow<Unit>,
+    feedFilterChanges: Flow<Unit>,
+    settingDelayMs: Long = 1_000,
+    feedFilterDelayMs: Long = 30_000,
+): Flow<Unit> =
+    channelFlow {
+        var settingPending = false
+        merge(settingChanges.map { true }, feedFilterChanges.map { false }).collectLatest { isSetting ->
+            if (isSetting) settingPending = true
+            delay(if (settingPending) settingDelayMs else feedFilterDelayMs)
+            settingPending = false
+            send(Unit)
+        }
+    }
