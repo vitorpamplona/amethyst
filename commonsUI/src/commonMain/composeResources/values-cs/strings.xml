@@ -2911,6 +2911,16 @@
     <string name="contact_list_containing_label">Seznam sledování (%1$d):</string>
     <string name="contact_list_screen_title">Seznam sledování</string>
     <string name="contact_list_screen_title_with_count">Seznam sledování (%1$d)</string>
+    <string name="relay_list_screen_title">Relaye</string>
+    <string name="relay_list_show_all">Zobrazit všechny relaye</string>
+    <string name="relay_list_add_to_my_relays">Přidat do mých relayů</string>
+    <string name="relay_list_in_my_relays">V mých relayích</string>
+    <plurals name="relay_list_section_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="few">%1$d relaye</item>
+        <item quantity="many">%1$d relaye</item>
+        <item quantity="other">%1$d relayů</item>
+    </plurals>
     <string name="follow_pack_creation_name_label">Název sady</string>
     <string name="follow_pack_copy_name_label">Nový název sady</string>
     <string name="follow_pack_creation_desc_label">Popis sady</string>
@@ -4721,6 +4731,10 @@
     <string name="desktop_notification_follow">%1$s vás začal sledovat</string>
     <string name="desktop_upload_server_not_supported">Nahrávání z počítače jde na servery Blossom. Vyberte jeden v nastavení mediálních serverů.</string>
     <string name="desktop_menu_help">Nápověda</string>
+    <string name="desktop_menu_website">Web Amethystu</string>
+    <string name="desktop_menu_window">Okno</string>
+    <string name="desktop_menu_minimize">Minimalizovat</string>
+    <string name="desktop_menu_zoom">Zvětšit</string>
     <string name="desktop_menu_report_issue">Nahlásit problém</string>
     <string name="login_with_remote_signer">Přihlásit se vzdáleným podepisovatelem</string>
     <string name="login_with_signer_app">Přihlásit se přes %1$s</string>
@@ -4735,6 +4749,12 @@
     <string name="remote_signer_login_failed">Přihlášení vzdáleným podepisovatelem se nezdařilo: %1$s</string>
     <string name="remote_signer_relay_label">Jeden z vašich relayí pro příchozí zprávy</string>
     <string name="remote_signer_relay_hint">Podepisovač se nepřipojuje? Použijte místo toho jeden z relayí pro příchozí zprávy vašeho účtu.</string>
+    <string name="remote_signer_auth_title">Schvalte to ve svém podepisovateli</string>
+    <string name="remote_signer_auth_body">Váš vzdálený podepisovatel potřebuje, abyste se na jeho stránce přihlásili nebo akci schválili. Amethyst mezitím čeká a pokračuje, jakmile to uděláte.</string>
+    <string name="remote_signer_auth_open">Otevřít stránku</string>
+    <string name="remote_signer_auth_later">Teď ne</string>
+    <string name="remote_signer_auth_for_account">Pro %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Tuto stránku tu neumí otevřít žádná aplikace. Zkopírujte adresu do prohlížeče.</string>
     <string name="remote_signer_relay_apply">Použít relay</string>
     <string name="remote_signer_default_relays">Použít výchozí relaye</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Pro zvýšení příspěvků se přihlaste s privátním klíčem</string>
@@ -7063,6 +7083,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Z těchto skupin nic nepřichází. Amethyst to stále zkouší znovu.</string>
     <string name="cordn_groups_manage">Koordinátoři</string>
+    <string name="cordn_groups_menu_invitations">Pozvánky</string>
     <string name="cordn_groups_none">Zatím žádné skupiny cordn</string>
     <string name="cordn_groups_none_detail">Skupina cordn žije na jednom koordinátoru, který spravuje její členství a předává zprávy, aniž by kdy viděl, co kdo píše.</string>
     <string name="cordn_groups_start">Založit skupinu</string>
@@ -7874,6 +7895,55 @@
     <string name="kind_card_private_relays_hidden">Relaye jsou zašifrované: vidí je jen autor.</string>
     <string name="kind_card_linked_event">Propojená událost</string>
     <string name="kind_card_more">+%1$d</string>
+    <string name="unknown_kind_title">Typ %1$d</string>
+    <string name="unknown_kind_unsupported">Nepodporováno</string>
+    <string name="unknown_kind_encrypted">Šifrovaný obsah (%1$s)</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hex data, %1$d znak</item>
+        <item quantity="few">Hex data, %1$d znaky</item>
+        <item quantity="many">Hex data, %1$d znaku</item>
+        <item quantity="other">Hex data, %1$d znaků</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Data Base64, %1$d znak</item>
+        <item quantity="few">Data Base64, %1$d znaky</item>
+        <item quantity="many">Data Base64, %1$d znaku</item>
+        <item quantity="other">Data Base64, %1$d znaků</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">Data JSON, %1$d znak</item>
+        <item quantity="few">Data JSON, %1$d znaky</item>
+        <item quantity="many">Data JSON, %1$d znaku</item>
+        <item quantity="other">Data JSON, %1$d znaků</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Kódovaná data, %1$d znak</item>
+        <item quantity="few">Kódovaná data, %1$d znaky</item>
+        <item quantity="many">Kódovaná data, %1$d znaku</item>
+        <item quantity="other">Kódovaná data, %1$d znaků</item>
+    </plurals>
+    <plurals name="unknown_kind_json_items">
+        <item quantity="one">Seznam JSON s %1$d položkou</item>
+        <item quantity="few">Seznam JSON s %1$d položkami</item>
+        <item quantity="many">Seznam JSON s %1$d položky</item>
+        <item quantity="other">Seznam JSON s %1$d položkami</item>
+    </plurals>
+    <plurals name="unknown_kind_show_tags">
+        <item quantity="one">Zobrazit %1$d tag</item>
+        <item quantity="few">Zobrazit %1$d tagy</item>
+        <item quantity="many">Zobrazit %1$d tagu</item>
+        <item quantity="other">Zobrazit %1$d tagů</item>
+    </plurals>
+    <string name="unknown_kind_hide_tags">Skrýt tagy</string>
+    <string name="unknown_kind_identifier">Identifikátor</string>
+    <string name="unknown_kind_published">Publikováno</string>
+    <string name="unknown_kind_starts">Začátek</string>
+    <string name="unknown_kind_ends">Konec</string>
+    <string name="unknown_kind_location">Poloha</string>
+    <string name="unknown_kind_links">Odkazy</string>
+    <string name="unknown_kind_kinds">Typy</string>
+    <string name="unknown_kind_relays">Relaye</string>
+    <string name="unknown_kind_client">Odesláno z</string>
     <string name="kc_proto_offer">Nabídka</string>
     <string name="kc_proto_nwc_methods">Metody</string>
     <string name="kc_proto_nwc_notifications">Oznámení</string>
@@ -8592,34 +8662,6 @@
     <string name="drawing_discard_message">Zatím nebyla přidána do vašeho příspěvku.</string>
     <string name="drawing_discard">Zahodit</string>
     <string name="drawing_keep_drawing">Kreslit dál</string>
-    <string name="relay_list_screen_title">Relaye</string>
-    <string name="relay_list_show_all">Zobrazit všechny relaye</string>
-    <string name="relay_list_add_to_my_relays">Přidat do mých relayů</string>
-    <string name="relay_list_in_my_relays">V mých relayích</string>
-    <string name="desktop_menu_website">Web Amethystu</string>
-    <string name="desktop_menu_window">Okno</string>
-    <string name="desktop_menu_minimize">Minimalizovat</string>
-    <string name="desktop_menu_zoom">Zvětšit</string>
-    <string name="remote_signer_auth_title">Schvalte to ve svém podepisovateli</string>
-    <string name="remote_signer_auth_body">Váš vzdálený podepisovatel potřebuje, abyste se na jeho stránce přihlásili nebo akci schválili. Amethyst mezitím čeká a pokračuje, jakmile to uděláte.</string>
-    <string name="remote_signer_auth_open">Otevřít stránku</string>
-    <string name="remote_signer_auth_later">Teď ne</string>
-    <string name="remote_signer_auth_for_account">Pro %1$s</string>
-    <string name="remote_signer_auth_cannot_open">Tuto stránku tu neumí otevřít žádná aplikace. Zkopírujte adresu do prohlížeče.</string>
-    <string name="cordn_groups_menu_invitations">Pozvánky</string>
-    <string name="unknown_kind_title">Typ %1$d</string>
-    <string name="unknown_kind_unsupported">Nepodporováno</string>
-    <string name="unknown_kind_encrypted">Šifrovaný obsah (%1$s)</string>
-    <string name="unknown_kind_hide_tags">Skrýt tagy</string>
-    <string name="unknown_kind_identifier">Identifikátor</string>
-    <string name="unknown_kind_published">Publikováno</string>
-    <string name="unknown_kind_starts">Začátek</string>
-    <string name="unknown_kind_ends">Konec</string>
-    <string name="unknown_kind_location">Poloha</string>
-    <string name="unknown_kind_links">Odkazy</string>
-    <string name="unknown_kind_kinds">Typy</string>
-    <string name="unknown_kind_relays">Relaye</string>
-    <string name="unknown_kind_client">Odesláno z</string>
     <string name="devtools_title">Nástroje pro vývojáře</string>
     <string name="devtools_search_keywords">vývojář, ladění, developer, debug, nostr, nip-19, bech32, npub, nevent, hex, událost, event, json, podpis, signature, ověřit, verify, typ, kind, procházet, crawl, relay, websocket, konzole, console, req</string>
     <string name="devtools_explainer">Nástroje pro zkoumání dat Nostru a přímou komunikaci s relayi. Čtou z relayů a nikdy za vás nic nepublikují; konzole relaye posílá jen rámce, které sestavíte nebo napíšete, a před ověřením se zeptá.</string>
@@ -8673,16 +8715,40 @@
     <string name="devtools_event_kind_nip">%1$s, NIP-%2$s</string>
     <string name="devtools_event_find_on_relays">Najít na relayích</string>
     <string name="devtools_kinds_search">Hledat podle čísla, názvu nebo NIP</string>
+    <plurals name="devtools_kinds_count">
+        <item quantity="one">%1$d známý typ</item>
+        <item quantity="few">%1$d známé typy</item>
+        <item quantity="many">%1$d známého typu</item>
+        <item quantity="other">%1$d známých typů</item>
+    </plurals>
     <string name="devtools_kind_lookup_title">Vyhledání typu</string>
     <string name="devtools_kind_lookup_desc">Zadejte číslo typu a uvidíte jeho název a všechny způsoby, jak ho klienti kódují, se skutečnými příklady</string>
     <string name="devtools_kind_lookup_field">Číslo typu</string>
     <string name="devtools_kind_lookup_button">Vyhledat</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s, %2$d z %3$d relaye</item>
+        <item quantity="few">%1$s, %2$d z %3$d relayů</item>
+        <item quantity="many">%1$s, %2$d z %3$d relaye</item>
+        <item quantity="other">%1$s, %2$d z %3$d relayů</item>
+    </plurals>
     <string name="devtools_kind_by_client">Podle klienta</string>
     <string name="devtools_kind_by_shape">Podle tvaru</string>
     <string name="devtools_kind_no_client">Bez tagu client</string>
     <string name="devtools_kind_shape_n">Tvar %1$d</string>
     <string name="devtools_kind_from_clients">Od: %1$s</string>
     <string name="devtools_kind_more">+%1$d dalších</string>
+    <plurals name="devtools_kind_events">
+        <item quantity="one">%1$d událost</item>
+        <item quantity="few">%1$d události</item>
+        <item quantity="many">%1$d události</item>
+        <item quantity="other">%1$d událostí</item>
+    </plurals>
+    <plurals name="devtools_kind_authors">
+        <item quantity="one">%1$d autor</item>
+        <item quantity="few">%1$d autoři</item>
+        <item quantity="many">%1$d autora</item>
+        <item quantity="other">%1$d autorů</item>
+    </plurals>
     <string name="devtools_kind_custom">Procházet typ %1$d</string>
     <string name="devtools_kind_usage_title">Typ %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>
@@ -8690,6 +8756,12 @@
     <string name="devtools_probe_start">Procházet</string>
     <string name="devtools_probe_stop">Zastavit</string>
     <string name="devtools_probe_discovering">Hledání relayů z monitorů NIP-66…</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">Odpovědi: %1$d z %2$d relaye, nalezeno na %3$d</item>
+        <item quantity="few">Odpovědi: %1$d z %2$d relayů, nalezeno na %3$d</item>
+        <item quantity="many">Odpovědi: %1$d z %2$d relaye, nalezeno na %3$d</item>
+        <item quantity="other">Odpovědi: %1$d z %2$d relayů, nalezeno na %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Nejnovější událost</string>
     <string name="devtools_probe_none_found">Žádný relay nevrátil odpovídající událost</string>
     <string name="devtools_probe_found_only">Jen relaye, které ji mají</string>
@@ -8747,76 +8819,4 @@
     <string name="devtools_console_invalid_url">Není URL relaye: %1$s</string>
     <string name="devtools_console_tor">%1$s vede přes Tor, který ještě není připojen. Zkuste to znovu, až Tor poběží, nebo změňte nastavení Toru pro tento relay.</string>
     <string name="devtools_console_send_failed">Nepřipojeno, rámec nebyl odeslán</string>
-    <plurals name="relay_list_section_count">
-        <item quantity="one">%1$d relay</item>
-        <item quantity="few">%1$d relaye</item>
-        <item quantity="many">%1$d relaye</item>
-        <item quantity="other">%1$d relayů</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_hex">
-        <item quantity="one">Hex data, %1$d znak</item>
-        <item quantity="few">Hex data, %1$d znaky</item>
-        <item quantity="many">Hex data, %1$d znaku</item>
-        <item quantity="other">Hex data, %1$d znaků</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_base64">
-        <item quantity="one">Data Base64, %1$d znak</item>
-        <item quantity="few">Data Base64, %1$d znaky</item>
-        <item quantity="many">Data Base64, %1$d znaku</item>
-        <item quantity="other">Data Base64, %1$d znaků</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_json">
-        <item quantity="one">Data JSON, %1$d znak</item>
-        <item quantity="few">Data JSON, %1$d znaky</item>
-        <item quantity="many">Data JSON, %1$d znaku</item>
-        <item quantity="other">Data JSON, %1$d znaků</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_opaque">
-        <item quantity="one">Kódovaná data, %1$d znak</item>
-        <item quantity="few">Kódovaná data, %1$d znaky</item>
-        <item quantity="many">Kódovaná data, %1$d znaku</item>
-        <item quantity="other">Kódovaná data, %1$d znaků</item>
-    </plurals>
-    <plurals name="unknown_kind_json_items">
-        <item quantity="one">Seznam JSON s %1$d položkou</item>
-        <item quantity="few">Seznam JSON s %1$d položkami</item>
-        <item quantity="many">Seznam JSON s %1$d položky</item>
-        <item quantity="other">Seznam JSON s %1$d položkami</item>
-    </plurals>
-    <plurals name="unknown_kind_show_tags">
-        <item quantity="one">Zobrazit %1$d tag</item>
-        <item quantity="few">Zobrazit %1$d tagy</item>
-        <item quantity="many">Zobrazit %1$d tagu</item>
-        <item quantity="other">Zobrazit %1$d tagů</item>
-    </plurals>
-    <plurals name="devtools_kinds_count">
-        <item quantity="one">%1$d známý typ</item>
-        <item quantity="few">%1$d známé typy</item>
-        <item quantity="many">%1$d známého typu</item>
-        <item quantity="other">%1$d známých typů</item>
-    </plurals>
-    <plurals name="devtools_kind_sample_status">
-        <item quantity="one">%1$s, %2$d z %3$d relaye</item>
-        <item quantity="few">%1$s, %2$d z %3$d relayů</item>
-        <item quantity="many">%1$s, %2$d z %3$d relaye</item>
-        <item quantity="other">%1$s, %2$d z %3$d relayů</item>
-    </plurals>
-    <plurals name="devtools_kind_events">
-        <item quantity="one">%1$d událost</item>
-        <item quantity="few">%1$d události</item>
-        <item quantity="many">%1$d události</item>
-        <item quantity="other">%1$d událostí</item>
-    </plurals>
-    <plurals name="devtools_kind_authors">
-        <item quantity="one">%1$d autor</item>
-        <item quantity="few">%1$d autoři</item>
-        <item quantity="many">%1$d autora</item>
-        <item quantity="other">%1$d autorů</item>
-    </plurals>
-    <plurals name="devtools_probe_progress">
-        <item quantity="one">Odpovědi: %1$d z %2$d relaye, nalezeno na %3$d</item>
-        <item quantity="few">Odpovědi: %1$d z %2$d relayů, nalezeno na %3$d</item>
-        <item quantity="many">Odpovědi: %1$d z %2$d relaye, nalezeno na %3$d</item>
-        <item quantity="other">Odpovědi: %1$d z %2$d relayů, nalezeno na %3$d</item>
-    </plurals>
 </resources>

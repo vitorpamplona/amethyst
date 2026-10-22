@@ -2873,6 +2873,14 @@
     <string name="contact_list_containing_label">Folgenliste (%1$d Nutzer):</string>
     <string name="contact_list_screen_title">Folgenliste</string>
     <string name="contact_list_screen_title_with_count">Folgenliste (%1$d)</string>
+    <string name="relay_list_screen_title">Relays</string>
+    <string name="relay_list_show_all">Alle Relays anzeigen</string>
+    <string name="relay_list_add_to_my_relays">Zu meinen Relays hinzufügen</string>
+    <string name="relay_list_in_my_relays">In meinen Relays</string>
+    <plurals name="relay_list_section_count">
+        <item quantity="one">%1$d Relay</item>
+        <item quantity="other">%1$d Relays</item>
+    </plurals>
     <string name="follow_pack_creation_name_label">Paketname</string>
     <string name="follow_pack_copy_name_label">Neuer Paketname</string>
     <string name="follow_pack_creation_desc_label">Paketbeschreibung</string>
@@ -4597,6 +4605,10 @@
     <string name="desktop_notification_follow">%1$s folgt dir jetzt</string>
     <string name="desktop_upload_server_not_supported">Uploads am Desktop gehen an Blossom-Server. Wähle einen in deinen Medienserver-Einstellungen.</string>
     <string name="desktop_menu_help">Hilfe</string>
+    <string name="desktop_menu_website">Amethyst-Website</string>
+    <string name="desktop_menu_window">Fenster</string>
+    <string name="desktop_menu_minimize">Im Dock ablegen</string>
+    <string name="desktop_menu_zoom">Zoomen</string>
     <string name="desktop_menu_report_issue">Problem melden</string>
     <string name="login_with_remote_signer">Mit einem Remote-Signer anmelden</string>
     <string name="login_with_signer_app">Mit %1$s anmelden</string>
@@ -4611,6 +4623,12 @@
     <string name="remote_signer_login_failed">Anmeldung mit dem Remote-Signer fehlgeschlagen: %1$s</string>
     <string name="remote_signer_relay_label">Eines deiner Inbox-Relays</string>
     <string name="remote_signer_relay_hint">Signer verbindet sich nicht? Nutze stattdessen eines der Inbox-Relays deines Kontos.</string>
+    <string name="remote_signer_auth_title">In deinem Signer bestätigen</string>
+    <string name="remote_signer_auth_body">Dein Remote-Signer möchte, dass du dich auf seiner Seite anmeldest oder die Anfrage bestätigst. Amethyst wartet so lange und macht weiter, sobald du das getan hast.</string>
+    <string name="remote_signer_auth_open">Seite öffnen</string>
+    <string name="remote_signer_auth_later">Nicht jetzt</string>
+    <string name="remote_signer_auth_for_account">Für %1$s</string>
+    <string name="remote_signer_auth_cannot_open">Keine App auf diesem Gerät kann diese Seite öffnen. Kopiere die Adresse in einen Browser.</string>
     <string name="remote_signer_relay_apply">Relay verwenden</string>
     <string name="remote_signer_default_relays">Standard-Relays verwenden</string>
     <string name="login_with_a_private_key_to_be_able_to_boost_posts">Du verwendest einen öffentlichen Schlüssel und öffentliche Schlüssel sind schreibgeschützt. Mit einem privaten Schlüssel anmelden, um Beiträge boosten zu können</string>
@@ -6691,6 +6709,7 @@
     </plurals>
     <string name="cordn_groups_down_note">Aus diesen Gruppen kommt nichts an. Amethyst versucht es weiter.</string>
     <string name="cordn_groups_manage">Koordinatoren</string>
+    <string name="cordn_groups_menu_invitations">Einladungen</string>
     <string name="cordn_groups_none">Noch keine cordn-Gruppen</string>
     <string name="cordn_groups_none_detail">Eine cordn-Gruppe liegt auf einem Koordinator, der ihre Mitgliedschaft verwaltet und Nachrichten weitergibt, ohne je zu sehen, was jemand schreibt.</string>
     <string name="cordn_groups_start">Eine starten</string>
@@ -7436,6 +7455,43 @@
     <string name="kind_card_private_relays_hidden">Die Relays sind verschlüsselt: Nur der Autor kann sie sehen.</string>
     <string name="kind_card_linked_event">Verknüpftes Ereignis</string>
     <string name="kind_card_more">+%1$d</string>
+    <string name="unknown_kind_title">Typ %1$d</string>
+    <string name="unknown_kind_unsupported">Nicht unterstützt</string>
+    <string name="unknown_kind_encrypted">Verschlüsselter Inhalt (%1$s)</string>
+    <plurals name="unknown_kind_encoded_hex">
+        <item quantity="one">Hex-Daten, %1$d Zeichen</item>
+        <item quantity="other">Hex-Daten, %1$d Zeichen</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_base64">
+        <item quantity="one">Base64-Daten, %1$d Zeichen</item>
+        <item quantity="other">Base64-Daten, %1$d Zeichen</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_json">
+        <item quantity="one">JSON-Daten, %1$d Zeichen</item>
+        <item quantity="other">JSON-Daten, %1$d Zeichen</item>
+    </plurals>
+    <plurals name="unknown_kind_encoded_opaque">
+        <item quantity="one">Kodierte Daten, %1$d Zeichen</item>
+        <item quantity="other">Kodierte Daten, %1$d Zeichen</item>
+    </plurals>
+    <plurals name="unknown_kind_json_items">
+        <item quantity="one">JSON-Liste mit %1$d Eintrag</item>
+        <item quantity="other">JSON-Liste mit %1$d Einträgen</item>
+    </plurals>
+    <plurals name="unknown_kind_show_tags">
+        <item quantity="one">%1$d Tag anzeigen</item>
+        <item quantity="other">%1$d Tags anzeigen</item>
+    </plurals>
+    <string name="unknown_kind_hide_tags">Tags ausblenden</string>
+    <string name="unknown_kind_identifier">Kennung</string>
+    <string name="unknown_kind_published">Veröffentlicht</string>
+    <string name="unknown_kind_starts">Beginnt</string>
+    <string name="unknown_kind_ends">Endet</string>
+    <string name="unknown_kind_location">Standort</string>
+    <string name="unknown_kind_links">Links</string>
+    <string name="unknown_kind_kinds">Typen</string>
+    <string name="unknown_kind_relays">Relays</string>
+    <string name="unknown_kind_client">Gepostet mit</string>
     <string name="kc_proto_offer">Angebot</string>
     <string name="kc_proto_nwc_methods">Methoden</string>
     <string name="kc_proto_nwc_notifications">Benachrichtigungen</string>
@@ -8080,34 +8136,6 @@
     <string name="drawing_discard_message">Sie wurde deinem Beitrag noch nicht hinzugefügt.</string>
     <string name="drawing_discard">Verwerfen</string>
     <string name="drawing_keep_drawing">Weiterzeichnen</string>
-    <string name="relay_list_screen_title">Relays</string>
-    <string name="relay_list_show_all">Alle Relays anzeigen</string>
-    <string name="relay_list_add_to_my_relays">Zu meinen Relays hinzufügen</string>
-    <string name="relay_list_in_my_relays">In meinen Relays</string>
-    <string name="desktop_menu_website">Amethyst-Website</string>
-    <string name="desktop_menu_window">Fenster</string>
-    <string name="desktop_menu_minimize">Im Dock ablegen</string>
-    <string name="desktop_menu_zoom">Zoomen</string>
-    <string name="remote_signer_auth_title">In deinem Signer bestätigen</string>
-    <string name="remote_signer_auth_body">Dein Remote-Signer möchte, dass du dich auf seiner Seite anmeldest oder die Anfrage bestätigst. Amethyst wartet so lange und macht weiter, sobald du das getan hast.</string>
-    <string name="remote_signer_auth_open">Seite öffnen</string>
-    <string name="remote_signer_auth_later">Nicht jetzt</string>
-    <string name="remote_signer_auth_for_account">Für %1$s</string>
-    <string name="remote_signer_auth_cannot_open">Keine App auf diesem Gerät kann diese Seite öffnen. Kopiere die Adresse in einen Browser.</string>
-    <string name="cordn_groups_menu_invitations">Einladungen</string>
-    <string name="unknown_kind_title">Typ %1$d</string>
-    <string name="unknown_kind_unsupported">Nicht unterstützt</string>
-    <string name="unknown_kind_encrypted">Verschlüsselter Inhalt (%1$s)</string>
-    <string name="unknown_kind_hide_tags">Tags ausblenden</string>
-    <string name="unknown_kind_identifier">Kennung</string>
-    <string name="unknown_kind_published">Veröffentlicht</string>
-    <string name="unknown_kind_starts">Beginnt</string>
-    <string name="unknown_kind_ends">Endet</string>
-    <string name="unknown_kind_location">Standort</string>
-    <string name="unknown_kind_links">Links</string>
-    <string name="unknown_kind_kinds">Typen</string>
-    <string name="unknown_kind_relays">Relays</string>
-    <string name="unknown_kind_client">Gepostet mit</string>
     <string name="devtools_title">Entwicklertools</string>
     <string name="devtools_search_keywords">Entwickler, Debug, developer, debug, nostr, nip-19, bech32, npub, nevent, hex, Ereignis, event, json, Signatur, signature, prüfen, verify, Typ, kind, durchsuchen, crawl, relay, websocket, Konsole, console, req</string>
     <string name="devtools_explainer">Werkzeuge, um Nostr-Daten zu untersuchen und direkt mit Relays zu sprechen. Sie lesen von Relays und veröffentlichen nie etwas für dich; die Relay-Konsole sendet nur die Frames, die du baust oder eintippst, und fragt nach, bevor sie sich authentifiziert.</string>
@@ -8161,16 +8189,32 @@
     <string name="devtools_event_kind_nip">%1$s, NIP-%2$s</string>
     <string name="devtools_event_find_on_relays">Auf Relays finden</string>
     <string name="devtools_kinds_search">Nach Nummer, Name oder NIP suchen</string>
+    <plurals name="devtools_kinds_count">
+        <item quantity="one">%1$d bekannter Typ</item>
+        <item quantity="other">%1$d bekannte Typen</item>
+    </plurals>
     <string name="devtools_kind_lookup_title">Typ-Suche</string>
     <string name="devtools_kind_lookup_desc">Gib eine Typnummer ein, um ihren Namen und jede Art zu sehen, wie Clients ihn kodieren, mit echten Beispielen</string>
     <string name="devtools_kind_lookup_field">Typnummer</string>
     <string name="devtools_kind_lookup_button">Nachschlagen</string>
+    <plurals name="devtools_kind_sample_status">
+        <item quantity="one">%1$s aus %2$d von %3$d Relay</item>
+        <item quantity="other">%1$s aus %2$d von %3$d Relays</item>
+    </plurals>
     <string name="devtools_kind_by_client">Nach Client</string>
     <string name="devtools_kind_by_shape">Nach Form</string>
     <string name="devtools_kind_no_client">Kein Client-Tag</string>
     <string name="devtools_kind_shape_n">Form %1$d</string>
     <string name="devtools_kind_from_clients">Von: %1$s</string>
     <string name="devtools_kind_more">+%1$d weitere</string>
+    <plurals name="devtools_kind_events">
+        <item quantity="one">%1$d Ereignis</item>
+        <item quantity="other">%1$d Ereignisse</item>
+    </plurals>
+    <plurals name="devtools_kind_authors">
+        <item quantity="one">%1$d Autor</item>
+        <item quantity="other">%1$d Autoren</item>
+    </plurals>
     <string name="devtools_kind_custom">Typ %1$d durchsuchen</string>
     <string name="devtools_kind_usage_title">Typ %1$d</string>
     <string name="devtools_kind_nip">NIP-%1$s</string>
@@ -8178,6 +8222,10 @@
     <string name="devtools_probe_start">Durchsuchen</string>
     <string name="devtools_probe_stop">Stopp</string>
     <string name="devtools_probe_discovering">Relays werden über NIP-66-Monitore gesucht…</string>
+    <plurals name="devtools_probe_progress">
+        <item quantity="one">%1$d von %2$d Relay hat geantwortet, gefunden auf %3$d</item>
+        <item quantity="other">%1$d von %2$d Relays haben geantwortet, gefunden auf %3$d</item>
+    </plurals>
     <string name="devtools_probe_newest">Neuestes Ereignis</string>
     <string name="devtools_probe_none_found">Kein Relay hat ein passendes Ereignis geliefert</string>
     <string name="devtools_probe_found_only">Nur Relays, die es haben</string>
@@ -8235,52 +8283,4 @@
     <string name="devtools_console_invalid_url">Keine Relay-URL: %1$s</string>
     <string name="devtools_console_tor">%1$s läuft über Tor, und Tor ist noch nicht verbunden. Versuche es erneut, sobald Tor läuft, oder ändere die Tor-Einstellung des Relays.</string>
     <string name="devtools_console_send_failed">Nicht verbunden, Frame nicht gesendet</string>
-    <plurals name="relay_list_section_count">
-        <item quantity="one">%1$d Relay</item>
-        <item quantity="other">%1$d Relays</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_hex">
-        <item quantity="one">Hex-Daten, %1$d Zeichen</item>
-        <item quantity="other">Hex-Daten, %1$d Zeichen</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_base64">
-        <item quantity="one">Base64-Daten, %1$d Zeichen</item>
-        <item quantity="other">Base64-Daten, %1$d Zeichen</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_json">
-        <item quantity="one">JSON-Daten, %1$d Zeichen</item>
-        <item quantity="other">JSON-Daten, %1$d Zeichen</item>
-    </plurals>
-    <plurals name="unknown_kind_encoded_opaque">
-        <item quantity="one">Kodierte Daten, %1$d Zeichen</item>
-        <item quantity="other">Kodierte Daten, %1$d Zeichen</item>
-    </plurals>
-    <plurals name="unknown_kind_json_items">
-        <item quantity="one">JSON-Liste mit %1$d Eintrag</item>
-        <item quantity="other">JSON-Liste mit %1$d Einträgen</item>
-    </plurals>
-    <plurals name="unknown_kind_show_tags">
-        <item quantity="one">%1$d Tag anzeigen</item>
-        <item quantity="other">%1$d Tags anzeigen</item>
-    </plurals>
-    <plurals name="devtools_kinds_count">
-        <item quantity="one">%1$d bekannter Typ</item>
-        <item quantity="other">%1$d bekannte Typen</item>
-    </plurals>
-    <plurals name="devtools_kind_sample_status">
-        <item quantity="one">%1$s aus %2$d von %3$d Relay</item>
-        <item quantity="other">%1$s aus %2$d von %3$d Relays</item>
-    </plurals>
-    <plurals name="devtools_kind_events">
-        <item quantity="one">%1$d Ereignis</item>
-        <item quantity="other">%1$d Ereignisse</item>
-    </plurals>
-    <plurals name="devtools_kind_authors">
-        <item quantity="one">%1$d Autor</item>
-        <item quantity="other">%1$d Autoren</item>
-    </plurals>
-    <plurals name="devtools_probe_progress">
-        <item quantity="one">%1$d von %2$d Relay hat geantwortet, gefunden auf %3$d</item>
-        <item quantity="other">%1$d von %2$d Relays haben geantwortet, gefunden auf %3$d</item>
-    </plurals>
 </resources>
