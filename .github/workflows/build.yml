@@ -91,10 +91,15 @@ jobs:
 
       # Linux packages bundle the JetBrains Runtime, the JDK Gradle runs on, for its native Wayland
       # toolkit (see create-release.yml); build and test the .deb the same way.
+      - name: Set up JDK 21 (JetBrains Runtime)
+        if: runner.os == 'Linux'
+        uses: ./.github/actions/setup-jbr
+
       - name: Set up JDK 21
+        if: runner.os != 'Linux'
         uses: actions/setup-java@v6.0.1
         with:
-          distribution: ${{ runner.os == 'Linux' && 'jetbrains' || 'temurin' }}
+          distribution: 'temurin'
           java-version: 21
 
       - name: Set up Gradle

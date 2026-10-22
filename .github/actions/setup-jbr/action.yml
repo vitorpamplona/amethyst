@@ -1,0 +1,46 @@
+name: Set up JetBrains Runtime
+description: >-
+  Install a pinned JetBrains Runtime (JBR) 21 SDK on a Linux runner and make it the job's JDK.
+  Linux desktop builds need JBR: jlink/jpackage bundle the JDK Gradle runs on, and only JBR's
+  AWT draws natively on Wayland (see create-release.yml).
+
+  setup-java's `jetbrains` distribution is not used on purpose: it first lists JetBrains'
+  releases to find the newest 21, and that lookup fails intermittently, leaving only JBR 11
+  builds to choose from ("No matching version found for SemVer '21'"). This action downloads
+  one pinned archive instead, checks it against the SHA-512 pinned below, and hands the file to
+  setup-java's `jdkfile` distribution.
+
+  To move to a newer JBR, take the version and build from the JetBrainsRuntime release notes and
+  the SHA-512s from the `.checksum` file next to each archive on cache-redirector.jetbrains.com.
+
+runs:
+  using: composite
+  steps:
+    - name: Download JetBrains Runtime
+      id: download
+      shell: bash
+      env:
+        JBR_VERSION: "21.0.11"
+        JBR_BUILD: "b1163.116"
+        RUNNER_ARCH: ${{ runner.arch }}
+        RUNNER_OS: ${{ runner.os }}
+      run: |
+        set -euo pipefail
+        [[ "$RUNNER_OS" == "Linux" ]] || { echo "::error::setup-jbr only installs Linux builds, not $RUNNER_OS"; exit 1; }
+        case "$RUNNER_ARCH" in
+          X64)   arch=x64;     sha512=13d0aab4bcfa9e4f77a696b97d3998f7e82e22f7f1362d8ce97f0d50d69dddd9331a66ada3fe92c04e544795fc247bcbaf586ad0415df4eda5e0e0505753888f ;;
+          ARM64) arch=aarch64; sha512=88a1d5cabcdb258bcf2d9fc3fa3695e2321ed46633596e979250966a14a93ec08e2f285d3a5dbd2510965e5a9ef9c1f3b87a1b43b19d643caa5f1726f8f02958 ;;
+          *)     echo "::error::no pinned JetBrains Runtime for $RUNNER_ARCH"; exit 1 ;;
+        esac
+        file="jbrsdk-${JBR_VERSION}-linux-${arch}-${JBR_BUILD}.tar.gz"
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/$file" "https://cache-redirector.jetbrains.com/intellij-jbr/$file"
+        echo "$sha512  $RUNNER_TEMP/$file" | sha512sum -c -
+        echo "file=$RUNNER_TEMP/$file" >> "$GITHUB_OUTPUT"
+        echo "version=$JBR_VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Install JetBrains Runtime
+      uses: actions/setup-java@v6.0.1
+      with:
+        distribution: jdkfile
+        jdkFile: ${{ steps.download.outputs.file }}
+        java-version: ${{ steps.download.outputs.version }}
