@@ -4564,6 +4564,21 @@ class Account(
             }
         }
 
+        // The NIP-78 settings that live in AccountSettings publish on their own, a second after the
+        // last change, so their many setters (and the screens calling them) need no Account wrapper.
+        scope.launch(Dispatchers.IO) {
+            @OptIn(kotlinx.coroutines.FlowPreview::class)
+            settings.syncedChanges.debounce(1000).collect {
+                if (!settings.isWriteable()) return@collect
+                try {
+                    sendNewAppSpecificData()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("Account", "Could not publish the synced settings", e)
+                }
+            }
+        }
+
         scope.launch(Dispatchers.IO) {
             @OptIn(kotlinx.coroutines.FlowPreview::class)
             settings.saveable.debounce(1000).collect {

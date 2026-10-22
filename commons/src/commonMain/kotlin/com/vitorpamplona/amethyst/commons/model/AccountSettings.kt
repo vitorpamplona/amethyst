@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewM
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthPolicy
 import com.vitorpamplona.amethyst.commons.service.pow.PoWCategory
@@ -59,6 +60,7 @@ import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -88,6 +90,8 @@ import com.vitorpamplona.quartz.nipA3PaymentTargets.PaymentTargetsEvent
 import com.vitorpamplona.quartz.nipB1Bolt12Zaps.offer.Bolt12OfferListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -317,6 +321,18 @@ class AccountSettings(
         saveable.update { AccountSettingsUpdater(this) }
     }
 
+    /**
+     * Fires when a setting that syncs through NIP-78 but lives here (see [SyncedLocalSettings])
+     * is changed on this device. [Account] publishes the blob a second after the last one. Values
+     * that arrive from another device are applied without it, so they are not echoed back.
+     */
+    val syncedChanges = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    private fun saveAndSync() {
+        saveAccountSettings()
+        syncedChanges.tryEmit(Unit)
+    }
+
     fun isWriteable(): Boolean = keyPair.privKey != null || externalSignerPackageName != null || usesRemoteSigner()
 
     /** Whether this account signs through a NIP-46 remote signer it logged in with. */
@@ -325,21 +341,21 @@ class AccountSettings(
     fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
         if (relayGroupViewMode.value != mode) {
             relayGroupViewMode.tryEmit(mode)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun updateConcordViewMode(mode: ConcordViewMode) {
         if (concordViewMode.value != mode) {
             concordViewMode.tryEmit(mode)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun updateAccentColor(color: AccentColorType?) {
         if (accentColor.value != color) {
             accentColor.tryEmit(color)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -351,7 +367,7 @@ class AccountSettings(
         val next = if (enabled) current + type else current - type
         if (next != current) {
             enabledChatFeeds.tryEmit(next)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -365,7 +381,7 @@ class AccountSettings(
         val next = if (enabled) current + type else current - type
         if (next != current) {
             enabledHomeFeedTypes.tryEmit(next)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -637,14 +653,14 @@ class AccountSettings(
     fun changeDefaultFileServer(server: ServerName) {
         if (defaultFileServer != server) {
             defaultFileServer = server
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeStripLocationOnUpload(strip: Boolean) {
         if (stripLocationOnUpload != strip) {
             stripLocationOnUpload = strip
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -658,7 +674,7 @@ class AccountSettings(
     fun changeHideCommunityRulesViolations(enabled: Boolean) {
         if (hideCommunityRulesViolations.value != enabled) {
             hideCommunityRulesViolations.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -701,14 +717,14 @@ class AccountSettings(
     fun changeMirrorUploadsToAllServers(enabled: Boolean) {
         if (mirrorUploadsToAllServers.value != enabled) {
             mirrorUploadsToAllServers.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeOptimizeMediaOnUpload(enabled: Boolean) {
         if (optimizeMediaOnUpload.value != enabled) {
             optimizeMediaOnUpload.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -797,7 +813,134 @@ class AccountSettings(
             }
         }
 
-        if (changed) saveAccountSettings()
+        if (changed) saveAndSync()
+    }
+
+    // ---
+    // NIP-78 sync of the settings that live here (see SyncedLocalSettings)
+    // ---
+
+    private fun feedFilterFlow(slot: FollowListSlot): MutableStateFlow<TopFilter> =
+        when (slot) {
+            FollowListSlot.HOME -> defaultHomeFollowList
+            FollowListSlot.STORIES -> defaultStoriesFollowList
+            FollowListSlot.NOTIFICATION -> defaultNotificationFollowList
+            FollowListSlot.DISCOVERY -> defaultDiscoveryFollowList
+            FollowListSlot.POLLS -> defaultPollsFollowList
+            FollowListSlot.PICTURES -> defaultPicturesFollowList
+            FollowListSlot.RELAY_GROUPS_DISCOVERY -> defaultRelayGroupsDiscoveryFollowList
+            FollowListSlot.NAPPLETS -> defaultNappletsFollowList
+            FollowListSlot.NSITES -> defaultNsitesFollowList
+            FollowListSlot.WORKOUTS -> defaultWorkoutsFollowList
+            FollowListSlot.GIT_REPOSITORIES -> defaultGitRepositoriesFollowList
+            FollowListSlot.HIGHLIGHTS -> defaultHighlightsFollowList
+            FollowListSlot.CALENDARS -> defaultCalendarsFollowList
+            FollowListSlot.PRODUCTS -> defaultProductsFollowList
+            FollowListSlot.GEOCACHES -> defaultGeocachesFollowList
+            FollowListSlot.SHORTS -> defaultShortsFollowList
+            FollowListSlot.PUBLIC_CHATS -> defaultPublicChatsFollowList
+            FollowListSlot.LIVE_STREAMS -> defaultLiveStreamsFollowList
+            FollowListSlot.NESTS -> defaultNestsFollowList
+            FollowListSlot.LONGS -> defaultLongsFollowList
+            FollowListSlot.ARTICLES -> defaultArticlesFollowList
+            FollowListSlot.MUSIC_TRACKS -> defaultMusicTracksFollowList
+            FollowListSlot.MUSIC_PLAYLISTS -> defaultMusicPlaylistsFollowList
+            FollowListSlot.PODCAST_EPISODES -> defaultPodcastEpisodesFollowList
+            FollowListSlot.PODCASTS -> defaultPodcastsFollowList
+            FollowListSlot.SOFTWARE_APPS -> defaultSoftwareAppsFollowList
+            FollowListSlot.BADGES -> defaultBadgesFollowList
+            FollowListSlot.BROWSE_EMOJI_SETS -> defaultBrowseEmojiSetsFollowList
+            FollowListSlot.COMMUNITIES -> defaultCommunitiesFollowList
+            FollowListSlot.FOLLOW_PACKS -> defaultFollowPacksFollowList
+            FollowListSlot.APP_RECOMMENDATIONS -> defaultAppRecommendationsFollowList
+        }
+
+    fun syncedLocalSettings() =
+        SyncedLocalSettings(
+            accentColor = accentColor.value,
+            relayGroupViewMode = relayGroupViewMode.value,
+            concordViewMode = concordViewMode.value,
+            enabledChatFeeds = enabledChatFeeds.value,
+            enabledHomeFeedTypes = enabledHomeFeedTypes.value,
+            feedFilters = FollowListSlot.entries.associateWith { feedFilterFlow(it).value },
+            customFeeds = customFeeds.value,
+            hideCommunityRulesViolations = hideCommunityRulesViolations.value,
+            relayAuthPolicy = defaultRelayAuthPolicy.value,
+            relayAuthTrustMyRelaysAndVenues = relayAuthTrustMyRelaysAndVenues.value,
+            relayAuthTrustReadFollows = relayAuthTrustReadFollows.value,
+            relayAuthTrustMessageFollows = relayAuthTrustMessageFollows.value,
+            relayAuthTrustMessageStrangers = relayAuthTrustMessageStrangers.value,
+            defaultFileServer = defaultFileServer,
+            stripLocationOnUpload = stripLocationOnUpload,
+            mirrorUploadsToAllServers = mirrorUploadsToAllServers.value,
+            optimizeMediaOnUpload = optimizeMediaOnUpload.value,
+            callsEnabled = callsEnabled.value,
+        )
+
+    /** The whole NIP-78 blob: [syncedSettings] plus the groups that live here. */
+    fun toSyncedSettingsInternal(): AccountSyncedSettingsInternal = syncedSettings.toInternal(mutedPublicChats.value).withLocalGroups(syncedLocalSettings())
+
+    /**
+     * Applies the groups [remote] carries. A group it lacks was written by a version that did not
+     * know it, so this device keeps its own values for it.
+     */
+    private fun applyLocalGroups(remote: AccountSyncedSettingsInternal) {
+        remote.appearance?.let { group -> accentColor.update { decodeAccentColor(group.accentColor, it) } }
+
+        remote.messages?.let { group ->
+            relayGroupViewMode.update { enumByName(group.relayGroupViewMode, it) }
+            concordViewMode.update { enumByName(group.concordViewMode, it) }
+            enabledChatFeeds.value = ChatFeedType.ALL - ChatFeedType.decode(group.disabledChatFeeds)
+        }
+
+        remote.feeds?.let { group ->
+            enabledHomeFeedTypes.value = HomeFeedType.ALL - HomeFeedType.decode(group.disabledHomeFeedTypes)
+            hideCommunityRulesViolations.value = group.hideCommunityRulesViolations
+            decodeCustomFeeds(group.customFeeds)?.let { applyCustomFeeds(it) }
+            // By JSON: a decoded filter that carries an id or address never equals the current one,
+            // and assigning it would reload that screen's feed although nothing changed.
+            readableFeedFilters(group.feedFilters).forEach { (slot, json) ->
+                val flow = feedFilterFlow(slot)
+                if (JsonMapper.toJson(flow.value) != json) decodeFeedFilter(json)?.let { flow.value = it }
+            }
+        }
+
+        remote.relayAuth?.let { group ->
+            defaultRelayAuthPolicy.update { enumByName(group.policy, it) }
+            relayAuthTrustMyRelaysAndVenues.value = group.trustMyRelaysAndVenues
+            relayAuthTrustReadFollows.value = group.trustReadFollows
+            relayAuthTrustMessageFollows.value = group.trustMessageFollows
+            relayAuthTrustMessageStrangers.value = group.trustMessageStrangers
+        }
+
+        remote.uploads?.let { group ->
+            decodeFileServer(group.defaultFileServer)?.let { defaultFileServer = it }
+            stripLocationOnUpload = group.stripLocation
+            mirrorUploadsToAllServers.value = group.mirrorToAllServers
+            optimizeMediaOnUpload.value = group.optimizeMedia
+        }
+
+        remote.calls?.let { group -> callsEnabled.value = group.callsEnabled }
+    }
+
+    /**
+     * Replaces the custom feeds with [feeds] from another device, as [saveCustomFeed] and
+     * [deleteCustomFeed] would: a screen showing a feed that changed gets a fresh
+     * [TopFilter.CustomFeed], and one showing a feed that is gone goes back to its default.
+     */
+    private fun applyCustomFeeds(feeds: List<FeedDefinition>) {
+        val before = customFeeds.value
+        if (before == feeds) return
+        customFeeds.value = feeds
+        val byId = feeds.associateBy { it.id }
+        feedFiltersWithDefaults.forEach { (flow, default) ->
+            val current = flow.value as? TopFilter.CustomFeed ?: return@forEach
+            val now = byId[current.id]
+            when {
+                now == null -> flow.value = default
+                before.firstOrNull { it.id == current.id } != now -> flow.value = TopFilter.CustomFeed(current.id)
+            }
+        }
     }
 
     /** Applies [transform] to the deck layout and saves it when it changed. */
@@ -821,7 +964,7 @@ class AccountSettings(
             val current = flow.value
             if (current is TopFilter.CustomFeed && current.id == feed.id) flow.tryEmit(TopFilter.CustomFeed(feed.id))
         }
-        saveAccountSettings()
+        saveAndSync()
     }
 
     /** Deletes the custom feed [id] and sends any screen that showed it back to its default feed. */
@@ -831,223 +974,223 @@ class AccountSettings(
             val current = flow.value
             if (current is TopFilter.CustomFeed && current.id == id) flow.tryEmit(default)
         }
-        saveAccountSettings()
+        saveAndSync()
     }
 
     fun changeDefaultHomeFollowList(name: TopFilter) {
         if (defaultHomeFollowList.value != name) {
             defaultHomeFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultStoriesFollowList(name: TopFilter) {
         if (defaultStoriesFollowList.value != name) {
             defaultStoriesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultNotificationFollowList(name: TopFilter) {
         if (defaultNotificationFollowList.value != name) {
             defaultNotificationFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultDiscoveryFollowList(name: TopFilter) {
         if (defaultDiscoveryFollowList.value != name) {
             defaultDiscoveryFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultPollsFollowList(name: TopFilter) {
         if (defaultPollsFollowList.value != name) {
             defaultPollsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultCommunitiesFollowList(name: TopFilter) {
         if (defaultCommunitiesFollowList.value != name) {
             defaultCommunitiesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultPicturesFollowList(name: TopFilter) {
         if (defaultPicturesFollowList.value != name) {
             defaultPicturesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultRelayGroupsDiscoveryFollowList(name: TopFilter) {
         if (defaultRelayGroupsDiscoveryFollowList.value != name) {
             defaultRelayGroupsDiscoveryFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultNappletsFollowList(name: TopFilter) {
         if (defaultNappletsFollowList.value != name) {
             defaultNappletsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultNsitesFollowList(name: TopFilter) {
         if (defaultNsitesFollowList.value != name) {
             defaultNsitesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultWorkoutsFollowList(name: TopFilter) {
         if (defaultWorkoutsFollowList.value != name) {
             defaultWorkoutsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultGitRepositoriesFollowList(name: TopFilter) {
         if (defaultGitRepositoriesFollowList.value != name) {
             defaultGitRepositoriesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultHighlightsFollowList(name: TopFilter) {
         if (defaultHighlightsFollowList.value != name) {
             defaultHighlightsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultCalendarsFollowList(name: TopFilter) {
         if (defaultCalendarsFollowList.value != name) {
             defaultCalendarsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultProductsFollowList(name: TopFilter) {
         if (defaultProductsFollowList.value != name) {
             defaultProductsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultGeocachesFollowList(name: TopFilter) {
         if (defaultGeocachesFollowList.value != name) {
             defaultGeocachesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultShortsFollowList(name: TopFilter) {
         if (defaultShortsFollowList.value != name) {
             defaultShortsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultPublicChatsFollowList(name: TopFilter) {
         if (defaultPublicChatsFollowList.value != name) {
             defaultPublicChatsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultLiveStreamsFollowList(name: TopFilter) {
         if (defaultLiveStreamsFollowList.value != name) {
             defaultLiveStreamsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultNestsFollowList(name: TopFilter) {
         if (defaultNestsFollowList.value != name) {
             defaultNestsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultLongsFollowList(name: TopFilter) {
         if (defaultLongsFollowList.value != name) {
             defaultLongsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultArticlesFollowList(name: TopFilter) {
         if (defaultArticlesFollowList.value != name) {
             defaultArticlesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultMusicTracksFollowList(name: TopFilter) {
         if (defaultMusicTracksFollowList.value != name) {
             defaultMusicTracksFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultMusicPlaylistsFollowList(name: TopFilter) {
         if (defaultMusicPlaylistsFollowList.value != name) {
             defaultMusicPlaylistsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultPodcastEpisodesFollowList(name: TopFilter) {
         if (defaultPodcastEpisodesFollowList.value != name) {
             defaultPodcastEpisodesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultPodcastsFollowList(name: TopFilter) {
         if (defaultPodcastsFollowList.value != name) {
             defaultPodcastsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultSoftwareAppsFollowList(name: TopFilter) {
         if (defaultSoftwareAppsFollowList.value != name) {
             defaultSoftwareAppsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultBadgesFollowList(name: TopFilter) {
         if (defaultBadgesFollowList.value != name) {
             defaultBadgesFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultBrowseEmojiSetsFollowList(name: TopFilter) {
         if (defaultBrowseEmojiSetsFollowList.value != name) {
             defaultBrowseEmojiSetsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultFollowPacksFollowList(name: TopFilter) {
         if (defaultFollowPacksFollowList.value != name) {
             defaultFollowPacksFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultAppRecommendationsFollowList(name: TopFilter) {
         if (defaultAppRecommendationsFollowList.value != name) {
             defaultAppRecommendationsFollowList.tryEmit(name)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -1515,6 +1658,7 @@ class AccountSettings(
                 return
             }
             syncedSettings.updateFrom(newSyncedSettings)
+            applyLocalGroups(newSyncedSettings)
 
             // Null means an older client rewrote the blob without this key — leave the
             // local set alone rather than treating "absent" as "unmute everything".
@@ -1797,14 +1941,14 @@ class AccountSettings(
     fun changeCallsEnabled(enabled: Boolean) {
         if (callsEnabled.value != enabled) {
             callsEnabled.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
     fun changeDefaultRelayAuthPolicy(policy: RelayAuthPolicy) {
         if (defaultRelayAuthPolicy.value != policy) {
             defaultRelayAuthPolicy.tryEmit(policy)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
@@ -1814,7 +1958,7 @@ class AccountSettings(
     ) {
         if (flow.value != enabled) {
             flow.tryEmit(enabled)
-            saveAccountSettings()
+            saveAndSync()
         }
     }
 
