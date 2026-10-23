@@ -394,7 +394,8 @@ open class Note(
             }
         }
 
-        val currentOutbox = author?.outboxRelays()?.toSet()
+        // A short list (a handful of outbox relays): scanning it beats building a Set per call.
+        val currentOutbox = author?.outboxRelays()
 
         return if (relays.isNotEmpty()) {
             if (!currentOutbox.isNullOrEmpty()) {

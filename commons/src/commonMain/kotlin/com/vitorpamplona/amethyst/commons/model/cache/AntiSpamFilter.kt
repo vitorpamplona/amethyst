@@ -93,8 +93,10 @@ class AntiSpamFilter(
                 (existingAddress != null && existingAddress != address) ||
                 (knownSpammer != null && !knownSpammer.duplicatedEventAddresses.contains(address))
             ) {
-                val link2 = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
-                val link1 = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2
+                // Built only when read: at DEBUG, or when the spammer is hidden.
+                fun link2() = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
+
+                fun link1() = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2()
 
                 // Debug, not warn: a duplicate detection is this filter working, not a fault, and
                 // it is already reported where it can be acted on — relayStats.newSpam below and
@@ -102,7 +104,7 @@ class AntiSpamFilter(
                 // with a pair of njump links each, which is the widest line in the log and says
                 // nothing the spam counters don't. Keep the links at DEBUG for when you need to
                 // open the two events and compare them.
-                Log.d("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
+                Log.d("Duplicated/SPAM") { "${relay?.url} ${link1()} ${link2()}" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)
@@ -111,7 +113,7 @@ class AntiSpamFilter(
                     host()
                         .relayStats
                         ?.get(relay)
-                        ?.newSpam(link1, link2)
+                        ?.newSpam(link1(), link2())
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))
@@ -128,10 +130,12 @@ class AntiSpamFilter(
                 (existingEvent != null && existingEvent != event.id) ||
                 (knownSpammer != null && !knownSpammer.duplicatedEventIds.contains(event.id))
             ) {
-                val link2 = njumpLink(NEvent.create(event.id, null, null, relay))
+                // Built only when read: at DEBUG, or when the spammer is hidden.
+                fun link2() = njumpLink(NEvent.create(event.id, null, null, relay))
+
                 // existingEvent may be null if the first duplicate was evicted from the
                 // LRU cache while the spammer record still matches this hash.
-                val link1 = existingEvent?.let { njumpLink(NEvent.create(it, null, null, relay)) } ?: link2
+                fun link1() = existingEvent?.let { njumpLink(NEvent.create(it, null, null, relay)) } ?: link2()
 
                 // Debug, not warn: a duplicate detection is this filter working, not a fault, and
                 // it is already reported where it can be acted on — relayStats.newSpam below and
@@ -139,7 +143,7 @@ class AntiSpamFilter(
                 // with a pair of njump links each, which is the widest line in the log and says
                 // nothing the spam counters don't. Keep the links at DEBUG for when you need to
                 // open the two events and compare them.
-                Log.d("Duplicated/SPAM") { "${relay?.url} $link1 $link2" }
+                Log.d("Duplicated/SPAM") { "${relay?.url} ${link1()} ${link2()}" }
 
                 // Log down offenders
                 val spammer = logOffender(hash, event)
@@ -148,7 +152,7 @@ class AntiSpamFilter(
                     host()
                         .relayStats
                         ?.get(relay)
-                        ?.newSpam(link1, link2)
+                        ?.newSpam(link1(), link2())
                 }
 
                 flowSpam.tryEmit(AntiSpamState(this))
