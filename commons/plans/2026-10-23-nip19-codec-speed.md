@@ -1,27 +1,25 @@
 # NIP-19 codec: faster, lighter Bech32 + TLV
 
-_2026-10-23. Implemented in quartz, not yet released. The change lives in quartz (`nip19Bech32/`);
-this repo holds the benchmark and the prototype it measures._
+_2026-10-23. Shipped: quartz 2.2.0 (vitorpamplona/quartz#14), and Amethyst bumped to it with the
+call-site changes below. The benchmark is `commons/src/jvmTest/.../prodbench/nip19/Nip19Benchmark.kt`._
 
 ## Status
 
-- **quartz:** done in commit `13c0f82` ("perf(nip19): single-pass Bech32 and in-place TLV; fix
-  TLV values over 255 bytes"), on top of quartz `main` `db5813d`. It still has to be pushed and
-  released (this session had read-only access to quartz). The public API keeps every old
-  signature and only adds new ones. The behaviour changes are listed under "API decisions"
-  below. Checks: all 7,529 `:quartz:jvmTest` tests pass, as do `spotlessCheck`,
-  `verifyKmpPurity`, and the common and Apple metadata compiles.
-- **Amethyst follow-up**, for when `quartzKmp` is bumped: the call sites that cite someone else's
-  d-tag move to `Address.toNIP19OrFallback` / `toNostrUriOrFallback`. These give the `naddr`,
-  else the loaded event's `nevent`, else the raw address. `Note`/`User`/channel `toNostrUri()`
-  move to the one-buffer `createNostrUri` helpers. This must ship **with** the bump: otherwise
-  `AddressableNote.toNAddr()` and `AntiSpamFilter` (which runs on ingest) throw on an
-  attacker-chosen long d-tag. Built against the patched quartz: all 4,286 `commons` tests and
-  86 `cli` tests pass, and `commonsUI`, `desktopApp` and `amethyst` (play debug) compile.
+- **quartz 2.2.0:** single-pass Bech32, in-place TLV, the 255-byte TLV fix and the audit fixes
+  (lone surrogates, non-hex keys, the generator-table index), in vitorpamplona/quartz#14. The
+  public API keeps every old signature and only adds new ones. The behaviour changes are listed
+  under "API decisions" below.
+- **Amethyst:** `quartzKmp` is 2.2.0. The call sites that cite someone else's d-tag use
+  `Address.toNIP19OrFallback` / `toNostrUriOrFallback`. These give the `naddr`, else the loaded
+  event's `nevent`, else the raw address, so `AddressableNote.toNAddr()` and `AntiSpamFilter`
+  (which runs on ingest) never throw on an attacker-chosen long d-tag. `Note`/`User`/channel
+  `toNostrUri()` use the one-buffer `createNostrUri` helpers.
+- The prototype codec that this plan measured (`FastNip19.kt`) was deleted once quartz carried
+  the real one. `Nip19Benchmark` now times quartz alone.
 
-Measured with the real patched quartz (`-PquartzDir`), 2.1.0 → patched:
+Measured with quartz built from the merged change (`-PquartzDir`), 2.1.0 → 2.2.0:
 
-| | 2.1.0 | patched |
+| | 2.1.0 | 2.2.0 |
 | --- | --- | --- |
 | `Note.toNostrUri()` | 3,339 ns, 3,559 B | 1,653 ns, 1,314 B (relay-hint lookup is 696 ns of it) |
 | `User.pubkeyNpub()` / `pubkeyDisplayHex()` | 918 / 921 ns | 285 / 311 ns |
