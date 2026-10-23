@@ -129,7 +129,7 @@
     <string name="always_on_notif_tile_subtitle_off">Ki</string>
     <string name="always_on_notif_tile_subtitle_on">Be</string>
     <string name="always_on_notif_title">Amethyst értesítések aktíválva</string>
-    <string name="blossom_sync_cancel">Mégsem</string>
+    <string name="blossom_sync_cancel">Mégse</string>
     <string name="blossom_sync_channel_description">Megjeleníti a folyamatot, miközben a fájljait átmásolja a Blossom kiszolgálókra.</string>
     <string name="blossom_sync_channel_name">Blossom szinkronizálás</string>
     <string name="call_ongoing">Hívások</string>
