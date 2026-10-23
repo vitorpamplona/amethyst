@@ -48,9 +48,13 @@ object SearchFilterBuilder {
     private val COMMENT_SCOPE_TAGS = listOf("I", "i")
 
     /**
-     * The filters this query sends. [kinds] is the caller's kind window (null asks every kind),
-     * [limit] the page size, and [searchString] the caller's own NIP-50 builder over the leftover
+     * The filters this query sends. [kinds] is the caller’s kind window (null asks every kind),
+     * [limit] the page size, and [searchString] the caller’s own NIP-50 builder over the leftover
      * terms — that is where `language:`, `domain:` and any relay-specific extension belong.
+     *
+     * A `from:` name the parser could not decode stays a name here: it is not a filter field,
+     * and the field’s in-place rewrite ([AuthorNameRewrite]) turns it into the `from:npub1…`
+     * that lands in [SearchQuery.authors] once the name resolves.
      */
     fun build(
         query: SearchQuery,

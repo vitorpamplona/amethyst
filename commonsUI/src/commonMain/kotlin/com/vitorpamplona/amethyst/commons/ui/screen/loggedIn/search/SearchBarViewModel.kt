@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.relayClient.search.SearchQueryState
+import com.vitorpamplona.amethyst.commons.search.AuthorNameRewrite
 import com.vitorpamplona.amethyst.commons.search.RenderableKinds
 import com.vitorpamplona.amethyst.commons.search.SearchHistory
 import com.vitorpamplona.amethyst.commons.search.SearchHistoryStorage
@@ -62,6 +63,8 @@ import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnamePath
 import com.vitorpamplona.quartz.nip02FollowList.petnames.PetnameResolver
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.INip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Id
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05KeyInfo
+import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.decodeEventIdAsHexOrNull
@@ -80,6 +83,7 @@ import com.vitorpamplona.quartz.utils.startsWithAny
 import com.vitorpamplona.quartz.utils.toDoubleValue
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
@@ -105,10 +109,16 @@ import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 
 @Stable
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class SearchBarViewModel(
     val account: Account,
     val nip05Client: INip05Client,
+    /**
+     * The `.bit` / `d/` / `id/` resolver behind the Namecoin lookups. Held beside [nip05Client]
+     * because the NIP-05 grammar cannot express a `d/<name>` or `id/<name>` identifier, so those
+     * two namespaces are resolved here directly.
+     */
+    val namecoinResolver: NamecoinNameResolver,
     /** Where this device keeps what has been searched for; see [history]. */
     historyStorage: SearchHistoryStorage,
     /**
@@ -226,13 +236,47 @@ class SearchBarViewModel(
             .onEach(::updateDataSource)
             .stateIn(viewModelScope, SharingStarted.Eagerly, searchValue)
 
+    /**
+     * The asynchronous half of the author qualifiers, written back into the box.
+     *
+     * A `from:name.bit` or `to:alice@example.com` names a person the events themselves never
+     * spell out — an event holds keys, not names — so neither NIP-50 nor the cache’s tag scan
+     * can match the name the reader typed. Once the name resolves, the token is rewritten in
+     * place to the `from:npub1…` / `to:npub1…` a people-picker pick writes, and from then on it
+     * is ordinary field text: the parser decodes it into `authors`/`mentions`, the field draws
+     * the pill, and both the cache scan and the relay REQs read it with no side channel — the
+     * text is the single source of truth, and the rewrite re-issues the search the same way a
+     * keystroke would.
+     *
+     * The free text is never resolved: a bare npub, hex key or `.bit` name with no `from:`
+     * stays NIP-50 search text, so the posts citing a person remain searchable.
+     */
+    private suspend fun rewriteResolvedAuthorNames(text: String) {
+        val unresolved = AuthorNameRewrite.unresolvedAuthorNames(text)
+        if (unresolved.isEmpty()) return
+
+        var rewritten = text
+        // Right to left, so a rewrite never moves the spans still to be rewritten.
+        unresolved.asReversed().forEach { token ->
+            val resolved = resolvePersonNameOrNull(token.name, nip05Client, namecoinResolver) ?: return@forEach
+            AuthorNameRewrite.rewrite(rewritten, token, resolved.pubkey)?.let { rewritten = it } ?: return@forEach
+            resolved.relays.forEach { relay ->
+                relay.normalizeRelayUrlOrNull()?.let { account.cache.relayHints.addKey(resolved.pubkey, it) }
+            }
+        }
+        // Nothing is written over a box that has moved on: a keystroke since the pause makes
+        // the resolution stale, and the newer text is resolved when it settles in its turn.
+        if (rewritten != text && searchValue == text) {
+            updateSearchValue(rewritten)
+        }
+    }
+
     @Suppress("unused")
     val sourceWatcher =
         source
             .onEach { updateDataSource(searchValue) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, SearchSource.RELAYS)
 
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directNip05Resolver: Flow<User?> =
         searchTerm
             .debounce(400)
@@ -247,7 +291,7 @@ class SearchBarViewModel(
                 when {
                     nip05 != null -> {
                         runCatchingCancellable {
-                            nip05Client.get(nip05)?.let { info ->
+                            resolvePersonNameOrNull(nip05.toValue(), nip05Client, namecoinResolver)?.let { info ->
                                 val user = account.cache.checkGetOrCreateUser(info.pubkey)
                                 if (user != null) {
                                     info.relays.forEach {
@@ -258,7 +302,8 @@ class SearchBarViewModel(
                                 }
                                 user
                             }
-                        }.getOrNull()
+                        }.onFailure { if (it is CancellationException) throw it }
+                            .getOrNull()
                     }
 
                     term.startsWithAny(userUriPrefixes) -> {
@@ -328,7 +373,6 @@ class SearchBarViewModel(
      * `/invite/`, which no token can produce, and both open a redeem flow rather than a profile
      * or a post.
      */
-    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val directRouteResolver: Flow<Route?> =
         searchTerm
             .mapLatest { term ->
@@ -578,6 +622,12 @@ class SearchBarViewModel(
                 pastDeadline = true
             }
         }
+        // The same pause the cache scan waits for: typing in flight resolves nothing, and a
+        // keystroke landing mid-lookup cancels it — the newer text is resolved when it settles
+        // in its turn.
+        viewModelScope.launch(Dispatchers.IO) {
+            state.debounced.collectLatest { input -> rewriteResolvedAuthorNames(input.text) }
+        }
     }
 
     /** The relays this query went to that have not sent EOSE yet. */
@@ -683,6 +733,7 @@ class SearchBarViewModel(
     class Factory(
         val account: Account,
         val nip05: INip05Client,
+        val namecoinResolver: NamecoinNameResolver,
         val historyStorage: SearchHistoryStorage,
         val initialQuery: String? = null,
     ) : ViewModelProvider.Factory {
@@ -690,7 +741,7 @@ class SearchBarViewModel(
         override fun <T : ViewModel> create(
             modelClass: KClass<T>,
             extras: CreationExtras,
-        ): T = SearchBarViewModel(account, nip05, historyStorage, initialQuery) as T
+        ): T = SearchBarViewModel(account, nip05, namecoinResolver, historyStorage, initialQuery) as T
     }
 }
 
@@ -710,3 +761,32 @@ internal fun directNip05Target(term: String): Nip05Id? =
             // Bare .bit domain → synthesize _@domain.bit
             ?.let { Nip05Id("_", it.lowercase()) }
     }
+
+/**
+ * The key and relays a single person *name* resolves to, or null when nothing resolves — in
+ * which case the name stays a name.
+ *
+ * The one routing table the box’s name lookups share — the direct open above and the
+ * `from:`/`to:` token rewrite — so a name means the same key whichever way it was asked:
+ * a NIP-05 address (`alice@example.com`, and the `user@domain.bit` spellings the client
+ * routes through Namecoin itself), a bare `.bit` domain (looked up as its `_@domain.bit`
+ * wildcard, the same synthesis [directNip05Target] detects for the whole box), or a
+ * Namecoin-only `d/`/`id/` identifier the NIP-05 grammar cannot express.
+ */
+internal suspend fun resolvePersonNameOrNull(
+    name: String,
+    nip05Client: INip05Client,
+    namecoinResolver: NamecoinNameResolver,
+): Nip05KeyInfo? =
+    runCatching {
+        when {
+            name.contains('@') -> Nip05Id.parse(name)?.let { nip05Client.get(it) }
+            name.endsWith(".bit", ignoreCase = true) -> nip05Client.get(Nip05Id("_", name.lowercase()))
+            // The Namecoin-only shapes the NIP-05 grammar rejects: `d/<name>`, `id/<name>`.
+            NamecoinNameResolver.isNamecoinIdentifier(name) ->
+                namecoinResolver.resolve(name)?.let { Nip05KeyInfo(it.pubkey, it.relays) }
+
+            else -> null
+        }
+    }.onFailure { if (it is CancellationException) throw it }
+        .getOrNull()

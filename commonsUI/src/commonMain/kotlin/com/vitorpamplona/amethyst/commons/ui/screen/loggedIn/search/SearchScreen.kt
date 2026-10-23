@@ -169,6 +169,7 @@ fun SearchScreen(
     nav: INav,
 ) {
     val appStores = LocalAppServices.current.appStores
+    val namecoinResolver = LocalAppServices.current.namecoinResolver
     val historyStorage = remember { appStores.searchHistoryStorage() }
     val searchBarViewModel: SearchBarViewModel =
         rememberViewModel(
@@ -179,6 +180,7 @@ fun SearchScreen(
                 SearchBarViewModel.Factory(
                     accountViewModel.account,
                     accountViewModel.nip05ClientBuilder(),
+                    namecoinResolver,
                     historyStorage,
                     initialQuery,
                 ),
