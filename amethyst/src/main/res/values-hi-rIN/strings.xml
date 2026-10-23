@@ -83,9 +83,9 @@
     <string name="share_target_as_picture">नया चित्र</string>
     <string name="share_target_as_short_video">नया लघु चलचित्र</string>
     <string name="share_target_as_video">नया चलचित्र</string>
-    <string name="share_target_scan_qr">क्यूआर॰ चित्र अक्षरराशि परखें</string>
-    <string name="shortcut_scan_qr_short">क्यूआर॰ क्रमचित्र को परखें</string>
-    <string name="shortcut_scan_qr_long">एक क्यूआर॰ चित्र अक्षरराशि परखें</string>
+    <string name="share_target_scan_qr">क्यूआर चित्र अक्षरराशि परखें</string>
+    <string name="shortcut_scan_qr_short">क्यूआर चित्र को परखें</string>
+    <string name="shortcut_scan_qr_long">एक क्यूआर चित्र अक्षरराशि परखें</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <!-- Onchain zap send dialog -->
@@ -135,7 +135,7 @@
     <string name="call_ongoing">आह्वान</string>
     <string name="call_ongoing_description">चालू आह्वान सूचना</string>
     <string name="call_with">%1$s के साथ आह्वान</string>
-    <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰१३ श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
+    <string name="pow_notification_channel_description">उन पत्रों को दिखाता है जो अपने निप॰तेरह श्रमप्रमाण का खनन कर रहे हैं जिससे कि वे सम्पन्न हो सके आप क्रमक छोडने के पश्चात।</string>
     <string name="pow_notification_channel_name">श्रमप्रमाण खनन</string>
     <string name="pow_notification_send_without_pow">अभी भेजें</string>
     <string name="blossom_syncing">आपके अभिलेखों की अनुकृति सभी सेवासंगणकों में…</string>
