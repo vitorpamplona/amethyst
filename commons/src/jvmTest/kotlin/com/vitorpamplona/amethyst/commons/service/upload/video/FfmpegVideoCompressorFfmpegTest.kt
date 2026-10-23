@@ -124,6 +124,18 @@ class FfmpegVideoCompressorFfmpegTest {
         }
 
     @Test
+    fun anamorphicSourceComesOutInSquarePixelsAtItsDisplayShape() =
+        runBlocking {
+            if (!ffmpegForTests()) return@runBlocking
+            // 1080x720 stored with 4:9 pixels: a 480x720 portrait video.
+            val r = compressor().compress(Fixtures.anamorphic, CompressorQuality.HIGH, false) {}
+            assertIs<VideoCompressionResult.Compressed>(r)
+            val s = probe(r.file)
+            assertEquals(480 to 720, s.width to s.height)
+            assertEquals("1:1", s.sampleAspectRatio)
+        }
+
+    @Test
     fun stripDropsTheTimecodeTrackAndEveryTag() =
         runBlocking {
             if (!ffmpegForTests()) return@runBlocking
@@ -140,6 +152,7 @@ class FfmpegVideoCompressorFfmpegTest {
         val codec: String,
         val bitRate: Long,
         val hasSideData: Boolean,
+        val sampleAspectRatio: String?,
         val streamTypes: List<String>,
         val title: String?,
         val location: String?,
@@ -152,7 +165,7 @@ class FfmpegVideoCompressorFfmpegTest {
                 "-v",
                 "error",
                 "-show_entries",
-                "stream=width,height,codec_name,codec_type,bit_rate:stream_side_data=rotation:format_tags",
+                "stream=width,height,sample_aspect_ratio,codec_name,codec_type,bit_rate:stream_side_data=rotation:format_tags",
                 "-of",
                 "json",
                 file.absolutePath,
@@ -167,6 +180,7 @@ class FfmpegVideoCompressorFfmpegTest {
             codec = video.stringOrNull("codec_name") ?: "",
             bitRate = video.longOrNull("bit_rate") ?: 0L,
             hasSideData = "side_data_list" in video,
+            sampleAspectRatio = video.stringOrNull("sample_aspect_ratio"),
             streamTypes = streams.map { it.stringOrNull("codec_type") ?: "" },
             title = tags?.stringOrNull("title"),
             location = tags?.stringOrNull("location"),
@@ -206,6 +220,29 @@ class FfmpegVideoCompressorFfmpegTest {
                     "ultrafast",
                     "-metadata",
                     "title=secret",
+                    it.absolutePath,
+                )
+            }
+        }
+
+        /** High entropy, anamorphic: 1080x720 stored with 4:9 pixels, shown as 480x720. */
+        val anamorphic: File by lazy {
+            File(dir, "anamorphic.mp4").also {
+                ffmpeg(
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "color=c=gray:s=1080x720:r=30,noise=alls=100:allf=t+u,setsar=4/9",
+                    "-t",
+                    "2",
+                    "-pix_fmt",
+                    "yuv420p",
+                    "-c:v",
+                    "libx264",
+                    "-crf",
+                    "18",
+                    "-preset",
+                    "ultrafast",
                     it.absolutePath,
                 )
             }

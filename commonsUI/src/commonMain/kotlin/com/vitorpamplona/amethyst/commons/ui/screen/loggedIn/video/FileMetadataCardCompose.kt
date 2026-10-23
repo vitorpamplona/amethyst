@@ -125,7 +125,8 @@ private fun FileMetadataCardImage(
     }
 
     val isImage = content is MediaUrlImage
-    val ratio = dimensions?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(fullUrl)
+    // A video's measured shape beats its `dim`, which can be wrong (see MediaAspectRatioCache.videoRatio).
+    val ratio = MediaAspectRatioCache.videoRatio(fullUrl, dimensions?.aspectRatioOrNull())
 
     ContentWarningGate(
         isSensitive = isSensitive,

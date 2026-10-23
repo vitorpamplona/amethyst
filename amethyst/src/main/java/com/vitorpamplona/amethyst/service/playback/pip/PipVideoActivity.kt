@@ -33,6 +33,7 @@ import androidx.annotation.OptIn
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.media3.common.util.UnstableApi
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
 import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
@@ -103,7 +104,7 @@ class PipVideoActivity : ComponentActivity() {
             val options =
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     ActivityOptions.makeLaunchIntoPip(
-                        makePipParams(videoData.aspectRatio, videoBounds),
+                        makePipParams(MediaAspectRatioCache.videoRatio(videoData.videoUri, videoData.aspectRatio), videoBounds),
                     )
                 } else {
                     ActivityOptions.makeBasic()

@@ -221,7 +221,7 @@ object DesktopNotePlatform : NotePlatform {
                     return
                 }
                 if (LocalMediaCapture.current != null) {
-                    val ratio = content.dim.ratioOrNull() ?: MediaAspectRatioCache.get(url)
+                    val ratio = MediaAspectRatioCache.videoRatio(url, content.dim.ratioOrNull())
                     CapturedVideoStill(url, video?.artworkUri, isLive, accountViewModel, ratio, content.blurhash, content.thumbhash, shape, content.description)
                     return
                 }
@@ -371,7 +371,7 @@ object DesktopNotePlatform : NotePlatform {
         thumbhash: String?,
     ) {
         val shape = if (roundedCorner) RoundedCornerShape(12.dp) else RoundedCornerShape(0.dp)
-        val ratio = dimensions.ratioOrNull() ?: MediaAspectRatioCache.get(videoUri)
+        val ratio = MediaAspectRatioCache.videoRatio(videoUri, dimensions.ratioOrNull())
         val fillsSlot = contentScale == ContentScale.Crop
         val modifier =
             (if (fillsSlot) Modifier.fillMaxSize() else Modifier.inlineImageSize(ratio, MaxInlineMediaHeight))

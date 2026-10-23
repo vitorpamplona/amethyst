@@ -34,6 +34,13 @@ interface MutableMediaAspectRatioCache {
         width: Int,
         height: Int,
     )
+
+    /** A size a player decoded and displays: it wins over declared and estimated ones. */
+    fun addMeasured(
+        url: String,
+        width: Int,
+        height: Int,
+    )
 }
 
 /**
@@ -46,18 +53,40 @@ interface MutableMediaAspectRatioCache {
  * wrong for the whole visit and only look right the *next* time the media is opened. Note this only
  * works for reads made in composition — a read from inside `remember { }` is cached by `remember`
  * itself and won't pick the update up.
+ *
+ * A video player's report is kept apart as *measured* ([addMeasured], [measured]): it is the shape
+ * the player draws, so a `dim` that the uploader got wrong (the stored size of an anamorphic video,
+ * or one that ignored rotation) must not overwrite it, and video renderers size from it first
+ * ([videoRatio]).
  */
 object MediaAspectRatioCache : MutableMediaAspectRatioCache {
-    private val cache = LruCache<String, MutableState<Float?>>(1000)
+    private class Entry(
+        val ratio: Float,
+        val measured: Boolean,
+    )
+
+    private val cache = LruCache<String, MutableState<Entry?>>(1000)
 
     // get-then-put has to be atomic, so the compound op is guarded even though LruCache is itself
     // thread-safe. A miss still stores a slot: that empty slot is what the caller observes until
     // add() fills it in.
     private val lock = KmpLock()
 
-    private fun entry(url: String): MutableState<Float?> = lock.withLock { cache.get(url) ?: mutableStateOf<Float?>(null).also { cache.put(url, it) } }
+    private fun entry(url: String): MutableState<Entry?> = lock.withLock { cache.get(url) ?: mutableStateOf<Entry?>(null).also { cache.put(url, it) } }
 
-    override fun get(url: String): Float? = entry(url).value
+    override fun get(url: String): Float? = entry(url).value?.ratio
+
+    /** The ratio a video player reported for [url], or null before it has played. */
+    fun measured(url: String): Float? = entry(url).value?.takeIf { it.measured }?.ratio
+
+    /**
+     * The shape to give the video at [url]: what its player measured, else what its event
+     * [declared] (imeta `dim`), else any estimate on file (a poster's shape).
+     */
+    fun videoRatio(
+        url: String,
+        declared: Float?,
+    ): Float? = measured(url) ?: declared ?: get(url)
 
     // Both sides are checked, not just the divisor: a zero width divides cleanly to 0f, and 0f is
     // just as unusable downstream as a division by zero — `Modifier.aspectRatio` throws on it. A
@@ -68,16 +97,34 @@ object MediaAspectRatioCache : MutableMediaAspectRatioCache {
         width: Int,
         height: Int,
     ) {
-        if (width > 0 && height > 1) {
-            entry(url).value = width.toFloat() / height.toFloat()
-        }
+        if (width > 0 && height > 1) store(url, width.toFloat() / height.toFloat(), measured = false)
     }
 
-    /** Stores a ratio a player reported directly (it may account for non-square pixels). */
-    fun addRatio(
+    override fun addMeasured(
+        url: String,
+        width: Int,
+        height: Int,
+    ) {
+        if (width > 0 && height > 1) store(url, width.toFloat() / height.toFloat(), measured = true)
+    }
+
+    /** Stores a ratio a video player reported directly (it may account for non-square pixels). */
+    fun addMeasuredRatio(
         url: String,
         ratio: Float,
     ) {
-        if (ratio > 0f && ratio.isFinite()) entry(url).value = ratio
+        if (ratio > 0f && ratio.isFinite()) store(url, ratio, measured = true)
+    }
+
+    // A declared or estimated size never replaces a measured one.
+    private fun store(
+        url: String,
+        ratio: Float,
+        measured: Boolean,
+    ) {
+        val slot = entry(url)
+        lock.withLock {
+            if (measured || slot.value?.measured != true) slot.value = Entry(ratio, measured)
+        }
     }
 }

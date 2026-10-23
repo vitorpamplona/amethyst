@@ -58,7 +58,10 @@ object VideoCompressionHelper {
         useH265: Boolean,
         timeoutMs: Long = 60_000L, // configurable, default 60s
     ): MediaCompressorResult {
-        val videoInfo = getVideoInfo(uri, applicationContext)
+        // An anamorphic source is resized in square pixels (see SquarePixelsResizer), so the rules
+        // judge its display size and the upload plays at the right shape everywhere.
+        val pixelAspectRatio = videoPixelAspectRatio(applicationContext, uri)
+        val videoInfo = getVideoInfo(uri, applicationContext, pixelAspectRatio)
 
         val (videoBitrateInBps, resizer) =
             videoInfo?.let { info ->
@@ -73,13 +76,14 @@ object VideoCompressionHelper {
                     "Resizer: ${info.resolution.width}x${info.resolution.height} -> " +
                         "shortSide=${rule.shortSide} (${rule.description})"
                 }
-                val resizer = VideoResizer.limitShortSide(rule.shortSide.toDouble())
+                val limit = VideoResizer.limitShortSide(rule.shortSide.toDouble())
+                val resizer = pixelAspectRatio?.let { SquarePixelsResizer(it, limit) } ?: limit
 
                 Pair(bitrateBps, resizer)
             } ?: run {
                 Log.w(LOG_TAG, "Video bitrate fallback: 2Mbps (videoInfo unavailable)")
                 Log.d(LOG_TAG, "Resizer: null (original resolution preserved)")
-                Pair(VideoCompressionRules.PROBE_FAILED_BITRATE_BPS, null)
+                Pair(VideoCompressionRules.PROBE_FAILED_BITRATE_BPS, pixelAspectRatio?.let { SquarePixelsResizer(it, null) })
             }
 
         // Get original file size safely
@@ -227,12 +231,13 @@ object VideoCompressionHelper {
     private fun getVideoInfo(
         uri: Uri,
         context: Context,
+        pixelAspectRatio: Float?,
     ): VideoInfo? {
         var retriever: MediaMetadataRetriever? = null
         return try {
             retriever = MediaMetadataRetriever()
             retriever.setDataSource(context, uri)
-            val width = retriever.prepareVideoWidth()
+            val width = retriever.prepareVideoWidth()?.let { displayWidth(it, pixelAspectRatio) }
             val height = retriever.prepareVideoHeight()
             val rotation = retriever.prepareRotation() ?: 0
 

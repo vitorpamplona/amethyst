@@ -173,7 +173,7 @@ class FfmpegVideoCompressorTest {
             compressor(runner, setOf("libx264"), ffprobe = null).compress(source(1000), CompressorQuality.HIGH, false) {}
             val cmd = runner.commands.single()
             assertEquals("2000000", cmd.after("-b:v"))
-            assertEquals("scale=trunc(iw/2)*2:trunc(ih/2)*2", cmd.after("-vf"))
+            assertEquals("scale=trunc(iw*sar/2)*2:trunc(ih/2)*2,setsar=1", cmd.after("-vf"))
         }
 
     @Test
@@ -218,7 +218,7 @@ class FfmpegVideoCompressorTest {
             val r = compressor(runner, setOf("libx264")).convertGif(source(1000)) {}
             assertIs<VideoCompressionResult.Compressed>(r)
             val cmd = runner.commands.single()
-            assertEquals("scale=trunc(iw/2)*2:trunc(ih/2)*2", cmd.after("-vf"))
+            assertEquals("scale=trunc(iw*sar/2)*2:trunc(ih/2)*2,setsar=1", cmd.after("-vf"))
             assertEquals("2000000", cmd.after("-b:v")) // MEDIUM row for 1080p
         }
 

@@ -164,7 +164,7 @@ fun WatchControllerForActions(
             activity.makePipParams(
                 isPlaying = !playPauseState.showPlay,
                 isMuted = !muteState.showMuted,
-                ratio = mediaItemData.aspectRatio,
+                ratio = MediaAspectRatioCache.videoRatio(mediaItemData.videoUri, mediaItemData.aspectRatio),
                 bounds = null,
             ),
         )

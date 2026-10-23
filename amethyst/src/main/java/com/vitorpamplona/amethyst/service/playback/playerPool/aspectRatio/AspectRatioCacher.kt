@@ -44,7 +44,7 @@ class AspectRatioCacher(
     override fun onVideoSizeChanged(videoSize: VideoSize) {
         currentUrl?.let {
             val displayWidth = (videoSize.width * videoSize.pixelWidthHeightRatio).roundToInt()
-            cache.add(it, displayWidth, videoSize.height)
+            cache.addMeasured(it, displayWidth, videoSize.height)
         }
     }
 }

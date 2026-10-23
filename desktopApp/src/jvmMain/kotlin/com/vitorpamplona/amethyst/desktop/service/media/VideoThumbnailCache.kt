@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.service.media
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.upload.AmethystTempDir
 import com.vitorpamplona.amethyst.commons.service.upload.video.FfmpegLocator
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
@@ -159,6 +160,7 @@ object VideoThumbnailCache {
         if (persistable && diskFile.length() > 0) {
             runCatching { ImageIO.read(diskFile) }.getOrNull()?.let {
                 // The poster is already at the video's display shape.
+                recordShape(url, it)
                 if (parFile.exists()) {
                     runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, it.width.toFloat() / it.height) }
                 }
@@ -167,11 +169,21 @@ object VideoThumbnailCache {
         }
 
         val frame = extractFirstFrame(url) ?: return null
+        recordShape(url, frame)
         if (persistable) {
             writeAtomically(diskFile, frame)
             VideoPixelAspect.get(url)?.let { par -> runCatching { parFile.writeText(par.toString()) } }
         }
         return frame.toComposeImageBitmap()
+    }
+
+    // A frame of the video, turned and with square pixels: the shape it plays at, which beats what
+    // its event declares (see MediaAspectRatioCache.videoRatio).
+    private fun recordShape(
+        url: String,
+        frame: BufferedImage,
+    ) {
+        if (frame.width > 0 && frame.height > 0) MediaAspectRatioCache.addMeasured(url, frame.width, frame.height)
     }
 
     private suspend fun extractFirstFrame(url: String): BufferedImage? {

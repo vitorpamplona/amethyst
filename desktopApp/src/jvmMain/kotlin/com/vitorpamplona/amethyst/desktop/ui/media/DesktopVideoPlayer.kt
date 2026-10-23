@@ -254,16 +254,18 @@ fun DesktopVideoPlayer(
     // Read in composition, so an anamorphic video's pixel ratio corrects the shape when it lands.
     videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = VideoPixelAspect.displayRatio(url, it) }
     // The shape before this video plays, best source first: what the playing engine reports, what
-    // the note declares (imeta `dim`), what an engine that opened it ahead or earlier recorded (read
-    // in composition, so this card resizes when that lands), what its thumbnail shows. 16:9 only
-    // when nothing knows: without these a portrait Short sat in a landscape box until it played.
+    // an engine that opened it ahead or earlier measured (read in composition, so this card resizes
+    // when that lands), what the frame extracted for its thumbnail shows, what the note declares
+    // (imeta `dim`, which can be the stored size of an anamorphic video), any other estimate. 16:9
+    // only when nothing knows: without these a portrait Short sat in a landscape box until it played.
     val targetRatio =
         if (aspectRatio != 16f / 9f) {
             aspectRatio
         } else {
-            declaredRatio
-                ?: MediaAspectRatioCache.get(url)
+            MediaAspectRatioCache.measured(url)
                 ?: thumbnail?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
+                ?: declaredRatio
+                ?: MediaAspectRatioCache.get(url)
                 ?: aspectRatio
         }
     // A shape learned late (the engine's own report) eases in instead of snapping the card.
