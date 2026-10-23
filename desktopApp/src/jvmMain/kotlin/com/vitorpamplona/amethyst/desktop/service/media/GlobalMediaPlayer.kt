@@ -658,7 +658,7 @@ object GlobalMediaPlayer {
                     }
                 }.filterNotNull().first()
             }
-        if (ratio != null) MediaAspectRatioCache.addRatio(url, ratio)
+        if (ratio != null) MediaAspectRatioCache.addMeasuredRatio(url, VideoPixelAspect.displayRatio(url, ratio))
     }
 
     /**

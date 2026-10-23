@@ -45,13 +45,24 @@ object FfprobeOutputParser {
     fun parse(json: String): ProbeResult? {
         val root = runCatching { Json.parseToJsonElement(json) }.getOrNull() as? JsonObject ?: return null
         val stream = root.arrayOrNull("streams")?.firstOrNull() as? JsonObject ?: return null
-        val width = stream.intOrNull("width") ?: 0
+        // The display width: an anamorphic stream stores its frames narrower or wider than it shows.
+        val width = displayWidth(stream.intOrNull("width") ?: 0, stream.stringOrNull("sample_aspect_ratio"))
         val height = stream.intOrNull("height") ?: 0
         if (width <= 0 || height <= 0) return null
         val framerate = parseFramerate(stream.stringOrNull("avg_frame_rate") ?: "")
         val duration = root.objOrNull("format")?.stringOrNull("duration")?.toDoubleOrNull()
         val isHdr = stream.stringOrNull("color_transfer") in hdrTransfers
         return ProbeResult(VideoInfo(VideoResolution(width, height), framerate), duration, isHdr)
+    }
+
+    /** [width] times the `num:den` [sampleAspectRatio]; as is when that is missing, `N/A` or `0:1` (unknown). */
+    private fun displayWidth(
+        width: Int,
+        sampleAspectRatio: String?,
+    ): Int {
+        val (num, den) = sampleAspectRatio?.split(":")?.takeIf { it.size == 2 }?.map { it.toIntOrNull() ?: 0 } ?: return width
+        if (num <= 0 || den <= 0) return width
+        return (width.toLong() * num / den).toInt()
     }
 
     /** `num/den` → num / den; 0 when the denominator is 0 or the text is not a ratio. */
@@ -83,7 +94,7 @@ class FfmpegProbe(
                 "-select_streams",
                 "V:0",
                 "-show_entries",
-                "stream=width,height,avg_frame_rate,color_transfer",
+                "stream=width,height,sample_aspect_ratio,avg_frame_rate,color_transfer",
                 "-show_entries",
                 "format=duration",
                 "-of",

@@ -30,14 +30,14 @@ class FfmpegCommandBuilderTest {
     @Test
     fun portraitLimitsWidthAndKeepsEven() { // Review Focus 1
         assertEquals(
-            "scale='if(gt(iw,ih),-2,trunc(min(720,iw)/2)*2)':'if(gt(iw,ih),trunc(min(720,ih)/2)*2,-2)'",
+            "scale=trunc(iw*sar/2)*2:ih,setsar=1,scale='if(gt(iw,ih),-2,trunc(min(720,iw)/2)*2)':'if(gt(iw,ih),trunc(min(720,ih)/2)*2,-2)'",
             FfmpegCommandBuilder.scaleFilter(720),
         )
     }
 
     @Test
     fun noRuleOnlyEvensDimensions() {
-        assertEquals("scale=trunc(iw/2)*2:trunc(ih/2)*2", FfmpegCommandBuilder.scaleFilter(null))
+        assertEquals("scale=trunc(iw*sar/2)*2:trunc(ih/2)*2,setsar=1", FfmpegCommandBuilder.scaleFilter(null))
     }
 
     @Test

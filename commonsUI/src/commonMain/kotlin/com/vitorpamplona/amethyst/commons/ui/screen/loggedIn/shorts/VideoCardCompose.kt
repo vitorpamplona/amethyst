@@ -148,7 +148,8 @@ private fun VideoCardImage(
             )
         }
 
-    val ratio = imeta.dimension?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(imeta.url)
+    // A video's measured shape beats its `dim`, which can be wrong (see MediaAspectRatioCache.videoRatio).
+    val ratio = MediaAspectRatioCache.videoRatio(imeta.url, imeta.dimension?.aspectRatioOrNull())
 
     ContentWarningGate(
         isSensitive = isSensitive,

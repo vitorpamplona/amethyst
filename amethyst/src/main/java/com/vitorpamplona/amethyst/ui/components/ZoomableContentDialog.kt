@@ -365,13 +365,13 @@ internal suspend fun saveMediaToGallery(
     }
 }
 
+// A video's measured shape beats its `dim` (see MediaAspectRatioCache.videoRatio); images have none.
 private fun BaseMediaContent.aspectRatioOrNull(): Float? =
-    dim?.aspectRatioOrNull()
-        ?: when (this) {
-            is MediaUrlContent -> MediaAspectRatioCache.get(url)
-            is MediaPreloadedContent -> localJavaFile?.let { MediaAspectRatioCache.get(it.toUri().toString()) }
-            else -> null
-        }
+    when (this) {
+        is MediaUrlContent -> MediaAspectRatioCache.videoRatio(url, dim?.aspectRatioOrNull())
+        is MediaPreloadedContent -> localJavaFile?.let { MediaAspectRatioCache.videoRatio(it.toUri().toString(), dim?.aspectRatioOrNull()) } ?: dim?.aspectRatioOrNull()
+        else -> dim?.aspectRatioOrNull()
+    }
 
 @Composable
 private fun RenderImageOrVideo(
@@ -439,7 +439,7 @@ private fun RenderImageOrVideo(
                         Modifier.fillMaxWidth()
                     }
 
-                val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(content.url)
+                val ratio = MediaAspectRatioCache.videoRatio(content.url, content.dim?.aspectRatioOrNull())
                 val modifier =
                     if (ratio != null) {
                         Modifier.aspectRatio(ratio)
@@ -500,7 +500,7 @@ private fun RenderImageOrVideo(
                     }
 
                 content.localJavaFile?.let {
-                    val ratio = content.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(it.toUri().toString())
+                    val ratio = MediaAspectRatioCache.videoRatio(it.toUri().toString(), content.dim?.aspectRatioOrNull())
 
                     val modifier =
                         if (ratio != null) {
