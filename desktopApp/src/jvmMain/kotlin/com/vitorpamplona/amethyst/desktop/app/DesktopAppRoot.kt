@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_key_not_kept_description
@@ -56,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.withContext
 
 /**
@@ -192,6 +194,16 @@ class DesktopAppRoot(
                     navigator.destinations = null
                     navigator.settingsCatalog = emptyList()
                 }
+            }
+        }
+
+        // OS-opened nostr:/amethyst: links, queued by DesktopDeepLinks (main()'s argv, the macOS
+        // open-URI event, or a second launch forwarded over the instance bus), routed through the
+        // shared parser once a logged-in shell exists.
+        LaunchedEffect(nav, accountViewModel) {
+            DesktopDeepLinks.pending.filterNotNull().collect { uri ->
+                DesktopDeepLinks.pending.value = null
+                uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
             }
         }
     }

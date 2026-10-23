@@ -165,6 +165,17 @@ fun main(args: Array<String>) {
         File(System.getProperty("amethyst.dataDir") ?: File(System.getProperty("user.home"), ".amethyst/app").path)
             .apply { mkdirs() }
 
+    // Deep links: on Linux and Windows the OS starts a new process with the URI as argv (%u / %1).
+    // Hand it to the running instance over the instance bus and exit; on a cold start, queue it so
+    // the navigation host routes it once a logged-in shell exists. macOS delivers the URI to the
+    // running app as an open-URI event instead (installed below), never as argv.
+    DesktopDeepLinks.extractFromArgs(args)?.let { uri ->
+        if (DesktopDeepLinks.forwardToRunningInstance(uri, filesDir)) exitProcess(0)
+        DesktopDeepLinks.offer(uri)
+    }
+    DesktopDeepLinks.installOsHandlers()
+    DesktopDeepLinks.startInstanceBus(filesDir)
+
     val version =
         System.getProperty("amethyst.version")
             ?: DesktopAppModules::class.java.`package`?.implementationVersion
