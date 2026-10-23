@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.notices.report
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
+import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
 import com.vitorpamplona.amethyst.commons.relays.eventsync.EventSync
 import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
@@ -116,7 +117,6 @@ import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -312,7 +312,7 @@ open class BaseAccountViewModel(
         // account's NIP-51 kind:10006 blocked relays either.
         val newClient =
             BlockedRelayFilteringClient(
-                NostrClient(host.websocketBuilder, customScope, CachingEventDecoder()),
+                NostrClient(host.websocketBuilder, customScope, relayFrameDecoder()),
                 blockedRelays = { account.blockedRelayList.flow.value },
             )
 
