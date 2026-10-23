@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.IcsExport
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.appointmentView
+import com.vitorpamplona.amethyst.commons.model.toNostrUriOrFallback
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -112,7 +113,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -219,14 +219,7 @@ fun CalendarEventDetailScreen(
                         }
                         val shareTitle = stringRes(Res.string.calendar_share_nostr_title)
                         IconButton(onClick = {
-                            val naddr =
-                                NAddress.create(
-                                    targetAddress.kind,
-                                    targetAddress.pubKeyHex,
-                                    targetAddress.dTag,
-                                    null,
-                                )
-                            textSharer.share("nostr:$naddr", null, shareTitle)
+                            textSharer.share(targetAddress.toNostrUriOrFallback(null, null), null, shareTitle)
                         }) {
                             Icon(
                                 symbol = MaterialSymbols.AutoMirrored.Send,

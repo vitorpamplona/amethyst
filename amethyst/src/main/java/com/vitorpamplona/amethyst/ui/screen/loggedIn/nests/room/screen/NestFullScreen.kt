@@ -90,8 +90,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.NestViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ParticipantGrid
 import com.vitorpamplona.amethyst.ui.navigation.navs.BouncingIntentNav
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.participants.ParticipantHostActionsSheet
-import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip19Bech32.toNAddr
+import com.vitorpamplona.quartz.nip21UriScheme.toNostrUri
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.tags.StatusTag
 import kotlinx.coroutines.launch
@@ -644,10 +643,10 @@ private fun shareRoomNaddr(
     context: android.content.Context,
     event: MeetingSpaceEvent,
 ) {
-    val aTag = ATag(event.kind, event.pubKey, event.dTag(), null)
-    val naddr = aTag.toNAddr()
+    // toNostrUri falls back to the room's nevent when its d-tag is too long for an naddr
+    val uri = event.toNostrUri()
     val title = event.room().orEmpty()
-    val text = if (title.isNotBlank()) "$title — nostr:$naddr" else "nostr:$naddr"
+    val text = if (title.isNotBlank()) "$title — $uri" else uri
     val intent =
         android.content.Intent(android.content.Intent.ACTION_SEND).apply {
             type = "text/plain"

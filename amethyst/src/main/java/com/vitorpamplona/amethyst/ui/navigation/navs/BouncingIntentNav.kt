@@ -154,11 +154,11 @@ class BouncingIntentNav(
             }
 
             is Route.LiveActivityChannel -> {
-                NOSTR_URI_PREFIX + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
+                NAddress.createNostrUriOrNull(route.kind, route.pubKeyHex, route.dTag, null)
             }
 
             is Route.Community -> {
-                NOSTR_URI_PREFIX + NAddress.create(route.kind, route.pubKeyHex, route.dTag, null)
+                NAddress.createNostrUriOrNull(route.kind, route.pubKeyHex, route.dTag, null)
             }
 
             is Route.PublicChatChannel -> {

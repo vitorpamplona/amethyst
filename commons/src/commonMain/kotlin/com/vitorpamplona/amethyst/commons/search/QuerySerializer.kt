@@ -105,7 +105,7 @@ object QuerySerializer {
 
     private fun naddrOrNull(aTag: String) =
         try {
-            Address.parse(aTag)?.let { NAddress.create(it.kind, it.pubKeyHex, it.dTag, emptyList()) }
+            Address.parse(aTag)?.let { NAddress.createOrNull(it.kind, it.pubKeyHex, it.dTag, emptyList()) }
         } catch (_: Exception) {
             null
         }

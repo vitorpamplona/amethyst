@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NoteState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.toNostrUriOrFallback
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.geocache_archived
@@ -67,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.declaredGeocacheLogType
 import com.vitorpamplona.quartz.nipCCGeocaching.comment.tags.GeocacheLogType
@@ -165,8 +165,7 @@ fun GeocacheShareAction(address: Address) {
     val sharer = rememberTextSharer()
     val shareStr = stringRes(Res.string.quick_action_share)
     IconButton(onClick = {
-        val naddr = NAddress.create(address.kind, address.pubKeyHex, address.dTag, null)
-        sharer.share("nostr:$naddr", null, shareStr)
+        sharer.share(address.toNostrUriOrFallback(null, null), null, shareStr)
     }) {
         Icon(
             symbol = MaterialSymbols.AutoMirrored.Send,

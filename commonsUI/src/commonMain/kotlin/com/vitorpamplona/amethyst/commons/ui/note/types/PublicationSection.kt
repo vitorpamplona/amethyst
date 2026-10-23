@@ -334,13 +334,12 @@ private fun wikilinkResolver(event: PublicationContentEvent): (String) -> String
                 "nostr:" + NEvent.create(link.eventId!!, link.pubKey, WikiArticleEvent.KIND, link.relay)
 
             link.pubKey != null ->
-                "nostr:" +
-                    NAddress.create(
-                        WikiArticleEvent.KIND,
-                        link.pubKey!!,
-                        PublicationContentEvent.normalizeWikilink(link.target),
-                        link.relay,
-                    )
+                NAddress.createNostrUriOrNull(
+                    WikiArticleEvent.KIND,
+                    link.pubKey!!,
+                    PublicationContentEvent.normalizeWikilink(link.target),
+                    link.relay,
+                )
 
             else -> null
         }

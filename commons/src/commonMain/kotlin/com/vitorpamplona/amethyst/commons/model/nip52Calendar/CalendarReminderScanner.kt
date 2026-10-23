@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filterIntoSet
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
+import com.vitorpamplona.amethyst.commons.model.toNostrUriOrFallback
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -121,7 +121,7 @@ object CalendarReminderScanner {
                         eventId = eventId,
                         title = view.title,
                         minutesAway = ((start - now).coerceAtLeast(0L) / 60L).toInt(),
-                        deepLink = "nostr:" + NAddress.create(targetAddress.kind, targetAddress.pubKeyHex, targetAddress.dTag, null),
+                        deepLink = targetAddress.toNostrUriOrFallback(null, targetNote.event),
                     ),
                 )
             if (delivered) log.markNotified(eventId, start)

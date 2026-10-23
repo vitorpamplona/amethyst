@@ -37,7 +37,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.tags.NutzapMintTag
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -110,7 +110,7 @@ class User(
 
     fun pubkey() = Hex.decode(pubkeyHex)
 
-    fun pubkeyNpub() = pubkey().toNpub()
+    fun pubkeyNpub() = NPub.create(pubkeyHex)
 
     fun pubkeyDisplayHex() = pubkeyNpub().toShortDisplay(5)
 
@@ -179,7 +179,7 @@ class User(
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
-    fun toNostrUri() = "nostr:${toNProfile()}"
+    fun toNostrUri() = NProfile.createNostrUri(pubkeyHex, relayHints())
 
     fun toBestDisplayName(): String = metadataOrNull()?.bestName() ?: pubkeyDisplayHex()
 

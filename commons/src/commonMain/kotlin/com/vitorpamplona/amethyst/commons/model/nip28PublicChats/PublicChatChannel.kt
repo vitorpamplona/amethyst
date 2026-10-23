@@ -61,7 +61,7 @@ class PublicChatChannel(
 
     fun toNEvent() = NEvent.create(idHex, event?.pubKey, ChannelCreateEvent.KIND, relayHintUrls())
 
-    fun toNostrUri() = "nostr:${toNEvent()}"
+    fun toNostrUri() = NEvent.createNostrUri(idHex, event?.pubKey, ChannelCreateEvent.KIND, relayHintUrls())
 
     fun toEventHint() = event?.let { EventHintBundle(it, relayHintUrl(), null) }
 

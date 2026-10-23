@@ -309,7 +309,7 @@ object EmojiCommands {
             Output.emit(
                 mapOf(
                     "event_id" to selection?.id,
-                    "packs" to selection?.emojiPacks().orEmpty().map { mapOf("address" to it.toValue(), "naddr" to NAddress.create(it.kind, it.pubKeyHex, it.dTag, null)) },
+                    "packs" to selection?.emojiPacks().orEmpty().map { mapOf("address" to it.toValue(), "naddr" to NAddress.createOrNull(it.kind, it.pubKeyHex, it.dTag, null)) },
                     "emojis" to selection?.taggedEmojis().orEmpty().map { emojiMap(it, false) },
                 ),
             )
@@ -480,7 +480,7 @@ object EmojiCommands {
         return mapOf(
             "d_tag" to pack.dTag(),
             "address" to pack.addressTag(),
-            "naddr" to NAddress.create(pack.kind, pack.pubKey, pack.dTag(), null),
+            "naddr" to NAddress.createOrNull(pack.kind, pack.pubKey, pack.dTag(), null),
             "author" to pack.pubKey,
             "title" to (pack.titleOrName() ?: pack.dTag()),
             "description" to pack.description(),
