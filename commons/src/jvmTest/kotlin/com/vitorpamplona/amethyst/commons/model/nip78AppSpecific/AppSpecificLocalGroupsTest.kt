@@ -63,9 +63,13 @@ class AppSpecificLocalGroupsTest {
                     description = signer.nip44Encrypt(JsonMapper.toJson(blob), signer.pubKey),
                 ),
             )
+        // updateAppSpecificData keeps the blob as the backup first and applies its groups after,
+        // on another thread, ending with a save: wait for that save, not just the backup, or the
+        // assertions can read a half-applied blob.
+        val savedBefore = settings.saveable.value
         LocalCache.justConsumeMyOwnEvent(event)
         withTimeout(5_000) {
-            while (settings.backupAppSpecificData?.id != event.id) delay(10)
+            while (settings.backupAppSpecificData?.id != event.id || settings.saveable.value === savedBefore) delay(10)
         }
     }
 
