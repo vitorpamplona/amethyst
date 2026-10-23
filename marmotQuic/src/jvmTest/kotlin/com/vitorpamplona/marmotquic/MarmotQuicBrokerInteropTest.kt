@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.marmotquic
 
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamKeyContextV1
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamPublisher
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamRecordV1
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.AgentTextStreamTranscriptV1
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicException
+import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamCrypto
+import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamKeyContextV1
+import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamPublisher
+import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamRecordV1
+import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamTranscriptV1
+import com.vitorpamplona.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
+import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicException
 import com.vitorpamplona.quic.tls.PermissiveCertificateValidator
 import com.vitorpamplona.quic.tls.PinnedCertificateValidator
 import kotlinx.coroutines.CoroutineScope

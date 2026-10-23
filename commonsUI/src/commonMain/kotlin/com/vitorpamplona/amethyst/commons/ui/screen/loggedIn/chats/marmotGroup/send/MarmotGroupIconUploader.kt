@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send
 
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconUpload
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -31,8 +30,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageCipher
-import com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupImageEncryption
+import com.vitorpamplona.marmot.client.MarmotGroupIconUpload
+import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageCipher
+import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 

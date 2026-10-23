@@ -118,7 +118,7 @@ object GroupMembershipCommands {
      * is recoverable by issuing its opposite, and this one is not.
      *
      * The commit shape, the admin check and the enablement step all live in
-     * [com.vitorpamplona.amethyst.commons.marmot.MarmotManager.disbandGroup];
+     * [com.vitorpamplona.marmot.client.MarmotManager.disbandGroup];
      * this only confirms the intent and reports what happened.
      */
     suspend fun disband(

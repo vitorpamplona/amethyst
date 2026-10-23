@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CoordinatorHealth
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorAdvertisement
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.AnnouncedTools
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.DiscoverySurface
 import com.vitorpamplona.quartz.contextvm.cep06Announcements.ServerAnnouncement
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorAdvertisement
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient

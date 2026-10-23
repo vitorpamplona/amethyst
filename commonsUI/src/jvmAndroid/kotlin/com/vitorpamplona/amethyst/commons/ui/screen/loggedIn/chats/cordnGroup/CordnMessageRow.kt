@@ -56,7 +56,6 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
-import com.vitorpamplona.amethyst.commons.cordn.CordnMentions
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
@@ -117,10 +116,11 @@ import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.cordn.appEncryptedMedia.CordnMediaTag
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
+import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
+import com.vitorpamplona.cordn.client.CordnMentions
+import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

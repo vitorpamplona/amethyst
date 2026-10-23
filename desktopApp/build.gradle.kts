@@ -47,6 +47,7 @@ dependencies {
 
     // Quartz Nostr library (will use JVM target)
     implementation(libs.quartz)
+    implementation(libs.cordn)
 
     // Commons library (headless) + its Compose UI half
     implementation(project(":commons"))

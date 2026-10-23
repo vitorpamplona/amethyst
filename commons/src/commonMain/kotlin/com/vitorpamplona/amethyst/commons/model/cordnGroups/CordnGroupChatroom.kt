@@ -23,12 +23,12 @@ package com.vitorpamplona.amethyst.commons.model.cordnGroups
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.cordn.groups.CordnCredential
+import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.spec02Envelopes.CordnAnnotationIndex
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.mls.group.MlsGroup
-import com.vitorpamplona.quartz.cordn.groups.CordnCredential
-import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnAnnotationIndex
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageKinds
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

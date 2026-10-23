@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnRoomState
+import com.vitorpamplona.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async

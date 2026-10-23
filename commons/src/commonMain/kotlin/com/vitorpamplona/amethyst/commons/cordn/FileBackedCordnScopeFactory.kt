@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnCoordinatorLinkFactory
+import com.vitorpamplona.cordn.client.CordnCoordinatorScope
+import com.vitorpamplona.cordn.client.CordnCoordinatorScopeFactory
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import okio.FileSystem
 import okio.Path

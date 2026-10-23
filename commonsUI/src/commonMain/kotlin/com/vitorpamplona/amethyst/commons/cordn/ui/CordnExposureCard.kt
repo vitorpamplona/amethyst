@@ -38,9 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.cordn.ExposureLevel
-import com.vitorpamplona.amethyst.commons.cordn.ExposureNote
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -63,6 +60,9 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_note_membership
 import com.vitorpamplona.amethyst.commons.resources.cordn_note_publication
 import com.vitorpamplona.amethyst.commons.resources.cordn_note_sizes
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
+import com.vitorpamplona.cordn.client.ExposureLevel
+import com.vitorpamplona.cordn.client.ExposureNote
+import com.vitorpamplona.cordn.client.GroupExposure
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.utils.Hex
 import org.jetbrains.compose.resources.stringResource

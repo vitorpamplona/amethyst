@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.model.accountsCache
 
+import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
 import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import kotlinx.coroutines.CoroutineScope
 

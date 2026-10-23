@@ -23,13 +23,13 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.cordn.CordnGroupManager
+import com.vitorpamplona.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.client.CordnGroupManager
+import com.vitorpamplona.cordn.groups.CordnCredential
+import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
+import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
-import com.vitorpamplona.quartz.cordn.groups.CordnCredential
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.JoinRequest
-import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 
 /**
  * `amy cordn group …`, `invite`, `request`, `welcomes`, `join`, `send`, `fetch`

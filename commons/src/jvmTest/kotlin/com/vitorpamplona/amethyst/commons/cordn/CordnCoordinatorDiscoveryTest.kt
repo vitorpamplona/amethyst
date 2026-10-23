@@ -20,8 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorAdvertisement
 import com.vitorpamplona.quartz.contextvm.core.CvmKinds
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorAdvertisement
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.Tag

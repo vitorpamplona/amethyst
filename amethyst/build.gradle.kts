@@ -578,6 +578,8 @@ dependencies {
     debugImplementation(libs.androidx.tracing.perfetto.binary)
 
     implementation(libs.quartz)
+    implementation(libs.marmot)
+    implementation(libs.cordn)
     implementation(project(":commons"))
     implementation(project(":commonsUI"))
     implementation(project(":nestsClient"))

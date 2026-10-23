@@ -47,6 +47,8 @@ tasks.named<Test>("test") {
 
 dependencies {
     implementation(libs.quartz)
+    implementation(libs.marmot)
+    implementation(libs.cordn)
     implementation(project(":commons"))
     // Agent text stream previews: the raw-QUIC binding, and the QUIC
     // stack under it for the certificate validator the transport requires.

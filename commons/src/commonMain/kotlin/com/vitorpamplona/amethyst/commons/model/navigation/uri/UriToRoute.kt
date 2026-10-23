@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model.navigation.uri
 
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
-import com.vitorpamplona.amethyst.commons.cordn.CordnLinkInspection
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -30,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeForPointer
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.cordn.client.CordnLinkInspection
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey

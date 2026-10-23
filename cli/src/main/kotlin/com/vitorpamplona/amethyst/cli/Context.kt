@@ -31,10 +31,10 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
-import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
-import com.vitorpamplona.amethyst.commons.marmot.MarmotSyncPolicy
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.MarmotPublisher
+import com.vitorpamplona.marmot.client.MarmotSyncPolicy
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

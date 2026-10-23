@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model.marmot
 
-import com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore
+import com.vitorpamplona.marmot.MarmotIngestDedupStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers

@@ -1,9 +1,10 @@
-# marmotBench — quartz Marmot vs MDK, head to head
+# marmotBench — marmot-kmp vs MDK, head to head
 
 Measures the same Marmot/MLS operations on both engines so "are we as fast as
 the reference" has an answer instead of an opinion.
 
-The quartz half lives here. The MDK half is its own criterion suite:
+The marmot-kmp half (vitorpamplona/marmot-kmp, formerly quartz's `marmot` package) lives here.
+The MDK half is its own criterion suite:
 
 ```sh
 # quartz

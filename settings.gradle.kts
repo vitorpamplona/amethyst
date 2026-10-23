@@ -56,6 +56,26 @@ providers.gradleProperty("quartzDir").orNull?.let { dir ->
     }
 }
 
+// The MLS bindings live in their own repos, built on quartz: Marmot (vitorpamplona/marmot-kmp) and
+// cordn (vitorpamplona/cordn-kmp). To change one alongside the app, build a local checkout:
+//   ./gradlew -PquartzDir=../quartz -PmarmotKmpDir=../marmot-kmp :commons:jvmTest
+providers.gradleProperty("marmotKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.marmot:marmot")).using(project(":marmot"))
+        }
+    }
+}
+
+//   ./gradlew -PquartzDir=../quartz -PcordnKmpDir=../cordn-kmp :commons:jvmTest
+providers.gradleProperty("cordnKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.cordn:cordn")).using(project(":cordn"))
+        }
+    }
+}
+
 // crypto-kmp lives in its own repo (vitorpamplona/crypto-kmp) and reaches this build through
 // quartz. To change it alongside quartz and the app, point Gradle at a local checkout:
 //   ./gradlew -PquartzDir=../quartz -PcryptoKmpDir=../crypto-kmp :commons:jvmTest
@@ -80,7 +100,7 @@ providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
 }
 
 // The MLS engine lives in its own repo (vitorpamplona/mls-kmp) and comes from Maven Central, like
-// quic, and reaches this build through quartz. To change it alongside Marmot or cordn, build a
+// quic, and reaches this build through marmot and cordn. To change it alongside Marmot or cordn, build a
 // local checkout instead of the artifact:
 //   ./gradlew -PquartzDir=../quartz -PmlsKmpDir=../mls-kmp :commons:jvmTest
 providers.gradleProperty("mlsKmpDir").orNull?.let { dir ->

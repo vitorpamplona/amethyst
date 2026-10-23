@@ -42,7 +42,7 @@ broker. Only the sender half is here; quic-kmp is a client stack with no server
 role, so this module cannot expose a direct-path endpoint of its own.
 
 The codecs — control envelope, frame reader/writer with both caps, `quic://`
-candidate parsing — live in `quartz` next to the rest of agent-text-stream,
+candidate parsing — live in marmot-kmp next to the rest of agent-text-stream,
 because they are pure bytes and belong with the feature. This module is only
 the connection.
 

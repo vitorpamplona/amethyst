@@ -20,10 +20,10 @@
  */
 package com.vitorpamplona.marmotbench
 
-import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.ingest
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey

@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.cordn
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.cordnGroupPositionFor
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.sameDayAs
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

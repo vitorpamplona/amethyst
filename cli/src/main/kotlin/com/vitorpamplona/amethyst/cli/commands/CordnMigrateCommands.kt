@@ -28,7 +28,7 @@ import com.vitorpamplona.amethyst.cli.stores.HttpCordnBlobStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationException
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
 
 /**
  * `amy cordn migrate …` — the device handoff, drivable without a phone.

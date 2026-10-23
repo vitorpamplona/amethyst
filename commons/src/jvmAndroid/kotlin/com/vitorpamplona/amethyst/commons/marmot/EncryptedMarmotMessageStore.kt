@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
-import com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore
+import com.vitorpamplona.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers

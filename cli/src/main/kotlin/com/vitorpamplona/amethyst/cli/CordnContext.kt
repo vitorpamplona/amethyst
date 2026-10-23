@@ -20,15 +20,15 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorRegistry
 import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
-import com.vitorpamplona.amethyst.commons.cordn.CordnSession
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
-import com.vitorpamplona.amethyst.commons.cordn.KeyedCordnBlobCipher
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnCoordinatorRegistry
+import com.vitorpamplona.cordn.client.CordnSession
+import com.vitorpamplona.cordn.client.KeyedCordnBlobCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer

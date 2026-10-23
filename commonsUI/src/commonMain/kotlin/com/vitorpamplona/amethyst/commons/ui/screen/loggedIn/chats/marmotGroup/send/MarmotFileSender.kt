@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send
 
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.marmot.mip04EncryptedMedia.buildMip04IMetaTag
+import com.vitorpamplona.marmot.mip04EncryptedMedia.buildMip04IMetaTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

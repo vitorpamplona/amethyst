@@ -69,6 +69,9 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.quartz)
+                // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
+                implementation(libs.marmot)
+                implementation(libs.cordn)
 
                 // Imported directly (sha256, AESGCM, RandomInstance, MLS types), so declared directly.
                 // Through quartz's api alone, a -PcryptoKmpDir / -PmlsKmpDir checkout never reaches

@@ -30,11 +30,11 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaV2Cipher
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotMediaType
-import com.vitorpamplona.quartz.marmot.appComponents.MediaLocatorV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
+import com.vitorpamplona.marmot.appComponents.MarmotMediaType
+import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 
 /**
  * MIP-04 upload result containing all info needed to build the imeta tag.
