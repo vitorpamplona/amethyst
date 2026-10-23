@@ -37,9 +37,9 @@ import kotlin.math.roundToInt
  * [VideoPlayerSurface] at [url]'s real shape (see [VideoPixelAspect]). A video with square pixels
  * draws as the engine has it, fitted into [modifier].
  *
- * An anamorphic one gets a box of its display shape. Inside it the engine still draws the stored
- * shape, at the box's full height (it scales its output to fit its surface, so a surface squeezed
- * to the display shape would get a low-resolution frame), and that picture is then scaled
+ * An anamorphic one gets a box of its display shape. Inside it the engine still draws at the shape
+ * it believes in, at the box's full height (it scales its output to fit its surface, so a surface
+ * squeezed to the display shape would get a low-resolution frame), and that picture is then scaled
  * horizontally to the box's width.
  */
 @Composable

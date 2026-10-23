@@ -158,7 +158,10 @@ object VideoThumbnailCache {
         val parFile = File(diskDir, "$key$PAR_SUFFIX")
         if (persistable && diskFile.length() > 0) {
             runCatching { ImageIO.read(diskFile) }.getOrNull()?.let {
-                if (parFile.exists()) runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par) }
+                // The poster is already at the video's display shape.
+                if (parFile.exists()) {
+                    runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, it.width.toFloat() / it.height) }
+                }
                 return it.toComposeImageBitmap()
             }
         }
@@ -265,11 +268,12 @@ object VideoThumbnailCache {
                         ?.pixelAspectRatio
                         ?.takeIf { it.num > 0 && it.den > 0 }
                         ?.let { it.num.toFloat() / it.den }
-                if (par != null) VideoPixelAspect.record(url, par)
                 // Phones store portrait video sideways with a rotation in the track header; the
                 // decoded picture ignores it, so apply it (ffmpeg already does). An anamorphic
                 // video's pixels are not square: stretch them back first, as they are stored.
-                scaleDown(rotate(squarePixels(AWTUtil.toBufferedImage(rgb), par), frame.orientation))
+                val poster = scaleDown(rotate(squarePixels(AWTUtil.toBufferedImage(rgb), par), frame.orientation))
+                if (par != null) VideoPixelAspect.record(url, par, poster.width.toFloat() / poster.height)
+                poster
             }
         }.getOrNull()
 

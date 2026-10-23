@@ -30,28 +30,38 @@ import kotlin.math.abs
  *
  * The video engine on Linux (GStreamer) reports and draws the stored frame, so that video came out
  * as a squashed landscape box. macOS (AVFoundation) applies the pixel ratio itself. Windows reports
- * the frame size too but is left alone until someone checks how its engine draws such a video. The
- * engine exposes no pixel ratio, so [VideoThumbnailCache] records it here when it reads the
- * container for the poster, and [displayRatio] and `VideoSurface` correct for it.
+ * the frame size too but is left alone until someone checks how its engine draws such a video.
+ *
+ * The engine exposes no pixel ratio, so [VideoThumbnailCache] records it here when it reads the
+ * container for the poster, with the shape the poster came out at, and [displayRatio] and
+ * `VideoSurface` show the video at that shape. The engine's own ratio is not a base to correct:
+ * it keeps a 16:9 placeholder when no frame arrived within its open timeout, and then draws the
+ * picture at 16:9 too.
  *
  * Snapshot state, so a card that composed before the poster probe finished resizes when it lands.
  */
 object VideoPixelAspect {
-    private val known = mutableStateMapOf<String, Float>()
+    private class Shape(
+        val pixelWidthHeightRatio: Float,
+        val displayRatio: Float,
+    )
+
+    private val known = mutableStateMapOf<String, Shape>()
 
     private val engineIgnoresIt = PlatformInfo.host.isLinux
 
+    /** Records [url]'s [pixelWidthHeightRatio] and the [displayRatio] it shows at, unless its pixels are square. */
     fun record(
         url: String,
         pixelWidthHeightRatio: Float,
+        displayRatio: Float,
     ) {
-        if (pixelWidthHeightRatio > 0f && pixelWidthHeightRatio.isFinite() && abs(pixelWidthHeightRatio - 1f) > 0.01f) {
-            known[url] = pixelWidthHeightRatio
-        }
+        if (!usable(pixelWidthHeightRatio) || !usable(displayRatio) || abs(pixelWidthHeightRatio - 1f) <= 0.01f) return
+        known[url] = Shape(pixelWidthHeightRatio, displayRatio)
     }
 
     /** The pixel ratio [url] was seen with, or null for square pixels or an unread video. */
-    fun get(url: String): Float? = known[url]
+    fun get(url: String): Float? = known[url]?.pixelWidthHeightRatio
 
     /** The shape to show [url] at, given the [engineRatio] its engine reports. */
     fun displayRatio(
@@ -59,7 +69,8 @@ object VideoPixelAspect {
         engineRatio: Float,
     ): Float {
         if (!engineIgnoresIt || url == null) return engineRatio
-        val par = known[url] ?: return engineRatio
-        return engineRatio * par
+        return known[url]?.displayRatio ?: engineRatio
     }
+
+    private fun usable(ratio: Float) = ratio > 0f && ratio.isFinite()
 }
