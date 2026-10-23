@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # relaygroup-headless.sh — end-to-end check of `amy relaygroup` (NIP-29) against
-# an embedded relay (`amy serve`, which boots :geode). No external relay binary.
+# an embedded relay (`amy serve`, which boots geode). No external relay binary.
 #
 # What it proves:
 #   1. relaygroup create publishes 9007 + 9002 and returns a group_id.

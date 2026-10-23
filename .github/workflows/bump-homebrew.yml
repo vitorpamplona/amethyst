@@ -1,7 +1,6 @@
 name: Sync Homebrew Cask Reference
 
-# Sibling of bump-homebrew-formula.yml (amy) and bump-homebrew-geode-formula.yml
-# (geode-relay). Same mechanism, third artifact:
+# Sibling of bump-homebrew-formula.yml (amy). Same mechanism, second artifact:
 #   - this workflow -> Cask `amethyst-nostr` (the desktop GUI app / DMG)
 #
 # What it does: after a stable release, download the published macOS DMG, assert

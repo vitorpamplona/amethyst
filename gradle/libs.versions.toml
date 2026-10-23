@@ -77,6 +77,8 @@ mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
 quartzKmp = "2.2.0"
+# geode (vitorpamplona/geode-relay): the relay `amy serve` embeds and the tests boot in-process.
+geodeRelay = "1.20.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) and the MLS engine (vitorpamplona/mls-kmp) come with
 # quartz; commons also declares them because it imports them directly. Keep them at quartz's versions.
 cryptoKmp = "1.0.0"
@@ -252,6 +254,7 @@ mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "mockk" }
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartzKmp" }
+geode = { module = "com.vitorpamplona.geode:geode", version.ref = "geodeRelay" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
 quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }

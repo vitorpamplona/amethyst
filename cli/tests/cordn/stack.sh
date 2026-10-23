@@ -24,7 +24,8 @@
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../../.." && pwd)"
 AMY="$ROOT/cli/build/install/amy/bin/amy"
-GEODE="$ROOT/geode/build/install/geode/bin/geode"
+# geode lives in vitorpamplona/geode-relay; by default a sibling checkout of it.
+GEODE="${GEODE:-$ROOT/../geode-relay/geode/build/install/geode/bin/geode}"
 IMAGE="ghcr.io/cordn-msg/cordn:latest"
 
 PORT="${PORT:-7447}"
@@ -38,7 +39,7 @@ GEODE_PID=""
 stack_require() {
     for f in "$AMY" "$GEODE"; do
         [ -x "$f" ] || {
-            echo "missing $f — run ./gradlew :cli:installDist :geode:installDist"
+            echo "missing $f — run ./gradlew :cli:installDist here and ./gradlew :geode:installDist in ../geode-relay (or set GEODE)"
             exit 2
         }
     done

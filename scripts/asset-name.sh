@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Single source of truth for Amethyst release asset naming.
 #
-# Three product lines share this contract:
+# Two product lines share this contract:
 #   amethyst-desktop-<version>-<family>-<arch>.<ext>   (Compose Desktop app)
 #   amy-<version>-<family>-<arch>.<ext>                (Amy CLI — cli/ module)
-#   geode-<version>-<family>-<arch>.<ext>              (geode relay — geode/ module)
+#
+# (The geode relay's own geode-<version>-... assets ship from
+# vitorpamplona/geode-relay, which carries its own copy of this contract.)
 #
 #   <version> = tag stripped of leading 'v' (e.g. "1.08.0")
 #   <family>  = macos | windows | linux
@@ -47,28 +49,18 @@
 #   amy-1.08.0-linux-arm64.rpm
 #   amy-1.08.0-windows-x64.zip
 #   amy-1.08.0-windows-arm64.zip
-#   geode-1.08.0-macos-arm64.tar.gz
-#   geode-1.08.0-linux-x64.tar.gz
-#   geode-1.08.0-linux-x64.deb
-#   geode-1.08.0-linux-x64.rpm
-#   geode-1.08.0-linux-arm64.tar.gz
-#   geode-1.08.0-linux-arm64.deb
-#   geode-1.08.0-linux-arm64.rpm
-#   geode-1.08.0-windows-x64.zip
-#   geode-1.08.0-windows-arm64.zip
 #
 # The AppImage breaks the family/arch shape on purpose: AppImageHub
 # (appimage.github.io) flags "linux" in an AppImage name, since every AppImage
 # is for Linux, and expects the AppImage arch names, so it is
 #   amethyst-desktop-<version>-<x86_64|aarch64>.AppImage
 #
-# Two more assets break the family/arch shape on purpose: the no-JRE jar bundles for
-# Homebrew-core are pure JVM bytecode (no bundled runtime), so a single
+# One more asset breaks the family/arch shape on purpose: the no-JRE jar bundle for
+# Homebrew-core is pure JVM bytecode (no bundled runtime), so a single
 # platform-independent artifact serves every OS:
 #   amy-1.08.0-jvm.tar.gz
-#   geode-1.08.0-jvm.tar.gz
-# They are packaged inline in create-release.yml (linux leg), not via the helpers
-# below, since they have no <family>/<arch> dimension.
+# It is packaged inline in create-release.yml (linux leg), not via the helpers
+# below, since it has no <family>/<arch> dimension.
 
 set -euo pipefail
 
@@ -84,13 +76,6 @@ asset_name() {
 cli_asset_name() {
     local family="$1" arch="$2" version="$3" ext="$4"
     printf 'amy-%s-%s-%s.%s' "$version" "$family" "$arch" "$ext"
-}
-
-# geode relay variant of asset_name — same shape, different product prefix.
-# Usage: geode_asset_name <family> <arch> <version> <ext>
-geode_asset_name() {
-    local family="$1" arch="$2" version="$3" ext="$4"
-    printf 'geode-%s-%s-%s.%s' "$version" "$family" "$arch" "$ext"
 }
 
 # AppImage variant: no <family> (all AppImages are for Linux) and the AppImage
@@ -218,77 +203,6 @@ PY
         base="$(basename "$src")"
         ext="${base##*.}"
         dst="$abs_dest/$(cli_asset_name "$family" "$arch" "$version" "$ext")"
-        cp "$src" "$dst"
-        echo "Collected: $dst"
-    done
-    shopt -u nullglob
-}
-
-# Copy + rename geode relay build outputs into <dest_dir> using the canonical
-# geode-<version>-<family>-<arch>.<ext> scheme.
-#
-# Expected inputs:
-#   geode/build/geode-image/geode/  flat app-image built by :geode:geodeImage
-#                                   (bin/geode + bin/geode.bat + lib/*.jar
-#                                    + runtime/ + share/)
-#   geode/build/jpackage/*.deb      from :geode:jpackageDeb (Linux only)
-#   geode/build/jpackage/*.rpm      from :geode:jpackageRpm (Linux only)
-#
-# On Windows the flat image is packaged as .zip; every other OS uses tar.gz.
-# See the matching comment in collect_cli_assets for the tool-selection order.
-#
-# Usage: collect_geode_assets <family> <arch> <version> <dest_dir>
-collect_geode_assets() {
-    local family="$1" arch="$2" version="$3" dest="$4"
-    mkdir -p "$dest"
-    local abs_dest
-    abs_dest="$(cd "$dest" && pwd)"
-    shopt -s nullglob
-
-    # 1. Archive the flat app-image into geode-<version>-<family>-<arch>.<ext>.
-    #    macOS runners produce only this one. Windows uses .zip; every other
-    #    OS uses tar.gz.
-    local app_image="geode/build/geode-image/geode"
-    if [ -d "$app_image" ]; then
-        if [ "$family" = "windows" ]; then
-            local zipfile="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" zip)"
-            if command -v 7z >/dev/null 2>&1; then
-                ( cd "$(dirname "$app_image")" && 7z a -tzip "$zipfile" "$(basename "$app_image")/" >/dev/null )
-            elif command -v zip >/dev/null 2>&1; then
-                ( cd "$(dirname "$app_image")" && zip -qr "$zipfile" "$(basename "$app_image")" )
-            else
-                python3 - "$app_image" "$zipfile" <<'PY'
-import os, sys, zipfile
-src, dst = sys.argv[1], sys.argv[2]
-root = os.path.dirname(src)
-base = os.path.basename(src)
-with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as zf:
-    for dirpath, _dirs, files in os.walk(src):
-        for f in files:
-            p = os.path.join(dirpath, f)
-            zf.write(p, os.path.relpath(p, root))
-PY
-            fi
-            echo "Collected: $zipfile"
-        else
-            local tarball="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" tar.gz)"
-            ( cd "$(dirname "$app_image")" && tar czf "$tarball" "$(basename "$app_image")" )
-            echo "Collected: $tarball"
-        fi
-    fi
-
-    # 2. Linux native installers (.deb, .rpm). jpackage writes them directly
-    #    to geode/build/jpackage/ with its own naming, so we re-copy under the
-    #    canonical scheme.
-    local src base ext dst
-    for src in \
-        geode/build/jpackage/*.deb \
-        geode/build/jpackage/*.rpm \
-    ; do
-        [ -f "$src" ] || continue
-        base="$(basename "$src")"
-        ext="${base##*.}"
-        dst="$abs_dest/$(geode_asset_name "$family" "$arch" "$version" "$ext")"
         cp "$src" "$dst"
         echo "Collected: $dst"
     done

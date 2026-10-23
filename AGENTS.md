@@ -28,11 +28,12 @@ and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.qu
 QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
 (`settings.gradle.kts`). Crypto primitives live in <https://github.com/vitorpamplona/crypto-kmp>
 (`libs.crypto`, `com.vitorpamplona.crypto.*`), used by quartz and quic-kmp; secp256k1 stays in
-quartz. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
-relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
-`relayBench` (head-to-head relay benchmark — boots geode, strfry and other
-relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `marmotQuic` is the Marmot raw-QUIC transport
+quartz. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. **geode**, the standalone JVM
+Nostr relay (Ktor) on quartz's relay-server code, and **relayBench**, the head-to-head relay
+benchmark, live in <https://github.com/vitorpamplona/geode-relay>. geode comes from Maven Central
+as `com.vitorpamplona.geode:geode` (`libs.geode`): `amy serve` embeds it, and the `amethyst`/`cli`
+tests boot it in-process through its test fixtures. `-PgeodeDir=../geode-relay` builds a local
+checkout. A smaller module here is `benchmark` (Android macrobenchmarks). `marmotQuic` is the Marmot raw-QUIC transport
 binding for agent text stream previews (`transports/quic.md`) on top of
 quic-kmp — its own ALPNs and framing, not WebTransport. `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
@@ -98,7 +99,6 @@ amethyst/
 │   └── src/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
-├── geode/          # Standalone JVM Nostr relay (Ktor) on quartz's relay-server code
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
 └── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
@@ -131,8 +131,8 @@ amethyst/
   integrations and the actuals of shared ports. Screens and navigation are shared UI and are
   moving to `commonsUI`.
 - `cli/` = Thin assembly layer over `quartz/` + `commons/` (no new logic
-  allowed). May also depend on `:geode` (for `amy serve`, which embeds the
-  standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
+  allowed). May also depend on geode (`libs.geode`, for `amy serve`, which embeds
+  the standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
 module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
@@ -331,7 +331,8 @@ replaced with an in-house pitch shifter for exactly this reason.)
 Quartz uses expect/actual for platform-specific implementations (e.g. crypto backed by
 `secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on JVM), so app modules
 declare the JNI variant they ship, at quartz's secp256k1 version. Its client tests that need a
-real socket relay (`KtorRelay`) live in `geode/src/test`. See `/kotlin-multiplatform`.
+real socket relay (`KtorRelay`) live in geode's own suite, in vitorpamplona/geode-relay. See
+`/kotlin-multiplatform`.
 
 ## Strings
 

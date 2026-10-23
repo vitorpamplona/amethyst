@@ -13,10 +13,11 @@ adds the source-set mechanics and the build traps.
 
 ## Modules
 
-`settings.gradle.kts` includes 13: `amethyst`, `nappletHost`, `benchmark`,
-`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`,
-`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. Quartz is the
-external `libs.quartz` (vitorpamplona/quartz) and QUIC the external `libs.quic`
+`settings.gradle.kts` includes 11: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `commons`, `commonsUI`, `nestsClient`,
+`marmotQuic`, `desktopApp`, `cli`, `marmotBench`. Quartz is the
+external `libs.quartz` (vitorpamplona/quartz), the geode relay `libs.geode`
+(vitorpamplona/geode-relay, `-PgeodeDir=../geode-relay`) and QUIC the external `libs.quic`
 (vitorpamplona/quic-kmp); `-PquartzDir=../quartz` / `-PquicKmpDir=../quic-kmp` build a
 local checkout instead (an included build, so quic's own quartz dependency follows).
 
@@ -84,7 +85,7 @@ after touching `commonMain`. Quartz has its own copy of the task and its own iOS
 - **testFixtures in KMP:** the source-set `dependencies { }` block
   (`KotlinDependencyHandler`) has no `testFixtures(...)`. Use a top-level block with
   the configuration name as a string:
-  `dependencies { "jvmAndroidTestImplementation"(testFixtures(project(":geode"))) }`.
+  `dependencies { "jvmAndroidTestImplementation"(testFixtures(libs.geode)) }`.
 - **secp256k1 variants:** `secp256k1-kmp-common` in `commonMain`,
   `secp256k1-kmp-jni-android` in `androidMain`, `secp256k1-kmp-jni-jvm` in `jvmMain`
   and JVM tests. All three share one `version.ref`. A JVM classpath with the

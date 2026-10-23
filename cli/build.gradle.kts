@@ -53,8 +53,8 @@ dependencies {
     implementation(project(":marmotQuic"))
     implementation(libs.quic)
     // `amy serve` embeds geode (the standalone Ktor relay built on quartz's
-    // relay-server code). geode depends only on quartz, never on :amethyst.
-    implementation(project(":geode"))
+    // relay-server code, vitorpamplona/geode-relay). geode depends only on quartz.
+    implementation(libs.geode)
 
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

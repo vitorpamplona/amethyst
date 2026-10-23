@@ -42,8 +42,8 @@ own, so don't expect to find it in the run's job list.
    appCode = "449"      # Android versionCode, monotonic — must increment
    ```
    That single edit propagates to Android (`versionName`/`versionCode`),
-   Desktop & CLI (`packageVersion`), `quartz` (Maven version) and `geode`
-   (`RelayInfo.VERSION`). Nothing else hardcodes the version.
+   Desktop & CLI (`packageVersion`). Nothing else hardcodes the version.
+   (quartz and geode are released from their own repos with their own versions.)
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
@@ -129,7 +129,7 @@ git -c credential.helper= -c credential.helper='!gh auth git-credential' push up
 ```
 
 When the `Create Release Assets` workflow finishes (~25–30 min) the GH Release
-holds **47 assets**, per the asset-name contract:
+holds **37 assets**, per the asset-name contract:
 
 - **Android (13):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
   `.apks` set for Accrescent
@@ -140,9 +140,11 @@ holds **47 assets**, per the asset-name contract:
   runbook has the per-leg breakdown and why the two gaps exist.
 - **CLI (10):** the `amy` artifacts — the no-JRE `jvm.tar.gz`, macOS arm64,
   Windows x64 + arm64, and Linux DEB/RPM/tar.gz in both x64 and arm64
-- **Relay (10):** the `geode` artifacts, same matrix as `amy`. The geode Docker
-  image is **not** a release asset — it goes to the registry, so don't count it
-  here.
+
+The `geode` relay (bundles, `.deb`/`.rpm`, the GHCR image, its Homebrew formula and
+the Maven Central library) releases from
+[vitorpamplona/geode-relay](https://github.com/vitorpamplona/geode-relay). Bumping it
+here means bumping `geodeRelay` in `gradle/libs.versions.toml` to a published version.
 
 ---
 
@@ -324,14 +326,13 @@ be in the installed tree (JBR's Wayland toolkit). `builddir/`, `repo/` and
 ### Homebrew + Winget
 
 The in-repo sync workflows (`bump-homebrew.yml`, `bump-homebrew-formula.yml`,
-`bump-homebrew-geode-formula.yml`, `bump-winget.yml`) keep the reference
+`bump-winget.yml`) keep the reference
 packaging files current. Upstream:
 
 | Channel | Upstream package | State |
 |---|---|---|
 | **Homebrew cask** | `Homebrew/homebrew-cask` → `amethyst-nostr` | **Live, autobumped** — BrewTestBot opens the version PR (v1.17.0: [#292108](https://github.com/Homebrew/homebrew-cask/pull/292108)) |
 | **Homebrew formula** | `Homebrew/homebrew-core` → `amy` | **Live, autobumped** — BrewTestBot opens and merges the version PR (v1.17.0: [#315679](https://github.com/Homebrew/homebrew-core/pull/315679)) |
-| **Homebrew formula** | `Homebrew/homebrew-core` → `geode-relay` | Not submitted — renamed from `geode`, which is permanently reserved for Apache Geode |
 | **Winget** | `microsoft/winget-pkgs` → `VitorPamplona.Amethyst` | **Live** — initial [PR #422752](https://github.com/microsoft/winget-pkgs/pull/422752) merged 2026-09-23; bumped per release by `scripts/bump-winget.sh` |
 
 **Homebrew is autobumped.** Both packages are on Homebrew's autobump list
@@ -380,8 +381,8 @@ one also refuses a DMG without a stapled notarization ticket. Run the Homebrew
 one again later if BrewTestBot has not opened its PR yet. See BUILDING.md
 § Package-manager credentials.
 
-All four in-repo sync workflows (`amy` formula, `geode` formula,
-`amethyst-nostr` cask, winget manifests) open PRs against *this* repo on every
+All three in-repo sync workflows (`amy` formula, `amethyst-nostr` cask,
+winget manifests) open PRs against *this* repo on every
 release. Merge them to keep the reference packaging files current.
 
 ---
@@ -447,8 +448,8 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] F-Droid: new version detected (may lag days).
 - [ ] Flathub (only once Amethyst is on Flathub): the app-repo PR with the
       regenerated `gradle-sources.json` is merged and Flathub's build is green.
-- [ ] Four sync PRs opened against this repo (`amy` formula, `geode` formula,
-      `amethyst-nostr` cask, winget manifests) — merge them.
+- [ ] Three sync PRs opened against this repo (`amy` formula, `amethyst-nostr`
+      cask, winget manifests) — merge them.
 - [ ] Homebrew: `scripts/bump-homebrew-cask.sh vX.Y.Z` passes — DMG verified and
       BrewTestBot's cask PR carries the same sha256 (no token; re-run later if
       the bot has not opened it yet). `amy` needs nothing: BrewTestBot bumps it.

@@ -373,7 +373,7 @@ one pipeline. The Quartz library releases from its own repo
 
 3. **Wait** for the `Create Release Assets` workflow to finish (~25–30 min).
 
-4. **Verify** — the GH Release should hold **49 assets**:
+4. **Verify** — the GH Release should hold **39 assets**:
    - **14 desktop**, one per matrix leg × format:
      - macOS arm64: `dmg` (1)
      - Windows x64: `msi` + portable `zip` (2)
@@ -397,7 +397,8 @@ one pipeline. The Quartz library releases from its own repo
    - **10 amy** — `tar.gz` (macOS arm64, Linux x64, Linux arm64),
      `deb` + `rpm` per Linux arch, portable `zip` per Windows arch, and the
      one arch-independent no-JRE `amy-<ver>-jvm.tar.gz` for Homebrew-core.
-   - **10 geode** — same shape as amy.
+   - geode, the relay, is no longer in this release: it ships from
+     [vitorpamplona/geode-relay](https://github.com/vitorpamplona/geode-relay).
    - Asset sizes look sane (see §Enforce asset size budget — CI auto-fails at 1 GB/asset)
    - Android flow unchanged
 
@@ -575,8 +576,8 @@ reads an optional per-release changelog from
 > formula (`Homebrew/homebrew-core`) are both on Homebrew's **autobump** list, so
 > BrewTestBot opens their version PRs itself. Winget's initial submission,
 > [microsoft/winget-pkgs#422752](https://github.com/microsoft/winget-pkgs/pull/422752),
-> merged on 2026-09-23. Only the `geode-relay` formula has never been submitted;
-> its sync workflow detects the absence and skips with a `::warning::`.
+> merged on 2026-09-23. (The `geode-relay` formula, never submitted, moved with
+> the relay to vitorpamplona/geode-relay.)
 
 ### Package-manager credentials (and why there are none)
 

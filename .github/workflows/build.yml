@@ -123,7 +123,7 @@ jobs:
           fi
 
       # This job runs the JVM test suites (:commons, :commonsUI,
-      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
+      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the
@@ -197,55 +197,6 @@ jobs:
         with:
           name: ${{ matrix.desktop-artifact-name }}
           path: ${{ matrix.desktop-artifact-path }}
-
-  # geode (the standalone Nostr relay) is JVM-only, so it runs in its own job
-  # rather than the build-desktop matrix — one runner suffices (no reason to test
-  # a platform-independent module 3× across the desktop OS matrix). Isolating it
-  # also keeps its default suite's CPU-heavy throughput benchmarks (a 1M-event
-  # mirror sync, WireReqFloor, NegentropyServerReconcile) from contending with
-  # timing-sensitive relay-client tests under org.gradle.parallel. It also runs
-  # the quartz client tests that need a real socket relay (KtorRelay), which
-  # stayed here when quartz moved to vitorpamplona/quartz.
-  test-geode:
-    needs: lint
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v7
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
-        with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      # -DsyncN shrinks MirrorSyncThroughputTest's corpus from its 1,000,000-event
-      # default. At 1M the sink cannot keep up with the in-process source, and the
-      # MirrorWorker's deliberately unbounded intake channel buffers the backlog until
-      # the runner's heap is gone: throughput collapses (13,800 -> 86 ev/s) and an
-      # OutOfMemoryError lands on a coroutine thread, where the UncaughtExceptionHandler
-      # swallows it. JUnit never sees a failure, so the JVM wedges and the job burns to
-      # the timeout with no signal rather than failing. 100k keeps a real ev/s number
-      # while bounding the worst-case backlog to a tenth of what died.
-      #
-      # Only CI is shrunk: -DsyncN is unset everywhere else, so a local or manual run
-      # still measures the full 1M — the number written up in
-      # relayBench/plans/2026-07-04-sync-throughput-1m.md.
-      - name: Test geode (gradle)
-        run: ./gradlew :geode:test -DsyncN=100000
-
-      - name: Upload geode Test Reports
-        uses: actions/upload-artifact@v7
-        if: failure()
-        with:
-          name: geode Test Reports
-          path: geode/build/reports
 
   # The two iOS jobs run on macos-latest, the smallest hosted runner there
   # is: 3 M1 cores and 7 GB of RAM, and 5 to 10x slower than a current laptop

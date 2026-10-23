@@ -33,14 +33,12 @@ include(":amethyst")
 include(":nappletHost")
 include(":benchmark")
 include(":baselineprofile")
-include(":geode")
 include(":commons")
 include(":commonsUI")
 include(":nestsClient")
 include(":marmotQuic")
 include(":desktopApp")
 include(":cli")
-include(":relayBench")
 include(":marmotBench")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto
@@ -52,6 +50,18 @@ providers.gradleProperty("quartzDir").orNull?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("com.vitorpamplona.quartz:quartz")).using(project(":quartz"))
+        }
+    }
+}
+
+// geode lives in its own repo (vitorpamplona/geode-relay) and comes from Maven Central: `amy
+// serve` embeds it and the amethyst/cli tests boot it in-process through its test fixtures. To
+// change it alongside them, point Gradle at a local checkout:
+//   ./gradlew -PgeodeDir=../geode-relay :cli:test
+providers.gradleProperty("geodeDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.geode:geode")).using(project(":geode"))
         }
     }
 }

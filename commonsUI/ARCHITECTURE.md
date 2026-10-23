@@ -29,7 +29,7 @@ bridges. See `commons/plans/2026-09-27-one-ui-android-desktop.md` and
 
 It depends on `:commons` (and quartz, `libs.quartz`) as **`api`**, so a consumer that adds
 `:commonsUI` sees the headless layer transitively. `amethyst`, `desktopApp`,
-`nappletHost` and `benchmark` depend on it; `cli`, `geode`, `marmotBench`
+`nappletHost` and `benchmark` depend on it; `cli` and `marmotBench`
 must never.
 
 ## Platform slots

@@ -36,7 +36,7 @@ listing (including archived plans), open that folder's `README.md`.
 | quartz (own repo) | 10 | 7 | 0 | 3 | 0 | [quartz/plans](https://github.com/vitorpamplona/quartz/blob/main/quartz/plans/README.md) |
 | commons | 6 | 2 | 2 | 2 | 0 | [commons/plans](commons/plans/README.md) |
 | cli | 6 | 5 | 1 | 0 | 0 | [cli/plans](cli/plans/README.md) |
-| geode | 5 | 4 | 0 | 0 | 0 | [geode/plans](geode/plans/README.md) |
+| geode (own repo) | 5 | 4 | 0 | 0 | 0 | [geode/plans](https://github.com/vitorpamplona/geode-relay/blob/main/geode/plans/README.md) |
 | docs (frozen) | 52 | 48 | 2 | 0 | 2 | [docs/plans](docs/plans/README.md) |
 
 ## Live work (not shipped)
