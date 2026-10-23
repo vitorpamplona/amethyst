@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
+import com.vitorpamplona.cordn.client.CordnBlobCipher
 
 /**
  * The desktop [CordnBlobCipher]: the AES-256-GCM key that already protects the desktop's Marmot

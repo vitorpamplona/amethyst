@@ -33,8 +33,6 @@ import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
 import com.vitorpamplona.amethyst.commons.feeds.CardFeedState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
-import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.CombinedZap
@@ -102,12 +100,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.amethyst.commons.wallet.ReloadMintRequest
 import com.vitorpamplona.amethyst.commons.wot.sortedByFollowsThenTrust
 import com.vitorpamplona.amethyst.commons.wot.sortedKeysByFollowsThenTrust
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
+import com.vitorpamplona.marmot.client.GroupMemberInfo
+import com.vitorpamplona.marmot.client.MarmotGroupIconChange
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryReadingStateEvent
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaReferenceV2
-import com.vitorpamplona.quartz.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event

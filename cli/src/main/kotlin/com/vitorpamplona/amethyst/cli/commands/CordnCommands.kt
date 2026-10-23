@@ -23,10 +23,10 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
-import com.vitorpamplona.amethyst.commons.cordn.ExposureNote
-import com.vitorpamplona.amethyst.commons.cordn.GroupExposure
-import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.ExposureNote
+import com.vitorpamplona.cordn.client.GroupExposure
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 
 /**

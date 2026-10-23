@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds
 
+import com.vitorpamplona.marmot.MarmotEvents
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -29,6 +30,12 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class RepostRenderabilityTest {
+    init {
+        // The app registers Marmot's kinds at startup (EventCache does); without it 443 and the
+        // other marmot-kmp kinds read as untyped here.
+        MarmotEvents.register()
+    }
+
     private val id = "00".repeat(32)
     private val pubKey = "11".repeat(32)
     private val sig = "22".repeat(64)

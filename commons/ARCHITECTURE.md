@@ -92,7 +92,7 @@ in `commonsUI`, under the same package.
 | `actions`      | no  | Event builders for user actions (follow, zap…). The canonical entry point for non-UI callers. |
 | `account`      | mixed | New-account bootstrap events; the logged-off login/sign-up buttons in `commonsUI` `account/ui/login` and `account/ui/signup`. |
 | `onchain`      | mixed | On-chain zap splitting/broadcasting; user-facing failure strings in `commonsUI` `onchain/ui`. |
-| `marmot`       | mixed | MLS group-chat event processing; group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. |
+| `marmot`       | mixed | The encrypted at-rest stores behind marmot-kmp's `MarmotManager` (`jvmAndroid`); group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. The group pipeline itself is `com.vitorpamplona.marmot.client` in marmot-kmp. |
 | `cyberspace`   | no  | `CYBERSPACE_V2` §7.7 region-bag search: the free quote off a bag's `hint`/`h` tags, the device-measured budget, and the cold sweep flow over quartz's `RegionSweep`. The protocol itself (coordinates, Cantor trees, keys, the bag) is `quartz/.../cyberspace`. |
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
@@ -206,7 +206,7 @@ Instead, **layer is the primary axis, NIP is the secondary axis**:
 - **A top-level package that *is* a single self-contained NIP feature takes the
   same name as its `quartz` counterpart**, and owns its own UI under
   `<feature>/ui`: `nip64Chess`, `nipACWebRtcCalls`, `nip53LiveActivities`,
-  `nip23LongContent`, `marmot`. (`marmot` is un-numbered in `quartz` too.)
+  `nip23LongContent`, `marmot`. (`marmot` is un-numbered in marmot-kmp too.)
   Generic/multi-NIP packages keep their concern name (`search`, `preview`,
   `actions`, `richtext`…).
 - **Feature UI is never under `ui/`.** A single-NIP feature's composables live

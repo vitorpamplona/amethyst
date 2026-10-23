@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.marmot
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 /**

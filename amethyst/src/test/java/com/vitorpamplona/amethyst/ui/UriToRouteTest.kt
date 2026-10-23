@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
-import com.vitorpamplona.quartz.cordn.appGroupRef.CordnGroupRef
+import com.vitorpamplona.cordn.appGroupRef.CordnGroupRef
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.Assert.assertEquals

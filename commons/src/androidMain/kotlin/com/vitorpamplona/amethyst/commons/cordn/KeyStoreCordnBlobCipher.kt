@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStoreEncryption
+import com.vitorpamplona.cordn.client.CordnBlobCipher
 
 /**
  * The Android [CordnBlobCipher]: AES-GCM under a key held in the Android

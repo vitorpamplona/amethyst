@@ -30,11 +30,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.defaults.Constants
-import com.vitorpamplona.amethyst.commons.marmot.MarmotManager
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPublisher
-import com.vitorpamplona.amethyst.commons.marmot.MarmotPushCoordinator
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.EventProcessor
 import com.vitorpamplona.amethyst.commons.model.IAccount
@@ -70,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.KeyPackageRelayListState
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.nip01UserMetadata.AccountHomeRelayState
@@ -203,9 +200,16 @@ import com.vitorpamplona.amethyst.commons.wot.network.RelayTrustNetworkSource
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkState
 import com.vitorpamplona.amethyst.commons.wot.network.TrustNetworkStore
 import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
+import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.crypto.aes.AES_GCM_NAME
 import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.MarmotPublisher
+import com.vitorpamplona.marmot.client.MarmotPushCoordinator
+import com.vitorpamplona.marmot.groups.MlsGroupStateStore
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -237,9 +241,6 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
-import com.vitorpamplona.quartz.marmot.groups.MlsGroupStateStore
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -472,26 +473,26 @@ class Account(
      */
     val cordnBlobCipher: (() -> CordnBlobCipher)? = null,
     val mlsGroupStateStore: MlsGroupStateStore? = null,
-    val marmotMessageStore: com.vitorpamplona.quartz.marmot.groups.MarmotMessageStore? = null,
-    val marmotKeyPackageStore: com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
+    val marmotMessageStore: com.vitorpamplona.marmot.groups.MarmotMessageStore? = null,
+    val marmotKeyPackageStore: com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore? = null,
     /**
      * Durable publish obligations. Null means publish-before-apply does not
      * survive a restart, so a commit interrupted mid-publish is replaced by a
      * fresh one for the same epoch — a fork against the peers that took the
      * first.
      */
-    val marmotPublishObligationStore: com.vitorpamplona.quartz.marmot.protocolCore.MarmotPublishObligationStore? = null,
+    val marmotPublishObligationStore: com.vitorpamplona.marmot.protocolCore.MarmotPublishObligationStore? = null,
     /**
      * Durable "already decided" markers for inbound events. Null means every
      * backdated gift wrap is re-unwrapped on every sync.
      */
-    val marmotIngestDedupStore: com.vitorpamplona.quartz.marmot.MarmotIngestDedupStore? = null,
+    val marmotIngestDedupStore: com.vitorpamplona.marmot.MarmotIngestDedupStore? = null,
     /**
      * Durable push token records, stamps and tombstones. Null means a restart
      * forgets every tombstone, so a relayed but revoked token record can win
      * once and start waking a device its owner asked to be forgotten.
      */
-    val marmotPushStateStore: com.vitorpamplona.quartz.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
+    val marmotPushStateStore: com.vitorpamplona.marmot.mip05PushNotifications.MarmotPushStateStore? = null,
     val powQueue: () -> PoWPublishQueue? = { null },
     /**
      * Where the Web of Trust network index lives (the account's own directory), or null to

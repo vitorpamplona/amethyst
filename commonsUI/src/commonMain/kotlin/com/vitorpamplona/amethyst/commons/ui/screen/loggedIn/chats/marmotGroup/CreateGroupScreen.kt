@@ -42,7 +42,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.vitorpamplona.amethyst.commons.marmot.MarmotGroupIconChange
 import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionChoice
 import com.vitorpamplona.amethyst.commons.marmot.ui.MarmotRetentionPicker
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -68,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.s
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.marmot.client.MarmotGroupIconChange
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers

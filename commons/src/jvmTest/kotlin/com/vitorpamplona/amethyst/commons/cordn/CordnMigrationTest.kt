@@ -20,18 +20,19 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.cordn.appMultiDevice.CordnDeviceTip
+import com.vitorpamplona.cordn.appMultiDevice.CordnDocumentSeal
+import com.vitorpamplona.cordn.appMultiDevice.CordnGroupDocument
+import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnLastResortKeyPackage
+import com.vitorpamplona.cordn.appMultiDevice.CordnTipEntry
+import com.vitorpamplona.cordn.appMultiDevice.CordnTipInventory
+import com.vitorpamplona.cordn.client.CordnBlobStore
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessageCodec
+import com.vitorpamplona.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDeviceTip
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnDocumentSeal
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnGroupDocument
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnHandoffCode
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnLastResortKeyPackage
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnTipEntry
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnTipInventory
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper

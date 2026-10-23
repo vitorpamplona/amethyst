@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.cli.commands
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 
 object KeyPackageCommands {
     val USAGE: String =

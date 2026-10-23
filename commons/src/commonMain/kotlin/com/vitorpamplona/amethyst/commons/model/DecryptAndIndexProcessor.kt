@@ -24,16 +24,17 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.chatMessageMarksRoomAsRead
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
+import com.vitorpamplona.marmot.GroupEventResult
+import com.vitorpamplona.marmot.MarmotInboundProcessor
+import com.vitorpamplona.marmot.WelcomeResult
+import com.vitorpamplona.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.marmot.GroupEventResult
-import com.vitorpamplona.quartz.marmot.MarmotInboundProcessor
-import com.vitorpamplona.quartz.marmot.WelcomeResult
-import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
-import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.IEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
@@ -440,7 +441,7 @@ class GiftWrapEventHandler(
  * (in case a Welcome arrives directly inside a kind:1059 with no Seal
  * layer) and [SealEventHandler] (the actual production path —
  * Welcomes are wrapped GiftWrap → Seal → Welcome per
- * [com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeGiftWrap]).
+ * [com.vitorpamplona.marmot.mip02Welcome.WelcomeGiftWrap]).
  */
 private suspend fun processMarmotWelcomeFlow(
     innerEvent: Event,

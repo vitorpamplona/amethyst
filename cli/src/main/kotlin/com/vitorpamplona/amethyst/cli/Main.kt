@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.cli.commands.cashu.CashuMintCommands
 import com.vitorpamplona.amethyst.cli.commands.route
 import com.vitorpamplona.amethyst.cli.secrets.SecretStore
 import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
+import com.vitorpamplona.marmot.MarmotEvents
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.PagingDiagnostics
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
@@ -144,6 +145,8 @@ fun runCli(argv: Array<String>): Int {
     val verbose = argv.any { it == "--verbose" || it == "-v" }
     Log.minLevel = if (verbose) LogLevel.DEBUG else LogLevel.WARN
     QuicLogBridge.install()
+    // Marmot's kinds (marmot-kmp) parse typed only once registered with Quartz's EventFactory.
+    MarmotEvents.register()
     // --verbose also reports how each relay ordered and repeated a paged walk's events.
     PagingDiagnostics.enabled = verbose
 

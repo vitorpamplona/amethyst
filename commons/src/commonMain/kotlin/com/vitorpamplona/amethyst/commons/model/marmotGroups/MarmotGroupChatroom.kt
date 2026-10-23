@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -29,8 +28,10 @@ import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
-import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
-import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
+import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.marmot.client.GroupMemberInfo
+import com.vitorpamplona.marmot.client.MarmotGroupImage
+import com.vitorpamplona.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.channels.BufferOverflow

@@ -22,9 +22,13 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
-import com.vitorpamplona.quartz.cordn.appMultiDevice.CordnCarriedKeyPackage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessageCodec
-import com.vitorpamplona.quartz.cordn.sync.GroupCursor
+import com.vitorpamplona.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.cordn.client.CordnRoomStateCodec
+import com.vitorpamplona.cordn.client.EchoStateCodec
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessageCodec
+import com.vitorpamplona.cordn.sync.GroupCursor
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okio.FileSystem

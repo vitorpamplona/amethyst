@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.cordn.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CoordinatorConfig
 
 /**
  * `amy cordn coordinator …` and `amy cordn keypackage …`.

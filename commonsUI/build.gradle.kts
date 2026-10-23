@@ -75,6 +75,8 @@ kotlin {
                 // or returns commons types (Note, User, ViewModels, states).
                 api(project(":commons"))
                 api(libs.quartz)
+                implementation(libs.marmot)
+                implementation(libs.cordn)
                 // Imported directly; see the same line in commons/build.gradle.kts.
                 implementation(libs.crypto)
 

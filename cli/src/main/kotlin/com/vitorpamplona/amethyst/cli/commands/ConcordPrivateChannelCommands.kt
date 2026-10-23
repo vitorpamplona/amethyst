@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
 import com.vitorpamplona.amethyst.commons.actions.ConcordReceive
 import com.vitorpamplona.amethyst.commons.model.ConcordDirectInviteDraft
 import com.vitorpamplona.crypto.random.RandomInstance
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
 import com.vitorpamplona.quartz.concord.cord02Community.PrivateChannelKey
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChannelKeyring
@@ -42,7 +43,6 @@ import com.vitorpamplona.quartz.concord.cord04Roles.ControlEdition
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordInviteVend
 import com.vitorpamplona.quartz.concord.cord06Rekey.ChannelRekeyOutcome
 import com.vitorpamplona.quartz.concord.cord06Rekey.ConcordChannelRekey
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

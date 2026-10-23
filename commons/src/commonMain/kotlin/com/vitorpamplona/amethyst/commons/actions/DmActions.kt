@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.actions
 
 import com.vitorpamplona.crypto.aes.AESGCM
-import com.vitorpamplona.quartz.marmot.RecipientRelayFetcher
+import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -38,8 +38,8 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
  * usable from amy CLI, the Android App Functions adapter for Gemini, and any
  * other non-UI consumer. The send builders return signed gift wraps but do
  * NOT publish; the read side (decrypting incoming gift wraps) stays at the
- * caller because the `unwrapAndUnsealOrNull` extension in
- * `commons/.../relayClient/nip17Dm/` is already a one-liner.
+ * caller because quartz's `GiftWrapEvent.unwrapAndUnsealOrNull` is already a
+ * one-liner.
  *
  * **Caller responsibilities** that this object leaves to the consumer:
  *
@@ -55,7 +55,7 @@ import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
  *    an OkHttp dep) before calling here.
  *  * **Receipt of incoming DMs.** The kind:1059 gift-wrap drain, NIP-44
  *    unseal, and decrypt-to-inner-event step is a 3-line caller-side loop
- *    over [com.vitorpamplona.amethyst.commons.relayClient.nip17Dm.unwrapAndUnsealOrNull]
+ *    over [com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent.unwrapAndUnsealOrNull]
  *    — too small to bother extracting.
  */
 object DmActions {

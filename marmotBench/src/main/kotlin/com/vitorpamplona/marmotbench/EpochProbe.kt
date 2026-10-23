@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.marmotbench
 
-import com.vitorpamplona.amethyst.commons.marmot.ingest
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.client.ingest
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.runBlocking
 

@@ -20,14 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordnGroups
 
+import com.vitorpamplona.cordn.groups.CordnCredential
+import com.vitorpamplona.cordn.groups.CordnGroupPolicy
+import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
+import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
+import com.vitorpamplona.cordn.spec02Envelopes.CordnEnvelope
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageKinds
+import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.mls.group.MlsGroup
-import com.vitorpamplona.quartz.cordn.groups.CordnCredential
-import com.vitorpamplona.quartz.cordn.groups.CordnGroupPolicy
-import com.vitorpamplona.quartz.cordn.spec01GroupMetadata.CordnGroupMetadata
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnDeliveredMessage
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnEnvelope
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageKinds
-import com.vitorpamplona.quartz.cordn.spec02Envelopes.CordnMessageReferences
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlin.test.Test
 import kotlin.test.assertEquals

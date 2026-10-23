@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlin.test.Test
 import kotlin.test.assertEquals

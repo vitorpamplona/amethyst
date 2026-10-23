@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
-import com.vitorpamplona.amethyst.commons.marmot.GroupMemberInfo
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
@@ -39,7 +38,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.ha
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.client.GroupMemberInfo
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**

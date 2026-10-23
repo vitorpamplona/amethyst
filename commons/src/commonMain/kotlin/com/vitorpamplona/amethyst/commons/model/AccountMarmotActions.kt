@@ -21,22 +21,23 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
-import com.vitorpamplona.quartz.marmot.appComponents.BlobStoreEndpointV2
-import com.vitorpamplona.quartz.marmot.appComponents.EncryptedMediaPolicyV2
-import com.vitorpamplona.quartz.marmot.appComponents.GroupAvatarUrlV1
-import com.vitorpamplona.quartz.marmot.appComponents.GroupProfileV1
-import com.vitorpamplona.quartz.marmot.appComponents.MarmotWebUrl
-import com.vitorpamplona.quartz.marmot.appComponents.MessageRetentionV1
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotAppEvent
-import com.vitorpamplona.quartz.marmot.foundation.appEvents.MarmotMessageEdit
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageFetcher
-import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
-import com.vitorpamplona.quartz.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
+import com.vitorpamplona.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
+import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
+import com.vitorpamplona.marmot.mip00KeyPackages.PublishedKeyPackage
+import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -410,9 +411,9 @@ class AccountMarmotActions(
             (
                 account.cache
                     .getAddressableNoteIfExists(
-                        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+                        com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
                             .createAddress(memberPubKey),
-                    )?.event as? com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+                    )?.event as? com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
             )?.relays()?.toSet().orEmpty()
         val memberOutbox =
             account.cache
@@ -957,7 +958,7 @@ class AccountMarmotActions(
      */
     suspend fun updateMarmotGroupMetadata(
         nostrGroupId: HexKey,
-        metadata: com.vitorpamplona.quartz.marmot.mip01Groups.MarmotGroupData,
+        metadata: com.vitorpamplona.marmot.mip01Groups.MarmotGroupData,
         groupRelays: Set<NormalizedRelayUrl>,
     ) {
         val manager = account.marmotManager ?: return

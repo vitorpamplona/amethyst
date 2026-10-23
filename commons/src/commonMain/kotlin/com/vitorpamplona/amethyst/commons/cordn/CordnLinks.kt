@@ -20,53 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.cordn.client.CordnCoordinatorLink
+import com.vitorpamplona.cordn.client.CordnCoordinatorLinkFactory
+import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorClient
 import com.vitorpamplona.quartz.contextvm.cep04Encryption.CvmGiftWrap
 import com.vitorpamplona.quartz.contextvm.mcp.CvmMcpClient
 import com.vitorpamplona.quartz.contextvm.transport.CvmTransport
 import com.vitorpamplona.quartz.contextvm.transport.DualSigner
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorClient
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.CoordinatorServerInfo
-import com.vitorpamplona.quartz.cordn.spec00Coordinator.ICoordinator
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-
-/** A live connection to one coordinator, and the way to close it. */
-interface CordnCoordinatorLink {
-    val coordinator: ICoordinator
-
-    /**
-     * What the coordinator says about itself, or null.
-     *
-     * Deliberately **not** on `ICoordinator`. That interface is "the eleven
-     * coordinator tools, as a contract" and its KDoc says it adds nothing to
-     * them; `initialize` is the MCP handshake, not a twelfth tool. It belongs
-     * to whoever owns the transport, which is this.
-     *
-     * The default is null so a substitute link — a fixture, a test double —
-     * does not have to invent a handshake it never performed.
-     */
-    suspend fun serverInfo(): CoordinatorServerInfo? = null
-
-    suspend fun close()
-}
-
-/**
- * Opens the ContextVM transport to a coordinator.
- *
- * The one piece a scope factory cannot supply on its own: a `CvmTransport`
- * needs a relay pool and the account's signers, which belong to whichever
- * front end is running. Everything else about a scope — where the bytes go
- * and how they are encrypted — is the same on every platform.
- */
-fun interface CordnCoordinatorLinkFactory {
-    suspend fun connect(
-        accountPubKey: HexKey,
-        config: CoordinatorConfig,
-    ): CordnCoordinatorLink
-}
 
 /**
  * The production [CordnCoordinatorLinkFactory]: a real ContextVM transport per

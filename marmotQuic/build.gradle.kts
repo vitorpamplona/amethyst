@@ -36,6 +36,8 @@ kotlin {
                 implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.coroutines.core)
                 api(libs.quartz)
+                // The agent text stream transport this module implements.
+                api(libs.marmot)
                 implementation(libs.quic)
             }
         }

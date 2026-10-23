@@ -50,7 +50,7 @@ unregister, `distinctUntilChanged().debounce(200).flowOn(Dispatchers.IO)`).
   rethrow turns one slow RPC into a dead loop: rethrowing it ended the cordn sync
   loop for the whole session. Either catch the timeout narrowly, right at the
   `withTimeout`, or rethrow only when the coroutine itself is cancelled
-  (`if (!isActive) throw e`). See `commons/.../cordn/CordnSyncLoop.kt` for both.
+  (`if (!isActive) throw e`). See cordn-kmp's `cordn/client/CordnSyncLoop.kt` for both.
 
 ## State and events
 

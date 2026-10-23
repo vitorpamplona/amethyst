@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.cli
 
 import com.vitorpamplona.amethyst.cli.stores.FilePublishObligationStore
-import com.vitorpamplona.quartz.marmot.protocolCore.LocalOutboundGate
+import com.vitorpamplona.marmot.protocolCore.LocalOutboundGate
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test

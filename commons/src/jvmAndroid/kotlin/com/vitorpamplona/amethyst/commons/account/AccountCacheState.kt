@@ -22,13 +22,11 @@ package com.vitorpamplona.amethyst.commons.account
 
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
-import com.vitorpamplona.amethyst.commons.cordn.CordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedKeyPackageBundleStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMarmotMessageStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.marmot.EncryptedPublishObligationStore
-import com.vitorpamplona.amethyst.commons.marmot.InMemoryMlsGroupStateStore
 import com.vitorpamplona.amethyst.commons.model.AMETHYST_CLIENT_TAG_NAME
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -45,7 +43,9 @@ import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaym
 import com.vitorpamplona.amethyst.commons.relayauth.DataStoreRelayAuthPermissionStore
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
-import com.vitorpamplona.quartz.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
+import com.vitorpamplona.cordn.client.CordnBlobCipher
+import com.vitorpamplona.marmot.appComponents.agentTextStream.transport.MarmotQuicTransport
+import com.vitorpamplona.marmot.client.InMemoryMlsGroupStateStore
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
