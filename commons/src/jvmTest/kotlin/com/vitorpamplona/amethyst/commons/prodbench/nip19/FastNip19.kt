@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
+import com.vitorpamplona.quartz.utils.internIfPossible
 
 /**
  * Prototype of a single-pass Bech32 + TLV codec for quartz's `nip19Bech32` package, kept here
@@ -37,7 +38,7 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
  *   written as a char in the same step. Quartz builds `ArrayList<Byte>` / `Array<Byte>` (an
  *   `Object[]` of boxed `java.lang.Byte`), then copies them again for `expand(hrp) + data`.
  * - **One output buffer.** The exact length is known up front, so the string is written into a
- *   single `CharArray`, including any `nostr:` prefix. Quartz concatenates `hrp + "1" + data`
+ *   single ASCII `ByteArray`, including any `nostr:` prefix. Quartz concatenates `hrp + "1" + data`
  *   and the caller then adds `"nostr:" + …`: two more full copies.
  * - **Table polymod.** One lookup into a 32-entry table per step instead of five branches.
  * - **Exact-size TLV.** The TLV is sized first and written into one `ByteArray`; hex values are
@@ -53,7 +54,7 @@ object FastBech32 {
     const val BECH32_CONST = 1
     const val BECH32M_CONST = 0x2bc830a3
 
-    private val ALPHABET_CHARS = ALPHABET.toCharArray()
+    private val ALPHABET_BYTES = ByteArray(32) { ALPHABET[it].code.toByte() }
 
     // GEN_TABLE[b] is the xor of the generator constants for each bit set in the 5-bit value b.
     private val GEN_TABLE =
@@ -74,7 +75,7 @@ object FastBech32 {
         }
 
     private const val HEX = "0123456789abcdef"
-    private val HEX_CHARS = HEX.toCharArray()
+    private val HEX_BYTES = ByteArray(16) { HEX[it].code.toByte() }
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun step(
@@ -110,7 +111,7 @@ object FastBech32 {
         prefix: String = "",
         encodingConst: Int = BECH32_CONST,
     ): String {
-        val out = CharArray(encodedLength(prefix, hrp, length))
+        val out = ByteArray(encodedLength(prefix, hrp, length))
         var p = writePrefix(out, prefix, hrp)
         var chk = hrpSeed(hrp)
 
@@ -124,18 +125,18 @@ object FastBech32 {
                 bits -= 5
                 val v = (acc ushr bits) and 31
                 chk = step(chk, v)
-                out[p++] = ALPHABET_CHARS[v]
+                out[p++] = ALPHABET_BYTES[v]
             }
             acc = acc and ((1 shl bits) - 1)
         }
         if (bits > 0) {
             val v = (acc shl (5 - bits)) and 31
             chk = step(chk, v)
-            out[p++] = ALPHABET_CHARS[v]
+            out[p++] = ALPHABET_BYTES[v]
         }
 
         writeChecksum(out, p, chk, encodingConst)
-        return out.concatToString()
+        return out.decodeToString()
     }
 
     /**
@@ -148,7 +149,7 @@ object FastBech32 {
         prefix: String = "",
     ): String {
         require(hex.length and 1 == 0) { "odd hex length" }
-        val out = CharArray(encodedLength(prefix, hrp, hex.length / 2))
+        val out = ByteArray(encodedLength(prefix, hrp, hex.length / 2))
         var p = writePrefix(out, prefix, hrp)
         var chk = hrpSeed(hrp)
 
@@ -161,34 +162,34 @@ object FastBech32 {
                 bits -= 5
                 val v = (acc ushr bits) and 31
                 chk = step(chk, v)
-                out[p++] = ALPHABET_CHARS[v]
+                out[p++] = ALPHABET_BYTES[v]
                 acc = acc and ((1 shl bits) - 1)
             }
         }
         if (bits > 0) {
             val v = (acc shl (5 - bits)) and 31
             chk = step(chk, v)
-            out[p++] = ALPHABET_CHARS[v]
+            out[p++] = ALPHABET_BYTES[v]
         }
 
         writeChecksum(out, p, chk, BECH32_CONST)
-        return out.concatToString()
+        return out.decodeToString()
     }
 
     private fun writePrefix(
-        out: CharArray,
+        out: ByteArray,
         prefix: String,
         hrp: String,
     ): Int {
         var p = 0
-        for (i in prefix.indices) out[p++] = prefix[i]
-        for (i in hrp.indices) out[p++] = hrp[i]
-        out[p++] = '1'
+        for (i in prefix.indices) out[p++] = prefix[i].code.toByte()
+        for (i in hrp.indices) out[p++] = hrp[i].code.toByte()
+        out[p++] = '1'.code.toByte()
         return p
     }
 
     private fun writeChecksum(
-        out: CharArray,
+        out: ByteArray,
         start: Int,
         chkIn: Int,
         encodingConst: Int,
@@ -197,16 +198,23 @@ object FastBech32 {
         repeat(6) { chk = step(chk, 0) }
         chk = chk xor encodingConst
         var p = start
-        for (i in 0 until 6) out[p++] = ALPHABET_CHARS[(chk ushr (5 * (5 - i))) and 31]
+        for (i in 0 until 6) out[p++] = ALPHABET_BYTES[(chk ushr (5 * (5 - i))) and 31]
     }
 
-    fun hexNibble(c: Char): Int =
-        when (c) {
-            in '0'..'9' -> c - '0'
-            in 'a'..'f' -> c - 'a' + 10
-            in 'A'..'F' -> c - 'A' + 10
-            else -> throw IllegalArgumentException("invalid hex char $c")
+    private val HEX_TO_INT =
+        IntArray(128) { -1 }.apply {
+            for (i in 0..9) this['0'.code + i] = i
+            for (i in 0..5) {
+                this['a'.code + i] = 10 + i
+                this['A'.code + i] = 10 + i
+            }
         }
+
+    fun hexNibble(c: Char): Int {
+        val v = if (c.code < 128) HEX_TO_INT[c.code] else -1
+        if (v < 0) throw IllegalArgumentException("invalid hex char $c")
+        return v
+    }
 
     /**
      * Decodes [bech32] (`hrp1data+checksum`, either case) to its data bytes, or null when it is
@@ -292,14 +300,14 @@ object FastBech32 {
         from: Int,
         to: Int,
     ): String {
-        val out = CharArray((to - from) * 2)
+        val out = ByteArray((to - from) * 2)
         var p = 0
         for (i in from until to) {
             val b = bytes[i].toInt()
-            out[p++] = HEX_CHARS[(b ushr 4) and 0xf]
-            out[p++] = HEX_CHARS[b and 0xf]
+            out[p++] = HEX_BYTES[(b ushr 4) and 0xf]
+            out[p++] = HEX_BYTES[b and 0xf]
         }
-        return out.concatToString()
+        return out.decodeToString()
     }
 }
 
@@ -493,7 +501,7 @@ object FastNip19 {
         var relays: ArrayList<NormalizedRelayUrl>? = null
         forEachTlv(tlv) { t, from, to ->
             when (t) {
-                SPECIAL -> if (hex == null) hex = FastBech32.hex(tlv, from, to).intern()
+                SPECIAL -> if (hex == null) hex = FastBech32.hex(tlv, from, to).internIfPossible()
                 RELAY -> {
                     RelayUrlNormalizer.normalizeHintOrNull(tlv.decodeToString(from, to))?.let {
                         (relays ?: ArrayList<NormalizedRelayUrl>(2).also { relays = it }).add(it)
@@ -502,7 +510,7 @@ object FastNip19 {
                 AUTHOR ->
                     if (!authorSeen) {
                         authorSeen = true
-                        if (to - from == 32) author = FastBech32.hex(tlv, from, to).intern()
+                        if (to - from == 32) author = FastBech32.hex(tlv, from, to).internIfPossible()
                     }
                 KIND ->
                     if (!kindSeen) {
@@ -522,7 +530,7 @@ object FastNip19 {
         var relays: ArrayList<NormalizedRelayUrl>? = null
         forEachTlv(tlv) { t, from, to ->
             when (t) {
-                SPECIAL -> if (hex == null) hex = FastBech32.hex(tlv, from, to).intern()
+                SPECIAL -> if (hex == null) hex = FastBech32.hex(tlv, from, to).internIfPossible()
                 RELAY ->
                     RelayUrlNormalizer.normalizeHintOrNull(tlv.decodeToString(from, to))?.let {
                         (relays ?: ArrayList<NormalizedRelayUrl>(3).also { relays = it }).add(it)
@@ -548,7 +556,7 @@ object FastNip19 {
                     RelayUrlNormalizer.normalizeHintOrNull(tlv.decodeToString(from, to))?.let {
                         (relays ?: ArrayList<NormalizedRelayUrl>(2).also { relays = it }).add(it)
                     }
-                AUTHOR -> if (author == null) author = FastBech32.hex(tlv, from, to).intern()
+                AUTHOR -> if (author == null) author = FastBech32.hex(tlv, from, to).internIfPossible()
                 KIND ->
                     if (!kindSeen) {
                         kindSeen = true

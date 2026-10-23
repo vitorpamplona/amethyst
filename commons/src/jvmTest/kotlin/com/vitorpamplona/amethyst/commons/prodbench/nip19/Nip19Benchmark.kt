@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
 import com.vitorpamplona.quartz.nip19Bech32.bech32.Bech32
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
@@ -37,7 +38,6 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip19Bech32.entities.NSec
 import com.vitorpamplona.quartz.nip19Bech32.tlv.TlvBuilder
 import com.vitorpamplona.quartz.nip19Bech32.toNsec
-import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import java.lang.management.ManagementFactory
 import kotlin.random.Random
@@ -91,7 +91,7 @@ class Nip19Benchmark {
         /** Best-of-5 rounds of [reps] calls over the N inputs; also reports bytes allocated/op. */
         fun bench(
             label: String,
-            reps: Int = 200,
+            reps: Int = 40,
             op: (Int) -> Any?,
         ): Row {
             var sink = 0
@@ -116,7 +116,7 @@ class Nip19Benchmark {
 
         fun compare(
             label: String,
-            reps: Int = 200,
+            reps: Int = 40,
             quartz: (Int) -> Any?,
             fast: (Int) -> Any?,
         ) {
