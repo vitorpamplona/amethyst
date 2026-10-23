@@ -1,7 +1,52 @@
 # NIP-19 codec: faster, lighter Bech32 + TLV
 
-_2026-10-23. Proposed. The change belongs in quartz (`nip19Bech32/`); this repo holds the benchmark
-and the prototype it measures._
+_2026-10-23. Implemented in quartz, not yet released. The change lives in quartz (`nip19Bech32/`);
+this repo holds the benchmark and the prototype it measures._
+
+## Status
+
+- **quartz:** done in commit `13c0f82` ("perf(nip19): single-pass Bech32 and in-place TLV; fix
+  TLV values over 255 bytes"), on top of quartz `main` `db5813d`. It still has to be pushed and
+  released (this session had read-only access to quartz). The public API keeps every old
+  signature and only adds new ones. The behaviour changes are listed under "API decisions"
+  below. Checks: all 7,529 `:quartz:jvmTest` tests pass, as do `spotlessCheck`,
+  `verifyKmpPurity`, and the common and Apple metadata compiles.
+- **Amethyst follow-up**, for when `quartzKmp` is bumped: the call sites that cite someone else's
+  d-tag move to `Address.toNIP19OrFallback` / `toNostrUriOrFallback`. These give the `naddr`,
+  else the loaded event's `nevent`, else the raw address. `Note`/`User`/channel `toNostrUri()`
+  move to the one-buffer `createNostrUri` helpers. This must ship **with** the bump: otherwise
+  `AddressableNote.toNAddr()` and `AntiSpamFilter` (which runs on ingest) throw on an
+  attacker-chosen long d-tag. Built against the patched quartz: all 4,286 `commons` tests and
+  86 `cli` tests pass, and `commonsUI`, `desktopApp` and `amethyst` (play debug) compile.
+
+Measured with the real patched quartz (`-PquartzDir`), 2.1.0 → patched:
+
+| | 2.1.0 | patched |
+| --- | --- | --- |
+| `Note.toNostrUri()` | 3,339 ns, 3,559 B | 1,653 ns, 1,314 B (relay-hint lookup is 696 ns of it) |
+| `User.pubkeyNpub()` / `pubkeyDisplayHex()` | 918 / 921 ns | 285 / 311 ns |
+| `nostr:nevent` encode | 2,344 ns, 2,915 B | 688 ns, 728 B |
+| `npub` → entity | 1,150 ns, 1,686 B | 352 ns, 558 B |
+| `nevent` → entity | 3,739 ns, 4,846 B | 1,359 ns, 1,177 B |
+| `uriToRoute` nevent | 6,175 ns | 3,511 ns (the regex is now most of it) |
+
+### API decisions
+
+- `TlvBuilder` throws `IllegalArgumentException` for a value over 255 bytes
+  (`TlvBuilder.MAX_VALUE_SIZE`).
+- `NAddress.create` throws for a d-tag over 255 bytes. New `createOrNull` and
+  `createNostrUriOrNull` return null instead.
+- Relay hints over 255 bytes are dropped from `nevent`/`nprofile`/`naddr`.
+- `Event.toNIP19` / `Event.toNostrUri` fall back to the event's `nevent` when its d-tag can't
+  fit an `naddr`.
+- New, additive: `Bech32.encodeBytes(…, prefix)`, `encodeHex`, `decodeBytesOrNull`;
+  `NPub`/`NEvent`/`NProfile.createNostrUri`; `Hex.encode(bytes, from, to)`.
+- Stricter inputs:
+  - An ASCII non-hex char in a key passed to `create` now throws. Before, it encoded garbage.
+    (Odd lengths and non-ASCII chars already threw.)
+  - In `decodeBytes(noChecksum = true)`, a char outside the alphabet now throws instead of
+    decoding as `l`.
+  - `NAddress.parse(String)` checks that the hrp is exactly `naddr`.
 
 ## Why
 
