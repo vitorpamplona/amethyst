@@ -316,7 +316,7 @@ class RelayGroupChannel(
      */
     fun toNAddr(): String? {
         val relaySelf = event?.pubKey ?: return null
-        return NAddress.create(GroupMetadataEvent.KIND, relaySelf, groupId.id, groupId.relayUrl)
+        return NAddress.createOrNull(GroupMetadataEvent.KIND, relaySelf, groupId.id, groupId.relayUrl)
     }
 
     /** Number of known members (admins are members too). */

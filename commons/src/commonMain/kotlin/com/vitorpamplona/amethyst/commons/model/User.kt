@@ -179,7 +179,7 @@ class User(
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
-    fun toNostrUri() = "nostr:${toNProfile()}"
+    fun toNostrUri() = NProfile.createNostrUri(pubkeyHex, relayHints())
 
     fun toBestDisplayName(): String = metadataOrNull()?.bestName() ?: pubkeyDisplayHex()
 

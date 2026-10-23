@@ -24,11 +24,12 @@ import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.toNIP19OrFallback
+import com.vitorpamplona.amethyst.commons.model.toNostrUriOrFallback
 import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 
@@ -132,9 +133,9 @@ class LiveActivitiesChannel(
         info?.title()?.contains(prefix, true) == true ||
             info?.summary()?.contains(prefix, true) == true
 
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrls())
+    fun toNAddr() = address.toNIP19OrFallback(relayHintUrls(), info)
 
     fun toATag() = ATag(address, relayHintUrl())
 
-    fun toNostrUri() = "nostr:${toNAddr()}"
+    fun toNostrUri() = address.toNostrUriOrFallback(relayHintUrls(), info)
 }

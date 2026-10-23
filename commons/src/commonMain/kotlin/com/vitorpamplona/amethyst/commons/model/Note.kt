@@ -44,7 +44,6 @@ import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.threadRootIdOrSelf
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.base.IsInPublicChatChannel
@@ -104,7 +103,9 @@ class AddressableNote(
 
     fun dTag(): String = address.dTag
 
-    fun toNAddr() = NAddress.create(address.kind, address.pubKeyHex, address.dTag, relayHintUrl())
+    fun toNAddr() = address.toNIP19OrFallback(relayHintUrl(), event)
+
+    override fun toNostrUri() = address.toNostrUriOrFallback(relayHintUrl(), event)
 }
 
 @Stable
@@ -411,7 +412,15 @@ open class Note(
         }
     }
 
-    fun toNostrUri(): String = "nostr:${toNEvent()}"
+    /** `nostr:` + [toNEvent], built in one buffer. */
+    open fun toNostrUri(): String {
+        val host = rumorHost
+        return if (host != null) {
+            NEvent.createNostrUri(host.id, host.pubKey, host.kind, relayHintUrl())
+        } else {
+            NEvent.createNostrUri(idHex, author?.pubkeyHex, event?.kind, relayHintUrl())
+        }
+    }
 
     open fun idDisplayNote() = idNote().toShortDisplay()
 

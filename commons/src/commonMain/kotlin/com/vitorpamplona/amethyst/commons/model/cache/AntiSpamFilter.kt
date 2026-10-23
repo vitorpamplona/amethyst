@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.cache
 
 import androidx.collection.LruCache
+import com.vitorpamplona.amethyst.commons.model.toNIP19OrFallback
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.njumpLink
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -30,7 +31,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -93,10 +93,11 @@ class AntiSpamFilter(
                 (existingAddress != null && existingAddress != address) ||
                 (knownSpammer != null && !knownSpammer.duplicatedEventAddresses.contains(address))
             ) {
-                // Built only when read: at DEBUG, or when the spammer is hidden.
-                fun link2() = njumpLink(NAddress.create(event.kind, event.pubKey, event.dTag(), relay))
+                // Built only when read: at DEBUG, or when the spammer is hidden. The d-tag is the
+                // sender's, so an over-long one must not throw on ingest.
+                fun link2() = njumpLink(address.toNIP19OrFallback(relay, event))
 
-                fun link1() = existingAddress?.let { njumpLink(NAddress.create(it.kind, it.pubKeyHex, it.dTag, relay)) } ?: link2()
+                fun link1() = existingAddress?.let { njumpLink(it.toNIP19OrFallback(relay, null)) } ?: link2()
 
                 // Debug, not warn: a duplicate detection is this filter working, not a fault, and
                 // it is already reported where it can be acted on — relayStats.newSpam below and
