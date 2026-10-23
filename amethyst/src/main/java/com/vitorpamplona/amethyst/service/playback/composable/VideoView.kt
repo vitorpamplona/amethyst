@@ -136,15 +136,19 @@ fun VideoView(
     // extra Spacer, and restructuring the children around a live AndroidView leaves the player's
     // TextureView on a stale surface (the video redraws at native size in the corner). The
     // enclosing box in ZoomableContentView is what sizes the player, and that one does observe.
-    val ratio =
+    val snapshotRatio =
         remember(videoUri, dimW, dimH) {
             if (dimW != null && dimH != null && dimW > 0 && dimH > 0) {
                 MediaAspectRatioCache.add(videoUri, dimW, dimH)
-                dimW.toFloat() / dimH.toFloat()
+                MediaAspectRatioCache.videoRatio(videoUri, dimW.toFloat() / dimH.toFloat())
             } else {
                 MediaAspectRatioCache.get(videoUri)
             }
         }
+    // Once there is a ratio, what the player measures replaces it as it lands: a ratio swapped for
+    // a ratio keeps the children as they are, and it corrects a `dim` the uploader got wrong (the
+    // stored size of an anamorphic video), which would otherwise crop the picture.
+    val ratio = snapshotRatio?.let { MediaAspectRatioCache.measured(videoUri) ?: it }
 
     // A player surface can't be recorded into a share-as-image capture: draw a still instead.
     if (LocalMediaCapture.current != null && waveform == null && !RichTextParser.isAudioContent(mimeType, videoUri)) {

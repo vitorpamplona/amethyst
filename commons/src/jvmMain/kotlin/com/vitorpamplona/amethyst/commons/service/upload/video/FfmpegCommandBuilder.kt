@@ -28,12 +28,17 @@ object FfmpegCommandBuilder {
      * Limits the short side to [shortSide] without ever upscaling and keeps both dimensions even
      * (a yuv420p requirement). Landscape keeps the width derived (`-2`), portrait the height, so a
      * phone video's short side is its width. Null only evens the dimensions.
+     *
+     * Square pixels first: an anamorphic source (1080x720 stored with 4:9 pixels is a 480x720
+     * portrait video) is resized at its display shape, so the limit applies to the side people see
+     * and the output plays right in players that ignore the pixel ratio. `sar` is 1 when the source
+     * declares none, which leaves an ordinary video as it is.
      */
     fun scaleFilter(shortSide: Int?): String =
         if (shortSide == null) {
-            "scale=trunc(iw/2)*2:trunc(ih/2)*2"
+            "scale=trunc(iw*sar/2)*2:trunc(ih/2)*2,setsar=1"
         } else {
-            "scale='if(gt(iw,ih),-2,trunc(min($shortSide,iw)/2)*2)':'if(gt(iw,ih),trunc(min($shortSide,ih)/2)*2,-2)'"
+            "scale=trunc(iw*sar/2)*2:ih,setsar=1,scale='if(gt(iw,ih),-2,trunc(min($shortSide,iw)/2)*2)':'if(gt(iw,ih),trunc(min($shortSide,ih)/2)*2,-2)'"
         }
 
     fun encode(

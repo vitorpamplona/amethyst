@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.BootRelayDiagnostics
+import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.notify.NotifyCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -182,7 +183,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimitsTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
-import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
@@ -746,7 +746,7 @@ class AppModules(
     // purpose: those keep relays connected that the always-on notification cannot explain.
     val client: INostrClient =
         BlockedRelayFilteringClient(
-            NostrClient(websocketBuilder, applicationIOScope, CachingEventDecoder()).let {
+            NostrClient(websocketBuilder, applicationIOScope, relayFrameDecoder()).let {
                 if (BuildConfig.DEBUG) UntaggedFilterWarningClient(it) else it
             },
             blockedRelays = {

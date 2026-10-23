@@ -92,7 +92,7 @@ object PreviewMetadataCalculator {
                 val retriever = MediaMetadataRetriever()
                 try {
                     retriever.setDataSource(ByteArrayMediaDataSource(data))
-                    processRetriever(retriever, dimPrecomputed)
+                    processRetriever(retriever, videoPixelAspectRatio(ByteArrayMediaDataSource(data)), dimPrecomputed)
                 } finally {
                     retriever.release()
                 }
@@ -129,7 +129,7 @@ object PreviewMetadataCalculator {
                     val retriever = MediaMetadataRetriever()
                     try {
                         retriever.setDataSource(context, uri)
-                        processRetriever(retriever, dimPrecomputed)
+                        processRetriever(retriever, videoPixelAspectRatio(context, uri), dimPrecomputed)
                     } finally {
                         retriever.release()
                     }
@@ -178,9 +178,10 @@ object PreviewMetadataCalculator {
 
     private fun processRetriever(
         retriever: MediaMetadataRetriever,
+        pixelAspectRatio: Float?,
         dimPrecomputed: DimensionTag?,
     ): PreviewHashes {
-        val dim = retriever.prepareDimFromVideo() ?: dimPrecomputed
+        val dim = retriever.prepareDimFromVideo(pixelAspectRatio) ?: dimPrecomputed
         val thumb = retriever.getThumbnail()
         if (thumb == null) {
             Log.w(LOG_TAG) { "video frame extraction returned null; no blurhash/thumbhash will be generated" }

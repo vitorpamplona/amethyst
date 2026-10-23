@@ -45,7 +45,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
@@ -61,7 +60,7 @@ import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.platform.awtPixelScale
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
-import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
+import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -228,13 +227,14 @@ private fun FullscreenVideo(
         // crashing the overlay.
         Box(Modifier.fillMaxSize().zoomTransitionLayer(transition)) {
             GlobalMediaPlayer.activeVideoPlayerState?.let { player ->
-                VideoPlayerSurface(
+                val url = GlobalMediaPlayer.videoState.value.url
+                VideoSurface(
                     playerState = player,
+                    url = url,
                     modifier =
                         Modifier
                             .fillMaxSize()
-                            .onGloballyPositioned { transition.onMediaPositioned(it, GlobalMediaPlayer.videoState.value.aspectRatio) },
-                    contentScale = ContentScale.Fit,
+                            .onGloballyPositioned { transition.onMediaPositioned(it, VideoPixelAspect.displayRatio(url, GlobalMediaPlayer.videoState.value.aspectRatio)) },
                 )
             } ?: Box(Modifier.fillMaxSize().onGloballyPositioned { transition.onMediaPositioned(it, null) })
         }

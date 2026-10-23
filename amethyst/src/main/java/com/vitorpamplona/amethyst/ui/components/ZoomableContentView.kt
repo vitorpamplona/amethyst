@@ -283,9 +283,10 @@ fun ZoomableContentView(
                     remember(content.url, content.mimeType) {
                         unknownMediaAspectRatio(content.mimeType, content.url)
                     }
+                // What the player measured beats the event's `dim`, which can be the stored size of
+                // an anamorphic video or ignore rotation.
                 val ratio =
-                    content.dim?.aspectRatioOrNull()
-                        ?: MediaAspectRatioCache.get(content.url)
+                    MediaAspectRatioCache.videoRatio(content.url, content.dim?.aspectRatioOrNull())
                         ?: fallbackRatio
                 ContentWarningGate(
                     isSensitive = content.contentWarning != null,
