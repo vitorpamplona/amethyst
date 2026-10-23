@@ -1855,6 +1855,8 @@
     <string name="language">Nyelv</string>
     <string name="accent_color">Kiemelés színe</string>
     <string name="accent_color_description">A gomboknál és hivatkozásoknál használt fő szín</string>
+    <string name="accent_color_account_description">Felülírja az alkalmazás kiemelő színét ehhez a fiókhoz. Válassza az „Alkalmazás” lehetőséget, ha újra az alkalmazás beállításait szeretné követni.</string>
+    <string name="accent_color_application">Alkalmazás</string>
     <string name="action_unmute">Némítás megszüntetése</string>
     <string name="picture_in_picture">Kép a képben</string>
     <string name="search_button">Helyi és távoli bejegyzések keresése</string>
@@ -7719,14 +7721,14 @@
     <string name="kc_buzz_timeout">Időkorlátozás alatt</string>
     <string name="kc_buzz_untimeout">Időkorlátozás feloldva</string>
     <string name="kc_buzz_report_resolved">Bejelentés megoldva</string>
-    <string name="kc_buzz_report_dismissed">Bejelentés elvetve</string>
+    <string name="kc_buzz_report_dismissed">Jelentés eltüntetve</string>
     <string name="kc_buzz_report_closed">Bejelentés lezárva</string>
     <string name="kc_buzz_action">Művelet</string>
     <string name="kc_buzz_action_delete">Tartalom törölve</string>
     <string name="kc_buzz_action_kick">Tag kirúgva</string>
     <string name="kc_buzz_action_ban">Tag kitiltva</string>
     <string name="kc_buzz_action_timeout">Tag időkorlátozva</string>
-    <string name="kc_buzz_action_dismiss">Nem történt intézkedés</string>
+    <string name="kc_buzz_action_dismiss">Nem történt művelet</string>
     <string name="kc_buzz_action_escalate">Eszkalálva</string>
     <string name="kc_buzz_presence">Jelenlét</string>
     <plurals name="kc_buzz_people_count">
