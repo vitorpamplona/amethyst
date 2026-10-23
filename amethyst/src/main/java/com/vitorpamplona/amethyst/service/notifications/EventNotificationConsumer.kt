@@ -56,9 +56,9 @@ import com.vitorpamplona.amethyst.service.notifications.renderers.GroupMessageNo
 import com.vitorpamplona.amethyst.service.notifications.renderers.ReplyNotification
 import com.vitorpamplona.amethyst.service.notifications.renderers.StandardNotification
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser

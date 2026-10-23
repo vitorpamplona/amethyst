@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.amethyst.service.okhttp.isEmulator
 import com.vitorpamplona.amethyst.service.priority.WorkerThreadPriorityGovernor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import com.vitorpamplona.marmot.MarmotEvents
 import com.vitorpamplona.quartz.nip01Core.core.JsonEngine
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
@@ -124,8 +123,6 @@ class Amethyst : Application() {
         AndroidDebugFlag.enabled = isDebug
         // Quartz's hand-written JSON engine, in both processes, before anything parses an event.
         JsonEngine.current = JsonEngine.KITE
-        // Marmot's kinds (marmot-kmp) parse typed only once registered with Quartz's EventFactory.
-        MarmotEvents.register()
         Log.d("AmethystApp") { "onCreate $this" }
 
         // Application.onCreate runs in every process. The sandboxed napplet host

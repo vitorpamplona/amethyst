@@ -35,7 +35,7 @@ import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotSyncPolicy
-import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify

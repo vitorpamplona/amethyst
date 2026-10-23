@@ -63,12 +63,6 @@ import com.vitorpamplona.amethyst.commons.rendering.unknown.isStorableUnknownKin
 import com.vitorpamplona.amethyst.commons.rendering.unknown.unknownKindAddress
 import com.vitorpamplona.amethyst.commons.service.BundledInsert
 import com.vitorpamplona.amethyst.commons.service.nwc.NwcPaymentTracker
-import com.vitorpamplona.marmot.MarmotEvents
-import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageEvent
-import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-import com.vitorpamplona.marmot.mip00KeyPackages.LegacyKeyPackageEvent
-import com.vitorpamplona.marmot.mip02Welcome.WelcomeEvent
-import com.vitorpamplona.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.buzz.aeEngrams.EngramEvent
 import com.vitorpamplona.quartz.buzz.agentProfiles.AgentProfileEvent
 import com.vitorpamplona.quartz.buzz.amTurnMetrics.AgentTurnMetricEvent
@@ -231,6 +225,11 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVe
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.feedDefinition.FeedDefinitionEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.marmot.mip03GroupMessages.GroupEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -531,12 +530,6 @@ open class EventCache :
     ILocalCache,
     ICacheProvider,
     Dao {
-    init {
-        // Marmot's event classes live in marmot-kmp, which Quartz does not know: until they are
-        // registered, a kind:445 reaching this cache is a bare Event and no Marmot branch fires.
-        MarmotEvents.register()
-    }
-
     /**
      * What this cache needs from the application shell around it: a scope to verify on, the
      * NIP-95 blob directory, the relay identity and stats sinks, and the main-thread assertion.

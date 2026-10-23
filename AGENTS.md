@@ -9,8 +9,8 @@ lives in its own repo, <https://github.com/vitorpamplona/quartz>, and comes from
 `com.vitorpamplona.quartz:quartz` (`libs.quartz`): NIPs under `nipXX` packages and whole protocol
 families (`contextvm/`, `concord/`, `openagents/`, `buzz/`). The MLS bindings are their own libraries
 on quartz, each with its headless group manager: vitorpamplona/marmot-kmp (`libs.marmot`,
-`-PmarmotKmpDir`) and vitorpamplona/cordn-kmp (`libs.cordn`, `-PcordnKmpDir`). Marmot kinds parse
-typed only after `MarmotEvents.register()` (`EventCache` calls it). A new protocol over
+`-PmarmotKmpDir`) and vitorpamplona/cordn-kmp (`libs.cordn`, `-PcordnKmpDir`); Marmot's event
+classes stay in quartz (`quartz.marmot`). A new protocol over
 Nostr is a package in quartz, not a Gradle module here; `nestsClient`/`marmotQuic` are modules because
 they are transports with no Nostr in them. Protocol work is a quartz PR, with its own rules and skills
 (`nostr-expert`, `event-store-semantics`); this repo then bumps `quartzKmp`. Until the release is out,

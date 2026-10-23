@@ -36,8 +36,8 @@ import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
-import com.vitorpamplona.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
@@ -411,9 +411,9 @@ class AccountMarmotActions(
             (
                 account.cache
                     .getAddressableNoteIfExists(
-                        com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+                        com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
                             .createAddress(memberPubKey),
-                    )?.event as? com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageRelayListEvent
+                    )?.event as? com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
             )?.relays()?.toSet().orEmpty()
         val memberOutbox =
             account.cache

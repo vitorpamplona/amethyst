@@ -209,7 +209,6 @@ import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
 import com.vitorpamplona.marmot.client.MarmotPushCoordinator
 import com.vitorpamplona.marmot.groups.MlsGroupStateStore
-import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
 import com.vitorpamplona.quartz.buzz.threading.buzzThread
 import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
@@ -241,6 +240,7 @@ import com.vitorpamplona.quartz.experimental.profileGallery.fromEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.hash
 import com.vitorpamplona.quartz.experimental.profileGallery.image
 import com.vitorpamplona.quartz.experimental.profileGallery.mimeType
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey

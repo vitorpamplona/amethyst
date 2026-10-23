@@ -36,7 +36,7 @@ import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.postCo
 import com.vitorpamplona.amethyst.service.notifications.notificationManager
 import com.vitorpamplona.amethyst.service.notifications.privateMessagesLocked
 import com.vitorpamplona.amethyst.ui.MainActivity
-import com.vitorpamplona.marmot.mip02Welcome.WelcomeEvent
+import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
