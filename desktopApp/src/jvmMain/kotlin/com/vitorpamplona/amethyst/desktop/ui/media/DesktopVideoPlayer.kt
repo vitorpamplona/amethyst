@@ -69,9 +69,9 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.quartz.utils.Log
-import io.github.kdroidfilter.composemediaplayer.VideoPlayerSurface
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -251,7 +251,8 @@ fun DesktopVideoPlayer(
         if (errorReason != null) Log.w("DesktopVideoPlayer") { "Can't play $url: $errorReason" }
     }
 
-    videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = it }
+    // Read in composition, so an anamorphic video's pixel ratio corrects the shape when it lands.
+    videoState?.aspectRatio?.let { if (it != 16f / 9f) aspectRatio = VideoPixelAspect.displayRatio(url, it) }
     // The shape before this video plays, best source first: what the playing engine reports, what
     // the note declares (imeta `dim`), what an engine that opened it ahead or earlier recorded (read
     // in composition, so this card resizes when that lands), what its thumbnail shows. 16:9 only
@@ -338,11 +339,7 @@ fun DesktopVideoPlayer(
             if (errorReason != null) {
                 PlaybackErrorMessage(url = url, reason = errorReason)
             } else if (activePlayer != null) {
-                VideoPlayerSurface(
-                    playerState = activePlayer,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
+                VideoSurface(playerState = activePlayer, url = url, modifier = Modifier.fillMaxSize())
                 // The surface is black until the engine has decoded a frame: the thumbnail stays over
                 // it until the video is moving, then fades, instead of the card blinking to black as
                 // it starts.

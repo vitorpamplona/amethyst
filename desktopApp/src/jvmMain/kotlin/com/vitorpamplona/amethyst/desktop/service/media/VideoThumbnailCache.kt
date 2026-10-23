@@ -59,6 +59,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Per-URL one-frame poster for feed videos.
@@ -84,6 +86,7 @@ object VideoThumbnailCache {
     private const val MAX_DISK_BYTES = 64L * 1024 * 1024
     private const val FAILURE_RETRY_MS = 60_000L
     private const val FFMPEG_TIMEOUT_SECONDS = 15L
+    private const val PAR_SUFFIX = ".par"
 
     private val memory =
         object : LinkedHashMap<String, ImageBitmap>(64, 0.75f, true) {
@@ -147,14 +150,24 @@ object VideoThumbnailCache {
 
     private suspend fun load(url: String): ImageBitmap? {
         val persistable = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
-        // v2: frames from before rotation was applied are on disk sideways; leave them behind.
-        val diskFile = File(diskDir, sha1Hex("v2:$url") + ".jpg")
+        // v2: frames from before rotation was applied are on disk sideways; v3: anamorphic ones
+        // from before the pixel ratio was applied are squashed. Leave both behind.
+        val key = sha1Hex("v3:$url")
+        val diskFile = File(diskDir, "$key.jpg")
+        // The pixel ratio of an anamorphic video, beside its poster: the player needs it too.
+        val parFile = File(diskDir, "$key$PAR_SUFFIX")
         if (persistable && diskFile.length() > 0) {
-            runCatching { ImageIO.read(diskFile) }.getOrNull()?.let { return it.toComposeImageBitmap() }
+            runCatching { ImageIO.read(diskFile) }.getOrNull()?.let {
+                if (parFile.exists()) runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par) }
+                return it.toComposeImageBitmap()
+            }
         }
 
         val frame = extractFirstFrame(url) ?: return null
-        if (persistable) writeAtomically(diskFile, frame)
+        if (persistable) {
+            writeAtomically(diskFile, frame)
+            VideoPixelAspect.get(url)?.let { par -> runCatching { parFile.writeText(par.toString()) } }
+        }
         return frame.toComposeImageBitmap()
     }
 
@@ -162,7 +175,7 @@ object VideoThumbnailCache {
         // An encrypted blob is ciphertext until decrypted whole: frame it only once it is.
         if (MediaHttp.isEncrypted(url)) {
             val plain = DecryptedMediaFiles.cachedFile(url) ?: return null
-            return tryJCodec(plain) ?: runFfmpeg(plain.absolutePath)
+            return tryJCodec(plain, url) ?: runFfmpeg(plain.absolutePath)
         }
 
         // For HLS we skip straight to ffmpeg — JCodec can't read m3u8.
@@ -172,7 +185,7 @@ object VideoThumbnailCache {
             val chunk = runCatchingCancellable { downloadFirstChunk(url) }.getOrNull()
             if (chunk != null) {
                 try {
-                    (tryJCodec(chunk) ?: runFfmpeg(chunk.absolutePath))?.let { return it }
+                    (tryJCodec(chunk, url) ?: runFfmpeg(chunk.absolutePath))?.let { return it }
                 } finally {
                     chunk.deleteOrWarn(TAG, "video chunk")
                 }
@@ -233,7 +246,11 @@ object VideoThumbnailCache {
         return copied
     }
 
-    private fun tryJCodec(mp4: File): BufferedImage? =
+    /** A frame of [mp4], which holds the start of [url]; records the video's pixel ratio on the way. */
+    private fun tryJCodec(
+        mp4: File,
+        url: String,
+    ): BufferedImage? =
         runCatching {
             NIOUtils.readableChannel(mp4).use { ch ->
                 val grab = FrameGrab.createFrameGrab(ch).seekToSecondSloppy(1.0)
@@ -241,11 +258,39 @@ object VideoThumbnailCache {
                 val native: Picture = frame.picture ?: return null
                 val rgb = Picture.create(native.width, native.height, ColorSpace.RGB)
                 ColorUtil.getTransform(native.color, ColorSpace.RGB).transform(native, rgb)
+                val par =
+                    grab.videoTrack
+                        ?.meta
+                        ?.videoCodecMeta
+                        ?.pixelAspectRatio
+                        ?.takeIf { it.num > 0 && it.den > 0 }
+                        ?.let { it.num.toFloat() / it.den }
+                if (par != null) VideoPixelAspect.record(url, par)
                 // Phones store portrait video sideways with a rotation in the track header; the
-                // decoded picture ignores it, so apply it (ffmpeg already does).
-                scaleDown(rotate(AWTUtil.toBufferedImage(rgb), frame.orientation))
+                // decoded picture ignores it, so apply it (ffmpeg already does). An anamorphic
+                // video's pixels are not square: stretch them back first, as they are stored.
+                scaleDown(rotate(squarePixels(AWTUtil.toBufferedImage(rgb), par), frame.orientation))
             }
         }.getOrNull()
+
+    /** [image] with its [par]-wide pixels made square: narrower for a ratio under 1, shorter over it. */
+    private fun squarePixels(
+        image: BufferedImage,
+        par: Float?,
+    ): BufferedImage {
+        if (par == null || abs(par - 1f) <= 0.01f) return image
+        val w = if (par < 1f) (image.width * par).roundToInt().coerceAtLeast(1) else image.width
+        val h = if (par > 1f) (image.height / par).roundToInt().coerceAtLeast(1) else image.height
+        val out = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
+        val g = out.createGraphics()
+        try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            g.drawImage(image, 0, 0, w, h, null)
+        } finally {
+            g.dispose()
+        }
+        return out
+    }
 
     /** [image] turned as the track's display [orientation] asks (clockwise degrees). */
     private fun rotate(
@@ -294,7 +339,8 @@ object VideoThumbnailCache {
                 "-frames:v",
                 "1",
                 "-vf",
-                "scale='min($MAX_POSTER_WIDTH,iw)':-2",
+                // Square pixels first: an anamorphic video's frame is stored at another shape.
+                "scale='trunc(iw*sar/2)*2':ih,setsar=1,scale='min($MAX_POSTER_WIDTH,iw)':-2",
                 "-an",
                 "-f",
                 "image2pipe",
@@ -358,18 +404,21 @@ object VideoThumbnailCache {
         }
     }
 
-    // Drops the video chunks older versions cached here, then the oldest posters past MAX_DISK_BYTES.
+    // Drops the video chunks older versions cached here, then the oldest posters past MAX_DISK_BYTES,
+    // and the pixel ratios of posters that are gone.
     private fun trimDisk(dir: File) {
         val files = dir.listFiles()?.filter { it.isFile } ?: return
-        files.filter { !it.name.endsWith(".jpg") }.forEach { it.delete() }
+        files.filter { !it.name.endsWith(".jpg") && !it.name.endsWith(PAR_SUFFIX) }.forEach { it.delete() }
         var total = 0L
+        val kept = HashSet<String>()
         files
             .filter { it.name.endsWith(".jpg") }
             .sortedByDescending { it.lastModified() }
             .forEach { file ->
                 total += file.length()
-                if (total > MAX_DISK_BYTES) file.delete()
+                if (total > MAX_DISK_BYTES) file.delete() else kept.add(file.name.removeSuffix(".jpg"))
             }
+        files.filter { it.name.endsWith(PAR_SUFFIX) && it.name.removeSuffix(PAR_SUFFIX) !in kept }.forEach { it.delete() }
     }
 
     private fun sha1Hex(s: String): String {

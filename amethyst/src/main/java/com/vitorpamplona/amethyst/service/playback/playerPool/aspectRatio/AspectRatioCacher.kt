@@ -24,6 +24,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import com.vitorpamplona.amethyst.commons.model.MutableMediaAspectRatioCache
+import kotlin.math.roundToInt
 
 class AspectRatioCacher(
     val cache: MutableMediaAspectRatioCache,
@@ -37,9 +38,13 @@ class AspectRatioCacher(
         currentUrl = mediaItem?.mediaId
     }
 
+    // width/height are the decoded frame, not the shape it is shown at: an anamorphic video
+    // (stored 1080x720 with 4:9 pixels, displayed 480x720) needs the pixel ratio applied, or its
+    // box comes out landscape and ContentFrame, which does apply it, crops the portrait picture.
     override fun onVideoSizeChanged(videoSize: VideoSize) {
         currentUrl?.let {
-            cache.add(it, videoSize.width, videoSize.height)
+            val displayWidth = (videoSize.width * videoSize.pixelWidthHeightRatio).roundToInt()
+            cache.add(it, displayWidth, videoSize.height)
         }
     }
 }
