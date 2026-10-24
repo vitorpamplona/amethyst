@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import kotlin.test.Test
@@ -30,7 +31,7 @@ import kotlin.test.assertNotNull
 
 /**
  * A Marmot group's polls are counted by the shared tally ([PollResponsesCache]) under the rule
- * the group hands it ([MarmotPolls.ResponseRule]), which is MDK 0.14's (`crates/traits/src/polls.rs`).
+ * the group hands it ([MarmotPollResponseRule], over marmot-kmp's [MarmotPolls.castVote]), which is MDK 0.14's (`crates/traits/src/polls.rs`).
  * These are the cases where MDK and NIP-88's lenient reading disagree; getting one wrong shows a
  * group a different result than White Noise does.
  */

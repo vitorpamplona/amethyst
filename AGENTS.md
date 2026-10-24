@@ -41,15 +41,15 @@ On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
 | quic-kmp (`quic`) | QUIC v1, TLS 1.3, HTTP/3, QPACK, WebTransport client (JVM, Android) | `quicKmpDir` |
 
 Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
-(which never import each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
+(never each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
 
-**What goes where.** A Nostr kind, tag or codec → quartz. A primitive → crypto-kmp. RFC 9420 → mls-kmp.
-Anything that reads or changes an MLS group under a binding's rules → that binding's repo, headless,
-with store *interfaces*. QUIC/HTTP/3/WebTransport → quic-kmp; MoQ and audio → `nestsClient`. A
-test, bench or vector exercising one library alone → that library. **Stays here:** encrypted-at-rest
-store implementations (`commons/…/marmot/Encrypted*Store`, `commons/…/cordn/FileCordnStores`),
-account wiring (`AccountMarmotActions`, `CordnRuntime`), chatrooms, feeds, subscriptions, UI, `amy`,
-and tests needing both bindings (`CordnIndependenceTest`).
+**What goes where.** If another client of that protocol (`amy`, White Noise, a bot) would need the
+code, it goes in a library. Signed Nostr kinds, tags, codecs → quartz. Primitives → crypto-kmp. RFC
+9420 → mls-kmp. A binding's rules, MLS state or not → its repo: group operations, and the shape and
+validation of the unsigned events members send inside a group (edits, polls, emoji, reports). QUIC →
+quic-kmp; MoQ → `nestsClient`. A test or vector of one library → that library. **Stays here:** at-rest
+stores, account wiring (relays, signer, LocalCache; not protocol steps inside `AccountMarmotActions`
+or `CordnRuntime`), chatrooms, feeds, UI, `amy` verbs, tests needing both bindings.
 
 **Changing one:** edit its repo (own `AGENTS.md`), build here with its `-P…Dir`, release, then bump
 `gradle/libs.versions.toml` (keep `cryptoKmp`/`mlsKmp` at what quartz and the bindings use). A

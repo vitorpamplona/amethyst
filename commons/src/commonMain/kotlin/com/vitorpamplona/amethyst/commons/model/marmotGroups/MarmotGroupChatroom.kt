@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupImage
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -238,7 +240,7 @@ class MarmotGroupChatroom(
     // MDK lets the author vote in their own poll.
     override fun pollAuthorMayVote(): Boolean = true
 
-    override fun pollTallyPolicy(poll: PollEvent): PollTallyPolicy = PollTallyPolicy.from(poll).copy(rule = MarmotPolls.responseRule(poll))
+    override fun pollTallyPolicy(poll: PollEvent): PollTallyPolicy = PollTallyPolicy.from(poll).copy(rule = MarmotPollResponseRule.of(poll))
 
     override suspend fun respondToPoll(
         account: Account,

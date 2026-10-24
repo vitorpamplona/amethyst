@@ -92,7 +92,8 @@ in `commonsUI`, under the same package.
 | `actions`      | no  | Event builders for user actions (follow, zap…). The canonical entry point for non-UI callers. |
 | `account`      | mixed | New-account bootstrap events; the logged-off login/sign-up buttons in `commonsUI` `account/ui/login` and `account/ui/signup`. |
 | `onchain`      | mixed | On-chain zap splitting/broadcasting; user-facing failure strings in `commonsUI` `onchain/ui`. |
-| `marmot`       | mixed | The encrypted at-rest stores behind marmot-kmp's `MarmotManager` (`jvmAndroid`); group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. The group pipeline itself is `com.vitorpamplona.marmot.client` in marmot-kmp. |
+| `marmot`       | mixed | The encrypted at-rest stores behind marmot-kmp's `MarmotManager` (`jvmAndroid`); group-chat composables (retention picker, agent stream banner) in `commonsUI` `marmot/ui`. The group pipeline itself is `com.vitorpamplona.marmot.client` in marmot-kmp, and the rules for what members send inside a group (polls, emoji, edits, reports) are its `foundation/appEvents`. The account wiring is `model/AccountMarmotActions` and `model/marmotGroups` (chatrooms, the poll tally adapter, upload caches). |
+| `cordn`        | no  | cordn's at-rest stores (`FileCordnStores`, the keystore ciphers) and the blob store over Blossom. The account wiring is `model/cordn/CordnRuntime`. Protocol decisions every cordn client shares belong in cordn-kmp, not here; `CordnLinks`, `CordnCoordinatorDiscovery`, `CordnMigration` and `NostrClientCvmRelayPool` (quartz) still sit here and are due to move. |
 | `cyberspace`   | no  | `CYBERSPACE_V2` §7.7 region-bag search: the free quote off a bag's `hint`/`h` tags, the device-measured budget, and the cold sweep flow over quartz's `RegionSweep`. The protocol itself (coordinates, Cantor trees, keys, the bag) is `quartz/.../cyberspace`. |
 | `sno`          | mixed | DECK-0003 object rendering math — rasterizer, lighting, face winding, default avatar — here; the Compose viewer/thumbnail and the Coil fetcher in `commonsUI` under `sno` and `sno/ui`. |
 | `nip53LiveActivities` | mixed | Live-activity zapper aggregation (logic) + the stream card in `nip53LiveActivities/ui`. |
@@ -261,6 +262,13 @@ In `commonMain`, `Dispatchers.IO` needs `import kotlinx.coroutines.IO`; it is
 available on every target this module builds.
 
 ### Where does my code go? (quick guide)
+0. **Would another client of the same protocol need it** (`amy`, White Noise, a bot, another
+   app)? → not here, it goes in a library (`AGENTS.md` › Libraries). For Marmot and cordn that
+   includes rules with no MLS state: the tags, limits and validation of the unsigned events members
+   send inside a group (edits, polls, custom emoji, reports, deletions) are marmot-kmp's
+   `foundation/appEvents/` or cordn-kmp's `spec02Envelopes/`, not `model/marmotGroups` here. What
+   stays here is the wiring around them: which relays and signer, `LocalCache`/`Note`, the
+   chatroom, the tally cache, the UI.
 1. **Pure Nostr protocol** (events/NIPs/crypto)? → not here, it's `quartz`.
 2. **A composable** (screens and navigation chrome included)? → `commonsUI`, in
    `ui/<area>` or `<feature>/ui` (same package tree as here). Also anything that

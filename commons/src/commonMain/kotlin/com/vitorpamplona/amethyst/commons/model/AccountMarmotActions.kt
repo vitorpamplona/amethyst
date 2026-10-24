@@ -23,11 +23,9 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
@@ -47,7 +45,9 @@ import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
 import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
