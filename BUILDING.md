@@ -468,11 +468,11 @@ provided automatically; everything else you set yourself.)
 | ~~`WINGET_TOKEN`~~ | *Not used.* The winget bump runs on a maintainer's machine — see § Winget | — |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Crowdin API creds | Translation sync (separate workflow, not the release) |
 
-Note the **three distinct signing identities** people often conflate:
-`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `SIGNING_PRIVATE_KEY` +
-`SIGNING_PASSWORD` is the **GPG key** for Maven Central; `MAC_CERTIFICATE_*` +
+Note the **two distinct signing identities** people often conflate:
+`SIGNING_KEY` + `KEY_*` is the **Android keystore**; `MAC_CERTIFICATE_*` +
 `MAC_SIGN_IDENTITY` + `MAC_NOTARY_*` is the **Apple Developer ID** for the macOS
-desktop DMG. They are unrelated — each comes from a different authority.
+desktop DMG. They are unrelated — each comes from a different authority. (The GPG
+key that signs Maven artifacts belongs to the library repos, not this one.)
 
 The macOS signing secrets are **optional**: if `MAC_CERTIFICATE_P12` is unset
 the release workflow still builds the DMG **and** the macOS `amy` tarball, just
@@ -519,10 +519,6 @@ keytool -genkey -v -keystore upload.jks -keyalg RSA -keysize 2048 \
   -validity 10000 -alias upload          # creates the keystore (once)
 base64 -i upload.jks | tr -d '\n'        # paste output into SIGNING_KEY
 
-# GPG key → armored private key for SIGNING_PRIVATE_KEY
-gpg --full-generate-key                  # create the key (once)
-gpg --armor --export-secret-keys <KEY_ID>   # paste output into SIGNING_PRIVATE_KEY
-
 # Apple Developer ID Application cert → base64 for MAC_CERTIFICATE_P12.
 # In Keychain Access, export the "Developer ID Application: ..." cert (with its
 # private key) as a .p12, setting an export password (-> MAC_CERTIFICATE_PASSWORD).
@@ -532,8 +528,9 @@ security find-identity -v -p codesigning  # shows the exact MAC_SIGN_IDENTITY st
 # (Sign-In and Security -> App-Specific Passwords), NOT your Apple ID login.
 ```
 
-Publishing Quartz to Maven Central (the Sonatype and GPG secrets) is set up in
-the quartz repo's `create-release.yml`, not here.
+Publishing to Maven Central (the Sonatype and GPG secrets) is set up in each library
+repo's `create-release.yml` (quartz, crypto-kmp, mls-kmp, marmot-kmp, cordn-kmp,
+quic-kmp), not here.
 
 ---
 

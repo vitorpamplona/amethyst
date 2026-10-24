@@ -28,9 +28,10 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-Maven Central (the `quartz` library) also publishes automatically from the same
-workflow — as a *step* at the end of the `deploy-android` job, not a job of its
-own, so don't expect to find it in the run's job list.
+Nothing here publishes to Maven Central. Quartz and the other libraries (crypto-kmp,
+mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
+`create-release.yml`; an Amethyst release only consumes the versions pinned in
+`gradle/libs.versions.toml`, so those must already be on Maven Central when you tag.
 
 ---
 
@@ -42,8 +43,12 @@ own, so don't expect to find it in the run's job list.
    appCode = "449"      # Android versionCode, monotonic — must increment
    ```
    That single edit propagates to Android (`versionName`/`versionCode`),
-   Desktop & CLI (`packageVersion`), `quartz` (Maven version) and `geode`
-   (`RelayInfo.VERSION`). Nothing else hardcodes the version.
+   Desktop & CLI (`packageVersion`) and `geode` (`RelayInfo.VERSION`). Nothing
+   else hardcodes the version. The libraries version themselves in their own repos.
+
+   Check that every library version pinned in `gradle/libs.versions.toml`
+   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`)
+   resolves on Maven Central: a pin to an unreleased library fails the build.
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
@@ -422,10 +427,12 @@ ownership:
 | Secret(s) | Protects | Rotation |
 |---|---|---|
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
-| `SONATYPE_USERNAME`, `SONATYPE_PASSWORD` | Maven Central namespace `com.vitorpamplona` | On compromise |
-| `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | The **GPG key** signing Maven artifacts | Per GPG key expiry |
 | *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
+
+The Maven Central secrets (`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`,
+`SIGNING_PASSWORD`) belong to the library repos' release workflows; no workflow in this repo
+reads them.
 
 Owner assignments and rotation reminders live with the team (issue tracker).
 
@@ -438,8 +445,6 @@ Owner assignments and rotation reminders live with the team (issue tracker).
 - [ ] GH Release: 49 assets, sizes sane, and the asset-name set matches the
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
-- [ ] Maven Central: `quartz:<version>` resolves (allow tens of minutes of
-      propagation; the publish step's log is the authoritative signal).
 - [ ] Play Console: rollout started, no policy rejection.
 - [ ] Zapstore: release event visible.
 - [ ] Orchard: the Amethyst row shows the new version, and its repository link
