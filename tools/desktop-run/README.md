@@ -84,6 +84,14 @@ AMETHYST_DISPLAY=:98 AMETHYST_SCREEN=480x900x24 tools/desktop-run/run-headless.s
 - **Never `pkill -f AmethystDesktopKt` from an agent shell.** The pattern also matches the shell
   whose own command line contains it, and kills your tool call (exit 144). `run-headless.sh stop`
   anchors the match on the java binary.
+- **Tor never starts in a sandboxed container, and by default DM and untrusted relays wait for
+  it.** Tor needs direct TCP to its guard relays; a container that only lets traffic out through
+  an HTTPS proxy never gets a SOCKS port, so every Tor-routed relay is held back with nothing in
+  the log. For an account whose outbox is also its DM relay, its own lists (follows, emoji, mutes)
+  then never load and its publishes never leave, while clearnet relays work and hide the problem.
+  The tell is the drawer's `Relays 1/11`. Before testing a signing account, open the onion icon
+  next to the version at the bottom of the drawer and set the Tor engine to **Off**; the choice is
+  saved in the run's profile, so it survives `stop`/`start`.
 - A dependency resolution `429 Too Many Requests` from Maven Central is a rate limit. Re-run
   `start`.
 - `start` gives up after `AMETHYST_START_TIMEOUT` seconds (default 900). Raise it for a first cold

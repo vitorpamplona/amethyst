@@ -125,7 +125,7 @@ fun CreateGroupScreen(
                 val iconChange =
                     pickedIcon?.let { media ->
                         MarmotGroupIconChange.Set(
-                            accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
+                            accountViewModel.uploadMarmotGroupIcon(nostrGroupId, media.uri, media.mimeType, accountViewModel.host.mediaUploader),
                         )
                     } ?: MarmotGroupIconChange.Keep
                 // Always commit an initial metadata extension so that

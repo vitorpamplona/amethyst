@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -50,8 +52,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.chats.marmotGroup.MarmotGroupFeedViewModel
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
@@ -65,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_body
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_reset
+import com.vitorpamplona.amethyst.commons.resources.marmot_poll_create
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -78,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatIsOneOnOne
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.CreateMarmotPollSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
@@ -238,9 +245,17 @@ fun MarmotGroupMessageComposer(
     val shortNotice = rememberShortNotice()
 
     var isUploading by remember { mutableStateOf(false) }
+    var showPollSheet by remember { mutableStateOf(false) }
+
+    if (showPollSheet) {
+        CreateMarmotPollSheet(nostrGroupId, accountViewModel) { showPollSheet = false }
+    }
 
     DisposableEffect(nostrGroupId) {
-        onDispose { newMessageModel.userSuggestions?.reset() }
+        onDispose {
+            newMessageModel.userSuggestions?.reset()
+            newMessageModel.emojiSuggestions?.reset()
+        }
     }
 
     // Upload dialog
@@ -277,6 +292,15 @@ fun MarmotGroupMessageComposer(
             )
         }
 
+        newMessageModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                newMessageModel::autocompleteWithEmoji,
+                newMessageModel::autocompleteWithEmoji,
+                SuggestionListDefaultHeightChat,
+            )
+        }
+
         ThinPaddingTextField(
             state = newMessageModel.message,
             onTextChanged = { newMessageModel.onMessageChanged() },
@@ -298,6 +322,7 @@ fun MarmotGroupMessageComposer(
                 MarmotGalleryLeadingIcon(
                     isUploading = isUploading,
                     onImageChosen = newMessageModel::pickedMedia,
+                    onCreatePoll = { showPollSheet = true },
                 )
             },
             trailingIcon = {
@@ -331,6 +356,7 @@ fun MarmotGroupMessageComposer(
 private fun MarmotGalleryLeadingIcon(
     isUploading: Boolean,
     onImageChosen: (ImmutableList<SelectedMedia>) -> Unit,
+    onCreatePoll: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -342,6 +368,16 @@ private fun MarmotGalleryLeadingIcon(
             modifier = Modifier,
             onImageChosen = onImageChosen,
         )
+        // Encrypted NIP-88 poll. Peers on MDK 0.11+ send them and allow them in
+        // direct conversations too (0.13), so the composer offers one everywhere.
+        IconButton(onClick = onCreatePoll) {
+            Icon(
+                symbol = MaterialSymbols.Poll,
+                contentDescription = stringRes(Res.string.marmot_poll_create),
+                modifier = Modifier.height(22.dp),
+                tint = MaterialTheme.colorScheme.placeholderText,
+            )
+        }
     }
 }
 

@@ -119,7 +119,7 @@ fun EditGroupInfoScreen(
                             val iconChange =
                                 pickedIcon?.let { media ->
                                     MarmotGroupIconChange.Set(
-                                        accountViewModel.uploadMarmotGroupIcon(media.uri, media.mimeType, accountViewModel.host.mediaUploader),
+                                        accountViewModel.uploadMarmotGroupIcon(nostrGroupId, media.uri, media.mimeType, accountViewModel.host.mediaUploader),
                                     )
                                 } ?: if (removeIcon) MarmotGroupIconChange.Clear else MarmotGroupIconChange.Keep
                             accountViewModel.updateMarmotGroupMetadata(

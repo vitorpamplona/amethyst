@@ -680,8 +680,10 @@ class AppModules(
             // whole Tor-routed relay set is hammered with doomed dials against the dead
             // proxy during bootstrap. RelayProxyClientConnector reconnects them (with
             // ignoreRetryDelays=true) the instant Tor flips to Active.
+            // A session bypass ("continue without Tor") drops the SOCKS port, so the Tor client
+            // above falls back to a direct one: let those relays dial, or they never connect.
             canDial = { url ->
-                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isTorReady()
+                !torEvaluatorFlow.shouldUseTorForRelay(url) || torManager.isTorReady() || torManager.sessionBypass.value
             },
         )
 

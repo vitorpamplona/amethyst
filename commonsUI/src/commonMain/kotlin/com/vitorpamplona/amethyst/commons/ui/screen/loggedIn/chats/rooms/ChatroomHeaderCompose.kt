@@ -928,7 +928,7 @@ private fun ConcordRoomCompose(
     val lastContent =
         if (author != null && noteEvent != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            "$authorName: ${observeChatPreviewText(lastMessage)}"
         } else {
             // Event-less placeholder row for a just-joined channel with no messages yet.
             channel.communityName ?: stringRes(Res.string.relay_group_no_messages_yet)
@@ -1121,11 +1121,11 @@ private fun ConcordServerRoomCompose(
             ?: stringRes(Res.string.concord_home_title)
 
     val author = row.newestMessage?.author
-    val noteEvent = row.newestMessage?.event
+    val newestMessage = row.newestMessage
     val lastContent =
-        if (author != null && noteEvent != null) {
+        if (author != null && newestMessage?.event != null) {
             val authorName by observeUserName(author, accountViewModel)
-            "$authorName: ${noteEvent.content.take(200)}"
+            "$authorName: ${observeChatPreviewText(newestMessage)}"
         } else {
             stringRes(Res.string.relay_group_no_messages_yet)
         }

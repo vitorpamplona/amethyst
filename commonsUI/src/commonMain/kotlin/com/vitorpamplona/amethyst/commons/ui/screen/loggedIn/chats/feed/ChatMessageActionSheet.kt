@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.isBuzzEditableBy
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
@@ -88,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.AddHashtagLabelDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ConcordBanConfirmationDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteActionHandlers
+import com.vitorpamplona.amethyst.commons.ui.note.elements.RemoveForEveryoneConfirmationDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
@@ -106,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.concord.cord03Channels.ConcordDisappearing
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.Dispatchers
@@ -142,6 +142,7 @@ fun ChatMessageActionSheet(
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
+    var removeForEveryoneConfirming by remember { mutableStateOf(false) }
     var showDeliveryDialog by remember { mutableStateOf(false) }
 
     val performDelete = { accountViewModel.deleteOwn(note) }
@@ -237,6 +238,15 @@ fun ChatMessageActionSheet(
         )
     }
 
+    if (removeForEveryoneConfirming) {
+        RemoveForEveryoneConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { removeForEveryoneConfirming = false },
+            onRemoved = onDismiss,
+        )
+    }
+
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
             isFollowingAuthor = false,
@@ -274,14 +284,13 @@ fun ChatMessageActionSheet(
             // Stage one: the primary chat action (reply / edit draft) is always shown.
             ChatOnlyRow(note, state, onWantsToReply, onWantsToEditDraft, onDismiss)
 
-            // Editing my own chat message. Two surfaces publish an edit today, gated by type:
+            // Editing a chat message, gated by where it lives:
             //  - Buzz: kind-9 message in a Buzz-dialect relay group (or a legacy kind-40002 one)
             //    → a kind-40003 edit, by its author or the author's agent owner.
-            //  - Concord: kind-9 channel message or kind-1111 thread reply (carries a
-            //    ConcordChannel gatherer) → a kind-3302 edit wrapped on the channel plane.
-            // Both restrict to my own messages; a note is only ever one of the two, so at
-            // most one tile shows and both route through the same edit callback.
-            val isMine = note.author?.pubkeyHex == accountViewModel.userProfile().pubkeyHex
+            //  - A room (Concord channel, Marmot group): the room says which of its messages its
+            //    composer can edit, and sends the edit inside itself.
+            // A note is only ever one of the two, so at most one tile shows and both route
+            // through the same edit callback.
             // Buzz lets the owner of an agent edit the agent's messages too, and credits a
             // relay-signed message to the member it names, so its own rule decides.
             val canEditBuzz =
@@ -294,20 +303,9 @@ fun ChatMessageActionSheet(
                             )
                     ) &&
                     note.isBuzzEditableBy(accountViewModel.userProfile().pubkeyHex)
-            val canEditConcord =
-                onWantsToEditChatMessage != null &&
-                    (note.event is ChatEvent || note.event is CommentEvent) &&
-                    isMine &&
-                    note.inGatherers?.any { it is ConcordChannel } == true
-            // Marmot: my own text message in a group -> a kind-1009 edit inside the group. A
-            // media message's content is its locator, so editing it would break the attachment.
-            val canEditMarmot =
-                onWantsToEditChatMessage != null &&
-                    note.event is ChatEvent &&
-                    isMine &&
-                    note.event?.tags?.none { it.isNotEmpty() && it[0] == "imeta" } == true &&
-                    accountViewModel.account.marmot.marmotGroupOf(note) != null
-            if (canEditBuzz || canEditConcord || canEditMarmot) {
+            // A room (Concord channel, Marmot group) decides which of its messages its composer can edit.
+            val canEditInRoom = onWantsToEditChatMessage != null && accountViewModel.canEditInRoom(note)
+            if (canEditBuzz || canEditInRoom) {
                 SectionDivider()
                 TileRow {
                     val label = if (canEditBuzz) Res.string.buzz_edit_message else Res.string.edit_message
@@ -337,6 +335,7 @@ fun ChatMessageActionSheet(
                         }
                     },
                     onConcordBan = { concordBanConfirming = true },
+                    onRemoveForEveryone = { removeForEveryoneConfirming = true },
                     onDismiss = onDismiss,
                 )
 
@@ -620,6 +619,9 @@ private fun QuickReactionRow(
                 note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
             }
         }
+    // A group's custom-emoji reaction is keyed by its own encrypted copy's URL, never the pack's,
+    // so a pick is "already mine" by shortcode.
+    val myShortcodes = remember(myReactions) { myReactions.mapNotNullTo(HashSet()) { MarmotCustomEmoji.reactionShortcode(it) } }
 
     // Wrap onto as many rows as needed (like the zap grid) rather than a single
     // horizontally-scrolling strip, so long custom-reaction sets stay reachable.
@@ -631,7 +633,12 @@ private fun QuickReactionRow(
     ) {
         reactions.forEach { reactionType ->
             ClickableBox(
-                modifier = if (reactionType in myReactions) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
+                modifier =
+                    if (reactionType in myReactions || MarmotCustomEmoji.reactionShortcode(reactionType) in myShortcodes) {
+                        MaterialTheme.colorScheme.selectedReactionBoxModifier
+                    } else {
+                        reactionBox
+                    },
                 onClick = {
                     onReactOverride?.invoke(note, reactionType) ?: accountViewModel.reactToOrDelete(note, reactionType)
                     onDismiss()

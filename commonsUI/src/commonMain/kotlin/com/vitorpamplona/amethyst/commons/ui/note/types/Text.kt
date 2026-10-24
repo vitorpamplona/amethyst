@@ -25,11 +25,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -235,17 +236,16 @@ fun RenderTextEvent(
 /** The newest in-place edit of a chat message (Concord, Buzz or Marmot), recomposing as edits land. */
 @Composable
 fun observeChatMessageEdit(note: Note): Note? {
-    // Resolved once per note, not on every recomposition: produceState's initialValue argument is
-    // re-evaluated each time this runs, and these feeds recompose a lot.
-    val initial = remember(note) { note.latestChatEdit() }
-    val latest by
-        produceState(initialValue = initial, note.idHex) {
-            note
-                .flow()
-                .edits.stateFlow
-                .collect { value = note.latestChatEdit() }
-        }
-    return latest
+    // State keyed by the note, not produceState: produceState's state outlives a key change,
+    // so a row reused for another note showed that note's previous edit until the first emission.
+    val latest = remember(note) { mutableStateOf(note.latestChatEdit()) }
+    LaunchedEffect(note) {
+        note
+            .flow()
+            .edits.stateFlow
+            .collect { latest.value = note.latestChatEdit() }
+    }
+    return latest.value
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()

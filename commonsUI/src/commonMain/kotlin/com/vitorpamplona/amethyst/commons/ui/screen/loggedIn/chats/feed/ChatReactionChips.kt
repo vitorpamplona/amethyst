@@ -39,6 +39,7 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,6 +56,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -77,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.util.customEmojiUrlOrNull
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.quartz.nip30CustomEmoji.CustomEmoji
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -87,6 +91,8 @@ data class ReactionChip(
     val type: String,
     val count: Int,
     val includesMe: Boolean,
+    /** What the chip draws; differs from [type] only for a Marmot custom emoji that cannot be shown as a picture yet. */
+    val glyph: String = type,
 )
 
 private val ChipGlyphFontSize = 13.sp
@@ -152,20 +158,31 @@ fun ChatReactionChips(
     // cheaper but would never DISCOVER reactions for messages nobody expanded.
     val reactionsState by observeNoteReactions(baseNote, accountViewModel)
 
+    // In a Marmot group a custom-emoji reaction's picture is an encrypted
+    // attachment of the reaction itself (MDK 0.12). Until its key is known the
+    // chip shows the `:shortcode:` as text, and a URL no attachment backs is
+    // never fetched at all.
+    val marmotEmoji = rememberMarmotReactionEmoji(baseNote, reactionsState?.note ?: baseNote, accountViewModel)
+
     val chips by
-        remember(reactionsState, myIdentities) {
+        remember(reactionsState, myIdentities, marmotEmoji) {
             derivedStateOf {
                 val note = reactionsState?.note ?: baseNote
                 val me = accountViewModel.userProfile()
-                note.reactions
-                    .map { (type, reactors) ->
+                // In a group each custom-emoji reaction carries its own copy of the picture under its
+                // own URL, so one chip per shortcode; elsewhere one per reaction key, as before.
+                note.reactions.entries
+                    .groupBy({ (type, _) -> marmotEmoji?.chipKey(type) ?: type }, { it.toPair() })
+                    .map { (_, entries) ->
+                        val reactors = entries.flatMap { it.second }
                         val mine =
                             if (myIdentities != null) {
                                 reactors.any { it.author?.pubkeyHex in myIdentities }
                             } else {
                                 reactors.any { it.author == me }
                             }
-                        ReactionChip(type, reactors.size, mine)
+                        val type = entries.first().first
+                        ReactionChip(type, reactors.size, mine, marmotEmoji?.glyphFor(entries.map { it.first }) ?: type)
                     }.sortedByDescending { it.count }
                     .toImmutableList()
             }
@@ -335,7 +352,7 @@ fun ReactionChipView(
                 .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
         ChipContentRow {
-            ChipReactionGlyph(chip.type)
+            ChipReactionGlyph(chip.glyph)
             if (chip.count > 1) {
                 Text(
                     text = chip.count.toString(),
@@ -438,4 +455,55 @@ internal fun ChipReactionGlyph(reactionType: String) {
             }
         }
     }
+}
+
+/**
+ * The custom-emoji pictures of a Marmot message's reactions that can be shown:
+ * each reaction's own `encrypted-media-v2` attachment, registered with the
+ * download layer under the media key of the epoch that carried the reaction.
+ */
+class MarmotReactionEmoji(
+    private val resolvedUrls: Set<String>,
+) {
+    /** [type] itself when its picture can be drawn, else its bare `:shortcode:`. */
+    fun glyphFor(type: String): String {
+        val url = type.customEmojiUrlOrNull() ?: return type
+        return if (url in resolvedUrls) type else type.substringBefore(url)
+    }
+
+    /** One chip's glyph for reactions that share a shortcode: the first whose picture can be drawn. */
+    fun glyphFor(types: List<String>): String = types.firstOrNull { it.customEmojiUrlOrNull() in resolvedUrls } ?: glyphFor(types.first())
+
+    /** What makes two reactions one chip: a custom emoji's bare `:shortcode:`, anything else itself. */
+    fun chipKey(type: String): String = type.customEmojiUrlOrNull()?.let { type.substringBefore(it) } ?: type
+}
+
+/** Null when [baseNote] is not a Marmot message (its reactions then render as before). */
+@Composable
+fun rememberMarmotReactionEmoji(
+    baseNote: Note,
+    note: Note,
+    accountViewModel: AccountViewModel,
+): MarmotReactionEmoji? {
+    // Every chat row calls this; only a Marmot message pays for a producer.
+    val groupId = remember(baseNote) { baseNote.marmotGroupIdFor(accountViewModel.account) } ?: return null
+    val reactions = note.reactions
+    val resolved by
+        produceState(emptySet<String>(), groupId, reactions) {
+            val urls = HashSet<String>()
+            reactions.values.flatten().forEach { reactor ->
+                val event = reactor.event ?: return@forEach
+                val matched = MarmotCustomEmoji.matchedEmojiAttachments(event)
+                if (matched.isEmpty()) return@forEach
+                val secret = accountViewModel.marmotMediaSecretForMessage(groupId, reactor.idHex) ?: return@forEach
+                matched.forEach { (url, reference) ->
+                    if (url.startsWith("https://") || url.startsWith("http://")) {
+                        accountViewModel.account.encryptionKeyCache.add(url, EncryptedMediaV2Cipher(secret, reference), reference.mediaType)
+                        urls.add(url)
+                    }
+                }
+            }
+            value = urls
+        }
+    return remember(resolved) { MarmotReactionEmoji(resolved) }
 }

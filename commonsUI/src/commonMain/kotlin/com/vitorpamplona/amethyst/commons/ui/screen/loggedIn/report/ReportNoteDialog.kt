@@ -21,8 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.report
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip56Reports.ui.ReportDialog
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_reminder_group
+import com.vitorpamplona.amethyst.commons.resources.report_dialog_reminder_public
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 @Composable
@@ -31,12 +35,16 @@ fun ReportNoteDialog(
     accountViewModel: AccountViewModel,
     onDismiss: () -> Unit,
 ) {
+    // A report the message's room keeps among its members is for the room's admins to review;
+    // it does not also block the author, which would empty the conversation for the reporter.
+    val staysInRoom = remember(note) { accountViewModel.reportStaysInRoom(note) }
     ReportDialog(
         onBlock = { note.author?.let { accountViewModel.hide(it) } },
         onReport = { reason, additionalReason ->
             accountViewModel.report(note, reason, additionalReason)
-            note.author?.let { accountViewModel.hide(it) }
+            if (!staysInRoom) note.author?.let { accountViewModel.hide(it) }
         },
         onDismiss = onDismiss,
+        reminder = if (staysInRoom) Res.string.report_dialog_reminder_group else Res.string.report_dialog_reminder_public,
     )
 }

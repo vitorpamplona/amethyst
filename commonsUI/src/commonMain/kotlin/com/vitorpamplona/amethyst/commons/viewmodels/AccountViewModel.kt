@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.viewmodels
 
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotEmojiMediaPortOf
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.notices.ui.ResUserNoticeResolver
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
@@ -63,6 +64,12 @@ class AccountViewModel(
         // receivers can reach callManager + account + accountViewModel.
         CallSessionBridge
             .set(callManager, account, this)
+
+        // Lets a custom emoji in a Marmot group travel as an encrypted picture,
+        // through this account's own HTTP routes (proxy, Tor).
+        if (account.marmot.emojiMediaPort == null) {
+            account.marmot.emojiMediaPort = marmotEmojiMediaPortOf(account, httpClientBuilder)
+        }
     }
 
     override fun onCleared() {

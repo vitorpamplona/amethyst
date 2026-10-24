@@ -175,11 +175,13 @@ class Nip65RelayListViewModel : ViewModel() {
 
     fun clear() {
         hasModified = false
+        // Marked like every other relay list, so the outbox shows when it waits for Tor.
+        val torEvaluation = accountViewModel.host.torRelayEvaluation.value
         _homeRelays.update {
             val relayList = account.nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
+                .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }
                 .distinctBy { it.relay }
         }
 
@@ -187,7 +189,7 @@ class Nip65RelayListViewModel : ViewModel() {
             val relayList = account.nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
 
             relayList
-                .map { relaySetupInfoBuilder(it) }
+                .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }
                 .distinctBy { it.relay }
         }
     }

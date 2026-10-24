@@ -31,7 +31,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.marmot.client.MarmotGroupImage
-import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageCipher
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
@@ -83,12 +82,14 @@ fun rememberMarmotGroupIconUrl(
         value = finder.findServerUrl(blossomUri) ?: fallbackUrl
     }
 
-    val cipher = remember(image) { MarmotGroupImageCipher(image.key, image.nonce) }
+    // The scheme follows the group's avatar carrier: `0x8002` (raw key, media type in the
+    // AAD) for a current-profile group, MIP-01 v2 for a legacy one.
+    val cipher = remember(image) { image.cipher() }
     // Register the cipher only when the URL or cipher changes (not on every recomposition),
     // and synchronously during composition so the interceptor can decrypt before Coil fetches.
-    // The plaintext MIME isn't stored (MIP-01 v2), so Coil sniffs the format from the bytes.
+    // MIP-01 stores no plaintext type, so Coil sniffs the format from the bytes there.
     remember(url, cipher) {
-        accountViewModel.account.encryptionKeyCache.add(url, cipher, null)
+        accountViewModel.account.encryptionKeyCache.add(url, cipher, image.mediaType)
         url
     }
 

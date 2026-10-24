@@ -29,6 +29,7 @@ import com.vitorpamplona.quartz.concord.cord03Channels.ConcordChatEditEvent
 import com.vitorpamplona.quartz.experimental.edits.TextNoteModificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip40Expiration.isExpirationBefore
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 /*
@@ -133,6 +134,8 @@ fun Note.latestBuzzEdit(users: (HexKey) -> User? = LocalCache::getUserIfExists):
  * leaf but the same account key, and may edit its own account's message.
  */
 fun Note.latestMarmotEdit(): Note? {
+    // Only a kind-9 chat message is editable; MDK ignores an edit naming anything else.
+    if (event?.kind != ChatEvent.KIND) return null
     val authorHex = author?.pubkeyHex ?: return null
     return edits
         .filter { it.author?.pubkeyHex == authorHex && it.event?.kind == MarmotAppEvent.KIND_EDIT }

@@ -64,7 +64,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast
@@ -89,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.quick_action_follow
 import com.vitorpamplona.amethyst.commons.resources.quick_action_mute_thread
 import com.vitorpamplona.amethyst.commons.resources.quick_action_report
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body
+import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body_channel
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body_group
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_body_private
 import com.vitorpamplona.amethyst.commons.resources.quick_action_request_deletion_alert_title
@@ -577,17 +580,23 @@ fun NoteQuickActionItem(
 
 /**
  * What a deletion actually does for [note]: a public NIP-09 to relays, a request sent
- * inside a Marmot group, or a gift-wrapped request to a NIP-17 conversation. The public
- * wording ("deleted from the relays you are connected to") is wrong for the last two.
+ * inside its room (a Marmot group or a Concord channel), or a gift-wrapped request to a
+ * NIP-17 conversation. The public wording ("deleted from the relays you are connected
+ * to") is wrong for the last two.
  */
 fun deletionRequestBody(
     note: Note,
     accountViewModel: AccountViewModel,
 ): StringResource =
-    when {
-        accountViewModel.account.marmot.marmotGroupOf(note) != null -> Res.string.quick_action_request_deletion_alert_body_group
-        note.isPrivateRumor() -> Res.string.quick_action_request_deletion_alert_body_private
-        else -> Res.string.quick_action_request_deletion_alert_body
+    when (note.roomFor(accountViewModel.account)) {
+        is ConcordChannel -> Res.string.quick_action_request_deletion_alert_body_channel
+        null ->
+            if (note.isPrivateRumor()) {
+                Res.string.quick_action_request_deletion_alert_body_private
+            } else {
+                Res.string.quick_action_request_deletion_alert_body
+            }
+        else -> Res.string.quick_action_request_deletion_alert_body_group
     }
 
 @Composable

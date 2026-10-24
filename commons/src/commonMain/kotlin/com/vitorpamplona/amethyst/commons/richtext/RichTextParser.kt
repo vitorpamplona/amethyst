@@ -419,6 +419,10 @@ class RichTextParser {
             (ClinkPointerParser.parse(word) as? NOffer)?.let { return ClinkOfferSegment(word, it) }
         }
 
+        if (LocalTimestamp.mightContain(word)) {
+            LocalTimestamp.split(word)?.let { return TimestampSegment(word, it) }
+        }
+
         if (word.startsWith('#')) return parseHash(word, tags)
 
         if (EmojiCoder.isCoded(word)) return SecretEmoji(word)

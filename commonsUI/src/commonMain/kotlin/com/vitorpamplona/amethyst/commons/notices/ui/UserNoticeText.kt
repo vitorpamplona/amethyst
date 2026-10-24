@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.could_not_assemble_lnurl_fro
 import com.vitorpamplona.amethyst.commons.resources.could_not_fetch_invoice_from_details
 import com.vitorpamplona.amethyst.commons.resources.could_not_resolve_check_if_you_are_connected_if_the_server_is_up_and_if_the_lightning_address_is_correct_exception
 import com.vitorpamplona.amethyst.commons.resources.draft_note
+import com.vitorpamplona.amethyst.commons.resources.emoji_packs_title
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_invoice_error
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_zap_error
 import com.vitorpamplona.amethyst.commons.resources.error_parsing_error_message
@@ -91,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.incorrect_invoice_amount_sat
 import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_to_a_draft_note
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
+import com.vitorpamplona.amethyst.commons.resources.marmot_emoji_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.missing_lud16
 import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
@@ -259,6 +261,7 @@ fun UserNotice.text(): NoticeText =
         Bolt12OfferNotice.PaymentSent -> text(Res.string.bolt12_offers, Res.string.bolt12_payment_sent)
         MarmotNotice.ResetDone -> text(Res.string.reset_marmot_state, Res.string.reset_marmot_success)
         is MarmotNotice.ResetFailed -> NoticeText(Res.string.reset_marmot_state, str(Res.string.reset_marmot_failure, raw(message)))
+        MarmotNotice.EmojiNotAttached -> text(Res.string.emoji_packs_title, Res.string.marmot_emoji_upload_failed)
 
         is Bolt12OfferNotice.PaymentFailed -> NoticeText(Res.string.bolt12_offers, str(Res.string.bolt12_payment_failed, raw(detail)))
 

@@ -31,16 +31,18 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.client.MarmotGroupIconUpload
-import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageCipher
-import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageEncryption
+import com.vitorpamplona.marmot.client.MarmotGroupImageUploadPlan
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 
 /**
- * Encrypts a picked image with the MIP-01 v2 scheme (see [MarmotGroupImageEncryption])
- * and uploads the ciphertext to Blossom, signing the upload authorization with the
- * keypair derived from `image_upload_key` (so any admin holding that seed can later
- * replace/delete the blob).
+ * Encrypts a picked image in the scheme its group's avatar carrier uses and uploads
+ * the ciphertext to Blossom, signing the upload with that scheme's upload key (so any
+ * admin holding it can later replace or delete the blob). A current-profile group
+ * uses `marmot.group.blossom.image.v1` (raw keys, media type bound into the AAD); a
+ * legacy group keeps MIP-01 v2. [MarmotGroupImageUploadPlan] picks; mixing them up
+ * makes an avatar no other client can open.
  *
  * Reuses [UploadOrchestrator.uploadEncrypted] for compression, metadata stripping,
  * upload, and re-download verification — the same pipeline as MIP-04 message media.
@@ -49,22 +51,24 @@ class MarmotGroupIconUploader(
     val account: Account,
 ) {
     suspend fun upload(
+        nostrGroupId: HexKey,
         uri: MediaUri,
         mimeType: String?,
         server: ServerName,
         uploader: MediaUploader,
     ): MarmotGroupIconUpload {
         // Compress/downscale up front — avatars don't need full resolution, and a smaller
-        // blob is cheaper for every member to fetch. The MIP-01 crypto uses no AAD and does
-        // not bind the MIME type, so the (possibly transcoded) output type is irrelevant to
-        // decryption; we just hand the compressed bytes to the encrypting uploader.
+        // blob is cheaper for every member to fetch. The current-profile scheme binds the
+        // media type into the AEAD, so the plan is made for the type AFTER compression.
         val compressed = UploadOrchestrator().compressIfNeeded(uri, mimeType, CompressorQuality.MEDIUM, uploader)
         val uploadMime = compressed.contentType ?: mimeType ?: DEFAULT_MIME
-        val cipher = MarmotGroupImageCipher.forNewImage()
-        val uploadKeySeed = MarmotGroupImageEncryption.generateUploadKey()
-        val uploadSigner = NostrSignerInternal(KeyPair(privKey = MarmotGroupImageEncryption.deriveUploadKeypairSecret(uploadKeySeed)))
 
+        // Inside the try, so a failed plan (not a member any more) still discards the compressed file.
         try {
+            val manager = account.marmotManager ?: throw IllegalStateException("Marmot is not initialized")
+            val plan = manager.planGroupImageUpload(nostrGroupId, uploadMime)
+            val uploadSigner = NostrSignerInternal(KeyPair(privKey = plan.uploadSecretKey))
+
             val state =
                 UploadOrchestrator().uploadEncrypted(
                     uri = compressed.uri,
@@ -72,7 +76,7 @@ class MarmotGroupIconUploader(
                     alt = null,
                     contentWarningReason = null,
                     compressionQuality = CompressorQuality.UNCOMPRESSED,
-                    encrypt = cipher,
+                    encrypt = plan.cipher,
                     server = server,
                     account = account,
                     uploader = uploader,
@@ -85,13 +89,7 @@ class MarmotGroupIconUploader(
                 val hash =
                     serverResult.uploadedHash
                         ?: throw IllegalStateException("Blossom server did not return a content hash for the group icon")
-                return MarmotGroupIconUpload(
-                    imageHash = hash,
-                    imageKey = cipher.imageKey,
-                    imageNonce = cipher.imageNonce,
-                    imageUploadKey = uploadKeySeed,
-                    mediaType = uploadMime,
-                )
+                return plan.uploadFor(hash)
             }
 
             val message =
@@ -120,7 +118,8 @@ class MarmotGroupIconUploader(
  * separate from that commit so the slow Blossom upload can show its own progress first.
  */
 suspend fun AccountViewModel.uploadMarmotGroupIcon(
+    nostrGroupId: HexKey,
     uri: MediaUri,
     mimeType: String?,
     uploader: MediaUploader,
-): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(uri, mimeType, account.settings.defaultFileServer, uploader)
+): MarmotGroupIconUpload = MarmotGroupIconUploader(account).upload(nostrGroupId, uri, mimeType, account.settings.defaultFileServer, uploader)

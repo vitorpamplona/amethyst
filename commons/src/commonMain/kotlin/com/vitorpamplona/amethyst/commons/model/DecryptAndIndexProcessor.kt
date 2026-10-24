@@ -851,7 +851,7 @@ class GroupEventHandler(
                     // peer-sent kind:1210 is dropped inside addMessage — see
                     // `MarmotGroupList.isDisplayableFeedMessage`.
                     account.marmotGroupList.addMessage(result.groupId, innerNote)
-                    account.marmot.applyMarmotAdminRemoval(result.groupId, innerEvent)
+                    account.marmot.applyMarmotModeration(result.groupId, innerEvent)
 
                     // Traffic is the natural clock for disappearing messages: a
                     // group being read is a group whose expired messages should
@@ -874,7 +874,7 @@ class GroupEventHandler(
                     // the persist for those — don't relax this gate to cover
                     // them, or every own message would be written twice.
                     if (isNew) {
-                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
+                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson, result.epoch)
 
                         // GroupEvents have no `p` tag, so the cache-observer
                         // notification path can't route them. Fire the popup
@@ -882,8 +882,9 @@ class GroupEventHandler(
                         // a relay re-broadcast or persist-replay doesn't
                         // double-notify. Restrict to ChatEvent (kind:9) so
                         // reactions, deletions, and control messages stay
-                        // silent.
-                        if (innerEvent is ChatEvent) {
+                        // silent. A message an admin removed before it
+                        // landed is never shown, so it never notifies either.
+                        if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
                             account.marmotNotifier().notifyGroupMessage(
                                 innerEvent,
                                 result.groupId,

@@ -150,6 +150,8 @@ source "$SCRIPT_DIR/tests-manage.sh"
 source "$SCRIPT_DIR/tests-extras.sh"
 # shellcheck source=tests-media.sh
 source "$SCRIPT_DIR/tests-media.sh"
+# shellcheck source=tests-mdk014.sh
+source "$SCRIPT_DIR/tests-mdk014.sh"
 
 # Make sure Ctrl+C / SIGTERM / SIGHUP all run the full cleanup path —
 # otherwise wnd is nohup'd and keeps running after the script dies,
@@ -217,6 +219,9 @@ ALL_TESTS=(
   test_32_amy_message_after_wn_commit
   test_33_wn_leaves_amy_admin_group
   test_34_amy_removes_last_other_member
+  test_35_media_from_an_earlier_epoch_wn_to_amy
+  test_36_admin_deletion_amy_to_wn
+  test_37_admin_deletion_wn_to_amy
 )
 
 # --tests runs a subset in the order given. Most tests read state a previous

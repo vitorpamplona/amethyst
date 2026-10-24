@@ -138,6 +138,7 @@ class PollResponsesCache : UserDependencies {
 
             /** The option codes this response actually casts under the current rules. */
             private fun accepted(event: PollResponseEvent): Set<String> {
+                policy?.rule?.let { return it.cast(event) ?: emptySet() }
                 val codes = event.responses()
                 return policy?.accept(codes) ?: codes.toSet()
             }
@@ -183,9 +184,18 @@ class PollResponsesCache : UserDependencies {
 
                 val author = note.author ?: return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
 
+                // Under a room's rule a response that breaks it is no vote, so it cannot displace one.
+                val rule = policy?.rule
+                if (rule != null && rule.cast(event) == null) {
+                    return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
+                }
+
                 // Latest-per-author, ties keeping the one already held — same rule as latestByAuthor.
+                // A room's rule breaks a tie by the larger id instead, as MDK does.
                 val current = votes[author]
-                if (current != null && current.createdAt >= event.createdAt) {
+                if (current != null &&
+                    (current.createdAt > event.createdAt || (current.createdAt == event.createdAt && (rule == null || current.id >= event.id)))
+                ) {
                     return ResponseTally(withNote, policy, votes, tally, countedVoters, lateVotes, backdatedVotes)
                 }
 
@@ -243,9 +253,13 @@ class PollResponsesCache : UserDependencies {
      * the same poll event arriving again from another relay.
      */
     fun updatePolicy(newPolicy: PollTallyPolicy) {
-        if (responses.value.policy == newPolicy) return
-
-        responses.update { it.rebuild(newPolicy = newPolicy) }
+        // The cache re-derives the poll's NIP-88 rules on every response; a room's rule, once its
+        // poll is in the room, outlives that. Merged inside the update: a room setting its rule on
+        // another thread must not be overwritten by a refresh that read the policy before it.
+        responses.update { current ->
+            val merged = if (newPolicy.rule == null) newPolicy.copy(rule = current.policy?.rule) else newPolicy
+            if (current.policy == merged) current else current.rebuild(newPolicy = merged)
+        }
     }
 
     fun ResponseTally.filterTo(
@@ -288,6 +302,12 @@ class PollResponsesCache : UserDependencies {
         combine(responses, priorityAccounts) { responses, priority ->
             responses.filterTo(code, forKey, priority)
         }
+
+    /** The options [user]'s counted vote picks, empty when they have not voted. */
+    fun selectionOf(user: User): Set<String> =
+        responses.value.tally
+            .filterValues { user in it }
+            .keys
 
     // Counted, not merely present: a response whose option codes the poll doesn't recognise casts
     // no vote, so its author should still be offered the voting controls.

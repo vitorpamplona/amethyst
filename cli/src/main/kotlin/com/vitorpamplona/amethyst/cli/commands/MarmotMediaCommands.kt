@@ -306,13 +306,15 @@ object MarmotMediaCommands {
                 return Output.error("hash_mismatch", "the blob at ${locator.value} is not the one the message names")
             }
 
+            // The media secret is per-epoch: the attachment opens under the key
+            // of the epoch that carried this message, not the current one.
+            val epochSecret =
+                ctx.marmot.mediaSecretForMessage(resolved, eventId)
+                    ?: return Output.error("decrypt_failed", "the media key of the epoch that carried $eventId is no longer held")
             val plaintext =
                 try {
-                    ctx.marmot.decryptMedia(resolved, reference, ciphertext)
+                    ctx.marmot.decryptMedia(resolved, reference, ciphertext, epochSecret)
                 } catch (e: Exception) {
-                    // A failure here is not "the file is corrupt": the media
-                    // secret is per-epoch, so an attachment from an older epoch
-                    // simply does not open under the current one.
                     return Output.error("decrypt_failed", "${e.message}")
                 }
 
