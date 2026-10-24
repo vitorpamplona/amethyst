@@ -23,6 +23,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.rooms.isInRoom
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -135,6 +136,11 @@ fun filterRepliesAndReactionsToNotes(
     val perRelayEventIds =
         mapOfSet {
             events.forEach { note ->
+                // A private message (a room's, or a NIP-17 rumor) gets its reactions and replies
+                // inside its own conversation, never from relays; asking for them would hand the
+                // relays the private message's id.
+                if (note.isPrivateRumor() || note.isInRoom()) return@forEach
+
                 note.relayUrlsForReactions().forEach { relay ->
                     add(relay, note.idHex)
                 }

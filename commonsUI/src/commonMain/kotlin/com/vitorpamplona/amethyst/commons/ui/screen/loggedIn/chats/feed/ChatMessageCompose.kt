@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
@@ -105,6 +106,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 @Composable
 fun ChatroomMessageCompose(
@@ -664,7 +666,18 @@ fun NoteRow(
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             // `encrypted-media-v2` is a separate branch because its imeta has
             // no `url` field for the NIP-92 parser above to anchor on.
-            hasEncryptedMediaV2(note.event) -> RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+            hasEncryptedMediaV2(note.event) ->
+                Column {
+                    RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+                    // The content of a media message is its caption (MDK and our own sender
+                    // both put it there), and it may carry custom emoji of its own.
+                    if (note.event?.content?.isNotBlank() == true) {
+                        RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    }
+                }
+            // A poll renders like a poll anywhere else; its room, when it has one, carries the votes.
+            // Quoted in a reply it is a preview, not a ballot.
+            note.event is PollEvent -> RenderPoll(note, innerQuote, canPreview, if (innerQuote) 0 else 1, bgColor, accountViewModel, nav)
             else -> {
                 // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
                 // 40003 and 1009): when one exists, render the winning edit's content instead of

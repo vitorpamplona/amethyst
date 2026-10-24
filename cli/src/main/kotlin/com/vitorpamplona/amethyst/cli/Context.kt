@@ -939,6 +939,7 @@ class Context(
             drain = { filters, timeoutMs -> drain(filters, timeoutMs) },
             publish = { event, relayList -> publish(event, relayList) },
             log = { System.err.println("[cli] $it") },
+            publishAndConfirm = { event, relayList -> publish(event, relayList).values.any { it.accepted } },
         )
     }
 

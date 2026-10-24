@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,11 +39,21 @@ class MarmotGroupList(
 
     private val noteToGroupIndex = LargeCache<HexKey, HexKey>()
 
-    // Message id -> group, for every message a group admin removed (kind 4891). A removal can
+    // Group + message id, for every message a group admin removed (kind 4891). A removal can
     // decrypt before its target: a catch-up returns newest first, and both sit in one epoch.
     // Unlike a kind-5 there is no LocalCache deletion index behind it, so without this record a
-    // target arriving second would be added and stay, restarts included.
-    private val adminRemovedIds = LargeCache<HexKey, HexKey>()
+    // target arriving second would be added and stay, restarts included. Keyed by both, so an
+    // admin of one group can neither remove a message of another nor overwrite its record.
+    private val adminRemovedIds = LargeCache<String, Boolean>()
+
+    // Group + report id, for every report a group admin dismissed (kind 1985), for the same
+    // reason: the dismissal can decrypt before the report it names.
+    private val dismissedReportIds = LargeCache<String, Boolean>()
+
+    private fun moderationKey(
+        nostrGroupId: HexKey,
+        id: HexKey,
+    ) = nostrGroupId + id
 
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
@@ -54,7 +65,8 @@ class MarmotGroupList(
         msg: Note,
     ) {
         if (!isDisplayableFeedMessage(msg)) return
-        if (adminRemovedIds.get(msg.idHex) == nostrGroupId) return
+        // An admin deletion applies to chat messages only (`features/content-moderation.md`).
+        if (msg.event?.kind == ChatEvent.KIND && isAdminRemoved(nostrGroupId, msg.idHex)) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.addMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
@@ -66,6 +78,15 @@ class MarmotGroupList(
     }
 
     fun groupIdForNote(noteId: HexKey): HexKey? = noteToGroupIndex.get(noteId)
+
+    /** True when [note] is one of [nostrGroupId]'s messages. */
+    fun isInGroup(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
+        val room = rooms.get(nostrGroupId) ?: return false
+        return note.inGatherers?.any { it === room } == true
+    }
 
     /**
      * Mark a group as "known" by the local user — used right after the user
@@ -107,17 +128,40 @@ class MarmotGroupList(
     }
 
     /**
-     * Applies an admin removal of [targetId] in [nostrGroupId]: drops [target] if it is already
-     * shown, and keeps the removal so the message is refused if it arrives later.
+     * Applies an admin removal of [targetId] in [nostrGroupId]: drops [target] if it is one of
+     * this group's messages, and keeps the removal so the message is refused if it arrives later.
      */
     fun applyAdminRemoval(
         nostrGroupId: HexKey,
         targetId: HexKey,
         target: Note?,
     ) {
-        adminRemovedIds.put(targetId, nostrGroupId)
-        if (target != null) removeMessage(nostrGroupId, target)
+        adminRemovedIds.put(moderationKey(nostrGroupId, targetId), true)
+        if (target != null && target.event?.kind == ChatEvent.KIND && isInGroup(nostrGroupId, target)) removeMessage(nostrGroupId, target)
     }
+
+    /**
+     * Records that an admin of [nostrGroupId] dismissed the report [reportId]. Kept because a
+     * dismissal can arrive before its report, which must then stay dismissed when it lands.
+     */
+    fun applyReportDismissal(
+        nostrGroupId: HexKey,
+        reportId: HexKey,
+    ) {
+        dismissedReportIds.put(moderationKey(nostrGroupId, reportId), true)
+    }
+
+    /** True when an admin of [nostrGroupId] dismissed the report [reportId]. */
+    fun isReportDismissed(
+        nostrGroupId: HexKey,
+        reportId: HexKey,
+    ): Boolean = dismissedReportIds.get(moderationKey(nostrGroupId, reportId)) == true
+
+    /** True when an admin of [nostrGroupId] removed the message [noteId]. */
+    fun isAdminRemoved(
+        nostrGroupId: HexKey,
+        noteId: HexKey,
+    ): Boolean = adminRemovedIds.get(moderationKey(nostrGroupId, noteId)) == true
 
     /**
      * Drop a group from the in-memory list. Also clears the chatroom's own
@@ -128,7 +172,18 @@ class MarmotGroupList(
     fun removeGroup(nostrGroupId: HexKey) {
         val chatroom = rooms.remove(nostrGroupId)
         chatroom?.clearAllMessagesSync()?.forEach { noteToGroupIndex.remove(it.idHex) }
+        forgetModeration(adminRemovedIds, nostrGroupId)
+        forgetModeration(dismissedReportIds, nostrGroupId)
         _groupListChanges.tryEmit(nostrGroupId)
+    }
+
+    private fun forgetModeration(
+        records: LargeCache<String, Boolean>,
+        nostrGroupId: HexKey,
+    ) {
+        val keys = mutableListOf<String>()
+        records.forEach { key, _ -> if (key.startsWith(nostrGroupId)) keys.add(key) }
+        keys.forEach { records.remove(it) }
     }
 
     fun allGroupIds(): List<HexKey> {
@@ -210,6 +265,22 @@ class MarmotGroupList(
         private const val MARMOT_INNER_KIND_PUSH_TOKEN_LIST = 448
         private const val MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL = 449
 
+        // A NIP-88 vote. It changes the tally drawn on its poll's row and is
+        // never a message of its own (MDK projects no timeline row for one).
+        private const val MARMOT_INNER_KIND_POLL_RESPONSE = 1018
+
+        // Content moderation (`features/content-moderation.md`): a NIP-56
+        // report of a message in this group and a NIP-32 label dismissing one.
+        // Both are addressed to the group's admins as review state, not to the
+        // conversation, and a report's body would otherwise read as a message.
+        private const val MARMOT_INNER_KIND_REPORT = 1984
+        private const val MARMOT_INNER_KIND_REPORT_LABEL = 1985
+
+        // Agent activity and operation status from WN Agent harnesses: progress
+        // telemetry about a run, whose result arrives as an ordinary kind:9.
+        private const val MARMOT_INNER_KIND_AGENT_ACTIVITY = 1201
+        private const val MARMOT_INNER_KIND_AGENT_OPERATION = 1202
+
         private val NON_CHAT_INNER_KINDS =
             setOf(
                 MARMOT_INNER_KIND_DELETION,
@@ -220,6 +291,11 @@ class MarmotGroupList(
                 MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE,
                 MARMOT_INNER_KIND_PUSH_TOKEN_LIST,
                 MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL,
+                MARMOT_INNER_KIND_POLL_RESPONSE,
+                MARMOT_INNER_KIND_REPORT,
+                MARMOT_INNER_KIND_REPORT_LABEL,
+                MARMOT_INNER_KIND_AGENT_ACTIVITY,
+                MARMOT_INNER_KIND_AGENT_OPERATION,
             )
     }
 }

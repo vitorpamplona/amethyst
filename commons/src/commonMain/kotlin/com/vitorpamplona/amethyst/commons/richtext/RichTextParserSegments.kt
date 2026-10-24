@@ -224,3 +224,14 @@ class MathSegment(
     val leading: String = "",
     val trailing: String = "",
 ) : Segment(segment)
+
+/**
+ * A word holding one or more `<t:SECONDS[:STYLE]>` local-time tokens
+ * ([LocalTimestamp]), with any text glued around them. [segmentText] keeps the
+ * raw word, so a renderer that does not know the segment still shows it as typed.
+ */
+@Immutable
+class TimestampSegment(
+    segment: String,
+    val pieces: List<LocalTimestamp.Piece>,
+) : Segment(segment)

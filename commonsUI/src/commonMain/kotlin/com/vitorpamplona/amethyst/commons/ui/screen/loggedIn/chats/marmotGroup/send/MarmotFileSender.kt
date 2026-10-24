@@ -33,9 +33,14 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * because the result type still allows a null reference, but nothing this app
  * writes takes it; the MIP-era shape survives only on the READ side, for
  * messages older builds already sent.
+ *
+ * Each message is sent pinned to [sourceEpoch], the epoch whose key encrypted the files: if a
+ * commit landed during the upload, the send is refused rather than delivering attachments no
+ * member can open.
  */
 class MarmotFileSender(
     val nostrGroupId: HexKey,
+    val sourceEpoch: Long,
     val accountViewModel: AccountViewModel,
 ) {
     suspend fun send(uploads: List<Mip04UploadResult>) {
@@ -46,6 +51,7 @@ class MarmotFileSender(
                     nostrGroupId = nostrGroupId,
                     reference = v2,
                     caption = upload.caption.orEmpty(),
+                    sourceEpoch = sourceEpoch,
                 )
                 continue
             }
@@ -67,6 +73,7 @@ class MarmotFileSender(
                 nostrGroupId = nostrGroupId,
                 url = upload.url,
                 imeta = imeta,
+                sourceEpoch = sourceEpoch,
             )
         }
     }

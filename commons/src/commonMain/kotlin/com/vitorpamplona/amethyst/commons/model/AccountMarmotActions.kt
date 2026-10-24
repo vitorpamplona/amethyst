@@ -20,31 +20,64 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
 import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.marmot.appComponents.GroupProfileV1
+import com.vitorpamplona.marmot.appComponents.MarmotMediaType
 import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
+import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
+import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
+import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirm
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
+import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -187,6 +220,8 @@ class AccountMarmotActions(
     fun beginMarmotGroupMessage(
         nostrGroupId: HexKey,
         innerEvent: Event,
+        /** See [sendMarmotGroupMessage]. */
+        expectedEpoch: Long? = null,
     ) {
         // The same two guards sendMarmotGroupMessage returns on. Checked here
         // too, because marking a message as sending and then returning early
@@ -207,7 +242,7 @@ class AccountMarmotActions(
         // a Marmot send fails is that the group had none, and that is exactly
         // what the user may have just fixed.
         account.chatDeliveryTracker.markSending(innerEvent.id) {
-            sendMarmotGroupMessage(nostrGroupId, innerEvent, marmotGroupRelays(nostrGroupId))
+            sendMarmotGroupMessage(nostrGroupId, innerEvent, marmotGroupRelays(nostrGroupId), expectedEpoch)
         }
         showOwnMessageLocally(nostrGroupId, innerEvent)
     }
@@ -229,6 +264,13 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         innerEvent: Event,
         groupRelays: Set<NormalizedRelayUrl>,
+        /**
+         * The epoch whose media key encrypted what [innerEvent] carries, when it carries any. The
+         * send goes out in that epoch or fails with [MarmotEpochMovedException]: in any other, no
+         * receiver could open the attachment. A retry keeps the pin, so a dead reference is never
+         * sent; the media has to be attached again.
+         */
+        expectedEpoch: Long? = null,
     ) {
         Log.d("MarmotDbg") {
             "sendMarmotGroupMessage: group=${nostrGroupId.take(8)}… innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}… " +
@@ -237,7 +279,7 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        beginMarmotGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
 
         if (groupRelays.isEmpty()) {
             // Previously this only logged and the message was silently
@@ -252,7 +294,7 @@ class AccountMarmotActions(
 
         val outbound =
             try {
-                manager.buildGroupMessage(nostrGroupId, innerEvent)
+                manager.buildGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("MarmotDbg", "sendMarmotGroupMessage: could not build the envelope for $nostrGroupId", e)
@@ -278,7 +320,9 @@ class AccountMarmotActions(
         // this one in the cache — so that path will skip it and the message
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
-        manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson())
+        manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson(), outbound.epoch)
+        // Our own removal or dismissal takes effect now, not when the relay echoes it back.
+        applyMarmotModeration(nostrGroupId, innerEvent)
     }
 
     /**
@@ -292,42 +336,58 @@ class AccountMarmotActions(
      * from White Noise decrypted fine and never showed. An edit needs nothing from the
      * cache but its note, so it is attached directly.
      */
-    fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent {
-        val cache = account.cache
-        val isEdit = innerEvent.kind == MarmotAppEvent.KIND_EDIT
-        val innerNote = cache.getOrCreateNote(innerEvent.id)
-        // wasVerified=true: MIP-03 inner events are unsigned rumors; MLS authenticated the sender.
-        // For an edit, "new" is whether its note was empty — which also decides whether it is
-        // persisted, so an edit is kept in the local log and survives a restart.
-        val isNew = if (isEdit) innerNote.event == null else cache.justConsume(innerEvent, null, true)
-        if (isNew || innerNote.event == null) {
-            // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
-            // message's, and only loadEvent sets it.
-            innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
-        }
-
-        // The overlay's rules (author-only, latest wins) are applied at render time by
-        // `Note.latestMarmotEdit`: the target's author may not be known yet.
-        if (isEdit) {
-            MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
-                cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
-            }
-        }
-        return IndexedInnerEvent(innerNote, isNew)
-    }
+    fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
 
     /**
-     * Apply a kind-4891 admin removal: drop the messages it names from the conversation
-     * when its author is an admin of the group (see [MarmotManager.adminRemovalTargets]).
-     * Runs on live delivery and on the restart replay, which re-adds every stored message.
+     * Apply an admin's moderation, when its author was an admin of the group in the epoch it was
+     * sent in (see [MarmotManager.adminRemovalTargets] and [MarmotManager.dismissedReportIds]):
+     * a kind-4891 removal drops the chat message it names, and a kind-1985 dismissal drops the
+     * reports it names, so they no longer count against their message. Runs on live delivery,
+     * after our own sends and on the restart replay, which re-adds every stored message; the
+     * replay reads back the verdict recorded at delivery, so a later demotion undoes neither.
      */
-    fun applyMarmotAdminRemoval(
+    suspend fun applyMarmotModeration(
         nostrGroupId: HexKey,
         innerEvent: Event,
     ) {
         val manager = account.marmotManager ?: return
+        val groups = account.marmotGroupList
+        // An admin's authority ends at their group: a target is removed only when it is one of
+        // this group's messages, never a message of another group or a public note it names.
         manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
-            account.marmotGroupList.applyAdminRemoval(nostrGroupId, targetId, account.cache.getNoteIfExists(targetId))
+            val target = account.cache.getNoteIfExists(targetId)
+            val removable = groupMessageToRemove(groups, nostrGroupId, target)
+            groups.applyAdminRemoval(nostrGroupId, targetId, target)
+            removable?.let { account.cache.removeLocally(it) }
+        }
+        manager.dismissedReportIds(nostrGroupId, innerEvent).forEach { reportId ->
+            groups.applyReportDismissal(nostrGroupId, reportId)
+            account.cache
+                .getNoteIfExists(reportId)
+                ?.takeIf { isGroupReport(nostrGroupId, it) }
+                ?.let { account.cache.removeLocally(it) }
+        }
+        // A message or report whose removal arrived first is dropped as it lands.
+        val landedRemoved =
+            (innerEvent.kind == ChatEvent.KIND && groups.isAdminRemoved(nostrGroupId, innerEvent.id)) ||
+                (innerEvent.kind == ReportEvent.KIND && groups.isReportDismissed(nostrGroupId, innerEvent.id))
+        if (landedRemoved) {
+            account.cache
+                .getNoteIfExists(innerEvent.id)
+                ?.takeIf { it.isPrivateRumor() }
+                ?.let { account.cache.removeLocally(it) }
+        }
+    }
+
+    /** True when [report] is a report filed inside [nostrGroupId]: a group rumor about one of its messages. */
+    private fun isGroupReport(
+        nostrGroupId: HexKey,
+        report: Note,
+    ): Boolean {
+        val event = report.event as? ReportEvent ?: return false
+        if (!report.isPrivateRumor()) return false
+        return event.reportedPost().any { reported ->
+            account.cache.getNoteIfExists(reported.eventId)?.let { account.marmotGroupList.isInGroup(nostrGroupId, it) } == true
         }
     }
 
@@ -336,15 +396,6 @@ class AccountMarmotActions(
         val note: Note,
         val isNew: Boolean,
     )
-
-    /**
-     * The Marmot group [note] was received or sent in, or null when it is not a
-     * Marmot message.
-     *
-     * Only chat rows are indexed, so pass the MESSAGE a reaction or deletion is
-     * about, not the reaction itself.
-     */
-    fun marmotGroupOf(note: Note): HexKey? = account.marmotGroupList.groupIdForNote(note.idHex)
 
     /**
      * React to a Marmot message inside its group.
@@ -363,7 +414,7 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         val targetEvent = target.event ?: return
-        if (target.hasReacted(account.userProfile(), reaction)) return
+        if (target.reactionsOfAuthorLike(account.userProfile(), reaction).isNotEmpty()) return
         val rumor = manager.buildReactionRumor(targetEvent, reaction)
         sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
     }
@@ -377,12 +428,44 @@ class AccountMarmotActions(
     suspend fun deleteMarmotMessages(
         nostrGroupId: HexKey,
         notes: List<Note>,
-    ) {
-        val manager = account.marmotManager ?: return
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
         val mine = notes.filter { it.author == account.userProfile() }.mapNotNull { it.event }
-        if (mine.isEmpty()) return
+        if (mine.isEmpty()) return false
         val rumor = manager.buildDeletionRumor(mine)
         sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
+    }
+
+    /**
+     * Whether this account may delete [note] for everyone in [nostrGroupId]: a
+     * chat message by someone else, in a group this account is an admin of now.
+     * Receivers check the admin set of the epoch the deletion is sent in, which is
+     * this one.
+     */
+    fun canAdminDeleteMarmotMessage(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        val event = note.event ?: return false
+        return manager.canAdminDelete(nostrGroupId, event)
+    }
+
+    /**
+     * Delete another member's chat message as a group admin: a kind-4891
+     * (`features/content-moderation.md`) inside the group. White Noise sends the
+     * same event, and hides the message, its edits and its attachments.
+     */
+    suspend fun adminDeleteMarmotMessage(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
+        if (!canAdminDeleteMarmotMessage(nostrGroupId, note)) return false
+        val manager = account.marmotManager ?: return false
+        val rumor = manager.buildAdminDeletionRumor(note.idHex)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
     }
 
     /**
@@ -455,10 +538,11 @@ class AccountMarmotActions(
             return "Error: KeyPackage event has empty content"
         }
 
-        // The relays embedded in the WelcomeEvent tell the new member
-        // where to subscribe for subsequent GroupEvents. Use our own
-        // outbox — that's where we will publish them.
-        val groupRelays = myOutbox.toList()
+        // The commit goes to the GROUP's relays (its routing component), where
+        // every member listens. Our own outbox is only the fallback for a group
+        // that names none: a member reading other relays would never see the
+        // commit and fall an epoch behind.
+        val groupRelays = marmotGroupRelays(nostrGroupId).toList()
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: addMarmotGroupMember → groupRelays=${groupRelays.size}: ${groupRelays.map { it.url }}"
@@ -608,12 +692,47 @@ class AccountMarmotActions(
                     "publishMarmotKeyPackages: publishing rotated kind:${event.kind} id=${event.id.take(8)}… " +
                         "→ ${relays.size} relay(s): ${relays.map { it.url }}"
                 }
-                account.client.publish(event, relays)
+                // Confirmed, not just queued: a consumed KeyPackage displaced
+                // from this slot keeps its private keys for 24 hours after its
+                // replacement is CONFIRMED published, then they are deleted
+                // (`foundation/key-packages.md`). The manager can only start
+                // that clock if it hears a relay accepted the replacement.
+                publishKeyPackage(manager, event, relays)
             }
             // A rotation we just published makes this device the newest owner.
             // Leaving the old answer in place would keep the banner warning for
             // up to its full life about a state that no longer exists.
             lastOwnerCheck = null
+        }
+    }
+
+    /**
+     * Publish [event], a KeyPackage [manager] just made active, and start its replacement
+     * clock once a relay confirms it. A first failure is retried in the background with
+     * backoff: the new KeyPackage is already the active one, so nothing else would publish
+     * it again, and inviters would keep finding only the one it replaced.
+     */
+    private suspend fun publishKeyPackage(
+        manager: MarmotManager,
+        event: KeyPackageEvent,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (account.client.publishAndConfirm(event, relays)) {
+            manager.confirmKeyPackagePublished(event)
+            return
+        }
+        Log.w("MarmotDbg") { "no relay confirmed KeyPackage ${event.id.take(8)}…; retrying in the background" }
+        account.scope.launch(Dispatchers.IO) {
+            var wait = KEY_PACKAGE_RETRY_FIRST_MS
+            repeat(KEY_PACKAGE_RETRIES) {
+                delay(wait)
+                wait *= 4
+                if (account.client.publishAndConfirm(event, relays)) {
+                    manager.confirmKeyPackagePublished(event)
+                    return@launch
+                }
+            }
+            Log.w("MarmotDbg") { "KeyPackage ${event.id.take(8)}… was never confirmed by a relay" }
         }
     }
 
@@ -633,7 +752,9 @@ class AccountMarmotActions(
             "publishMarmotKeyPackage: signed kind:${event.kind} id=${event.id.take(8)}… authored=${event.pubKey.take(8)}…"
         }
         account.cache.justConsumeMyOwnEvent(event)
-        account.client.publish(event, relays)
+        // A fresh mint can displace an earlier bundle in the same slot, so the
+        // confirmation starts that bundle's grace period like a rotation does.
+        publishKeyPackage(manager, event, relays)
         // Same as the rotation path: we have just changed who owns the newest
         // KeyPackage, so any cached answer is stale by construction.
         lastOwnerCheck = null
@@ -680,6 +801,16 @@ class AccountMarmotActions(
                 "ensureMarmotKeyPackagePublished: hasActiveKeyPackages=$hasBundle for ${account.signer.pubKey.take(8)}…"
             }
             if (hasBundle) {
+                // A KeyPackage minted by an older release advertises fewer app
+                // components than this one supports. Replace it, so an inviter
+                // can add us to a group that requires a newly supported one
+                // (`foundation/key-packages.md`).
+                val relays = keyPackagePublishRelays()
+                manager.replaceStaleKeyPackages(relays.toList()).forEach { event ->
+                    Log.d("MarmotDbg") { "ensureMarmotKeyPackagePublished: replacing stale KeyPackage → ${event.id.take(8)}…" }
+                    account.cache.justConsumeMyOwnEvent(event)
+                    publishKeyPackage(manager, event, relays)
+                }
                 return
             }
             Log.d("MarmotDbg") {
@@ -689,6 +820,29 @@ class AccountMarmotActions(
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w("MarmotDbg", "ensureMarmotKeyPackagePublished failed: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Keep this device's leaf in every group advertising every app component
+     * the client supports (`app-components/README.md`, "Advertising support").
+     * The manager delays each refresh by a random amount within a window of
+     * hours, so a new release does not make a whole group commit at once; this
+     * loop only gives it a clock. Runs until [account]'s scope is cancelled.
+     */
+    suspend fun runMarmotLeafRefreshLoop() {
+        while (currentCoroutineContext().isActive) {
+            val manager = account.marmotManager ?: return
+            if (account.isWriteable()) {
+                try {
+                    val refreshed = manager.refreshStaleLeaves()
+                    if (refreshed.isNotEmpty()) Log.d("MarmotDbg") { "refreshed our leaf in ${refreshed.size} group(s)" }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.w("MarmotDbg", "leaf refresh pass failed", e)
+                }
+            }
+            delay(LEAF_REFRESH_CHECK_INTERVAL_MS)
         }
     }
 
@@ -891,6 +1045,7 @@ class AccountMarmotActions(
         // (which holds them weakly) can GC them, and the Notification feed
         // (which iterates account.marmotGroupList.rooms) stops surfacing the group.
         account.marmotGroupList.removeGroup(nostrGroupId)
+        emojiUploads.forget(nostrGroupId)
         account.client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -914,6 +1069,7 @@ class AccountMarmotActions(
         account.marmotManager?.resetAllState()
         for (groupId in account.marmotGroupList.allGroupIds()) {
             account.marmotGroupList.removeGroup(groupId)
+            emojiUploads.forget(groupId)
         }
     }
 
@@ -1151,4 +1307,395 @@ class AccountMarmotActions(
         // admin badges keep the pre-commit admin list until our own echo or a restart.
         manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))
     }
+
+    // ---- Encrypted custom emoji, polls (MDK 0.11/0.12 interop) --------------
+
+    /**
+     * Where custom-emoji images are fetched from and their ciphertext uploaded
+     * to. Set by the platform; null keeps the old public-URL emoji behaviour.
+     */
+    var emojiMediaPort: MarmotEmojiMediaPort? = null
+
+    /**
+     * Pack pictures already downloaded, by URL: a pack is a handful of small images used over and
+     * over, so each is fetched once. Bounded by bytes; the port caps every download.
+     */
+    private val emojiImages =
+        object : LruCache<String, MarmotEmojiMediaPort.Image>(EMOJI_IMAGE_CACHE_BYTES) {
+            override fun sizeOf(
+                key: String,
+                value: MarmotEmojiMediaPort.Image,
+            ) = value.bytes.size
+        }
+
+    private val emojiUploads = MarmotEmojiUploadCache()
+
+    /**
+     * Encrypt the picture of [emoji] as an `encrypted-media-v2` attachment of
+     * [nostrGroupId] and upload it, the way MDK sends a custom emoji: the
+     * picture travels as ciphertext and the group sees only the reference.
+     *
+     * Encrypted under the current epoch's media key, which [AttachedEmoji.epoch] names: the message
+     * carrying it must go out pinned to that epoch (see [sendMarmotGroupMessage]).
+     * Returns null when the platform has no port, the image cannot be fetched,
+     * or no blob server takes it.
+     */
+    suspend fun encryptMarmotCustomEmoji(
+        nostrGroupId: HexKey,
+        emoji: EmojiUrlTag,
+    ): AttachedEmoji? {
+        val manager = account.marmotManager ?: return null
+        val port = emojiMediaPort ?: return null
+        return try {
+            val key = manager.mediaUploadKey(nostrGroupId) ?: return null
+            emojiUploads.get(nostrGroupId, key.epoch, emoji.url)?.let { return AttachedEmoji(it, key.epoch) }
+            val image = emojiImages[emoji.url] ?: port.download(emoji.url)?.also { emojiImages.put(emoji.url, it) } ?: return null
+            val mediaType =
+                image.contentType
+                    ?.substringBefore(';')
+                    ?.trim()
+                    ?.let { MarmotMediaType.canonicalize(it) }
+                    ?.takeIf { it.startsWith("image/") }
+                    ?: mediaTypeFromUrl(emoji.url)
+                    ?: return null
+            val filename = emojiFilename(emoji.code, mediaType)
+            val sealed = EncryptedMediaV2.encrypt(image.bytes, key.mediaSecret, mediaType, filename)
+            val url = port.uploadCiphertext(sealed.ciphertext) ?: return null
+            val reference =
+                EncryptedMediaReferenceV2(
+                    locators = listOf(MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, url)),
+                    ciphertextSha256 = sealed.ciphertextSha256,
+                    plaintextSha256 = sealed.plaintextSha256,
+                    nonce = sealed.nonce,
+                    mediaType = mediaType,
+                    filename = filename,
+                )
+            emojiUploads.remember(nostrGroupId, key.epoch, emoji.url, reference)
+            AttachedEmoji(reference, key.epoch)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("MarmotDbg", "encryptMarmotCustomEmoji: could not attach :${emoji.code}: in ${nostrGroupId.take(8)}", e)
+            null
+        }
+    }
+
+    /**
+     * [rumor] (a kind:9 or kind:7 Marmot payload) with every custom emoji in
+     * [emojis] attached MDK's way: one `imeta` per picture, and an `emoji` tag
+     * naming it by the reference's first locator. An emoji whose picture could
+     * not be attached is left out, so its `:shortcode:` shows as text rather
+     * than pointing receivers at a URL they must never fetch.
+     *
+     * Every picture is encrypted under one epoch, returned with the payload: send it pinned to
+     * that epoch. A commit that lands while the pictures upload leaves them behind, so they are
+     * attached again, once, under the new one.
+     */
+    suspend fun withEncryptedCustomEmoji(
+        nostrGroupId: HexKey,
+        rumor: Event,
+        emojis: List<EmojiUrlTag>,
+        /**
+         * A cap on all of the event's tags, for kinds MDK bounds that way (a poll: MarmotPolls.MAX_TAGS).
+         * Null applies a message's limits on its extra tags.
+         */
+        maxTotalTags: Int? = null,
+        /** Called when at least one emoji could not be attached and goes out as text. */
+        onEmojiNotAttached: () -> Unit = {},
+    ): PinnedRumor {
+        if (emojis.isEmpty()) return PinnedRumor(rumor, null)
+        val distinct = emojis.distinctBy { it.code }
+        val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
+        // Only as many as the tag count can take, before any download or upload: a poll spends two
+        // tags per emoji (imeta + emoji), a message's limit counts the emoji tags alone.
+        val room = if (maxTotalTags != null) (maxTotalTags - base.size) / 2 else MarmotCustomEmoji.MAX_MESSAGE_TAGS - base.size
+        val wanted = distinct.take(room.coerceAtLeast(0))
+
+        // In parallel: each one is a download and an upload, and one slow host should not
+        // hold the others back.
+        suspend fun attachAll() =
+            coroutineScope {
+                wanted
+                    .map { emoji -> async { encryptMarmotCustomEmoji(nostrGroupId, emoji)?.let { emoji.code to it } } }
+                    .awaitAll()
+                    .filterNotNull()
+            }
+
+        var attached = attachAll()
+        if (attached.any { (_, it) -> it.epoch != currentMarmotEpoch(nostrGroupId) }) attached = attachAll()
+        // Still split after a second try (commits in a row): keep the newest epoch's, the only
+        // ones a send can still carry.
+        val epoch = attached.maxOfOrNull { (_, it) -> it.epoch }
+        val kept = attached.filter { (_, it) -> it.epoch == epoch }
+
+        val imetas = kept.map { (_, it) -> it.reference.toImetaTag() }
+        val emojiTags =
+            kept.map { (code, it) ->
+                arrayOf(
+                    MarmotCustomEmoji.TAG_EMOJI,
+                    code,
+                    it.reference.locators
+                        .first()
+                        .value,
+                )
+            }
+        // MDK refuses to SEND past its limits on a message's extra tags (the
+        // imeta rows are counted apart), and so must we, or a peer that one day
+        // enforces them on receive drops the message.
+        val fits =
+            if (maxTotalTags != null) {
+                imetas.size + emojiTags.size + base.size <= maxTotalTags
+            } else {
+                MarmotCustomEmoji.withinTagLimits(emojiTags + base)
+            }
+        if (kept.size < distinct.size || (!fits && kept.isNotEmpty())) onEmojiNotAttached()
+        val tags = if (fits) imetas + emojiTags + base else base
+        val template = EventTemplate<Event>(rumor.createdAt, rumor.kind, tags.toTypedArray(), rumor.content)
+        return PinnedRumor(RumorAssembler.assembleRumor(account.signer.pubKey, template), if (fits) epoch else null)
+    }
+
+    /**
+     * React to a Marmot message, carrying a custom emoji as an encrypted
+     * attachment of the reaction (MDK's `reactWithMedia`): `e` names the
+     * target, then the `imeta`, then the `emoji` tag. Anything that is not a
+     * custom emoji, or a custom emoji that cannot be attached, takes the
+     * ordinary [reactToMarmotMessage] path.
+     */
+    suspend fun reactToMarmotMessageWithMedia(
+        nostrGroupId: HexKey,
+        target: Note,
+        reaction: String,
+        /** Called when the custom emoji could not be attached and the reaction goes out as text. */
+        onEmojiNotAttached: () -> Unit = {},
+    ) {
+        val shortcode = MarmotCustomEmoji.reactionShortcode(reaction)
+        val targetEvent = target.event
+        if (shortcode == null || emojiMediaPort == null || targetEvent == null || account.marmotManager == null) {
+            reactToMarmotMessage(nostrGroupId, target, reaction)
+            return
+        }
+        if (target.reactionsOfAuthorLike(account.userProfile(), reaction).isNotEmpty()) return
+        // The picture comes from the account's own packs, by shortcode. The URL in [reaction] may be
+        // another member's ciphertext (a chip tapped) or any URL a peer wrote, and is never fetched.
+        val emoji = account.emoji.findEmojiTags(shortcode).firstOrNull()
+        var attached = emoji?.let { encryptMarmotCustomEmoji(nostrGroupId, it) }
+        // Left behind by a commit during the upload: attach again under the new epoch, once.
+        if (emoji != null && attached != null && attached.epoch != currentMarmotEpoch(nostrGroupId)) attached = encryptMarmotCustomEmoji(nostrGroupId, emoji)
+        if (emoji == null || attached == null) {
+            // As text: the bare shortcode carries no emoji tag, so no receiver fetches a public URL.
+            onEmojiNotAttached()
+            reactToMarmotMessage(nostrGroupId, target, shortcode)
+            return
+        }
+        val tags =
+            arrayOf(
+                arrayOf("e", targetEvent.id),
+                attached.reference.toImetaTag(),
+                arrayOf(
+                    MarmotCustomEmoji.TAG_EMOJI,
+                    emoji.code,
+                    attached.reference.locators
+                        .first()
+                        .value,
+                ),
+            )
+        val template = EventTemplate<Event>(TimeUtils.now(), REACTION_KIND, tags, ":${emoji.code}:")
+        val rumor = RumorAssembler.assembleRumor<Event>(account.signer.pubKey, template)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId), attached.epoch)
+    }
+
+    private fun currentMarmotEpoch(nostrGroupId: HexKey): Long? =
+        account.marmotManager
+            ?.groupManager
+            ?.getGroup(nostrGroupId)
+            ?.epoch
+
+    /**
+     * Build a Marmot poll (kind 1068) for [nostrGroupId], or null when the input
+     * breaks MDK's profile ([MarmotPolls.pollTags]). Returned rather than sent,
+     * so the caller shows it through the usual show-then-publish path.
+     */
+    suspend fun buildMarmotPoll(
+        question: String,
+        options: List<String>,
+        type: MarmotPolls.PollType,
+        endsAt: Long?,
+        /** The accounts the question and options mention, `p`-tagged as a message tags them. */
+        mentions: List<PTag> = emptyList(),
+    ): Event? {
+        val createdAt = TimeUtils.now()
+        val tags = MarmotPolls.pollTags(createdAt, question, options, type, endsAt) ?: return null
+        // MDK ignores tags a poll does not define, within MAX_TAGS in all. A mention past that
+        // still reads as a link in the text; it just notifies no one.
+        val room = (MarmotPolls.MAX_TAGS - tags.size).coerceAtLeast(0)
+        val pTags = mentions.distinctBy { it.pubKey }.take(room).map { it.toTagArray() }
+        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL, tags + pTags, question)
+        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
+    }
+
+    /**
+     * Build a vote (kind 1018) on [poll] choosing [optionIds], or null when the
+     * poll is closed, invalid, or the selection does not fit it. A vote is the
+     * voter's complete selection, replacing any earlier one.
+     */
+    suspend fun buildMarmotPollVote(
+        poll: Event,
+        optionIds: List<String>,
+    ): Event? {
+        val definition = MarmotPolls.parsePoll(poll) ?: return null
+        val createdAt = TimeUtils.now()
+        if (!MarmotPolls.isValidResponse(definition, createdAt, optionIds)) return null
+        val tags = MarmotPolls.responseTags(poll.id, optionIds) ?: return null
+        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL_RESPONSE, tags, "")
+        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
+    }
+
+    /**
+     * Report [target], a message in [nostrGroupId], to the group's members for [type] (a kind
+     * 1984 inside the group, `features/content-moderation.md`). Every member sees the report
+     * and who sent it. NIP-56 reasons MDK does not read go as "other", with the reason kept as
+     * the explanation when there is none, so White Noise still counts the report.
+     */
+    suspend fun reportMarmotMessage(
+        nostrGroupId: HexKey,
+        target: Note,
+        type: ReportType,
+        explanation: String,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        val targetEvent = target.event ?: return false
+        val reason = MarmotReport.Reason.parse(type.code) ?: MarmotReport.Reason.OTHER
+        val text = if (explanation.isBlank() && reason.code != type.code) type.code else explanation
+        val rumor = manager.buildReportRumor(targetEvent, reason, text)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
+    }
+
+    /**
+     * Dismiss [reportIds], reports in [nostrGroupId], as a group admin (a kind-1985 label inside
+     * the group). False when this account is not an admin now or there is nothing to dismiss.
+     */
+    suspend fun dismissMarmotReports(
+        nostrGroupId: HexKey,
+        reportIds: List<HexKey>,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!manager.isGroupAdmin(nostrGroupId)) return false
+        val rumor = manager.buildReportDismissalRumor(reportIds.take(MarmotReportDismissal.MAX_REPORTS), "") ?: return false
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
+    }
+
+    /**
+     * Vote for [optionIds] on [poll] in [nostrGroupId], replacing any earlier vote. The options go
+     * out in the poll's own order, so the same choice is always the same tags. False when the
+     * poll is closed or the selection does not fit it.
+     */
+    suspend fun respondToMarmotPoll(
+        nostrGroupId: HexKey,
+        poll: Event,
+        optionIds: Set<String>,
+    ): Boolean {
+        val ordered =
+            MarmotPolls
+                .parsePoll(poll)
+                ?.options
+                ?.map { it.id }
+                ?.filter { it in optionIds } ?: return false
+        val vote = buildMarmotPollVote(poll, ordered) ?: return false
+        sendMarmotGroupMessage(nostrGroupId, vote, marmotGroupRelays(nostrGroupId))
+        return true
+    }
+
+    private fun mediaTypeFromUrl(url: String): String? =
+        when (url.substringBefore('?').substringAfterLast('.', "").lowercase()) {
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "avif" -> "image/avif"
+            "svg" -> "image/svg+xml"
+            else -> null
+        }
+
+    private fun emojiFilename(
+        code: String,
+        mediaType: String,
+    ): String {
+        val ext =
+            when (mediaType) {
+                "image/jpeg" -> "jpg"
+                "image/svg+xml" -> "svg"
+                else -> mediaType.substringAfter('/').substringBefore('+')
+            }
+        val safe = code.filter { it.isLetterOrDigit() || it == '_' || it == '-' }.ifEmpty { "emoji" }.take(200)
+        return "$safe.$ext"
+    }
+
+    companion object {
+        /**
+         * [target], when an authorized admin removal in [nostrGroupId] may drop it from the cache:
+         * only a chat message of that same group. Null for anything else, a message of another
+         * group or a public note included.
+         */
+        fun groupMessageToRemove(
+            groups: MarmotGroupList,
+            nostrGroupId: HexKey,
+            target: Note?,
+        ): Note? = target?.takeIf { it.event?.kind == ChatEvent.KIND && groups.isInGroup(nostrGroupId, it) }
+
+        private const val REACTION_KIND = 7
+
+        /** How often the leaf-refresh loop asks whether a delayed refresh is due: 30 minutes. */
+        private const val LEAF_REFRESH_CHECK_INTERVAL_MS = 30L * 60 * 1000
+
+        // Retries of an unconfirmed KeyPackage publish: after 30 s, 2 min, 8 min and 32 min.
+        private const val KEY_PACKAGE_RETRY_FIRST_MS = 30_000L
+        private const val KEY_PACKAGE_RETRIES = 4
+
+        fun indexMarmotInnerEvent(
+            cache: EventCache,
+            innerEvent: Event,
+        ): IndexedInnerEvent {
+            val isEdit = innerEvent.kind == MarmotAppEvent.KIND_EDIT
+            val innerNote = cache.getOrCreateNote(innerEvent.id)
+            // A message deleted on an earlier pass stays deleted. Relays replay its kind:445 after
+            // a restart, the cache refuses the event, and loading it below anyway brought it back.
+            if (innerNote.event == null && cache.deletionIndex.hasBeenDeleted(innerEvent)) {
+                return IndexedInnerEvent(innerNote, false)
+            }
+            // wasVerified=true: MIP-03 inner events are unsigned rumors; MLS authenticated the sender.
+            // For an edit, "new" is whether its note was empty — which also decides whether it is
+            // persisted, so an edit is kept in the local log and survives a restart.
+            val isNew = if (isEdit) innerNote.event == null else cache.justConsume(innerEvent, null, true)
+            if (isNew || innerNote.event == null) {
+                // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
+                // message's, and only loadEvent sets it.
+                innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
+            }
+
+            // The overlay's rules (author-only, latest wins) are applied at render time by
+            // `Note.latestMarmotEdit`: the target's author may not be known yet.
+            if (isEdit) {
+                MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
+                    cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
+                }
+            }
+            return IndexedInnerEvent(innerNote, isNew)
+        }
+    }
 }
+
+/** A custom emoji's picture attached to a group message, and the epoch whose media key encrypted it. */
+class AttachedEmoji(
+    val reference: EncryptedMediaReferenceV2,
+    val epoch: Long,
+)
+
+/** A Marmot payload ready to send, and the epoch its attachments were encrypted in; null when it has none. */
+class PinnedRumor(
+    val rumor: Event,
+    val epoch: Long?,
+)
+
+/** Pack pictures kept in memory for re-sending, in bytes. */
+private const val EMOJI_IMAGE_CACHE_BYTES = 4 * 1024 * 1024

@@ -122,6 +122,7 @@ fun NoteDropDownMenu(
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
+    var removeForEveryoneConfirming by remember { mutableStateOf(false) }
 
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
@@ -189,6 +190,15 @@ fun NoteDropDownMenu(
         )
     }
 
+    if (removeForEveryoneConfirming) {
+        RemoveForEveryoneConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { removeForEveryoneConfirming = false },
+            onRemoved = onDismiss,
+        )
+    }
+
     val handlers =
         NoteActionHandlers(
             // The Share options sit in the menu itself, as a submenu like Copy.
@@ -206,6 +216,7 @@ fun NoteDropDownMenu(
                 }
             },
             onConcordBan = { concordBanConfirming = true },
+            onRemoveForEveryone = { removeForEveryoneConfirming = true },
             onDismiss = onDismiss,
         )
 

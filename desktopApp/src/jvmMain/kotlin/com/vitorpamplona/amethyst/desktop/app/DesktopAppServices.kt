@@ -71,6 +71,8 @@ class DesktopAppServices(
 
     override val torStatus: Flow<TorServiceStatus> get() = modules.torManager.status
 
+    override val torStuck: Flow<Boolean> get() = modules.torManager.stuck
+
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = modules.drawerSectionCollapsePrefs
 
     override val paneWidthPrefs: PaneWidthPreferences get() = modules.paneWidthPrefs

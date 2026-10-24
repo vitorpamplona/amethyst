@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.latestMarmotEdit
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupChatroom
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.utils.ChatFileUploadState
@@ -65,8 +67,14 @@ open class MarmotNewMessageViewModel : ViewModel() {
 
     var uploadState by mutableStateOf<ChatFileUploadState?>(null)
     var userSuggestions: UserSuggestionState? = null
+    var emojiSuggestions: EmojiSuggestionState? = null
 
     open fun init(accountVM: AccountViewModel) {
+        // Called from the chat screen's composable body, so on every recomposition. Re-running the
+        // setup would swap the suggestion states under the composer and reset an upload in flight;
+        // only an account change needs it.
+        if (::accountViewModel.isInitialized && this.accountViewModel === accountVM) return
+
         this.accountViewModel = accountVM
         this.account = accountVM.account
 
@@ -77,6 +85,9 @@ open class MarmotNewMessageViewModel : ViewModel() {
                 accountVM.nip05ClientBuilder(),
                 priorityPubkeys = { chatroom?.members?.value?.mapTo(mutableSetOf()) { it.pubkey } ?: emptySet() },
             )
+
+        this.emojiSuggestions?.reset()
+        this.emojiSuggestions = EmojiSuggestionState(accountVM.account.emoji)
 
         this.uploadState = ChatFileUploadState(account.settings.defaultFileServer, account.settings.stripLocationOnUpload)
     }
@@ -129,7 +140,17 @@ open class MarmotNewMessageViewModel : ViewModel() {
             } else {
                 userSuggestions?.reset()
             }
+            emojiSuggestions?.processCurrentWord(lastWord)
         }
+    }
+
+    /**
+     * Completes the word under the cursor with the emoji's `:shortcode:`. Both picks of the
+     * shared list land here: the send path attaches the picture encrypted, so the emoji's public
+     * URL is never put in the message, where members would have to fetch it.
+     */
+    fun autocompleteWithEmoji(item: EmojiPackState.EmojiMedia) {
+        emojiSuggestions?.autocompleteInto(message, item)
     }
 
     fun autocompleteWithUser(item: User) {
@@ -149,7 +170,8 @@ open class MarmotNewMessageViewModel : ViewModel() {
      *
      * Returns once the message is on screen, not once it has been published:
      * encryption and the relay hand-off run on the account scope and report
-     * themselves on the bubble. Only a failure to even build the message
+     * themselves on the bubble. A message with custom emoji appears once its
+     * pictures are uploaded, which also runs on the account scope. Only a failure to even build the message
      * throws here — anything later shows up as a failed bubble the user can
      * retry, so the composer is free to clear as soon as this returns.
      */
@@ -164,6 +186,7 @@ open class MarmotNewMessageViewModel : ViewModel() {
             editingMessage.value = null
             onUiThread { message.clearText() }
             userSuggestions?.reset()
+            emojiSuggestions?.reset()
             return
         }
 
@@ -171,7 +194,8 @@ open class MarmotNewMessageViewModel : ViewModel() {
         // doesn't race a user-cleared reply state.
         val parentEvent = replyTo.value?.event
 
-        accountViewModel.sendMarmotGroupMessage(
+        // Custom emoji travel as encrypted pictures of the message (MDK 0.12+).
+        accountViewModel.sendMarmotGroupMessageWithCustomEmoji(
             nostrGroupId = groupId,
             text = text,
             replyToInnerEventId = parentEvent?.id,
@@ -181,5 +205,6 @@ open class MarmotNewMessageViewModel : ViewModel() {
         onUiThread { message.clearText() }
         replyTo.value = null
         userSuggestions?.reset()
+        emojiSuggestions?.reset()
     }
 }

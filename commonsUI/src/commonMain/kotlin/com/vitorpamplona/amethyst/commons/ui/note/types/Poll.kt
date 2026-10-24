@@ -61,6 +61,7 @@ import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -77,11 +78,16 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.TallyResults
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.poll_change_vote
 import com.vitorpamplona.amethyst.commons.resources.poll_results_vote_count_link
 import com.vitorpamplona.amethyst.commons.resources.poll_submit
+import com.vitorpamplona.amethyst.commons.resources.poll_unsupported
 import com.vitorpamplona.amethyst.commons.resources.poll_view_results
+import com.vitorpamplona.amethyst.commons.resources.poll_vote
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -89,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.rememberMarmotRenderTags
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
@@ -125,6 +132,19 @@ fun RenderPoll(
 ) {
     val noteEvent = note.event as? PollEvent ?: return
 
+    // A room that holds this poll may read polls more strictly than NIP-88. One that breaks its
+    // rules must not be shown as if it could be answered: members of the room would disagree.
+    val room = remember(note) { note.roomFor(accountViewModel.account) }
+    val accepted = remember(room, noteEvent) { room == null || room.acceptsPoll(noteEvent) }
+    if (!accepted) {
+        Text(
+            text = stringRes(Res.string.poll_unsupported),
+            fontStyle = FontStyle.Italic,
+            color = MaterialTheme.colorScheme.placeholderText,
+        )
+        return
+    }
+
     // A boosted note inside a zap/nutzap/onchain activity card is always shown as a
     // compact 2-line preview, even when the logged-in user is only a zap-split
     // beneficiary (and thus not the author) of the post being zapped.
@@ -156,7 +176,9 @@ fun InnerRenderPoll(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    val ownTags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    // In a Marmot group an emoji tag names an attachment, never a URL to fetch as is.
+    val tags = rememberMarmotRenderTags(note, accountViewModel) ?: ownTags
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(
@@ -177,6 +199,7 @@ fun InnerRenderPoll(
 
         RenderPollCard(
             event = event,
+            pollNote = note,
             pollState = note.pollState(),
             accountViewModel = accountViewModel,
             footerContent = { if (!makeItShort) PollResultsLink(note, nav) },
@@ -251,6 +274,10 @@ class PollCard(
     val isMyPoll: Boolean = false,
     val haveIVotedFlow: Flow<Boolean>,
     val haveIVoted: () -> Boolean,
+    /** Whether the author may vote in their own poll. Amethyst's public polls say no; a room may say yes. */
+    val authorMayVote: Boolean = false,
+    /** The options the reader's counted vote picks, to start a vote change from. */
+    val mySelection: () -> Set<String> = { emptySet() },
 ) {
     fun hasEnded() = endsAt != null && endsAt < TimeUtils.now()
 }
@@ -266,6 +293,7 @@ class PollItemCard(
 @Composable
 fun RenderPollCard(
     event: PollEvent,
+    pollNote: Note,
     pollState: PollResponsesCache,
     accountViewModel: AccountViewModel,
     galleryUser: @Composable RowScope.(user: User) -> Unit,
@@ -303,17 +331,16 @@ fun RenderPollCard(
                 haveIVoted = {
                     pollState.hasPubKeyVoted(accountViewModel.account.userProfile())
                 },
+                authorMayVote = pollNote.roomFor(accountViewModel.account)?.pollAuthorMayVote() == true,
+                mySelection = { pollState.selectionOf(accountViewModel.account.userProfile()) },
             )
         }
 
     RenderPollCard(
         card = card,
         noteId = event.id,
-        onRespond = { responses ->
-            accountViewModel.launchSigner {
-                accountViewModel.account.pollRespond(event, responses)
-            }
-        },
+        // The poll's room, when it has one, carries the vote; otherwise it is a public response.
+        onRespond = { responses -> accountViewModel.respondToPoll(pollNote, responses) },
         onViewResults = { accountViewModel.markPollResultsViewed(event.id, event.endsAt()) },
         hasViewedResults = { accountViewModel.hasViewedPollResults(event.id) },
         resultContent = galleryUser,
@@ -333,31 +360,46 @@ fun RenderPollCard(
     footerContent: @Composable () -> Unit = {},
     labelContent: @Composable ColumnScope.(code: String, label: String) -> Unit,
 ) {
+    var changingVote by remember(card) { mutableStateOf(false) }
+    val respond: (Set<String>) -> Unit = {
+        changingVote = false
+        onRespond(it)
+    }
+    val canVote = !card.isMyPoll || card.authorMayVote
+    // NIP-88 counts a voter's latest response, so an open poll lets anyone who may vote change theirs.
+    val startVote: (() -> Unit)? = if (canVote && !card.hasEnded()) ({ changingVote = true }) else null
+
     Column(
         verticalArrangement = SpacedBy5dp,
     ) {
-        if (card.isMyPoll) {
+        if (changingVote) {
+            RenderOptions(card, labelContent, respond, initial = card.mySelection())
+            // Keeping the vote as it is must not take casting another one.
+            Text(
+                text = stringRes(Res.string.cancel),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { changingVote = false }.padding(vertical = 4.dp),
+            )
+        } else if (!canVote) {
             RenderResults(card, resultContent, footerContent, labelContent)
         } else {
             val haveIVoted = card.haveIVoted()
             if (haveIVoted) {
-                RenderResults(card, resultContent, footerContent, labelContent)
+                RenderResults(card, resultContent, footerContent, labelContent, startVote, hasVoted = true)
             } else {
                 // waits for vote
                 val haveIVoted by card.haveIVotedFlow.collectAsStateWithLifecycle(haveIVoted)
                 if (haveIVoted) {
-                    RenderResults(card, resultContent, footerContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent, startVote, hasVoted = true)
                 } else if (card.hasEnded() || hasViewedResults()) {
-                    RenderResults(card, resultContent, footerContent, labelContent)
+                    RenderResults(card, resultContent, footerContent, labelContent, startVote, hasVoted = false)
                 } else {
                     var viewingResults by remember { mutableStateOf(false) }
                     if (viewingResults) {
-                        RenderResults(card, resultContent, footerContent, labelContent)
+                        RenderResults(card, resultContent, footerContent, labelContent, startVote, hasVoted = false)
                     } else {
-                        when (card.type) {
-                            PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
-                            PollType.MULTI_CHOICE -> RenderMultiChoiceOptions(card, labelContent, onRespond)
-                        }
+                        RenderOptions(card, labelContent, respond)
 
                         Text(
                             text = stringRes(Res.string.poll_view_results),
@@ -374,6 +416,19 @@ fun RenderPollCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ColumnScope.RenderOptions(
+    card: PollCard,
+    labelContent: @Composable (ColumnScope.(String, String) -> Unit),
+    onRespond: (Set<String>) -> Unit,
+    initial: Set<String> = emptySet(),
+) {
+    when (card.type) {
+        PollType.SINGLE_CHOICE -> RenderSingleChoiceOptions(card, labelContent, onRespond)
+        PollType.MULTI_CHOICE -> RenderMultiChoiceOptions(card, labelContent, onRespond, initial)
     }
 }
 
@@ -422,10 +477,11 @@ private fun ColumnScope.RenderMultiChoiceOptions(
     card: PollCard,
     labelContent: @Composable (ColumnScope.(String, String) -> Unit),
     onRespond: (Set<String>) -> Unit,
+    initial: Set<String>,
 ) {
     var multichoice by
         remember {
-            mutableStateOf<Set<String>>(emptySet())
+            mutableStateOf(initial)
         }
 
     card.options.forEach { option ->
@@ -480,6 +536,8 @@ private fun RenderResults(
     resultContent: @Composable RowScope.(user: User) -> Unit,
     footerContent: @Composable () -> Unit,
     labelContent: @Composable (ColumnScope.(code: String, label: String) -> Unit),
+    onVote: (() -> Unit)? = null,
+    hasVoted: Boolean = false,
 ) {
     val showGallery =
         remember(card) {
@@ -492,6 +550,15 @@ private fun RenderResults(
         RenderClosedItem(pollItem, showGallery, resultContent) {
             labelContent(pollItem.code, pollItem.label)
         }
+    }
+
+    if (onVote != null) {
+        Text(
+            text = stringRes(if (hasVoted) Res.string.poll_change_vote else Res.string.poll_vote),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable(onClick = onVote).padding(vertical = 4.dp),
+        )
     }
 
     footerContent()

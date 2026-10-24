@@ -89,6 +89,10 @@ object AndroidAppServices : AppServices {
                 }
             }
 
+    // The failure the 60s Tor dialog shows. It already measures across the self-heal restarts,
+    // which pass through Off and would restart a plain timer on the status.
+    override val torStuck: Flow<Boolean> get() = Amethyst.instance.torManager.connectionFailure
+
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = Amethyst.instance.drawerSectionCollapsePrefs
 
     override val paneWidthPrefs: PaneWidthPreferences get() = Amethyst.instance.paneWidthPrefs

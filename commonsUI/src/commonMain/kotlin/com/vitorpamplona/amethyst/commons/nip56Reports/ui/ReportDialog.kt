@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import kotlinx.collections.immutable.toImmutableList
+import org.jetbrains.compose.resources.StringResource
 
 /** The NIP-56 reasons the dialog offers, in display order, with their labels. */
 private val ReportReasons =
@@ -107,6 +108,8 @@ fun ReportDialog(
     onBlock: () -> Unit,
     onReport: (reason: ReportType, additionalReason: String) -> Unit,
     onDismiss: () -> Unit,
+    /** Who will see the report: everyone by default, or only the members of the message's group. */
+    reminder: StringResource = Res.string.report_dialog_reminder_public,
 ) {
     val labels = ReportReasons.map { stringRes(it.second) }
     // Keyed on the labels so a locale change while the dialog is open relabels the spinner;
@@ -158,7 +161,7 @@ fun ReportDialog(
                 SpacerH16()
                 SectionHeader(text = stringRes(Res.string.report_dialog_report_btn))
                 SpacerH16()
-                Text(stringRes(Res.string.report_dialog_reminder_public))
+                Text(stringRes(reminder))
                 SpacerH16()
                 TextSpinner(
                     label = stringRes(Res.string.report_dialog_select_reason_label),

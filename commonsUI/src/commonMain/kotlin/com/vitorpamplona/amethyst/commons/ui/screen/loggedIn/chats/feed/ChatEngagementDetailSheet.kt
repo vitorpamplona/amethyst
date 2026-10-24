@@ -91,6 +91,7 @@ fun ChatEngagementDetailSheet(
         remember(reactionsState) {
             buildReactionEntries(reactionsState?.note ?: baseNote)
         }
+    val marmotEmoji = rememberMarmotReactionEmoji(baseNote, reactionsState?.note ?: baseNote, accountViewModel)
 
     val zaps by
         produceState<ImmutableList<ZapAmountCommentNotification>>(initialValue = persistentListOf(), baseNote) {
@@ -113,7 +114,7 @@ fun ChatEngagementDetailSheet(
             }
 
             reactionEntries.forEach { entry ->
-                ReactorRow(entry, accountViewModel, nav, onDismiss)
+                ReactorRow(entry, marmotEmoji?.glyphFor(entry.reactionType) ?: entry.reactionType, accountViewModel, nav, onDismiss)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -172,6 +173,7 @@ private fun ZapperRow(
 @Composable
 private fun ReactorRow(
     entry: ReactionEntry,
+    glyph: String,
     accountViewModel: AccountViewModel,
     nav: INav,
     onDismiss: () -> Unit,
@@ -183,7 +185,7 @@ private fun ReactorRow(
         nav = nav,
         onDismiss = onDismiss,
     ) {
-        ChipReactionGlyph(entry.reactionType)
+        ChipReactionGlyph(glyph)
     }
 }
 

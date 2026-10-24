@@ -1964,6 +1964,13 @@ open class EventCache :
     }
 
     /**
+     * Removes [note] the way a NIP-09 delete does, for a removal that no kind:5 carries: a
+     * Marmot admin deletion (kind 4891) or an expired disappearing message. Dropping it from
+     * its chatroom alone left it in every other feed that held it, such as notifications.
+     */
+    fun removeLocally(note: Note) = deleteNote(note)
+
+    /**
      * Removes the envelope notes that delivered [rumorNote]'s rumor: its
      * host (normally the kind-1059 wrap; a bare kind-13 seal otherwise)
      * and, when the host is a wrap, the seal layer it carried. Public

@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.commons.model.concord
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Channel
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.rooms.MessageRoom
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityState
@@ -47,7 +50,28 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 @Stable
 class ConcordChannel(
     val channelId: ConcordChannelId,
-) : Channel() {
+) : Channel(),
+    MessageRoom {
+    /** Reactions and deletions go on the channel's own plane (CORD-01), sealed to the community. */
+    override fun isReadBy(account: Account): Boolean = account.concordSessions.sessionFor(channelId.communityId) != null
+
+    override suspend fun react(
+        account: Account,
+        target: Note,
+        reaction: String,
+        notices: UserNoticeSink,
+    ): Boolean = account.concord.reactToConcordMessage(target, reaction)
+
+    override suspend fun delete(
+        account: Account,
+        notes: List<Note>,
+    ): Boolean = account.concord.deleteConcordRumors(this, notes)
+
+    override fun canEdit(
+        account: Account,
+        note: Note,
+    ): Boolean = note.event?.let { account.concord.isConcordEditable(it) } == true
+
     /** Channel display name from the folded ChannelMetadata, when known. */
     var channelName: String? = null
         private set

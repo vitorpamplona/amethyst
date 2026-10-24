@@ -29,9 +29,12 @@ import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.RandomAccessFile
 
 /**
  * Test-harness file stores. **Unencrypted** — the production interfaces
@@ -143,6 +146,12 @@ class FileKeyPackageBundleStore(
     }
 }
 
+/** A pubkey or event id, in hex. */
+private const val KEY_HEX_LENGTH = 64
+
+/** A Marmot media key is a 32-byte MLS exporter secret. */
+private const val MEDIA_SECRET_HEX_LENGTH = 64
+
 class FileMarmotMessageStore(
     private val dir: File,
 ) : MarmotMessageStore {
@@ -172,6 +181,9 @@ class FileMarmotMessageStore(
         snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
         expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
         epochRetentionFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch retentions")
+        mediaSecretFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group media keys")
+        epochAdminsFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch admins")
+        verdictsFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group moderation verdicts")
     }
 
     private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
@@ -261,6 +273,114 @@ class FileMarmotMessageStore(
                 epoch to secs
             }?.toMap()
             ?: emptyMap()
+
+    private fun mediaSecretFile(id: String) = File(dir, "$id.media-secrets")
+
+    /** First write wins: an epoch's media key never changes. */
+    override suspend fun recordMediaSecret(
+        nostrGroupId: String,
+        epoch: Long,
+        mediaSecret: ByteArray,
+    ) {
+        // Checked with the parser that loads it: a line a crash cut short is not a record.
+        if (epoch in loadMediaSecrets(nostrGroupId)) return
+        appendRecord(mediaSecretFile(nostrGroupId), "$epoch ${mediaSecret.toHexKey()}")
+    }
+
+    override suspend fun loadMediaSecrets(nostrGroupId: String): Map<Long, ByteArray> =
+        mediaSecretFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.completeRecords()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                if (!parts[1].isHex(MEDIA_SECRET_HEX_LENGTH)) return@mapNotNull null
+                epoch to parts[1].hexToByteArray()
+            }?.toMap()
+            ?: emptyMap()
+
+    private fun epochAdminsFile(id: String) = File(dir, "$id.epoch-admins")
+
+    private fun verdictsFile(id: String) = File(dir, "$id.moderation-verdicts")
+
+    /** First write wins: an epoch's admin set is fixed once it exists. */
+    override suspend fun recordEpochAdmins(
+        nostrGroupId: String,
+        epoch: Long,
+        admins: Set<String>,
+    ) {
+        if (epoch in loadEpochAdmins(nostrGroupId)) return
+        appendRecord(epochAdminsFile(nostrGroupId), "$epoch ${admins.joinToString(",")}")
+    }
+
+    override suspend fun loadEpochAdmins(nostrGroupId: String): Map<Long, Set<String>> =
+        epochAdminsFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.completeRecords()
+            ?.mapNotNull { line ->
+                val epoch = line.substringBefore(' ').toLongOrNull() ?: return@mapNotNull null
+                val admins =
+                    line
+                        .substringAfter(' ', "")
+                        .split(',')
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+                if (admins.any { !it.isHex(KEY_HEX_LENGTH) }) return@mapNotNull null
+                epoch to admins
+            }?.toMap()
+            ?: emptyMap()
+
+    /** First write wins: a deletion's authority is decided once. */
+    override suspend fun recordModerationVerdict(
+        nostrGroupId: String,
+        innerEventId: String,
+        authorized: Boolean,
+    ) {
+        if (innerEventId in loadModerationVerdicts(nostrGroupId)) return
+        appendRecord(verdictsFile(nostrGroupId), "$innerEventId ${if (authorized) 1 else 0}")
+    }
+
+    override suspend fun loadModerationVerdicts(nostrGroupId: String): Map<String, Boolean> =
+        verdictsFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.completeRecords()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2 || !parts[0].isHex(KEY_HEX_LENGTH) || parts[1] !in setOf("0", "1")) return@mapNotNull null
+                parts[0] to (parts[1] == "1")
+            }?.toMap()
+            ?: emptyMap()
+
+    /**
+     * Appends one record line. A crash can leave the last line unterminated: that partial record is
+     * cut off first, since terminating it would turn it into a record that looks whole.
+     */
+    private fun appendRecord(
+        target: File,
+        line: String,
+    ) {
+        if (target.exists() && target.length() > 0 && target.lastByte() != '\n'.code.toByte()) {
+            val text = target.readText()
+            SecureFileIO.writeTextAtomic(target, text.substring(0, text.lastIndexOf('\n') + 1))
+        }
+        SecureFileIO.appendText(target, line + "\n")
+    }
+
+    private fun File.lastByte(): Byte =
+        RandomAccessFile(this, "r").use {
+            it.seek(it.length() - 1)
+            it.readByte()
+        }
+
+    /**
+     * The records [appendRecord] finished: every one ends in a newline, so an unterminated last line
+     * is a write a crash cut short. Parsed, it could still look valid (an admin set missing its
+     * last keys) and, first write wins, would never be corrected.
+     */
+    private fun File.completeRecords(): List<String> = readText().split('\n').dropLast(1)
+
+    private fun String.isHex(length: Int) = this.length == length && all { it in '0'..'9' || it in 'a'..'f' }
 
     private fun epochFile(id: String) = File(dir, "$id.epochs")
 

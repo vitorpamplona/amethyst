@@ -20,16 +20,22 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -77,9 +83,13 @@ fun hasMip04Media(event: Event?): Boolean {
  */
 fun encryptedMediaV2Of(event: Event?): EncryptedMediaReferenceV2? {
     if (event == null) return null
-    return event.tags.firstNotNullOfOrNull { tag ->
-        if (tag.size > 1 && tag[0] == "imeta") EncryptedMediaV2.parseImetaTagOrNull(tag) else null
-    }
+    // Every chat row asks on every recomposition, and almost none has an attachment.
+    if (event.tags.none { it.size > 1 && it[0] == "imeta" }) return null
+    // A custom emoji's picture is an attachment too (MDK 0.12), named by an
+    // `emoji` tag; it is artwork for the text, drawn inline, not the file the
+    // message sends. A message whose only attachments are emoji is text.
+    val emojiArtwork = MarmotCustomEmoji.matchedEmojiAttachments(event).keys
+    return MarmotCustomEmoji.attachments(event).firstOrNull { MarmotCustomEmoji.firstLocator(it) !in emojiArtwork }
 }
 
 fun hasEncryptedMediaV2(event: Event?): Boolean = encryptedMediaV2Of(event) != null
@@ -116,10 +126,12 @@ fun RenderEncryptedMediaV2(
         }
 
     val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
-    val mediaSecret =
-        remember(nostrGroupId) {
-            nostrGroupId?.let { accountViewModel.marmotMediaExporterSecret(it) }
-        }
+    val secretLookup = rememberMessageMediaSecret(note, nostrGroupId, accountViewModel)
+    if (secretLookup is MessageMediaSecret.Loading) {
+        MediaKeyLoadingSpace(reference?.dim)
+        return
+    }
+    val mediaSecret = (secretLookup as? MessageMediaSecret.Found)?.secret
 
     if (reference == null || url == null || mediaSecret == null) {
         RenderDecryptionError(note, bgColor, accountViewModel, nav)
@@ -217,10 +229,12 @@ fun RenderMarmotEncryptedMedia(
 
     // Find the nostrGroupId via the reverse index in MarmotGroupList
     val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
-    val exporterSecret =
-        remember(nostrGroupId) {
-            nostrGroupId?.let { accountViewModel.marmotMediaExporterSecret(it) }
-        }
+    val secretLookup = rememberMessageMediaSecret(note, nostrGroupId, accountViewModel)
+    if (secretLookup is MessageMediaSecret.Loading) {
+        MediaKeyLoadingSpace(mip04Meta.dimensions)
+        return
+    }
+    val exporterSecret = (secretLookup as? MessageMediaSecret.Found)?.secret
 
     if (exporterSecret == null) {
         RenderDecryptionError(note, bgColor, accountViewModel, nav)
@@ -337,11 +351,49 @@ private fun RenderDecryptionError(
     )
 }
 
-/**
- * Finds the Marmot group ID for a note via the reverse index
- * maintained by [MarmotGroupList].
- */
+/** The Marmot group whose room [note] is in, which holds the keys to its media. */
 private fun findGroupIdForNote(
     note: Note,
     accountViewModel: AccountViewModel,
-): String? = accountViewModel.account.marmotGroupList.groupIdForNote(note.idHex)
+): String? = note.marmotGroupIdFor(accountViewModel.account)
+
+/** Where the lookup of a message's media key stands. */
+private sealed interface MessageMediaSecret {
+    data object Loading : MessageMediaSecret
+
+    data object Missing : MessageMediaSecret
+
+    class Found(
+        val secret: ByteArray,
+    ) : MessageMediaSecret
+}
+
+/**
+ * The room the attachment will take while its key is looked up, which is one frame on most
+ * entries. Drawing nothing made every media row grow from 0 dp as it scrolled in, so the list
+ * jumped; an attachment without dimensions has no size to keep.
+ */
+@Composable
+private fun MediaKeyLoadingSpace(dimensions: String?) {
+    val ratio = remember(dimensions) { dimensions?.let { DimensionTag.parse(it) }?.aspectRatioOrNull() } ?: return
+    Box(Modifier.fillMaxWidth().aspectRatio(ratio))
+}
+
+/**
+ * The media key of the epoch that carried [note]. An attachment is keyed to its
+ * message's epoch, so the group's current key stops opening it as soon as a
+ * commit lands after it was sent.
+ */
+@Composable
+private fun rememberMessageMediaSecret(
+    note: Note,
+    nostrGroupId: String?,
+    accountViewModel: AccountViewModel,
+): MessageMediaSecret {
+    val state by
+        produceState<MessageMediaSecret>(MessageMediaSecret.Loading, note.idHex, nostrGroupId) {
+            val secret = nostrGroupId?.let { accountViewModel.marmotMediaSecretForMessage(it, note.idHex) }
+            value = if (secret != null) MessageMediaSecret.Found(secret) else MessageMediaSecret.Missing
+        }
+    return state
+}

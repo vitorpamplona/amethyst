@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
@@ -192,6 +193,7 @@ private fun RenderWord(
         is HashIndexEventSegment -> renderer.QuotedEvent(word.hex, word.extras, canPreview, quotesLeft, Modifier)
         is BechSegment -> renderer.NostrEntity(word.segmentText, canPreview, quotesLeft, Modifier)
         is SecretEmoji -> renderer.SecretMessage(word, state, canPreview, quotesLeft, Modifier)
+        is TimestampSegment -> LocalTimestampText(word)
 
         // Unknown/other segments fall back to their raw text.
         else -> Text(word.segmentText)

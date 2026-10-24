@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
 import com.vitorpamplona.amethyst.commons.resources.highlight_action
 import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.marmot_admin_delete_message
 import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
@@ -69,6 +70,9 @@ import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.request_deletion
+import com.vitorpamplona.amethyst.commons.resources.room_dismiss_reports
+import com.vitorpamplona.amethyst.commons.resources.room_remove_for_everyone_body
+import com.vitorpamplona.amethyst.commons.resources.room_remove_for_everyone_title
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
@@ -77,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
@@ -134,6 +139,9 @@ data class NoteActionHandlers(
     // owns a confirmation dialog (like delete). Null where a caller never renders
     // Concord messages (they simply never see the Ban tile anyway).
     val onConcordBan: (() -> Unit)? = null,
+    // Removing someone else's message for every member cannot be undone, so it is
+    // confirmed by the surface too. Null where a caller never renders room messages.
+    val onRemoveForEveryone: (() -> Unit)? = null,
     val onDismiss: () -> Unit,
 )
 
@@ -477,9 +485,62 @@ fun noteActionSections(
             if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
                 add(NoteAction(MaterialSymbols.Gavel, stringRes(Res.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
             }
+            // A room admin may remove any member's message for everyone (a Marmot group sends a
+            // kind 4891; receivers check the sender was an admin when it was sent).
+            if (handlers.onRemoveForEveryone != null && !state.isLoggedUser && accountViewModel.canRemoveForEveryone(note)) {
+                add(
+                    NoteAction(
+                        MaterialSymbols.Delete,
+                        stringRes(Res.string.marmot_admin_delete_message),
+                        isDestructive = true,
+                        onClick = handlers.onRemoveForEveryone,
+                    ),
+                )
+            }
+            // A room admin may dismiss the reports members made on a message, their own included.
+            // It neither hides nor deletes the message; the reports just stop counting.
+            val toDismiss = accountViewModel.reportsToDismiss(note).size
+            if (toDismiss > 0) {
+                add(
+                    NoteAction(MaterialSymbols.DoneAll, pluralStringRes(Res.plurals.room_dismiss_reports, toDismiss, toDismiss)) {
+                        accountViewModel.dismissReports(note)
+                        handlers.onDismiss()
+                    },
+                )
+            }
         }
 
     return listOf(author, copyAndShare, editAndBroadcast, organize, moderation).filter { it.isNotEmpty() }
+}
+
+/**
+ * Confirmation for an admin's "Delete for everyone": every member's app removes the message,
+ * which cannot be undone. Shared by both action surfaces (sheet + 3-dot menu). [onClose]
+ * dismisses the dialog; [onRemoved] fires after the removal is sent.
+ */
+@Composable
+fun RemoveForEveryoneConfirmationDialog(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    onClose: () -> Unit,
+    onRemoved: () -> Unit,
+) {
+    QuickActionAlertDialogOneButton(
+        title = stringRes(Res.string.room_remove_for_everyone_title),
+        textContent = stringRes(Res.string.room_remove_for_everyone_body),
+        buttonIcon = MaterialSymbols.Delete,
+        buttonText = stringRes(Res.string.marmot_admin_delete_message),
+        buttonColors =
+            ButtonDefaults.buttonColors(
+                containerColor = LightRedColor,
+                contentColor = Color.White,
+            ),
+        onClickDoOnce = {
+            accountViewModel.removeForEveryone(note)
+            onRemoved()
+        },
+        onDismiss = onClose,
+    )
 }
 
 /**

@@ -49,8 +49,8 @@ import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -60,6 +60,8 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningSt
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
@@ -104,6 +106,8 @@ import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupIconChange
+import com.vitorpamplona.marmot.client.MediaUploadKey
+import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -161,6 +165,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imeta
@@ -501,11 +506,13 @@ open class BaseAccountViewModel(
         note: Note,
         reaction: String,
     ) {
-        // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
-        // public relays. Route the reaction through a channel-plane wrap instead; tapping it again
-        // retracts it with an in-channel kind-5 delete (CORD-01), never a NIP-17 one.
-        if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.concord.toggleConcordReaction(note, reaction) }
+        // A room's message is reacted to inside the room, and tapping again retracts the reaction
+        // there; anything else would name the message outside it.
+        note.roomFor(account)?.let { room ->
+            launchSigner {
+                val mine = note.reactionsOfAuthorLike(userProfile(), reaction)
+                if (mine.isNotEmpty()) room.delete(account, mine) else room.react(account, note, reaction, notices)
+            }
             return
         }
 
@@ -551,12 +558,12 @@ open class BaseAccountViewModel(
     }
 
     /**
-     * Retracts one of your own notes the way its transport requires. Private rumors (NIP-17 DMs,
-     * Marmot group messages) take a private deletion; a public NIP-09 would e-tag the rumor id
-     * onto public relays.
+     * Retracts one of your own notes the way its transport requires: inside its room for a room's
+     * message, a gift-wrapped deletion for any other private rumor (NIP-17), a public NIP-09
+     * otherwise. A public one would e-tag a private rumor id onto public relays.
      */
     fun deleteOwn(note: Note) {
-        if (note.isPrivateRumor()) deletePrivately(note) else delete(note)
+        if (note.isPrivateRumor() && note.roomFor(account) == null) deletePrivately(note) else delete(note)
     }
 
     /**
@@ -566,6 +573,10 @@ open class BaseAccountViewModel(
      */
     fun deletePrivately(note: Note) {
         launchSigner {
+            note.roomFor(account)?.let { room ->
+                room.delete(account, listOf(note))
+                return@launchSigner
+            }
             account.deletePrivately(listOf(note), note)
         }
     }
@@ -1372,11 +1383,29 @@ open class BaseAccountViewModel(
         }
     }
 
+    /** Reports [note]: inside its room when it has one, which decides how, and publicly otherwise. */
     fun report(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = launchSigner { account.report(note, type, content) }
+    ) = launchSigner {
+        val room = note.roomFor(account)
+        if (room != null) room.report(account, note, type, content) else account.report(note, type, content)
+    }
+
+    /** True when a report of [note] stays among the members of its room instead of going public. */
+    fun reportStaysInRoom(note: Note): Boolean = note.roomFor(account)?.keepsReports() == true
+
+    /** The reports on [note] this account, as an admin of its room, may dismiss. */
+    fun reportsToDismiss(note: Note): List<Note> = note.roomFor(account)?.reportsToDismiss(account, note) ?: emptyList()
+
+    /** Dismisses every report on [note] this account may, for every member of its room. */
+    fun dismissReports(note: Note) =
+        launchSigner {
+            val room = note.roomFor(account) ?: return@launchSigner
+            val reports = room.reportsToDismiss(account, note)
+            if (reports.isNotEmpty()) room.dismissReports(account, reports)
+        }
 
     fun report(
         user: User,
@@ -1527,9 +1556,40 @@ open class BaseAccountViewModel(
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
-    fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
+    /** Deletes [notes], each inside its room when it has one and publicly otherwise. */
+    fun delete(notes: List<Note>) =
+        launchSigner {
+            val byRoom = notes.groupBy { it.roomFor(account) }
+            byRoom.forEach { (room, roomNotes) -> room?.delete(account, roomNotes) }
+            byRoom[null]?.let { account.delete(it) }
+        }
 
-    fun delete(note: Note) = launchSigner { account.delete(note) }
+    fun delete(note: Note) = delete(listOf(note))
+
+    /** Whether this account, as an admin of [note]'s room, may remove it for every member. */
+    fun canRemoveForEveryone(note: Note): Boolean = note.roomFor(account)?.canRemoveForEveryone(account, note) == true
+
+    /** Removes another member's message for every member of its room, as an admin. */
+    fun removeForEveryone(note: Note) = launchSigner { note.roomFor(account)?.removeForEveryone(account, note) }
+
+    /** True when [note] is a message this account may edit from its room's composer. */
+    fun canEditInRoom(note: Note): Boolean = note.roomFor(account)?.canEdit(account, note) == true
+
+    /**
+     * Votes [optionCodes] on [poll]: inside the poll's room when it has one, where the vote
+     * replaces any earlier one; as a public NIP-88 response otherwise.
+     */
+    fun respondToPoll(
+        poll: Note,
+        optionCodes: Set<String>,
+    ) = launchSigner {
+        val room = poll.roomFor(account)
+        if (room != null) {
+            room.respondToPoll(account, poll, optionCodes)
+        } else {
+            (poll.event as? PollEvent)?.let { account.pollRespond(it, optionCodes) }
+        }
+    }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -2404,7 +2464,26 @@ open class BaseAccountViewModel(
         val tagger = NewMessageTagger(text, null, null, this)
         tagger.run()
         val manager = account.marmotManager ?: return
-        deliverMarmotGroupMessage(nostrGroupId, manager.buildMessageEditRumor(target.idHex, tagger.message))
+        val plain = manager.buildMessageEditRumor(target.idHex, tagger.message)
+        // The edited text renders with the edit's own tags, so its custom emoji travel the way a
+        // message's do; without them a `:shortcode:` the edit keeps shows as text.
+        val emojis = if (account.marmot.emojiMediaPort != null) account.emoji.findEmojiTags(text) else emptyList()
+        if (emojis.isEmpty()) {
+            deliverMarmotGroupMessage(nostrGroupId, plain)
+            return
+        }
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val pinned =
+                    account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
+                        notices.notify(MarmotNotice.EmojiNotAttached)
+                    }
+                deliverMarmotGroupMessage(nostrGroupId, pinned.rumor, pinned.epoch)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot edit with custom emoji", e)
+            }
+        }
     }
 
     /**
@@ -2414,15 +2493,21 @@ open class BaseAccountViewModel(
     private fun deliverMarmotGroupMessage(
         nostrGroupId: String,
         innerEvent: Event,
+        /** The epoch the media [innerEvent] carries was encrypted in; see [AccountMarmotActions.sendMarmotGroupMessage]. */
+        expectedEpoch: Long? = null,
     ) {
-        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
         account.scope.launch(Dispatchers.IO) {
             try {
                 account.marmot.sendMarmotGroupMessage(
                     nostrGroupId,
                     innerEvent,
                     account.marmot.marmotGroupRelays(nostrGroupId),
+                    expectedEpoch,
                 )
+            } catch (e: MarmotEpochMovedException) {
+                // The group moved on while the media uploaded: what it carries opens in no later epoch.
+                notices.notify(MarmotNotice.MediaEpochMoved)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // The bubble already carries the failure and its retry; this
@@ -2432,10 +2517,101 @@ open class BaseAccountViewModel(
         }
     }
 
+    /**
+     * [sendMarmotGroupMessage], with every custom emoji the text uses attached
+     * as an encrypted picture (MDK 0.12's `sendTaggedMedia`) instead of a
+     * public URL that other Marmot clients refuse to fetch. With no emoji in
+     * the text, or no emoji port on this platform, it is the plain send.
+     */
+    suspend fun sendMarmotGroupMessageWithCustomEmoji(
+        nostrGroupId: String,
+        text: String,
+        replyToInnerEventId: HexKey? = null,
+        replyToInnerAuthorPubKey: HexKey? = null,
+    ) {
+        val emojis = account.emoji.findEmojiTags(text)
+        if (emojis.isEmpty() || account.marmot.emojiMediaPort == null) {
+            sendMarmotGroupMessage(nostrGroupId, text, replyToInnerEventId, replyToInnerAuthorPubKey)
+            return
+        }
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
+        val manager = account.marmotManager ?: return
+        val plain =
+            manager.buildTextRumor(
+                text = tagger.message,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthorPubKey,
+                mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+            )
+        // Each picture is downloaded, encrypted and uploaded before the message can be built,
+        // which can take seconds. That runs on the account scope, so the composer clears at once
+        // and a second tap cannot send the same text again.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val pinned =
+                    account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
+                        notices.notify(MarmotNotice.EmojiNotAttached)
+                    }
+                deliverMarmotGroupMessage(nostrGroupId, pinned.rumor, pinned.epoch)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot message with custom emoji", e)
+            }
+        }
+    }
+
+    /**
+     * Post an encrypted NIP-88 poll in a Marmot group. Returns false when the
+     * question, options or deadline break the profile MDK enforces.
+     */
+    suspend fun createMarmotPoll(
+        nostrGroupId: String,
+        question: String,
+        options: List<String>,
+        type: MarmotPolls.PollType,
+        endsAt: Long?,
+    ): Boolean {
+        // `@` mentions become `nostr:` links with `p` tags, as in a message.
+        val texts = listOf(question) + options
+        val taggers = texts.map { NewMessageTagger(it, null, null, this).also { tagger -> tagger.run() } }
+        val mentions = taggers.flatMap { it.pTags ?: emptyList() }.distinct().map { it.toPTag() }
+        val poll =
+            account.marmot.buildMarmotPoll(taggers.first().message, taggers.drop(1).map { it.message }, type, endsAt, mentions)
+                ?: return false
+
+        val emojis = account.emoji.findEmojiTags(texts.joinToString(" "))
+        if (emojis.isEmpty() || account.marmot.emojiMediaPort == null) {
+            deliverMarmotGroupMessage(nostrGroupId, poll)
+            return true
+        }
+        // Custom emoji travel as encrypted pictures of the poll, as in a message. They are
+        // uploaded on the account scope, so the sheet closes at once.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val withEmoji =
+                    account.marmot.withEncryptedCustomEmoji(
+                        nostrGroupId,
+                        poll,
+                        emojis,
+                        onEmojiNotAttached = { notices.notify(MarmotNotice.EmojiNotAttached) },
+                        maxTotalTags = MarmotPolls.MAX_TAGS,
+                    )
+                deliverMarmotGroupMessage(nostrGroupId, withEmoji.rumor, withEmoji.epoch)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot poll with custom emoji", e)
+            }
+        }
+        return true
+    }
+
     suspend fun sendMarmotGroupMediaMessage(
         nostrGroupId: String,
         url: String,
         imeta: IMetaTag,
+        /** The epoch of the key [MarmotFileUploader] encrypted the file with ([marmotMediaUploadKey]). */
+        sourceEpoch: Long? = null,
     ) {
         val template =
             eventTemplate(
@@ -2454,10 +2630,26 @@ open class BaseAccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent, sourceEpoch)
     }
 
-    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
+    /**
+     * The media key for a new upload and the epoch it belongs to, read together. The message
+     * carrying the upload is sent pinned to that epoch: a commit landing during a long upload would
+     * otherwise send it where no member can open it.
+     */
+    suspend fun marmotMediaUploadKey(nostrGroupId: String): MediaUploadKey? = account.marmotManager?.mediaUploadKey(nostrGroupId)
+
+    /**
+     * The media key for the attachments of one message: the key of the epoch
+     * that carried it. An attachment does not open under the group's current
+     * key once a commit has landed after it, so rendering must use this, not
+     * [marmotMediaUploadKey], which is for encrypting a new upload.
+     */
+    suspend fun marmotMediaSecretForMessage(
+        nostrGroupId: String,
+        innerEventId: String,
+    ): ByteArray? = account.marmotManager?.mediaSecretForMessage(nostrGroupId, innerEventId)
 
     /**
      * True when this group carries the `encrypted-media-v2` policy (`0x800b`)
@@ -2491,9 +2683,11 @@ open class BaseAccountViewModel(
         nostrGroupId: String,
         reference: EncryptedMediaReferenceV2,
         caption: String,
+        /** The epoch [reference] was encrypted in ([marmotMediaUploadKey]). */
+        sourceEpoch: Long? = null,
     ) {
         val manager = account.marmotManager ?: return
-        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption))
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption), sourceEpoch)
     }
 
     suspend fun createMarmotGroup(
