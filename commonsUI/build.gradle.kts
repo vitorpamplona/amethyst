@@ -310,4 +310,11 @@ tasks.named<Test>("jvmTest") {
             quartzSources.flatMap { it.elements }.map { it.single().asFile.path }
         }
     jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-Dquartz.sources=${sources.get()}") })
+
+    // The render tests leave every ImageComposeScene.render() Image to the GC, and each one holds
+    // its pixels in native Skia memory that only a Cleaner frees. Their Java side is tiny, so the
+    // 512 MB heap almost never collects, and the test JVM grew to 6 GB resident (enough, beside
+    // the Gradle and Kotlin daemons, for the OOM killer on a 16 GB machine). A timed G1 cycle
+    // runs those Cleaners: the peak drops to under 3 GB, at no measurable cost in run time.
+    jvmArgs("-XX:G1PeriodicGCInterval=1000", "-XX:G1PeriodicGCSystemLoadThreshold=0")
 }
