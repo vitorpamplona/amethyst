@@ -25,16 +25,10 @@ echo "Running test... "
 # build), but this hook stays explicit: a bare `test` would also pull in :desktopApp:test,
 # which needs a display server and is deliberately skipped on CLAUDE_CODE_REMOTE below.
 TASKS=(
-    # The CI lint job's KMP checks. The JVM tests below compile shared code for the JVM only,
-    # where java.util and java.io APIs (HashMap.putIfAbsent, Dispatchers.IO without the
-    # kotlinx.coroutines.IO import, AutoCloseable.use on skia or okio types) still resolve.
-    # The metadata compiles reject them, so a break that only iOS would hit fails here on any
-    # host. Keep this list in sync with the lint job in .github/workflows/build.yml.
+    # The CI lint job's source scan for JVM-only APIs in iOS-targeted code. It reads files, so it
+    # costs seconds.
     :commons:verifyKmpPurity
     :commonsUI:verifyKmpPurity
-    :commons:compileCommonMainKotlinMetadata
-    :commonsUI:compileCommonMainKotlinMetadata
-    :commonsUI:compileSkikoMainKotlinMetadata
     :commons:jvmTest
     :commonsUI:jvmTest
     # Android-only commonsUI code (e.g. SafeImeInsets) is tested here, not in jvmTest.
@@ -44,6 +38,30 @@ TASKS=(
     :amethyst:testPlayDebugUnitTest
     :cli:test
 )
+
+# The metadata compiles are the rest of the CI lint job. The JVM tests above compile shared code
+# for the JVM only, where java.util and java.io APIs (HashMap.putIfAbsent, Dispatchers.IO without
+# the kotlinx.coroutines.IO import, AutoCloseable.use on skia or okio types) still resolve; the
+# metadata compiles reject them, so a break only iOS would hit fails on any host. They are a third
+# full compile of :commons and :commonsUI (8 of the 47 CPU minutes of a cold run, and 2.6 of the
+# 6 after a one-line :commonsUI edit), so they are opt-in here and always run in CI's lint job.
+# Turn them on when touching commonMain/skikoMain platform APIs or expect/actual:
+#   PREPUSH_KMP_METADATA=1 git push
+# A push to main turns them on by itself: git names the target refs on stdin (the timeout keeps a
+# hand-run `bash .git-hooks/pre-push`, which has no such input, from waiting on the terminal).
+while read -r -t 5 _local_ref _local_sha remote_ref _remote_sha; do
+    if [ "$remote_ref" = "refs/heads/main" ]; then
+        PREPUSH_KMP_METADATA=1
+    fi
+done
+# Keep this list in sync with the lint job in .github/workflows/build.yml.
+if [ "${PREPUSH_KMP_METADATA:-}" = "1" ]; then
+    TASKS+=(
+        :commons:compileCommonMainKotlinMetadata
+        :commonsUI:compileCommonMainKotlinMetadata
+        :commonsUI:compileSkikoMainKotlinMetadata
+    )
+fi
 
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     ./gradlew "${TASKS[@]}" --quiet
