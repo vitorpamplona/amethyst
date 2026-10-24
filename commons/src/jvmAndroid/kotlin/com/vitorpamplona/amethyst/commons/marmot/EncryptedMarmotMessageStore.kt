@@ -263,10 +263,10 @@ class EncryptedMarmotMessageStore(
     ) = withContext(Dispatchers.IO) {
         logMutex.withLock {
             try {
-                val existing = readAllFrom(mediaSecretsFile(nostrGroupId)).toMutableList()
+                val existing = readAllFrom(mediaSecretsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
-                existing.add("$epoch ${mediaSecret.toHexKey()}")
-                writeAllTo(mediaSecretsFile(nostrGroupId), existing)
+                // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
+                log.append(mediaSecretsFile(nostrGroupId).toOkioPath(), "$epoch ${mediaSecret.toHexKey()}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordMediaSecret($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -308,10 +308,10 @@ class EncryptedMarmotMessageStore(
     ) = withContext(Dispatchers.IO) {
         logMutex.withLock {
             try {
-                val existing = readAllFrom(epochAdminsFile(nostrGroupId)).toMutableList()
+                val existing = readAllFrom(epochAdminsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
-                existing.add("$epoch ${admins.joinToString(",")}")
-                writeAllTo(epochAdminsFile(nostrGroupId), existing)
+                // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
+                log.append(epochAdminsFile(nostrGroupId).toOkioPath(), "$epoch ${admins.joinToString(",")}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordEpochAdmins($nostrGroupId) FAILED: ${e.message}", e)
             }
@@ -348,10 +348,10 @@ class EncryptedMarmotMessageStore(
     ) = withContext(Dispatchers.IO) {
         logMutex.withLock {
             try {
-                val existing = readAllFrom(verdictsFile(nostrGroupId)).toMutableList()
+                val existing = readAllFrom(verdictsFile(nostrGroupId))
                 if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
-                existing.add("$innerEventId ${if (authorized) 1 else 0}")
-                writeAllTo(verdictsFile(nostrGroupId), existing)
+                // Appended, not rewritten: the log is append-only, and a rewrite re-encrypts every record.
+                log.append(verdictsFile(nostrGroupId).toOkioPath(), "$innerEventId ${if (authorized) 1 else 0}")
             } catch (e: Exception) {
                 Log.e(TAG, "recordModerationVerdict($nostrGroupId) FAILED: ${e.message}", e)
             }

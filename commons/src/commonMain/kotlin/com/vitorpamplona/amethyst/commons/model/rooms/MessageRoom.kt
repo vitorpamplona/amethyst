@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
+import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -141,9 +142,16 @@ interface MessageRoom : NotesGatherer {
  */
 fun Note.roomFor(account: Account): MessageRoom? =
     ownRoom { it.isReadBy(account) }
-        ?: if (isPrivateRumor()) replyTo?.firstNotNullOfOrNull { it.ownRoom { room -> room.isReadBy(account) } } else null
+        ?: if (isPlacedByTarget()) replyTo?.firstNotNullOfOrNull { it.ownRoom { room -> room.isReadBy(account) } } else null
 
 /** True when this note is in any room, whichever account reads it. See [MessageRoom]. */
-fun Note.isInRoom(): Boolean = ownRoom { true } != null || (isPrivateRumor() && replyTo?.any { it.ownRoom { true } != null } == true)
+fun Note.isInRoom(): Boolean = ownRoom { true } != null || (isPlacedByTarget() && replyTo?.any { it.ownRoom { true } != null } == true)
+
+/**
+ * A private note outside every room is placed by the message it points at, unless it is itself a
+ * message of a private conversation: a NIP-17 DM that quotes a group message belongs to the DM,
+ * and acting on it must not send anything into that group.
+ */
+private fun Note.isPlacedByTarget(): Boolean = isPrivateRumor() && inGatherers?.none { it is Chatroom } != false
 
 private inline fun Note.ownRoom(accept: (MessageRoom) -> Boolean): MessageRoom? = inGatherers?.firstNotNullOfOrNull { (it as? MessageRoom)?.takeIf(accept) }

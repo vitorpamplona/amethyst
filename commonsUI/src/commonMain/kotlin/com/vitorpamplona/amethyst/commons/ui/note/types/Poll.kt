@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.rememberMarmotRenderTags
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BigPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleHorzSpacer
@@ -133,7 +134,8 @@ fun RenderPoll(
     // A room that holds this poll may read polls more strictly than NIP-88. One that breaks its
     // rules must not be shown as if it could be answered: members of the room would disagree.
     val room = remember(note) { note.roomFor(accountViewModel.account) }
-    if (room != null && !room.acceptsPoll(noteEvent)) {
+    val accepted = remember(room, noteEvent) { room == null || room.acceptsPoll(noteEvent) }
+    if (!accepted) {
         Text(
             text = stringRes(Res.string.poll_unsupported),
             fontStyle = FontStyle.Italic,
@@ -173,7 +175,9 @@ fun InnerRenderPoll(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val tags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    val ownTags = remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
+    // In a Marmot group an emoji tag names an attachment, never a URL to fetch as is.
+    val tags = rememberMarmotRenderTags(note, accountViewModel) ?: ownTags
     val callbackUri = remember(note) { note.toNostrUri() }
 
     Column(

@@ -2516,11 +2516,21 @@ open class BaseAccountViewModel(
                 replyToAuthorPubKey = replyToInnerAuthorPubKey,
                 mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
             )
-        val rumor =
-            account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
-                notices.notify(MarmotNotice.EmojiNotAttached)
+        // Each picture is downloaded, encrypted and uploaded before the message can be built,
+        // which can take seconds. That runs on the account scope, so the composer clears at once
+        // and a second tap cannot send the same text again.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val rumor =
+                    account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
+                        notices.notify(MarmotNotice.EmojiNotAttached)
+                    }
+                deliverMarmotGroupMessage(nostrGroupId, rumor)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot message with custom emoji", e)
             }
-        deliverMarmotGroupMessage(nostrGroupId, rumor)
+        }
     }
 
     /**

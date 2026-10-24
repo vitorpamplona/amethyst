@@ -882,8 +882,9 @@ class GroupEventHandler(
                         // a relay re-broadcast or persist-replay doesn't
                         // double-notify. Restrict to ChatEvent (kind:9) so
                         // reactions, deletions, and control messages stay
-                        // silent.
-                        if (innerEvent is ChatEvent) {
+                        // silent. A message an admin removed before it
+                        // landed is never shown, so it never notifies either.
+                        if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
                             account.marmotNotifier().notifyGroupMessage(
                                 innerEvent,
                                 result.groupId,

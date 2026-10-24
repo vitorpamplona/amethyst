@@ -53,8 +53,14 @@ class MarmotEmojiMediaService(
                     .build()
             httpClients.okHttpClientForImage(url).newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext null
-                val bytes = response.body.bytes()
-                if (bytes.isEmpty() || bytes.size > MAX_EMOJI_BYTES) return@withContext null
+                // Capped while reading, not after: the URL comes from an emoji pack, and a
+                // host that serves an endless body would otherwise fill the heap first.
+                val body = response.body
+                if (body.contentLength() > MAX_EMOJI_BYTES) return@withContext null
+                val source = body.source()
+                if (source.request(MAX_EMOJI_BYTES + 1L)) return@withContext null
+                val bytes = source.buffer.readByteArray()
+                if (bytes.isEmpty()) return@withContext null
                 MarmotEmojiMediaPort.Image(bytes, response.header("Content-Type"))
             }
         }

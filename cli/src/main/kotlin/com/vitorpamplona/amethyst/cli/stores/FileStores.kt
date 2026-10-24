@@ -145,6 +145,12 @@ class FileKeyPackageBundleStore(
     }
 }
 
+/** A pubkey or event id, in hex. */
+private const val KEY_HEX_LENGTH = 64
+
+/** A Marmot media key is a 32-byte MLS exporter secret. */
+private const val MEDIA_SECRET_HEX_LENGTH = 64
+
 class FileMarmotMessageStore(
     private val dir: File,
 ) : MarmotMessageStore {
@@ -275,9 +281,9 @@ class FileMarmotMessageStore(
         epoch: Long,
         mediaSecret: ByteArray,
     ) {
-        val target = mediaSecretFile(nostrGroupId)
-        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
-        SecureFileIO.appendText(target, "$epoch ${mediaSecret.toHexKey()}\n")
+        // Checked with the parser that loads it: a line a crash cut short is not a record.
+        if (epoch in loadMediaSecrets(nostrGroupId)) return
+        appendRecord(mediaSecretFile(nostrGroupId), "$epoch ${mediaSecret.toHexKey()}")
     }
 
     override suspend fun loadMediaSecrets(nostrGroupId: String): Map<Long, ByteArray> =
@@ -288,8 +294,8 @@ class FileMarmotMessageStore(
                 val parts = line.trim().split(' ')
                 if (parts.size != 2) return@mapNotNull null
                 val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
-                val secret = runCatching { parts[1].hexToByteArray() }.getOrNull() ?: return@mapNotNull null
-                epoch to secret
+                if (!parts[1].isHex(MEDIA_SECRET_HEX_LENGTH)) return@mapNotNull null
+                epoch to parts[1].hexToByteArray()
             }?.toMap()
             ?: emptyMap()
 
@@ -303,9 +309,8 @@ class FileMarmotMessageStore(
         epoch: Long,
         admins: Set<String>,
     ) {
-        val target = epochAdminsFile(nostrGroupId)
-        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
-        SecureFileIO.appendText(target, "$epoch ${admins.joinToString(",")}\n")
+        if (epoch in loadEpochAdmins(nostrGroupId)) return
+        appendRecord(epochAdminsFile(nostrGroupId), "$epoch ${admins.joinToString(",")}")
     }
 
     override suspend fun loadEpochAdmins(nostrGroupId: String): Map<Long, Set<String>> =
@@ -314,12 +319,14 @@ class FileMarmotMessageStore(
             ?.readLines()
             ?.mapNotNull { line ->
                 val epoch = line.substringBefore(' ').toLongOrNull() ?: return@mapNotNull null
-                epoch to
+                val admins =
                     line
                         .substringAfter(' ', "")
                         .split(',')
                         .filter { it.isNotEmpty() }
                         .toSet()
+                if (admins.any { !it.isHex(KEY_HEX_LENGTH) }) return@mapNotNull null
+                epoch to admins
             }?.toMap()
             ?: emptyMap()
 
@@ -329,9 +336,8 @@ class FileMarmotMessageStore(
         innerEventId: String,
         authorized: Boolean,
     ) {
-        val target = verdictsFile(nostrGroupId)
-        if (target.exists() && target.readLines().any { it.substringBefore(' ') == innerEventId }) return
-        SecureFileIO.appendText(target, "$innerEventId ${if (authorized) 1 else 0}\n")
+        if (innerEventId in loadModerationVerdicts(nostrGroupId)) return
+        appendRecord(verdictsFile(nostrGroupId), "$innerEventId ${if (authorized) 1 else 0}")
     }
 
     override suspend fun loadModerationVerdicts(nostrGroupId: String): Map<String, Boolean> =
@@ -340,10 +346,24 @@ class FileMarmotMessageStore(
             ?.readLines()
             ?.mapNotNull { line ->
                 val parts = line.trim().split(' ')
-                if (parts.size != 2) return@mapNotNull null
+                if (parts.size != 2 || !parts[0].isHex(KEY_HEX_LENGTH) || parts[1] !in setOf("0", "1")) return@mapNotNull null
                 parts[0] to (parts[1] == "1")
             }?.toMap()
             ?: emptyMap()
+
+    /**
+     * Appends one record line. A crash can leave the last line unterminated, and the next
+     * record would then be glued onto it and lost with it, so a missing newline comes first.
+     */
+    private fun appendRecord(
+        target: File,
+        line: String,
+    ) {
+        val unterminated = target.exists() && target.length() > 0 && !target.readText().endsWith('\n')
+        SecureFileIO.appendText(target, (if (unterminated) "\n" else "") + line + "\n")
+    }
+
+    private fun String.isHex(length: Int) = this.length == length && all { it in '0'..'9' || it in 'a'..'f' }
 
     private fun epochFile(id: String) = File(dir, "$id.epochs")
 

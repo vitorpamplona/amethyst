@@ -44,6 +44,8 @@ class LocalTimestampTest {
         assertNull(LocalTimestamp.split("<t:12:FF>"))
         assertNull(LocalTimestamp.split("<t:12"))
         assertNull(LocalTimestamp.split("<t:-:F>"))
+        // Past year 9999 the milliseconds overflow into a garbage date.
+        assertNull(LocalTimestamp.split("<t:9223372036854775:R>"))
         assertNull(LocalTimestamp.split("<t:99999999999999999999>"))
         assertNull(LocalTimestamp.split("plain"))
     }

@@ -4365,8 +4365,10 @@ class Account(
                 // by KeyPackageRotationManager via marmotKeyPackageStore, so
                 // restoreAll() above has already restored any previously
                 // generated bundles. Only generate-and-publish if no active
-                // bundle exists in memory after restore.
-                marmot.ensureMarmotKeyPackagePublished()
+                // bundle exists in memory after restore. Launched, not awaited: it
+                // waits on relay confirmations, and the group history below must
+                // not wait on the network.
+                scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
 
                 // Refresh our leaf in groups where it predates support for a
                 // component, after the randomized delay the spec asks for.
@@ -4411,6 +4413,7 @@ class Account(
                                 marmotGroupList.addMessage(groupId, innerNote)
                                 marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {
+                                if (e is CancellationException) throw e
                                 Log.w(
                                     "Account",
                                     "Failed to restore persisted Marmot message for $groupId",

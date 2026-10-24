@@ -112,6 +112,10 @@ private fun formatLocalTimestamp(
         LocalTimestamp.Style.RELATIVE ->
             if (abs(timestamp.unixSeconds - now) < TimeUtils.ONE_MINUTE) {
                 stringRes(Res.string.now)
+            } else if (abs(timestamp.unixSeconds - now) >= TimeUtils.ONE_MONTH) {
+                // The short forms stop at weeks and turn into a date beyond; "Jul 22 ago"
+                // reads wrong, so a time that far out is shown as its date.
+                formatDateTime(millis, DateTimeStyle.MEDIUM, DateTimeStyle.NONE)
             } else if (timestamp.unixSeconds > now) {
                 aheadTemplate.replace("%1\$s", timeAheadNoDot(timestamp.unixSeconds))
             } else {

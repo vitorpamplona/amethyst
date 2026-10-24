@@ -4739,6 +4739,8 @@
     </plurals>
     <string name="marmot_not_a_member">Not a member of this group</string>
     <string name="marmot_admin_delete_message">Delete for everyone</string>
+    <string name="room_remove_for_everyone_title">Delete for everyone?</string>
+    <string name="room_remove_for_everyone_body">Every member's app will remove this message. This can't be undone.</string>
     <plurals name="room_dismiss_reports">
         <item quantity="one">Dismiss %1$d report</item>
         <item quantity="other">Dismiss %1$d reports</item>

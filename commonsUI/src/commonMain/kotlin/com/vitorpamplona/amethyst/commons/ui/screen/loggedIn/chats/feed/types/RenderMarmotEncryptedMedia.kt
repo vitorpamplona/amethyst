@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -122,7 +125,10 @@ fun RenderEncryptedMediaV2(
 
     val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
     val secretLookup = rememberMessageMediaSecret(note, nostrGroupId, accountViewModel)
-    if (secretLookup is MessageMediaSecret.Loading) return
+    if (secretLookup is MessageMediaSecret.Loading) {
+        MediaKeyLoadingSpace(reference?.dim)
+        return
+    }
     val mediaSecret = (secretLookup as? MessageMediaSecret.Found)?.secret
 
     if (reference == null || url == null || mediaSecret == null) {
@@ -222,7 +228,10 @@ fun RenderMarmotEncryptedMedia(
     // Find the nostrGroupId via the reverse index in MarmotGroupList
     val nostrGroupId = remember(note) { findGroupIdForNote(note, accountViewModel) }
     val secretLookup = rememberMessageMediaSecret(note, nostrGroupId, accountViewModel)
-    if (secretLookup is MessageMediaSecret.Loading) return
+    if (secretLookup is MessageMediaSecret.Loading) {
+        MediaKeyLoadingSpace(mip04Meta.dimensions)
+        return
+    }
     val exporterSecret = (secretLookup as? MessageMediaSecret.Found)?.secret
 
     if (exporterSecret == null) {
@@ -355,6 +364,17 @@ private sealed interface MessageMediaSecret {
     class Found(
         val secret: ByteArray,
     ) : MessageMediaSecret
+}
+
+/**
+ * The room the attachment will take while its key is looked up, which is one frame on most
+ * entries. Drawing nothing made every media row grow from 0 dp as it scrolled in, so the list
+ * jumped; an attachment without dimensions has no size to keep.
+ */
+@Composable
+private fun MediaKeyLoadingSpace(dimensions: String?) {
+    val ratio = remember(dimensions) { dimensions?.let { DimensionTag.parse(it) }?.aspectRatioOrNull() } ?: return
+    Box(Modifier.fillMaxWidth().aspectRatio(ratio))
 }
 
 /**

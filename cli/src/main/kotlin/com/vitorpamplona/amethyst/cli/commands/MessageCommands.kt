@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 object MessageCommands {
     val USAGE: String =
@@ -253,7 +252,7 @@ object MessageCommands {
             // a kind 4891 (`features/content-moderation.md`), as White Noise does.
             // A kind 5 is the author's own retraction.
             val others = targets.filter { it.pubKey != ctx.identity.pubKeyHex }
-            if (others.isNotEmpty() && (targets.size != 1 || others[0].kind != ChatEvent.KIND || !ctx.marmot.isGroupAdmin(gid))) {
+            if (others.isNotEmpty() && (targets.size != 1 || !ctx.marmot.canAdminDelete(gid, others[0]))) {
                 return Output.error("not_allowed", "only a group admin can delete another member's chat message, one at a time")
             }
             val bundle =

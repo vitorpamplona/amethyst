@@ -87,6 +87,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.elements.AddHashtagLabelDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ConcordBanConfirmationDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DropDownParams
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NoteActionHandlers
+import com.vitorpamplona.amethyst.commons.ui.note.elements.RemoveForEveryoneConfirmationDialog
 import com.vitorpamplona.amethyst.commons.ui.note.elements.ShareOptionsBottomSheet
 import com.vitorpamplona.amethyst.commons.ui.note.elements.noteActionSections
 import com.vitorpamplona.amethyst.commons.ui.note.elements.observeBookmarksFollowsAndAccount
@@ -140,6 +141,7 @@ fun ChatMessageActionSheet(
     var addLabelDialogShowing by remember { mutableStateOf(false) }
     var deleteConfirmationShowing by remember { mutableStateOf(false) }
     var concordBanConfirming by remember { mutableStateOf(false) }
+    var removeForEveryoneConfirming by remember { mutableStateOf(false) }
     var showDeliveryDialog by remember { mutableStateOf(false) }
 
     val performDelete = { accountViewModel.deleteOwn(note) }
@@ -235,6 +237,15 @@ fun ChatMessageActionSheet(
         )
     }
 
+    if (removeForEveryoneConfirming) {
+        RemoveForEveryoneConfirmationDialog(
+            note = note,
+            accountViewModel = accountViewModel,
+            onClose = { removeForEveryoneConfirming = false },
+            onRemoved = onDismiss,
+        )
+    }
+
     val state by observeBookmarksFollowsAndAccount(note, accountViewModel).collectAsStateWithLifecycle(
         DropDownParams(
             isFollowingAuthor = false,
@@ -323,6 +334,7 @@ fun ChatMessageActionSheet(
                         }
                     },
                     onConcordBan = { concordBanConfirming = true },
+                    onRemoveForEveryone = { removeForEveryoneConfirming = true },
                     onDismiss = onDismiss,
                 )
 

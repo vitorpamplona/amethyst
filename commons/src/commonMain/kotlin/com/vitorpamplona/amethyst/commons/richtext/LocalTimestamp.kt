@@ -87,6 +87,9 @@ data class LocalTimestamp(
     companion object {
         private const val OPEN = "<t:"
 
+        // Year 9999 either way: past it the milliseconds overflow and a date is meaningless.
+        private const val MAX_SECONDS = 253_402_300_799L
+
         /** Cheap pre-check before the parse, so the hot path pays one `contains`. */
         fun mightContain(text: String): Boolean = text.contains(OPEN)
 
@@ -106,7 +109,7 @@ data class LocalTimestamp(
             val digitsStart = end
             while (end < text.length && text[end] in '0'..'9') end++
             if (end == digitsStart) return null
-            val seconds = text.substring(numberStart, end).toLongOrNull() ?: return null
+            val seconds = text.substring(numberStart, end).toLongOrNull()?.takeIf { it in -MAX_SECONDS..MAX_SECONDS } ?: return null
 
             val style =
                 if (text.getOrNull(end) == ':') {

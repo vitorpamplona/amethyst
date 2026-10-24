@@ -254,11 +254,12 @@ class PollResponsesCache : UserDependencies {
      */
     fun updatePolicy(newPolicy: PollTallyPolicy) {
         // The cache re-derives the poll's NIP-88 rules on every response; a room's rule, once its
-        // poll is in the room, outlives that.
-        val merged = if (newPolicy.rule == null) newPolicy.copy(rule = responses.value.policy?.rule) else newPolicy
-        if (responses.value.policy == merged) return
-
-        responses.update { it.rebuild(newPolicy = merged) }
+        // poll is in the room, outlives that. Merged inside the update: a room setting its rule on
+        // another thread must not be overwritten by a refresh that read the policy before it.
+        responses.update { current ->
+            val merged = if (newPolicy.rule == null) newPolicy.copy(rule = current.policy?.rule) else newPolicy
+            if (current.policy == merged) current else current.rebuild(newPolicy = merged)
+        }
     }
 
     fun ResponseTally.filterTo(

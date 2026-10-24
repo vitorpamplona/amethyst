@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
@@ -83,6 +84,7 @@ fun CreateMarmotPollDialog(
     var multiple by remember { mutableStateOf(false) }
     var deadline by remember { mutableStateOf<Long?>(null) }
     var invalid by remember { mutableStateOf(false) }
+    var sending by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     AlertDialog(
@@ -116,7 +118,8 @@ fun CreateMarmotPollDialog(
                     Switch(checked = multiple, onCheckedChange = { multiple = it })
                 }
                 Text(stringRes(Res.string.marmot_poll_has_deadline), style = MaterialTheme.typography.labelMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Wraps: five chips do not fit one line in a phone-width dialog.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     DEADLINES.forEach { seconds ->
                         FilterChip(
                             selected = deadline == seconds,
@@ -145,7 +148,10 @@ fun CreateMarmotPollDialog(
         },
         confirmButton = {
             TextButton(
+                // One poll per tap: a second tap while the first is being sent would post it twice.
+                enabled = !sending,
                 onClick = {
+                    sending = true
                     val labels = options.map { it.trim() }.filter { it.isNotEmpty() }
                     val type = if (multiple) MarmotPolls.PollType.MULTIPLE_CHOICE else MarmotPolls.PollType.SINGLE_CHOICE
                     val endsAt = deadline?.let { TimeUtils.now() + it }
@@ -154,6 +160,7 @@ fun CreateMarmotPollDialog(
                             onDismiss()
                         } else {
                             invalid = true
+                            sending = false
                         }
                     }
                 },

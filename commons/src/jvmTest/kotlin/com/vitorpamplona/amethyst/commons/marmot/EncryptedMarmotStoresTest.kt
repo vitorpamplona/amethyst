@@ -118,6 +118,33 @@ class EncryptedMarmotStoresTest {
             assertEquals("both, in append order", listOf("""{"id":"one"}""", """{"id":"two"}"""), reopened)
         }
 
+    /**
+     * Media keys, epoch admins and moderation verdicts decide what a restart shows: an
+     * attachment that opens, a deleted message that stays deleted. Each is first-write-wins.
+     */
+    @Test
+    fun epochRecordsSurviveAReopenAndKeepTheirFirstValue() =
+        runTest {
+            val (dir, encryption) = accountDir()
+            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val verdictId = "c".repeat(64)
+
+            store.recordMediaSecret(groupId, 3, byteArrayOf(1, 2))
+            store.recordMediaSecret(groupId, 3, byteArrayOf(9))
+            store.recordMediaSecret(groupId, 4, byteArrayOf(3))
+            store.recordEpochAdmins(groupId, 3, setOf("a", "b"))
+            store.recordEpochAdmins(groupId, 3, setOf("z"))
+            store.recordModerationVerdict(groupId, verdictId, true)
+            store.recordModerationVerdict(groupId, verdictId, false)
+
+            val reopened = EncryptedMarmotMessageStore(dir, encryption)
+            val secrets = reopened.loadMediaSecrets(groupId)
+            assertEquals(listOf<Byte>(1, 2), secrets[3]?.toList())
+            assertEquals(listOf<Byte>(3), secrets[4]?.toList())
+            assertEquals(mapOf(3L to setOf("a", "b")), reopened.loadEpochAdmins(groupId))
+            assertEquals(mapOf(verdictId to true), reopened.loadModerationVerdicts(groupId))
+        }
+
     @Test
     fun aGroupWithNoMessagesLoadsEmptyRatherThanFailing() =
         runTest {

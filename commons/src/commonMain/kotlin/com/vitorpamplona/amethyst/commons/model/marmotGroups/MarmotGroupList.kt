@@ -39,15 +39,21 @@ class MarmotGroupList(
 
     private val noteToGroupIndex = LargeCache<HexKey, HexKey>()
 
-    // Message id -> group, for every message a group admin removed (kind 4891). A removal can
+    // Group + message id, for every message a group admin removed (kind 4891). A removal can
     // decrypt before its target: a catch-up returns newest first, and both sit in one epoch.
     // Unlike a kind-5 there is no LocalCache deletion index behind it, so without this record a
-    // target arriving second would be added and stay, restarts included.
-    private val adminRemovedIds = LargeCache<HexKey, HexKey>()
+    // target arriving second would be added and stay, restarts included. Keyed by both, so an
+    // admin of one group can neither remove a message of another nor overwrite its record.
+    private val adminRemovedIds = LargeCache<String, Boolean>()
 
-    // Report id -> group, for every report a group admin dismissed (kind 1985), for the same
+    // Group + report id, for every report a group admin dismissed (kind 1985), for the same
     // reason: the dismissal can decrypt before the report it names.
-    private val dismissedReportIds = LargeCache<HexKey, HexKey>()
+    private val dismissedReportIds = LargeCache<String, Boolean>()
+
+    private fun moderationKey(
+        nostrGroupId: HexKey,
+        id: HexKey,
+    ) = nostrGroupId + id
 
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
@@ -60,7 +66,7 @@ class MarmotGroupList(
     ) {
         if (!isDisplayableFeedMessage(msg)) return
         // An admin deletion applies to chat messages only (`features/content-moderation.md`).
-        if (adminRemovedIds.get(msg.idHex) == nostrGroupId && msg.event?.kind == ChatEvent.KIND) return
+        if (msg.event?.kind == ChatEvent.KIND && isAdminRemoved(nostrGroupId, msg.idHex)) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.addMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
@@ -72,6 +78,15 @@ class MarmotGroupList(
     }
 
     fun groupIdForNote(noteId: HexKey): HexKey? = noteToGroupIndex.get(noteId)
+
+    /** True when [note] is one of [nostrGroupId]'s messages. */
+    fun isInGroup(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
+        val room = rooms.get(nostrGroupId) ?: return false
+        return note.inGatherers?.any { it === room } == true
+    }
 
     /**
      * Mark a group as "known" by the local user — used right after the user
@@ -113,16 +128,16 @@ class MarmotGroupList(
     }
 
     /**
-     * Applies an admin removal of [targetId] in [nostrGroupId]: drops [target] if it is already
-     * shown, and keeps the removal so the message is refused if it arrives later.
+     * Applies an admin removal of [targetId] in [nostrGroupId]: drops [target] if it is one of
+     * this group's messages, and keeps the removal so the message is refused if it arrives later.
      */
     fun applyAdminRemoval(
         nostrGroupId: HexKey,
         targetId: HexKey,
         target: Note?,
     ) {
-        adminRemovedIds.put(targetId, nostrGroupId)
-        if (target != null && target.event?.kind == ChatEvent.KIND) removeMessage(nostrGroupId, target)
+        adminRemovedIds.put(moderationKey(nostrGroupId, targetId), true)
+        if (target != null && target.event?.kind == ChatEvent.KIND && isInGroup(nostrGroupId, target)) removeMessage(nostrGroupId, target)
     }
 
     /**
@@ -133,20 +148,20 @@ class MarmotGroupList(
         nostrGroupId: HexKey,
         reportId: HexKey,
     ) {
-        dismissedReportIds.put(reportId, nostrGroupId)
+        dismissedReportIds.put(moderationKey(nostrGroupId, reportId), true)
     }
 
     /** True when an admin of [nostrGroupId] dismissed the report [reportId]. */
     fun isReportDismissed(
         nostrGroupId: HexKey,
         reportId: HexKey,
-    ): Boolean = dismissedReportIds.get(reportId) == nostrGroupId
+    ): Boolean = dismissedReportIds.get(moderationKey(nostrGroupId, reportId)) == true
 
     /** True when an admin of [nostrGroupId] removed the message [noteId]. */
     fun isAdminRemoved(
         nostrGroupId: HexKey,
         noteId: HexKey,
-    ): Boolean = adminRemovedIds.get(noteId) == nostrGroupId
+    ): Boolean = adminRemovedIds.get(moderationKey(nostrGroupId, noteId)) == true
 
     /**
      * Drop a group from the in-memory list. Also clears the chatroom's own
@@ -157,7 +172,18 @@ class MarmotGroupList(
     fun removeGroup(nostrGroupId: HexKey) {
         val chatroom = rooms.remove(nostrGroupId)
         chatroom?.clearAllMessagesSync()?.forEach { noteToGroupIndex.remove(it.idHex) }
+        forgetModeration(adminRemovedIds, nostrGroupId)
+        forgetModeration(dismissedReportIds, nostrGroupId)
         _groupListChanges.tryEmit(nostrGroupId)
+    }
+
+    private fun forgetModeration(
+        records: LargeCache<String, Boolean>,
+        nostrGroupId: HexKey,
+    ) {
+        val keys = mutableListOf<String>()
+        records.forEach { key, _ -> if (key.startsWith(nostrGroupId)) keys.add(key) }
+        keys.forEach { records.remove(it) }
     }
 
     fun allGroupIds(): List<HexKey> {

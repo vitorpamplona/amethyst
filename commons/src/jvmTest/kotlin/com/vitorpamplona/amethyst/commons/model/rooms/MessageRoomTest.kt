@@ -23,11 +23,13 @@ package com.vitorpamplona.amethyst.commons.model.rooms
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.relayClient.event.watchers.filterRepliesAndReactionsToNotes
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
+import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlin.test.Test
@@ -96,6 +98,18 @@ class MessageRoomTest {
         cache.justConsume(rumor, null, true)
 
         assertTrue(cache.getNoteIfExists(rumor.id)!!.isInRoom())
+    }
+
+    @Test
+    fun aDirectMessageQuotingARoomMessageStaysInItsConversation() {
+        val cache = EventCache()
+        val target = message(cache, "hi", signed = false).also { it.addGatherer(FakeRoom()) }
+        val signedDm = signer.sign<ChatMessageEvent>(1_001, ChatMessageEvent.KIND, arrayOf(arrayOf("e", target.idHex)), "look at this")
+        val dm = ChatMessageEvent(signedDm.id, signedDm.pubKey, signedDm.createdAt, signedDm.tags, signedDm.content, "")
+        cache.justConsume(dm, null, true)
+        val dmNote = cache.getNoteIfExists(dm.id)!!.also { it.addGatherer(Chatroom()) }
+
+        assertFalse(dmNote.isInRoom())
     }
 
     @Test

@@ -51,6 +51,8 @@ fun rememberMarmotRenderTags(
 ): ImmutableListOfLists<String>? {
     val event = note.event
     val groupId = remember(note) { note.marmotGroupIdFor(accountViewModel.account) }
+    // Every chat row passes through here; only a Marmot message has work to do.
+    if (groupId == null) return null
     val matched = remember(event) { event?.let { MarmotCustomEmoji.matchedEmojiAttachments(it) } ?: emptyMap() }
     val withoutEmoji =
         remember(event) {
@@ -63,7 +65,7 @@ fun rememberMarmotRenderTags(
 
     val tags by
         produceState(withoutEmoji, event, groupId) {
-            if (event == null || groupId == null || matched.isEmpty()) return@produceState
+            if (event == null || matched.isEmpty()) return@produceState
             val secret = accountViewModel.marmotMediaSecretForMessage(groupId, note.idHex) ?: return@produceState
             matched.forEach { (url, reference) ->
                 if (url.startsWith("https://") || url.startsWith("http://")) {
@@ -73,5 +75,5 @@ fun rememberMarmotRenderTags(
             value = MarmotCustomEmoji.safeRenderTags(event).toImmutableListOfLists()
         }
 
-    return if (groupId == null) null else tags
+    return tags
 }

@@ -149,7 +149,8 @@ open class MarmotNewMessageViewModel : ViewModel() {
      *
      * Returns once the message is on screen, not once it has been published:
      * encryption and the relay hand-off run on the account scope and report
-     * themselves on the bubble. Only a failure to even build the message
+     * themselves on the bubble. A message with custom emoji appears once its
+     * pictures are uploaded, which also runs on the account scope. Only a failure to even build the message
      * throws here — anything later shows up as a failed bubble the user can
      * retry, so the composer is free to clear as soon as this returns.
      */

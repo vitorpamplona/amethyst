@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
@@ -40,12 +41,14 @@ import com.vitorpamplona.marmot.appComponents.MarmotMediaType
 import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
+import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
+import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -60,9 +63,14 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -328,16 +336,19 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         val groups = account.marmotGroupList
+        // An admin's authority ends at their group: a target is removed only when it is one of
+        // this group's messages, never a message of another group or a public note it names.
         manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
             val target = account.cache.getNoteIfExists(targetId)
+            val removable = groupMessageToRemove(groups, nostrGroupId, target)
             groups.applyAdminRemoval(nostrGroupId, targetId, target)
-            if (target?.event?.kind == ChatEvent.KIND) account.cache.removeLocally(target)
+            removable?.let { account.cache.removeLocally(it) }
         }
         manager.dismissedReportIds(nostrGroupId, innerEvent).forEach { reportId ->
             groups.applyReportDismissal(nostrGroupId, reportId)
             account.cache
                 .getNoteIfExists(reportId)
-                ?.takeIf { it.event is ReportEvent }
+                ?.takeIf { isGroupReport(nostrGroupId, it) }
                 ?.let { account.cache.removeLocally(it) }
         }
         // A message or report whose removal arrived first is dropped as it lands.
@@ -345,7 +356,22 @@ class AccountMarmotActions(
             (innerEvent.kind == ChatEvent.KIND && groups.isAdminRemoved(nostrGroupId, innerEvent.id)) ||
                 (innerEvent.kind == ReportEvent.KIND && groups.isReportDismissed(nostrGroupId, innerEvent.id))
         if (landedRemoved) {
-            account.cache.getNoteIfExists(innerEvent.id)?.let { account.cache.removeLocally(it) }
+            account.cache
+                .getNoteIfExists(innerEvent.id)
+                ?.takeIf { it.isPrivateRumor() }
+                ?.let { account.cache.removeLocally(it) }
+        }
+    }
+
+    /** True when [report] is a report filed inside [nostrGroupId]: a group rumor about one of its messages. */
+    private fun isGroupReport(
+        nostrGroupId: HexKey,
+        report: Note,
+    ): Boolean {
+        val event = report.event as? ReportEvent ?: return false
+        if (!report.isPrivateRumor()) return false
+        return event.reportedPost().any { reported ->
+            account.cache.getNoteIfExists(reported.eventId)?.let { account.marmotGroupList.isInGroup(nostrGroupId, it) } == true
         }
     }
 
@@ -406,8 +432,8 @@ class AccountMarmotActions(
         note: Note,
     ): Boolean {
         val manager = account.marmotManager ?: return false
-        if (note.event?.kind != ChatEvent.KIND || note.author == account.userProfile()) return false
-        return manager.isGroupAdmin(nostrGroupId)
+        val event = note.event ?: return false
+        return manager.canAdminDelete(nostrGroupId, event)
     }
 
     /**
@@ -655,16 +681,42 @@ class AccountMarmotActions(
                 // replacement is CONFIRMED published, then they are deleted
                 // (`foundation/key-packages.md`). The manager can only start
                 // that clock if it hears a relay accepted the replacement.
-                if (account.client.publishAndConfirm(event, relays)) {
-                    manager.confirmKeyPackagePublished(event)
-                } else {
-                    Log.w("MarmotDbg") { "publishMarmotKeyPackages: no relay confirmed rotated id=${event.id.take(8)}…" }
-                }
+                publishKeyPackage(manager, event, relays)
             }
             // A rotation we just published makes this device the newest owner.
             // Leaving the old answer in place would keep the banner warning for
             // up to its full life about a state that no longer exists.
             lastOwnerCheck = null
+        }
+    }
+
+    /**
+     * Publish [event], a KeyPackage [manager] just made active, and start its replacement
+     * clock once a relay confirms it. A first failure is retried in the background with
+     * backoff: the new KeyPackage is already the active one, so nothing else would publish
+     * it again, and inviters would keep finding only the one it replaced.
+     */
+    private suspend fun publishKeyPackage(
+        manager: MarmotManager,
+        event: KeyPackageEvent,
+        relays: Set<NormalizedRelayUrl>,
+    ) {
+        if (account.client.publishAndConfirm(event, relays)) {
+            manager.confirmKeyPackagePublished(event)
+            return
+        }
+        Log.w("MarmotDbg") { "no relay confirmed KeyPackage ${event.id.take(8)}…; retrying in the background" }
+        account.scope.launch(Dispatchers.IO) {
+            var wait = KEY_PACKAGE_RETRY_FIRST_MS
+            repeat(KEY_PACKAGE_RETRIES) {
+                delay(wait)
+                wait *= 4
+                if (account.client.publishAndConfirm(event, relays)) {
+                    manager.confirmKeyPackagePublished(event)
+                    return@launch
+                }
+            }
+            Log.w("MarmotDbg") { "KeyPackage ${event.id.take(8)}… was never confirmed by a relay" }
         }
     }
 
@@ -686,9 +738,7 @@ class AccountMarmotActions(
         account.cache.justConsumeMyOwnEvent(event)
         // A fresh mint can displace an earlier bundle in the same slot, so the
         // confirmation starts that bundle's grace period like a rotation does.
-        if (account.client.publishAndConfirm(event, relays)) {
-            manager.confirmKeyPackagePublished(event)
-        }
+        publishKeyPackage(manager, event, relays)
         // Same as the rotation path: we have just changed who owns the newest
         // KeyPackage, so any cached answer is stale by construction.
         lastOwnerCheck = null
@@ -743,7 +793,7 @@ class AccountMarmotActions(
                 manager.replaceStaleKeyPackages(relays.toList()).forEach { event ->
                     Log.d("MarmotDbg") { "ensureMarmotKeyPackagePublished: replacing stale KeyPackage → ${event.id.take(8)}…" }
                     account.cache.justConsumeMyOwnEvent(event)
-                    if (account.client.publishAndConfirm(event, relays)) manager.confirmKeyPackagePublished(event)
+                    publishKeyPackage(manager, event, relays)
                 }
                 return
             }
@@ -1308,9 +1358,14 @@ class AccountMarmotActions(
     ): Event {
         if (emojis.isEmpty()) return rumor
         val wanted = emojis.distinctBy { it.code }
+        // In parallel: each one is a download and an upload, and one slow host should not
+        // hold the others back.
         val attached =
-            wanted.mapNotNull { emoji ->
-                encryptMarmotCustomEmoji(nostrGroupId, emoji)?.let { emoji.code to it }
+            coroutineScope {
+                wanted
+                    .map { emoji -> async { encryptMarmotCustomEmoji(nostrGroupId, emoji)?.let { emoji.code to it } } }
+                    .awaitAll()
+                    .filterNotNull()
             }
         if (attached.size < wanted.size) onEmojiNotAttached()
         val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
@@ -1479,10 +1534,25 @@ class AccountMarmotActions(
     }
 
     companion object {
+        /**
+         * [target], when an authorized admin removal in [nostrGroupId] may drop it from the cache:
+         * only a chat message of that same group. Null for anything else, a message of another
+         * group or a public note included.
+         */
+        fun groupMessageToRemove(
+            groups: MarmotGroupList,
+            nostrGroupId: HexKey,
+            target: Note?,
+        ): Note? = target?.takeIf { it.event?.kind == ChatEvent.KIND && groups.isInGroup(nostrGroupId, it) }
+
         private const val REACTION_KIND = 7
 
         /** How often the leaf-refresh loop asks whether a delayed refresh is due: 30 minutes. */
         private const val LEAF_REFRESH_CHECK_INTERVAL_MS = 30L * 60 * 1000
+
+        // Retries of an unconfirmed KeyPackage publish: after 30 s, 2 min, 8 min and 32 min.
+        private const val KEY_PACKAGE_RETRY_FIRST_MS = 30_000L
+        private const val KEY_PACKAGE_RETRIES = 4
 
         fun indexMarmotInnerEvent(
             cache: EventCache,
