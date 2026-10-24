@@ -36,9 +36,9 @@ On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
 | quartz (`quartz`) | Nostr: NIPs (`nipXX`), protocol families (`contextvm/`, `concord/`, …), signers, relay client + accessories, relay-server code, secp256k1, **Marmot's event classes** (`quartz.marmot`) | `quartzDir` |
 | crypto-kmp (`crypto`) | SHA, HMAC, HKDF, AES, ChaCha20-Poly1305, X25519, Ed25519, random. No Nostr | `cryptoKmpDir` |
 | mls-kmp (`mls.kmp`) | The RFC 9420 engine. No Nostr, no binding | `mlsKmpDir` |
-| marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic that needs MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, the MDK bench/vectors | `marmotKmpDir` |
+| marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic needing MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, MDK bench | `marmotKmpDir` |
 | cordn-kmp (`cordn`) | cordn specs, `CordnGroupManager`, `CordnSyncLoop`, the registry, store interfaces | `cordnKmpDir` |
-| quic-kmp (`quic`) | QUIC v1, TLS 1.3, HTTP/3, QPACK, WebTransport client + interop runner (JVM, Android) | `quicKmpDir` |
+| quic-kmp (`quic`) | QUIC v1, TLS 1.3, HTTP/3, QPACK, WebTransport client (JVM, Android) | `quicKmpDir` |
 
 Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
 (which never import each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
@@ -49,7 +49,7 @@ with store *interfaces*. QUIC/HTTP/3/WebTransport → quic-kmp; MoQ and audio �
 test, bench or vector exercising one library alone → that library. **Stays here:** encrypted-at-rest
 store implementations (`commons/…/marmot/Encrypted*Store`, `commons/…/cordn/FileCordnStores`),
 account wiring (`AccountMarmotActions`, `CordnRuntime`), chatrooms, feeds, subscriptions, UI, `amy`,
-and tests needing both bindings (`CordnIndependenceTest`, `BothCredentialProfilesTest`).
+and tests needing both bindings (`CordnIndependenceTest`).
 
 **Changing one:** edit its repo (own `AGENTS.md`), build here with its `-P…Dir`, release, then bump
 `gradle/libs.versions.toml` (keep `cryptoKmp`/`mlsKmp` at what quartz and the bindings use). A
