@@ -82,39 +82,8 @@
     "vitorpamplona"
   ],
   "sinceLastTag": {
-    "tag": "v1.19.0",
-    "since": "2026-10-14T09:06:00-04:00",
-    "translators": [
-      {
-        "user": "StellarStoic",
-        "languages": [
-          "Slovenian"
-        ]
-      },
-      {
-        "user": "raj2516",
-        "languages": [
-          "Hindi"
-        ]
-      },
-      {
-        "user": "maxblake2015",
-        "languages": [
-          "Polish"
-        ]
-      },
-      {
-        "user": "summoner001",
-        "languages": [
-          "Hungarian"
-        ]
-      },
-      {
-        "user": "fiddleway",
-        "languages": [
-          "Uzbek"
-        ]
-      }
-    ]
+    "tag": "v1.20.0",
+    "since": "2026-10-24T16:25:42-04:00",
+    "translators": []
   }
 }

@@ -815,6 +815,7 @@
     <string name="quick_action_request_deletion_alert_title">Prošnja za izbris</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst bo poslal prošnjo za izbris zapiska vsem relejem na katere ste povezani. Nobenega jamstva ni, da bo vaš zapisek trajno izbrisan iz teh relejev ali iz drugih relejev, kjer je morda shranjen.</string>
     <string name="quick_action_request_deletion_alert_body_group">Amethyst bo vse v tej šifrirani skupini prosil, naj sporočilo izbrišejo. Njihove aplikacije naj bi ga odstranile, ni pa zagotovila, da bo vsak član izbrisal svojo kopijo.</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Amethyst bo vse v tem kanalu prosil, naj sporočilo izbrišejo. Njihove aplikacije naj bi ga odstranile, ni pa zagotovila, da bo vsak člen izbrisal svojo kopijo.</string>
     <string name="quick_action_request_deletion_alert_body_private">Amethyst bo osebam v tem pogovoru poslal šifrirano prošnjo za izbris. Njihove aplikacije naj bi sporočilo odstranile, ni pa zagotovila, da bodo izbrisane vse kopije.</string>
     <string name="quick_action_block_dialog_btn">Blokiraj</string>
     <string name="quick_action_delete_dialog_btn">Izbriši</string>
@@ -830,6 +831,7 @@
     <string name="report_dialog_blocking_a_user">Blokiranje uporabnika bo skrilo njegove objave v vaši aplikaciji. Vaši zapiski še vedno ostajajo javno dostopni. Blokirani uporabniki so vidni v varnost in filtri.</string>
     <string name="report_dialog_report_btn">Prijavi zlorabo</string>
     <string name="report_dialog_reminder_public">Vse poslane prijave bojo javno vidne.</string>
+    <string name="report_dialog_reminder_group">Vsi v tej skupini bodo videli to prijavo in to, da si jo poslal/a. Skrbniki jo lahko pregledajo.</string>
     <string name="report_dialog_additional_reason_placeholder">Poljubno lahko dodaš dodatna pojasnila glede vaše prijave…</string>
     <string name="report_dialog_additional_reason_label">Dodaten kontekst</string>
     <string name="report_dialog_select_reason_label">Razlog</string>
@@ -2108,6 +2110,13 @@
     <string name="tor_keep_waiting">Nadaljuj s čakanjem</string>
     <string name="tor_splash_connecting">Povezovanje s Torom…</string>
     <string name="tor_status_connected">Povezan s Torom</string>
+    <string name="tor_waiting">Čakanje na Tor</string>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">Tor se ne povezuje. %1$d rele čaka nanj.</item>
+        <item quantity="two">Tor se ne povezuje. %1$d releja čakata nanj.</item>
+        <item quantity="few">Tor se ne povezuje. %1$d releji čakajo nanj.</item>
+        <item quantity="other">Tor se ne povezuje. %1$d relejev čaka nanj.</item>
+    </plurals>
     <string name="tor_splash_error">Napaka Tora: %1$s</string>
     <string name="tor_splash_explainer">Amethyst uporablja Tor, da pred releji skrije tvoj naslov IP. Zagon Tora lahko traja minuto in potrebuje dostop do interneta.</string>
     <string name="notification_settings_categories_explainer">Dotakni se kategorije, da odpreš njene nastavitve obvestil v Androidu — tam te čakajo zvok, pomembnost, značke in funkcija Ne moti.</string>
@@ -4820,6 +4829,15 @@
         <item quantity="other">%1$d sporočilo</item>
     </plurals>
     <string name="marmot_not_a_member">Ni član te skupine</string>
+    <string name="marmot_admin_delete_message">Izbriši za vse</string>
+    <string name="room_remove_for_everyone_title">Izbriši za vse?</string>
+    <string name="room_remove_for_everyone_body">Aplikacija vsakega člana bo odstranila to sporočilo. Tega ni mogoče razveljaviti.</string>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">Opusti %1$d prijavo</item>
+        <item quantity="two">Opusti %1$d prijavi</item>
+        <item quantity="few">Opusti %1$d prijave</item>
+        <item quantity="other">Opusti %1$d prijav</item>
+    </plurals>
     <string name="marmot_unknown_error">neznana napaka</string>
     <string name="media_added">Medij dodan</string>
     <string name="media_added_to_profile_gallery">Medij dodan v galerijo profila</string>
@@ -8819,4 +8837,44 @@
     <string name="devtools_console_invalid_url">Ni naslov releja: %1$s</string>
     <string name="devtools_console_tor">%1$s poteka prek Tor, ki še ni povezan. Poskusite znova, ko bo Tor vzpostavljen, ali spremenite nastavitev Tor za ta rele.</string>
     <string name="devtools_console_send_failed">Ni povezave, okvir ni bil poslan</string>
+    <string name="local_timestamp_in">čez %1$s</string>
+    <string name="local_timestamp_ago">pred %1$s</string>
+    <string name="marmot_poll_label">Glasovanje</string>
+    <string name="marmot_poll_preview">Glasovanje: %1$s</string>
+    <string name="poll_unsupported">To glasovanje uporablja obliko, ki je ta aplikacija ne more prikazati.</string>
+    <string name="marmot_poll_not_anonymous">Glasovi so vidni vsem članom te skupine.</string>
+    <string name="poll_vote">Glasuj</string>
+    <string name="poll_change_vote">Spremeni glas</string>
+    <string name="marmot_poll_create">Ustvari glasovanje</string>
+    <string name="marmot_poll_question">Postavi vprašanje</string>
+    <string name="marmot_poll_option">Možnost %1$d</string>
+    <string name="marmot_poll_add_option">Dodaj možnost</string>
+    <string name="marmot_poll_new">Novo glasovanje</string>
+    <string name="marmot_poll_options">Možnosti</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_remove_option">Odstrani možnost</string>
+    <string name="marmot_poll_multiple_answers">Več odgovorov</string>
+    <string name="marmot_poll_pick_one">Vsak član izbere en odgovor</string>
+    <string name="marmot_poll_pick_many">Vsak član lahko izbere več odgovorov</string>
+    <string name="marmot_poll_closes_at">Zapre se %1$s</string>
+    <string name="marmot_poll_stays_open">Ostane odprto za glasovanje</string>
+    <string name="marmot_poll_duplicate_option">Dve možnosti povesta isto.</string>
+    <string name="marmot_poll_invalid_text">To besedilo je predolgo ali vsebuje znake, ki jih glasovanje ne more prikazati.</string>
+    <string name="marmot_poll_has_deadline">Zapri po</string>
+    <string name="marmot_poll_no_deadline">Nikoli</string>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d ura</item>
+        <item quantity="two">%1$d uri</item>
+        <item quantity="few">%1$d ure</item>
+        <item quantity="other">%1$d ur</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d dan</item>
+        <item quantity="two">%1$d dneva</item>
+        <item quantity="few">%1$d dnevi</item>
+        <item quantity="other">%1$d dni</item>
+    </plurals>
+    <string name="marmot_poll_invalid">Preveri vprašanje in možnosti: od 2 do 10 možnosti, brez praznega besedila.</string>
+    <string name="marmot_emoji_upload_failed">Emojija po meri ni bilo mogoče priložiti, zato je bil poslan kot besedilo.</string>
+    <string name="marmot_media_epoch_moved">Skupina se je med nalaganjem tvoje datoteke spremenila, zato datoteka ni bila poslana. Pošlji jo znova.</string>
 </resources>
