@@ -38,6 +38,11 @@ object BunkerLoginUseCase {
         authPrompts: RemoteSignerAuthPrompts? = null,
         /** Also told of each `auth_url` page, for a caller that shows it its own way (the CLI prints it). */
         onAuthUrl: ((String) -> Unit)? = null,
+        /**
+         * The most the signer may take to answer `connect` and `get_public_key`. Null leaves it to
+         * [NostrSignerRemote], which waits 65 s per request and retries once.
+         */
+        answerTimeoutMs: Long? = null,
     ): BunkerLoginResult {
         val remoteSigner =
             NostrSignerRemote.fromBunkerUri(
@@ -69,8 +74,18 @@ object BunkerLoginUseCase {
                 }
             } ?: throw Exception("Could not reach the signer's relays: ${remoteSigner.relays.joinToString { it.url }}")
 
-            remoteSigner.connect()
-            return BunkerLoginResult(remoteSigner, remoteSigner.getPublicKey())
+            val handshake: suspend () -> String = {
+                remoteSigner.connect()
+                remoteSigner.getPublicKey()
+            }
+            val pubKey =
+                if (answerTimeoutMs == null) {
+                    handshake()
+                } else {
+                    withTimeoutOrNull(answerTimeoutMs) { handshake() }
+                        ?: throw Exception("The signer did not answer within ${answerTimeoutMs / 1000}s")
+                }
+            return BunkerLoginResult(remoteSigner, pubKey)
         } catch (e: Throwable) {
             // Cancellation included: nobody else holds this signer to close it.
             remoteSigner.closeSubscription()

@@ -88,6 +88,9 @@ class Nip05SignerLoginTest {
     /** The legacy shape: the address's own key signs, on the test relay. */
     private var nostrJson: String = ""
 
+    /** The spec shape's `?name=_` document, naming the domain's signer; null serves a 404. */
+    private var announcementJson: String? = null
+
     @BeforeTest
     fun setup() {
         relay = KtorRelay(RelayEngine(url = "ws://127.0.0.1:7785/".normalizeRelayUrl()), host = "127.0.0.1", port = 0).start()
@@ -114,7 +117,12 @@ class Nip05SignerLoginTest {
         LoginCommand.nip05ClientBuilder = {
             Nip05Client(
                 object : Nip05Fetcher {
-                    override suspend fun fetch(url: String) = if (url.endsWith("?name=bob")) nostrJson else throw IllegalStateException("404")
+                    override suspend fun fetch(url: String) =
+                        when {
+                            url.endsWith("?name=bob") -> nostrJson
+                            url.endsWith("?name=_") -> announcementJson ?: throw IllegalStateException("404")
+                            else -> throw IllegalStateException("404")
+                        }
                 },
             )
         }
@@ -151,11 +159,26 @@ class Nip05SignerLoginTest {
 
     @Test
     fun aSignerForAnotherAccountFailsTheLogin() {
-        // The domain names bob's key, but its signer signs for someone else.
+        // The address names someone else's key, but the domain's signer (the running one) signs for
+        // the user: it answers, and the login refuses an account the address does not name.
         val someoneElse = KeyPair().pubKey.toHexKey()
-        nostrJson = """{"names":{"bob":"$someoneElse"},"nip46":{"$someoneElse":["${relay.url}"]}}"""
+        nostrJson = """{"names":{"bob":"$someoneElse"}}"""
+        announcementJson = """{"names":{"_":"${user.pubKey}"},"nip46":{"relays":["${relay.url}"]}}"""
         val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--timeout", "10")
         assertEquals(1, r.exit, r.stdout + r.stderr)
         assertTrue(r.stdout.contains("signer_error") || r.stderr.contains("signer_error"), r.stdout + r.stderr)
+    }
+
+    @Test
+    fun aSignerThatNeverAnswersTimesOutOnTime() {
+        // Nobody signs for this key, so connect goes unanswered: the login gives up at --timeout
+        // rather than at the remote signer's own 65 s wait and retry.
+        val nobody = KeyPair().pubKey.toHexKey()
+        nostrJson = """{"names":{"bob":"$nobody"},"nip46":{"$nobody":["${relay.url}"]}}"""
+        val started = System.nanoTime()
+        val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--timeout", "2")
+        val elapsedMs = (System.nanoTime() - started) / 1_000_000
+        assertEquals(124, r.exit, r.stdout + r.stderr)
+        assertTrue(elapsedMs < 30_000, "took ${elapsedMs}ms")
     }
 }
