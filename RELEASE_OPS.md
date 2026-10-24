@@ -371,8 +371,8 @@ files. After merging those sync PRs, a maintainer runs:
 
 ```bash
 git pull                                     # the scripts read the merged files
-scripts/bump-homebrew-cask.sh v1.19.0        # verify only; BrewTestBot opens the PR
-scripts/bump-winget.sh v1.19.0               # opens the winget-pkgs PR; uses your `gh` auth
+scripts/bump-homebrew-cask.sh v1.20.0        # verify only; BrewTestBot opens the PR
+scripts/bump-winget.sh v1.20.0               # opens the winget-pkgs PR; uses your `gh` auth
 ```
 
 Both scripts re-verify the published artifact's sha256 first, and the Homebrew
