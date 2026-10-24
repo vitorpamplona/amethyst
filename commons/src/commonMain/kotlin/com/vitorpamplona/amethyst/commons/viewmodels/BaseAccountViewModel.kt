@@ -2544,8 +2544,37 @@ open class BaseAccountViewModel(
         type: MarmotPolls.PollType,
         endsAt: Long?,
     ): Boolean {
-        val poll = account.marmot.buildMarmotPoll(question, options, type, endsAt) ?: return false
-        deliverMarmotGroupMessage(nostrGroupId, poll)
+        // `@` mentions become `nostr:` links with `p` tags, as in a message.
+        val texts = listOf(question) + options
+        val taggers = texts.map { NewMessageTagger(it, null, null, this).also { tagger -> tagger.run() } }
+        val mentions = taggers.flatMap { it.pTags ?: emptyList() }.distinct().map { it.toPTag() }
+        val poll =
+            account.marmot.buildMarmotPoll(taggers.first().message, taggers.drop(1).map { it.message }, type, endsAt, mentions)
+                ?: return false
+
+        val emojis = account.emoji.findEmojiTags(texts.joinToString(" "))
+        if (emojis.isEmpty() || account.marmot.emojiMediaPort == null) {
+            deliverMarmotGroupMessage(nostrGroupId, poll)
+            return true
+        }
+        // Custom emoji travel as encrypted pictures of the poll, as in a message. They are
+        // uploaded on the account scope, so the sheet closes at once.
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val withEmoji =
+                    account.marmot.withEncryptedCustomEmoji(
+                        nostrGroupId,
+                        poll,
+                        emojis,
+                        onEmojiNotAttached = { notices.notify(MarmotNotice.EmojiNotAttached) },
+                        maxTotalTags = MarmotPolls.MAX_TAGS,
+                    )
+                deliverMarmotGroupMessage(nostrGroupId, withEmoji)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot poll with custom emoji", e)
+            }
+        }
         return true
     }
 

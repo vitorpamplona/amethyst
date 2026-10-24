@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndCon
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
+import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportType
@@ -1353,6 +1354,11 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         rumor: Event,
         emojis: List<EmojiUrlTag>,
+        /**
+         * A cap on all of the event's tags, for kinds MDK bounds that way (a poll: MarmotPolls.MAX_TAGS).
+         * Null applies a message's limits on its extra tags.
+         */
+        maxTotalTags: Int? = null,
         /** Called when at least one emoji could not be attached and goes out as text. */
         onEmojiNotAttached: () -> Unit = {},
     ): Event {
@@ -1367,14 +1373,20 @@ class AccountMarmotActions(
                     .awaitAll()
                     .filterNotNull()
             }
-        if (attached.size < wanted.size) onEmojiNotAttached()
         val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
         val imetas = attached.map { (_, reference) -> reference.toImetaTag() }
         val emojiTags = attached.map { (code, reference) -> arrayOf(MarmotCustomEmoji.TAG_EMOJI, code, reference.locators.first().value) }
         // MDK refuses to SEND past its limits on a message's extra tags (the
         // imeta rows are counted apart), and so must we, or a peer that one day
         // enforces them on receive drops the message.
-        val tags = if (MarmotCustomEmoji.withinTagLimits(emojiTags + base)) imetas + emojiTags + base else base
+        val fits =
+            if (maxTotalTags != null) {
+                imetas.size + emojiTags.size + base.size <= maxTotalTags
+            } else {
+                MarmotCustomEmoji.withinTagLimits(emojiTags + base)
+            }
+        if (attached.size < wanted.size || (!fits && attached.isNotEmpty())) onEmojiNotAttached()
+        val tags = if (fits) imetas + emojiTags + base else base
         val template = EventTemplate<Event>(rumor.createdAt, rumor.kind, tags.toTypedArray(), rumor.content)
         return RumorAssembler.assembleRumor(account.signer.pubKey, template)
     }
@@ -1427,10 +1439,16 @@ class AccountMarmotActions(
         options: List<String>,
         type: MarmotPolls.PollType,
         endsAt: Long?,
+        /** The accounts the question and options mention, `p`-tagged as a message tags them. */
+        mentions: List<PTag> = emptyList(),
     ): Event? {
         val createdAt = TimeUtils.now()
         val tags = MarmotPolls.pollTags(createdAt, question, options, type, endsAt) ?: return null
-        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL, tags, question)
+        // MDK ignores tags a poll does not define, within MAX_TAGS in all. A mention past that
+        // still reads as a link in the text; it just notifies no one.
+        val room = (MarmotPolls.MAX_TAGS - tags.size).coerceAtLeast(0)
+        val pTags = mentions.distinctBy { it.pubKey }.take(room).map { it.toTagArray() }
+        val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL, tags + pTags, question)
         return RumorAssembler.assembleRumor(account.signer.pubKey, template)
     }
 

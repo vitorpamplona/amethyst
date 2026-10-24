@@ -49,8 +49,12 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.InputTransformation
+import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.then
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +67,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -72,6 +77,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,8 +86,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -89,7 +102,11 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
+import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_add_option
@@ -113,16 +130,23 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_poll_pick_one
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_remove_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_stays_open
+import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
+import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
+import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
+import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightChat
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 /** Deadlines offered by the sheet, in seconds; MDK caps a poll at 30 days. */
@@ -133,9 +157,12 @@ private val DEADLINES = listOf(null, 3_600L, 24 * 3_600L, 7 * 24 * 3_600L, Marmo
 private class DraftOption(
     val id: Int,
 ) {
-    var text by mutableStateOf("")
+    val state = TextFieldState()
+    val focus = FocusRequester()
 
-    val label: String get() = text.trim()
+    val label: String get() = state.text.toString().trim()
+
+    val isEmpty: Boolean get() = state.text.isEmpty()
 }
 
 /**
@@ -145,20 +172,16 @@ private class DraftOption(
  */
 @Stable
 private class PollDraft {
-    var question by mutableStateOf("")
+    val question = TextFieldState()
+    val questionFocus = FocusRequester()
     var multiple by mutableStateOf(false)
     var deadline by mutableStateOf<Long?>(null)
 
+    /** The field being typed in: the `@` and `:` suggestion lists open under it. */
+    var active by mutableStateOf<TextFieldState?>(null)
+
     private var nextId = 0
     val options = mutableStateListOf(DraftOption(nextId++), DraftOption(nextId++))
-
-    fun edit(
-        option: DraftOption,
-        text: String,
-    ) {
-        option.text = text
-        keepTrailingRow()
-    }
 
     fun remove(option: DraftOption) {
         options.remove(option)
@@ -166,19 +189,21 @@ private class PollDraft {
         keepTrailingRow()
     }
 
-    private fun keepTrailingRow() {
-        if (options.last().text.isNotEmpty() && options.size < MarmotPolls.MAX_OPTIONS) options.add(DraftOption(nextId++))
+    fun keepTrailingRow() {
+        if (!options.last().isEmpty && options.size < MarmotPolls.MAX_OPTIONS) options.add(DraftOption(nextId++))
     }
 
     /** The empty row at the end is where the next option goes, not an option to remove. */
-    fun canRemove(option: DraftOption) = options.size > MarmotPolls.MIN_OPTIONS && option.text.isNotEmpty()
+    fun canRemove(option: DraftOption) = options.size > MarmotPolls.MIN_OPTIONS && !option.isEmpty
 
-    fun isTrailing(option: DraftOption) = option === options.last() && option.text.isEmpty() && options.size > MarmotPolls.MIN_OPTIONS
+    fun isTrailing(option: DraftOption) = option === options.last() && option.isEmpty && options.size > MarmotPolls.MIN_OPTIONS
+
+    val questionText: String get() = question.text.toString().trim()
 
     val labels: List<String> get() = options.map { it.label }.filter { it.isNotEmpty() }
 
     val questionInvalid: Boolean
-        get() = question.isNotBlank() && !MarmotPolls.isValidDisplayText(question.trim(), MarmotPolls.MAX_QUESTION_BYTES)
+        get() = questionText.isNotEmpty() && !MarmotPolls.isValidDisplayText(questionText, MarmotPolls.MAX_QUESTION_BYTES)
 
     fun isInvalid(option: DraftOption) = option.label.isNotEmpty() && !MarmotPolls.isValidDisplayText(option.label, MarmotPolls.MAX_OPTION_BYTES)
 
@@ -187,10 +212,46 @@ private class PollDraft {
 
     val isReady: Boolean
         get() =
-            question.isNotBlank() &&
+            questionText.isNotEmpty() &&
                 !questionInvalid &&
                 labels.size in MarmotPolls.MIN_OPTIONS..MarmotPolls.MAX_OPTIONS &&
                 options.none { isInvalid(it) || isDuplicate(it) }
+}
+
+/**
+ * The `@` and `:` autocomplete of every compose screen (the shared [UserSuggestionState] and
+ * [EmojiSuggestionState]), pointed at whichever field of the poll is being typed in. Members of
+ * the group come first among the people suggested.
+ */
+@Stable
+private class PollSuggestions(
+    val users: UserSuggestionState,
+    val emojis: EmojiSuggestionState,
+) {
+    fun onEdited(state: TextFieldState) {
+        if (!state.selection.collapsed) return
+        val word = state.currentWord()
+        if (word.startsWith("@")) users.processCurrentWord(word) else users.reset()
+        emojis.processCurrentWord(word)
+    }
+
+    fun pickUser(
+        state: TextFieldState,
+        user: User,
+    ) {
+        users.replaceCurrentWord(state, state.currentWord(), user)
+        users.reset()
+    }
+
+    fun pickEmoji(
+        state: TextFieldState,
+        emoji: EmojiPackState.EmojiMedia,
+    ) = emojis.autocompleteInto(state, emoji)
+
+    fun reset() {
+        users.reset()
+        emojis.reset()
+    }
 }
 
 /**
@@ -208,6 +269,25 @@ fun CreateMarmotPollSheet(
     onDismiss: () -> Unit,
 ) {
     val draft = remember { PollDraft() }
+    val suggestions =
+        remember {
+            val account = accountViewModel.account
+            PollSuggestions(
+                users =
+                    UserSuggestionState(
+                        account,
+                        accountViewModel.nip05ClientBuilder(),
+                        priorityPubkeys = {
+                            account.marmotGroupList
+                                .getOrCreateGroup(nostrGroupId)
+                                .members.value
+                                .mapTo(mutableSetOf()) { it.pubkey }
+                        },
+                    ),
+                emojis = EmojiSuggestionState(account.emoji),
+            )
+        }
+    DisposableEffect(Unit) { onDispose { suggestions.reset() } }
     var sending by remember { mutableStateOf(false) }
     var refused by remember { mutableStateOf(false) }
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
@@ -235,13 +315,19 @@ fun CreateMarmotPollSheet(
         ) {
             PollSheetHeader(onClose = ::close)
 
-            val firstOption = remember { FocusRequester() }
             QuestionField(
                 draft = draft,
-                onNext = { firstOption.requestFocus() },
+                suggestions = suggestions,
+                accountViewModel = accountViewModel,
+                onNext = {
+                    draft.options
+                        .first()
+                        .focus
+                        .requestFocus()
+                },
             )
 
-            OptionsSection(draft, firstOption)
+            OptionsSection(draft, suggestions, accountViewModel)
 
             PollSettingsCard(draft)
 
@@ -258,7 +344,7 @@ fun CreateMarmotPollSheet(
                     val type = if (draft.multiple) MarmotPolls.PollType.MULTIPLE_CHOICE else MarmotPolls.PollType.SINGLE_CHOICE
                     val endsAt = draft.deadline?.let { TimeUtils.now() + it }
                     scope.launch {
-                        if (accountViewModel.createMarmotPoll(nostrGroupId, draft.question.trim(), draft.labels, type, endsAt)) {
+                        if (accountViewModel.createMarmotPoll(nostrGroupId, draft.questionText, draft.labels, type, endsAt)) {
                             close()
                         } else {
                             refused = true
@@ -322,32 +408,25 @@ private fun PollSheetHeader(onClose: () -> Unit) {
 @Composable
 private fun QuestionField(
     draft: PollDraft,
+    suggestions: PollSuggestions,
+    accountViewModel: AccountViewModel,
     onNext: () -> Unit,
 ) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    LaunchedEffect(Unit) { draft.questionFocus.requestFocus() }
     val style = MaterialTheme.typography.headlineSmall.copy(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
 
     Column {
-        BasicTextField(
-            value = draft.question,
-            onValueChange = { text ->
-                if ('\n' in text) onNext() else draft.question = text
-            },
-            textStyle = style,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { onNext() }),
+        PollTextField(
+            state = draft.question,
+            placeholder = stringRes(Res.string.marmot_poll_question),
+            style = style,
             maxLines = 4,
-            modifier = Modifier.fillMaxWidth().focusRequester(focus),
-            decorationBox = { inner ->
-                Box {
-                    if (draft.question.isEmpty()) {
-                        Text(stringRes(Res.string.marmot_poll_question), style = style, color = MaterialTheme.colorScheme.placeholderText)
-                    }
-                    inner()
-                }
+            onEdited = {
+                draft.active = draft.question
+                suggestions.onEdited(draft.question)
             },
+            onEnter = onNext,
+            modifier = Modifier.fillMaxWidth().focusRequester(draft.questionFocus),
         )
         AnimatedVisibility(visible = draft.questionInvalid, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Text(
@@ -357,13 +436,109 @@ private fun QuestionField(
                 modifier = Modifier.padding(top = 4.dp),
             )
         }
+        FieldSuggestions(draft.question, draft.questionFocus, draft, suggestions, accountViewModel)
+    }
+}
+
+/**
+ * The `@` and `:` suggestion lists for [state], open while it is the field being typed in. A
+ * pick completes the word under the cursor, as in every other composer.
+ */
+@Composable
+private fun FieldSuggestions(
+    state: TextFieldState,
+    focus: FocusRequester,
+    draft: PollDraft,
+    suggestions: PollSuggestions,
+    accountViewModel: AccountViewModel,
+) {
+    if (draft.active !== state) return
+    ShowUserSuggestionList(
+        suggestions.users,
+        { user ->
+            suggestions.pickUser(state, user)
+            // Tapping the list took the cursor away; give it back to go on typing.
+            focus.requestFocus()
+        },
+        accountViewModel,
+        SuggestionListDefaultHeightChat,
+    )
+    ShowEmojiSuggestionList(
+        suggestions.emojis,
+        { emoji ->
+            suggestions.pickEmoji(state, emoji)
+            focus.requestFocus()
+        },
+        { emoji ->
+            suggestions.pickEmoji(state, emoji)
+            focus.requestFocus()
+        },
+        SuggestionListDefaultHeightChat,
+    )
+}
+
+/**
+ * A borderless field for the poll: wraps rather than scrolls sideways, keeps `@` mentions whole
+ * and shows them as names, and turns a line break into the next field (a question or option is
+ * one line of text; MDK refuses control characters in it).
+ */
+@Composable
+private fun PollTextField(
+    state: TextFieldState,
+    placeholder: String,
+    style: TextStyle,
+    maxLines: Int,
+    onEdited: () -> Unit,
+    onEnter: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LaunchedEffect(state) {
+        snapshotFlow { state.text.toString() to state.selection }
+            .drop(1)
+            .collect { onEdited() }
+    }
+    BasicTextField(
+        state = state,
+        textStyle = style,
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+        onKeyboardAction = { onEnter() },
+        lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines),
+        inputTransformation = MentionPreservingInputTransformation.then(NoLineBreaks),
+        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+        modifier =
+            modifier.onPreviewKeyEvent { event ->
+                if (event.key == Key.Enter && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
+                    onEnter()
+                    true
+                } else {
+                    false
+                }
+            },
+        decorator = { inner ->
+            Box {
+                if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
+                inner()
+            }
+        },
+    )
+}
+
+/** A pasted line break becomes a space: a question or option is one line of text. */
+private object NoLineBreaks : InputTransformation {
+    override fun TextFieldBuffer.transformInput() {
+        val text = asCharSequence()
+        for (i in text.length - 1 downTo 0) {
+            if (text[i] == '\n' || text[i] == '\r') replace(i, i + 1, " ")
+        }
     }
 }
 
 @Composable
 private fun OptionsSection(
     draft: PollDraft,
-    firstOption: FocusRequester,
+    suggestions: PollSuggestions,
+    accountViewModel: AccountViewModel,
 ) {
     val focusManager = LocalFocusManager.current
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -398,18 +573,17 @@ private fun OptionsSection(
                         trailing = draft.isTrailing(option),
                         error = draft.isInvalid(option) || draft.isDuplicate(option),
                         canRemove = draft.canRemove(option),
-                        focusRequester = if (index == 0) firstOption else null,
-                        onChange = { text ->
-                            if ('\n' in text) {
-                                focusManager.moveFocus(FocusDirection.Down)
-                            } else {
-                                draft.edit(option, text)
-                            }
+                        focusRequester = option.focus,
+                        onEdited = {
+                            draft.active = option.state
+                            draft.keepTrailingRow()
+                            suggestions.onEdited(option.state)
                         },
                         onNext = { focusManager.moveFocus(FocusDirection.Down) },
                         onRemove = { draft.remove(option) },
                     )
                 }
+                FieldSuggestions(option.state, option.focus, draft, suggestions, accountViewModel)
             }
         }
 
@@ -434,8 +608,8 @@ private fun OptionRow(
     trailing: Boolean,
     error: Boolean,
     canRemove: Boolean,
-    focusRequester: FocusRequester?,
-    onChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    onEdited: () -> Unit,
     onNext: () -> Unit,
     onRemove: () -> Unit,
 ) {
@@ -464,29 +638,22 @@ private fun OptionRow(
         if (trailing) {
             Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.placeholderText)
         } else {
-            ChoiceGlyph(multiple = multiple, active = option.text.isNotBlank())
+            ChoiceGlyph(multiple = multiple, active = option.label.isNotEmpty())
         }
         Spacer(Modifier.width(12.dp))
-        BasicTextField(
-            value = option.text,
-            onValueChange = onChange,
-            textStyle = style,
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { onNext() }),
+        PollTextField(
+            state = option.state,
+            placeholder = placeholder,
+            style = style,
             maxLines = 3,
+            onEdited = onEdited,
+            onEnter = onNext,
             modifier =
                 Modifier
                     .weight(1f)
                     .padding(vertical = 14.dp)
-                    .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                    .focusRequester(focusRequester)
                     .onFocusChanged { focused = it.isFocused },
-            decorationBox = { inner ->
-                Box {
-                    if (option.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
-                    inner()
-                }
-            },
         )
         if (canRemove) {
             IconButton(onClick = onRemove, modifier = Modifier.size(40.dp)) {
