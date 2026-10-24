@@ -179,6 +179,7 @@ class Nip05SignerLoginTest {
         val r = amy("--secret-backend", "plaintext", "--account", "bob", "--json", "login", "bob@signer.example", "--timeout", "2")
         val elapsedMs = (System.nanoTime() - started) / 1_000_000
         assertEquals(124, r.exit, r.stdout + r.stderr)
+        assertTrue((r.stdout + r.stderr).contains("Timed out after 2s"), r.stdout + r.stderr)
         assertTrue(elapsedMs < 30_000, "took ${elapsedMs}ms")
     }
 }
