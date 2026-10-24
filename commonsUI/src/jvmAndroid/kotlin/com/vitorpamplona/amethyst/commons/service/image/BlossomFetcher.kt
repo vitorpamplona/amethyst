@@ -121,7 +121,7 @@ class BlossomFetcher(
                     NetworkFetcher(
                         url = url,
                         options = keyedOptions.withAuthHeader(authHeader),
-                        networkClient = lazy { networkClient(url).asNetworkClient() },
+                        networkClient = lazy { networkClient(url).asNetworkClient().reportingDownloadSize() },
                         diskCache = lazy { imageLoader.diskCache },
                         cacheStrategy = cacheStrategyLazy,
                         connectivityChecker = lazy { connectivityCheckers.get(options.context) },

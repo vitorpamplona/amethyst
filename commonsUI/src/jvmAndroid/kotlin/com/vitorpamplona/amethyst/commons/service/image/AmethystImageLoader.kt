@@ -31,7 +31,6 @@ import coil3.memory.MemoryCache
 import coil3.network.CacheStrategy
 import coil3.network.ConcurrentRequestStrategy
 import coil3.network.ConnectivityChecker
-import coil3.network.DeDupeConcurrentRequestStrategy
 import coil3.network.NetworkFetcher
 import coil3.network.okhttp.asNetworkClient
 import coil3.request.Options
@@ -46,7 +45,7 @@ import okhttp3.Call
  * The Coil image loader both apps use: the inline image schemes (base64, blurhash, thumbhash,
  * sno), `blossom:` URIs resolved to the server that holds the blob, and HTTP(S) through
  * [callFactory], so each URL gets its own Tor decision. Network fetches share one
- * [DeDupeConcurrentRequestStrategy] and sign the BUD-01 retry with [readAuth] when a gated
+ * [SharedDownloadStrategy] and sign the BUD-01 retry with [readAuth] when a gated
  * Blossom host answers 401.
  *
  * A platform adds what only it has: its decoders ([decoders], registered first, so they win),
@@ -66,13 +65,13 @@ fun buildAmethystImageLoader(
     decoders: ComponentRegistry.Builder.() -> Unit = {},
     fetchers: ComponentRegistry.Builder.(ConcurrentRequestStrategy) -> Unit = {},
 ): ImageLoader {
-    // ONE strategy for the whole ImageLoader. DeDupeConcurrentRequestStrategy coordinates through
-    // a map of in-flight fetches that it owns, so it only works when every fetcher shares the
-    // same instance: a fresh one per request never sees anybody else's fetch. Shared by every
+    // ONE strategy for the whole ImageLoader. SharedDownloadStrategy coordinates through a map of
+    // in-flight downloads that it owns, so it only works when every fetcher shares the same
+    // instance: a fresh one per request never sees anybody else's fetch. Shared by every
     // network-backed factory, so the same key requested through any of them (a feed image and a
     // profile picture with the same URL) collapses onto one download. `blossom:` blobs are keyed
     // by their sha256 instead (see BlossomFetcher.diskCacheKey).
-    val concurrentRequests = DeDupeConcurrentRequestStrategy()
+    val concurrentRequests = SharedDownloadStrategy()
 
     return ImageLoader
         .Builder(context)
@@ -129,7 +128,7 @@ class OkHttpFactory(
                 NetworkFetcher(
                     url = url,
                     options = options.withAuthHeader(authHeader),
-                    networkClient = lazy { networkClient(url).asNetworkClient() },
+                    networkClient = lazy { networkClient(url).asNetworkClient().reportingDownloadSize() },
                     diskCache = lazy { imageLoader.diskCache },
                     cacheStrategy = cacheStrategyLazy,
                     connectivityChecker = lazy { connectivityCheckers.get(options.context) },
