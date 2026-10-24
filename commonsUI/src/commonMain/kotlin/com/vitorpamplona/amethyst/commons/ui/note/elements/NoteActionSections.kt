@@ -478,13 +478,12 @@ fun noteActionSections(
             if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
                 add(NoteAction(MaterialSymbols.Gavel, stringRes(Res.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
             }
-            // Marmot: a group admin may delete any member's chat message for everyone (kind
-            // 4891). White Noise does the same; receivers check the sender was an admin when
-            // the deletion was sent.
-            if (!state.isLoggedUser && accountViewModel.canAdminDeleteMarmotMessage(note)) {
+            // A room admin may remove any member's message for everyone (a Marmot group sends a
+            // kind 4891; receivers check the sender was an admin when it was sent).
+            if (!state.isLoggedUser && accountViewModel.canRemoveForEveryone(note)) {
                 add(
                     NoteAction(MaterialSymbols.Delete, stringRes(Res.string.marmot_admin_delete_message), isDestructive = true) {
-                        accountViewModel.adminDeleteMarmotMessage(note)
+                        accountViewModel.removeForEveryone(note)
                         handlers.onDismiss()
                     },
                 )

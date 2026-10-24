@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.WatchBlockAndReport
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.DisplayZapSplits
 import com.vitorpamplona.amethyst.commons.ui.note.hovercard.UserHoverCardAnchor
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderPoll
 import com.vitorpamplona.amethyst.commons.ui.note.types.observeChatMessageEdit
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzActivityRow
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderBuzzDiff
@@ -77,12 +78,10 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedMediaV2
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderMarmotPoll
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isMarmotPoll
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -107,6 +106,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.raid.LiveActivitiesRaidEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.splits.hasZapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 @Composable
 fun ChatroomMessageCompose(
@@ -675,7 +675,8 @@ fun NoteRow(
                         RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
                     }
                 }
-            isMarmotPoll(note, accountViewModel) -> RenderMarmotPoll(note, accountViewModel, nav)
+            // A poll renders like a poll anywhere else; its room, when it has one, carries the votes.
+            note.event is PollEvent -> RenderPoll(note, false, canPreview, 1, bgColor, accountViewModel, nav)
             else -> {
                 // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
                 // 40003 and 1009): when one exists, render the winning edit's content instead of

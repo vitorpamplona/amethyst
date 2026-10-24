@@ -155,6 +155,8 @@ import com.vitorpamplona.amethyst.commons.model.nipBCOnchainZaps.OnchainWalletSt
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.model.privateChats.hasEncryptedContent
+import com.vitorpamplona.amethyst.commons.model.rooms.MessageRoom
+import com.vitorpamplona.amethyst.commons.model.rooms.isInRoom
 import com.vitorpamplona.amethyst.commons.model.serverList.AssumedRelayListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowListsState
 import com.vitorpamplona.amethyst.commons.model.serverList.MergedFollowPlusMineRelayListsState
@@ -1848,16 +1850,25 @@ class Account(
         }
     }
 
+    /**
+     * True, after logging it, when [note] belongs to a [MessageRoom]. Everything about a room's
+     * messages is the room's to send: the public paths here would name the message in a signed
+     * event on relays. Refusing makes an action that forgot to ask the room fail instead of leak.
+     */
+    private fun refusesRoomNote(
+        note: Note,
+        action: String,
+    ): Boolean {
+        if (!note.isInRoom()) return false
+        Log.e("Account") { "Refused to $action ${note.idHex} on a public path: it belongs to a room" }
+        return true
+    }
+
     suspend fun reactTo(
         note: Note,
         reaction: String,
     ) {
-        // A Marmot message reacts inside its MLS group; see AccountMarmotActions.reactToMarmotMessage.
-        // A custom emoji goes as an encrypted picture of the reaction, the way MDK sends one.
-        marmot.marmotGroupOf(note)?.let { groupId ->
-            marmot.reactToMarmotMessageWithMedia(groupId, note, reaction)
-            return
-        }
+        if (refusesRoomNote(note, "react to")) return
 
         // Reactions to NIP-17 groups and unsealed rumors are gift-wrapped: the
         // inner kind-7 only ever travels as ciphertext, so mining it is pure
@@ -2024,22 +2035,9 @@ class Account(
     suspend fun delete(notes: List<Note>) {
         if (!isWriteable()) return
 
-        // Marmot messages are retracted inside their group. A public NIP-09 here would e-tag
-        // the group's private rumor ids onto public relays.
-        val (marmotNotes, nonMarmotNotes) = notes.partition { marmot.marmotGroupOf(it) != null }
-        marmotNotes.groupBy { marmot.marmotGroupOf(it)!! }.forEach { (groupId, groupNotes) ->
-            marmot.deleteMarmotMessages(groupId, groupNotes)
-        }
-
-        // Concord rumors are retracted inside their channel's plane (CORD-01 Deletions), for the
-        // same reason: any other route carries the community's rumor ids outside it.
-        val (concordNotes, otherNotes) = nonMarmotNotes.partition { concord.concordChannelOf(it) != null }
-        concordNotes.groupBy { concord.concordChannelOf(it)!! }.forEach { (channel, channelNotes) ->
-            concord.deleteConcordRumors(channel, channelNotes)
-        }
-
         val (myRumors, myNotes) =
-            otherNotes
+            notes
+                .filterNot { refusesRoomNote(it, "delete") }
                 .filter { it.author == userProfile() && it.event != null }
                 .partition { it.isPrivateRumor() }
 
@@ -2070,19 +2068,8 @@ class Account(
     ) {
         if (!isWriteable()) return
         val targetEvent = target.event ?: return
-
-        // In a Marmot group the deletion goes to the group, not to the target's author as a DM.
-        marmot.marmotGroupOf(target)?.let { groupId ->
-            marmot.deleteMarmotMessages(groupId, notes)
-            return
-        }
-
-        // In a Concord channel it is an in-channel kind-5 on the channel's plane (CORD-01), never a
-        // NIP-17 DM to the p-tagged users, which would leak the rumor ids outside the community.
-        concord.concordChannelOf(target)?.let { channel ->
-            concord.deleteConcordRumors(channel, notes)
-            return
-        }
+        // A room's deletion goes to the room, not to the target's author as a DM.
+        if (refusesRoomNote(target, "delete privately around")) return
 
         val myRumors = notes.filter { it.author == userProfile() }.mapNotNull { it.event }
         if (myRumors.isEmpty()) return
@@ -2698,7 +2685,9 @@ class Account(
         event: PollEvent,
         responses: Set<String>,
     ) {
-        val poll = cache.getOrCreateNote(event.id).toEventHint<PollEvent>()
+        val pollNote = cache.getOrCreateNote(event.id)
+        if (refusesRoomNote(pollNote, "vote on")) return
+        val poll = pollNote.toEventHint<PollEvent>()
 
         if (poll != null) {
             // The poll decides how its answers are counted, so it decides which builder applies:

@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -339,14 +340,11 @@ private fun RenderDecryptionError(
     )
 }
 
-/**
- * Finds the Marmot group ID for a note via the reverse index
- * maintained by [MarmotGroupList].
- */
+/** The Marmot group whose room [note] is in, which holds the keys to its media. */
 private fun findGroupIdForNote(
     note: Note,
     accountViewModel: AccountViewModel,
-): String? = accountViewModel.account.marmotGroupList.groupIdForNote(note.idHex)
+): String? = note.marmotGroupIdFor(accountViewModel.account)
 
 /** Where the lookup of a message's media key stands. */
 private sealed interface MessageMediaSecret {

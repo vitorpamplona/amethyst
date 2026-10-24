@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeEditDraftTo
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.textNoteModifications
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.broadcast
@@ -585,7 +586,7 @@ fun deletionRequestBody(
     accountViewModel: AccountViewModel,
 ): StringResource =
     when {
-        accountViewModel.account.marmot.marmotGroupOf(note) != null -> Res.string.quick_action_request_deletion_alert_body_group
+        note.roomFor(accountViewModel.account) != null -> Res.string.quick_action_request_deletion_alert_body_group
         note.isPrivateRumor() -> Res.string.quick_action_request_deletion_alert_body_private
         else -> Res.string.quick_action_request_deletion_alert_body
     }

@@ -1406,14 +1406,6 @@ class AccountConcordActions(
     fun isConcordEditable(target: Event): Boolean = (target is ChatEvent || target is CommentEvent) && target.pubKey == account.signer.pubKey
 
     /**
-     * The Concord channel [note] belongs to: its own gatherer for a message or thread reply, else
-     * (a reaction, a delete) the channel of the note it points at. Null when it is not Concord.
-     */
-    fun concordChannelOf(note: Note): ConcordChannel? =
-        note.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel }
-            ?: note.replyTo?.firstNotNullOfOrNull { target -> target.inGatherers?.firstNotNullOfOrNull { it as? ConcordChannel } }
-
-    /**
      * Delete my own Concord rumors [notes] (messages, thread replies, reactions) in [channel] the
      * way CORD-01 prescribes: a kind-5 rumor with `e` + `k` tags, sealed (20013) and wrapped on the
      * channel's own plane, so only the community sees it. Never a signed kind 5 or a NIP-17 delete,
@@ -1450,20 +1442,6 @@ class AccountConcordActions(
         // author knows their own pins, so when they may write pins they publish it immediately.
         if (sent) omitDeletedConcordPins(channel.channelId.communityId, channelIdHex, mine.mapTo(HashSet()) { it.id })
         return sent
-    }
-
-    /**
-     * Toggle my [reaction] on Concord message [note]: retract my existing reactions of that content
-     * with an in-channel delete, else add it ([reactToConcordMessage]). Returns false when nothing
-     * was sent.
-     */
-    suspend fun toggleConcordReaction(
-        note: Note,
-        reaction: String,
-    ): Boolean {
-        val channel = concordChannelOf(note) ?: return false
-        val mine = note.allReactionsOfContentByAuthor(account.userProfile(), reaction)
-        return if (mine.isNotEmpty()) deleteConcordRumors(channel, mine) else reactToConcordMessage(note, reaction)
     }
 
     /**

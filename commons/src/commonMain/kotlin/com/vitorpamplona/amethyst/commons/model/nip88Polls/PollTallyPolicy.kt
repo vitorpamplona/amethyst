@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.model.nip88Polls
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.tags.PollType
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
 /**
  * The rules a [PollResponsesCache] tally must apply, taken from the kind-1068 poll itself.
@@ -42,6 +43,11 @@ data class PollTallyPolicy(
     val createdAt: Long,
     /** NIP-88 `endsAt`, or null for a poll that never closes. */
     val endsAt: Long?,
+    /**
+     * A stricter reading the room the poll lives in applies on top of these rules, or null for
+     * NIP-88's. See [PollResponseRule].
+     */
+    val rule: PollResponseRule? = null,
 ) {
     /**
      * NIP-88: the retained response is "the event with the latest timestamp within poll
@@ -83,4 +89,17 @@ data class PollTallyPolicy(
                 endsAt = event.endsAt(),
             )
     }
+}
+
+/**
+ * How a room reads its own polls' votes when NIP-88's lenient reading is not what its members see.
+ *
+ * A Marmot group counts the way MDK does, so Amethyst and White Noise show the same numbers: a
+ * response that breaks the poll's rules is not a vote at all, and the voter's earlier valid vote
+ * stands instead of being cleared, and of two votes stamped the same second the larger id wins.
+ * Implementations hold only values, so two rules for the same poll compare equal.
+ */
+fun interface PollResponseRule {
+    /** The options [response] casts, or null when it is not a valid vote under this rule. */
+    fun cast(response: PollResponseEvent): Set<String>?
 }

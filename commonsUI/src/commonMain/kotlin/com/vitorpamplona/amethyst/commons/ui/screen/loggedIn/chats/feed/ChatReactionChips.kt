@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
@@ -473,7 +474,7 @@ fun rememberMarmotReactionEmoji(
     note: Note,
     accountViewModel: AccountViewModel,
 ): MarmotReactionEmoji? {
-    val groupId = remember(baseNote) { accountViewModel.account.marmotGroupList.groupIdForNote(baseNote.idHex) }
+    val groupId = remember(baseNote) { baseNote.marmotGroupIdFor(accountViewModel.account) }
     val reactions = note.reactions
     val resolved by
         produceState(emptySet<String>(), groupId, reactions) {

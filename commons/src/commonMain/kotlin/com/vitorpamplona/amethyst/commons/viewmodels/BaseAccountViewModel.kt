@@ -49,7 +49,6 @@ import com.vitorpamplona.amethyst.commons.model.ZapraiserStatus
 import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflict
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
-import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
@@ -61,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningSt
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
@@ -162,6 +162,7 @@ import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.imeta
@@ -502,11 +503,13 @@ open class BaseAccountViewModel(
         note: Note,
         reaction: String,
     ) {
-        // Concord messages are encrypted: a public kind-7 would e-tag the private rumor id onto
-        // public relays. Route the reaction through a channel-plane wrap instead; tapping it again
-        // retracts it with an in-channel kind-5 delete (CORD-01), never a NIP-17 one.
-        if (note.inGatherers?.any { it is ConcordChannel } == true) {
-            launchSigner { account.concord.toggleConcordReaction(note, reaction) }
+        // A room's message is reacted to inside the room, and tapping again retracts the reaction
+        // there; anything else would name the message outside it.
+        note.roomFor(account)?.let { room ->
+            launchSigner {
+                val mine = note.allReactionsOfContentByAuthor(userProfile(), reaction)
+                if (mine.isNotEmpty()) room.delete(account, mine) else room.react(account, note, reaction, notices)
+            }
             return
         }
 
@@ -552,12 +555,12 @@ open class BaseAccountViewModel(
     }
 
     /**
-     * Retracts one of your own notes the way its transport requires. Private rumors (NIP-17 DMs,
-     * Marmot group messages) take a private deletion; a public NIP-09 would e-tag the rumor id
-     * onto public relays.
+     * Retracts one of your own notes the way its transport requires: inside its room for a room's
+     * message, a gift-wrapped deletion for any other private rumor (NIP-17), a public NIP-09
+     * otherwise. A public one would e-tag a private rumor id onto public relays.
      */
     fun deleteOwn(note: Note) {
-        if (note.isPrivateRumor()) deletePrivately(note) else delete(note)
+        if (note.isPrivateRumor() && note.roomFor(account) == null) deletePrivately(note) else delete(note)
     }
 
     /**
@@ -567,6 +570,10 @@ open class BaseAccountViewModel(
      */
     fun deletePrivately(note: Note) {
         launchSigner {
+            note.roomFor(account)?.let { room ->
+                room.delete(account, listOf(note))
+                return@launchSigner
+            }
             account.deletePrivately(listOf(note), note)
         }
     }
@@ -1528,15 +1535,40 @@ open class BaseAccountViewModel(
 
     fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
 
-    fun delete(notes: List<Note>) = launchSigner { account.delete(notes) }
+    /** Deletes [notes], each inside its room when it has one and publicly otherwise. */
+    fun delete(notes: List<Note>) =
+        launchSigner {
+            val byRoom = notes.groupBy { it.roomFor(account) }
+            byRoom.forEach { (room, roomNotes) -> room?.delete(account, roomNotes) }
+            byRoom[null]?.let { account.delete(it) }
+        }
 
-    fun delete(note: Note) = launchSigner { account.delete(note) }
+    fun delete(note: Note) = delete(listOf(note))
 
-    /** Whether this account, as a group admin, may delete [note] for every member of its Marmot group. */
-    fun canAdminDeleteMarmotMessage(note: Note): Boolean = account.marmot.canAdminDeleteMarmotMessage(note)
+    /** Whether this account, as an admin of [note]'s room, may remove it for every member. */
+    fun canRemoveForEveryone(note: Note): Boolean = note.roomFor(account)?.canRemoveForEveryone(account, note) == true
 
-    /** Delete another member's Marmot message for everyone, as a group admin (kind 4891). */
-    fun adminDeleteMarmotMessage(note: Note) = launchSigner { account.marmot.adminDeleteMarmotMessage(note) }
+    /** Removes another member's message for every member of its room, as an admin. */
+    fun removeForEveryone(note: Note) = launchSigner { note.roomFor(account)?.removeForEveryone(account, note) }
+
+    /** True when [note] is a message this account may edit from its room's composer. */
+    fun canEditInRoom(note: Note): Boolean = note.roomFor(account)?.canEdit(account, note) == true
+
+    /**
+     * Votes [optionCodes] on [poll]: inside the poll's room when it has one, where the vote
+     * replaces any earlier one; as a public NIP-88 response otherwise.
+     */
+    fun respondToPoll(
+        poll: Note,
+        optionCodes: Set<String>,
+    ) = launchSigner {
+        val room = poll.roomFor(account)
+        if (room != null) {
+            room.respondToPoll(account, poll, optionCodes)
+        } else {
+            (poll.event as? PollEvent)?.let { account.pollRespond(it, optionCodes) }
+        }
+    }
 
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
@@ -2486,21 +2518,6 @@ open class BaseAccountViewModel(
     ): Boolean {
         val poll = account.marmot.buildMarmotPoll(question, options, type, endsAt) ?: return false
         deliverMarmotGroupMessage(nostrGroupId, poll)
-        return true
-    }
-
-    /**
-     * Vote on a Marmot poll with the complete selection [optionIds] (one id for
-     * single choice). Returns false when the poll is closed or the selection
-     * does not fit it.
-     */
-    suspend fun castMarmotPollVote(
-        nostrGroupId: String,
-        poll: Event,
-        optionIds: List<String>,
-    ): Boolean {
-        val vote = account.marmot.buildMarmotPollVote(poll, optionIds) ?: return false
-        deliverMarmotGroupMessage(nostrGroupId, vote)
         return true
     }
 

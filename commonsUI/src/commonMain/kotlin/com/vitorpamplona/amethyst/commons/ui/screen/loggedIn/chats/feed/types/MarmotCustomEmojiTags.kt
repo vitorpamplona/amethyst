@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
@@ -49,7 +50,7 @@ fun rememberMarmotRenderTags(
     accountViewModel: AccountViewModel,
 ): ImmutableListOfLists<String>? {
     val event = note.event
-    val groupId = remember(note) { accountViewModel.account.marmotGroupList.groupIdForNote(note.idHex) }
+    val groupId = remember(note) { note.marmotGroupIdFor(accountViewModel.account) }
     val matched = remember(event) { event?.let { MarmotCustomEmoji.matchedEmojiAttachments(it) } ?: emptyMap() }
     val withoutEmoji =
         remember(event) {

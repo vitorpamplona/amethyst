@@ -21,10 +21,15 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Stable
+import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Channel.Companion.DefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.ListChange
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
+import com.vitorpamplona.amethyst.commons.model.rooms.MessageRoom
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
+import com.vitorpamplona.amethyst.commons.notices.MarmotNotice
+import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
@@ -34,6 +39,8 @@ import com.vitorpamplona.marmot.client.MarmotGroupImage
 import com.vitorpamplona.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,11 +50,14 @@ import kotlinx.coroutines.flow.update
  * Represents a Marmot MLS group chat room.
  * Tracks decrypted inner messages for a single group.
  * Follows the same pattern as [com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom].
+ *
+ * As a [MessageRoom] it is where everything about its messages is written: reactions, deletions,
+ * poll votes and admin removals all go into the group as MLS application messages.
  */
 @Stable
 class MarmotGroupChatroom(
     val nostrGroupId: HexKey,
-) : NotesGatherer {
+) : MessageRoom {
     var messages: Set<Note> = setOf()
     var displayName = MutableStateFlow<String?>(null)
     var description = MutableStateFlow<String?>(null)
@@ -193,11 +203,65 @@ class MarmotGroupChatroom(
         removeMessageSync(note)
     }
 
+    override fun isReadBy(account: Account): Boolean = account.marmotGroupList.rooms.get(nostrGroupId) === this
+
+    override suspend fun react(
+        account: Account,
+        target: Note,
+        reaction: String,
+        notices: UserNoticeSink,
+    ): Boolean {
+        account.marmot.reactToMarmotMessageWithMedia(nostrGroupId, target, reaction) { notices.notify(MarmotNotice.EmojiNotAttached) }
+        return true
+    }
+
+    override suspend fun delete(
+        account: Account,
+        notes: List<Note>,
+    ): Boolean = account.marmot.deleteMarmotMessages(nostrGroupId, notes)
+
+    // A media message's content is its locator, so editing it would break the attachment.
+    override fun canEdit(
+        account: Account,
+        note: Note,
+    ): Boolean =
+        note.event is ChatEvent &&
+            note.author == account.userProfile() &&
+            note.event?.tags?.none { it.isNotEmpty() && it[0] == "imeta" } == true
+
+    override fun acceptsPoll(poll: PollEvent): Boolean = MarmotPolls.parsePoll(poll) != null
+
+    // MDK lets the author vote in their own poll.
+    override fun pollAuthorMayVote(): Boolean = true
+
+    override fun pollTallyPolicy(poll: PollEvent): PollTallyPolicy = PollTallyPolicy.from(poll).copy(rule = MarmotPolls.responseRule(poll))
+
+    override suspend fun respondToPoll(
+        account: Account,
+        poll: Note,
+        optionCodes: Set<String>,
+    ): Boolean {
+        val pollEvent = poll.event ?: return false
+        return account.marmot.respondToMarmotPoll(nostrGroupId, pollEvent, optionCodes)
+    }
+
+    override fun canRemoveForEveryone(
+        account: Account,
+        note: Note,
+    ): Boolean = account.marmot.canAdminDeleteMarmotMessage(nostrGroupId, note)
+
+    override suspend fun removeForEveryone(
+        account: Account,
+        note: Note,
+    ): Boolean = account.marmot.adminDeleteMarmotMessage(nostrGroupId, note)
+
     fun addMessageSync(msg: Note): Boolean =
         syncLock.withLock {
             if (msg !in messages) {
                 messages = messages + msg
                 msg.addGatherer(this)
+                // The group counts its polls' votes by its own rules, whatever the cache derived.
+                (msg.event as? PollEvent)?.let { msg.pollState().updatePolicy(pollTallyPolicy(it)) }
 
                 val createdAt = msg.createdAt() ?: 0L
                 if (createdAt > (newestMessage?.createdAt() ?: 0L)) {
@@ -265,3 +329,6 @@ class MarmotGroupChatroom(
             toRemove
         }
 }
+
+/** The Marmot group whose room this note is in for [account], or null outside every Marmot group. */
+fun Note.marmotGroupIdFor(account: Account): HexKey? = (roomFor(account) as? MarmotGroupChatroom)?.nostrGroupId

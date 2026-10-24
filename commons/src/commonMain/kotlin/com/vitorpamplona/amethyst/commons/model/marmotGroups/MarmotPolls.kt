@@ -21,8 +21,11 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponseRule
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
 /**
  * Encrypted NIP-88 polls inside a Marmot group, in the bounded profile MDK
@@ -50,13 +53,6 @@ object MarmotPolls {
     const val MAX_OPTION_ID_BYTES = 64
     const val MAX_LIFETIME_SECONDS = 30L * 24 * 60 * 60
     const val MAX_TAGS = 32
-
-    /**
-     * How many of one voter's newest responses a tally looks at. MDK applies the
-     * bound before validating, so 64 newer malformed responses do hide an older
-     * valid one; matching it is what keeps both clients on the same count.
-     */
-    const val MAX_RESPONSES_PER_AUTHOR = 64
 
     private const val TAG_OPTION = "option"
     private const val TAG_POLL_TYPE = "polltype"
@@ -88,30 +84,29 @@ object MarmotPolls {
         fun isOpen(nowSeconds: Long): Boolean = endsAt == null || nowSeconds <= endsAt
     }
 
+    /**
+     * MDK's reading of the votes on one poll, handed to the shared tally ([PollResponsesCache]) by
+     * the group the poll lives in, so this client and White Noise count the same group alike.
+     *
+     * A response counts only when it is well formed, names this poll, was sent while the poll was
+     * open and fits its selection rules; anything else is no vote, and leaves the voter's earlier
+     * valid vote standing. MDK also stops looking past a voter's newest 64 responses, so 64 newer
+     * malformed ones would hide an older valid vote there and not here.
+     */
     @Immutable
-    data class Vote(
-        val voter: HexKey,
-        val optionIds: List<String>,
-        val votedAt: Long,
-    )
+    data class ResponseRule(
+        val pollId: HexKey,
+        val poll: Definition,
+    ) : PollResponseRule {
+        override fun cast(response: PollResponseEvent): Set<String>? {
+            val (target, selections) = parseResponse(response) ?: return null
+            if (target != pollId || !isValidResponse(poll, response.createdAt, selections)) return null
+            return selections.toSet()
+        }
+    }
 
-    @Immutable
-    data class OptionResult(
-        val id: String,
-        val label: String,
-        val votes: Int,
-    )
-
-    /** What a poll row shows: MDK's `PollProjection`. */
-    @Immutable
-    data class Projection(
-        val definition: Definition,
-        val options: List<OptionResult>,
-        val participants: Int,
-        /** The account's own effective selection, empty when it has not voted. */
-        val localSelection: List<String>,
-        val votes: List<Vote>,
-    )
+    /** The [ResponseRule] of [poll], or null when the poll itself breaks the profile. */
+    fun responseRule(poll: Event): ResponseRule? = parsePoll(poll)?.let { ResponseRule(poll.id, it) }
 
     // ---- building ----------------------------------------------------------
 
@@ -270,55 +265,6 @@ object MarmotPolls {
         if (type == PollType.SINGLE_CHOICE && selections.size != 1) return false
         val known = optionIds.toHashSet()
         return selections.all { it in known }
-    }
-
-    // ---- tally -------------------------------------------------------------
-
-    /**
-     * MDK's projection of [poll] from every [responses] event that names it.
-     *
-     * For each voter, the newest [MAX_RESPONSES_PER_AUTHOR] responses by
-     * `(created_at, id)` are considered and the newest VALID one counts. A
-     * malformed or out-of-window response is skipped rather than clearing the
-     * voter's earlier vote, which is how MDK falls back to "the newest retained
-     * valid response".
-     */
-    fun project(
-        pollEvent: Event,
-        poll: Definition,
-        responses: Collection<Event>,
-        localPubKey: HexKey?,
-    ): Projection {
-        val byVoter = HashMap<HexKey, MutableList<Event>>()
-        for (response in responses) {
-            if (response.kind != KIND_POLL_RESPONSE) continue
-            byVoter.getOrPut(response.pubKey) { ArrayList() }.add(response)
-        }
-
-        val votes = ArrayList<Vote>(byVoter.size)
-        for ((voter, events) in byVoter) {
-            val newestFirst = events.sortedWith(compareByDescending<Event> { it.createdAt }.thenByDescending { it.id })
-            val effective =
-                newestFirst.asSequence().take(MAX_RESPONSES_PER_AUTHOR).firstNotNullOfOrNull { response ->
-                    val (target, selections) = parseResponse(response) ?: return@firstNotNullOfOrNull null
-                    if (target != pollEvent.id) return@firstNotNullOfOrNull null
-                    if (!isValidResponse(poll, response.createdAt, selections)) return@firstNotNullOfOrNull null
-                    Vote(voter, selections, response.createdAt)
-                }
-            if (effective != null) votes.add(effective)
-        }
-        votes.sortWith(compareBy<Vote> { it.votedAt }.thenBy { it.voter })
-
-        val counts = HashMap<String, Int>()
-        votes.forEach { vote -> vote.optionIds.forEach { counts[it] = (counts[it] ?: 0) + 1 } }
-
-        return Projection(
-            definition = poll,
-            options = poll.options.map { OptionResult(it.id, it.label, counts[it.id] ?: 0) },
-            participants = votes.size,
-            localSelection = votes.firstOrNull { it.voter == localPubKey }?.optionIds ?: emptyList(),
-            votes = votes,
-        )
     }
 
     // ---- validation helpers ------------------------------------------------

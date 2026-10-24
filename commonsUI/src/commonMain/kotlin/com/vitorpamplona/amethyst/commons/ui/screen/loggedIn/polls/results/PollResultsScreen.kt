@@ -72,6 +72,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
+import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.relayClient.polls.results.RelayPollResponseLoader
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -119,7 +120,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollLoadReport
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollOptionResult
+import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResponseLoader
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsUiState
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollResultsViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.nip88Polls.PollVoterRow
@@ -169,9 +172,13 @@ private fun PollResults(
     // The poll's own event and engagement, exactly as any note on any screen gets them.
     val noteState by observeNote(note, accountViewModel)
 
+    // A room's poll has every vote it will ever have already: its room delivered them, and asking
+    // relays about it would name the room's private message outside the room.
+    val inRoom = remember(note) { note.roomFor(account) != null }
+
     // ...plus this screen's own claim: every vote, from the relays the poll nominates. Lifecycle-aware
     // and deduplicated like every other current-screen data source, so leaving the screen closes it.
-    PollResponsesFilterAssemblerSubscription(note.idHex, accountViewModel)
+    if (!inRoom) PollResponsesFilterAssemblerSubscription(note.idHex, accountViewModel)
 
     // Opening this screen is the opt-in, exactly like the card's "View results" link. Keyed on the
     // note state rather than the id: arriving by deep link, the poll event lands *after* the first
@@ -183,14 +190,14 @@ private fun PollResults(
     // Remembered: the view model store only consults the factory once, but building it inline allocated a
     // loader, two lambdas and a mapped Flow on every recomposition.
     val factory =
-        remember(note, account) {
+        remember(note, account, inRoom) {
             PollResultsViewModel.Factory(
                 pollNote = note,
                 forKey = account.pubKey,
                 isHidden = { account.isHidden(it) },
                 follows = account.allFollows.flow.map { it.authors },
                 hiddenChanges = account.hiddenUsers.flow,
-                loader = RelayPollResponseLoader(account.client, note),
+                loader = if (inRoom) PollResponseLoader { PollLoadReport(null, approximate = false, relaysAsked = 0, relaysAnswered = 0) } else RelayPollResponseLoader(account.client, note),
             )
         }
 

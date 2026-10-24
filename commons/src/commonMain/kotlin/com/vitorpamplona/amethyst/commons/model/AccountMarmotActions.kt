@@ -339,15 +339,6 @@ class AccountMarmotActions(
     )
 
     /**
-     * The Marmot group [note] was received or sent in, or null when it is not a
-     * Marmot message.
-     *
-     * Only chat rows are indexed, so pass the MESSAGE a reaction or deletion is
-     * about, not the reaction itself.
-     */
-    fun marmotGroupOf(note: Note): HexKey? = account.marmotGroupList.groupIdForNote(note.idHex)
-
-    /**
      * React to a Marmot message inside its group.
      *
      * A Marmot message is an unsigned rumor, which the generic reaction path
@@ -378,25 +369,28 @@ class AccountMarmotActions(
     suspend fun deleteMarmotMessages(
         nostrGroupId: HexKey,
         notes: List<Note>,
-    ) {
-        val manager = account.marmotManager ?: return
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
         val mine = notes.filter { it.author == account.userProfile() }.mapNotNull { it.event }
-        if (mine.isEmpty()) return
+        if (mine.isEmpty()) return false
         val rumor = manager.buildDeletionRumor(mine)
         sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
     }
 
     /**
-     * Whether this account may delete [note] for everyone in its Marmot group: a
+     * Whether this account may delete [note] for everyone in [nostrGroupId]: a
      * chat message by someone else, in a group this account is an admin of now.
      * Receivers check the admin set of the epoch the deletion is sent in, which is
      * this one.
      */
-    fun canAdminDeleteMarmotMessage(note: Note): Boolean {
+    fun canAdminDeleteMarmotMessage(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
         val manager = account.marmotManager ?: return false
         if (note.event?.kind != ChatEvent.KIND || note.author == account.userProfile()) return false
-        val groupId = marmotGroupOf(note) ?: return false
-        return manager.isGroupAdmin(groupId)
+        return manager.isGroupAdmin(nostrGroupId)
     }
 
     /**
@@ -404,12 +398,15 @@ class AccountMarmotActions(
      * (`features/content-moderation.md`) inside the group. White Noise sends the
      * same event, and hides the message, its edits and its attachments.
      */
-    suspend fun adminDeleteMarmotMessage(note: Note) {
-        if (!canAdminDeleteMarmotMessage(note)) return
-        val manager = account.marmotManager ?: return
-        val groupId = marmotGroupOf(note) ?: return
+    suspend fun adminDeleteMarmotMessage(
+        nostrGroupId: HexKey,
+        note: Note,
+    ): Boolean {
+        if (!canAdminDeleteMarmotMessage(nostrGroupId, note)) return false
+        val manager = account.marmotManager ?: return false
         val rumor = manager.buildAdminDeletionRumor(note.idHex)
-        sendMarmotGroupMessage(groupId, rumor, marmotGroupRelays(groupId))
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
     }
 
     /**
@@ -1380,6 +1377,27 @@ class AccountMarmotActions(
         val tags = MarmotPolls.responseTags(poll.id, optionIds) ?: return null
         val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL_RESPONSE, tags, "")
         return RumorAssembler.assembleRumor(account.signer.pubKey, template)
+    }
+
+    /**
+     * Vote for [optionIds] on [poll] in [nostrGroupId], replacing any earlier vote. The options go
+     * out in the poll's own order, so the same choice is always the same tags. False when the
+     * poll is closed or the selection does not fit it.
+     */
+    suspend fun respondToMarmotPoll(
+        nostrGroupId: HexKey,
+        poll: Event,
+        optionIds: Set<String>,
+    ): Boolean {
+        val ordered =
+            MarmotPolls
+                .parsePoll(poll)
+                ?.options
+                ?.map { it.id }
+                ?.filter { it in optionIds } ?: return false
+        val vote = buildMarmotPollVote(poll, ordered) ?: return false
+        sendMarmotGroupMessage(nostrGroupId, vote, marmotGroupRelays(nostrGroupId))
+        return true
     }
 
     private fun mediaTypeFromUrl(url: String): String? =
