@@ -109,7 +109,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.OsScheduler
 import com.vitorpamplona.amethyst.desktop.tor.DesktopTorManager
 import com.vitorpamplona.amethyst.desktop.update.DesktopAppUpdates
 import com.vitorpamplona.amethyst.desktop.update.InstallChannel
-import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

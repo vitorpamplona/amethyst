@@ -37,15 +37,13 @@ include(":geode")
 include(":commons")
 include(":commonsUI")
 include(":nestsClient")
-include(":marmotQuic")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
-include(":marmotBench")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Maven Central, like crypto
 // and quic below. To change it alongside the app, point Gradle at a local checkout and it builds
-// that checkout instead of the published artifact, for every module and for quic's own
+// that checkout instead of the published artifact, for every module and for the libraries' own
 // dependency on it:
 //   ./gradlew -PquartzDir=../quartz :commons:jvmTest
 providers.gradleProperty("quartzDir").orNull?.let { dir ->
@@ -63,6 +61,7 @@ providers.gradleProperty("marmotKmpDir").orNull?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("com.vitorpamplona.marmot:marmot")).using(project(":marmot"))
+            substitute(module("com.vitorpamplona.marmot:marmot-quic")).using(project(":marmot-quic"))
         }
     }
 }
@@ -88,7 +87,7 @@ providers.gradleProperty("cryptoKmpDir").orNull?.let { dir ->
 }
 
 // quic lives in its own repo (vitorpamplona/quic-kmp) and comes from Maven Central. To change
-// it alongside nestsClient or marmotQuic, point Gradle at a local checkout and it builds that
+// it alongside nestsClient or marmot-quic, point Gradle at a local checkout and it builds that
 // checkout instead of the published artifact:
 //   ./gradlew -PquicKmpDir=../quic-kmp :nestsClient:jvmTest
 providers.gradleProperty("quicKmpDir").orNull?.let { dir ->

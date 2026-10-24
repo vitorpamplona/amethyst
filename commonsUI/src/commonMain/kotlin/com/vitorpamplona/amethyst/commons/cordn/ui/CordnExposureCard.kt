@@ -70,7 +70,7 @@ import org.jetbrains.compose.resources.stringResource
 /**
  * What the coordinator behind a cordn group learns, as a panel.
  *
- * §8 of `quartz/plans/2026-09-17-cordn-interop.md` ends with a requirement:
+ * §8 of cordn-kmp's `cordn/plans/2026-09-17-cordn-interop.md` ends with a requirement:
  * the exposure analysis "should be surfaced in the UI if we ship this, not
  * buried. A Marmot group and a cordn group have materially different metadata
  * exposure and users cannot infer that from either one looking like a group

@@ -13,12 +13,13 @@ adds the source-set mechanics and the build traps.
 
 ## Modules
 
-`settings.gradle.kts` includes 13: `amethyst`, `nappletHost`, `benchmark`,
-`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`,
-`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. Quartz is the
-external `libs.quartz` (vitorpamplona/quartz) and QUIC the external `libs.quic`
-(vitorpamplona/quic-kmp); `-PquartzDir=../quartz` / `-PquicKmpDir=../quic-kmp` build a
-local checkout instead (an included build, so quic's own quartz dependency follows).
+`settings.gradle.kts` includes 11: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`, `desktopApp`,
+`cli`, `relayBench`. The protocol libraries are external artifacts from their own repos:
+`libs.quartz`, `libs.crypto`, `libs.mls.kmp`, `libs.marmot` (+ `libs.marmot.quic`),
+`libs.cordn` and `libs.quic` (`AGENTS.md` › Libraries has what each holds). A `-P…Dir` flag
+(`-PquartzDir=../quartz`, `-PmarmotKmpDir=../marmot-kmp`, …) builds a local checkout instead,
+as an included build substituted for the artifact (`settings.gradle.kts`).
 
 ## Source sets
 
@@ -32,7 +33,7 @@ local checkout instead (an included build, so quic's own quartz dependency follo
 
 Targets: `quartz` builds android, jvm, iosArm64, iosSimulatorArm64, linuxX64,
 macosArm64. `commons` and `commonsUI` build android, jvm, iosArm64,
-iosSimulatorArm64. `nestsClient`, `marmotQuic` are android + jvm. There is
+iosSimulatorArm64. `nestsClient` is android + jvm. There is
 no `iosX64`.
 
 `jvmAndroid` is a custom intermediate set created with `create("jvmAndroid")`
