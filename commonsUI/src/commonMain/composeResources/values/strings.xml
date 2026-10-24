@@ -8424,4 +8424,5 @@
     </plurals>
     <string name="marmot_poll_invalid">Check the question and the options: 2 to 10 options, no empty text.</string>
     <string name="marmot_emoji_upload_failed">Could not attach the custom emoji, sent as text instead.</string>
+    <string name="marmot_media_epoch_moved">The group changed while your file was uploading, so it was not sent. Send it again.</string>
 </resources>

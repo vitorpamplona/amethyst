@@ -90,6 +90,12 @@ sealed interface MarmotNotice : UserNotice {
      * `:shortcode:` text.
      */
     data object EmojiNotAttached : MarmotNotice
+
+    /**
+     * The group moved to a new epoch while a file was uploading, so the message carrying it was not
+     * sent: no member could open media encrypted under the old epoch's key. It has to be sent again.
+     */
+    data object MediaEpochMoved : MarmotNotice
 }
 
 sealed interface Bolt12OfferNotice : UserNotice {

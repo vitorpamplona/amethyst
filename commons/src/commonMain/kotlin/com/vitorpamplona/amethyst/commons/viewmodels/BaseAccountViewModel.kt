@@ -106,6 +106,8 @@ import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupIconChange
+import com.vitorpamplona.marmot.client.MediaUploadKey
+import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryBaseEvent
@@ -2472,11 +2474,11 @@ open class BaseAccountViewModel(
         }
         account.scope.launch(Dispatchers.IO) {
             try {
-                val rumor =
+                val pinned =
                     account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
                         notices.notify(MarmotNotice.EmojiNotAttached)
                     }
-                deliverMarmotGroupMessage(nostrGroupId, rumor)
+                deliverMarmotGroupMessage(nostrGroupId, pinned.rumor, pinned.epoch)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("BaseAccountViewModel", "Failed to send a Marmot edit with custom emoji", e)
@@ -2491,15 +2493,21 @@ open class BaseAccountViewModel(
     private fun deliverMarmotGroupMessage(
         nostrGroupId: String,
         innerEvent: Event,
+        /** The epoch the media [innerEvent] carries was encrypted in; see [AccountMarmotActions.sendMarmotGroupMessage]. */
+        expectedEpoch: Long? = null,
     ) {
-        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        account.marmot.beginMarmotGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
         account.scope.launch(Dispatchers.IO) {
             try {
                 account.marmot.sendMarmotGroupMessage(
                     nostrGroupId,
                     innerEvent,
                     account.marmot.marmotGroupRelays(nostrGroupId),
+                    expectedEpoch,
                 )
+            } catch (e: MarmotEpochMovedException) {
+                // The group moved on while the media uploaded: what it carries opens in no later epoch.
+                notices.notify(MarmotNotice.MediaEpochMoved)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 // The bubble already carries the failure and its retry; this
@@ -2541,11 +2549,11 @@ open class BaseAccountViewModel(
         // and a second tap cannot send the same text again.
         account.scope.launch(Dispatchers.IO) {
             try {
-                val rumor =
+                val pinned =
                     account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
                         notices.notify(MarmotNotice.EmojiNotAttached)
                     }
-                deliverMarmotGroupMessage(nostrGroupId, rumor)
+                deliverMarmotGroupMessage(nostrGroupId, pinned.rumor, pinned.epoch)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("BaseAccountViewModel", "Failed to send a Marmot message with custom emoji", e)
@@ -2589,7 +2597,7 @@ open class BaseAccountViewModel(
                         onEmojiNotAttached = { notices.notify(MarmotNotice.EmojiNotAttached) },
                         maxTotalTags = MarmotPolls.MAX_TAGS,
                     )
-                deliverMarmotGroupMessage(nostrGroupId, withEmoji)
+                deliverMarmotGroupMessage(nostrGroupId, withEmoji.rumor, withEmoji.epoch)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("BaseAccountViewModel", "Failed to send a Marmot poll with custom emoji", e)
@@ -2602,6 +2610,8 @@ open class BaseAccountViewModel(
         nostrGroupId: String,
         url: String,
         imeta: IMetaTag,
+        /** The epoch of the key [MarmotFileUploader] encrypted the file with ([marmotMediaUploadKey]). */
+        sourceEpoch: Long? = null,
     ) {
         val template =
             eventTemplate(
@@ -2620,16 +2630,21 @@ open class BaseAccountViewModel(
                     account.signer.pubKey,
                     template,
                 )
-        deliverMarmotGroupMessage(nostrGroupId, innerEvent)
+        deliverMarmotGroupMessage(nostrGroupId, innerEvent, sourceEpoch)
     }
 
-    fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
+    /**
+     * The media key for a new upload and the epoch it belongs to, read together. The message
+     * carrying the upload is sent pinned to that epoch: a commit landing during a long upload would
+     * otherwise send it where no member can open it.
+     */
+    suspend fun marmotMediaUploadKey(nostrGroupId: String): MediaUploadKey? = account.marmotManager?.mediaUploadKey(nostrGroupId)
 
     /**
      * The media key for the attachments of one message: the key of the epoch
      * that carried it. An attachment does not open under the group's current
      * key once a commit has landed after it, so rendering must use this, not
-     * [marmotMediaExporterSecret], which is for encrypting a new upload.
+     * [marmotMediaUploadKey], which is for encrypting a new upload.
      */
     suspend fun marmotMediaSecretForMessage(
         nostrGroupId: String,
@@ -2668,9 +2683,11 @@ open class BaseAccountViewModel(
         nostrGroupId: String,
         reference: EncryptedMediaReferenceV2,
         caption: String,
+        /** The epoch [reference] was encrypted in ([marmotMediaUploadKey]). */
+        sourceEpoch: Long? = null,
     ) {
         val manager = account.marmotManager ?: return
-        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption))
+        deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption), sourceEpoch)
     }
 
     suspend fun createMarmotGroup(

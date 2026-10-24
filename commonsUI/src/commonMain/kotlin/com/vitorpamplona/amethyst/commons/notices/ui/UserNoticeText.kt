@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.resources.it_s_not_possible_to_quote_t
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_boost_posts
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.marmot_emoji_upload_failed
+import com.vitorpamplona.amethyst.commons.resources.marmot_group_default_name
+import com.vitorpamplona.amethyst.commons.resources.marmot_media_epoch_moved
 import com.vitorpamplona.amethyst.commons.resources.missing_lud16
 import com.vitorpamplona.amethyst.commons.resources.no_lightning_address_set
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
@@ -262,6 +264,7 @@ fun UserNotice.text(): NoticeText =
         MarmotNotice.ResetDone -> text(Res.string.reset_marmot_state, Res.string.reset_marmot_success)
         is MarmotNotice.ResetFailed -> NoticeText(Res.string.reset_marmot_state, str(Res.string.reset_marmot_failure, raw(message)))
         MarmotNotice.EmojiNotAttached -> text(Res.string.emoji_packs_title, Res.string.marmot_emoji_upload_failed)
+        MarmotNotice.MediaEpochMoved -> text(Res.string.marmot_group_default_name, Res.string.marmot_media_epoch_moved)
 
         is Bolt12OfferNotice.PaymentFailed -> NoticeText(Res.string.bolt12_offers, str(Res.string.bolt12_payment_failed, raw(detail)))
 

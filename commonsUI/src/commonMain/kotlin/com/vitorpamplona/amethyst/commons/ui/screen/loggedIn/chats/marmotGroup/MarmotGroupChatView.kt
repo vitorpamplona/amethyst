@@ -405,8 +405,8 @@ private fun MarmotGroupFileUploadDialog(
         },
         upload = {
             scope.launch(Dispatchers.IO) {
-                val exporterSecret = accountViewModel.marmotMediaExporterSecret(nostrGroupId)
-                if (exporterSecret == null) {
+                val key = accountViewModel.marmotMediaUploadKey(nostrGroupId)
+                if (key == null) {
                     launch(Dispatchers.Main) {
                         shortNotice.show(loadStringRes(Res.string.marmot_not_a_member))
                     }
@@ -415,7 +415,7 @@ private fun MarmotGroupFileUploadDialog(
 
                 MarmotFileUploader(accountViewModel.account).uploadMip04(
                     viewState = state,
-                    exporterSecret = exporterSecret,
+                    exporterSecret = key.mediaSecret,
                     onError = { title, message ->
                         scope.launch(Dispatchers.Main) {
                             longNotice.show("$title: $message")
@@ -423,7 +423,7 @@ private fun MarmotGroupFileUploadDialog(
                     },
                     uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
-                        MarmotFileSender(nostrGroupId, accountViewModel).send(uploads)
+                        MarmotFileSender(nostrGroupId, key.epoch, accountViewModel).send(uploads)
                         onUpload()
                     },
                 )

@@ -20,10 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.model
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
+import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
 import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
 import com.vitorpamplona.marmot.appComponents.GroupProfileV1
 import com.vitorpamplona.marmot.appComponents.MarmotMediaType
@@ -47,6 +50,7 @@ import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
+import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -216,6 +220,8 @@ class AccountMarmotActions(
     fun beginMarmotGroupMessage(
         nostrGroupId: HexKey,
         innerEvent: Event,
+        /** See [sendMarmotGroupMessage]. */
+        expectedEpoch: Long? = null,
     ) {
         // The same two guards sendMarmotGroupMessage returns on. Checked here
         // too, because marking a message as sending and then returning early
@@ -236,7 +242,7 @@ class AccountMarmotActions(
         // a Marmot send fails is that the group had none, and that is exactly
         // what the user may have just fixed.
         account.chatDeliveryTracker.markSending(innerEvent.id) {
-            sendMarmotGroupMessage(nostrGroupId, innerEvent, marmotGroupRelays(nostrGroupId))
+            sendMarmotGroupMessage(nostrGroupId, innerEvent, marmotGroupRelays(nostrGroupId), expectedEpoch)
         }
         showOwnMessageLocally(nostrGroupId, innerEvent)
     }
@@ -258,6 +264,13 @@ class AccountMarmotActions(
         nostrGroupId: HexKey,
         innerEvent: Event,
         groupRelays: Set<NormalizedRelayUrl>,
+        /**
+         * The epoch whose media key encrypted what [innerEvent] carries, when it carries any. The
+         * send goes out in that epoch or fails with [MarmotEpochMovedException]: in any other, no
+         * receiver could open the attachment. A retry keeps the pin, so a dead reference is never
+         * sent; the media has to be attached again.
+         */
+        expectedEpoch: Long? = null,
     ) {
         Log.d("MarmotDbg") {
             "sendMarmotGroupMessage: group=${nostrGroupId.take(8)}… innerKind=${innerEvent.kind} innerId=${innerEvent.id.take(8)}… " +
@@ -266,7 +279,7 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        beginMarmotGroupMessage(nostrGroupId, innerEvent)
+        beginMarmotGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
 
         if (groupRelays.isEmpty()) {
             // Previously this only logged and the message was silently
@@ -281,7 +294,7 @@ class AccountMarmotActions(
 
         val outbound =
             try {
-                manager.buildGroupMessage(nostrGroupId, innerEvent)
+                manager.buildGroupMessage(nostrGroupId, innerEvent, expectedEpoch)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 Log.w("MarmotDbg", "sendMarmotGroupMessage: could not build the envelope for $nostrGroupId", e)
@@ -1032,6 +1045,7 @@ class AccountMarmotActions(
         // (which holds them weakly) can GC them, and the Notification feed
         // (which iterates account.marmotGroupList.rooms) stops surfacing the group.
         account.marmotGroupList.removeGroup(nostrGroupId)
+        emojiUploads.forget(nostrGroupId)
         account.client.publish(outbound.signedEvent, groupRelays)
     }
 
@@ -1055,6 +1069,7 @@ class AccountMarmotActions(
         account.marmotManager?.resetAllState()
         for (groupId in account.marmotGroupList.allGroupIds()) {
             account.marmotGroupList.removeGroup(groupId)
+            emojiUploads.forget(groupId)
         }
     }
 
@@ -1302,23 +1317,39 @@ class AccountMarmotActions(
     var emojiMediaPort: MarmotEmojiMediaPort? = null
 
     /**
+     * Pack pictures already downloaded, by URL: a pack is a handful of small images used over and
+     * over, so each is fetched once. Bounded by bytes; the port caps every download.
+     */
+    private val emojiImages =
+        object : LruCache<String, MarmotEmojiMediaPort.Image>(EMOJI_IMAGE_CACHE_BYTES) {
+            override fun sizeOf(
+                key: String,
+                value: MarmotEmojiMediaPort.Image,
+            ) = value.bytes.size
+        }
+
+    private val emojiUploads = MarmotEmojiUploadCache()
+
+    /**
      * Encrypt the picture of [emoji] as an `encrypted-media-v2` attachment of
      * [nostrGroupId] and upload it, the way MDK sends a custom emoji: the
      * picture travels as ciphertext and the group sees only the reference.
      *
-     * Encrypted under the CURRENT epoch's media key, so the message carrying it
-     * must go out in that epoch, which a send right after this does.
+     * Encrypted under the current epoch's media key, which [AttachedEmoji.epoch] names: the message
+     * carrying it must go out pinned to that epoch (see [sendMarmotGroupMessage]).
      * Returns null when the platform has no port, the image cannot be fetched,
      * or no blob server takes it.
      */
     suspend fun encryptMarmotCustomEmoji(
         nostrGroupId: HexKey,
         emoji: EmojiUrlTag,
-    ): EncryptedMediaReferenceV2? {
+    ): AttachedEmoji? {
         val manager = account.marmotManager ?: return null
         val port = emojiMediaPort ?: return null
         return try {
-            val image = port.download(emoji.url) ?: return null
+            val key = manager.mediaUploadKey(nostrGroupId) ?: return null
+            emojiUploads.get(nostrGroupId, key.epoch, emoji.url)?.let { return AttachedEmoji(it, key.epoch) }
+            val image = emojiImages[emoji.url] ?: port.download(emoji.url)?.also { emojiImages.put(emoji.url, it) } ?: return null
             val mediaType =
                 image.contentType
                     ?.substringBefore(';')
@@ -1328,16 +1359,19 @@ class AccountMarmotActions(
                     ?: mediaTypeFromUrl(emoji.url)
                     ?: return null
             val filename = emojiFilename(emoji.code, mediaType)
-            val sealed = manager.encryptMedia(nostrGroupId, image.bytes, mediaType, filename)
+            val sealed = EncryptedMediaV2.encrypt(image.bytes, key.mediaSecret, mediaType, filename)
             val url = port.uploadCiphertext(sealed.ciphertext) ?: return null
-            EncryptedMediaReferenceV2(
-                locators = listOf(MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, url)),
-                ciphertextSha256 = sealed.ciphertextSha256,
-                plaintextSha256 = sealed.plaintextSha256,
-                nonce = sealed.nonce,
-                mediaType = mediaType,
-                filename = filename,
-            )
+            val reference =
+                EncryptedMediaReferenceV2(
+                    locators = listOf(MediaLocatorV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, url)),
+                    ciphertextSha256 = sealed.ciphertextSha256,
+                    plaintextSha256 = sealed.plaintextSha256,
+                    nonce = sealed.nonce,
+                    mediaType = mediaType,
+                    filename = filename,
+                )
+            emojiUploads.remember(nostrGroupId, key.epoch, emoji.url, reference)
+            AttachedEmoji(reference, key.epoch)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.w("MarmotDbg", "encryptMarmotCustomEmoji: could not attach :${emoji.code}: in ${nostrGroupId.take(8)}", e)
@@ -1351,6 +1385,10 @@ class AccountMarmotActions(
      * naming it by the reference's first locator. An emoji whose picture could
      * not be attached is left out, so its `:shortcode:` shows as text rather
      * than pointing receivers at a URL they must never fetch.
+     *
+     * Every picture is encrypted under one epoch, returned with the payload: send it pinned to
+     * that epoch. A commit that lands while the pictures upload leaves them behind, so they are
+     * attached again, once, under the new one.
      */
     suspend fun withEncryptedCustomEmoji(
         nostrGroupId: HexKey,
@@ -1363,25 +1401,43 @@ class AccountMarmotActions(
         maxTotalTags: Int? = null,
         /** Called when at least one emoji could not be attached and goes out as text. */
         onEmojiNotAttached: () -> Unit = {},
-    ): Event {
-        if (emojis.isEmpty()) return rumor
+    ): PinnedRumor {
+        if (emojis.isEmpty()) return PinnedRumor(rumor, null)
         val distinct = emojis.distinctBy { it.code }
         val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
         // Only as many as the tag count can take, before any download or upload: a poll spends two
         // tags per emoji (imeta + emoji), a message's limit counts the emoji tags alone.
         val room = if (maxTotalTags != null) (maxTotalTags - base.size) / 2 else MarmotCustomEmoji.MAX_MESSAGE_TAGS - base.size
         val wanted = distinct.take(room.coerceAtLeast(0))
+
         // In parallel: each one is a download and an upload, and one slow host should not
         // hold the others back.
-        val attached =
+        suspend fun attachAll() =
             coroutineScope {
                 wanted
                     .map { emoji -> async { encryptMarmotCustomEmoji(nostrGroupId, emoji)?.let { emoji.code to it } } }
                     .awaitAll()
                     .filterNotNull()
             }
-        val imetas = attached.map { (_, reference) -> reference.toImetaTag() }
-        val emojiTags = attached.map { (code, reference) -> arrayOf(MarmotCustomEmoji.TAG_EMOJI, code, reference.locators.first().value) }
+
+        var attached = attachAll()
+        if (attached.any { (_, it) -> it.epoch != currentMarmotEpoch(nostrGroupId) }) attached = attachAll()
+        // Still split after a second try (commits in a row): keep the newest epoch's, the only
+        // ones a send can still carry.
+        val epoch = attached.maxOfOrNull { (_, it) -> it.epoch }
+        val kept = attached.filter { (_, it) -> it.epoch == epoch }
+
+        val imetas = kept.map { (_, it) -> it.reference.toImetaTag() }
+        val emojiTags =
+            kept.map { (code, it) ->
+                arrayOf(
+                    MarmotCustomEmoji.TAG_EMOJI,
+                    code,
+                    it.reference.locators
+                        .first()
+                        .value,
+                )
+            }
         // MDK refuses to SEND past its limits on a message's extra tags (the
         // imeta rows are counted apart), and so must we, or a peer that one day
         // enforces them on receive drops the message.
@@ -1391,10 +1447,10 @@ class AccountMarmotActions(
             } else {
                 MarmotCustomEmoji.withinTagLimits(emojiTags + base)
             }
-        if (attached.size < distinct.size || (!fits && attached.isNotEmpty())) onEmojiNotAttached()
+        if (kept.size < distinct.size || (!fits && kept.isNotEmpty())) onEmojiNotAttached()
         val tags = if (fits) imetas + emojiTags + base else base
         val template = EventTemplate<Event>(rumor.createdAt, rumor.kind, tags.toTypedArray(), rumor.content)
-        return RumorAssembler.assembleRumor(account.signer.pubKey, template)
+        return PinnedRumor(RumorAssembler.assembleRumor(account.signer.pubKey, template), if (fits) epoch else null)
     }
 
     /**
@@ -1421,8 +1477,10 @@ class AccountMarmotActions(
         // The picture comes from the account's own packs, by shortcode. The URL in [reaction] may be
         // another member's ciphertext (a chip tapped) or any URL a peer wrote, and is never fetched.
         val emoji = account.emoji.findEmojiTags(shortcode).firstOrNull()
-        val reference = emoji?.let { encryptMarmotCustomEmoji(nostrGroupId, it) }
-        if (emoji == null || reference == null) {
+        var attached = emoji?.let { encryptMarmotCustomEmoji(nostrGroupId, it) }
+        // Left behind by a commit during the upload: attach again under the new epoch, once.
+        if (emoji != null && attached != null && attached.epoch != currentMarmotEpoch(nostrGroupId)) attached = encryptMarmotCustomEmoji(nostrGroupId, emoji)
+        if (emoji == null || attached == null) {
             // As text: the bare shortcode carries no emoji tag, so no receiver fetches a public URL.
             onEmojiNotAttached()
             reactToMarmotMessage(nostrGroupId, target, shortcode)
@@ -1431,13 +1489,25 @@ class AccountMarmotActions(
         val tags =
             arrayOf(
                 arrayOf("e", targetEvent.id),
-                reference.toImetaTag(),
-                arrayOf(MarmotCustomEmoji.TAG_EMOJI, emoji.code, reference.locators.first().value),
+                attached.reference.toImetaTag(),
+                arrayOf(
+                    MarmotCustomEmoji.TAG_EMOJI,
+                    emoji.code,
+                    attached.reference.locators
+                        .first()
+                        .value,
+                ),
             )
         val template = EventTemplate<Event>(TimeUtils.now(), REACTION_KIND, tags, ":${emoji.code}:")
         val rumor = RumorAssembler.assembleRumor<Event>(account.signer.pubKey, template)
-        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId), attached.epoch)
     }
+
+    private fun currentMarmotEpoch(nostrGroupId: HexKey): Long? =
+        account.marmotManager
+            ?.groupManager
+            ?.getGroup(nostrGroupId)
+            ?.epoch
 
     /**
      * Build a Marmot poll (kind 1068) for [nostrGroupId], or null when the input
@@ -1614,3 +1684,18 @@ class AccountMarmotActions(
         }
     }
 }
+
+/** A custom emoji's picture attached to a group message, and the epoch whose media key encrypted it. */
+class AttachedEmoji(
+    val reference: EncryptedMediaReferenceV2,
+    val epoch: Long,
+)
+
+/** A Marmot payload ready to send, and the epoch its attachments were encrypted in; null when it has none. */
+class PinnedRumor(
+    val rumor: Event,
+    val epoch: Long?,
+)
+
+/** Pack pictures kept in memory for re-sending, in bytes. */
+private const val EMOJI_IMAGE_CACHE_BYTES = 4 * 1024 * 1024
