@@ -73,7 +73,7 @@ object MarmotCustomEmoji {
         val result = LinkedHashMap<String, EncryptedMediaReferenceV2>()
         for (reference in attachments(event)) {
             val locator = firstLocator(reference) ?: continue
-            if (locator in emojiUrls) result.putIfAbsent(locator, reference)
+            if (locator in emojiUrls && locator !in result) result[locator] = reference
         }
         return result
     }
