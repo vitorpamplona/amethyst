@@ -38,12 +38,12 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 `main` has no branch protection, and the JVM/Android builds accept APIs that break the shared code: `HashMap.putIfAbsent`, `Dispatchers.IO` without `import kotlinx.coroutines.IO`, the stdlib `use` on skia or okio types. Four PRs merged in one day broke `main` this way (#4529, #4536, #4540, #4541), each merged while its CI was red or still running. So, before **every** push, `ngit send` or merge:
 
 ```bash
-bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites
+PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites
 ```
 
-That is the script the git pre-push hook runs, but `.git/hooks/pre-push` is a copy that only `:amethyst:preBuild` or `./gradlew installGitHook` refreshes: a fresh clone or web container may have none, and an old one lacks the KMP compiles. Run `./gradlew installGitHook` once per checkout, and run the script by hand before `ngit send` and `ngit pr merge`, which publish without a plain `git push` of your branch. On macOS, when `iosMain` changed, also run `./gradlew :commons:compileKotlinIosSimulatorArm64 :commonsUI:compileKotlinIosSimulatorArm64`.
+That is the script the git pre-push hook runs, but a plain `git push` leaves the KMP metadata compiles out unless `PREPUSH_KMP_METADATA=1` is set or it pushes to `main`, and `.git/hooks/pre-push` is a copy that only `:amethyst:preBuild` or `./gradlew installGitHook` refreshes: a fresh clone or web container may have none. Run `./gradlew installGitHook` once per checkout, and run the script by hand before `ngit send` and `ngit pr merge`, which publish without a plain `git push` of your branch. On macOS, when `iosMain` changed, also run `./gradlew :commons:compileKotlinIosSimulatorArm64 :commonsUI:compileKotlinIosSimulatorArm64`.
 
-**Merge only on green CI.** `gh pr checks <n> --repo vitorpamplona/amethyst --watch` and wait for `lint` and the iOS jobs to pass; a skipped job means `lint` failed. An ngit merge publishes `main` directly, with no PR checks on GitHub, so the gate above is the only check it gets.
+**Merge only on green CI.** `gh pr checks <n> --repo vitorpamplona/amethyst --watch` and wait for every job, `lint` and the iOS jobs included, to pass; the jobs run side by side, so a `lint` failure no longer skips the rest. An ngit merge publishes `main` directly, with no PR checks on GitHub, so the gate above is the only check it gets.
 
 ---
 
@@ -172,4 +172,4 @@ Delete throwaway branches pushed to the nostr remote with `git push "$NOSTR_REMO
 | push "succeeds" but nothing on gitworkshop | pushed a plain branch, not a proposal | use the `pr/` prefix or `ngit send --in-reply-to` |
 | `ngit pr view`/`merge` "failed to parse event id" | used the short prefix | pass the **full** hex id or `nevent` |
 | push hangs / times out at 2 min | normal GRASP fan-out latency | run in background; verify via `git ls-remote` |
-| `main` CI red after a merge: `lint` fails in `compile…KotlinMetadata`, the jobs after it skipped | a JVM-only API in shared code, merged without the build gate | fix forward on a branch; run `bash .git-hooks/pre-push` before the next merge |
+| `main` CI red after a merge: `lint` fails in `compile…KotlinMetadata` | a JVM-only API in shared code, merged without the build gate | fix forward on a branch; run `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` before the next merge |

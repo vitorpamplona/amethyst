@@ -54,7 +54,8 @@ jobs:
         # missing for iOS fails here, on Linux, instead of in test-commons-ios.
         # skikoMain (desktop + iOS) does the same for the skiko code: a skia or
         # okio `use` that only resolves on the JVM fails here, not in
-        # test-commonsui-ios. The .git-hooks/pre-push hook runs this same list.
+        # test-commonsui-ios. The .git-hooks/pre-push hook runs this same list
+        # when PREPUSH_KMP_METADATA=1 (a plain push skips the compiles).
         run: |
           ./gradlew spotlessCheck \
             :commons:verifyKmpPurity :commonsUI:verifyKmpPurity \
@@ -62,22 +63,30 @@ jobs:
             :commonsUI:compileCommonMainKotlinMetadata \
             :commonsUI:compileSkikoMainKotlinMetadata
 
+  # No job waits for `lint` (they used to `needs: lint`): that put its ~3.5 minutes in front of
+  # every run's critical path. A lint failure still fails the run.
   build-desktop:
-    needs: lint
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             desktop-task: packageDeb
+            # Every shared JVM suite runs on this leg. Running all of them on all three legs is
+            # what made the macOS leg the slowest job (~32 min against ~5 on Linux), and only
+            # :commons has tests that take an OS-specific path (ffmpeg lookup, file permissions,
+            # the keystore), so the other legs run that one beside the desktop shim's.
+            jvm-tests: ':commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test'
             desktop-artifact-name: Desktop Linux DEB
             desktop-artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
           - os: macos-latest
             desktop-task: packageDmg
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop macOS DMG
             desktop-artifact-path: desktopApp/build/compose/binaries/main/dmg/*.dmg
           - os: windows-latest
             desktop-task: packageMsi
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop Windows MSI
             desktop-artifact-path: desktopApp/build/compose/binaries/main/msi/*.msi
     runs-on: ${{ matrix.os }}
@@ -115,15 +124,15 @@ jobs:
 
       - name: Test + Build Desktop (gradle)
         run: |
-          CMD="./gradlew :commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
+          CMD="./gradlew ${{ matrix.jvm-tests }} :desktopApp:test :desktopApp:${{ matrix.desktop-task }}"
           if [ "${{ runner.os }}" = "Linux" ]; then
             xvfb-run --auto-servernum $CMD
           else
             $CMD
           fi
 
-      # This job runs the JVM test suites (:commons, :commonsUI,
-      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
+      # This job runs the JVM test suites (all of them on Linux; :commons and
+      # :desktopApp on macOS and Windows) but, unlike test-geode /
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the
@@ -207,7 +216,6 @@ jobs:
   # the quartz client tests that need a real socket relay (KtorRelay), which
   # stayed here when quartz moved to vitorpamplona/quartz.
   test-geode:
-    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -277,7 +285,6 @@ jobs:
     #   :commons:jvmTest stays green — this is the job that catches it.
     # - compileTestKotlinIosArm64 catches device-only compile drift
     #   (iosArm64 = aarch64-apple-ios) without needing a physical device.
-    needs: lint
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -334,7 +341,6 @@ jobs:
     # Skiko and the resource pipeline all go through the native compiler), so
     # it has a job to itself: together with :commons it ran 35 to 37 minutes
     # against the 45-minute limit on back-to-back runs.
-    needs: lint
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
@@ -404,7 +410,6 @@ jobs:
   # repeat some module compilation. That buys back more than it spends here,
   # because the duplicated work is parallel while the memory pressure was not.
   lint-android:
-    needs: lint
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -441,7 +446,6 @@ jobs:
           path: amethyst/build/reports/lint-results-*.html
 
   test-and-build-android:
-    needs: lint
     runs-on: ubuntu-latest
     # 90, not 60. On main this job's Gradle step takes ~46 minutes, which used
     # 76% of a 60-minute budget — fine for an incremental run, but PR runs set
@@ -488,22 +492,19 @@ jobs:
       # variants are compile-equivalent for unit-test purposes; running all six
       # adds ~5× the kotlinc work without catching new defects on PRs. Push to
       # main still gets the full test matrix via the production-build path.
-      # Memory, CI-only. gradle.properties asks for -Xmx6g (Gradle) plus -Xmx8g
-      # and 2g metaspace (Kotlin daemon) — about 16GB of ceiling on a 16GB
-      # ubuntu-latest runner, before the launcher JVM, Lint's fork and the KSP
-      # workers. This job is the only one heavy enough to reach it, and it died
-      # five times mid-compile with "the runner has received a shutdown signal",
-      # which is the OOM killer taking the runner agent.
+      # Test scope: :commons, :commonsUI and :nestsClient jvmTest run in the
+      # build-desktop Linux leg, not here; this job builds :commonsUI for Android
+      # anyway, but running those suites here too compiled both shared modules for
+      # the JVM a second time in the workflow.
       #
-      # Only the Kotlin daemon is cut. An earlier attempt capped BOTH to 4g and
-      # traded one OOM for another: the runner survived and the job ran to
-      # completion, but R8 and lintAnalyze then failed with
-      # "java.lang.OutOfMemoryError: Java heap space" — they draw on the Gradle
-      # daemon's heap, and 4g is not enough for them on this app. 6g always was,
-      # so it stays; 8g + 2g for kotlinc is the part that did not fit.
-      #
-      # Overridden here rather than in gradle.properties so local builds on
-      # bigger machines keep the headroom.
+      # Memory, CI-only. This job died five times mid-compile with "the runner has
+      # received a shutdown signal" (the OOM killer taking the runner agent) when the
+      # Kotlin daemon had 8g + 2g metaspace beside the Gradle daemon's 6g, so it caps
+      # the Kotlin daemon at 4g + 1g. The Gradle daemon keeps 6g: an earlier attempt
+      # capped both to 4g, and R8 and lintAnalyze then failed with
+      # "java.lang.OutOfMemoryError: Java heap space". gradle.properties asks 6g for
+      # local builds, since a cold local build at 4g stalled in full GCs; this job
+      # compiles with --max-workers=3 (below), so fewer compiles share the daemon.
       #
       # `--max-workers` is the second half, and it is about concurrency rather
       # than ceilings. The heap numbers above are per-JVM limits; what actually
@@ -529,10 +530,7 @@ jobs:
           ./gradlew \
             -Dkotlin.daemon.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g" \
             --max-workers=3 \
-            :commons:jvmTest \
-            :commonsUI:jvmTest \
             :commonsUI:testAndroidHostTest \
-            :nestsClient:jvmTest \
             :amethyst:testFdroidDebugUnitTest \
             :amethyst:testPlayDebugUnitTest \
             :amethyst:assembleBenchmark \

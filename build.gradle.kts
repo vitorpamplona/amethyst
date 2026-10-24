@@ -125,17 +125,11 @@ subprojects {
             }
         }
 
-        try {
-            tasks.named("preBuild") {
-                dependsOn("spotlessApply")
-            }
-        } catch (ignored: UnknownTaskException) {
-            tasks.matching {
-                it.name.startsWith("pre") && it.name.endsWith("Build")
-            }.configureEach {
-                dependsOn("spotlessApply")
-            }
-        }
+        // Formatting is not part of the build. spotlessApply used to hang off every module's
+        // preBuild, which put ktlint in front of every compile (about 3 min of a cold build) and
+        // had the build rewrite its own sources while it ran. The pre-commit hook and CI's lint
+        // job run spotlessCheck, and the agents' hooks run spotlessApply; by hand it is
+        // `./gradlew spotlessApply`.
     }
 }
 

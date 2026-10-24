@@ -58,12 +58,13 @@ object Nip05SignerLoginUseCase {
         authPrompts: RemoteSignerAuthPrompts? = null,
         /** Also told of every page to open, for a caller that shows it its own way (the CLI prints it). */
         onAuthUrl: ((String) -> Unit)? = null,
+        /** How long the signer has to finish the login, on either path (its page or a direct connect). */
         connectTimeoutMs: Long = NostrConnectLoginUseCase.NOSTRCONNECT_TIMEOUT_MS,
     ): Nip05Login {
         val login =
             signer.nostrConnectUrl?.let { template ->
                 viaSignerPage(signer, template, transport, client, clientMetadata, authPrompts, onAuthUrl, connectTimeoutMs)
-            } ?: viaDirectConnect(signer, transport, client, clientMetadata, authPrompts, onAuthUrl)
+            } ?: viaDirectConnect(signer, transport, client, clientMetadata, authPrompts, onAuthUrl, connectTimeoutMs)
 
         if (login.result.pubKeyHex.lowercase() != signer.userPubKey.lowercase()) {
             login.result.signer.closeSubscription()
@@ -101,10 +102,11 @@ object Nip05SignerLoginUseCase {
         clientMetadata: BunkerClientMetadata?,
         authPrompts: RemoteSignerAuthPrompts?,
         onAuthUrl: ((String) -> Unit)?,
+        answerTimeoutMs: Long,
     ): Nip05Login {
         // No secret: the address is all the user gave, so the signer confirms it is them (auth_url).
         val bunkerUri = NostrConnectURI.buildBunker(signer.signerPubKey, signer.relays, secret = null)
-        val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), client, clientMetadata, authPrompts, onAuthUrl)
+        val result = BunkerLoginUseCase.execute(bunkerUri, NostrSignerInternal(transport), client, clientMetadata, authPrompts, onAuthUrl, answerTimeoutMs)
         return Nip05Login(result, bunkerUri)
     }
 }
