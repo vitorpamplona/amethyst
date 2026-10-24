@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.follow
 import com.vitorpamplona.amethyst.commons.resources.follow_set_add_author_from_note_action
 import com.vitorpamplona.amethyst.commons.resources.highlight_action
 import com.vitorpamplona.amethyst.commons.resources.manage_bookmark_label
+import com.vitorpamplona.amethyst.commons.resources.marmot_admin_delete_message
 import com.vitorpamplona.amethyst.commons.resources.pin_to_profile
 import com.vitorpamplona.amethyst.commons.resources.post
 import com.vitorpamplona.amethyst.commons.resources.propose_an_edit
@@ -476,6 +477,17 @@ fun noteActionSections(
             }
             if (handlers.onConcordBan != null && accountViewModel.account.concord.concordBanTarget(note) != null) {
                 add(NoteAction(MaterialSymbols.Gavel, stringRes(Res.string.concord_ban_user), isDestructive = true, onClick = handlers.onConcordBan))
+            }
+            // Marmot: a group admin may delete any member's chat message for everyone (kind
+            // 4891). White Noise does the same; receivers check the sender was an admin when
+            // the deletion was sent.
+            if (!state.isLoggedUser && accountViewModel.canAdminDeleteMarmotMessage(note)) {
+                add(
+                    NoteAction(MaterialSymbols.Delete, stringRes(Res.string.marmot_admin_delete_message), isDestructive = true) {
+                        accountViewModel.adminDeleteMarmotMessage(note)
+                        handlers.onDismiss()
+                    },
+                )
             }
         }
 

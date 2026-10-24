@@ -53,12 +53,15 @@ object KeyPackageCommands {
     private suspend fun publish(dataDir: DataDir): Int {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
-            val relays = ctx.keyPackageRelays().ifEmpty { ctx.outboxRelays() }.ifEmpty { ctx.anyRelays() }
+            // NIP-65 write set plus any legacy kind:10051, as the rotation path publishes.
+            val relays = KeyPackageFetcher.publishRelaysFor(ctx.outboxRelays(), ctx.keyPackageRelays()).ifEmpty { ctx.anyRelays() }
             if (relays.isEmpty()) return Output.error("no_relays", "configure relays first")
 
             val event = ctx.marmot.generateKeyPackageEvent(relays.toList())
             val ack = ctx.publish(event, relays)
             RawEventSupport.publishGuard(ack, event.id)?.let { return it }
+            // Confirmed by a relay: starts the grace period of any bundle this displaced.
+            ctx.marmot.confirmKeyPackagePublished(event)
             Output.emit(
                 mapOf(
                     "event_id" to event.id,

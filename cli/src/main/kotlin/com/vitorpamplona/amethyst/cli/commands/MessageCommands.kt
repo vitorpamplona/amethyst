@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
 object MessageCommands {
     val USAGE: String =
@@ -113,14 +114,9 @@ object MessageCommands {
             // A deletion is not its own row either. The retracted body is
             // blanked rather than the row dropped, so a harness (or a reader
             // paging back) can tell "retracted" from "never arrived".
-            val deleted =
-                ctx.marmot.deletedIds(
-                    parsed,
-                    ctx.marmot
-                        .groupView(gid)
-                        ?.adminPubkeys
-                        ?.toSet() ?: emptySet(),
-                )
+            // Admin deletions count when their author was an admin in the
+            // epoch they were sent in, not by today's admin list.
+            val deleted = ctx.marmot.deletedIds(gid, parsed)
             // Pinned at persist time from the retention of the epoch that
             // DELIVERED each message, so it is the message's own expiry and not
             // a recomputation against whatever the group's setting is now.
@@ -253,7 +249,19 @@ object MessageCommands {
                         ?: return Output.error("not_found", "no stored message $id in group $gid")
                 }
 
-            val bundle = ctx.marmot.buildDeletionMessage(gid, targets)
+            // Someone else's chat message can only be removed by an admin, with
+            // a kind 4891 (`features/content-moderation.md`), as White Noise does.
+            // A kind 5 is the author's own retraction.
+            val others = targets.filter { it.pubKey != ctx.identity.pubKeyHex }
+            if (others.isNotEmpty() && (targets.size != 1 || others[0].kind != ChatEvent.KIND || !ctx.marmot.isGroupAdmin(gid))) {
+                return Output.error("not_allowed", "only a group admin can delete another member's chat message, one at a time")
+            }
+            val bundle =
+                if (others.isEmpty()) {
+                    ctx.marmot.buildDeletionMessage(gid, targets)
+                } else {
+                    ctx.marmot.buildAdminDeletionMessage(gid, others[0].id)
+                }
             val relays = ctx.marmotGroupRelays(gid).ifEmpty { ctx.outboxRelays() }
             val ack = ctx.publish(bundle.outbound.signedEvent, relays)
             RawEventSupport.publishGuard(ack, bundle.outbound.signedEvent.id)?.let { return it }

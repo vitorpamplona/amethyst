@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -54,7 +55,8 @@ class MarmotGroupList(
         msg: Note,
     ) {
         if (!isDisplayableFeedMessage(msg)) return
-        if (adminRemovedIds.get(msg.idHex) == nostrGroupId) return
+        // An admin deletion applies to chat messages only (`features/content-moderation.md`).
+        if (adminRemovedIds.get(msg.idHex) == nostrGroupId && msg.event?.kind == ChatEvent.KIND) return
         val chatroom = getOrCreateGroup(nostrGroupId)
         if (chatroom.addMessageSync(msg)) {
             noteToGroupIndex.getOrCreate(msg.idHex) { nostrGroupId }
@@ -116,7 +118,7 @@ class MarmotGroupList(
         target: Note?,
     ) {
         adminRemovedIds.put(targetId, nostrGroupId)
-        if (target != null) removeMessage(nostrGroupId, target)
+        if (target != null && target.event?.kind == ChatEvent.KIND) removeMessage(nostrGroupId, target)
     }
 
     /**
@@ -210,6 +212,22 @@ class MarmotGroupList(
         private const val MARMOT_INNER_KIND_PUSH_TOKEN_LIST = 448
         private const val MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL = 449
 
+        // A NIP-88 vote. It changes the tally drawn on its poll's row and is
+        // never a message of its own (MDK projects no timeline row for one).
+        private const val MARMOT_INNER_KIND_POLL_RESPONSE = 1018
+
+        // Content moderation (`features/content-moderation.md`): a NIP-56
+        // report of a message in this group and a NIP-32 label dismissing one.
+        // Both are addressed to the group's admins as review state, not to the
+        // conversation, and a report's body would otherwise read as a message.
+        private const val MARMOT_INNER_KIND_REPORT = 1984
+        private const val MARMOT_INNER_KIND_REPORT_LABEL = 1985
+
+        // Agent activity and operation status from WN Agent harnesses: progress
+        // telemetry about a run, whose result arrives as an ordinary kind:9.
+        private const val MARMOT_INNER_KIND_AGENT_ACTIVITY = 1201
+        private const val MARMOT_INNER_KIND_AGENT_OPERATION = 1202
+
         private val NON_CHAT_INNER_KINDS =
             setOf(
                 MARMOT_INNER_KIND_DELETION,
@@ -220,6 +238,11 @@ class MarmotGroupList(
                 MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE,
                 MARMOT_INNER_KIND_PUSH_TOKEN_LIST,
                 MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL,
+                MARMOT_INNER_KIND_POLL_RESPONSE,
+                MARMOT_INNER_KIND_REPORT,
+                MARMOT_INNER_KIND_REPORT_LABEL,
+                MARMOT_INNER_KIND_AGENT_ACTIVITY,
+                MARMOT_INNER_KIND_AGENT_OPERATION,
             )
     }
 }

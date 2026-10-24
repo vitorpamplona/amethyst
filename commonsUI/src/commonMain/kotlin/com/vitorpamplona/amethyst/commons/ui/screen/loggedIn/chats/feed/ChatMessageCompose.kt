@@ -77,10 +77,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.Re
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedFile
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderEncryptedMediaV2
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderMarmotEncryptedMedia
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderMarmotPoll
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.RenderRegularTextNote
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasEncryptedMediaV2
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.hasMip04Media
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isBuzzActivityRow
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.isMarmotPoll
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -664,7 +666,16 @@ fun NoteRow(
             hasMip04Media(note.event) -> RenderMarmotEncryptedMedia(note, bgColor, accountViewModel, nav)
             // `encrypted-media-v2` is a separate branch because its imeta has
             // no `url` field for the NIP-92 parser above to anchor on.
-            hasEncryptedMediaV2(note.event) -> RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+            hasEncryptedMediaV2(note.event) ->
+                Column {
+                    RenderEncryptedMediaV2(note, bgColor, accountViewModel, nav)
+                    // The content of a media message is its caption (MDK and our own sender
+                    // both put it there), and it may carry custom emoji of its own.
+                    if (note.event?.content?.isNotBlank() == true) {
+                        RenderRegularTextNote(note, canPreview, innerQuote, bgColor, accountViewModel, nav)
+                    }
+                }
+            isMarmotPoll(note, accountViewModel) -> RenderMarmotPoll(note, accountViewModel, nav)
             else -> {
                 // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
                 // 40003 and 1009): when one exists, render the winning edit's content instead of

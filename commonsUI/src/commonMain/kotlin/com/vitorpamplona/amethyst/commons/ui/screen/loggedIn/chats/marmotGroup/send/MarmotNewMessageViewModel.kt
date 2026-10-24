@@ -171,7 +171,8 @@ open class MarmotNewMessageViewModel : ViewModel() {
         // doesn't race a user-cleared reply state.
         val parentEvent = replyTo.value?.event
 
-        accountViewModel.sendMarmotGroupMessage(
+        // Custom emoji travel as encrypted pictures of the message (MDK 0.12+).
+        accountViewModel.sendMarmotGroupMessageWithCustomEmoji(
             nostrGroupId = groupId,
             text = text,
             replyToInnerEventId = parentEvent?.id,

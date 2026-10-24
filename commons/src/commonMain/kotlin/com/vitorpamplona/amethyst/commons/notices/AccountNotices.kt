@@ -83,6 +83,13 @@ sealed interface MarmotNotice : UserNotice {
     data class ResetFailed(
         val message: String?,
     ) : MarmotNotice
+
+    /**
+     * A custom emoji could not be attached as an encrypted picture (its image
+     * could not be fetched or no blob server took it), so it went out as its
+     * `:shortcode:` text.
+     */
+    data object EmojiNotAttached : MarmotNotice
 }
 
 sealed interface Bolt12OfferNotice : UserNotice {

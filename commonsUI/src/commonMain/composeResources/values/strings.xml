@@ -4736,6 +4736,7 @@
         <item quantity="other">%1$d msgs</item>
     </plurals>
     <string name="marmot_not_a_member">Not a member of this group</string>
+    <string name="marmot_admin_delete_message">Delete for everyone</string>
     <string name="marmot_unknown_error">unknown error</string>
     <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
     <string name="media_added">Media added</string>
@@ -8375,4 +8376,35 @@
     <string name="devtools_console_invalid_url">Not a relay URL: %1$s</string>
     <string name="devtools_console_tor">%1$s goes through Tor, which is not connected yet. Try again once Tor is up, or change the relay's Tor setting.</string>
     <string name="devtools_console_send_failed">Not connected, frame not sent</string>
+    <string name="local_timestamp_in">in %1$s</string>
+    <string name="local_timestamp_ago">%1$s ago</string>
+    <string name="marmot_poll_label">Poll</string>
+    <string name="marmot_poll_preview">Poll: %1$s</string>
+    <string name="marmot_poll_unsupported">This poll uses a format this app cannot show.</string>
+    <string name="marmot_poll_not_anonymous">Votes are visible to every member of this group.</string>
+    <string name="marmot_poll_single_choice_hint">Choose one</string>
+    <string name="marmot_poll_multiple_choice_hint">Choose one or more</string>
+    <string name="marmot_poll_vote">Vote</string>
+    <string name="marmot_poll_change_vote">Change vote</string>
+    <string name="marmot_poll_closed">Closed</string>
+    <string name="marmot_poll_closes_at">Closes %1$s</string>
+    <plurals name="marmot_poll_participants">
+        <item quantity="one">%1$d voter</item>
+        <item quantity="other">%1$d voters</item>
+    </plurals>
+    <string name="marmot_poll_view_votes">View votes</string>
+    <string name="marmot_poll_votes_title">Votes</string>
+    <string name="marmot_poll_no_votes">No votes yet</string>
+    <string name="marmot_poll_create">Create poll</string>
+    <string name="marmot_poll_question">Question</string>
+    <string name="marmot_poll_option">Option %1$d</string>
+    <string name="marmot_poll_add_option">Add option</string>
+    <string name="marmot_poll_allow_multiple">Allow multiple answers</string>
+    <string name="marmot_poll_has_deadline">Close after</string>
+    <string name="marmot_poll_no_deadline">Never</string>
+    <string name="marmot_poll_deadline_hours">%1$d hours</string>
+    <string name="marmot_poll_deadline_days">%1$d days</string>
+    <string name="marmot_poll_invalid">Check the question and the options: 2 to 10 options, no empty text.</string>
+    <string name="marmot_poll_vote_failed">Could not send the vote: %1$s</string>
+    <string name="marmot_emoji_upload_failed">Could not attach the custom emoji, sent as text instead.</string>
 </resources>

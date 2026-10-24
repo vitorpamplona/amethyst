@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -1531,6 +1532,12 @@ open class BaseAccountViewModel(
 
     fun delete(note: Note) = launchSigner { account.delete(note) }
 
+    /** Whether this account, as a group admin, may delete [note] for every member of its Marmot group. */
+    fun canAdminDeleteMarmotMessage(note: Note): Boolean = account.marmot.canAdminDeleteMarmotMessage(note)
+
+    /** Delete another member's Marmot message for everyone, as a group admin (kind 4891). */
+    fun adminDeleteMarmotMessage(note: Note) = launchSigner { account.marmot.adminDeleteMarmotMessage(note) }
+
     fun requestToVanish(
         relays: List<NormalizedRelayUrl>,
         reason: String,
@@ -2432,6 +2439,71 @@ open class BaseAccountViewModel(
         }
     }
 
+    /**
+     * [sendMarmotGroupMessage], with every custom emoji the text uses attached
+     * as an encrypted picture (MDK 0.12's `sendTaggedMedia`) instead of a
+     * public URL that other Marmot clients refuse to fetch. With no emoji in
+     * the text, or no emoji port on this platform, it is the plain send.
+     */
+    suspend fun sendMarmotGroupMessageWithCustomEmoji(
+        nostrGroupId: String,
+        text: String,
+        replyToInnerEventId: HexKey? = null,
+        replyToInnerAuthorPubKey: HexKey? = null,
+    ) {
+        val emojis = account.emoji.findEmojiTags(text)
+        if (emojis.isEmpty() || account.marmot.emojiMediaPort == null) {
+            sendMarmotGroupMessage(nostrGroupId, text, replyToInnerEventId, replyToInnerAuthorPubKey)
+            return
+        }
+        val tagger = NewMessageTagger(text, null, null, this)
+        tagger.run()
+        val manager = account.marmotManager ?: return
+        val plain =
+            manager.buildTextRumor(
+                text = tagger.message,
+                replyToEventId = replyToInnerEventId,
+                replyToAuthorPubKey = replyToInnerAuthorPubKey,
+                mentions = tagger.pTags?.map { it.toPTag() } ?: emptyList(),
+            )
+        val rumor =
+            account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
+                notices.notify(MarmotNotice.EmojiNotAttached)
+            }
+        deliverMarmotGroupMessage(nostrGroupId, rumor)
+    }
+
+    /**
+     * Post an encrypted NIP-88 poll in a Marmot group. Returns false when the
+     * question, options or deadline break the profile MDK enforces.
+     */
+    suspend fun createMarmotPoll(
+        nostrGroupId: String,
+        question: String,
+        options: List<String>,
+        type: MarmotPolls.PollType,
+        endsAt: Long?,
+    ): Boolean {
+        val poll = account.marmot.buildMarmotPoll(question, options, type, endsAt) ?: return false
+        deliverMarmotGroupMessage(nostrGroupId, poll)
+        return true
+    }
+
+    /**
+     * Vote on a Marmot poll with the complete selection [optionIds] (one id for
+     * single choice). Returns false when the poll is closed or the selection
+     * does not fit it.
+     */
+    suspend fun castMarmotPollVote(
+        nostrGroupId: String,
+        poll: Event,
+        optionIds: List<String>,
+    ): Boolean {
+        val vote = account.marmot.buildMarmotPollVote(poll, optionIds) ?: return false
+        deliverMarmotGroupMessage(nostrGroupId, vote)
+        return true
+    }
+
     suspend fun sendMarmotGroupMediaMessage(
         nostrGroupId: String,
         url: String,
@@ -2458,6 +2530,17 @@ open class BaseAccountViewModel(
     }
 
     fun marmotMediaExporterSecret(nostrGroupId: String): ByteArray? = account.marmotManager?.mediaExporterSecret(nostrGroupId)
+
+    /**
+     * The media key for the attachments of one message: the key of the epoch
+     * that carried it. An attachment does not open under the group's current
+     * key once a commit has landed after it, so rendering must use this, not
+     * [marmotMediaExporterSecret], which is for encrypting a new upload.
+     */
+    suspend fun marmotMediaSecretForMessage(
+        nostrGroupId: String,
+        innerEventId: String,
+    ): ByteArray? = account.marmotManager?.mediaSecretForMessage(nostrGroupId, innerEventId)
 
     /**
      * True when this group carries the `encrypted-media-v2` policy (`0x800b`)

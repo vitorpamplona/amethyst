@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
 import com.vitorpamplona.marmot.groups.MarmotMessageStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
@@ -108,7 +110,7 @@ class EncryptedMarmotMessageStore(
     override suspend fun delete(nostrGroupId: String) {
         withContext(Dispatchers.IO) {
             logMutex.withLock {
-                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId))) {
+                for (file in listOf(messagesFile(nostrGroupId), epochsFile(nostrGroupId), snapshotFile(nostrGroupId), expiriesFile(nostrGroupId), epochRetentionsFile(nostrGroupId), mediaSecretsFile(nostrGroupId), epochAdminsFile(nostrGroupId), verdictsFile(nostrGroupId))) {
                     log.forget(file.toOkioPath())
                     if (file.exists() && !file.delete()) {
                         Log.w(TAG) { "delete($nostrGroupId): failed to remove ${file.absolutePath}" }
@@ -243,6 +245,135 @@ class EncryptedMarmotMessageStore(
             }
         }
     }
+
+    private fun mediaSecretsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "media_secrets")
+
+    /**
+     * Each epoch's encrypted-media key, captured while the epoch was still
+     * held. An attachment opens only under the key of its own message's epoch,
+     * and the MLS state drops an epoch's exporter secret a few commits later.
+     *
+     * These are secrets, so they go through the same encrypted codec as the
+     * messages. First write wins per epoch: an epoch's key never changes.
+     */
+    override suspend fun recordMediaSecret(
+        nostrGroupId: String,
+        epoch: Long,
+        mediaSecret: ByteArray,
+    ) = withContext(Dispatchers.IO) {
+        logMutex.withLock {
+            try {
+                val existing = readAllFrom(mediaSecretsFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
+                existing.add("$epoch ${mediaSecret.toHexKey()}")
+                writeAllTo(mediaSecretsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordMediaSecret($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadMediaSecrets(nostrGroupId: String): Map<Long, ByteArray> =
+        withContext(Dispatchers.IO) {
+            try {
+                logMutex
+                    .withLock { readAllFrom(mediaSecretsFile(nostrGroupId)) }
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                        val secret = runCatching { parts[1].hexToByteArray() }.getOrNull() ?: return@mapNotNull null
+                        epoch to secret
+                    }.toMap()
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "loadMediaSecrets($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    private fun epochAdminsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_admins")
+
+    private fun verdictsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "moderation_verdicts")
+
+    /**
+     * The active admins of each epoch, kept because an admin deletion is
+     * authorized by its source epoch's admins, not today's. First write wins:
+     * an epoch's admin set is fixed the moment it exists.
+     */
+    override suspend fun recordEpochAdmins(
+        nostrGroupId: String,
+        epoch: Long,
+        admins: Set<String>,
+    ) = withContext(Dispatchers.IO) {
+        logMutex.withLock {
+            try {
+                val existing = readAllFrom(epochAdminsFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == epoch.toString() }) return@withLock
+                existing.add("$epoch ${admins.joinToString(",")}")
+                writeAllTo(epochAdminsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordEpochAdmins($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadEpochAdmins(nostrGroupId: String): Map<Long, Set<String>> =
+        withContext(Dispatchers.IO) {
+            try {
+                logMutex
+                    .withLock { readAllFrom(epochAdminsFile(nostrGroupId)) }
+                    .mapNotNull { line ->
+                        val epoch = line.substringBefore(' ').toLongOrNull() ?: return@mapNotNull null
+                        val admins =
+                            line
+                                .substringAfter(' ', "")
+                                .split(',')
+                                .filter { it.isNotEmpty() }
+                                .toSet()
+                        epoch to admins
+                    }.toMap()
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "loadEpochAdmins($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
+
+    /** Whether each admin deletion was authorized, decided once. First write wins. */
+    override suspend fun recordModerationVerdict(
+        nostrGroupId: String,
+        innerEventId: String,
+        authorized: Boolean,
+    ) = withContext(Dispatchers.IO) {
+        logMutex.withLock {
+            try {
+                val existing = readAllFrom(verdictsFile(nostrGroupId)).toMutableList()
+                if (existing.any { it.substringBefore(' ') == innerEventId }) return@withLock
+                existing.add("$innerEventId ${if (authorized) 1 else 0}")
+                writeAllTo(verdictsFile(nostrGroupId), existing)
+            } catch (e: Exception) {
+                Log.e(TAG, "recordModerationVerdict($nostrGroupId) FAILED: ${e.message}", e)
+            }
+        }
+    }
+
+    override suspend fun loadModerationVerdicts(nostrGroupId: String): Map<String, Boolean> =
+        withContext(Dispatchers.IO) {
+            try {
+                logMutex
+                    .withLock { readAllFrom(verdictsFile(nostrGroupId)) }
+                    .mapNotNull { line ->
+                        val parts = line.trim().split(' ')
+                        if (parts.size != 2) return@mapNotNull null
+                        parts[0] to (parts[1] == "1")
+                    }.toMap()
+            } catch (e: Exception) {
+                currentCoroutineContext().ensureActive()
+                Log.e(TAG, "loadModerationVerdicts($nostrGroupId) FAILED: ${e.message}", e)
+                emptyMap()
+            }
+        }
 
     private fun epochRetentionsFile(nostrGroupId: String): File = File(groupDir(nostrGroupId), "epoch_retentions")
 

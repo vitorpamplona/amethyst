@@ -874,7 +874,7 @@ class GroupEventHandler(
                     // the persist for those — don't relax this gate to cover
                     // them, or every own message would be written twice.
                     if (isNew) {
-                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson)
+                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson, result.epoch)
 
                         // GroupEvents have no `p` tag, so the cache-observer
                         // notification path can't route them. Fire the popup

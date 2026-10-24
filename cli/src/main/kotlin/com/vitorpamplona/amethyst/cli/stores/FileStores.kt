@@ -29,6 +29,8 @@ import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageBundleStore
 import com.vitorpamplona.marmot.protocolCore.MarmotPublishObligationStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -172,6 +174,9 @@ class FileMarmotMessageStore(
         snapshotFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group system-row baseline")
         expiryFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group message expiries")
         epochRetentionFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch retentions")
+        mediaSecretFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group media keys")
+        epochAdminsFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group epoch admins")
+        verdictsFile(nostrGroupId).deleteOrWarn("FileMarmotMessageStore", "group moderation verdicts")
     }
 
     private fun snapshotFile(id: String) = File(dir, "$id.snapshot")
@@ -259,6 +264,84 @@ class FileMarmotMessageStore(
                 val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
                 val secs = parts[1].toLongOrNull() ?: return@mapNotNull null
                 epoch to secs
+            }?.toMap()
+            ?: emptyMap()
+
+    private fun mediaSecretFile(id: String) = File(dir, "$id.media-secrets")
+
+    /** First write wins: an epoch's media key never changes. */
+    override suspend fun recordMediaSecret(
+        nostrGroupId: String,
+        epoch: Long,
+        mediaSecret: ByteArray,
+    ) {
+        val target = mediaSecretFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
+        SecureFileIO.appendText(target, "$epoch ${mediaSecret.toHexKey()}\n")
+    }
+
+    override suspend fun loadMediaSecrets(nostrGroupId: String): Map<Long, ByteArray> =
+        mediaSecretFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                val epoch = parts[0].toLongOrNull() ?: return@mapNotNull null
+                val secret = runCatching { parts[1].hexToByteArray() }.getOrNull() ?: return@mapNotNull null
+                epoch to secret
+            }?.toMap()
+            ?: emptyMap()
+
+    private fun epochAdminsFile(id: String) = File(dir, "$id.epoch-admins")
+
+    private fun verdictsFile(id: String) = File(dir, "$id.moderation-verdicts")
+
+    /** First write wins: an epoch's admin set is fixed once it exists. */
+    override suspend fun recordEpochAdmins(
+        nostrGroupId: String,
+        epoch: Long,
+        admins: Set<String>,
+    ) {
+        val target = epochAdminsFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == epoch.toString() }) return
+        SecureFileIO.appendText(target, "$epoch ${admins.joinToString(",")}\n")
+    }
+
+    override suspend fun loadEpochAdmins(nostrGroupId: String): Map<Long, Set<String>> =
+        epochAdminsFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val epoch = line.substringBefore(' ').toLongOrNull() ?: return@mapNotNull null
+                epoch to
+                    line
+                        .substringAfter(' ', "")
+                        .split(',')
+                        .filter { it.isNotEmpty() }
+                        .toSet()
+            }?.toMap()
+            ?: emptyMap()
+
+    /** First write wins: a deletion's authority is decided once. */
+    override suspend fun recordModerationVerdict(
+        nostrGroupId: String,
+        innerEventId: String,
+        authorized: Boolean,
+    ) {
+        val target = verdictsFile(nostrGroupId)
+        if (target.exists() && target.readLines().any { it.substringBefore(' ') == innerEventId }) return
+        SecureFileIO.appendText(target, "$innerEventId ${if (authorized) 1 else 0}\n")
+    }
+
+    override suspend fun loadModerationVerdicts(nostrGroupId: String): Map<String, Boolean> =
+        verdictsFile(nostrGroupId)
+            .takeIf { it.exists() }
+            ?.readLines()
+            ?.mapNotNull { line ->
+                val parts = line.trim().split(' ')
+                if (parts.size != 2) return@mapNotNull null
+                parts[0] to (parts[1] == "1")
             }?.toMap()
             ?: emptyMap()
 

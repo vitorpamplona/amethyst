@@ -1853,8 +1853,9 @@ class Account(
         reaction: String,
     ) {
         // A Marmot message reacts inside its MLS group; see AccountMarmotActions.reactToMarmotMessage.
+        // A custom emoji goes as an encrypted picture of the reaction, the way MDK sends one.
         marmot.marmotGroupOf(note)?.let { groupId ->
-            marmot.reactToMarmotMessage(groupId, note, reaction)
+            marmot.reactToMarmotMessageWithMedia(groupId, note, reaction)
             return
         }
 
@@ -4373,6 +4374,10 @@ class Account(
                 // generated bundles. Only generate-and-publish if no active
                 // bundle exists in memory after restore.
                 marmot.ensureMarmotKeyPackagePublished()
+
+                // Refresh our leaf in groups where it predates support for a
+                // component, after the randomized delay the spec asks for.
+                scope.launch(Dispatchers.IO) { marmot.runMarmotLeafRefreshLoop() }
 
                 // Sync MIP-01 metadata from restored groups to chatrooms and
                 // re-hydrate decrypted messages from persistent storage.

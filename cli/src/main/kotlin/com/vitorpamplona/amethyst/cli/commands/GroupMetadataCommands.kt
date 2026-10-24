@@ -27,16 +27,16 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomAuth
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.marmot.OutboundGroupEvent
 import com.vitorpamplona.marmot.appComponents.GroupAvatarUrlV1
-import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.appComponents.MarmotWebUrl
 import com.vitorpamplona.marmot.client.MarmotManager
-import com.vitorpamplona.marmot.mip01Groups.MarmotGroupImageEncryption
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import java.io.File
 
 /**
@@ -77,9 +77,10 @@ object GroupMetadataCommands {
     }
 
     /**
-     * Set the group avatar (MIP-01 v2): encrypt the image, optionally push the
-     * ciphertext to Blossom (`--server`), and commit the image fields into the group
-     * metadata. The encryption is byte-for-byte interoperable with mdk/whitenoise.
+     * Set the group avatar: encrypt the image in the scheme of the group's carrier
+     * (`0x8002` for a current-profile group, MIP-01 v2 for a legacy one), optionally
+     * push the ciphertext to Blossom (`--server`), and commit the image fields. Both
+     * schemes are byte-for-byte interoperable with mdk/whitenoise.
      *
      * `group set-image <gid> <image-file> [--server URL] [--mime TYPE]`
      */
@@ -96,39 +97,102 @@ object GroupMetadataCommands {
         if (!file.isFile) return Output.error("bad_args", "no such file: $path")
 
         val plaintext = file.readBytes()
-        val enc = MarmotGroupImageEncryption.encrypt(plaintext)
-        val uploadKeySeed = MarmotGroupImageEncryption.generateUploadKey()
+        val mediaType = args.flag("mime") ?: "image/jpeg"
+        // Filled in once the group is open: the scheme depends on the group's
+        // avatar carrier, so the key material cannot be minted before that.
+        val extra = mutableMapOf<String, Any?>()
 
-        // Optionally push the encrypted blob to Blossom, signed by the keypair derived
-        // from image_upload_key so an admin holding the seed can later replace/delete it.
-        var uploadedUrl: String? = null
-        if (server != null) {
-            val uploadSigner = NostrSignerInternal(KeyPair(privKey = MarmotGroupImageEncryption.deriveUploadKeypairSecret(uploadKeySeed)))
-            val tmp = File.createTempFile("marmot-icon", ".bin")
-            try {
-                tmp.writeBytes(enc.ciphertext)
-                val auth = BlossomAuth.createUploadAuth(enc.imageHash, enc.ciphertext.size.toLong(), "Group image", uploadSigner)
-                val result = BlossomClient().upload(tmp, "application/octet-stream", server, auth)
-                if (result.sha256 != null && result.sha256 != enc.imageHash) {
-                    return Output.error("hash_mismatch", "blossom returned ${result.sha256}, expected ${enc.imageHash}")
+        return try {
+            setImageCommit(dataDir, gid, extra, plaintext, mediaType, server)
+        } catch (e: BlobHashMismatch) {
+            Output.error("hash_mismatch", e.message ?: "blossom returned a different hash")
+        }
+    }
+
+    private class BlobHashMismatch(
+        message: String,
+    ) : Exception(message)
+
+    private suspend fun setImageCommit(
+        dataDir: DataDir,
+        gid: String,
+        extra: MutableMap<String, Any?>,
+        plaintext: ByteArray,
+        mediaType: String,
+        server: String?,
+    ): Int =
+        commit(dataDir, gid, extra) { ctx, resolved, _ ->
+            // `0x8002` (raw key, media type in the AAD, raw upload key) for a
+            // current-profile group, MIP-01 v2 for a legacy one. Encrypting with
+            // MIP-01 and storing it in `0x8002` gave avatars no conformant
+            // client could open.
+            val plan = ctx.marmot.planGroupImageUpload(resolved, mediaType)
+            val ciphertext = plan.cipher.encrypt(plaintext)
+            val imageHash = sha256(ciphertext).toHexKey()
+
+            // Optionally push the encrypted blob to Blossom, signed by the
+            // scheme's upload key so an admin holding it can later replace or
+            // delete the blob.
+            var uploadedUrl: String? = null
+            if (server != null) {
+                val uploadSigner = NostrSignerInternal(KeyPair(privKey = plan.uploadSecretKey))
+                val tmp = File.createTempFile("marmot-icon", ".bin")
+                try {
+                    tmp.writeBytes(ciphertext)
+                    val auth = BlossomAuth.createUploadAuth(imageHash, ciphertext.size.toLong(), "Group image", uploadSigner)
+                    val result = BlossomClient().upload(tmp, "application/octet-stream", server, auth)
+                    if (result.sha256 != null && result.sha256 != imageHash) {
+                        throw BlobHashMismatch("blossom returned ${result.sha256}, expected $imageHash")
+                    }
+                    uploadedUrl = result.url
+                } finally {
+                    tmp.deleteOrWarn("GroupMetadataCommands", "encrypted group image")
                 }
-                uploadedUrl = result.url
-            } finally {
-                tmp.deleteOrWarn("GroupMetadataCommands", "encrypted group image")
             }
+            extra["image_hash"] = imageHash
+            extra["image_url"] = uploadedUrl
+            ctx.marmot.setGroupImage(resolved, plan.componentFor(imageHash))
         }
 
-        return commit(dataDir, gid, mapOf("image_hash" to enc.imageHash, "image_url" to uploadedUrl)) { ctx, resolved, _ ->
-            ctx.marmot.setGroupImage(
-                resolved,
-                GroupBlossomImageV1(
-                    imageHash = enc.imageHash.hexToByteArray(),
-                    imageKey = enc.imageKey,
-                    imageNonce = enc.imageNonce,
-                    imageUploadKey = uploadKeySeed,
-                    mediaType = args.flag("mime") ?: "image/jpeg",
+    /**
+     * Fetch the group avatar's blob from `--server` and decrypt it in the scheme
+     * of the group's carrier (`0x8002` or MIP-01), writing the plaintext to `--out`.
+     *
+     * `group download-image <gid> --server URL --out FILE`
+     */
+    suspend fun downloadImage(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val rawGid = args.positional(0, "gid")
+        val server = args.flag("server") ?: return Output.error("bad_args", "group download-image <gid> --server URL --out FILE")
+        val out = args.flag("out") ?: return Output.error("bad_args", "group download-image <gid> --server URL --out FILE")
+        args.rejectUnknown()
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val gid = ctx.resolveGroupId(rawGid)
+            ctx.syncIncoming()
+            val view = ctx.marmot.groupView(gid) ?: return Output.error("not_member", "not a member of group $gid")
+            val image = view.image ?: return Output.error("no_image", "group $gid has no Blossom avatar")
+            val ciphertext =
+                BlossomClient().download(BlossomServerUrl.blob(server, image.hash))
+                    ?: return Output.error("download_failed", "blob ${image.hash} not on $server")
+            val plaintext =
+                image.cipher().decryptOrNull(ciphertext)
+                    ?: return Output.error("decrypt_failed", "the avatar did not decrypt under the ${image.scheme} scheme")
+            File(out).writeBytes(plaintext)
+            Output.emit(
+                mapOf(
+                    "group_id" to gid,
+                    "image_hash" to image.hash,
+                    "scheme" to image.scheme.name,
+                    "media_type" to image.mediaType,
+                    "bytes" to plaintext.size,
+                    "out" to out,
                 ),
             )
+            return 0
         }
     }
 

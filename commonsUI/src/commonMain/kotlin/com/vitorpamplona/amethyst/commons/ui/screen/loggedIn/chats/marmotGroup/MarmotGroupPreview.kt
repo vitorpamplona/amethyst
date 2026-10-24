@@ -24,10 +24,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.marmot_group_fallback_name
 import com.vitorpamplona.amethyst.commons.resources.marmot_no_messages_yet
+import com.vitorpamplona.amethyst.commons.resources.marmot_poll_label
+import com.vitorpamplona.amethyst.commons.resources.marmot_poll_preview
 import com.vitorpamplona.amethyst.commons.resources.marmot_preview_group_updated
 import com.vitorpamplona.amethyst.commons.resources.marmot_preview_media
 import com.vitorpamplona.amethyst.commons.resources.marmot_preview_no_text
@@ -68,6 +71,10 @@ fun marmotGroupPreviewText(
             newestMessage == null -> stringRes(Res.string.marmot_no_messages_yet)
             previewEvent == null -> stringRes(Res.string.marmot_preview_no_text)
             previewEvent.kind == MarmotAppEvent.KIND_SYSTEM -> stringRes(Res.string.marmot_preview_group_updated)
+            // A poll's question alone reads like a plain message; MDK shows a poll label.
+            previewEvent.kind == MarmotPolls.KIND_POLL ->
+                MarmotPolls.parsePoll(previewEvent)?.let { stringRes(Res.string.marmot_poll_preview, it.question) }
+                    ?: stringRes(Res.string.marmot_poll_label)
             // Text first: an attachment usually carries a caption, and showing
             // "Attachment" over the words the sender actually wrote would be a
             // step back from the raw `content` this replaced.
