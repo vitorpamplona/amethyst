@@ -257,6 +257,10 @@ object DesktopDeepLinks {
             ?.takeIf { it.isNotEmpty() }
     }
 
+    /** How a routed link brings the app forward; a test swaps it for a slow one. */
+    @Volatile
+    internal var requestForeground: () -> Unit = ::bringToFront
+
     /** Asks the OS to surface the window; supported everywhere AWT is, ignored where it is not. */
     private fun bringToFront() {
         runCatching {
@@ -368,10 +372,13 @@ object DesktopDeepLinks {
             conn.soTimeout = BUS_READ_TIMEOUT_MS
             val line = conn.getInputStream().bufferedReader().readLine()
             if (line != null && isDeepLink(line)) {
-                bringToFront()
                 offer(line)
                 conn.getOutputStream().write("$BUS_ACK\n".toByteArray(Charsets.UTF_8))
                 conn.getOutputStream().flush()
+                // After the ack: the first foreground request initialises the desktop toolkit (GTK
+                // on Linux), which can outlast the forwarder's 2 s wait, and a late ack made it
+                // open a second copy of the app.
+                requestForeground()
             }
         } catch (e: IOException) {
             Log.w(TAG, "Instance bus connection failed", e)
