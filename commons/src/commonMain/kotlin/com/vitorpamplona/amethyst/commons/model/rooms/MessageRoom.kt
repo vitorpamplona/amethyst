@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 
 /**
@@ -79,6 +80,44 @@ interface MessageRoom : NotesGatherer {
         account: Account,
         poll: Note,
         optionCodes: Set<String>,
+    ): Boolean = false
+
+    /**
+     * True when a report of one of this room's messages stays among its members ([report]),
+     * false when it goes out publicly about the author. Only a public report also blocks the
+     * author: a report kept in the room is for its admins to review.
+     */
+    fun keepsReports(): Boolean = false
+
+    /**
+     * Reports [note], a message in this room, for [type], with [explanation] as free text.
+     *
+     * A room that keeps reports among its members (a Marmot group) sends one there, where every
+     * member sees it and who sent it. This default is for a room that keeps none: it reports the
+     * message's author publicly, naming no message, which is how a private message was reported
+     * before rooms owned their messages.
+     */
+    suspend fun report(
+        account: Account,
+        note: Note,
+        type: ReportType,
+        explanation: String,
+    ): Boolean {
+        val author = note.author ?: return false
+        account.report(author, type, explanation)
+        return true
+    }
+
+    /** The reports on [note] that [account], as an admin of this room, may dismiss. */
+    fun reportsToDismiss(
+        account: Account,
+        note: Note,
+    ): List<Note> = emptyList()
+
+    /** Dismisses [reports] for every member, as a room admin. It neither hides nor deletes their target. */
+    suspend fun dismissReports(
+        account: Account,
+        reports: List<Note>,
     ): Boolean = false
 
     /** True when [account] may remove [note], someone else's message, for every member. */

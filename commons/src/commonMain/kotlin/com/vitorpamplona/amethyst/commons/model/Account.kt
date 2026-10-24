@@ -1990,6 +1990,7 @@ class Account(
         type: ReportType,
         content: String = "",
     ) {
+        if (refusesRoomNote(note, "report")) return
         if (note.isPrivateRumor()) {
             // A kind-1984 e-tagging the rumor would leak the private id onto
             // public relays. Report the author instead (p-tag only).
@@ -4408,7 +4409,7 @@ class Account(
                                 // kind:1009 edit is re-linked to its message too.
                                 val innerNote = marmot.indexMarmotInnerEvent(innerEvent).note
                                 marmotGroupList.addMessage(groupId, innerNote)
-                                marmot.applyMarmotAdminRemoval(groupId, innerEvent)
+                                marmot.applyMarmotModeration(groupId, innerEvent)
                             } catch (e: Exception) {
                                 Log.w(
                                     "Account",

@@ -825,6 +825,7 @@
     <string name="report_dialog_blocking_a_user">Blocking a user will hide their content in your app. Your notes are still publicly viewable, including to people you block. Blocked users are listed on the Security Filters screen.</string>
     <string name="report_dialog_report_btn">Report Abuse</string>
     <string name="report_dialog_reminder_public">All reports posted will be publicly visible.</string>
+    <string name="report_dialog_reminder_group">Everyone in this group will see this report and that you sent it. Admins can review it.</string>
     <string name="report_dialog_additional_reason_placeholder">Optionally provide additional context about your report…</string>
     <string name="report_dialog_additional_reason_label">Additional Context</string>
     <string name="report_dialog_select_reason_label">Reason</string>
@@ -4737,6 +4738,10 @@
     </plurals>
     <string name="marmot_not_a_member">Not a member of this group</string>
     <string name="marmot_admin_delete_message">Delete for everyone</string>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">Dismiss %1$d report</item>
+        <item quantity="other">Dismiss %1$d reports</item>
+    </plurals>
     <string name="marmot_unknown_error">unknown error</string>
     <string name="mastodon" translatable="false">Mastodon Post ID w/ Proof</string>
     <string name="media_added">Media added</string>

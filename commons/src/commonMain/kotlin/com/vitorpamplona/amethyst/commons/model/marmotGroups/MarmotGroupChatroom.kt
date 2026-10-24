@@ -39,6 +39,8 @@ import com.vitorpamplona.marmot.client.MarmotGroupImage
 import com.vitorpamplona.marmot.protocolCore.LocalOutboundGate
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlinx.coroutines.channels.BufferOverflow
@@ -244,6 +246,33 @@ class MarmotGroupChatroom(
         val pollEvent = poll.event ?: return false
         return account.marmot.respondToMarmotPoll(nostrGroupId, pollEvent, optionCodes)
     }
+
+    // `features/content-moderation.md`: a report is a kind 1984 every member sees.
+    override fun keepsReports(): Boolean = true
+
+    override suspend fun report(
+        account: Account,
+        note: Note,
+        type: ReportType,
+        explanation: String,
+    ): Boolean = account.marmot.reportMarmotMessage(nostrGroupId, note, type, explanation)
+
+    // Only reports that came through this group: a report is a rumor here, and a dismissed one
+    // has already been dropped from the message's reports.
+    override fun reportsToDismiss(
+        account: Account,
+        note: Note,
+    ): List<Note> {
+        if (account.marmotManager?.isGroupAdmin(nostrGroupId) != true) return emptyList()
+        return note.reports.values
+            .flatten()
+            .filter { it.isPrivateRumor() && it.event is ReportEvent }
+    }
+
+    override suspend fun dismissReports(
+        account: Account,
+        reports: List<Note>,
+    ): Boolean = account.marmot.dismissMarmotReports(nostrGroupId, reports.map { it.idHex })
 
     override fun canRemoveForEveryone(
         account: Account,

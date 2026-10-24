@@ -42,6 +42,8 @@ import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.PublishedKeyPackage
@@ -52,6 +54,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.Log
@@ -293,6 +297,8 @@ class AccountMarmotActions(
         // would never reach the on-disk log. Write it here instead. Last,
         // because it rewrites the whole log and nothing on screen waits for it.
         manager.persistDecryptedMessage(nostrGroupId, innerEvent.toJson(), outbound.epoch)
+        // Our own removal or dismissal takes effect now, not when the relay echoes it back.
+        applyMarmotModeration(nostrGroupId, innerEvent)
     }
 
     /**
@@ -309,13 +315,14 @@ class AccountMarmotActions(
     fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
 
     /**
-     * Apply a kind-4891 admin removal: drop the chat message it names from the conversation
-     * when its author was an admin of the group in the epoch the removal was sent in (see
-     * [MarmotManager.adminRemovalTargets]). Runs on live delivery and on the restart replay,
-     * which re-adds every stored message; the replay reads back the verdict recorded at
-     * delivery, so a later demotion does not bring the message back.
+     * Apply an admin's moderation, when its author was an admin of the group in the epoch it was
+     * sent in (see [MarmotManager.adminRemovalTargets] and [MarmotManager.dismissedReportIds]):
+     * a kind-4891 removal drops the chat message it names, and a kind-1985 dismissal drops the
+     * reports it names, so they no longer count against their message. Runs on live delivery,
+     * after our own sends and on the restart replay, which re-adds every stored message; the
+     * replay reads back the verdict recorded at delivery, so a later demotion undoes neither.
      */
-    suspend fun applyMarmotAdminRemoval(
+    suspend fun applyMarmotModeration(
         nostrGroupId: HexKey,
         innerEvent: Event,
     ) {
@@ -326,8 +333,18 @@ class AccountMarmotActions(
             groups.applyAdminRemoval(nostrGroupId, targetId, target)
             if (target?.event?.kind == ChatEvent.KIND) account.cache.removeLocally(target)
         }
-        // A message whose removal arrived first is dropped as it lands.
-        if (innerEvent.kind == ChatEvent.KIND && groups.isAdminRemoved(nostrGroupId, innerEvent.id)) {
+        manager.dismissedReportIds(nostrGroupId, innerEvent).forEach { reportId ->
+            groups.applyReportDismissal(nostrGroupId, reportId)
+            account.cache
+                .getNoteIfExists(reportId)
+                ?.takeIf { it.event is ReportEvent }
+                ?.let { account.cache.removeLocally(it) }
+        }
+        // A message or report whose removal arrived first is dropped as it lands.
+        val landedRemoved =
+            (innerEvent.kind == ChatEvent.KIND && groups.isAdminRemoved(nostrGroupId, innerEvent.id)) ||
+                (innerEvent.kind == ReportEvent.KIND && groups.isReportDismissed(nostrGroupId, innerEvent.id))
+        if (landedRemoved) {
             account.cache.getNoteIfExists(innerEvent.id)?.let { account.cache.removeLocally(it) }
         }
     }
@@ -1377,6 +1394,42 @@ class AccountMarmotActions(
         val tags = MarmotPolls.responseTags(poll.id, optionIds) ?: return null
         val template = EventTemplate<Event>(createdAt, MarmotPolls.KIND_POLL_RESPONSE, tags, "")
         return RumorAssembler.assembleRumor(account.signer.pubKey, template)
+    }
+
+    /**
+     * Report [target], a message in [nostrGroupId], to the group's members for [type] (a kind
+     * 1984 inside the group, `features/content-moderation.md`). Every member sees the report
+     * and who sent it. NIP-56 reasons MDK does not read go as "other", with the reason kept as
+     * the explanation when there is none, so White Noise still counts the report.
+     */
+    suspend fun reportMarmotMessage(
+        nostrGroupId: HexKey,
+        target: Note,
+        type: ReportType,
+        explanation: String,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        val targetEvent = target.event ?: return false
+        val reason = MarmotReport.Reason.parse(type.code) ?: MarmotReport.Reason.OTHER
+        val text = if (explanation.isBlank() && reason.code != type.code) type.code else explanation
+        val rumor = manager.buildReportRumor(targetEvent, reason, text)
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
+    }
+
+    /**
+     * Dismiss [reportIds], reports in [nostrGroupId], as a group admin (a kind-1985 label inside
+     * the group). False when this account is not an admin now or there is nothing to dismiss.
+     */
+    suspend fun dismissMarmotReports(
+        nostrGroupId: HexKey,
+        reportIds: List<HexKey>,
+    ): Boolean {
+        val manager = account.marmotManager ?: return false
+        if (!manager.isGroupAdmin(nostrGroupId)) return false
+        val rumor = manager.buildReportDismissalRumor(reportIds.take(MarmotReportDismissal.MAX_REPORTS), "") ?: return false
+        sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
+        return true
     }
 
     /**

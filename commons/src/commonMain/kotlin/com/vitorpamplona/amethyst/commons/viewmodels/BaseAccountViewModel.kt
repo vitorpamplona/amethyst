@@ -1380,11 +1380,29 @@ open class BaseAccountViewModel(
         }
     }
 
+    /** Reports [note]: inside its room when it has one, which decides how, and publicly otherwise. */
     fun report(
         note: Note,
         type: ReportType,
         content: String = "",
-    ) = launchSigner { account.report(note, type, content) }
+    ) = launchSigner {
+        val room = note.roomFor(account)
+        if (room != null) room.report(account, note, type, content) else account.report(note, type, content)
+    }
+
+    /** True when a report of [note] stays among the members of its room instead of going public. */
+    fun reportStaysInRoom(note: Note): Boolean = note.roomFor(account)?.keepsReports() == true
+
+    /** The reports on [note] this account, as an admin of its room, may dismiss. */
+    fun reportsToDismiss(note: Note): List<Note> = note.roomFor(account)?.reportsToDismiss(account, note) ?: emptyList()
+
+    /** Dismisses every report on [note] this account may, for every member of its room. */
+    fun dismissReports(note: Note) =
+        launchSigner {
+            val room = note.roomFor(account) ?: return@launchSigner
+            val reports = room.reportsToDismiss(account, note)
+            if (reports.isNotEmpty()) room.dismissReports(account, reports)
+        }
 
     fun report(
         user: User,

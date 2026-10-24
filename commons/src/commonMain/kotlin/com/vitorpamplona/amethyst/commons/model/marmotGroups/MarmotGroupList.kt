@@ -45,6 +45,10 @@ class MarmotGroupList(
     // target arriving second would be added and stay, restarts included.
     private val adminRemovedIds = LargeCache<HexKey, HexKey>()
 
+    // Report id -> group, for every report a group admin dismissed (kind 1985), for the same
+    // reason: the dismissal can decrypt before the report it names.
+    private val dismissedReportIds = LargeCache<HexKey, HexKey>()
+
     private val _groupListChanges = MutableSharedFlow<HexKey>(0, 20, BufferOverflow.DROP_OLDEST)
     val groupListChanges = _groupListChanges
 
@@ -120,6 +124,23 @@ class MarmotGroupList(
         adminRemovedIds.put(targetId, nostrGroupId)
         if (target != null && target.event?.kind == ChatEvent.KIND) removeMessage(nostrGroupId, target)
     }
+
+    /**
+     * Records that an admin of [nostrGroupId] dismissed the report [reportId]. Kept because a
+     * dismissal can arrive before its report, which must then stay dismissed when it lands.
+     */
+    fun applyReportDismissal(
+        nostrGroupId: HexKey,
+        reportId: HexKey,
+    ) {
+        dismissedReportIds.put(reportId, nostrGroupId)
+    }
+
+    /** True when an admin of [nostrGroupId] dismissed the report [reportId]. */
+    fun isReportDismissed(
+        nostrGroupId: HexKey,
+        reportId: HexKey,
+    ): Boolean = dismissedReportIds.get(reportId) == nostrGroupId
 
     /** True when an admin of [nostrGroupId] removed the message [noteId]. */
     fun isAdminRemoved(

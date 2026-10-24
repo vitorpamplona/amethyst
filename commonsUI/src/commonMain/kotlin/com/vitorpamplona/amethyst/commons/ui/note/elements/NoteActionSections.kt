@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.resources.remove_from_emoji_list
 import com.vitorpamplona.amethyst.commons.resources.remove_from_private_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.remove_from_public_bookmarks
 import com.vitorpamplona.amethyst.commons.resources.request_deletion
+import com.vitorpamplona.amethyst.commons.resources.room_dismiss_reports
 import com.vitorpamplona.amethyst.commons.resources.timestamp_it
 import com.vitorpamplona.amethyst.commons.resources.timestamp_pending
 import com.vitorpamplona.amethyst.commons.resources.unfollow
@@ -78,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.QuickActionAlertDialogOneButton
 import com.vitorpamplona.amethyst.commons.ui.note.copyNoteTextAction
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.LightRedColor
 import com.vitorpamplona.amethyst.commons.util.toPrettyJson
@@ -484,6 +486,17 @@ fun noteActionSections(
                 add(
                     NoteAction(MaterialSymbols.Delete, stringRes(Res.string.marmot_admin_delete_message), isDestructive = true) {
                         accountViewModel.removeForEveryone(note)
+                        handlers.onDismiss()
+                    },
+                )
+            }
+            // A room admin may dismiss the reports members made on a message, their own included.
+            // It neither hides nor deletes the message; the reports just stop counting.
+            val toDismiss = accountViewModel.reportsToDismiss(note).size
+            if (toDismiss > 0) {
+                add(
+                    NoteAction(MaterialSymbols.DoneAll, pluralStringRes(Res.plurals.room_dismiss_reports, toDismiss, toDismiss)) {
+                        accountViewModel.dismissReports(note)
                         handlers.onDismiss()
                     },
                 )
