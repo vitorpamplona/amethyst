@@ -130,6 +130,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.observeChatPreviewText
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.ConcordDirectInviteDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelPreviewLoader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
@@ -783,17 +784,17 @@ private fun ConcordChannelPreviewLine(
         return
     }
 
-    val event = lastNote?.event
     val author = lastNote?.author
     val preview: String =
-        if (event != null && author != null) {
-            val authorName by observeUserName(author, accountViewModel)
-            val body = event.content.take(80)
-            if (body.isBlank()) authorName else "$authorName: $body"
-        } else if (event != null) {
-            event.content.take(80)
-        } else {
+        if (lastNote?.event == null) {
             stringRes(Res.string.concord_channel_no_messages)
+        } else if (author != null) {
+            val authorName by observeUserName(author, accountViewModel)
+            // The newest edit, as the bubble shows it.
+            val body = observeChatPreviewText(lastNote, 80)
+            if (body.isBlank()) authorName else "$authorName: $body"
+        } else {
+            observeChatPreviewText(lastNote, 80)
         }
     Text(
         preview,
