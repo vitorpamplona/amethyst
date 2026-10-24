@@ -92,12 +92,13 @@ object GroupMetadataCommands {
         val gid = args.positional(0, "gid")
         val path = args.positional(1, "image-file")
         val server = args.flag("server")
+        // Read before rejectUnknown(), which refuses any flag not consumed yet.
+        val mediaType = args.flag("mime") ?: "image/jpeg"
         args.rejectUnknown()
         val file = File(path)
         if (!file.isFile) return Output.error("bad_args", "no such file: $path")
 
         val plaintext = file.readBytes()
-        val mediaType = args.flag("mime") ?: "image/jpeg"
         // Filled in once the group is open: the scheme depends on the group's
         // avatar carrier, so the key material cannot be minted before that.
         val extra = mutableMapOf<String, Any?>()

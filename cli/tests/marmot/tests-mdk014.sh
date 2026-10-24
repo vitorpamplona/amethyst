@@ -123,11 +123,17 @@ test_37_admin_deletion_wn_to_amy() {
   }
   local deadline=$(( $(date +%s) + 90 )) admin=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    if wn_lists b "$mls_gid" admins "$B_HEX"; then admin=1; break; fi
+    if [[ "$(wn_b --json groups admins "$mls_gid" 2>/dev/null | jq_list admins | jq_member_ids | tr '\n' ' ')" == *"$B_HEX"* ]]; then
+      admin=1; break
+    fi
     wn_b sync >/dev/null 2>&1 || true
     sleep 3
   done
-  [[ "$admin" -eq 1 ]] || { record_result "$id" fail "wn never saw itself promoted"; return; }
+  if [[ "$admin" -ne 1 ]]; then
+    printf 'test 37: wn admins after promote: %s\n' "$(wn_b_json groups admins "$mls_gid" 2>&1 | head -c 4000)" >>"$LOG_FILE"
+    printf 'test 37: amy admins after promote: %s\n' "$(amy_json marmot group admins "$gid" 2>&1 | head -c 2000)" >>"$LOG_FILE"
+    record_result "$id" fail "wn never saw itself promoted"; return
+  fi
 
   local doomed="37-moderate-me-from-amethyst" send_json target
   send_json=$(amy_json marmot message send "$gid" "$doomed") || {
