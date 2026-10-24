@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateManager
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.cashu.DataStoreCashuCounterStore
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
 import com.vitorpamplona.amethyst.commons.cordn.SecretEncryptionCordnBlobCipher
@@ -485,12 +486,16 @@ class DesktopAppModules(
     /** The OS keyring, or without one the NIP-49 password file in [filesDir]. */
     private val keyStorage = SecureKeyStorage.create(filesDir).also { it.prompts = keyPrompts }
 
+    /** Each account's NUT-13 counters, in `cashu_<npub>`: the file name Android uses. */
+    private fun cashuCountersFor(npub: String) = DataStoreCashuCounterStore(appStores.getDataStore("cashu_$npub"))
+
     val sessionStore =
         StoreAccountSessionStore(
             rootFilesDir = { filesPath },
             appStores = appStores,
             keyVault = SecureKeyStorageVault(keyStorage),
             scope = applicationIOScope,
+            cashuCounters = ::cashuCountersFor,
             keyPrompts = keyPrompts,
         )
 
@@ -621,6 +626,8 @@ class DesktopAppModules(
     }
 
     private inner class DesktopAccountSessionHooks : AccountSessionHooks {
+        override fun cashuCountersFor(npub: String) = this@DesktopAppModules.cashuCountersFor(npub)
+
         // What one account played must not keep playing, or show in the bar, for the next.
         override fun onSessionEnding() {
             GlobalMediaPlayer.stopVideo()

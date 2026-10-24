@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.account
 
+import com.vitorpamplona.amethyst.commons.cashu.CashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.tor.SignerRelayRouting
@@ -28,6 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +41,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertIs
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class AccountSessionManagerTest {
@@ -181,6 +184,48 @@ class AccountSessionManagerTest {
             assertEquals(mapOf(relay to 1), registeredWhileShown)
             // A login that ends without an account has nothing to hand over to: released at once.
             assertEquals(mapOf(relay to 0), registered)
+        }
+
+    @Test
+    fun everyLoginCarriesTheHostsCashuCounterStore() =
+        runTest {
+            val counters =
+                object : CashuKeysetCounterStore {
+                    override suspend fun peek(keysetId: String) = 0L
+
+                    override suspend fun reserve(
+                        keysetId: String,
+                        count: Int,
+                    ) = 0L
+                }
+            val saved = mutableListOf<AccountSettings>()
+            val savingStore =
+                object : AccountSessionStore by store {
+                    override suspend fun setDefaultAccount(accountSettings: AccountSettings) = accountSettings.also { saved += it }
+                }
+            val withCounters =
+                AccountSessionManager(
+                    accountsCache = cache,
+                    nip05ClientBuilder = { error("unused") },
+                    clientBuilder = { error("unused") },
+                    localPreferences = savingStore,
+                    scope = scope,
+                    hooks =
+                        object : AccountSessionHooks {
+                            override fun cashuCountersFor(npub: String) = counters
+                        },
+                )
+
+            val keyPair = KeyPair()
+            // The cache refuses to load an account here, so each login ends in onError after saving.
+            listOf(keyPair.privKey!!.toNsec(), keyPair.pubKey.toNpub(), keyPair.pubKey.toHexKey()).forEach {
+                withCounters.loginSync(it, transientAccount = true, onError = {})
+            }
+            withCounters.loginSync(keyPair.pubKey.toHexKey(), transientAccount = true, loginWithExternalSigner = true, onError = {})
+
+            assertEquals(4, saved.size)
+            saved.forEach { assertSame(counters, it.cashuCounters) }
+            assertSame(counters, withCounters.createNewAccount().cashuCounters)
         }
 
     @Test

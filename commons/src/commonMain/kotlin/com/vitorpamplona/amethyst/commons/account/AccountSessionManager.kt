@@ -175,9 +175,11 @@ class AccountSessionManager(
         val accountSettings =
             when {
                 loginWithExternalSigner -> {
+                    val keyPair = KeyPair(pubKey = pubKeyParsed)
                     AccountSettings(
-                        keyPair = KeyPair(pubKey = pubKeyParsed),
+                        keyPair = keyPair,
                         transientAccount = transientAccount,
+                        cashuCounters = cashuCountersFor(keyPair.pubKey),
                         externalSignerPackageName = packageName.ifBlank { "com.greenart7c3.nostrsigner" },
                     )
                 }
@@ -196,21 +198,26 @@ class AccountSessionManager(
                         keyPair = keyPair,
                         transientAccount = transientAccount,
                         rememberKey = rememberKey,
+                        cashuCounters = cashuCountersFor(keyPair.pubKey),
                     )
                 }
 
                 key.contains(" ") && Nip06().isValidMnemonic(key) -> {
+                    val keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key))
                     AccountSettings(
-                        keyPair = KeyPair(privKey = Nip06().privateKeyFromMnemonic(key)),
+                        keyPair = keyPair,
                         transientAccount = transientAccount,
                         rememberKey = rememberKey,
+                        cashuCounters = cashuCountersFor(keyPair.pubKey),
                     )
                 }
 
                 pubKeyParsed != null -> {
+                    val keyPair = KeyPair(pubKey = pubKeyParsed)
                     AccountSettings(
-                        keyPair = KeyPair(pubKey = pubKeyParsed),
+                        keyPair = keyPair,
                         transientAccount = transientAccount,
+                        cashuCounters = cashuCountersFor(keyPair.pubKey),
                     )
                 }
 
@@ -225,6 +232,7 @@ class AccountSessionManager(
                         keyPair = keyPair,
                         transientAccount = transientAccount,
                         rememberKey = rememberKey,
+                        cashuCounters = cashuCountersFor(keyPair.pubKey),
                     )
                 }
             }
@@ -335,12 +343,22 @@ class AccountSessionManager(
         bunkerUri: String,
         transport: KeyPair,
         transientAccount: Boolean,
-    ) = AccountSettings(
-        keyPair = KeyPair(pubKey = userPubKeyHex.hexToByteArray()),
-        transientAccount = transientAccount,
-        remoteSignerBunkerUri = bunkerUri,
-        remoteSignerTransportKey = transport.privKey!!.toHexKey(),
-    )
+    ): AccountSettings {
+        val keyPair = KeyPair(pubKey = userPubKeyHex.hexToByteArray())
+        return AccountSettings(
+            keyPair = keyPair,
+            transientAccount = transientAccount,
+            cashuCounters = cashuCountersFor(keyPair.pubKey),
+            remoteSignerBunkerUri = bunkerUri,
+            remoteSignerTransportKey = transport.privKey!!.toHexKey(),
+        )
+    }
+
+    /**
+     * Every [AccountSettings] this manager builds must carry the host's durable NUT-13 store:
+     * the default refuses to mint, so a fresh login would fail every Cashu receive until restart.
+     */
+    private fun cashuCountersFor(pubKey: ByteArray) = hooks.cashuCountersFor(pubKey.toNpub())
 
     fun startUI(
         accountSettings: AccountSettings,
@@ -510,7 +528,7 @@ class AccountSessionManager(
         return AccountSettings(
             keyPair = keyPair,
             transientAccount = false,
-            cashuCounters = hooks.cashuCountersFor(keyPair.pubKey.toNpub()),
+            cashuCounters = cashuCountersFor(keyPair.pubKey),
             backupUserMetadata = bootstrap.userMetadata,
             backupContactList = bootstrap.contactList,
             backupNIP65RelayList = bootstrap.nip65RelayList,
