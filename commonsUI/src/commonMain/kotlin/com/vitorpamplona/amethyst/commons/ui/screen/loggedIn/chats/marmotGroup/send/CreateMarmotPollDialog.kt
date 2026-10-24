@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_poll_no_deadline
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_not_anonymous
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -124,8 +125,8 @@ fun CreateMarmotPollDialog(
                                 Text(
                                     when {
                                         seconds == null -> stringRes(Res.string.marmot_poll_no_deadline)
-                                        seconds < 24 * 3_600L -> stringRes(Res.string.marmot_poll_deadline_hours, (seconds / 3_600L).toInt())
-                                        else -> stringRes(Res.string.marmot_poll_deadline_days, (seconds / (24 * 3_600L)).toInt())
+                                        seconds < 24 * 3_600L -> (seconds / 3_600L).toInt().let { pluralStringRes(Res.plurals.marmot_poll_deadline_hours, it, it) }
+                                        else -> (seconds / (24 * 3_600L)).toInt().let { pluralStringRes(Res.plurals.marmot_poll_deadline_days, it, it) }
                                     },
                                 )
                             },

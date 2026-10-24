@@ -121,6 +121,12 @@ class MarmotGroupList(
         if (target != null && target.event?.kind == ChatEvent.KIND) removeMessage(nostrGroupId, target)
     }
 
+    /** True when an admin of [nostrGroupId] removed the message [noteId]. */
+    fun isAdminRemoved(
+        nostrGroupId: HexKey,
+        noteId: HexKey,
+    ): Boolean = adminRemovedIds.get(noteId) == nostrGroupId
+
     /**
      * Drop a group from the in-memory list. Also clears the chatroom's own
      * message set and the note→group index: LocalCache holds notes weakly, so

@@ -4354,7 +4354,10 @@ class Account(
             // rather than waiting for the next read to omit it.
             marmotManager.onMessagesExpired = { groupId, expiredIds ->
                 expiredIds.forEach { id ->
-                    cache.getNoteIfExists(id)?.let { marmotGroupList.removeMessage(groupId, it) }
+                    cache.getNoteIfExists(id)?.let {
+                        marmotGroupList.removeMessage(groupId, it)
+                        cache.removeLocally(it)
+                    }
                 }
             }
 

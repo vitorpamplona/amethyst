@@ -8402,8 +8402,14 @@
     <string name="marmot_poll_allow_multiple">Allow multiple answers</string>
     <string name="marmot_poll_has_deadline">Close after</string>
     <string name="marmot_poll_no_deadline">Never</string>
-    <string name="marmot_poll_deadline_hours">%1$d hours</string>
-    <string name="marmot_poll_deadline_days">%1$d days</string>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
     <string name="marmot_poll_invalid">Check the question and the options: 2 to 10 options, no empty text.</string>
     <string name="marmot_poll_vote_failed">Could not send the vote: %1$s</string>
     <string name="marmot_emoji_upload_failed">Could not attach the custom emoji, sent as text instead.</string>

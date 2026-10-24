@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
@@ -305,29 +306,7 @@ class AccountMarmotActions(
      * from White Noise decrypted fine and never showed. An edit needs nothing from the
      * cache but its note, so it is attached directly.
      */
-    fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent {
-        val cache = account.cache
-        val isEdit = innerEvent.kind == MarmotAppEvent.KIND_EDIT
-        val innerNote = cache.getOrCreateNote(innerEvent.id)
-        // wasVerified=true: MIP-03 inner events are unsigned rumors; MLS authenticated the sender.
-        // For an edit, "new" is whether its note was empty — which also decides whether it is
-        // persisted, so an edit is kept in the local log and survives a restart.
-        val isNew = if (isEdit) innerNote.event == null else cache.justConsume(innerEvent, null, true)
-        if (isNew || innerNote.event == null) {
-            // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
-            // message's, and only loadEvent sets it.
-            innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
-        }
-
-        // The overlay's rules (author-only, latest wins) are applied at render time by
-        // `Note.latestMarmotEdit`: the target's author may not be known yet.
-        if (isEdit) {
-            MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
-                cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
-            }
-        }
-        return IndexedInnerEvent(innerNote, isNew)
-    }
+    fun indexMarmotInnerEvent(innerEvent: Event): IndexedInnerEvent = indexMarmotInnerEvent(account.cache, innerEvent)
 
     /**
      * Apply a kind-4891 admin removal: drop the chat message it names from the conversation
@@ -341,8 +320,15 @@ class AccountMarmotActions(
         innerEvent: Event,
     ) {
         val manager = account.marmotManager ?: return
+        val groups = account.marmotGroupList
         manager.adminRemovalTargets(nostrGroupId, innerEvent).forEach { targetId ->
-            account.marmotGroupList.applyAdminRemoval(nostrGroupId, targetId, account.cache.getNoteIfExists(targetId))
+            val target = account.cache.getNoteIfExists(targetId)
+            groups.applyAdminRemoval(nostrGroupId, targetId, target)
+            if (target?.event?.kind == ChatEvent.KIND) account.cache.removeLocally(target)
+        }
+        // A message whose removal arrived first is dropped as it lands.
+        if (innerEvent.kind == ChatEvent.KIND && groups.isAdminRemoved(nostrGroupId, innerEvent.id)) {
+            account.cache.getNoteIfExists(innerEvent.id)?.let { account.cache.removeLocally(it) }
         }
     }
 
@@ -1421,10 +1407,41 @@ class AccountMarmotActions(
         return "$safe.$ext"
     }
 
-    private companion object {
-        const val REACTION_KIND = 7
+    companion object {
+        private const val REACTION_KIND = 7
 
         /** How often the leaf-refresh loop asks whether a delayed refresh is due: 30 minutes. */
-        const val LEAF_REFRESH_CHECK_INTERVAL_MS = 30L * 60 * 1000
+        private const val LEAF_REFRESH_CHECK_INTERVAL_MS = 30L * 60 * 1000
+
+        fun indexMarmotInnerEvent(
+            cache: EventCache,
+            innerEvent: Event,
+        ): IndexedInnerEvent {
+            val isEdit = innerEvent.kind == MarmotAppEvent.KIND_EDIT
+            val innerNote = cache.getOrCreateNote(innerEvent.id)
+            // A message deleted on an earlier pass stays deleted. Relays replay its kind:445 after
+            // a restart, the cache refuses the event, and loading it below anyway brought it back.
+            if (innerNote.event == null && cache.deletionIndex.hasBeenDeleted(innerEvent)) {
+                return IndexedInnerEvent(innerNote, false)
+            }
+            // wasVerified=true: MIP-03 inner events are unsigned rumors; MLS authenticated the sender.
+            // For an edit, "new" is whether its note was empty — which also decides whether it is
+            // persisted, so an edit is kept in the local log and survives a restart.
+            val isNew = if (isEdit) innerNote.event == null else cache.justConsume(innerEvent, null, true)
+            if (isNew || innerNote.event == null) {
+                // loadEvent, not a bare `event =`: the overlay also matches the edit's AUTHOR to the
+                // message's, and only loadEvent sets it.
+                innerNote.loadEvent(innerEvent, cache.getOrCreateUser(innerEvent.pubKey), emptyList())
+            }
+
+            // The overlay's rules (author-only, latest wins) are applied at render time by
+            // `Note.latestMarmotEdit`: the target's author may not be known yet.
+            if (isEdit) {
+                MarmotMessageEdit.fromAppEvent(MarmotAppEvent.fromEvent(innerEvent))?.let { edit ->
+                    cache.getOrCreateNote(edit.targetId).addEdit(innerNote)
+                }
+            }
+            return IndexedInnerEvent(innerNote, isNew)
+        }
     }
 }
