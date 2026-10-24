@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroupLastReadRoute
+import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
@@ -251,7 +252,10 @@ fun MarmotGroupMessageComposer(
     }
 
     DisposableEffect(nostrGroupId) {
-        onDispose { newMessageModel.userSuggestions?.reset() }
+        onDispose {
+            newMessageModel.userSuggestions?.reset()
+            newMessageModel.emojiSuggestions?.reset()
+        }
     }
 
     // Upload dialog
@@ -284,6 +288,15 @@ fun MarmotGroupMessageComposer(
                 it,
                 newMessageModel::autocompleteWithUser,
                 accountViewModel,
+                SuggestionListDefaultHeightChat,
+            )
+        }
+
+        newMessageModel.emojiSuggestions?.let {
+            ShowEmojiSuggestionList(
+                it,
+                newMessageModel::autocompleteWithEmoji,
+                newMessageModel::autocompleteWithEmoji,
                 SuggestionListDefaultHeightChat,
             )
         }
