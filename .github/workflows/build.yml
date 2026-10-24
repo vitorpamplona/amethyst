@@ -72,18 +72,21 @@ jobs:
         include:
           - os: ubuntu-latest
             desktop-task: packageDeb
-            # The shared JVM suites run on this leg only. They test platform-independent code,
-            # and running them on all three legs is what made the macOS leg the slowest job
-            # (~32 min against ~5 on Linux). The other legs test and package the desktop shim.
+            # Every shared JVM suite runs on this leg. Running all of them on all three legs is
+            # what made the macOS leg the slowest job (~32 min against ~5 on Linux), and only
+            # :commons has tests that take an OS-specific path (ffmpeg lookup, file permissions,
+            # the keystore), so the other legs run that one beside the desktop shim's.
             jvm-tests: ':commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test'
             desktop-artifact-name: Desktop Linux DEB
             desktop-artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
           - os: macos-latest
             desktop-task: packageDmg
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop macOS DMG
             desktop-artifact-path: desktopApp/build/compose/binaries/main/dmg/*.dmg
           - os: windows-latest
             desktop-task: packageMsi
+            jvm-tests: ':commons:jvmTest'
             desktop-artifact-name: Desktop Windows MSI
             desktop-artifact-path: desktopApp/build/compose/binaries/main/msi/*.msi
     runs-on: ${{ matrix.os }}
@@ -128,8 +131,8 @@ jobs:
             $CMD
           fi
 
-      # This job runs the JVM test suites (:commons, :commonsUI,
-      # :nestsClient, :marmotQuic, :cli, :desktopApp) but, unlike test-geode /
+      # This job runs the JVM test suites (all of them on Linux; :commons and
+      # :desktopApp on macOS and Windows) but, unlike test-geode /
       # test-and-build-android, published nothing when one of them failed. The
       # console line names the failing test and the exception class and stops
       # there, so the message is lost with the runner. That is how the
