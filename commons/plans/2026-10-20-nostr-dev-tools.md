@@ -120,8 +120,8 @@ Screens in `commonsUI/…/ui/screen/loggedIn/devtools/`:
 | `DevTools` | `DevToolsHubScreen` |
 | `DevToolsNip19(input?)` | `Nip19ToolScreen`: decode, re-encode, open in Amethyst, crawl the kind |
 | `DevToolsEventInspector(noteKey?)` | `EventInspectorScreen`: verdict, fields, tag chips, content, JSON, then find on relays / crawl kind / open |
-| `DevToolsKinds` | `KindBrowserScreen`: search by number, name or NIP; an unknown number still offers a crawl |
-| `DevToolsKindUsage(kind?)` | `KindLookupScreen`: a kind field whose one action is search (stop while that kind is running; searching the same kind again re-runs it). Then the kind's name and NIP when the registry knows it, one status line with a progress bar, and one card per client or per shape: its share, event/author counts, the clients behind a shape, and the newest event's JSON, shown open. The tags and content are read from the JSON, not re-rendered as chips |
+| `DevToolsKinds` | `KindBrowserScreen`, the hub's Kind Lookup entry: search by number, name or NIP; tapping a kind opens its lookup, and an unknown number still offers a crawl |
+| `DevToolsKindUsage(kind)` | `KindLookupScreen`, opened on a kind: a kind field whose one action is search (stop while that kind is running; searching the same kind again re-runs it). Then the kind's name and NIP when the registry knows it, one status line with a progress bar, and one card per client or per shape: its share, event/author counts, the clients behind a shape, and the newest event's JSON, shown open. The tags and content are read from the JSON, not re-rendered as chips |
 | `DevToolsEventFinder(eventId)` | `EventFinderScreen`: the same table for one event id |
 | `DevToolsRelayConsole(url?)` | `RelayConsoleScreen`, laid out like a chat. On top, a connection bar: an address field with Connect and the user's relays as suggestions, then one status line (relay, ping, deflate, open subs) with Disconnect and the AUTH offer. Then the frame log. At the bottom, closable chips for open REQs, then a composer: + opens a builder sheet (REQ, COUNT or EVENT tabs, errors on the field, exact frame previewed) and the field sends raw frames. |
 

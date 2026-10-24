@@ -8673,8 +8673,6 @@
     <string name="devtools_nip19_desc">Dekodirajte npub, nevent, naddr, nprofile in druge kode ali zakodirajte hex ključ oziroma ID</string>
     <string name="devtools_event_title">Pregledovalnik dogodkov</string>
     <string name="devtools_event_desc">Preverite ID in podpis dogodka ter preberite njegov tip(kind), oznake in vsebino</string>
-    <string name="devtools_kinds_title">Tipi(kinds) dogodkov</string>
-    <string name="devtools_kinds_desc">Vsi tipi(kinds), ki jih Amethyst pozna, z iskanjem po številki, imenu ali NIP</string>
     <string name="devtools_console_title">Konzola releja</string>
     <string name="devtools_console_desc">Odprite surov WebSocket na rele in pošiljajte okvire ročno</string>
     <string name="devtools_active_subs_desc">Vsaka naročnina, ki jo aplikacija trenutno drži odprto, in zakaj</string>

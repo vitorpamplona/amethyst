@@ -657,9 +657,9 @@ sealed class Route {
 
     @Serializable object DevToolsKinds : Route()
 
-    /** Kind lookup: name, newest example and per-relay usage. [kind] null opens it empty. */
+    /** Kind lookup for one [kind]: its name and how clients encode it, sampled from relays. */
     @Serializable data class DevToolsKindUsage(
-        val kind: Int? = null,
+        val kind: Int,
     ) : Route()
 
     @Serializable data class DevToolsEventFinder(

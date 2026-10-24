@@ -8145,8 +8145,6 @@
     <string name="devtools_nip19_desc">एनपुब एनइवेण्ट एनआड्ड्र एनप्रोफैल तथा अन्य अक्षरराशियों का स्पष्टलेखोद्घाटन करें। अथवा एक षोडशांक कुंचिका अथवा परिचायक का अक्षरराशिकरण</string>
     <string name="devtools_event_title">घटना निरीक्षक</string>
     <string name="devtools_event_desc">एक घटना का परिचायक तथा हस्ताक्षर की जाँच करें। तथा उसके प्रकार तथा सूचक तथा विषयवस्तु पढें</string>
-    <string name="devtools_kinds_title">घटना प्रकार</string>
-    <string name="devtools_kinds_desc">सभी प्रकार जो अमेथिस्ट को ज्ञात है। संख्या नाम अथवा निप द्वारा खोजशक्य</string>
     <string name="devtools_console_title">पुनःप्रसारक नियन्त्रणकोष्ठक</string>
     <string name="devtools_console_desc">एक कच्चा जालयोजकान्त खोलें एक पुनःप्रसारक तक तथा कोष्ठकों को हाथ से भेजें</string>
     <string name="devtools_active_subs_desc">सभी ग्राहकताएँ जो क्रमक खुला रख रहा है अभी। तथा क्यों</string>

@@ -52,10 +52,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_custom
+import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_nip
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_count
 import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_search
-import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
@@ -65,9 +65,10 @@ import com.vitorpamplona.quartz.kinds.KindName
 import com.vitorpamplona.quartz.kinds.KindNames
 
 /**
- * Every kind Quartz knows ([KindNames], the same registry `amy kind` reads), searchable by
- * number, name or NIP. Tapping one crawls relays for it; typing a number Quartz does not know
- * still offers the crawl, which is the question kinds.amethyst.social exists to answer.
+ * Kind Lookup's entry point: every kind Quartz knows ([KindNames], the same registry `amy kind`
+ * reads), searchable by number, name or NIP. Tapping one opens [KindLookupScreen] to crawl relays
+ * for it; typing a number Quartz does not know still offers the crawl, which is the question
+ * kinds.amethyst.social exists to answer.
  */
 @Composable
 fun KindBrowserScreen(nav: INav) {
@@ -82,7 +83,7 @@ fun KindBrowserScreen(nav: INav) {
     val typedKind = query.trim().toIntOrNull()?.takeIf { it in 0..65535 }
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_kinds_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.devtools_kind_lookup_title), nav) },
     ) { padding ->
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),

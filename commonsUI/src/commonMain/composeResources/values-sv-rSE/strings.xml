@@ -8143,8 +8143,6 @@
     <string name="devtools_nip19_desc">Avkoda npub, nevent, naddr, nprofile och andra koder, eller koda en hex-nyckel eller ett id</string>
     <string name="devtools_event_title">Händelsegranskare</string>
     <string name="devtools_event_desc">Kontrollera en händelses id och signatur och läs dess typ, taggar och innehåll</string>
-    <string name="devtools_kinds_title">Händelsetyper</string>
-    <string name="devtools_kinds_desc">Alla typer som Amethyst känner till, sökbara på nummer, namn eller NIP</string>
     <string name="devtools_console_title">Reläkonsol</string>
     <string name="devtools_console_desc">Öppna en rå WebSocket mot ett relä och skicka ramar för hand</string>
     <string name="devtools_active_subs_desc">Alla prenumerationer som appen har öppna just nu, och varför</string>
