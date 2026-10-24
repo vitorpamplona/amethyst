@@ -20,28 +20,26 @@ pluginManagement {
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    // The groups only JitPack builds (straight from GitHub). Google and Maven Central never have
+    // them, so they are told not to be asked: Gradle tried both first, for 404s, and when a
+    // rate-limited Central answered one with a 429 it disabled Central for the rest of the build
+    // and every other dependency failed to resolve. A JitPack group missing here still resolves,
+    // only through those wasted lookups first; mavenLocal() keeps serving a locally published fork.
+    val jitpackOnly =
+        listOf(
+            "cc.ekblad", // cli's TOML parser, 4koma
+            "cc.ekblad.konbini", // 4koma's parser combinators
+            "com.github.UnifiedPush",
+            "com.github.davotoula",
+            "com.github.lincollincol",
+            "com.github.rikkahub.jlatexmath-android",
+            "com.github.vitorpamplona.compose-richtext",
+        )
     repositories {
         mavenLocal()
-        google()
-        mavenCentral()
-        // JitPack builds artifacts straight from GitHub, and only these groups come from it (cli's
-        // TOML parser 4koma and its konbini are too, though not under com.github).
-        // exclusiveContent sends them to JitPack alone and keeps every other group off it. Before,
-        // Gradle asked Google and Maven Central for each of them first: wasted 404s, and when
-        // Central answered one with a 429 (rate limited) it disabled Central for the rest of the
-        // build, so every other dependency failed to resolve too.
-        exclusiveContent {
-            forRepository { maven { url = uri("https://jitpack.io") } }
-            filter {
-                includeGroup("cc.ekblad")
-                includeGroup("cc.ekblad.konbini")
-                includeGroup("com.github.UnifiedPush")
-                includeGroup("com.github.davotoula")
-                includeGroup("com.github.lincollincol")
-                includeGroup("com.github.rikkahub.jlatexmath-android")
-                includeGroup("com.github.vitorpamplona.compose-richtext")
-            }
-        }
+        google { content { jitpackOnly.forEach { excludeGroup(it) } } }
+        mavenCentral { content { jitpackOnly.forEach { excludeGroup(it) } } }
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
