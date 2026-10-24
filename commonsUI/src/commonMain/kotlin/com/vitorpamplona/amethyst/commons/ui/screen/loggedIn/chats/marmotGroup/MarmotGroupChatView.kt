@@ -83,7 +83,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.LocalChatIsOneOnOne
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.RefreshingChatroomFeedView
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.CreateMarmotPollDialog
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.CreateMarmotPollSheet
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileSender
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotFileUploader
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send.MarmotNewMessageViewModel
@@ -244,10 +244,10 @@ fun MarmotGroupMessageComposer(
     val shortNotice = rememberShortNotice()
 
     var isUploading by remember { mutableStateOf(false) }
-    var showPollDialog by remember { mutableStateOf(false) }
+    var showPollSheet by remember { mutableStateOf(false) }
 
-    if (showPollDialog) {
-        CreateMarmotPollDialog(nostrGroupId, accountViewModel) { showPollDialog = false }
+    if (showPollSheet) {
+        CreateMarmotPollSheet(nostrGroupId, accountViewModel) { showPollSheet = false }
     }
 
     DisposableEffect(nostrGroupId) {
@@ -309,7 +309,7 @@ fun MarmotGroupMessageComposer(
                 MarmotGalleryLeadingIcon(
                     isUploading = isUploading,
                     onImageChosen = newMessageModel::pickedMedia,
-                    onCreatePoll = { showPollDialog = true },
+                    onCreatePoll = { showPollSheet = true },
                 )
             },
             trailingIcon = {
