@@ -24,7 +24,24 @@ dependencyResolutionManagement {
         mavenLocal()
         google()
         mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+        // JitPack builds artifacts straight from GitHub, and only these groups come from it (cli's
+        // TOML parser 4koma and its konbini are too, though not under com.github).
+        // exclusiveContent sends them to JitPack alone and keeps every other group off it. Before,
+        // Gradle asked Google and Maven Central for each of them first: wasted 404s, and when
+        // Central answered one with a 429 (rate limited) it disabled Central for the rest of the
+        // build, so every other dependency failed to resolve too.
+        exclusiveContent {
+            forRepository { maven { url = uri("https://jitpack.io") } }
+            filter {
+                includeGroup("cc.ekblad")
+                includeGroup("cc.ekblad.konbini")
+                includeGroup("com.github.UnifiedPush")
+                includeGroup("com.github.davotoula")
+                includeGroup("com.github.lincollincol")
+                includeGroup("com.github.rikkahub.jlatexmath-android")
+                includeGroup("com.github.vitorpamplona.compose-richtext")
+            }
+        }
     }
 }
 
