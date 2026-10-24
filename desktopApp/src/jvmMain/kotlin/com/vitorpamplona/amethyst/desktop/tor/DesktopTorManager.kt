@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.desktop.tor
 
 import com.vitorpamplona.amethyst.commons.tor.ITorManager
+import com.vitorpamplona.amethyst.commons.tor.TOR_STUCK_AFTER_MS
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.tor.stuckAfter
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
@@ -70,6 +72,16 @@ class DesktopTorManager(
         _status
             .map { it.socksPort }
             .stateIn(scope, SharingStarted.Eagerly, null)
+
+    /**
+     * Tor has been starting for a minute without a SOCKS port, or failed to start. A network that
+     * blocks Tor leaves the daemon connecting forever without an error, so only the wait tells the
+     * user why the relays routed through Tor never answer.
+     */
+    val stuck: StateFlow<Boolean> =
+        _status
+            .stuckAfter(TOR_STUCK_AFTER_MS)
+            .stateIn(scope, SharingStarted.Eagerly, false)
 
     private val runtime: TorRuntime by lazy {
         TorRuntime.Builder(desktopEnvironment()) {

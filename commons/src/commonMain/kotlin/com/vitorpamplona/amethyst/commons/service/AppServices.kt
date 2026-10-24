@@ -82,6 +82,14 @@ interface AppServices {
      */
     val torStatus: Flow<TorServiceStatus> get() = flowOf(TorServiceStatus.Off)
 
+    /**
+     * Tor has been failing to carry traffic for [com.vitorpamplona.amethyst.commons.tor.TOR_STUCK_AFTER_MS]
+     * or more, so the relays routed through it are stuck rather than slow. Lives with the Tor service
+     * rather than in a screen, so the wait is measured from when Tor stopped working, not from when
+     * the screen opened.
+     */
+    val torStuck: Flow<Boolean> get() = flowOf(false)
+
     /** Device-wide drawer state: which headings the user folded away. Never synced. */
     val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences
 

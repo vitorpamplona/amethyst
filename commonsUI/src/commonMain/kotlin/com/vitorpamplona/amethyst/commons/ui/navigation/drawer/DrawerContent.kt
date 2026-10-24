@@ -127,9 +127,13 @@ import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
 import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
+import com.vitorpamplona.amethyst.commons.resources.tor_waiting_relays
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStatus
+import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.tor.waitingForTor
+import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
@@ -143,6 +147,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.AnimatedImage
 import com.vitorpamplona.amethyst.commons.ui.painterRes
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateTextWithEmoji
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -1149,7 +1154,7 @@ fun BottomContent(
                     maxLines = 1,
                 )
 
-                TorStatusIcon(nav)
+                TorStatusIcon(accountViewModel, nav)
             }
 
             IconButton(
@@ -1174,28 +1179,67 @@ fun BottomContent(
  * is a choice, not a fault, so it gets no icon at all rather than an alarming one. Connected only once
  * the directory is ready ([TorServiceStatus.isFullyBootstrapped]); a bound proxy still downloading it
  * cannot carry traffic yet, so it reads as connecting.
+ *
+ * Once Tor has been failing for a minute ([AppServices.torStuck]) while relays wait for it, the icon
+ * turns to the error colour and its tooltip counts them: from the outside a blocked Tor looks like
+ * relays that never answer, and nothing else on screen says why.
  */
 @Composable
-private fun TorStatusIcon(nav: INav) {
+private fun TorStatusIcon(
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
     val appServices = LocalAppServices.current
     val torStatus by remember(appServices) { appServices.torStatus }
         .collectAsStateWithLifecycle(TorServiceStatus.Off)
     if (torStatus is TorServiceStatus.Off) return
 
+    val stuck by remember(appServices) { appServices.torStuck }
+        .collectAsStateWithLifecycle(false)
+
     val connected = torStatus.isFullyBootstrapped
-    IconButton(
-        onClick = {
-            nav.nav(Route.PrivacyOptions)
-            nav.closeDrawer()
-        },
-    ) {
-        Icon(
-            painter = painterRes(Res.drawable.ic_tor, 2),
-            contentDescription = stringRes(if (connected) Res.string.tor_status_connected else Res.string.tor_splash_connecting),
-            modifier = Size20Modifier,
-            tint = if (connected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+    val waiting = if (stuck && !connected) relaysWaitingForTor(accountViewModel, torStatus) else 0
+
+    val description =
+        when {
+            waiting > 0 -> pluralStringRes(Res.plurals.tor_waiting_relays, waiting, waiting)
+            connected -> stringRes(Res.string.tor_status_connected)
+            else -> stringRes(Res.string.tor_splash_connecting)
+        }
+
+    HoverTooltip(description) {
+        IconButton(
+            onClick = {
+                nav.nav(Route.PrivacyOptions)
+                nav.closeDrawer()
+            },
+        ) {
+            Icon(
+                painter = painterRes(Res.drawable.ic_tor, 2),
+                contentDescription = description,
+                modifier = Size20Modifier,
+                tint =
+                    when {
+                        waiting > 0 -> MaterialTheme.colorScheme.error
+                        connected -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+            )
+        }
     }
+}
+
+/** How many of the pool's relays are held back for Tor. Only composed while Tor is stuck. */
+@Composable
+private fun relaysWaitingForTor(
+    accountViewModel: AccountViewModel,
+    torStatus: TorServiceStatus,
+): Int {
+    val relays by accountViewModel.account.client
+        .availableRelaysFlow()
+        .collectAsStateWithLifecycle()
+    val evaluation by accountViewModel.host.torRelayEvaluation.collectAsStateWithLifecycle()
+    return remember(relays, evaluation, torStatus) { evaluation.waitingForTor(relays, torStatus).size }
 }
 
 @Preview
