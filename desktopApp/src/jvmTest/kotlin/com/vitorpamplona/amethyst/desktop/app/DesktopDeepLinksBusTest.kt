@@ -122,4 +122,18 @@ class DesktopDeepLinksBusTest {
             assertEquals(-1, socket.getInputStream().read())
         }
     }
+
+    @Test
+    fun theAckDoesNotWaitForTheWindowToComeForward() {
+        // The first foreground request initialises the desktop toolkit (GTK on Linux), which can
+        // take longer than the 2 s the forwarder waits: the link must still be acked in time.
+        val original = DesktopDeepLinks.requestForeground
+        DesktopDeepLinks.requestForeground = { Thread.sleep(3_000) }
+        try {
+            assertTrue(DesktopDeepLinks.forwardToRunningInstance("nostr:note1slowwindow", busDir))
+            assertEquals("nostr:note1slowwindow", DesktopDeepLinks.pending.value)
+        } finally {
+            DesktopDeepLinks.requestForeground = original
+        }
+    }
 }
