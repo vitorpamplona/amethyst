@@ -4,18 +4,9 @@
 
 Amethyst is a Nostr Client for Android that was made for Android-only and has been slowly switching
 over to a Kotlin Multiplatform project. The main modules are: `commons`, `commonsUI`, `amethyst`,
-`desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. The Nostr protocol library, **Quartz**,
-lives in its own repo, <https://github.com/vitorpamplona/quartz>, and comes from Maven Central as
-`com.vitorpamplona.quartz:quartz` (`libs.quartz`): NIPs under `nipXX` packages and whole protocol
-families (`contextvm/`, `concord/`, `openagents/`, `buzz/`). The MLS bindings are their own libraries
-on quartz, each with its headless group manager: vitorpamplona/marmot-kmp (`libs.marmot`,
-`-PmarmotKmpDir`) and vitorpamplona/cordn-kmp (`libs.cordn`, `-PcordnKmpDir`); Marmot's event
-classes stay in quartz (`quartz.marmot`). A new protocol over
-Nostr is a package in quartz, not a Gradle module here; `nestsClient`/`marmotQuic` are modules because
-they are transports with no Nostr in them. Protocol work is a quartz PR, with its own rules and skills
-(`nostr-expert`, `event-store-semantics`); this repo then bumps `quartzKmp`. Until the release is out,
-build a checkout beside this repo with `-PquartzDir=../quartz`. A `quartz/…` path in these docs names a
-file in that repo. MLS is vitorpamplona/mls-kmp (`-PmlsKmpDir`). Commons stores
+`desktopApp`, `cli`, plus the audio-rooms client `nestsClient`. The protocol code is **not** in this
+repo: Nostr, MLS, the two MLS bindings, QUIC and the crypto primitives are libraries in their own
+repos, consumed from Maven Central (see [Libraries](#libraries-their-own-repos)). Commons stores
 shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktopApp`). Android now
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
@@ -24,26 +15,45 @@ shim that renders the same UI (`desktopApp/…/desktop/app/`, see
 deck and navigation) is gone: its desktop-only features were rebuilt in the shared UI or dropped
 (`commons/plans/2026-10-09-legacy-desktop-retirement.md`). `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
-humans, agents, and interop tests. QUIC itself is no longer in this repo: the from-scratch pure-Kotlin
-QUIC v1 + HTTP/3 + WebTransport client (no JNI, no BouncyCastle, built because no Android-compatible
-Java QUIC library exists) lives in <https://github.com/vitorpamplona/quic-kmp> with its interop runner
-and plans, and ships to Maven Central as `com.vitorpamplona.quic:quic` (`libs.quic`). To change
-QUIC alongside a consumer, build against a local checkout with `-PquicKmpDir=../quic-kmp`
-(`settings.gradle.kts`). Crypto primitives live in <https://github.com/vitorpamplona/crypto-kmp>
-(`libs.crypto`, `com.vitorpamplona.crypto.*`), used by quartz and quic-kmp; secp256k1 stays in
-quartz. `-PcryptoKmpDir=../crypto-kmp` builds a local checkout. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
-relay-server code; smaller modules are `benchmark` (Android macrobenchmarks),
+humans, agents, and interop tests. `geode` is a standalone JVM Nostr relay (Ktor) built on quartz's
+relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `marmotQuic` is the Marmot raw-QUIC transport
-binding for agent text stream previews (`transports/quic.md`) on top of
-quic-kmp — its own ALPNs and framing, not WebTransport. `nestsClient` runs
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
 nostrnests reference relay. The IETF code is kept as a reference + unit-test
 implementation for any future IETF target; see
 `nestsClient/plans/2026-04-26-moq-lite-gap.md`.
+
+## Libraries (their own repos)
+
+On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
+
+| Repo (`libs.*`) | Holds | `-P…Dir` |
+|---|---|---|
+| quartz (`quartz`) | Nostr: NIPs (`nipXX`), protocol families (`contextvm/`, `concord/`, …), signers, relay client + accessories, relay-server code, secp256k1, **Marmot's event classes** (`quartz.marmot`) | `quartzDir` |
+| crypto-kmp (`crypto`) | SHA, HMAC, HKDF, AES, ChaCha20-Poly1305, X25519, Ed25519, random. No Nostr | `cryptoKmpDir` |
+| mls-kmp (`mls.kmp`) | The RFC 9420 engine. No Nostr, no binding | `mlsKmpDir` |
+| marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic that needs MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, the MDK bench/vectors | `marmotKmpDir` |
+| cordn-kmp (`cordn`) | cordn specs, `CordnGroupManager`, `CordnSyncLoop`, the registry, store interfaces | `cordnKmpDir` |
+| quic-kmp (`quic`) | QUIC v1, TLS 1.3, HTTP/3, QPACK, WebTransport client + interop runner (JVM, Android) | `quicKmpDir` |
+
+Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
+(which never import each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
+
+**What goes where.** A Nostr kind, tag or codec → quartz. A primitive → crypto-kmp. RFC 9420 → mls-kmp.
+Anything that reads or changes an MLS group under a binding's rules → that binding's repo, headless,
+with store *interfaces*. QUIC/HTTP/3/WebTransport → quic-kmp; MoQ and audio → `nestsClient`. A
+test, bench or vector exercising one library alone → that library. **Stays here:** encrypted-at-rest
+store implementations (`commons/…/marmot/Encrypted*Store`, `commons/…/cordn/FileCordnStores`),
+account wiring (`AccountMarmotActions`, `CordnRuntime`), chatrooms, feeds, subscriptions, UI, `amy`,
+and tests needing both bindings (`CordnIndependenceTest`, `BothCredentialProfilesTest`).
+
+**Changing one:** edit its repo (own `AGENTS.md`), build here with its `-P…Dir`, release, then bump
+`gradle/libs.versions.toml` (keep `cryptoKmp`/`mlsKmp` at what quartz and the bindings use). A
+`quartz/…` path in these docs names a file in that repo.
 
 Canonical NIP specs live at <https://github.com/nostr-protocol/nips> — fetch
 `<NN>.md` from there for a specific one (quartz's `nostr-expert` skill shows how to map
@@ -102,13 +112,15 @@ amethyst/
 │       ├── commonMain/    # MoQ session, NestsListener, audio glue
 │       └── jvmAndroid/    # Opus encode/decode, AudioRecord/AudioTrack
 ├── geode/          # Standalone JVM Nostr relay (Ktor) on quartz's relay-server code
+├── relayBench/     # geode vs strfry and other relays, head to head
 ├── desktopApp/     # Desktop JVM application (layouts, navigation)
 ├── amethyst/       # Android app (layouts, navigation)
 └── cli/            # Amy — non-interactive CLI (JVM only, no Compose)
 ```
 
 **Sharing Philosophy:**
-- quartz (vitorpamplona/quartz, `libs.quartz`) = Nostr business logic, protocol, data (no UI)
+- The libraries above = protocol, crypto and headless group clients (no UI, no app state,
+  no platform storage)
 - `commons/` = Shared **headless** code for every front end (Android, Desktop,
   iOS, and the headless `cli`): domain models, state holders, ViewModels, the
   relay client, shared services. It may use the Compose *runtime*
@@ -125,11 +137,6 @@ amethyst/
   before adding a new package or dropping code into either module.
 - `nestsClient/` = MoQ + audio-rooms client; takes quic-kmp (`libs.quic`) as transport,
   Quartz for crypto, `MediaCodec` / `AudioRecord` / `AudioTrack` for audio.
-- `marmotQuic/` = Marmot's raw-QUIC binding for agent text stream previews.
-  Takes quic-kmp for the connection and quartz for the record/envelope
-  codecs. Not WebTransport — the binding has its own ALPNs and writes frames
-  straight onto QUIC streams, so it deliberately does not reuse
-  `nestsClient`'s `WebTransportSession`.
 - `amethyst/` & `desktopApp/` = Platform shims: process/window entry points, services, system
   integrations and the actuals of shared ports. Screens and navigation are shared UI and are
   moving to `commonsUI`.
@@ -331,10 +338,8 @@ replaced with an in-house pitch shifter for exactly this reason.)
 
 ## Quartz
 
-Quartz uses expect/actual for platform-specific implementations (e.g. crypto backed by
-`secp256k1-kmp-jni-android` on Android and `secp256k1-kmp-jni-jvm` on JVM), so app modules
-declare the JNI variant they ship, at quartz's secp256k1 version. Its client tests that need a
-real socket relay (`KtorRelay`) live in `geode/src/test`. See `/kotlin-multiplatform`.
+App modules declare the secp256k1 JNI variant they ship (`-jni-android`, `-jni-jvm`), at quartz's
+version. Quartz client tests needing a socket relay (`KtorRelay`) live in `geode/src/test`.
 
 ## Strings
 

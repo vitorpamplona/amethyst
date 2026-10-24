@@ -46,7 +46,7 @@ Status legend: ✅ shipped · 📦 logic lives in `commons/`, needs a command ·
 | Account logoff (`amy logoff`) — delete key + per-account state + the account's events in the shared store | ✅ | `LogoffCommand`. `--yes`-gated; `--keep-events` skips the shared-cache purge. |
 | Status overview (`amy status`) — who is signed in (profile name, npub, signer + can-sign), what each account has saved (follows, relay lists, own events, contacts, Marmot groups + messages, key package, Concord communities, Cashu wallet, DM cursor), whether an account is actually selected, and the machine operator key | ✅ | `StatusCommand` + `StatusReport` + `StatusText`. Cross-account and read-only: no keychain prompt, no network, and it never creates the event store it reads. Store size/backend is `amy store stat`. |
 | Relay config — every relay-list bucket (nip65 10002 via `outbox`/`inbox`/`nip65` nouns with spec read/write merge, dm 10050, key-package 10051, search 10007, private-outbox 10013, blocked 10006, trusted 10089, proxy 10087, indexer 10086, broadcast 10088, favorite 10012) — noun-first `relay <noun> add/remove/set/clear/list` + fan-out `relay add/remove` + publish | ✅ | `RelayCommands`. Mirrors the Android relay-settings screen. Local relays (device pref) + relay sets (30002) intentionally out of scope. |
-| MLS KeyPackage publish + fetch | ✅ | `commons/marmot/MarmotManager` |
+| MLS KeyPackage publish + fetch | ✅ | marmot-kmp's `MarmotManager` |
 | Marmot group create / add / rename / promote / demote / remove / leave | ✅ | `commons/marmot/` |
 | Marmot message send / list | ✅ | `commons/marmot/` |
 | `await` polling (KP / group / member / admin / message / rename / epoch) | ✅ | `AwaitCommands` |

@@ -31,7 +31,7 @@ import com.vitorpamplona.marmot.appComponents.agentTextStream.AgentTextStreamSub
 import com.vitorpamplona.marmot.appComponents.agentTextStream.InMemoryAgentTextStreamSequenceStore
 import com.vitorpamplona.marmot.appComponents.agentTextStream.PreviewStatus
 import com.vitorpamplona.marmot.appComponents.agentTextStream.RecordOutcome
-import com.vitorpamplona.marmotquic.QuicAgentTextStreamTransport
+import com.vitorpamplona.marmot.quic.QuicAgentTextStreamTransport
 import com.vitorpamplona.mls.crypto.MlsCryptoProvider
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray

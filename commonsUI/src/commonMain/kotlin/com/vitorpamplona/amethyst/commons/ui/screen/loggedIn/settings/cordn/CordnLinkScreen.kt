@@ -85,7 +85,7 @@ import org.jetbrains.compose.resources.stringResource
  * "Someone sent me a `cordn1…` link" — what it points at, and what following it
  * would cost.
  *
- * This screen exists because of §8 of `quartz/plans/2026-09-17-cordn-interop.md`:
+ * This screen exists because of §8 of cordn-kmp's `cordn/plans/2026-09-17-cordn-interop.md`:
  * a cordn group and a Marmot group look the same and are not the same, and the
  * moment the difference can still change a decision is **before** joining. A
  * link is where that moment happens, so the disclosure lives here rather than

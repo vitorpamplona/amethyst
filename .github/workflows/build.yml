@@ -76,7 +76,7 @@ jobs:
             # what made the macOS leg the slowest job (~32 min against ~5 on Linux), and only
             # :commons has tests that take an OS-specific path (ffmpeg lookup, file permissions,
             # the keystore), so the other legs run that one beside the desktop shim's.
-            jvm-tests: ':commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :marmotQuic:jvmTest :cli:test'
+            jvm-tests: ':commons:jvmTest :commonsUI:jvmTest :nestsClient:jvmTest :cli:test'
             desktop-artifact-name: Desktop Linux DEB
             desktop-artifact-path: desktopApp/build/compose/binaries/main/deb/*.deb
           - os: macos-latest
