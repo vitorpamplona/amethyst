@@ -8145,8 +8145,6 @@
     <string name="devtools_nip19_desc">npub, nevent, naddr, nprofile und andere Codes dekodieren oder einen Hex-Schlüssel bzw. eine ID kodieren</string>
     <string name="devtools_event_title">Ereignis-Inspektor</string>
     <string name="devtools_event_desc">ID und Signatur eines Ereignisses prüfen und Typ, Tags und Inhalt lesen</string>
-    <string name="devtools_kinds_title">Ereignistypen</string>
-    <string name="devtools_kinds_desc">Alle Typen, die Amethyst kennt, durchsuchbar nach Nummer, Name oder NIP</string>
     <string name="devtools_console_title">Relay-Konsole</string>
     <string name="devtools_console_desc">Eine rohe WebSocket-Verbindung zu einem Relay öffnen und Frames von Hand senden</string>
     <string name="devtools_active_subs_desc">Alle Abonnements, die die App gerade offen hält, und warum</string>

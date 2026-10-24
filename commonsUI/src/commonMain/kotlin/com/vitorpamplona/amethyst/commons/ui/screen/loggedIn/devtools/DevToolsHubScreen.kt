@@ -47,8 +47,6 @@ import com.vitorpamplona.amethyst.commons.resources.devtools_event_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_explainer
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_kind_lookup_title
-import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_desc
-import com.vitorpamplona.amethyst.commons.resources.devtools_kinds_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_desc
 import com.vitorpamplona.amethyst.commons.resources.devtools_nip19_title
 import com.vitorpamplona.amethyst.commons.resources.devtools_section_data
@@ -99,11 +97,7 @@ fun DevToolsHubScreen(nav: INav) {
                     nav.nav(Route.DevToolsEventInspector())
                 }
                 SettingsDivider()
-                HubEntry(MaterialSymbols.TravelExplore, Res.string.devtools_kind_lookup_title, Res.string.devtools_kind_lookup_desc) {
-                    nav.nav(Route.DevToolsKindUsage())
-                }
-                SettingsDivider()
-                HubEntry(MaterialSymbols.Numbers, Res.string.devtools_kinds_title, Res.string.devtools_kinds_desc) {
+                HubEntry(MaterialSymbols.Numbers, Res.string.devtools_kind_lookup_title, Res.string.devtools_kind_lookup_desc) {
                     nav.nav(Route.DevToolsKinds)
                 }
             }

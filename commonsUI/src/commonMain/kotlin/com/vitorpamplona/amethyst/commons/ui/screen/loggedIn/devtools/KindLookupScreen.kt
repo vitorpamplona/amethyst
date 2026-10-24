@@ -94,13 +94,15 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.kinds.KindNames
 
 /**
- * Type a kind number and see every way it is written: recent events sampled from the connected
- * relays and the search relays, grouped by the client that wrote them or by shape (tag names and
- * content format), each with its tag usage and a real example. Named when the registry knows the kind.
+ * One kind and every way it is written: recent events sampled from the connected relays and the
+ * search relays, grouped by the client that wrote them or by shape (tag names and content format),
+ * each with its tag usage and a real example. Named when the registry knows the kind. Opened on a
+ * kind from [KindBrowserScreen], the event inspector or the NIP-19 tool; the field re-runs it or
+ * switches to another number.
  */
 @Composable
 fun KindLookupScreen(
-    initialKind: Int?,
+    initialKind: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
@@ -122,10 +124,9 @@ fun KindLookupScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val running = state.phase == KindSamplerPhase.SAMPLING
 
-    // Opened on a kind (from the inspector or the kind list): look it up right away, once.
+    // Look up the kind it was opened on right away, once.
     LaunchedEffect(Unit) {
-        val opened = kind
-        if (opened != null && viewModel.state.value.kind != opened) viewModel.start(opened)
+        if (viewModel.state.value.kind != kind) viewModel.start(kind)
     }
 
     Scaffold(
@@ -149,8 +150,8 @@ fun KindLookupScreen(
                         },
                         onStop = viewModel::cancel,
                     )
-                    kind?.let { KindTitle(it) }
-                    if (kind != null) SampleStatus(state, running)
+                    KindTitle(kind)
+                    SampleStatus(state, running)
                 }
             }
 
@@ -184,12 +185,12 @@ fun KindLookupScreen(
  */
 @Composable
 private fun KindField(
-    kind: Int?,
+    kind: Int,
     running: Boolean,
     onLookUp: (Int) -> Unit,
     onStop: () -> Unit,
 ) {
-    var text by rememberSaveable { mutableStateOf(kind?.toString() ?: "") }
+    var text by rememberSaveable { mutableStateOf(kind.toString()) }
     val parsed = text.trim().toIntOrNull()?.takeIf { it in 0..65535 }
 
     OutlinedTextField(

@@ -8145,8 +8145,6 @@
     <string name="devtools_nip19_desc">Fejtse vissza az npub, nevent, naddr, nprofile és egyéb kódokat, vagy kódoljon egy hexadecimális kulcsot vagy azonosítót</string>
     <string name="devtools_event_title">Eseményvizsgáló</string>
     <string name="devtools_event_desc">Ellenőrizze egy esemény azonosítóját és aláírását, valamint olvassa el a típusát, címkéit és tartalmát</string>
-    <string name="devtools_kinds_title">Eseménytípusok</string>
-    <string name="devtools_kinds_desc">Minden típus, amelyet az Amethyst ismer, szám, név vagy NIP szerint kereshető</string>
     <string name="devtools_console_title">Átjátszókonzol</string>
     <string name="devtools_console_desc">Nyisson nyers WebSocket-kapcsolatot egy átjátszóhoz, és küldjön kereteket kézzel</string>
     <string name="devtools_active_subs_desc">Minden előfizetés, amelyet az alkalmazás jelenleg nyitva tart, és hogy miért</string>

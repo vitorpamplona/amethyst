@@ -8671,8 +8671,6 @@
     <string name="devtools_nip19_desc">Dekódujte npub, nevent, naddr, nprofile a další kódy, nebo zakódujte hex klíč či id</string>
     <string name="devtools_event_title">Inspektor událostí</string>
     <string name="devtools_event_desc">Zkontrolujte id a podpis události a přečtěte si její typ, tagy a obsah</string>
-    <string name="devtools_kinds_title">Typy událostí</string>
-    <string name="devtools_kinds_desc">Všechny typy, které Amethyst zná, s hledáním podle čísla, názvu nebo NIP</string>
     <string name="devtools_console_title">Konzole relaye</string>
     <string name="devtools_console_desc">Otevřete přímé spojení WebSocket s relayem a posílejte rámce ručně</string>
     <string name="devtools_active_subs_desc">Všechny odběry, které má aplikace právě otevřené, a proč</string>
