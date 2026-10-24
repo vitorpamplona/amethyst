@@ -46,6 +46,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,10 +73,15 @@ import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.quartz.utils.Log
+import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Desktop
 import java.net.URI
 
@@ -184,12 +190,30 @@ fun DesktopVideoPlayer(
     var posterFailed by remember(url, posterUrl) { mutableStateOf(false) }
     val poster = posterUrl?.takeUnless { posterFailed }
 
-    LaunchedEffect(url, loaded, poster) {
+    LaunchedEffect(url, loaded, poster, holdsEngine) {
         // A note's own poster is drawn straight from the image loader (see VideoPoster); only a
         // video without one has a frame extracted, which downloads part of the video.
-        if (loaded && thumbnail == null && poster == null) {
-            VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
+        if (!loaded || thumbnail != null || poster != null) return@LaunchedEffect
+        if (holdsEngine) {
+            // This card's own engine opens the video anyway, and its paused open shows the first
+            // frame: extracting one too downloaded the same video's first 4 MB a second time. Only
+            // a poster already kept is worth showing until then.
+            VideoThumbnailCache.getStored(url)?.let {
+                thumbnail = it
+                return@LaunchedEffect
+            }
+            if (engineShowsFrame({ onScreen }, { cardPlayer })) {
+                // The engine goes once the card leaves the screen, and its frame with it: make the
+                // poster from what it streamed, and show that from then on.
+                VideoThumbnailCache.keepFromStream(url)
+                snapshotFlow { cardPlayer }.first { it == null }
+                VideoThumbnailCache.getCached(url)?.let {
+                    thumbnail = it
+                    return@LaunchedEffect
+                }
+            }
         }
+        VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
     }
 
     LaunchedEffect(url, autoPlay) {
@@ -421,6 +445,42 @@ fun DesktopVideoPlayer(
         }
     }
 }
+
+/**
+ * Waits for the card's own engine ([player]) to open its video, and says whether it got a frame. A
+ * card that stays on screen ([onScreen]) without an engine, because the feed has already opened as
+ * many as it keeps, or one whose engine errors or takes too long, gets false: it extracts a
+ * thumbnail as before. A card off screen just waits: it opens an engine once it shows.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+private suspend fun engineShowsFrame(
+    onScreen: () -> Boolean,
+    player: () -> VideoPlayerState?,
+): Boolean =
+    snapshotFlow { onScreen() to player() }
+        .transformLatest { (shown, engine) ->
+            when {
+                engine != null -> {
+                    // Counted from the open: a paused one waits behind the playing video first.
+                    GlobalMediaPlayer.awaitOpenStarted(engine)
+                    val opened = withTimeoutOrNull(ENGINE_FRAME_WAIT_MS) { snapshotFlow { engine.hasMedia || engine.error != null }.first { it } }
+                    emit(opened != null && engine.error == null)
+                }
+
+                shown -> {
+                    delay(CARD_ENGINE_DELAY_MS + ENGINE_ATTACH_GRACE_MS)
+                    emit(false)
+                }
+            }
+        }.first()
+
+// How long past CARD_ENGINE_DELAY_MS a card on screen waits for its engine before it extracts a
+// thumbnail itself.
+private const val ENGINE_ATTACH_GRACE_MS = 500L
+
+// How long a card's engine may take to open its video, once it starts, before the card extracts a
+// thumbnail anyway.
+private const val ENGINE_FRAME_WAIT_MS = 10_000L
 
 /** Below this the top, middle and bottom rows of [VideoControls] overflow. */
 private val MinControlsWidth = 280.dp

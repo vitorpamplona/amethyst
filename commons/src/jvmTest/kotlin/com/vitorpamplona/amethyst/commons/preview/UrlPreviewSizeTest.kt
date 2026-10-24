@@ -25,7 +25,13 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Response
+import okhttp3.ResponseBody
+import okhttp3.ResponseBody.Companion.asResponseBody
 import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import okio.ForwardingSource
+import okio.Source
+import okio.buffer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -79,5 +85,73 @@ class UrlPreviewSizeTest {
             assertEquals("Goals vs. Systems", info.title)
             assertEquals("https://i.ytimg.com/vi/fwcKTYvupJw/maxresdefault.jpg", info.image)
             assertTrue(info.fetchComplete())
+        }
+
+    /** Serves [html] and counts in [pulled] how many of its bytes are read off the "network". */
+    private fun servingCounted(
+        html: String,
+        pulled: LongArray,
+    ): (String) -> OkHttpClient {
+        val counting: Source =
+            object : ForwardingSource(Buffer().writeUtf8(html)) {
+                override fun read(
+                    sink: Buffer,
+                    byteCount: Long,
+                ): Long = super.read(sink, minOf(byteCount, 8192L)).also { if (it > 0) pulled[0] += it }
+            }
+        val body: ResponseBody = counting.buffer().asResponseBody(contentType.toMediaType())
+        return { _ ->
+            OkHttpClient
+                .Builder()
+                .addInterceptor { chain ->
+                    Response
+                        .Builder()
+                        .request(chain.request())
+                        .protocol(Protocol.HTTP_1_1)
+                        .code(200)
+                        .message("OK")
+                        .header("Content-Type", contentType)
+                        .body(body)
+                        .build()
+                }.build()
+        }
+    }
+
+    @Test
+    fun stopsReadingOnceTheHeadCloses() =
+        runTest {
+            // A GitHub page (github.com/vitorpamplona/amethyst, 2026-10) is 495 KB and closes its
+            // <head> 33,639 bytes in. Reading on to the end cost a slow mobile link seconds before
+            // the card's image could even start loading.
+            val head =
+                "<!DOCTYPE html><html><head><title>vitorpamplona/amethyst</title>" +
+                    "<meta property=\"og:image\" content=\"https://opengraph.githubassets.com/x/vitorpamplona/amethyst\">" +
+                    "</head><body>"
+            val pulled = LongArray(1)
+            val client = servingCounted(head + "<div>" + "x".repeat(1_500_000) + "</div></body></html>", pulled)
+
+            val info = UrlPreview().getDocument("https://github.com/vitorpamplona/amethyst", client)
+
+            assertEquals("https://opengraph.githubassets.com/x/vitorpamplona/amethyst", info.image)
+            assertTrue(pulled[0] < 128 * 1024, "read ${pulled[0]} bytes of a page whose head ends at ${head.length}")
+        }
+
+    @Test
+    fun aHeadEndInsideAScriptOrACommentDoesNotStopTheRead() =
+        runTest {
+            // A head front-loaded with inline script, as YouTube's is: a `</head>` in a JS string or
+            // a comment is not the end of the head, and the og: tags come well after it.
+            val head =
+                "<html><head><script>var tpl = \"</head>\";" + "/*" + "x".repeat(60_000) + "*/</script>" +
+                    "<!-- old layout: </head> -->" + "<style>" + "y".repeat(40_000) + "</style>" +
+                    "<meta property=\"og:image\" content=\"https://i.ytimg.com/vi/x/maxresdefault.jpg\">" +
+                    "</head><body>"
+            val pulled = LongArray(1)
+            val client = servingCounted(head + "z".repeat(1_000_000) + "</body></html>", pulled)
+
+            val info = UrlPreview().getDocument("https://www.youtube.com/watch?v=x", client)
+
+            assertEquals("https://i.ytimg.com/vi/x/maxresdefault.jpg", info.image)
+            assertTrue(pulled[0] < head.length + 64 * 1024, "read ${pulled[0]} bytes of a page whose head ends at ${head.length}")
         }
 }

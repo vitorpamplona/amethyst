@@ -143,6 +143,22 @@ object VideoDiskCache {
         return Writer(entry, start)
     }
 
+    /**
+     * How many of [url]'s first bytes are on disk without a gap, and how long the whole file is; null
+     * when none of it is.
+     */
+    fun heldStart(url: String): Pair<Long, Long>? = entryFor(url, create = false)?.let { it.heldFromStart() to it.total }
+
+    /**
+     * Copies [url]'s first bytes on disk, up to [max] and without a gap, into [target], and says how
+     * many it copied (0 when it holds none). For a poster made from what an engine already streamed.
+     */
+    fun copyStart(
+        url: String,
+        target: File,
+        max: Long,
+    ): Long = entryFor(url, create = false)?.copyStart(target, max) ?: 0L
+
     class Writer internal constructor(
         private val entry: Entry,
         private var position: Long,
@@ -250,6 +266,30 @@ object VideoDiskCache {
             first: Long,
             last: Long,
         ): Boolean = spans.any { first >= it.first && last <= it.last }
+
+        /** How many bytes from the start of the file it holds without a gap. */
+        @Synchronized
+        fun heldFromStart(): Long = spans.firstOrNull()?.takeIf { it.first == 0L }?.let { it.last + 1 } ?: 0L
+
+        /** Copies its first bytes, up to [max] and without a gap, into [target]; how many it copied. */
+        fun copyStart(
+            target: File,
+            max: Long,
+        ): Long {
+            val length = minOf(heldFromStart(), max)
+            if (length <= 0) return 0
+            FileChannel.open(data.toPath(), StandardOpenOption.READ).use { src ->
+                FileChannel.open(target.toPath(), StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING).use { dst ->
+                    var at = 0L
+                    while (at < length) {
+                        val n = src.transferTo(at, length - at, dst)
+                        if (n <= 0) break
+                        at += n
+                    }
+                    return at
+                }
+            }
+        }
 
         @Synchronized
         fun write(

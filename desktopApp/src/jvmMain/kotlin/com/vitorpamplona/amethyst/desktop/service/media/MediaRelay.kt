@@ -34,6 +34,7 @@ import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.util.Base64
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * A loopback HTTP relay that lets the native engine stream through the app's OkHttp clients.
@@ -49,6 +50,11 @@ import java.util.concurrent.Executors
  * so seeking still works, and rewrites HLS playlists so every segment and variant comes through
  * here too. The bytes of plain videos also land in [VideoDiskCache], which answers the next
  * request for them from disk.
+ *
+ * It listens on [ORIGINS] loopback ports and hands each video it opens the next one. AVFoundation
+ * keeps only about six connections open per origin (host and port), and a paused engine keeps its
+ * stream open while it buffers ahead, so a feed's paused cards on one port left the video being
+ * watched waiting for a connection, or with none at all.
  *
  * It listens on loopback only, a random path prefix keeps it from being an open proxy for other
  * programs on the machine, and the Host check keeps a web page from reaching it by DNS rebinding.
@@ -74,12 +80,24 @@ object MediaRelay {
 
     private val loopback: InetAddress = InetAddress.getByName("127.0.0.1")
 
-    private val server: HttpServer by lazy {
+    // More than the engines a feed opens at once (GlobalMediaPlayer's card and warm engines, plus
+    // the playing one), so no port carries more than a couple of them.
+    private const val ORIGINS = 8
+
+    private val executor =
+        Executors.newCachedThreadPool { runnable ->
+            Thread(runnable, "media-relay").apply { isDaemon = true }
+        }
+
+    private val servers: List<HttpServer> by lazy { List(ORIGINS) { newServer() } }
+
+    private val hosts: List<String> by lazy { servers.map { "127.0.0.1:${it.address.port}" } }
+
+    private val nextOrigin = AtomicInteger()
+
+    private fun newServer(): HttpServer =
         HttpServer.create(InetSocketAddress(loopback, 0), 0).apply {
-            executor =
-                Executors.newCachedThreadPool { runnable ->
-                    Thread(runnable, "media-relay").apply { isDaemon = true }
-                }
+            executor = this@MediaRelay.executor
             createContext("/$secret/") { exchange ->
                 try {
                     handle(exchange)
@@ -93,9 +111,6 @@ object MediaRelay {
             }
             start()
         }
-    }
-
-    private val hostHeader: String by lazy { "127.0.0.1:${server.address.port}" }
 
     /**
      * What the engine should open for [url]: through this relay when it goes over Tor, or when it
@@ -111,11 +126,17 @@ object MediaRelay {
             else -> url
         }
 
-    /** [url] as a relay address, or null when it is not an http(s) URL. */
-    fun relayUrlFor(url: String): String? {
+    /**
+     * [url] as a relay address on [host], by default the next of the relay's origins; null when it is
+     * not an http(s) URL.
+     */
+    fun relayUrlFor(
+        url: String,
+        host: String = hosts[Math.floorMod(nextOrigin.getAndIncrement(), ORIGINS)],
+    ): String? {
         val parsed = url.toHttpUrlOrNull() ?: return null
         val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(parsed.toString().toByteArray())
-        return "http://$hostHeader/$secret/$encoded/${fileNameOf(parsed)}"
+        return "http://$host/$secret/$encoded/${fileNameOf(parsed)}"
     }
 
     /** The original URL a relay [path] (what follows the secret) stands for, or null. */
@@ -139,7 +160,9 @@ object MediaRelay {
             ?: "media"
 
     private fun handle(exchange: HttpExchange) {
-        if (exchange.requestHeaders.getFirst("Host") != hostHeader) {
+        // The port it came in on: a page that rebinds a DNS name to 127.0.0.1 sends its own name.
+        val host = "127.0.0.1:${exchange.localAddress.port}"
+        if (exchange.requestHeaders.getFirst("Host") != host) {
             exchange.sendResponseHeaders(403, -1)
             return
         }
@@ -180,7 +203,7 @@ object MediaRelay {
                     }
 
                     playlist -> {
-                        sendPlaylist(exchange, response)
+                        sendPlaylist(exchange, response, host)
                     }
 
                     else -> {
@@ -203,13 +226,14 @@ object MediaRelay {
     private fun sendPlaylist(
         exchange: HttpExchange,
         response: Response,
+        host: String,
     ) {
         val source = response.body.source()
         if (source.request(MAX_PLAYLIST_BYTES + 1)) {
             exchange.sendResponseHeaders(502, -1)
             return
         }
-        val rewritten = rewritePlaylist(source.buffer.readUtf8(), response.request.url)
+        val rewritten = rewritePlaylist(source.buffer.readUtf8(), response.request.url, host)
         if (rewritten == null) {
             exchange.sendResponseHeaders(502, -1)
             return
@@ -290,6 +314,7 @@ object MediaRelay {
     internal fun rewritePlaylist(
         playlist: String,
         base: HttpUrl,
+        host: String,
     ): String? {
         var refused = false
         val rewritten =
@@ -301,22 +326,24 @@ object MediaRelay {
 
                     line.startsWith("#") -> {
                         uriAttribute.replace(line) { match ->
-                            val relayed = toRelay(match.groupValues[1], base)
+                            val relayed = toRelay(match.groupValues[1], base, host)
                             if (relayed == null) refused = true
                             "URI=\"${relayed.orEmpty()}\""
                         }
                     }
 
                     else -> {
-                        toRelay(line.trim(), base) ?: "".also { refused = true }
+                        toRelay(line.trim(), base, host) ?: "".also { refused = true }
                     }
                 }
             }
         return if (refused) null else rewritten
     }
 
+    // On the playlist's own origin: one stream's segments stay together, off the other videos' ports.
     private fun toRelay(
         uri: String,
         base: HttpUrl,
-    ): String? = base.resolve(uri)?.let { relayUrlFor(it.toString()) }
+        host: String,
+    ): String? = base.resolve(uri)?.let { relayUrlFor(it.toString(), host) }
 }
