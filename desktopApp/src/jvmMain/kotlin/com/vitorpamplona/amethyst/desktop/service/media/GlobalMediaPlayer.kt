@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.playback.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
+import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.service.media.BackgroundOpenGate.Verdict
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
@@ -175,6 +176,13 @@ object GlobalMediaPlayer {
 
     /** Each card's own engine, by the card's owner key, for the card to draw. */
     val cardPlayers: StateFlow<Map<Any, VideoPlayerState>> = _cardPlayers.asStateFlow()
+
+    /**
+     * Whether an engine opened paused draws its video's first frame. kdroidFilter's Linux engine
+     * (GStreamer) makes frames only while it plays, so a paused card engine there shows nothing:
+     * its card needs a poster.
+     */
+    val pausedEngineShowsFrame: Boolean = !PlatformInfo.host.isLinux
 
     // A ceiling on those: more video cards than this are rarely on screen at once, and each is a
     // native engine holding its buffer. A card past it opens its video only when it plays.
