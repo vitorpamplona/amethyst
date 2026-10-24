@@ -59,7 +59,9 @@ import kotlin.coroutines.CoroutineContext
  * [reportingDownloadSize], which the network fetchers wrap their client in.
  *
  * As with Coil's strategy, the first request back takes the download's own result and the others
- * run their own fetch, which reads the copy left in the disk cache, or tries again after a failure.
+ * run their own fetch, which reads the copy left in the disk cache. A failure is the outcome of the
+ * request whose fetch it was: any other runs its own, since it may differ (a signed BUD-01 retry
+ * that joined an anonymous download of the same blob must not inherit its 401).
  */
 @OptIn(ExperimentalCoilApi::class)
 class SharedDownloadStrategy(
@@ -77,7 +79,7 @@ class SharedDownloadStrategy(
         var claimed = false
         var result: FetchResult? = null
         var orphan = false
-        var cut = false
+        var done = false
     }
 
     private val lock = Any()
@@ -89,7 +91,7 @@ class SharedDownloadStrategy(
         block: suspend () -> FetchResult,
     ): FetchResult {
         while (true) {
-            val download = join(key, block)
+            val (download, started) = join(key, block)
             val result =
                 try {
                     download.job.await()
@@ -97,22 +99,24 @@ class SharedDownloadStrategy(
                     leave(key, download)
                     // This request was cancelled: it only stops waiting.
                     currentCoroutineContext().ensureActive()
-                    // The download was cut as this request joined it: start another.
-                    if (download.cut) continue
-                    throw e
+                    // Its fetch threw a cancellation of its own: the outcome of the request that
+                    // started it. A request that joined runs its own.
+                    if (started) throw e
+                    continue
                 } catch (e: Throwable) {
-                    if (claim(download)) throw e
+                    synchronized(lock) { download.waiters-- }
+                    if (started) throw e
                     continue
                 }
             return if (claim(download)) result else block()
         }
     }
 
-    /** Waits on the download running for [key], starting one when there is none. */
+    /** Waits on the download running for [key], starting one when there is none; true when it started it. */
     private fun join(
         key: String,
         block: suspend () -> FetchResult,
-    ): Download =
+    ): Pair<Download, Boolean> =
         synchronized(lock) {
             val running = downloads[key]
             if (running != null) {
@@ -121,7 +125,7 @@ class SharedDownloadStrategy(
                     running.orphan = false
                     orphans--
                 }
-                return running
+                return running to false
             }
             val download = Download()
             download.waiters = 1
@@ -133,6 +137,9 @@ class SharedDownloadStrategy(
                         block().also { synchronized(lock) { download.result = it } }
                     } finally {
                         synchronized(lock) {
+                            // Marked here, under the lock, not read off the job: the job is still
+                            // active while this runs, and a decision taken now must see it is over.
+                            download.done = true
                             if (downloads[key] === download) downloads.remove(key)
                             if (download.orphan) {
                                 download.orphan = false
@@ -142,7 +149,7 @@ class SharedDownloadStrategy(
                         closeIfAbandoned(download)
                     }
                 }
-            download
+            download to true
         }
 
     /** Whether this request, back from waiting, is the first: it takes the download's own outcome. */
@@ -160,7 +167,7 @@ class SharedDownloadStrategy(
         val orphaned =
             synchronized(lock) {
                 download.waiters--
-                download.waiters == 0 && download.result == null && download.job.isActive
+                download.waiters == 0 && !download.done
             }
         if (orphaned) decide(key, download) else closeIfAbandoned(download)
     }
@@ -175,9 +182,11 @@ class SharedDownloadStrategy(
             val bytes = withTimeoutOrNull(sizeWaitMs) { download.size.bytes.first { it != null } }
             val cut =
                 synchronized(lock) {
-                    // Wanted again meanwhile, or already done.
-                    if (download.waiters > 0 || download.result != null || !download.job.isActive) return@launch
-                    if (bytes != null && bytes in 0..finishBelowBytes && (download.orphan || orphans < maxOrphans)) {
+                    // Wanted again meanwhile, or already over.
+                    if (download.waiters > 0 || download.done) return@launch
+                    // An empty first response is followed by Coil's second request without cache
+                    // headers, whose size is not known yet: 0 says nothing.
+                    if (bytes != null && bytes in 1..finishBelowBytes && (download.orphan || orphans < maxOrphans)) {
                         if (!download.orphan) {
                             download.orphan = true
                             orphans++
@@ -185,7 +194,6 @@ class SharedDownloadStrategy(
                         false
                     } else {
                         if (downloads[key] === download) downloads.remove(key)
-                        download.cut = true
                         true
                     }
                 }

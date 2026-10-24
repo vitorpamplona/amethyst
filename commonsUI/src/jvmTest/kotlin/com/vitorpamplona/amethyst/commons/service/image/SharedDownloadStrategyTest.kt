@@ -283,4 +283,103 @@ class SharedDownloadStrategyTest {
             assertTrue(request.await().isFailure)
             assertEquals(1, download.cancelled)
         }
+
+    @Test
+    fun aSignedRetryThatJoinsAnAnonymousDownloadRunsItsOwnFetchWhenThatOneFails() =
+        runTest {
+            val strategy = strategy()
+            val gate = CompletableDeferred<Unit>()
+            val signed = FakeDownload()
+            signed.finish.complete(Unit)
+            var signedRuns = 0
+            // Another card's anonymous download of the same gated blob, still waiting for its 401.
+            val anonymous =
+                async {
+                    runCatching {
+                        strategy.apply("blob") {
+                            gate.await()
+                            throw IOException("HTTP 401")
+                        }
+                    }
+                }
+            runCurrent()
+            val retry =
+                async {
+                    strategy.apply("blob") {
+                        signedRuns++
+                        signed.block()
+                    }
+                }
+            runCurrent()
+            // The anonymous card scrolls away: the signed retry is the only request left waiting.
+            anonymous.cancel()
+            runCurrent()
+            gate.complete(Unit)
+
+            assertEquals(DataSource.NETWORK, (retry.await() as SourceFetchResult).dataSource)
+            assertEquals(1, signedRuns)
+        }
+
+    @Test
+    fun aRequestThatJoinedRunsItsOwnFetchWhenTheDownloadThrowsACancellationOfItsOwn() =
+        runTest {
+            val strategy = strategy()
+            val gate = CompletableDeferred<Unit>()
+            val ok = FakeDownload().result()
+            var runs = 0
+            val block: suspend () -> FetchResult = {
+                runs++
+                gate.await()
+                if (runs == 1) throw CancellationException("the fetch gave up") else ok
+            }
+            val starter = async { runCatching { strategy.apply("img", block) } }
+            val joiner = async { strategy.apply("img", block) }
+            runCurrent()
+            gate.complete(Unit)
+
+            assertTrue(starter.await().exceptionOrNull() is CancellationException)
+            assertSame(ok, joiner.await())
+            assertEquals(2, runs)
+        }
+
+    @Test
+    fun anEmptyFirstResponseDoesNotCountAsSmall() =
+        runTest {
+            val strategy = strategy()
+            val download = FakeDownload(size = 0)
+            val request = async { strategy.apply("img", download.block) }
+            runCurrent()
+            request.cancel()
+            runCurrent()
+
+            assertEquals(1, download.cancelled)
+        }
+
+    @Test
+    fun aFinishedOrphanFreesItsPlaceEvenWhenItFails() =
+        runTest {
+            val strategy = strategy(maxOrphans = 1)
+            val gate = CompletableDeferred<Unit>()
+            val failing =
+                async {
+                    strategy.apply("a") {
+                        currentCoroutineContext()[DownloadSize]?.bytes?.value = 1024
+                        gate.await()
+                        throw IOException("boom")
+                    }
+                }
+            runCurrent()
+            failing.cancel()
+            runCurrent()
+            gate.complete(Unit)
+            runCurrent()
+
+            // The failed orphan's place is free again: the next small orphan finishes.
+            val b = FakeDownload(size = 1024)
+            val rb = async { strategy.apply("b", b.block) }
+            runCurrent()
+            rb.cancel()
+            runCurrent()
+            assertEquals(0, b.cancelled)
+        }
 }
