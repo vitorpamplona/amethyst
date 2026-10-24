@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.model.nip88Polls.TallyResults
 import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.poll_change_vote
 import com.vitorpamplona.amethyst.commons.resources.poll_results_vote_count_link
 import com.vitorpamplona.amethyst.commons.resources.poll_submit
@@ -373,6 +374,13 @@ fun RenderPollCard(
     ) {
         if (changingVote) {
             RenderOptions(card, labelContent, respond, initial = card.mySelection())
+            // Keeping the vote as it is must not take casting another one.
+            Text(
+                text = stringRes(Res.string.cancel),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { changingVote = false }.padding(vertical = 4.dp),
+            )
         } else if (!canVote) {
             RenderResults(card, resultContent, footerContent, labelContent)
         } else {

@@ -39,7 +39,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -70,6 +69,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -132,6 +132,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_poll_remove_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_stays_open
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -193,8 +194,8 @@ private class PollDraft {
         if (!options.last().isEmpty && options.size < MarmotPolls.MAX_OPTIONS) options.add(DraftOption(nextId++))
     }
 
-    /** The empty row at the end is where the next option goes, not an option to remove. */
-    fun canRemove(option: DraftOption) = options.size > MarmotPolls.MIN_OPTIONS && !option.isEmpty
+    /** The empty row at the end is where the next option goes, not an option to remove; one emptied mid-list is. */
+    fun canRemove(option: DraftOption) = options.size > MarmotPolls.MIN_OPTIONS && !(option === options.last() && option.isEmpty)
 
     fun isTrailing(option: DraftOption) = option === options.last() && option.isEmpty && options.size > MarmotPolls.MIN_OPTIONS
 
@@ -289,6 +290,8 @@ fun CreateMarmotPollSheet(
         }
     DisposableEffect(Unit) { onDispose { suggestions.reset() } }
     var sending by remember { mutableStateOf(false) }
+    // Reads every field: derived, so the sheet does not recompose on each keystroke for it.
+    val ready by remember(draft) { derivedStateOf { draft.isReady } }
     var refused by remember { mutableStateOf(false) }
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -302,13 +305,16 @@ fun CreateMarmotPollSheet(
         sheetState = sheetState,
         containerColor = CardSurfaces.color,
     ) {
+        // Insets before the scroll, so its viewport ends above the keyboard and the nav bar: inside
+        // it they would only add space at the end, and a focused option could sit under the
+        // keyboard. imePaddingSafe, not imePadding (see SafeImeInsets).
         Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .imePadding()
+                    .imePaddingSafe()
                     .navigationBarsPadding()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
                     .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -337,7 +343,7 @@ fun CreateMarmotPollSheet(
 
             Button(
                 // One poll per tap: a second tap while the first is being sent would post it twice.
-                enabled = draft.isReady && !sending,
+                enabled = ready && !sending,
                 onClick = {
                     sending = true
                     refused = false
@@ -504,11 +510,13 @@ private fun PollTextField(
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
         onKeyboardAction = { onEnter() },
         lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines),
-        inputTransformation = MentionPreservingInputTransformation.then(NoLineBreaks),
+        inputTransformation = PollInputTransformation,
         outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+        // The field focus moves to (Enter, Tab, a tap) is the one the suggestions follow.
         modifier =
-            modifier.onPreviewKeyEvent { event ->
-                if (event.key == Key.Enter && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
+            modifier.onFocusChanged { if (it.isFocused) onEdited() }.onPreviewKeyEvent { event ->
+                // Tab moves on like Enter: typed, it would put a tab in one-line text MDK refuses.
+                if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
                     onEnter()
                     true
                 } else {
@@ -523,6 +531,8 @@ private fun PollTextField(
         },
     )
 }
+
+private val PollInputTransformation = MentionPreservingInputTransformation.then(NoLineBreaks)
 
 /** A pasted line break becomes a space: a question or option is one line of text. */
 private object NoLineBreaks : InputTransformation {

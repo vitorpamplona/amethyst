@@ -65,6 +65,9 @@ fun rememberMarmotRenderTags(
 
     val tags by
         produceState(withoutEmoji, event, groupId) {
+            // The initial value only applies once: a later event (an edit replacing an edit) must
+            // not keep the previous one's tags while its own are resolved.
+            value = withoutEmoji
             if (event == null || matched.isEmpty()) return@produceState
             val secret = accountViewModel.marmotMediaSecretForMessage(groupId, note.idHex) ?: return@produceState
             matched.forEach { (url, reference) ->

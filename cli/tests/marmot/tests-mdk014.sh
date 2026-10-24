@@ -79,6 +79,25 @@ test_36_admin_deletion_amy_to_wn() {
              | jq_list messages \
              | jq -r --arg c "$doomed" 'select((.content // "") == $c) | .event_id' | head -n 1)
 
+  if [[ -z "$target" ]]; then
+    record_result "$id" fail "amy has no event id for wn's message"; return
+  fi
+
+  # wn must list the row before the delete, or its absence afterwards proves nothing.
+  local row_of='select((.message_id // .id // .event_id) == $t)'
+  local deadline=$(( $(date +%s) + 90 )) seen=0
+  while [[ $(date +%s) -lt $deadline ]]; do
+    if wn_b_json messages timeline list "$mls_gid" --limit 50 2>/dev/null | jq_list messages \
+         | jq -e --arg t "$target" "$row_of" >/dev/null 2>&1; then
+      seen=1; break
+    fi
+    wn_b sync >/dev/null 2>&1 || true
+    sleep 3
+  done
+  if [[ "$seen" -ne 1 ]]; then
+    record_result "$id" fail "wn's timeline never listed the message to delete"; return
+  fi
+
   local del
   del=$(amy_json marmot message delete "$gid" "$target") || {
     record_result "$id" fail "amy admin delete failed"; return
@@ -87,16 +106,16 @@ test_36_admin_deletion_amy_to_wn() {
     record_result "$id" fail "amy did not send a kind 4891: $del"; return
   fi
 
-  local deadline=$(( $(date +%s) + 120 )) gone=0
+  # Applied means flagged deleted, or dropped from a timeline that still lists messages. An empty
+  # or failed listing is neither: keep polling.
+  deadline=$(( $(date +%s) + 120 ))
+  local gone=0
   while [[ $(date +%s) -lt $deadline ]]; do
-    local payload
-    payload=$(wn_b_json messages timeline list "$mls_gid" --limit 50 2>/dev/null || true)
-    if [[ -n "$payload" ]]; then
-      # Hidden from the timeline, or present and flagged deleted: both are
-      # "the deletion applied".
-      if ! printf '%s' "$payload" | jq_list messages \
-             | jq -e --arg t "$target" 'select((.message_id // .id // .event_id) == $t) | select(.deleted != true)' \
-             >/dev/null 2>&1; then
+    local rows
+    rows=$(wn_b_json messages timeline list "$mls_gid" --limit 50 2>/dev/null | jq_list messages)
+    if [[ -n "$rows" ]]; then
+      if printf '%s' "$rows" | jq -e --arg t "$target" "$row_of | select(.deleted == true)" >/dev/null 2>&1 \
+         || ! printf '%s' "$rows" | jq -e --arg t "$target" "$row_of" >/dev/null 2>&1; then
         gone=1; break
       fi
     fi

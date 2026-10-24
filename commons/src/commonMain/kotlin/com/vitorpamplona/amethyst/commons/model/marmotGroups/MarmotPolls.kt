@@ -99,6 +99,9 @@ object MarmotPolls {
         val poll: Definition,
     ) : PollResponseRule {
         override fun cast(response: PollResponseEvent): Set<String>? {
+            // A member votes inside the group, as an unsigned rumor. A signed response came from a
+            // relay outside it: knowing the poll's id must not be enough to vote in a group's poll.
+            if (response.sig.isNotEmpty()) return null
             val (target, selections) = parseResponse(response) ?: return null
             if (target != pollId || !isValidResponse(poll, response.createdAt, selections)) return null
             return selections.toSet()

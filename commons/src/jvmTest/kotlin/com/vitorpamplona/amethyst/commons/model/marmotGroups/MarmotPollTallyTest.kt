@@ -117,4 +117,13 @@ class MarmotPollTallyTest {
         )
         assertEquals(listOf(0, 1, 0), tally.counts())
     }
+
+    /** Votes travel inside the group unsigned; a signed one came from outside, by the poll's id alone. */
+    @Test
+    fun aSignedResponseFromOutsideTheGroupDoesNotVote() {
+        val p = poll()
+        val outsider = PollResponseEvent("9".repeat(64), carol, 120, MarmotPolls.responseTags(p.id, listOf("2"))!!, "", "f".repeat(128))
+        val tally = tallyInGroup(p, listOf(vote('2', bob, 110, p.id, "0"), outsider))
+        assertEquals(listOf(1, 0, 0), tally.counts())
+    }
 }

@@ -175,7 +175,7 @@ object GroupMetadataCommands {
             val gid = ctx.resolveGroupId(rawGid)
             ctx.syncIncoming()
             val view = ctx.marmot.groupView(gid) ?: return Output.error("not_member", "not a member of group $gid")
-            val image = view.image ?: return Output.error("no_image", "group $gid has no Blossom avatar")
+            val image = view.image ?: return Output.error("not_found", "group $gid has no Blossom avatar")
             val ciphertext =
                 BlossomClient().download(BlossomServerUrl.blob(server, image.hash))
                     ?: return Output.error("download_failed", "blob ${image.hash} not on $server")

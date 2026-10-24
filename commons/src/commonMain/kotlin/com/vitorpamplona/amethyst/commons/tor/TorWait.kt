@@ -34,6 +34,13 @@ import kotlinx.coroutines.flow.transformLatest
 const val TOR_STUCK_AFTER_MS: Long = 60_000L
 
 /**
+ * Tor is meant to carry traffic but cannot yet: starting, or failed. Not when it is off, which is
+ * either the user's choice or Android's session bypass, where the relays dial directly instead.
+ */
+val TorServiceStatus.isHoldingRelays: Boolean
+    get() = this is TorServiceStatus.Connecting || this is TorServiceStatus.Error
+
+/**
  * The relays among [relays] that are not dialed yet because they go through Tor and Tor cannot
  * carry traffic. The same rule as the platforms' websocket gate (a Tor-routed relay waits for a
  * ready Tor), so this names exactly the relays being held back.
@@ -41,7 +48,7 @@ const val TOR_STUCK_AFTER_MS: Long = 60_000L
 fun TorRelayEvaluation.waitingForTor(
     relays: Collection<NormalizedRelayUrl>,
     status: TorServiceStatus,
-): List<NormalizedRelayUrl> = if (status.isFullyBootstrapped) emptyList() else relays.filter(::useTor)
+): List<NormalizedRelayUrl> = if (status.isHoldingRelays) relays.filter(::useTor) else emptyList()
 
 /**
  * True once Tor has been trying to start for [afterMs] without becoming ready, or has failed; false

@@ -62,11 +62,13 @@ class MarmotGroupIconUploader(
         // media type into the AEAD, so the plan is made for the type AFTER compression.
         val compressed = UploadOrchestrator().compressIfNeeded(uri, mimeType, CompressorQuality.MEDIUM, uploader)
         val uploadMime = compressed.contentType ?: mimeType ?: DEFAULT_MIME
-        val manager = account.marmotManager ?: throw IllegalStateException("Marmot is not initialized")
-        val plan = manager.planGroupImageUpload(nostrGroupId, uploadMime)
-        val uploadSigner = NostrSignerInternal(KeyPair(privKey = plan.uploadSecretKey))
 
+        // Inside the try, so a failed plan (not a member any more) still discards the compressed file.
         try {
+            val manager = account.marmotManager ?: throw IllegalStateException("Marmot is not initialized")
+            val plan = manager.planGroupImageUpload(nostrGroupId, uploadMime)
+            val uploadSigner = NostrSignerInternal(KeyPair(privKey = plan.uploadSecretKey))
+
             val state =
                 UploadOrchestrator().uploadEncrypted(
                     uri = compressed.uri,

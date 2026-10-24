@@ -169,15 +169,20 @@ fun ChatReactionChips(
             derivedStateOf {
                 val note = reactionsState?.note ?: baseNote
                 val me = accountViewModel.userProfile()
-                note.reactions
-                    .map { (type, reactors) ->
+                // In a group each custom-emoji reaction carries its own copy of the picture under its
+                // own URL, so one chip per shortcode; elsewhere one per reaction key, as before.
+                note.reactions.entries
+                    .groupBy({ (type, _) -> marmotEmoji?.chipKey(type) ?: type }, { it.toPair() })
+                    .map { (_, entries) ->
+                        val reactors = entries.flatMap { it.second }
                         val mine =
                             if (myIdentities != null) {
                                 reactors.any { it.author?.pubkeyHex in myIdentities }
                             } else {
                                 reactors.any { it.author == me }
                             }
-                        ReactionChip(type, reactors.size, mine, marmotEmoji?.glyphFor(type) ?: type)
+                        val type = entries.first().first
+                        ReactionChip(type, reactors.size, mine, marmotEmoji?.glyphFor(entries.map { it.first }) ?: type)
                     }.sortedByDescending { it.count }
                     .toImmutableList()
             }
@@ -465,6 +470,12 @@ class MarmotReactionEmoji(
         val url = type.customEmojiUrlOrNull() ?: return type
         return if (url in resolvedUrls) type else type.substringBefore(url)
     }
+
+    /** One chip's glyph for reactions that share a shortcode: the first whose picture can be drawn. */
+    fun glyphFor(types: List<String>): String = types.firstOrNull { it.customEmojiUrlOrNull() in resolvedUrls } ?: glyphFor(types.first())
+
+    /** What makes two reactions one chip: a custom emoji's bare `:shortcode:`, anything else itself. */
+    fun chipKey(type: String): String = type.customEmojiUrlOrNull()?.let { type.substringBefore(it) } ?: type
 }
 
 /** Null when [baseNote] is not a Marmot message (its reactions then render as before). */
@@ -474,11 +485,11 @@ fun rememberMarmotReactionEmoji(
     note: Note,
     accountViewModel: AccountViewModel,
 ): MarmotReactionEmoji? {
-    val groupId = remember(baseNote) { baseNote.marmotGroupIdFor(accountViewModel.account) }
+    // Every chat row calls this; only a Marmot message pays for a producer.
+    val groupId = remember(baseNote) { baseNote.marmotGroupIdFor(accountViewModel.account) } ?: return null
     val reactions = note.reactions
     val resolved by
         produceState(emptySet<String>(), groupId, reactions) {
-            if (groupId == null) return@produceState
             val urls = HashSet<String>()
             reactions.values.flatten().forEach { reactor ->
                 val event = reactor.event ?: return@forEach
@@ -494,5 +505,5 @@ fun rememberMarmotReactionEmoji(
             }
             value = urls
         }
-    return if (groupId == null) null else remember(resolved) { MarmotReactionEmoji(resolved) }
+    return remember(resolved) { MarmotReactionEmoji(resolved) }
 }

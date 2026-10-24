@@ -253,7 +253,7 @@ object MessageCommands {
             // A kind 5 is the author's own retraction.
             val others = targets.filter { it.pubKey != ctx.identity.pubKeyHex }
             if (others.isNotEmpty() && (targets.size != 1 || !ctx.marmot.canAdminDelete(gid, others[0]))) {
-                return Output.error("not_allowed", "only a group admin can delete another member's chat message, one at a time")
+                return Output.error("forbidden", "only a group admin can delete another member's chat message, one at a time")
             }
             val bundle =
                 if (others.isEmpty()) {

@@ -222,14 +222,16 @@ class MarmotGroupChatroom(
         notes: List<Note>,
     ): Boolean = account.marmot.deleteMarmotMessages(nostrGroupId, notes)
 
-    // A media message's content is its locator, so editing it would break the attachment.
+    // A media message's content is its locator, so editing it would break the attachment. Custom
+    // emoji pictures are attachments too, but artwork for the text, which an edit re-sends.
     override fun canEdit(
         account: Account,
         note: Note,
-    ): Boolean =
-        note.event is ChatEvent &&
-            note.author == account.userProfile() &&
-            note.event?.tags?.none { it.isNotEmpty() && it[0] == "imeta" } == true
+    ): Boolean {
+        val event = note.event as? ChatEvent ?: return false
+        if (note.author != account.userProfile()) return false
+        return event.tags.none { it.isNotEmpty() && it[0] == "imeta" } || MarmotCustomEmoji.hasOnlyEmojiAttachments(event)
+    }
 
     override fun acceptsPoll(poll: PollEvent): Boolean = MarmotPolls.parsePoll(poll) != null
 

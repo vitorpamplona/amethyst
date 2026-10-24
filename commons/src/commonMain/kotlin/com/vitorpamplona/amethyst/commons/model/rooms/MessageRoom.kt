@@ -23,6 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.rooms
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.NotesGatherer
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollTallyPolicy
 import com.vitorpamplona.amethyst.commons.model.privateChats.Chatroom
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
@@ -143,6 +145,21 @@ interface MessageRoom : NotesGatherer {
 fun Note.roomFor(account: Account): MessageRoom? =
     ownRoom { it.isReadBy(account) }
         ?: if (isPlacedByTarget()) replyTo?.firstNotNullOfOrNull { it.ownRoom { room -> room.isReadBy(account) } } else null
+
+/**
+ * [user]'s reactions to this note that are the same reaction as [reaction]. A custom emoji matches by
+ * shortcode: in a group each reaction carries its own encrypted copy of the picture under its own
+ * URL, so comparing whole keys never finds the reaction to retract.
+ */
+fun Note.reactionsOfAuthorLike(
+    user: User,
+    reaction: String,
+): List<Note> {
+    val shortcode = MarmotCustomEmoji.reactionShortcode(reaction) ?: return allReactionsOfContentByAuthor(user, reaction)
+    return reactions.flatMap { (type, notes) ->
+        if (MarmotCustomEmoji.reactionShortcode(type) == shortcode) notes.filter { it.author == user } else emptyList()
+    }
+}
 
 /** True when this note is in any room, whichever account reads it. See [MessageRoom]. */
 fun Note.isInRoom(): Boolean = ownRoom { true } != null || (isPlacedByTarget() && replyTo?.any { it.ownRoom { true } != null } == true)

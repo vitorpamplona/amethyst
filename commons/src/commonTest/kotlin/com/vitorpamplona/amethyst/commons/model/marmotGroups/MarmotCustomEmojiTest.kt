@@ -75,4 +75,16 @@ class MarmotCustomEmojiTest {
         assertFalse(MarmotCustomEmoji.withinTagLimits(List(65) { arrayOf("t", "x") }))
         assertFalse(MarmotCustomEmoji.withinTagLimits(listOf(arrayOf("t", "x".repeat(16 * 1024)))))
     }
+
+    /** Each reaction carries its own encrypted copy under its own URL, so the shortcode decides "the same". */
+    @Test
+    fun reactionShortcodeIgnoresTheUrl() {
+        assertEquals(":party:", MarmotCustomEmoji.reactionShortcode(":party:https://blossom.example/aaa"))
+        assertEquals(":party:", MarmotCustomEmoji.reactionShortcode(":party:https://blossom.example/bbb"))
+        assertEquals(":party:", MarmotCustomEmoji.reactionShortcode(":party:"))
+        assertEquals(null, MarmotCustomEmoji.reactionShortcode("+"))
+        assertEquals(null, MarmotCustomEmoji.reactionShortcode("\uD83D\uDE00"))
+        assertEquals(null, MarmotCustomEmoji.reactionShortcode("::"))
+        assertEquals(null, MarmotCustomEmoji.reactionShortcode(":"))
+    }
 }

@@ -83,6 +83,8 @@ fun hasMip04Media(event: Event?): Boolean {
  */
 fun encryptedMediaV2Of(event: Event?): EncryptedMediaReferenceV2? {
     if (event == null) return null
+    // Every chat row asks on every recomposition, and almost none has an attachment.
+    if (event.tags.none { it.size > 1 && it[0] == "imeta" }) return null
     // A custom emoji's picture is an attachment too (MDK 0.12), named by an
     // `emoji` tag; it is artwork for the text, drawn inline, not the file the
     // message sends. A message whose only attachments are emoji is text.

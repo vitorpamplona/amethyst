@@ -62,6 +62,12 @@ class TorWaitTest {
         assertEquals(emptyList(), off.waitingForTor(all, TorServiceStatus.Off))
     }
 
+    /** Android's session bypass: Tor is off but the relays keep their Tor policy, and dial directly. */
+    @Test
+    fun nothingWaitsWhileTorIsBypassed() {
+        assertEquals(emptyList(), evaluation.waitingForTor(all, TorServiceStatus.Off))
+    }
+
     @Test
     fun stuckOnlyAfterTheWait() =
         runTest {

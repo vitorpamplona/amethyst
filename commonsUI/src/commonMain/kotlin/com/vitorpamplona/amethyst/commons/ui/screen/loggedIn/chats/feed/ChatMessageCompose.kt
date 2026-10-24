@@ -676,7 +676,8 @@ fun NoteRow(
                     }
                 }
             // A poll renders like a poll anywhere else; its room, when it has one, carries the votes.
-            note.event is PollEvent -> RenderPoll(note, false, canPreview, 1, bgColor, accountViewModel, nav)
+            // Quoted in a reply it is a preview, not a ballot.
+            note.event is PollEvent -> RenderPoll(note, innerQuote, canPreview, if (innerQuote) 0 else 1, bgColor, accountViewModel, nav)
             else -> {
                 // Concord, Buzz and Marmot all overlay edits on their messages (kinds 3302,
                 // 40003 and 1009): when one exists, render the winning edit's content instead of

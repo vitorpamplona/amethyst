@@ -97,6 +97,17 @@ object MarmotCustomEmoji {
         return event.tags.filter { tag -> !(tag.size >= 3 && tag[0] == TAG_EMOJI && tag[2] !in matched) }.toTypedArray()
     }
 
+    /**
+     * The `:shortcode:` a custom-emoji reaction key starts with (`:party:` from `:party:https://…`),
+     * or null for anything else. In a group every reaction carries its own encrypted copy of the
+     * picture, under its own URL, so the shortcode is what makes two reactions the same one.
+     */
+    fun reactionShortcode(reaction: String): String? {
+        if (reaction.length < 3 || reaction[0] != ':') return null
+        val end = reaction.indexOf(':', 1)
+        return if (end > 1) reaction.substring(0, end + 1) else null
+    }
+
     /** MDK's limits on the extra tags of a message. */
     fun withinTagLimits(tags: List<Array<String>>): Boolean = tags.size <= MAX_MESSAGE_TAGS && tags.sumOf { tag -> tag.sumOf { it.encodeToByteArray().size } } <= MAX_MESSAGE_TAG_BYTES
 }

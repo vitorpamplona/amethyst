@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.model.nip56Reports.UserReportWarningSt
 import com.vitorpamplona.amethyst.commons.model.nip56Reports.dmReportWarningFor
 import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
+import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
@@ -507,7 +508,7 @@ open class BaseAccountViewModel(
         // there; anything else would name the message outside it.
         note.roomFor(account)?.let { room ->
             launchSigner {
-                val mine = note.allReactionsOfContentByAuthor(userProfile(), reaction)
+                val mine = note.reactionsOfAuthorLike(userProfile(), reaction)
                 if (mine.isNotEmpty()) room.delete(account, mine) else room.react(account, note, reaction, notices)
             }
             return
@@ -2461,7 +2462,26 @@ open class BaseAccountViewModel(
         val tagger = NewMessageTagger(text, null, null, this)
         tagger.run()
         val manager = account.marmotManager ?: return
-        deliverMarmotGroupMessage(nostrGroupId, manager.buildMessageEditRumor(target.idHex, tagger.message))
+        val plain = manager.buildMessageEditRumor(target.idHex, tagger.message)
+        // The edited text renders with the edit's own tags, so its custom emoji travel the way a
+        // message's do; without them a `:shortcode:` the edit keeps shows as text.
+        val emojis = if (account.marmot.emojiMediaPort != null) account.emoji.findEmojiTags(text) else emptyList()
+        if (emojis.isEmpty()) {
+            deliverMarmotGroupMessage(nostrGroupId, plain)
+            return
+        }
+        account.scope.launch(Dispatchers.IO) {
+            try {
+                val rumor =
+                    account.marmot.withEncryptedCustomEmoji(nostrGroupId, plain, emojis) {
+                        notices.notify(MarmotNotice.EmojiNotAttached)
+                    }
+                deliverMarmotGroupMessage(nostrGroupId, rumor)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("BaseAccountViewModel", "Failed to send a Marmot edit with custom emoji", e)
+            }
+        }
     }
 
     /**

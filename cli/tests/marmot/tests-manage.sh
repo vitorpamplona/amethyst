@@ -237,7 +237,7 @@ test_17_group_image_commit() {
 
   local server_args=()
   [[ -n "${BLOSSOM_PID:-}" ]] && server_args=(--server "$BLOSSOM_URL/")
-  if ! amy_json marmot group set-image "$gid" "$img" --mime image/png "${server_args[@]}" >/dev/null; then
+  if ! amy_json marmot group set-image "$gid" "$img" --mime image/png ${server_args[@]+"${server_args[@]}"} >/dev/null; then
     record_result "$id" fail "amy set-image failed"; return
   fi
 

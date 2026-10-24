@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.KmpLock
@@ -399,7 +400,7 @@ class AccountMarmotActions(
     ) {
         val manager = account.marmotManager ?: return
         val targetEvent = target.event ?: return
-        if (target.hasReacted(account.userProfile(), reaction)) return
+        if (target.reactionsOfAuthorLike(account.userProfile(), reaction).isNotEmpty()) return
         val rumor = manager.buildReactionRumor(targetEvent, reaction)
         sendMarmotGroupMessage(nostrGroupId, rumor, marmotGroupRelays(nostrGroupId))
     }
@@ -1363,7 +1364,12 @@ class AccountMarmotActions(
         onEmojiNotAttached: () -> Unit = {},
     ): Event {
         if (emojis.isEmpty()) return rumor
-        val wanted = emojis.distinctBy { it.code }
+        val distinct = emojis.distinctBy { it.code }
+        val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
+        // Only as many as the tag count can take, before any download or upload: a poll spends two
+        // tags per emoji (imeta + emoji), a message's limit counts the emoji tags alone.
+        val room = if (maxTotalTags != null) (maxTotalTags - base.size) / 2 else MarmotCustomEmoji.MAX_MESSAGE_TAGS - base.size
+        val wanted = distinct.take(room.coerceAtLeast(0))
         // In parallel: each one is a download and an upload, and one slow host should not
         // hold the others back.
         val attached =
@@ -1373,7 +1379,6 @@ class AccountMarmotActions(
                     .awaitAll()
                     .filterNotNull()
             }
-        val base = rumor.tags.filter { !(it.isNotEmpty() && it[0] == MarmotCustomEmoji.TAG_EMOJI) }
         val imetas = attached.map { (_, reference) -> reference.toImetaTag() }
         val emojiTags = attached.map { (code, reference) -> arrayOf(MarmotCustomEmoji.TAG_EMOJI, code, reference.locators.first().value) }
         // MDK refuses to SEND past its limits on a message's extra tags (the
@@ -1385,7 +1390,7 @@ class AccountMarmotActions(
             } else {
                 MarmotCustomEmoji.withinTagLimits(emojiTags + base)
             }
-        if (attached.size < wanted.size || (!fits && attached.isNotEmpty())) onEmojiNotAttached()
+        if (attached.size < distinct.size || (!fits && attached.isNotEmpty())) onEmojiNotAttached()
         val tags = if (fits) imetas + emojiTags + base else base
         val template = EventTemplate<Event>(rumor.createdAt, rumor.kind, tags.toTypedArray(), rumor.content)
         return RumorAssembler.assembleRumor(account.signer.pubKey, template)
@@ -1405,17 +1410,21 @@ class AccountMarmotActions(
         /** Called when the custom emoji could not be attached and the reaction goes out as text. */
         onEmojiNotAttached: () -> Unit = {},
     ) {
-        val emoji = if (reaction.startsWith(":")) EmojiUrlTag.decode(reaction) else null
+        val shortcode = MarmotCustomEmoji.reactionShortcode(reaction)
         val targetEvent = target.event
-        if (emoji == null || emojiMediaPort == null || targetEvent == null || account.marmotManager == null) {
+        if (shortcode == null || emojiMediaPort == null || targetEvent == null || account.marmotManager == null) {
             reactToMarmotMessage(nostrGroupId, target, reaction)
             return
         }
-        if (target.hasReacted(account.userProfile(), reaction)) return
-        val reference = encryptMarmotCustomEmoji(nostrGroupId, emoji)
-        if (reference == null) {
+        if (target.reactionsOfAuthorLike(account.userProfile(), reaction).isNotEmpty()) return
+        // The picture comes from the account's own packs, by shortcode. The URL in [reaction] may be
+        // another member's ciphertext (a chip tapped) or any URL a peer wrote, and is never fetched.
+        val emoji = account.emoji.findEmojiTags(shortcode).firstOrNull()
+        val reference = emoji?.let { encryptMarmotCustomEmoji(nostrGroupId, it) }
+        if (emoji == null || reference == null) {
+            // As text: the bare shortcode carries no emoji tag, so no receiver fetches a public URL.
             onEmojiNotAttached()
-            reactToMarmotMessage(nostrGroupId, target, reaction)
+            reactToMarmotMessage(nostrGroupId, target, shortcode)
             return
         }
         val tags =

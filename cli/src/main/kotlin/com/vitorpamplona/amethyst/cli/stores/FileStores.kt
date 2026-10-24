@@ -34,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.io.RandomAccessFile
 
 /**
  * Test-harness file stores. **Unencrypted** — the production interfaces
@@ -289,7 +290,7 @@ class FileMarmotMessageStore(
     override suspend fun loadMediaSecrets(nostrGroupId: String): Map<Long, ByteArray> =
         mediaSecretFile(nostrGroupId)
             .takeIf { it.exists() }
-            ?.readLines()
+            ?.completeRecords()
             ?.mapNotNull { line ->
                 val parts = line.trim().split(' ')
                 if (parts.size != 2) return@mapNotNull null
@@ -316,7 +317,7 @@ class FileMarmotMessageStore(
     override suspend fun loadEpochAdmins(nostrGroupId: String): Map<Long, Set<String>> =
         epochAdminsFile(nostrGroupId)
             .takeIf { it.exists() }
-            ?.readLines()
+            ?.completeRecords()
             ?.mapNotNull { line ->
                 val epoch = line.substringBefore(' ').toLongOrNull() ?: return@mapNotNull null
                 val admins =
@@ -343,7 +344,7 @@ class FileMarmotMessageStore(
     override suspend fun loadModerationVerdicts(nostrGroupId: String): Map<String, Boolean> =
         verdictsFile(nostrGroupId)
             .takeIf { it.exists() }
-            ?.readLines()
+            ?.completeRecords()
             ?.mapNotNull { line ->
                 val parts = line.trim().split(' ')
                 if (parts.size != 2 || !parts[0].isHex(KEY_HEX_LENGTH) || parts[1] !in setOf("0", "1")) return@mapNotNull null
@@ -352,16 +353,32 @@ class FileMarmotMessageStore(
             ?: emptyMap()
 
     /**
-     * Appends one record line. A crash can leave the last line unterminated, and the next
-     * record would then be glued onto it and lost with it, so a missing newline comes first.
+     * Appends one record line. A crash can leave the last line unterminated: that partial record is
+     * cut off first, since terminating it would turn it into a record that looks whole.
      */
     private fun appendRecord(
         target: File,
         line: String,
     ) {
-        val unterminated = target.exists() && target.length() > 0 && !target.readText().endsWith('\n')
-        SecureFileIO.appendText(target, (if (unterminated) "\n" else "") + line + "\n")
+        if (target.exists() && target.length() > 0 && target.lastByte() != '\n'.code.toByte()) {
+            val text = target.readText()
+            SecureFileIO.writeTextAtomic(target, text.substring(0, text.lastIndexOf('\n') + 1))
+        }
+        SecureFileIO.appendText(target, line + "\n")
     }
+
+    private fun File.lastByte(): Byte =
+        RandomAccessFile(this, "r").use {
+            it.seek(it.length() - 1)
+            it.readByte()
+        }
+
+    /**
+     * The records [appendRecord] finished: every one ends in a newline, so an unterminated last line
+     * is a write a crash cut short. Parsed, it could still look valid (an admin set missing its
+     * last keys) and, first write wins, would never be corrected.
+     */
+    private fun File.completeRecords(): List<String> = readText().split('\n').dropLast(1)
 
     private fun String.isHex(length: Int) = this.length == length && all { it in '0'..'9' || it in 'a'..'f' }
 

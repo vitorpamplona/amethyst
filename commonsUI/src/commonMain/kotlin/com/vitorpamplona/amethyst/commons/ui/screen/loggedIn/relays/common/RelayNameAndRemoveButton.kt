@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.resources.remove
 import com.vitorpamplona.amethyst.commons.resources.tor_relay
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.tor.isHoldingRelays
 import com.vitorpamplona.amethyst.commons.tor.waitingForTor
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.painterRes
@@ -135,7 +136,7 @@ private fun TorRelayBadge() {
     // Unknown until the first status arrives, so a ready Tor never flashes "waiting" on open.
     val torStatus by remember(appServices) { appServices.torStatus }
         .collectAsStateWithLifecycle<TorServiceStatus?>(null)
-    val waiting = torStatus?.isFullyBootstrapped == false
+    val waiting = torStatus?.isHoldingRelays == true
 
     Icon(
         painter = painterRes(Res.drawable.ic_tor, 2),

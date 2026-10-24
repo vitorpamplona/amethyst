@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.isBuzzEditableBy
+import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannel
@@ -618,6 +619,9 @@ private fun QuickReactionRow(
                 note.allReactionsByAuthor(accountViewModel.userProfile()).toImmutableSet()
             }
         }
+    // A group's custom-emoji reaction is keyed by its own encrypted copy's URL, never the pack's,
+    // so a pick is "already mine" by shortcode.
+    val myShortcodes = remember(myReactions) { myReactions.mapNotNullTo(HashSet()) { MarmotCustomEmoji.reactionShortcode(it) } }
 
     // Wrap onto as many rows as needed (like the zap grid) rather than a single
     // horizontally-scrolling strip, so long custom-reaction sets stay reachable.
@@ -629,7 +633,12 @@ private fun QuickReactionRow(
     ) {
         reactions.forEach { reactionType ->
             ClickableBox(
-                modifier = if (reactionType in myReactions) MaterialTheme.colorScheme.selectedReactionBoxModifier else reactionBox,
+                modifier =
+                    if (reactionType in myReactions || MarmotCustomEmoji.reactionShortcode(reactionType) in myShortcodes) {
+                        MaterialTheme.colorScheme.selectedReactionBoxModifier
+                    } else {
+                        reactionBox
+                    },
                 onClick = {
                     onReactOverride?.invoke(note, reactionType) ?: accountViewModel.reactToOrDelete(note, reactionType)
                     onDismiss()
