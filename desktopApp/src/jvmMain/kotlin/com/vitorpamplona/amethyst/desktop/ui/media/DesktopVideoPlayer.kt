@@ -194,7 +194,9 @@ fun DesktopVideoPlayer(
         // A note's own poster is drawn straight from the image loader (see VideoPoster); only a
         // video without one has a frame extracted, which downloads part of the video.
         if (!loaded || thumbnail != null || poster != null) return@LaunchedEffect
-        if (holdsEngine) {
+        // Where a paused engine draws nothing (Linux), the card would stay black until it played:
+        // it extracts a poster as a card without an engine does.
+        if (holdsEngine && GlobalMediaPlayer.pausedEngineShowsFrame) {
             // This card's own engine opens the video anyway, and its paused open shows the first
             // frame: extracting one too downloaded the same video's first 4 MB a second time. Only
             // a poster already kept is worth showing until then.

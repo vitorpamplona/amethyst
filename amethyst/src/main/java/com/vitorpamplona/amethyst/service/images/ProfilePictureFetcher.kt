@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvi
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomCacheRedirectInterceptor.Companion.PROFILE_PICTURE
 import com.vitorpamplona.amethyst.commons.service.http.LocalBlossomMediaCallFactory
 import com.vitorpamplona.amethyst.commons.service.image.readAuthAware
+import com.vitorpamplona.amethyst.commons.service.image.reportingDownloadSize
 import com.vitorpamplona.amethyst.commons.service.image.withAuthHeader
 import com.vitorpamplona.amethyst.commons.ui.components.ProfilePictureUrl
 import kotlinx.coroutines.CoroutineScope
@@ -124,7 +125,7 @@ class ProfilePictureFetcher(
                         url = data.url,
                         options = options.withAuthHeader(authHeader),
                         // Marked so the local Blossom cache bridge can honour "profile pictures only".
-                        networkClient = lazy { LocalBlossomMediaCallFactory(networkClient(data.url), PROFILE_PICTURE).asNetworkClient() },
+                        networkClient = lazy { LocalBlossomMediaCallFactory(networkClient(data.url), PROFILE_PICTURE).asNetworkClient().reportingDownloadSize() },
                         diskCache = diskCacheLazy,
                         cacheStrategy = cacheStrategyLazy,
                         connectivityChecker = lazy { connectivityCheckerLazy.get(options.context) },
