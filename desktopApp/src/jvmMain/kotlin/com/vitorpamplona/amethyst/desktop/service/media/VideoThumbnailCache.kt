@@ -31,8 +31,12 @@ import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -89,6 +93,10 @@ object VideoThumbnailCache {
     private const val FFMPEG_TIMEOUT_SECONDS = 15L
     private const val PAR_SUFFIX = ".par"
 
+    // How often, and how many times, keepFromStream looks for the start of a video its engine streams.
+    private const val STREAM_POLL_MS = 2_000L
+    private const val STREAM_POLLS = 15
+
     private val memory =
         object : LinkedHashMap<String, ImageBitmap>(64, 0.75f, true) {
             override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>) = size > MAX_MEMORY_POSTERS
@@ -102,6 +110,10 @@ object VideoThumbnailCache {
 
     // Each extraction downloads up to MAX_CHUNK_BYTES and may run ffmpeg; a fast scroll would start dozens.
     private val extractions = Semaphore(2)
+
+    // The videos keepFromStream waits on, one wait per URL. Its waits outlive the card that asked.
+    private val keeping = ConcurrentHashMap.newKeySet<String>()
+    private val background = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val ffmpegWatchdog =
         Executors.newSingleThreadScheduledExecutor { Thread(it, "ffmpeg-watchdog").apply { isDaemon = true } }
@@ -149,30 +161,80 @@ object VideoThumbnailCache {
         }
     }
 
-    private suspend fun load(url: String): ImageBitmap? {
-        val persistable = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
-        // v2: frames from before rotation was applied are on disk sideways; v3: anamorphic ones
-        // from before the pixel ratio was applied are squashed. Leave both behind.
-        val key = sha1Hex("v3:$url")
-        val diskFile = File(diskDir, "$key.jpg")
-        // The pixel ratio of an anamorphic video, beside its poster: the player needs it too.
-        val parFile = File(diskDir, "$key$PAR_SUFFIX")
-        if (persistable && diskFile.length() > 0) {
-            runCatching { ImageIO.read(diskFile) }.getOrNull()?.let {
-                // The poster is already at the video's display shape.
-                recordShape(url, it)
-                if (parFile.exists()) {
-                    runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, it.width.toFloat() / it.height) }
+    /**
+     * The poster of [url] only if it is already in memory or on disk: nothing is downloaded. For a
+     * card whose own engine opens the video anyway and shows its first frame.
+     */
+    suspend fun getStored(url: String): ImageBitmap? {
+        getCached(url)?.let { return it }
+        val poster = withContext(Dispatchers.IO) { readDisk(url) } ?: return null
+        synchronized(memory) { memory[url] = poster }
+        return poster
+    }
+
+    /**
+     * Makes [url]'s poster in the background from the bytes its engine streams through [MediaRelay],
+     * which land in [VideoDiskCache], once the start of the video is there: nothing is downloaded
+     * again. For a card whose own engine shows the video's frame: that engine goes when the card
+     * leaves the screen, and the poster is what the card then shows, there and on the next launch.
+     */
+    fun keepFromStream(url: String) {
+        if (getCached(url) != null || !VideoDiskCache.cacheable(url) || !keeping.add(url)) return
+        background.launch {
+            try {
+                repeat(STREAM_POLLS) {
+                    delay(STREAM_POLL_MS)
+                    if (getCached(url) != null) return@launch
+                    val (held, total) = VideoDiskCache.heldStart(url) ?: return@repeat
+                    if (startIsHeld(held, total)) {
+                        // Extracts from those bytes (see extractFirstFrame), deduplicated with any card asking.
+                        getThumbnail(url)
+                        return@launch
+                    }
                 }
-                return it.toComposeImageBitmap()
+            } finally {
+                keeping.remove(url)
             }
         }
+    }
+
+    /** Whether [held] bytes from the start of a video [total] bytes long are as much as a poster reads. */
+    internal fun startIsHeld(
+        held: Long,
+        total: Long,
+    ): Boolean = held > 0 && held >= minOf(MAX_CHUNK_BYTES.toLong(), total)
+
+    private fun isPersistable(url: String) = !MediaHttp.isEncrypted(url) && !MediaHttp.viaTor(url)
+
+    // v2: frames from before rotation was applied are on disk sideways; v3: anamorphic ones
+    // from before the pixel ratio was applied are squashed. Leave both behind.
+    private fun diskKey(url: String) = sha1Hex("v3:$url")
+
+    private fun readDisk(url: String): ImageBitmap? {
+        if (!isPersistable(url)) return null
+        val key = diskKey(url)
+        val diskFile = File(diskDir, "$key.jpg")
+        if (diskFile.length() <= 0) return null
+        // The pixel ratio of an anamorphic video, beside its poster: the player needs it too.
+        val parFile = File(diskDir, "$key$PAR_SUFFIX")
+        val image = runCatching { ImageIO.read(diskFile) }.getOrNull() ?: return null
+        // The poster is already at the video's display shape.
+        recordShape(url, image)
+        if (parFile.exists()) {
+            runCatching { parFile.readText().toFloat() }.getOrNull()?.let { par -> VideoPixelAspect.record(url, par, image.width.toFloat() / image.height) }
+        }
+        return image.toComposeImageBitmap()
+    }
+
+    private suspend fun load(url: String): ImageBitmap? {
+        readDisk(url)?.let { return it }
 
         val frame = extractFirstFrame(url) ?: return null
         recordShape(url, frame)
-        if (persistable) {
-            writeAtomically(diskFile, frame)
-            VideoPixelAspect.get(url)?.let { par -> runCatching { parFile.writeText(par.toString()) } }
+        if (isPersistable(url)) {
+            val key = diskKey(url)
+            writeAtomically(File(diskDir, "$key.jpg"), frame)
+            VideoPixelAspect.get(url)?.let { par -> runCatching { File(diskDir, "$key$PAR_SUFFIX").writeText(par.toString()) } }
         }
         return frame.toComposeImageBitmap()
     }
@@ -197,7 +259,8 @@ object VideoThumbnailCache {
         val isHls = isHlsMedia(url, null)
 
         if (!isHls) {
-            val chunk = runCatchingCancellable { downloadFirstChunk(url) }.getOrNull()
+            // What an engine already streamed of it, when that holds as much: else from the network.
+            val chunk = streamedStart(url) ?: runCatchingCancellable { downloadFirstChunk(url) }.getOrNull()
             if (chunk != null) {
                 try {
                     (tryJCodec(chunk, url) ?: runFfmpeg(chunk.absolutePath))?.let { return it }
@@ -211,6 +274,20 @@ object VideoThumbnailCache {
         // relay, whose secret would then sit in ffmpeg's command line for any local user to read.
         if (MediaHttp.viaTor(url)) return null
         return runFfmpeg(url)
+    }
+
+    /** The first [MAX_CHUNK_BYTES] of [url] (or all of it) from [VideoDiskCache] in a temp file, or null. */
+    private fun streamedStart(url: String): File? {
+        if (!VideoDiskCache.cacheable(url)) return null
+        val (held, total) = VideoDiskCache.heldStart(url) ?: return null
+        if (!startIsHeld(held, total)) return null
+        val file = AmethystTempDir.createTempFile("amethyst_thumb_", ".mp4")
+        val copied = runCatching { VideoDiskCache.copyStart(url, file, MAX_CHUNK_BYTES.toLong()) }.getOrDefault(0L)
+        if (copied <= 0L) {
+            file.deleteOrWarn(TAG, "video chunk")
+            return null
+        }
+        return file
     }
 
     /**

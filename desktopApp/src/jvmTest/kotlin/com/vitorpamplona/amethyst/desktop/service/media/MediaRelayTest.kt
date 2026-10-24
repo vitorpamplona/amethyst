@@ -224,4 +224,41 @@ class MediaRelayTest {
         assertTrue(status.contains(" 403"), status)
         assertTrue(fetched.isEmpty())
     }
+
+    @Test
+    fun eachVideoOpensOnTheNextOriginAndStreamsThere() {
+        // AVFoundation keeps about six connections per origin, and a paused card keeps its stream
+        // open: the feed's engines must not all share one port.
+        val relayed = (1..8).map { MediaRelay.streamingUrl("$base/media/video.mp4?n=$it")!! }
+        assertEquals(8, relayed.map { it.toHttpUrl().port }.toSet().size, relayed.toString())
+
+        relayed.forEach { url ->
+            val (code, _, body) = get(url, range = "bytes=0-99")
+            assertEquals(206, code, url)
+            assertContentEquals(video.copyOfRange(0, 100), body)
+        }
+    }
+
+    @Test
+    fun aPlaylistsSegmentsStayOnItsOrigin() {
+        val playlist = MediaRelay.streamingUrl("$base/live/index.m3u8")!!
+        val (_, _, body) = get(playlist)
+
+        val segments = body.decodeToString().lines().filter { it.startsWith("http://") }
+        assertEquals(2, segments.size, body.decodeToString())
+        assertTrue(segments.all { it.toHttpUrl().port == playlist.toHttpUrl().port }, segments.toString())
+    }
+
+    @Test
+    fun aRequestNamingAnotherOriginIsRefused() {
+        val first = MediaRelay.streamingUrl("$base/media/video.mp4?a=1")!!.toHttpUrl()
+        val other = MediaRelay.streamingUrl("$base/media/video.mp4?a=2")!!.toHttpUrl()
+        // What a DNS-rebinding page sends: a Host that is not the port it reached.
+        Socket(InetAddress.getByName("127.0.0.1"), first.port).use { socket ->
+            socket.getOutputStream().write("GET ${first.encodedPath} HTTP/1.1\r\nHost: 127.0.0.1:${other.port}\r\nConnection: close\r\n\r\n".toByteArray())
+            val status = socket.getInputStream().bufferedReader().readLine()
+            assertTrue(status.contains(" 403 "), status)
+        }
+        assertTrue(fetched.isEmpty())
+    }
 }

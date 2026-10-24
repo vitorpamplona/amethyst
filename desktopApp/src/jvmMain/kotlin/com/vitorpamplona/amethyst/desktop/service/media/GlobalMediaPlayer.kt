@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.playback.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
+import com.vitorpamplona.amethyst.desktop.service.media.BackgroundOpenGate.Verdict
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.InitialPlayerState
@@ -59,6 +60,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -133,6 +135,19 @@ object GlobalMediaPlayer {
     // Engines being retired, so shutdown can release the ones whose delay has not run out.
     private val retiring: MutableSet<VideoPlayerState> = Collections.synchronizedSet(mutableSetOf())
 
+    // Every engine retired so far, so an open still held back (see holdBehindPlayingVideo) never
+    // runs on one that is gone. Weak: a disposed engine is not kept alive by it.
+    private val retired: MutableSet<VideoPlayerState> = Collections.synchronizedSet(Collections.newSetFromMap(WeakHashMap()))
+
+    // The longest a paused engine waits for the playing video to start before opening its own.
+    private const val BACKGROUND_OPEN_HOLD_MS = 5_000L
+
+    // How long, with no video open, a paused engine waits for one to start (see BackgroundOpenGate).
+    private const val IDLE_OPEN_DELAY_MS = 1_000L
+
+    // Engines whose paused open is still held back, so a card waiting on one's frame counts from the open.
+    private val heldEngines = MutableStateFlow<Set<VideoPlayerState>>(emptySet())
+
     @Volatile private var shutDown = false
 
     // Engines opened ahead, paused and muted, on the videos the feeds are about to show, by URL
@@ -169,7 +184,7 @@ object GlobalMediaPlayer {
 
     // From here on a video counts as played to its end: play starts it over. The same mark the
     // cards use to keep an ended video from starting again on its own.
-    private const val ENDED_POSITION = 0.99f
+    internal const val ENDED_POSITION = 0.99f
 
     // How long publishShape waits for an engine to read a video's size before giving up.
     private const val SHAPE_WAIT_MS = 30_000L
@@ -555,10 +570,18 @@ object GlobalMediaPlayer {
             engine.volume = 0f
             engine.playbackSpeed = 1f
         }
+        // Before the card can see it: one that sees it unheld counts its open from now.
+        heldEngines.update { it + engine }
         synchronized(initLock) { keep(engine) }
         engineUrls[engine] = url
         Log.d(TAG) { "paused open url=$url" }
         scope.launch(Dispatchers.IO) {
+            try {
+                holdBehindPlayingVideo(engine)
+            } finally {
+                heldEngines.update { it - engine }
+            }
+            if (shutDown || engine in retired) return@launch
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
                 .onSuccess {
                     // Paused on the frame where this video was the last time it played, so its card
@@ -572,6 +595,45 @@ object GlobalMediaPlayer {
                     publishShape(engine, url)
                 }.onFailure { Log.w(TAG) { "Paused open failed for $url: ${it.message}" } }
         }
+    }
+
+    /**
+     * Waits, at most [BACKGROUND_OPEN_HOLD_MS], until the video the user watches is moving before
+     * [engine], opened paused for a card or ahead of a scroll, starts its own download. A paused
+     * engine reads the whole video: a Shorts screen opened four of them beside the playing one, and
+     * when they came from one host they shared its single HTTP/2 connection, so the video on screen
+     * got a fifth of it and took 8.7 s to move where it alone needed under 2 s. Held at the open,
+     * not throttled mid-stream: a stream that stalls makes the engine slow to play it later. An
+     * engine that becomes the playing one, or is retired, stops waiting at once, and none waits for
+     * a video the user paused, or long when none is open (see [BackgroundOpenGate]).
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private suspend fun holdBehindPlayingVideo(engine: VideoPlayerState) {
+        val gate = BackgroundOpenGate()
+        withTimeoutOrNull(BACKGROUND_OPEN_HOLD_MS) {
+            // Latest: a video that starts during the idle wait cancels it, and is waited on instead.
+            _videoState
+                .transformLatest { state ->
+                    val verdict = if (engine === videoPlayer || engine in retired) Verdict.OPEN else gate.check(state, videoPauseRequested)
+                    when (verdict) {
+                        Verdict.OPEN -> {
+                            emit(Unit)
+                        }
+
+                        Verdict.IDLE -> {
+                            delay(IDLE_OPEN_DELAY_MS)
+                            emit(Unit)
+                        }
+
+                        Verdict.HOLD -> {}
+                    }
+                }.first()
+        }
+    }
+
+    /** Returns once [engine], a card's, has started opening its video: its paused open may be held back. */
+    suspend fun awaitOpenStarted(engine: VideoPlayerState) {
+        heldEngines.first { engine !in it }
     }
 
     /**
@@ -1134,6 +1196,7 @@ object GlobalMediaPlayer {
             player.pause()
         }
         retiring += player
+        retired += player
         scope.launch(Dispatchers.Main) {
             delay(RETIRE_DELAY_MS)
             withTimeoutOrNull(RETIRE_LOAD_TIMEOUT_MS) { snapshotFlow { player.isLoading }.first { !it } }

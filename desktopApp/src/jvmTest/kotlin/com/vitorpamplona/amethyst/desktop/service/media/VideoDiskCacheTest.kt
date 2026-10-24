@@ -108,4 +108,39 @@ class VideoDiskCacheTest {
             dir.deleteRecursively()
         }
     }
+
+    @Test
+    fun theStartWithoutAGapIsWhatAPosterCanRead() {
+        val dir = Files.createTempDirectory("vdc").toFile()
+        try {
+            val entry = VideoDiskCache.Entry(File(dir, "d.data"), File(dir, "d.meta"), 1000, "video/mp4")
+            val bytes = ByteArray(1000) { it.toByte() }
+            // Only the tail: nothing from the start.
+            entry.write(900, bytes.copyOfRange(900, 1000), 100)
+            assertEquals(0L, entry.heldFromStart())
+            entry.write(0, bytes, 300)
+            entry.write(500, bytes.copyOfRange(500, 600), 100)
+            assertEquals(300L, entry.heldFromStart())
+
+            val out = File(dir, "start.mp4")
+            assertEquals(200L, entry.copyStart(out, 200))
+            assertEquals(bytes.copyOfRange(0, 200).toList(), out.readBytes().toList())
+            // Never past the gap, and a longer copy replaces the shorter one.
+            assertEquals(300L, entry.copyStart(out, 10_000))
+            assertEquals(bytes.copyOfRange(0, 300).toList(), out.readBytes().toList())
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun aPosterWaitsForAsMuchAsItWouldDownload() {
+        val chunk = 4L * 1024 * 1024
+        assertFalse(VideoThumbnailCache.startIsHeld(0, 10 * chunk))
+        assertFalse(VideoThumbnailCache.startIsHeld(chunk - 1, 10 * chunk))
+        assertTrue(VideoThumbnailCache.startIsHeld(chunk, 10 * chunk))
+        // A video smaller than that needs all of it.
+        assertFalse(VideoThumbnailCache.startIsHeld(999, 1000))
+        assertTrue(VideoThumbnailCache.startIsHeld(1000, 1000))
+    }
 }
