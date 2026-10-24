@@ -25,6 +25,8 @@ import com.vitorpamplona.quartz.nip01Core.relay.server.RelaySession
 import com.vitorpamplona.quartz.nip01Core.relay.server.SessionSink
 import io.ktor.server.websocket.DefaultWebSocketServerSession
 import io.ktor.websocket.Frame
+import io.ktor.websocket.FrameTooBigException
+import io.ktor.websocket.ProtocolViolationException
 import io.ktor.websocket.readText
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -147,6 +149,12 @@ internal class WebSocketSessionPump(
                     session.receive(frame.readText())
                 }
             }
+        } catch (_: FrameTooBigException) {
+            // Ktor has queued the 1009 close already. Rethrowing fails the call, which
+            // drops the socket before that frame is written; returning lets Ktor close
+            // the session and wait for it.
+        } catch (_: ProtocolViolationException) {
+            // Same, with the 1002 close.
         } finally {
             outQueue.close()
             writerJob.cancel()

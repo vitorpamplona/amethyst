@@ -23,12 +23,13 @@ package com.vitorpamplona.geode
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.io.DataInputStream
+import java.net.Socket
+import java.net.URI
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -38,6 +39,10 @@ import kotlin.test.assertTrue
 /**
  * Ktor allocates a frame's whole buffer as soon as the header names its length, so without a cap
  * one header claiming 2 GB costs the relay 2 GB before a byte of payload arrives.
+ *
+ * The oversized frame goes over a raw socket as a header alone. A client that also sends the payload
+ * races the relay's close: the relay closes with that payload unread, the reset can reach the client
+ * before the 1009 frame does, and the client then reports a broken pipe instead of a close code.
  */
 class KtorRelayFrameLimitTest {
     private lateinit var relay: RelayEngine
@@ -59,8 +64,6 @@ class KtorRelayFrameLimitTest {
     private class Recorder : WebSocketListener() {
         val messages = mutableListOf<String>()
         val firstMessage = CountDownLatch(1)
-        val closed = CountDownLatch(1)
-        val closeCode = AtomicReference<Int?>(null)
 
         override fun onMessage(
             webSocket: WebSocket,
@@ -69,35 +72,42 @@ class KtorRelayFrameLimitTest {
             synchronized(messages) { messages.add(text) }
             firstMessage.countDown()
         }
-
-        override fun onClosing(
-            webSocket: WebSocket,
-            code: Int,
-            reason: String,
-        ) {
-            closeCode.set(code)
-            closed.countDown()
-        }
-
-        override fun onFailure(
-            webSocket: WebSocket,
-            t: Throwable,
-            response: Response?,
-        ) {
-            closed.countDown()
-        }
     }
 
     private fun open(listener: Recorder): WebSocket = httpClient.newWebSocket(Request.Builder().url(server.url.replace("ws://", "http://")).build(), listener)
 
     @Test
     fun aFrameOverTheLimitClosesTheConnection() {
-        val listener = Recorder()
-        val ws = open(listener)
-        ws.send("[\"REQ\",\"big\",{\"search\":\"" + "x".repeat(128 * 1024) + "\"}]")
+        val uri = URI(server.url)
+        Socket(uri.host, uri.port).use { socket ->
+            socket.soTimeout = 10_000
+            val out = socket.getOutputStream()
+            val input = DataInputStream(socket.getInputStream())
 
-        assertTrue(listener.closed.await(10, TimeUnit.SECONDS), "the relay must refuse an oversized frame")
-        assertEquals(1009, listener.closeCode.get(), "1009 is the close code for a message too big to process")
+            out.write(
+                (
+                    "GET ${uri.path.ifEmpty { "/" }} HTTP/1.1\r\nHost: ${uri.host}:${uri.port}\r\n" +
+                        "Upgrade: websocket\r\nConnection: Upgrade\r\n" +
+                        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n"
+                ).toByteArray(),
+            )
+            out.flush()
+            assertTrue(readHttpHead(input).startsWith("HTTP/1.1 101"), "the relay must accept the upgrade")
+
+            // FIN + text, then masked with the 64-bit length form: 2 GB, then the mask key. No payload.
+            out.write(byteArrayOf(0x81.toByte(), 0xFF.toByte(), 0, 0, 0, 0, 0x80.toByte(), 0, 0, 0, 1, 2, 3, 4))
+            out.flush()
+
+            assertEquals(0x88, input.readUnsignedByte(), "the relay must answer with a close frame")
+            assertTrue((input.readUnsignedByte() and 0x7F) >= 2, "the close frame must carry a code")
+            assertEquals(1009, input.readUnsignedShort(), "1009 is the close code for a message too big to process")
+        }
+    }
+
+    private fun readHttpHead(input: DataInputStream): String {
+        val head = StringBuilder()
+        while (!head.endsWith("\r\n\r\n")) head.append(input.readUnsignedByte().toChar())
+        return head.toString()
     }
 
     @Test
