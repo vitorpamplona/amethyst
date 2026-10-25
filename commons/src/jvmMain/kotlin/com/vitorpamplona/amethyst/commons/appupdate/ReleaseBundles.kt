@@ -283,7 +283,7 @@ object ReleaseBundles {
         // A dry run uploads nothing and names where the blob would be (BUD-01: <server>/<sha256>).
         if (dryRun) return "${server.trimEnd('/')}/$sha256"
         val auth = BlossomAuth.createUploadAuth(sha256, file.length(), "Upload ${file.name}", signer)
-        val result = client.upload(file, contentType, server, auth)
+        val result = client.upload(file, contentType, server, auth, sha256)
         if (result.sha256 != null && result.sha256 != sha256) {
             throw ReleaseFilesException("$server stored ${file.name} as ${result.sha256}, not $sha256")
         }

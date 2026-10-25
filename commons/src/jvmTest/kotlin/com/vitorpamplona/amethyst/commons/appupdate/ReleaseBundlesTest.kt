@@ -92,10 +92,14 @@ class ReleaseBundlesTest {
             val file = File(dir, "blob.bin").apply { writeBytes(ByteArray(1000) { it.toByte() }) }
             val sha256 = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
             var authorization: String? = null
+            var contentDigest: String? = null
+            var xSha256: String? = null
             var returnedHash = sha256
             val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
             server.createContext("/upload") { exchange ->
                 authorization = exchange.requestHeaders.getFirst("Authorization")
+                contentDigest = exchange.requestHeaders.getFirst("Content-Digest")
+                xSha256 = exchange.requestHeaders.getFirst("X-SHA-256")
                 exchange.requestBody.readBytes()
                 val body = """{"url":"http://127.0.0.1:${server.address.port}/$returnedHash","sha256":"$returnedHash","size":1000,"uploaded":1}""".toByteArray()
                 exchange.sendResponseHeaders(200, body.size.toLong())
@@ -106,6 +110,8 @@ class ReleaseBundlesTest {
                 val base = "http://127.0.0.1:${server.address.port}"
                 assertEquals("$base/$sha256", ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer))
                 assertTrue(authorization!!.startsWith("Nostr "), "BUD-02 upload auth")
+                assertEquals(sha256, contentDigest, "cdn.zapstore.dev refuses an upload without Content-Digest")
+                assertEquals(sha256, xSha256)
 
                 returnedHash = "0".repeat(64)
                 assertFailsWith<ReleaseFilesException> { ReleaseBundles.mirrorToBlossom(file, "application/octet-stream", base, signer) }
