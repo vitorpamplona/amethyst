@@ -72,6 +72,25 @@ open class BlossomClient(
     ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), fileBody(file, contentType), serverBaseUrl, authHeader)
 
     /**
+     * Upload [file], naming its [sha256] up front as `X-SHA-256` and `Content-Digest` (the hex hash,
+     * as zsp sends it). cdn.zapstore.dev refuses an upload without `Content-Digest`.
+     */
+    open suspend fun upload(
+        file: File,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+        sha256: String,
+    ): BlossomUploadResult =
+        putBlob(
+            BlossomServerUrl.upload(serverBaseUrl),
+            fileBody(file, contentType),
+            serverBaseUrl,
+            authHeader,
+            mapOf(BlossomServerUrl.X_SHA_256_HEADER to sha256, CONTENT_DIGEST_HEADER to sha256),
+        )
+
+    /**
      * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
      */
     open suspend fun upload(
@@ -336,14 +355,17 @@ open class BlossomClient(
         body: RequestBody,
         serverBaseUrl: String,
         authHeader: String?,
+        headers: Map<String, String> = emptyMap(),
     ): BlossomUploadResult =
         withContext(Dispatchers.IO) {
             val request =
                 Request
                     .Builder()
                     .url(endpoint)
-                    .apply { authHeader?.let { addHeader("Authorization", it) } }
-                    .put(body)
+                    .apply {
+                        authHeader?.let { addHeader("Authorization", it) }
+                        headers.forEach { (name, value) -> addHeader(name, value) }
+                    }.put(body)
                     .build()
             okHttpClient.newCall(request).executeAsync().use { parseDescriptor(it, serverBaseUrl) }
         }
@@ -382,5 +404,7 @@ open class BlossomClient(
          * should fall back to a direct upload) rather than a mirror the server rejected.
          */
         private val MIRROR_UNSUPPORTED_CODES = setOf(404, 405, 501)
+
+        private const val CONTENT_DIGEST_HEADER = "Content-Digest"
     }
 }
