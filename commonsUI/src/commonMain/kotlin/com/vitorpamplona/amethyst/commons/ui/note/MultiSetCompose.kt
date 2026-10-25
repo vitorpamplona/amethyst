@@ -537,14 +537,14 @@ fun MapZaps(
     accountViewModel: AccountViewModel,
     content: @Composable (ImmutableList<ZapAmountCommentNotification>) -> Unit,
 ) {
-    var zapEvents by
-        remember(zaps) {
-            mutableStateOf<ImmutableList<ZapAmountCommentNotification>>(persistentListOf())
+    // Starts from what is already decrypted, not an empty list: the card is rebuilt every time the
+    // feed comes back on screen, and an empty first frame grows the card once the zaps arrive,
+    // which animateItem() then plays as a slide of every card below it.
+    @Suppress("ProduceStateDoesNotAssignValue")
+    val zapEvents by
+        produceState(initialValue = accountViewModel.cachedDecryptAmountMessageInGroup(zaps), zaps) {
+            accountViewModel.decryptAmountMessageInGroup(zaps) { value = it }
         }
-
-    LaunchedEffect(key1 = zaps) {
-        accountViewModel.decryptAmountMessageInGroup(zaps) { zapEvents = it }
-    }
 
     content(zapEvents)
 }
