@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.utils.cache.LargeCache
@@ -193,109 +194,21 @@ class MarmotGroupList(
     }
 
     /**
-     * True if this inner event should appear as its own bubble in the group
-     * chat feed. Side-channel kinds must still be consumed into LocalCache —
-     * they drive the reaction row on the target note and, for kind:5, revoke a
-     * prior reaction — but they must NOT show up as standalone messages.
-     *
-     * Needed because WhiteNoise emits plain kind:7 reactions (emoji content +
-     * `e` tag) and kind:5 unreacts inside kind:445, and the Marmot pipeline
-     * blindly routed every inner event into the chatroom. The reaction then
-     * rendered as a chat bubble containing just the emoji, with a quoted
-     * citation of the target message — which reads exactly like a reply.
-     *
-     * The same reasoning covers the three kinds that are not chat either:
-     *
-     * - **1009 edits** replace a prior message's text in place. Rendering one
-     *   as its own row would show the same sentence twice, and it must not
-     *   advance an unread count — a reader caught up with the original is
-     *   caught up with the edit.
-     * - **1200 agent-stream anchors** are hidden by their own feature: the
-     *   payload is routing metadata with an empty body, so it would render as
-     *   a blank bubble. What a reader sees is the live preview and then the
-     *   authoritative kind:9.
-     * 1210 system rows are NOT in this list. They are group-state captions
-     * rather than messages, but they belong in the conversation in
-     * chronological order, so the feed carries them and the renderer gives
-     * them their own style instead of a chat bubble — subject to the
-     * authorship rule below.
-     */
-    private fun isDisplayableFeedMessage(msg: Note): Boolean {
-        // Every path here indexes the decrypted inner event onto its note first, so a note
-        // without one can't be classified and would only render as a "can't be found" row.
-        val kind = msg.event?.kind ?: return false
-        if (kind == MARMOT_INNER_KIND_SYSTEM_ROW) return isOwnDerivedSystemRow(msg)
-        return kind !in NON_CHAT_INNER_KINDS
-    }
-
-    /**
-     * A kind:1210 row is shown only when THIS client derived it.
-     *
-     * MLS authenticates that a member sent an inner payload; it says nothing
-     * about whether the payload is true. A received 1210 is therefore an
-     * assertion by its sender, with an `actor` and `subject` of the sender's
-     * choosing — so rendering one would let any member forge an attributed
-     * history row ("X removed Y") indistinguishable from a real one, in the
-     * part of the conversation a reader trusts most.
-     *
-     * Rows this client derives are diffed from MLS-authenticated group state
-     * (`MarmotManager.syncGroupSystemRows`) and are always authored by the
-     * account itself, so authorship is exactly the test. Nothing is lost by
-     * dropping the sender's version: every client that applied the same
-     * commits derives the same rows.
+     * True if this inner event should appear as its own row in the group chat
+     * feed: Marmot's timeline rule ([MarmotAppEvent.isTimelineRow]), which hides
+     * the kinds that change or annotate another message (reactions, deletions,
+     * edits, votes, ...) and shows a kind:1210 system row only when this client
+     * derived it. Hidden kinds are still consumed into LocalCache, where they
+     * drive the target note's reaction row, edit overlay and tally.
      *
      * The check has to live here rather than at ingest because rows reach the
      * feed by two routes — live decryption and the restart re-read of the
      * local log — and the log holds received payloads too.
      */
-    private fun isOwnDerivedSystemRow(msg: Note): Boolean = msg.event?.pubKey == ownerPubKey
-
-    companion object {
-        private const val MARMOT_INNER_KIND_DELETION = 5
-        private const val MARMOT_INNER_KIND_ADMIN_REMOVAL = 4891
-        private const val MARMOT_INNER_KIND_REACTION = 7
-        private const val MARMOT_INNER_KIND_EDIT = 1009
-        private const val MARMOT_INNER_KIND_STREAM_START = 1200
-        private const val MARMOT_INNER_KIND_SYSTEM_ROW = 1210
-
-        // Push token gossip. Routing data for a notification server, addressed
-        // to the other members' clients rather than to the people in the room —
-        // a reader must never see a row for one.
-        private const val MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE = 447
-        private const val MARMOT_INNER_KIND_PUSH_TOKEN_LIST = 448
-        private const val MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL = 449
-
-        // A NIP-88 vote. It changes the tally drawn on its poll's row and is
-        // never a message of its own (MDK projects no timeline row for one).
-        private const val MARMOT_INNER_KIND_POLL_RESPONSE = 1018
-
-        // Content moderation (`features/content-moderation.md`): a NIP-56
-        // report of a message in this group and a NIP-32 label dismissing one.
-        // Both are addressed to the group's admins as review state, not to the
-        // conversation, and a report's body would otherwise read as a message.
-        private const val MARMOT_INNER_KIND_REPORT = 1984
-        private const val MARMOT_INNER_KIND_REPORT_LABEL = 1985
-
-        // Agent activity and operation status from WN Agent harnesses: progress
-        // telemetry about a run, whose result arrives as an ordinary kind:9.
-        private const val MARMOT_INNER_KIND_AGENT_ACTIVITY = 1201
-        private const val MARMOT_INNER_KIND_AGENT_OPERATION = 1202
-
-        private val NON_CHAT_INNER_KINDS =
-            setOf(
-                MARMOT_INNER_KIND_DELETION,
-                MARMOT_INNER_KIND_ADMIN_REMOVAL,
-                MARMOT_INNER_KIND_REACTION,
-                MARMOT_INNER_KIND_EDIT,
-                MARMOT_INNER_KIND_STREAM_START,
-                MARMOT_INNER_KIND_PUSH_TOKEN_UPDATE,
-                MARMOT_INNER_KIND_PUSH_TOKEN_LIST,
-                MARMOT_INNER_KIND_PUSH_TOKEN_REMOVAL,
-                MARMOT_INNER_KIND_POLL_RESPONSE,
-                MARMOT_INNER_KIND_REPORT,
-                MARMOT_INNER_KIND_REPORT_LABEL,
-                MARMOT_INNER_KIND_AGENT_ACTIVITY,
-                MARMOT_INNER_KIND_AGENT_OPERATION,
-            )
+    private fun isDisplayableFeedMessage(msg: Note): Boolean {
+        // Every path here indexes the decrypted inner event onto its note first, so a note
+        // without one can't be classified and would only render as a "can't be found" row.
+        val event = msg.event ?: return false
+        return MarmotAppEvent.isTimelineRow(event.kind, event.pubKey, ownerPubKey)
     }
 }

@@ -21,18 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send
 
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.marmot.mip04EncryptedMedia.buildMip04IMetaTag
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /**
- * Sends uploaded encrypted media as Marmot group messages. Each upload result
- * becomes a separate kind:9 with an `imeta` tag.
- *
- * Every upload now carries an `encrypted-media-v2` reference, whatever policy
- * the group holds -- see [MarmotFileUploader]. The MIP-04 branch below is kept
- * because the result type still allows a null reference, but nothing this app
- * writes takes it; the MIP-era shape survives only on the READ side, for
- * messages older builds already sent.
+ * Sends uploaded encrypted media as Marmot group messages: each upload becomes
+ * its own kind:9 carrying an `encrypted-media-v2` reference. The MIP-04 shape
+ * survives only on the read side, for messages older builds already sent.
  *
  * Each message is sent pinned to [sourceEpoch], the epoch whose key encrypted the files: if a
  * commit landed during the upload, the send is refused rather than delivering attachments no
@@ -43,36 +37,12 @@ class MarmotFileSender(
     val sourceEpoch: Long,
     val accountViewModel: AccountViewModel,
 ) {
-    suspend fun send(uploads: List<Mip04UploadResult>) {
+    suspend fun send(uploads: List<MarmotUploadResult>) {
         for (upload in uploads) {
-            val v2 = upload.encryptedMediaV2
-            if (v2 != null) {
-                accountViewModel.sendMarmotGroupEncryptedMediaV2(
-                    nostrGroupId = nostrGroupId,
-                    reference = v2,
-                    caption = upload.caption.orEmpty(),
-                    sourceEpoch = sourceEpoch,
-                )
-                continue
-            }
-
-            val imeta =
-                buildMip04IMetaTag(
-                    url = upload.url,
-                    mimeType = upload.mimeType,
-                    filename = upload.filename,
-                    originalFileHash = upload.originalFileHash,
-                    nonce = upload.nonce,
-                    dimensions = upload.dimensions,
-                    blurhash = upload.blurhash,
-                    thumbhash = upload.thumbhash,
-                    alt = upload.caption,
-                )
-
-            accountViewModel.sendMarmotGroupMediaMessage(
+            accountViewModel.sendMarmotGroupEncryptedMediaV2(
                 nostrGroupId = nostrGroupId,
-                url = upload.url,
-                imeta = imeta,
+                reference = upload.reference,
+                caption = upload.caption.orEmpty(),
                 sourceEpoch = sourceEpoch,
             )
         }

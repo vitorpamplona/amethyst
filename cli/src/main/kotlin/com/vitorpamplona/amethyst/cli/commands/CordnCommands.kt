@@ -232,7 +232,8 @@ object CordnCommands {
                 "membership" to exposure.membership.name,
                 "messaging" to exposure.messaging.name,
                 "linked_groups" to exposure.linkedGroupCount,
-                "differs_from_marmot" to exposure.differsFromMarmot(),
+                // Every cordn coordinator today; kept as a field so the JSON shape holds.
+                "differs_from_marmot" to true,
                 "notes" to exposure.notes().map { it.name to describe(it) }.toMap(),
             ),
         )

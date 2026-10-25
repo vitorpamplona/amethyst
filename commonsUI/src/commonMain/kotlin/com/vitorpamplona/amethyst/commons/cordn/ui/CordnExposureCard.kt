@@ -134,13 +134,14 @@ fun CordnExposureCard(
             )
             exposure.notes().forEach { NoteRow(it) }
 
-            if (exposure.differsFromMarmot()) {
-                Text(
-                    text = stringResource(Res.string.cordn_exposure_differs),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            // Every cordn group differs from a Marmot one: a coordinator holds what relays
+            // would spread out. Said unconditionally until a self-hosted coordinator changes
+            // that, which is this app's comparison to make, not cordn's.
+            Text(
+                text = stringResource(Res.string.cordn_exposure_differs),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             Text(
                 // An npub, not a hex head. What somebody checks this against is
