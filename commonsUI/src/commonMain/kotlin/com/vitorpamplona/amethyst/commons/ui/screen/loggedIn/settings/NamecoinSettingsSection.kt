@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -519,11 +520,15 @@ private fun ServerTestResultRow(result: ServerTestResult) {
             } else {
                 val errorText = result.error
                 if (errorText != null) {
-                    Text(
-                        text = errorText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.error,
-                    )
+                    // Selectable: the user can paste the exact failure into a
+                    // bug report or a message to the server operator.
+                    SelectionContainer {
+                        Text(
+                            text = errorText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
         }
@@ -1216,11 +1221,13 @@ private fun NamecoinCoreRpcSection(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
-                        Text(
-                            probe.error.orEmpty(),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace,
-                        )
+                        SelectionContainer {
+                            Text(
+                                probe.error.orEmpty(),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        }
                         if (probe.tlsHandshakeFailed && probe.certFingerprint != null) {
                             Spacer(Modifier.height(6.dp))
                             Text(
