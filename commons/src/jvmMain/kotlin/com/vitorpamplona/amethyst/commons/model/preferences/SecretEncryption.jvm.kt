@@ -60,11 +60,6 @@ actual class SecretEncryption internal constructor(
         internal fun defaultKeyFile(): File = File(appDataDir, KEY_FILE_NAME)
     }
 
-    // A Cipher holds the state of the operation in progress, so two coroutines
-    // encrypting through one instance would corrupt each other's output. One
-    // per thread, matching the Android actual.
-    private val ciphers = ThreadLocal.withInitial { Cipher.getInstance(TRANSFORMATION) }
-
     @Volatile
     private var cachedKey: SecretKey? = null
 
@@ -107,9 +102,10 @@ actual class SecretEncryption internal constructor(
 
     actual fun encrypt(bytes: ByteArray): ByteArray {
         try {
-            val cipher = ciphers.get()
-            cipher.init(Cipher.ENCRYPT_MODE, getKey())
-            return cipher.iv + cipher.doFinal(bytes)
+            val iv = ByteArray(GCM_IV_LENGTH).also { SecureRandom().nextBytes(it) }
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.ENCRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
+            return iv + cipher.doFinal(bytes)
         } catch (e: Exception) {
             cachedKey = null
             Log.e(TAG, "encrypt() failed: ${e.message}", e)
@@ -121,7 +117,7 @@ actual class SecretEncryption internal constructor(
         try {
             val iv = bytes.copyOfRange(0, GCM_IV_LENGTH)
             val data = bytes.copyOfRange(GCM_IV_LENGTH, bytes.size)
-            val cipher = ciphers.get()
+            val cipher = Cipher.getInstance(TRANSFORMATION)
             cipher.init(Cipher.DECRYPT_MODE, getKey(), GCMParameterSpec(GCM_TAG_LENGTH_BITS, iv))
             return cipher.doFinal(data)
         } catch (e: Exception) {
