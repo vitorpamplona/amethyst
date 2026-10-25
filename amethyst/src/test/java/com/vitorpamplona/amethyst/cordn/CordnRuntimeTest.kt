@@ -563,6 +563,23 @@ class CordnRuntimeTest {
         }
 
     @Test
+    fun `restoring a backup clears a handoff, the same as adopting a snapshot`() =
+        runBlocking {
+            // A restore deletes the on-disk marker with the rest of the account's
+            // directory. Leaving the in-memory flag set made every coordinator
+            // refuse to open until the app was relaunched.
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+            val archive = runtime.exportArchive("pw")
+            runtime.handoff.markHandedOff()
+
+            runtime.importArchive(archive, "pw")
+
+            assertFalse(runtime.handoff.handedOff.value)
+            assertNotNull(runtime.session(configFor(keyA)))
+        }
+
+    @Test
     fun `restoring replaces this device's groups rather than merging them`() =
         runBlocking {
             // The rule the confirmation dialog states. A merge is what produces

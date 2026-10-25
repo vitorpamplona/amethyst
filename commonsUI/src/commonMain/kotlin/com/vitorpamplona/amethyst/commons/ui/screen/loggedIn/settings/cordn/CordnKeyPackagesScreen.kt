@@ -50,7 +50,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
-import com.vitorpamplona.amethyst.commons.model.cordn.CordnKeyPackageRow
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_coordinators_none
@@ -80,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.Coor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnKeyPackageRow
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch

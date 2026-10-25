@@ -58,11 +58,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.cordn.DiscoveredCoordinator
 import com.vitorpamplona.amethyst.commons.cordn.ui.CordnExposureCard
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cordn.CordnCoverage
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnGroupCreation
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -128,7 +126,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.cordn.coor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnCoverage
 import com.vitorpamplona.cordn.client.GroupExposure
+import com.vitorpamplona.cordn.spec00Coordinator.DiscoveredCoordinator
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl

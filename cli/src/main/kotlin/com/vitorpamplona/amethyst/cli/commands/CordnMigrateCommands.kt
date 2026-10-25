@@ -24,11 +24,14 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.cli.stores.HttpCordnBlobStore
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationException
+import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigration
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationException
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 /**
  * `amy cordn migrate …` — the device handoff, drivable without a phone.
@@ -99,7 +102,7 @@ internal object CordnMigrateCommands {
                     )
 
                 val code =
-                    CordnMigration(ctx.client, ctx.signer, HttpCordnBlobStore(servers))
+                    CordnMigration(ctx.client, ctx.signer, blobStore(servers))
                         .publish(snapshot, relays.toSet())
 
                 Output.emit(
@@ -127,6 +130,17 @@ internal object CordnMigrateCommands {
         }
     }
 
+    /**
+     * cordn-kmp's migration blob store over plain OkHttp. Each `amy` run is its own process, so a
+     * client per call costs nothing that matters.
+     */
+    private fun blobStore(servers: List<String>): BlossomCordnBlobStore {
+        val http = OkHttpClient.Builder().callTimeout(CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS).build()
+        return BlossomCordnBlobStore(servers) { BlossomClient(http) }
+    }
+
+    private const val CALL_TIMEOUT_SECONDS = 60L
+
     private suspend fun import(
         dataDir: DataDir,
         tail: Array<String>,
@@ -144,7 +158,7 @@ internal object CordnMigrateCommands {
         return Context.open(dataDir).use { ctx ->
             try {
                 val snapshot =
-                    CordnMigration(ctx.client, ctx.signer, HttpCordnBlobStore(emptyList()))
+                    CordnMigration(ctx.client, ctx.signer, blobStore(emptyList()))
                         .fetch(code)
 
                 // Replaces, never merges: two devices holding one group's state

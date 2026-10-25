@@ -46,10 +46,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
 import com.vitorpamplona.amethyst.commons.cordn.ui.BusyLabel
 import com.vitorpamplona.amethyst.commons.cordn.ui.SettingsFormBlock
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable
 import com.vitorpamplona.amethyst.commons.resources.cordn_group_unavailable_detail
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSe
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigration
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
@@ -288,7 +290,7 @@ private fun SendSide(
 
                     val migration =
                         CordnMigration(
-                            accountViewModel.account.client,
+                            accountViewModel.account.client.taggedAs(SubPurpose.COORDINATOR_GROUPS),
                             accountViewModel.account.signer,
                             services.cordnBlobStore(servers),
                         )
@@ -372,7 +374,7 @@ private fun ReceiveSide(
                 try {
                     val migration =
                         CordnMigration(
-                            accountViewModel.account.client,
+                            accountViewModel.account.client.taggedAs(SubPurpose.COORDINATOR_GROUPS),
                             accountViewModel.account.signer,
                             services.cordnBlobStore(emptyList()),
                         )

@@ -29,7 +29,6 @@ import com.vitorpamplona.cordn.groups.CordnCredential
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.cordn.spec02Envelopes.CordnMessageReferences
-import com.vitorpamplona.crypto.random.RandomInstance
 
 /**
  * `amy cordn group …`, `invite`, `request`, `welcomes`, `join`, `send`, `fetch`
@@ -94,7 +93,7 @@ internal object CordnGroupCommands {
         val about = args.flag("about") ?: ""
         val icon = args.flag("icon") ?: ""
         val imageUrl = args.flag("image") ?: ""
-        val gid = args.flag("gid") ?: RandomInstance.bytes(16).joinToString("") { "%02x".format(it) }
+        val gid = args.flag("gid") ?: CordnGroupManager.newGid()
         val admins =
             args
                 .flag("admin")
@@ -107,7 +106,10 @@ internal object CordnGroupCommands {
         return CordnRun.withSession(dataDir, args) { _, scope ->
             val metadata =
                 try {
-                    CordnGroupMetadata(name = name, description = about, adminPubkeys = admins, icon = icon, imageUrl = imageUrl)
+                    // Naming any admin makes the group administered, and then the creator has to be
+                    // on the list too: without it they could not invite anyone into their own group.
+                    val adminPubkeys = CordnGroupMetadata.adminsForNewGroup(scope.manager.accountPubKey, admins, egalitarian = admins.isEmpty())
+                    CordnGroupMetadata(name = name, description = about, adminPubkeys = adminPubkeys, icon = icon, imageUrl = imageUrl)
                 } catch (e: IllegalArgumentException) {
                     return@withSession Output.error("bad_args", e.message ?: "bad group metadata")
                 }
@@ -264,13 +266,11 @@ internal object CordnGroupCommands {
                     ?: ref?.let { CordnGroupRef.decode(it).gid }
                     ?: return@withSession Output.error("bad_args", "cordn request needs --gid or --ref cordn1…")
 
-            val using =
-                keyPackageRef
-                    ?: scope.keyPackages.published.value
-                        .firstOrNull()
-                    ?: scope.keyPackages.publishNew().keyPackageRef
-
-            val at = scope.manager.requestToJoin(target, using)
+            // A freshly published package unless one was named: a held one may already have been
+            // taken by somebody's invitation, and asking with a spent key asks to be added with
+            // nothing anyone can use (CordnSession.requestToJoin).
+            val using = keyPackageRef ?: scope.keyPackages.publishNew().keyPackageRef
+            val at = scope.session.requestToJoin(target, using)
             Output.emit(
                 mapOf(
                     "coordinator" to scope.config.pubKey,

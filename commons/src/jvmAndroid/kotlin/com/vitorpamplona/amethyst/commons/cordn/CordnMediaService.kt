@@ -25,16 +25,14 @@ import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuild
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnEncryptedMedia
-import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Request
 
 /**
- * Sending and fetching cordn attachments.
+ * Sending cordn attachments. Fetching one is the media layer's (`EncryptedBlobInterceptor`).
  *
  * ## What each party sees
  *
@@ -101,11 +99,9 @@ class CordnMediaService(
         withContext(Dispatchers.IO) {
             val server = serverBaseUrl.ifBlank { return@withContext null }
 
-            // Derived from the group's epoch exporter, never sent: that is what
-            // spec/applications/encrypted-media.md §3.1 requires, and what lets
-            // any cordn client open the blob from group state alone.
-            val fileKey = CordnMediaEncryption.mediaKey(group)
-            val sealed = CordnMediaEncryption.encrypt(bytes, fileKey, mimeType, filename)
+            // Under the group's current epoch key, derived from its exporter and never sent
+            // (encrypted-media.md §3.1): cordn-kmp's rule, so any cordn client opens it.
+            val sealed = CordnMediaEncryption.sealFor(group, bytes, mimeType, filename)
             CordnMediaTag.build(
                 media = sealed,
                 url = put(sealed, server),
@@ -140,45 +136,4 @@ class CordnMediaService(
 
         return result.url ?: throw IllegalStateException("the blob server returned no URL")
     }
-
-    /**
-     * Fetches [attachment] and opens it with the key it carries.
-     *
-     * Throws if the bytes do not authenticate. That is the right outcome and
-     * not a rare one: a blob host can serve anything it likes for a URL, and
-     * the AEAD tag plus the plaintext hash are the only reasons to believe
-     * what came back is what was sent.
-     */
-    suspend fun download(
-        group: MlsGroup,
-        attachment: CordnMediaAttachment,
-    ): ByteArray =
-        withContext(Dispatchers.IO) {
-            val request =
-                Request
-                    .Builder()
-                    .url(attachment.url)
-                    .get()
-                    .build()
-            val response =
-                httpClients
-                    .okHttpClientForImage(attachment.url)
-                    .newCall(request)
-                    .execute()
-
-            val body =
-                response.use {
-                    check(it.isSuccessful) { "the blob server answered ${it.code}" }
-                    it.body.bytes()
-                }
-
-            CordnMediaEncryption.decrypt(
-                ciphertext = body,
-                fileKey = CordnMediaEncryption.mediaKey(group),
-                nonce = attachment.nonceBytes,
-                plaintextHash = attachment.hashBytes,
-                mimeType = attachment.mimeType,
-                filename = attachment.filename,
-            )
-        }
 }

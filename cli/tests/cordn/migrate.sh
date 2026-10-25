@@ -16,7 +16,8 @@
 #
 # The blob server is a throwaway python stand-in for Blossom: PUT /upload
 # stores by sha256, GET /<sha256> serves it back. Enough to exercise the real
-# HttpCordnBlobStore, and deliberately not a Blossom implementation.
+# blob store (cordn-kmp's CordnTipBlobStore over the app's BlossomClient), and
+# deliberately not a Blossom implementation.
 #
 # Usage: cli/tests/cordn/migrate.sh
 set -uo pipefail
