@@ -431,7 +431,9 @@ fun MarmotGroupInfoScreen(
                         member = member,
                         isMe = isMe,
                         isAdmin = isAdmin,
-                        canRemove = !isMe,
+                        // MIP-03: a non-admin may commit only a self-Update or a
+                        // SelfRemove, so the library refuses their removal of anyone else.
+                        canRemove = isMeAdmin && !isMe,
                         canPromote = canPromote,
                         canDemote = canDemote,
                         accountViewModel = accountViewModel,
