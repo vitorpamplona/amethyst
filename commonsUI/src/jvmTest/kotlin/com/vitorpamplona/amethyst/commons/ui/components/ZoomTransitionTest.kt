@@ -29,6 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -268,6 +271,83 @@ class ZoomTransitionTest {
             val closing = scene.render(860 * ms)
             assertTrue(closing.isRed(135, 135), "it lands where the thumbnail is now")
             assertFalse(closing.isRed(35, 35), "not where it was")
+        } finally {
+            scene.close()
+        }
+    }
+
+    /**
+     * A viewer opened from thumbnail "a" and paged to "b": it closes into b's thumbnail, and fades
+     * for media the note doesn't show, instead of flying b into a's place.
+     */
+    @Test
+    fun aPagedViewerClosesIntoTheThumbnailOfTheMediaOnScreen() {
+        var group: ZoomSourceGroup? = null
+        var a: ZoomSourceAnchor? = null
+        var showB by mutableStateOf(true)
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                ProvideZoomSourceGroup {
+                    group = LocalZoomSourceGroup.current
+                    Box(Modifier.fillMaxSize()) {
+                        val anchorA = rememberZoomSourceAnchor("a")
+                        a = anchorA
+                        Box(Modifier.offset(10.dp, 10.dp).size(50.dp).zoomSourceAnchor(anchorA))
+                        if (showB) {
+                            val anchorB = rememberZoomSourceAnchor("b")
+                            Box(Modifier.offset(110.dp, 110.dp).size(50.dp).zoomSourceAnchor(anchorB))
+                        }
+                    }
+                }
+            }
+        try {
+            scene.render(0)
+            assertEquals(thumbnail, zoomSourceFor("a", "a", a, group)!!.bounds)
+            assertEquals(Rect(110f, 110f, 160f, 160f), zoomSourceFor("b", "a", a, group)!!.bounds)
+            assertEquals(ZoomSource.Offscreen, zoomSourceFor("c", "a", a, group), "not in the note: fade")
+            assertEquals(ZoomSource.Offscreen, zoomSourceFor("b", "a", a, null), "no group: fade")
+
+            showB = false
+            scene.render(16_000_000L)
+            assertEquals(ZoomSource.Offscreen, zoomSourceFor("b", "a", a, group), "b's thumbnail left the screen")
+        } finally {
+            scene.close()
+        }
+    }
+
+    @Test
+    fun closingOnMediaWithNoThumbnailFadesInPlace() {
+        var transition: ZoomTransition? = null
+        var current = ZoomSource(thumbnail)
+        val scene =
+            ImageComposeScene(200, 200, Density(1f)) {
+                val t = rememberZoomTransition({ current }, onDismissed = {})
+                transition = t
+                Box(Modifier.fillMaxSize().zoomTransitionContainer(t)) {
+                    Box(Modifier.fillMaxSize().zoomTransitionLayer(t)) {
+                        Box(Modifier.fillMaxSize().background(Color.Red).onGloballyPositioned { t.onMediaPositioned(it, null) })
+                    }
+                }
+            }
+        try {
+            val ms = 1_000_000L
+            scene.render(0)
+            scene.render(16 * ms)
+            scene.render(32 * ms)
+            scene.render(600 * ms)
+            assertEquals(1f, transition!!.progress)
+
+            current = ZoomSource.Offscreen
+            transition.dismiss()
+            assertEquals(ZoomSource.Offscreen, transition.sourceBounds)
+
+            scene.render(616 * ms)
+            scene.render(632 * ms)
+            val closing = Bitmap.makeFromImage(scene.render(740 * ms))
+            val corner = closing.getColor(190, 190)
+            val alpha = corner ushr 24
+            assertTrue(alpha in 1..254 && (corner shr 16) and 0xFF > 200, "it stays full size, half faded: ${Integer.toHexString(corner)}")
+            assertEquals(corner, closing.getColor(35, 35), "and does not shrink into the old thumbnail")
         } finally {
             scene.close()
         }
