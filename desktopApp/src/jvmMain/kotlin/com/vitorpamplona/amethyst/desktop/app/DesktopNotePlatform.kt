@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.isAnimatedGifUrl
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
@@ -84,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
@@ -191,7 +194,8 @@ object DesktopNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) {
         var showViewer by remember { mutableStateOf(false) }
-        val source = rememberZoomSourceAnchor()
+        // Keyed by the media, so a viewer opened from a sibling thumbnail can close into this one.
+        val source = rememberZoomSourceAnchor(content)
         val cornerRadius = if (roundedCorner) 12.dp else 0.dp
         val shape = RoundedCornerShape(cornerRadius)
         val url = content.mediaUrl() ?: return
@@ -331,11 +335,21 @@ object DesktopNotePlatform : NotePlatform {
         sourceCornerRadius: Dp,
         onDismiss: () -> Unit,
     ) {
-        val urls = remember(allImages) { allImages.mapNotNull { it.mediaUrl() } }
+        val viewable = remember(allImages) { allImages.filter { it.mediaUrl() != null } }
+        val urls = remember(viewable) { viewable.mapNotNull { it.mediaUrl() } }
         val start = remember(urls, imageUrl) { urls.indexOf(imageUrl.mediaUrl()).coerceAtLeast(0) }
         if (urls.isEmpty()) return
 
-        val transition = rememberZoomTransition(source, sourceCornerRadius, onDismiss)
+        // Closes into the thumbnail of the media on screen, not the one clicked: after paging to
+        // another image, that one's own thumbnail, or a fade when the note doesn't show it.
+        var shown by remember { mutableIntStateOf(start) }
+        val group = LocalZoomSourceGroup.current
+        val transition =
+            rememberZoomTransition(
+                source = { zoomSourceFor(viewable.getOrNull(shown), viewable.getOrNull(start), source, group) },
+                sourceCornerRadius = sourceCornerRadius,
+                onDismissed = onDismiss,
+            )
 
         Dialog(
             onDismissRequest = transition::dismiss,
@@ -348,7 +362,7 @@ object DesktopNotePlatform : NotePlatform {
                 ),
         ) {
             Box(Modifier.fillMaxSize()) {
-                LightboxOverlay(urls = urls, initialIndex = start, onDismiss = transition::dismiss, transition = transition)
+                LightboxOverlay(urls = urls, initialIndex = start, onDismiss = transition::dismiss, transition = transition, onIndexChanged = { shown = it })
             }
         }
     }

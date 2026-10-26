@@ -79,6 +79,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.localJavaFile
+import com.vitorpamplona.amethyst.commons.ui.components.LocalZoomSourceGroup
 import com.vitorpamplona.amethyst.commons.ui.components.SlidingCarousel
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerBackButton
 import com.vitorpamplona.amethyst.commons.ui.components.ViewerControlsRow
@@ -88,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewerControlsVisibility
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
+import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -111,8 +113,19 @@ fun ZoomableImageDialog(
     accountViewModel: AccountViewModel,
     sourceCornerRadius: Dp = 0.dp,
 ) {
-    // The grow-from-thumbnail transition, shared with the desktop viewer.
-    val transition = rememberZoomTransition(source, sourceCornerRadius, onDismiss)
+    val pagerState: PagerState =
+        rememberPagerState(initialPage = allImages.indexOf(imageUrl).coerceAtLeast(0)) { allImages.size }
+
+    // The grow-from-thumbnail transition, shared with the desktop viewer. It closes into the
+    // thumbnail of the media on screen, not the one tapped: after paging to another image, that
+    // one's own thumbnail, or a fade when the note doesn't show it.
+    val group = LocalZoomSourceGroup.current
+    val transition =
+        rememberZoomTransition(
+            source = { zoomSourceFor(allImages.getOrNull(pagerState.currentPage), imageUrl, source, group) },
+            sourceCornerRadius = sourceCornerRadius,
+            onDismissed = onDismiss,
+        )
 
     // ZoomState of the currently-visible image, hoisted from RenderImageOrVideo so the
     // grow/shrink animation can read live scale/offset and start the exit from the
@@ -174,6 +187,7 @@ fun ZoomableImageDialog(
             DialogContent(
                 allImages = allImages,
                 imageUrl = imageUrl,
+                pagerState = pagerState,
                 transition = transition,
                 currentZoomState = { currentZoomState },
                 onZoomStateChanged = { currentZoomState = it },
@@ -187,13 +201,12 @@ fun ZoomableImageDialog(
 private fun DialogContent(
     allImages: ImmutableList<BaseMediaContent>,
     imageUrl: BaseMediaContent,
+    pagerState: PagerState,
     transition: ZoomTransition,
     currentZoomState: () -> ZoomState?,
     onZoomStateChanged: (ZoomState) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
-    val pagerState: PagerState = rememberPagerState { allImages.size }
-
     val onContentPositioned: (LayoutCoordinates, Float?) -> Unit = transition::onMediaPositioned
     val onDismiss: () -> Unit = transition::dismiss
 

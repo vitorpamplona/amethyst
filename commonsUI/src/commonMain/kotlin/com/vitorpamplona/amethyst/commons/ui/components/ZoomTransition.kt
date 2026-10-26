@@ -24,6 +24,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
@@ -75,6 +77,11 @@ data class ZoomSource(
         offsetX: Float,
         offsetY: Float,
     ) = ZoomSource(bounds.translate(offsetX, offsetY), visibleBounds.translate(offsetX, offsetY))
+
+    companion object {
+        /** No thumbnail on screen to grow out of or shrink into: the transition fades instead. */
+        val Offscreen = ZoomSource(Rect.Zero)
+    }
 }
 
 /**
@@ -107,11 +114,79 @@ class ZoomSourceAnchor internal constructor() {
     }
 }
 
+/**
+ * Tracks a thumbnail. With a [key] (the media it shows), it also joins the [LocalZoomSourceGroup]
+ * around it, so a viewer opened from a sibling thumbnail can close into this one when the user
+ * pages to [key].
+ */
 @Composable
-fun rememberZoomSourceAnchor(): ZoomSourceAnchor {
+fun rememberZoomSourceAnchor(key: Any? = null): ZoomSourceAnchor {
     val viewport = LocalZoomViewport.current
-    return remember { ZoomSourceAnchor() }.also { it.viewport = viewport }
+    val anchor = remember { ZoomSourceAnchor() }.also { it.viewport = viewport }
+    val group = LocalZoomSourceGroup.current
+    DisposableEffect(group, key, anchor) {
+        if (group != null && key != null) {
+            group.add(key, anchor)
+            onDispose { group.remove(key, anchor) }
+        } else {
+            onDispose {}
+        }
+    }
+    return anchor
 }
+
+/**
+ * The thumbnails of the media shown side by side (a note's text and galleries, a picture grid), by
+ * the media each one shows. A viewer opened from one of them pages through all of the media; when
+ * it closes on another one, it shrinks into that one's thumbnail rather than flying the media into
+ * the place of the thumbnail it opened from. See [zoomSourceFor].
+ */
+@Stable
+class ZoomSourceGroup {
+    private val anchors = HashMap<Any, ZoomSourceAnchor>()
+
+    fun anchorFor(key: Any): ZoomSourceAnchor? = anchors[key]
+
+    internal fun add(
+        key: Any,
+        anchor: ZoomSourceAnchor,
+    ) {
+        anchors[key] = anchor
+    }
+
+    internal fun remove(
+        key: Any,
+        anchor: ZoomSourceAnchor,
+    ) {
+        if (anchors[key] === anchor) anchors.remove(key)
+    }
+}
+
+val LocalZoomSourceGroup = staticCompositionLocalOf<ZoomSourceGroup?> { null }
+
+/** Gathers the thumbnails [content] draws into one [ZoomSourceGroup]. */
+@Composable
+fun ProvideZoomSourceGroup(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalZoomSourceGroup provides remember { ZoomSourceGroup() }, content = content)
+}
+
+/**
+ * Where a viewer that pages through several media closes while it shows [shown]: the thumbnail it
+ * opened from ([openedAnchor], for [opened]), else [shown]'s own thumbnail in [group], else
+ * [ZoomSource.Offscreen], a fade. Never the opening thumbnail for other media: that would fly it
+ * into the wrong place.
+ */
+fun zoomSourceFor(
+    shown: Any?,
+    opened: Any?,
+    openedAnchor: ZoomSourceAnchor?,
+    group: ZoomSourceGroup?,
+): ZoomSource? =
+    if (shown == null || shown == opened) {
+        openedAnchor?.capture()
+    } else {
+        group?.anchorFor(shown)?.capture() ?: ZoomSource.Offscreen
+    }
 
 /** Marks the thumbnail [anchor] tracks: the media's clipped box, before any padding around it. */
 fun Modifier.zoomSourceAnchor(anchor: ZoomSourceAnchor): Modifier = onPlaced { anchor.coordinates = it }
