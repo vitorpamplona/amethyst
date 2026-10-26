@@ -84,6 +84,25 @@
   "sinceLastTag": {
     "tag": "v1.20.0",
     "since": "2026-10-24T16:25:42-04:00",
-    "translators": []
+    "translators": [
+      {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
+        ]
+      },
+      {
+        "user": "summoner001",
+        "languages": [
+          "Hungarian"
+        ]
+      },
+      {
+        "user": "fiddleway",
+        "languages": [
+          "Uzbek"
+        ]
+      }
+    ]
   }
 }

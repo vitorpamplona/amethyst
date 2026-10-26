@@ -54,6 +54,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,8 +120,12 @@ fun LightboxOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     transition: ZoomTransition? = null,
+    onIndexChanged: (Int) -> Unit = {},
 ) {
     var currentIndex by remember { mutableIntStateOf(initialIndex.coerceIn(0, urls.lastIndex)) }
+    // The viewer's transition closes into the thumbnail of the media on screen.
+    val currentOnIndexChanged by rememberUpdatedState(onIndexChanged)
+    LaunchedEffect(currentIndex) { currentOnIndexChanged(currentIndex) }
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var menuExpanded by remember { mutableStateOf(false) }

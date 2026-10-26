@@ -29,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.moderation.notifications.nowEpochSecon
 import com.vitorpamplona.amethyst.commons.notifications.NotificationMessage
 import com.vitorpamplona.amethyst.commons.notifications.composers.MentionNotificationComposer
 import com.vitorpamplona.amethyst.commons.notifications.composers.StandardNotificationComposer
+import com.vitorpamplona.amethyst.commons.notifications.dal.NotificationFeedFilter
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications
 import com.vitorpamplona.amethyst.commons.resources.desktop_notifications_denied
@@ -81,7 +83,8 @@ class DesktopNotifications(
     /**
      * Notifies [account] of new events for it while the window is not focused. Watches the event
      * stream only while notifications are on (they start off), and loads the native notifier off
-     * the UI thread the first time they are.
+     * the UI thread the first time they are. A toast goes out only for what the Notifications tab
+     * would list under its current top-nav filter, read at each event so a change applies at once.
      */
     fun watch(
         account: Account,
@@ -101,7 +104,7 @@ class DesktopNotifications(
                         authorOf = { id -> cache.getNoteIfExists(id)?.event?.pubKey },
                         displayNameOf = { pubKey -> cache.getUserIfExists(pubKey)?.toBestDisplayName() },
                         compose = { event -> composeNotification(account, event) },
-                        isAcceptable = { event -> cache.getNoteIfExists(event.id)?.let { account.isAcceptable(it) } ?: true },
+                        isAcceptable = notifiesAbout(account),
                         isWindowFocused = isWindowFocused,
                         sessionStartSec = sessionStartSec,
                         scope = this,
@@ -127,6 +130,16 @@ class DesktopNotifications(
     companion object {
         private const val BUNDLE_ID = "com.vitorpamplona.amethyst.desktop"
         private const val APP_LABEL = "Amethyst"
+
+        /**
+         * Whether a note may raise a toast for [account]: the Notifications tab would list it under
+         * the top-nav filter picked right now (Curated, All Follows, a list...), and its author is not
+         * muted, blocked or reported.
+         */
+        internal fun notifiesAbout(account: Account): (Note) -> Boolean {
+            val feedFilter = NotificationFeedFilter(account)
+            return { note -> account.isAcceptable(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
+        }
     }
 }
 

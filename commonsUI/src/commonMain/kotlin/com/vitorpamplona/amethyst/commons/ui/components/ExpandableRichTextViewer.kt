@@ -83,6 +83,38 @@ fun ExpandableRichTextViewer(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    ExpandableTextViewer(content, modifier, backgroundColor, id) { text, textModifier ->
+        RichTextViewer(
+            text,
+            canPreview,
+            quotesLeft,
+            textModifier,
+            tags,
+            backgroundColor,
+            callbackUri,
+            authorPubKey,
+            accountViewModel,
+            nav,
+        )
+    }
+}
+
+/**
+ * Crops [content] to a preview with "Show More" under it, and "Show Less" once expanded, drawing
+ * the text through [displayText]. [ExpandableRichTextViewer] hands it the rich-text viewer; a
+ * kind whose body is always one format (a markdown chapter) hands it that renderer directly.
+ *
+ * [displayText] gets the visible text and the modifier to lay it out with, which carries the
+ * room the inline "Show Less" button sits in.
+ */
+@Composable
+fun ExpandableTextViewer(
+    content: String,
+    modifier: Modifier,
+    backgroundColor: MutableState<Color>,
+    id: String,
+    displayText: @Composable (String, Modifier) -> Unit,
+) {
     var showFullText by
         rememberSaveable {
             val cached = ShowFullTextCache.cache[id]
@@ -131,17 +163,9 @@ fun ExpandableRichTextViewer(
     // One call site for the text in every state: expanding, collapsing or pinning never throws away
     // what it has laid out (loaded images, players). The inline button sits in the text's padding.
     Box(modifier = revealTop?.modifier ?: Modifier) {
-        RichTextViewer(
+        displayText(
             text,
-            canPreview,
-            quotesLeft,
             if (showLessInline) modifier.align(Alignment.TopStart).padding(bottom = ShowLessRowHeight) else modifier.align(Alignment.TopStart),
-            tags,
-            backgroundColor,
-            callbackUri,
-            authorPubKey,
-            accountViewModel,
-            nav,
         )
 
         if (content.length > whereToCut && !showFullText) {

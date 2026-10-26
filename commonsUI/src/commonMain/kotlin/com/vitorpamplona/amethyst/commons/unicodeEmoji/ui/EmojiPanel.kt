@@ -42,8 +42,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.insets.KeyboardState
+import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.insets.keyboardAsState
 
 /** Which composer the docked panel is writing into, how, and which [EmojiPanelHost] shows it. */
@@ -68,8 +71,12 @@ internal class EmojiPanelRequest(
 class EmojiPanelState {
     internal var request by mutableStateOf<EmojiPanelRequest?>(null)
 
+    /** Focus is inside the panel: its search field, which brings up the keyboard of its own. */
+    internal var focused by mutableStateOf(false)
+
     fun close() {
         request = null
+        focused = false
     }
 }
 
@@ -83,16 +90,21 @@ internal val LocalEmojiPanelRegion = staticCompositionLocalOf<Any?> { null }
  *
  * The panel is the fallback for when there is no on-screen keyboard to pick emoji from: Desktop,
  * or a phone with a hardware keyboard or with the keyboard put away. So it closes as soon as the
- * keyboard comes up (a tap in the text), and the buttons hide while the keyboard is up. Unlike a
- * menu it stays open between picks, so several emoji go in one after another.
+ * keyboard comes up for anything but the panel's own search (a tap in the text), and the buttons
+ * hide while the keyboard is up. Unlike a menu it stays open between picks, so several emoji go in
+ * one after another.
  */
 @Composable
 fun EmojiPanelScope(content: @Composable () -> Unit) {
     val state = remember { EmojiPanelState() }
-    val keyboard by keyboardAsState()
+    val keyboard = keyboardAsState()
 
-    LaunchedEffect(keyboard) {
-        if (keyboard == KeyboardState.Opened) state.close()
+    // The search field takes focus on the tap, before the keyboard's inset starts to grow, so a
+    // keyboard brought up by the search never reads as one brought up by the text. Focus moving
+    // from the search back to the text, with the keyboard still up, closes the panel too.
+    LaunchedEffect(state, keyboard) {
+        snapshotFlow { keyboard.value == KeyboardState.Opened && !state.focused }
+            .collect { if (it) state.close() }
     }
     CompositionLocalProvider(LocalEmojiPanel provides state, content = content)
 }
@@ -127,7 +139,9 @@ fun EmojiPanelHost(
     }
 
     CompositionLocalProvider(LocalEmojiPanelRegion provides region) {
-        Column(Modifier.fillMaxSize()) {
+        // While the panel's search has the keyboard up, the panel and the screen above it sit on
+        // top of the keyboard. The padding consumes the inset, so the screen does not add its own.
+        Column(Modifier.fillMaxSize().then(if (open) Modifier.imePaddingSafe() else Modifier)) {
             // The panel covers the navigation bar, so the screen above it leaves no room for one.
             Box(Modifier.weight(1f).then(if (open) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
                 content()
@@ -149,7 +163,10 @@ private fun DockedPanel(
     // closes the panel before it leaves the screen.
     PlatformBackHandler { state.close() }
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().onFocusChanged { state.focused = it.hasFocus },
+    ) {
         Column(Modifier.navigationBarsPadding()) {
             HorizontalDivider()
             EmojiPicker(
@@ -163,7 +180,10 @@ private fun DockedPanel(
     }
 }
 
-/** The composer's button for the docked panel: toggles it, and hides while the keyboard is up. */
+/**
+ * The composer's button for the docked panel: toggles it, and hides while the keyboard is up unless
+ * its panel is open (the keyboard is then the panel's search's).
+ */
 @Composable
 internal fun EmojiPanelButton(
     host: EmojiPanelState,
@@ -188,18 +208,18 @@ internal fun EmojiPanelButton(
         if (host.request?.owner === owner) host.close()
     }
 
-    // The on-screen keyboard has an emoji key of its own.
-    if (keyboard == KeyboardState.Opened) return
-
     val open = host.request?.owner === owner
+
+    // The on-screen keyboard has an emoji key of its own.
+    if (keyboard == KeyboardState.Opened && !open) return
+
     Box(modifier) {
         EmojiPickerIcon(if (open) MaterialTheme.colorScheme.primary else tint) {
-            host.request =
-                if (open) {
-                    null
-                } else {
-                    EmojiPanelRequest(owner, region, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
-                }
+            if (open) {
+                host.close()
+            } else {
+                host.request = EmojiPanelRequest(owner, region, emojiPacks, { pickUnicode(it) }, { pickCustom(it) })
+            }
         }
     }
 }

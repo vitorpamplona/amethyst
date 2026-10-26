@@ -85,6 +85,10 @@ fun Items9() = GridPreviewTemplate(9)
 @Preview(device = "spec:width=300px,height=300px,dpi=440")
 fun Items10() = GridPreviewTemplate(10)
 
+/**
+ * A square-ish grid of [itemCount] cells. Its cells share one [ZoomSourceGroup]: these grids hold
+ * a post's pictures, and the viewer opened from one closes into whichever one it ends on.
+ */
 @Composable
 fun AutoNonlazyGrid(
     itemCount: Int,
@@ -92,7 +96,9 @@ fun AutoNonlazyGrid(
     content: @Composable (Int) -> Unit,
 ) {
     if (itemCount > 0) {
-        NonlazyGrid(ceil(sqrt(itemCount.toDouble())).toInt(), itemCount, modifier, content)
+        ProvideZoomSourceGroup {
+            NonlazyGrid(ceil(sqrt(itemCount.toDouble())).toInt(), itemCount, modifier, content)
+        }
     }
 }
 
