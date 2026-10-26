@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.ui.components
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.view.Window
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -31,6 +32,7 @@ import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import coil3.BitmapImage
 import coil3.Image
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
@@ -96,6 +98,7 @@ fun Image.hasGainmap(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.U
  * Whether the video track the player is actually rendering carries an HDR transfer (HLG or PQ).
  * Only selected tracks count: an adaptive stream can offer an HDR rendition the selector skipped.
  */
+@OptIn(UnstableApi::class)
 fun Tracks.hasSelectedHdrVideo(): Boolean =
     groups.any { group ->
         group.type == C.TRACK_TYPE_VIDEO &&
