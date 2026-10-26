@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
 import com.vitorpamplona.amethyst.commons.ui.playback.audioSquare
@@ -66,6 +67,7 @@ import com.vitorpamplona.amethyst.service.playback.composable.controls.fullscree
 import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.LoadedMediaItem
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.AudioPlayingAnimation
 import com.vitorpamplona.amethyst.service.playback.composable.wavefront.rememberIsAudioTrack
+import com.vitorpamplona.amethyst.ui.components.RequestHdrFor
 
 internal const val SKIP_SECONDS = 10
 internal const val SKIP_MILLIS = SKIP_SECONDS * 1000L
@@ -208,10 +210,16 @@ fun RenderVideoPlayer(
                     },
                 ),
     ) {
+        // Fullscreen plays into a SurfaceView so the decoder hands HDR frames straight to the
+        // compositor. The feed keeps its TextureView, which clips, scales and sits in a lazy
+        // list the way a SurfaceView can't; HDR is only requested where the surface can show it.
+        val surfaceType = if (isFullscreen) SURFACE_TYPE_SURFACE_VIEW else SURFACE_TYPE_TEXTURE_VIEW
+        if (surfaceType == SURFACE_TYPE_SURFACE_VIEW) RequestHdrFor(controllerState.controller)
+
         ContentFrame(
             player = controllerState.controller,
             modifier = videoModifier,
-            surfaceType = SURFACE_TYPE_TEXTURE_VIEW,
+            surfaceType = surfaceType,
             contentScale = contentScale,
             // Transparent shutter — media3's default is an opaque black Box that flashes
             // until EVENT_RENDERED_FIRST_FRAME fires. Letting the layer beneath show

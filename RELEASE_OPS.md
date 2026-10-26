@@ -21,6 +21,7 @@ A release is one tag push that fans out to these distribution channels:
 | **GitHub Releases** | Automatic — the `Create Release Assets` workflow builds + signs everything on the `v*` tag | CI |
 | **Google Play** | **Manual** — download the signed AAB from the GH Release, upload in Play Console | Maintainer |
 | **F-Droid** | **Pull** — F-Droid's build server builds the `fdroid` flavor from source when it sees the new tag | F-Droid (we just maintain the recipe + metadata) |
+| **Accrescent** | **Manual** — upload the GH Release's signed `.apks` set in the Accrescent console | Maintainer |
 | **Zapstore** | `amy releases publish` signs the APK's NIP-82 events (as `zsp` did), reading `zapstore.yaml`, with Amethyst's nsec | Maintainer |
 | **Orchard** | The same `amy releases publish` run signs NIP-82 events naming the GitHub Release's `.flatpak` bundles | Maintainer |
 | **Desktop self-update** | The same `amy releases publish` run signs the NIP-82 events the desktop app updates from | Maintainer |
@@ -28,7 +29,7 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-Nothing here publishes to Maven Central. Quartz and the other libraries (crypto-kmp,
+Nothing here publishes to Maven Central. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
 mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
 `create-release.yml`; an Amethyst release only consumes the versions pinned in
 `gradle/libs.versions.toml`, so those must already be on Maven Central when you tag.
@@ -134,11 +135,12 @@ git -c credential.helper= -c credential.helper='!gh auth git-credential' push up
 ```
 
 When the `Create Release Assets` workflow finishes (~25–30 min) the GH Release
-holds **47 assets**, per the asset-name contract:
+holds **49 assets**, per the asset-name contract:
 
-- **Android (13):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
-  `.apks` set for Accrescent
-  (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`)
+- **Android (15):** 5 Google Play APKs + 5 F-Droid APKs + 2 AABs + the F-Droid
+  `.apks` set for Accrescent + the 2 R8 mappings
+  (`amethyst-googleplay-*-v…apk` / `.aab`, `amethyst-fdroid-*-v…apk` / `.aab` / `.apks`,
+  `amethyst-{googleplay,fdroid}-mapping-v….txt.gz`)
 - **Desktop (14):** macOS DMG (**arm64 only** — there is no Intel DMG), Windows
   MSI (x64 only — **no arm64 MSI**) + portable zip (x64, arm64), and Linux
   DEB/RPM/AppImage/flatpak/tar.gz in both x64 and arm64. BUILDING.md § Release
@@ -169,6 +171,15 @@ that old (§ 7).
    staged-rollout track we're using) → create release → upload the AAB.
 3. The release notes field can reuse the `docs/changelog` text.
 4. Roll out.
+
+### Accrescent — manual upload
+Accrescent takes neither AABs nor single APKs: it wants a signed set of split APKs. The release
+workflow builds it from the `fdroid` flavor with bundletool and signs it with the release keystore
+(the "Build Accrescent APK set" step), and warns when it is over Accrescent's 128 MiB limit.
+Accrescent has no publish API, so:
+
+1. Download `amethyst-fdroid-v<version>.apks` from the GH Release.
+2. Upload it in the [Accrescent console](https://console.accrescent.app).
 
 ### F-Droid — pull / build-from-source
 F-Droid does **not** accept an upload from us. Its build server polls the repo,
@@ -212,14 +223,40 @@ One command announces the release on Nostr (NIP-82) for three readers, each unde
 The three share the key and the event kinds, so they must never share an app id: one publish would
 replace another's release.
 
-**Each release**, after the GH Release assets exist, download them into one folder and run from
-the repo root (for `zapstore.yaml`), logged in to amy with Amethyst's nsec:
+**Each release**, after the GH Release assets exist, publish from the repo root (for
+`zapstore.yaml`) with an `amy` at least as new as the release. The Homebrew `amy` lags until
+BrewTestBot merges its bump, so build it from the tag (`./gradlew :cli:installDist`, then
+`cli/build/install/amy/bin/amy`) or take `amy-X.Y.Z-*` from the release. Older builds miss what the
+readers now require: the release's `f` (platform) tags, which relay.zapstore.dev refuses a release
+without, and the `Content-Digest` header cdn.zapstore.dev refuses an upload without.
+
+Keep Amethyst's key in its own amy account, so your personal account stays the default, and log
+in to it in your own terminal, never through an agent's shell, whose commands and output it keeps:
 
 ```bash
-gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --pattern 'amethyst-googleplay-arm64-v8a-*.apk' --dir /tmp/release-vX.Y.Z
-amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev --dry-run   # check
-amy releases publish /tmp/release-vX.Y.Z --version X.Y.Z --notes-file notes.md --blossom https://cdn.zapstore.dev
+amy --account amethyst login <nsec | ncryptsec --password …>   # once
+amy --account amethyst whoami   # npub142gywvjkq0dv6nupggyn2euhx4nduwc7yz5f24ah9rpmunr2s39se3xrj0
 ```
+
+amy hashes every file it names, so it needs them on disk, and the desktop installers are about
+3 GB. Publish one app at a time, each from its own folder; the desktop step can wait for a fast
+connection:
+
+```bash
+NOTES=docs/changelog/vX.Y.ZZ.md
+# Zapstore: the arm64 APK (~60 MB)
+gh release download vX.Y.Z --pattern 'amethyst-googleplay-arm64-v8a-*.apk' --dir /tmp/release-vX.Y.Z/android
+amy --account amethyst releases publish /tmp/release-vX.Y.Z/android --only android --version X.Y.Z --notes-file $NOTES --blossom https://cdn.zapstore.dev --dry-run
+# Orchard: the two Flatpak bundles (~0.5 GB)
+gh release download vX.Y.Z --pattern 'amethyst-desktop-*.flatpak' --dir /tmp/release-vX.Y.Z/flatpak
+amy --account amethyst releases publish /tmp/release-vX.Y.Z/flatpak --only flatpak --version X.Y.Z --notes-file $NOTES --dry-run
+# Desktop self-update: the 12 installers (~3 GB)
+gh release download vX.Y.Z --pattern 'amethyst-desktop-*' --dir /tmp/release-vX.Y.Z/desktop
+amy --account amethyst releases publish /tmp/release-vX.Y.Z/desktop --only desktop --version X.Y.Z --notes-file $NOTES --dry-run
+```
+
+Read each dry run (`--json` prints the signed events), then run the same command without
+`--dry-run`. The desktop download also brings the `.flatpak` bundles; `--only desktop` skips them.
 
 For each app with files in the folder, it signs one kind 3063 asset per file, then the kind 30063
 release that names them, and publishes to that app's relays. `--listing` also (re)publishes the kind 32267 listing: do it when
@@ -246,7 +283,9 @@ workflow classifies tags) goes out on the `beta` channel, which none of the read
 `--only android`, `--only flatpak` or `--only desktop` publishes one app.
 
 `zsp publish` still works for the APK if `amy` is unavailable: it reads the same `zapstore.yaml`,
-with the relays in the `RELAY_URLS` env var.
+with the relays in the `RELAY_URLS` env var. It needs zsp 0.4.8 or later: older versions put the
+platform only on the asset, and relay.zapstore.dev refuses their release ("platform must include
+android-arm64-v8a").
 
 ### Orchard
 Orchard (0.2.0 and later) downloads the bundle from the asset's URL, checks it against the signed
@@ -427,6 +466,7 @@ ownership:
 | Secret(s) | Protects | Rotation |
 |---|---|---|
 | `SIGNING_KEY`, `KEY_ALIAS`, `KEY_STORE_PASSWORD`, `KEY_PASSWORD` | The **Android upload keystore** — losing/leaking it is the worst case; Play app signing identity | Keep the keystore backed up offline; never rotate casually (Play upload key reset is a support process) |
+| `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | Nothing here any more: they published `quartz` to Maven Central, which now releases from vitorpamplona/quartz. No workflow in this repo reads them | Delete from this repo's secrets |
 | *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
 
@@ -446,6 +486,7 @@ Owner assignments and rotation reminders live with the team (issue tracker).
       previous release (see the `diff` one-liner in BUILDING.md § Release
       runbook). macOS is arm64-only — do **not** look for an Intel DMG.
 - [ ] Play Console: rollout started, no policy rejection.
+- [ ] Accrescent: the `.apks` upload passed the console's checks.
 - [ ] Zapstore: release event visible.
 - [ ] Orchard: the Amethyst row shows the new version, and its repository link
       wears the check (the `orchard.txt` proof).

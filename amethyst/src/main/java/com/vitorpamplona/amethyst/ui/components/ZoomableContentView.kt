@@ -192,7 +192,8 @@ fun ZoomableContentView(
     accountViewModel: AccountViewModel,
 ) {
     var dialogOpen by remember(content) { mutableStateOf(false) }
-    val source = rememberZoomSourceAnchor()
+    // Keyed by the media, so a viewer opened from a sibling thumbnail can close into this one.
+    val source = rememberZoomSourceAnchor(content)
     val boundsTrackingModifier = Modifier.zoomSourceAnchor(source)
 
     when (content) {

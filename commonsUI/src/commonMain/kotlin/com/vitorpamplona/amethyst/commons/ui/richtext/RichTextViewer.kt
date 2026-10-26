@@ -83,6 +83,7 @@ import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -108,17 +109,20 @@ fun RichTextViewer(
     val paragraphStyle = remember(baseStyle) { baseStyle.copy(lineHeight = 1.3.em) }
     val paragraphs = remember(state, canPreview) { dropBlankLineAfterBlocks(state.paragraphs, canPreview) }
 
-    Column(modifier) {
-        paragraphs.forEach { paragraph ->
-            val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
-            if (paragraph is ImageGalleryParagraph) {
-                renderer.Gallery(paragraph, state, Modifier.align(align))
-            } else {
-                CompositionLocalProvider(
-                    LocalLayoutDirection provides if (paragraph.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
-                    LocalTextStyle provides paragraphStyle,
-                ) {
-                    RenderParagraph(paragraph, state, canPreview, quotesLeft, Modifier.align(align))
+    // One group for the note's media, so the viewer closes into whichever one it ends on.
+    ProvideZoomSourceGroup {
+        Column(modifier) {
+            paragraphs.forEach { paragraph ->
+                val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
+                if (paragraph is ImageGalleryParagraph) {
+                    renderer.Gallery(paragraph, state, Modifier.align(align))
+                } else {
+                    CompositionLocalProvider(
+                        LocalLayoutDirection provides if (paragraph.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
+                        LocalTextStyle provides paragraphStyle,
+                    ) {
+                        RenderParagraph(paragraph, state, canPreview, quotesLeft, Modifier.align(align))
+                    }
                 }
             }
         }

@@ -23,10 +23,8 @@ package com.vitorpamplona.amethyst.desktop.ui.media
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -48,43 +46,53 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
+import org.jetbrains.skia.AnimationDisposalMode
 import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Codec
 import org.jetbrains.skia.Data
+import org.jetbrains.skia.impl.use
 
-private const val MAX_BITMAP_MEMORY = 64L * 1024 * 1024 // 64MB per GIF
 private const val MIN_FRAME_DURATION_MS = 20
 
-private class GifFrames(
-    val frames: List<ImageBitmap>,
-    val durations: List<Int>,
-    val bytes: Long,
-)
+// Shortest wait between two frames even when decoding ate the frame's whole duration, so a frame
+// is on screen for at least one paint before its buffer is written again.
+private const val MIN_FRAME_GAP_MS = 10L
 
-// Decoded GIFs kept for the next time they show (scrolling back, reopening a thread), so they
-// neither download nor decode again. Bounded by the frames' pixel memory.
-private const val FRAME_CACHE_BYTES = 128L * 1024 * 1024
+/**
+ * A downloaded GIF: its compressed [bytes] (null when it has a single frame, so there is nothing
+ * to play) and its decoded [firstFrame], shown at once while the player starts.
+ */
+private class GifSource(
+    val bytes: ByteArray?,
+    val firstFrame: ImageBitmap,
+) {
+    val cost = (bytes?.size ?: 0) + firstFrame.width.toLong() * firstFrame.height * 4
+}
 
-private object GifFrameCache {
-    private val entries = LinkedHashMap<String, GifFrames>(16, 0.75f, true)
+// GIFs kept for the next time they show (scrolling back, reopening a thread), so they neither
+// download again nor flash a placeholder. Bounded by their bytes plus their first frame's pixels.
+private const val SOURCE_CACHE_BYTES = 64L * 1024 * 1024
+
+private object GifSourceCache {
+    private val entries = LinkedHashMap<String, GifSource>(16, 0.75f, true)
     private var total = 0L
 
     @Synchronized
-    fun get(url: String): GifFrames? = entries[url]
+    fun get(url: String): GifSource? = entries[url]
 
     @Synchronized
     fun put(
         url: String,
-        frames: GifFrames,
+        source: GifSource,
     ) {
-        if (frames.bytes > FRAME_CACHE_BYTES) return
-        entries.put(url, frames)?.let { total -= it.bytes }
-        total += frames.bytes
+        if (source.cost > SOURCE_CACHE_BYTES) return
+        entries.put(url, source)?.let { total -= it.cost }
+        total += source.cost
         val oldest = entries.entries.iterator()
-        while (total > FRAME_CACHE_BYTES && oldest.hasNext()) {
+        while (total > SOURCE_CACHE_BYTES && oldest.hasNext()) {
             val evicted = oldest.next()
             if (evicted.key == url) continue
-            total -= evicted.value.bytes
+            total -= evicted.value.cost
             oldest.remove()
         }
     }
@@ -99,49 +107,27 @@ fun AnimatedGifImage(
     // Called when neither the GIF decoder nor the image loader can draw [url].
     onError: (() -> Unit)? = null,
 ) {
-    var gifFrames by remember(url) { mutableStateOf(GifFrameCache.get(url)) }
-    var currentFrame by remember(url) { mutableIntStateOf(0) }
+    var gif by remember(url) { mutableStateOf(GifSourceCache.get(url)) }
     var loadFailed by remember(url) { mutableStateOf(false) }
-    if (gifFrames == null && !loadFailed) ReportCaptureLoading()
+    if (gif == null && !loadFailed) ReportCaptureLoading()
 
     LaunchedEffect(url) {
-        currentFrame = 0
         loadFailed = false
-        if (gifFrames != null) return@LaunchedEffect
-        gifFrames = withContext(Dispatchers.IO) { decodeGifFrames(url)?.also { GifFrameCache.put(url, it) } }
-        if (gifFrames == null) loadFailed = true
+        if (gif != null) return@LaunchedEffect
+        gif = withContext(Dispatchers.IO) { loadGif(url)?.also { GifSourceCache.put(url, it) } }
+        if (gif == null) loadFailed = true
     }
 
-    // Reset frame index when frames change
-    DisposableEffect(url) {
-        onDispose { currentFrame = 0 }
-    }
-
-    val data = gifFrames
+    val data = gif
     when {
-        data != null && data.frames.size > 1 -> {
-            val safeFrame = currentFrame.coerceIn(0, data.frames.size - 1)
-
-            LaunchedEffect(data) {
-                while (isActive) {
-                    val frameIdx = currentFrame.coerceIn(0, data.frames.size - 1)
-                    val duration = data.durations[frameIdx].coerceAtLeast(MIN_FRAME_DURATION_MS)
-                    delay(duration.toLong())
-                    currentFrame = (currentFrame + 1) % data.frames.size
-                }
+        data != null -> {
+            var shown by remember(data) { mutableStateOf(data.firstFrame) }
+            if (data.bytes != null) {
+                LaunchedEffect(data) { playGif(data.bytes) { shown = it } }
             }
 
             Image(
-                bitmap = data.frames[safeFrame],
-                contentDescription = contentDescription,
-                modifier = modifier,
-                contentScale = contentScale,
-            )
-        }
-
-        data != null && data.frames.isNotEmpty() -> {
-            Image(
-                bitmap = data.frames[0],
+                bitmap = shown,
                 contentDescription = contentDescription,
                 modifier = modifier,
                 contentScale = contentScale,
@@ -161,6 +147,113 @@ fun AnimatedGifImage(
         else -> {
             Box(modifier)
         }
+    }
+}
+
+/**
+ * Loops the GIF in [bytes] for as long as the caller stays active, handing each frame to [show].
+ * Frames decode one at a time, off the UI thread, the way Android's `AnimatedImageDrawable` plays
+ * them, so a GIF costs two frames of memory however many it has. Stops on the last frame shown
+ * if the GIF turns out to be broken halfway through.
+ */
+private suspend fun playGif(
+    bytes: ByteArray,
+    show: (ImageBitmap) -> Unit,
+) {
+    val player =
+        try {
+            withContext(Dispatchers.Default) { GifPlayer(bytes) }
+        } catch (e: Exception) {
+            currentCoroutineContext().ensureActive()
+            println("AnimatedGif: cannot play — ${e.message}")
+            return
+        }
+
+    // withContext only returns once its block has finished, so no decode is running when the
+    // codec closes.
+    try {
+        var frame = 0
+        while (currentCoroutineContext().isActive) {
+            val start = System.nanoTime()
+            show(withContext(Dispatchers.Default) { player.decode(frame) })
+            val spentMs = (System.nanoTime() - start) / 1_000_000
+            delay((player.duration(frame) - spentMs).coerceAtLeast(MIN_FRAME_GAP_MS))
+            frame = (frame + 1) % player.frameCount
+        }
+    } catch (e: Exception) {
+        currentCoroutineContext().ensureActive()
+        println("AnimatedGif: stopped playing — ${e.message}")
+    } finally {
+        player.close()
+    }
+}
+
+/**
+ * Decodes the frames of a GIF in order into two buffers that take turns: the next frame is drawn
+ * into the buffer that is not on screen, starting from the frame on screen when it builds on it.
+ *
+ * The buffers stay mutable so Compose copies their pixels when it draws them (it makes a Skia
+ * image from the bitmap on every draw) and a recorded frame never changes under it. They are not
+ * closed here: a draw already queued may still read one, so they are left to the garbage
+ * collector like any other bitmap.
+ */
+internal class GifPlayer(
+    bytes: ByteArray,
+) : AutoCloseable {
+    private val data = Data.makeFromBytes(bytes)
+    private val codec = Codec.makeFromData(data)
+    private val frameInfos = codec.framesInfo
+    private val buffers =
+        Array(2) {
+            Bitmap().apply { allocN32Pixels(codec.width, codec.height) }
+        }
+    private val images = buffers.map { it.asComposeImageBitmap() }
+
+    // The buffer holding [lastFrame], or -1 before the first decode.
+    private var front = -1
+    private var lastFrame = -1
+
+    val frameCount: Int = codec.frameCount
+
+    fun duration(frame: Int): Int = (frameInfos.getOrNull(frame)?.duration ?: 100).coerceAtLeast(MIN_FRAME_DURATION_MS)
+
+    /** The pixels of [frame], decoded into the buffer that is not on screen. */
+    fun decode(frame: Int): ImageBitmap {
+        val back = if (front == 0) 1 else 0
+        val target = buffers[back]
+        val required = frameInfos.getOrNull(frame)?.requiredFrame ?: -1
+
+        if (required >= 0 && canBuildOn(lastFrame, required, frame)) {
+            // The frame draws over the one on screen: start from it instead of decoding every
+            // frame it depends on again.
+            buffers[front].peekPixels()?.use { onScreen ->
+                target.peekPixels()?.use { onScreen.readPixels(it) }
+            }
+            codec.readPixels(target, frame, lastFrame)
+        } else {
+            // Starts from a transparent canvas, or depends on frames that are not on screen, in
+            // which case Skia decodes those first.
+            target.erase(0)
+            codec.readPixels(target, frame)
+        }
+        target.notifyPixelsChanged()
+
+        front = back
+        lastFrame = frame
+        return images[back]
+    }
+
+    // Skia accepts a prior frame between the frame's required one and the frame itself, unless
+    // the prior frame is meant to be undone ("restore previous").
+    private fun canBuildOn(
+        prior: Int,
+        required: Int,
+        frame: Int,
+    ) = prior in required until frame && frameInfos[prior].disposalMethod != AnimationDisposalMode.RESTORE_PREVIOUS
+
+    override fun close() {
+        codec.close()
+        data.close()
     }
 }
 
@@ -197,41 +290,26 @@ private suspend fun gifBytes(url: String): ByteArray? {
     return bytes
 }
 
-private suspend fun decodeGifFrames(url: String): GifFrames? =
+private suspend fun loadGif(url: String): GifSource? =
     try {
         val bytes = gifBytes(url) ?: return null
 
-        val skData = Data.makeFromBytes(bytes)
-        val codec = Codec.makeFromData(skData)
-        val frameCount = codec.frameCount
-        if (frameCount <= 0) return null
-        // So the card reserves the GIF's shape the next time, before it decodes again.
-        MediaAspectRatioCache.add(url, codec.width, codec.height)
+        Data.makeFromBytes(bytes).use { skData ->
+            Codec.makeFromData(skData).use { codec ->
+                val frameCount = codec.frameCount
+                if (frameCount <= 0) return null
+                // So the card reserves the GIF's shape the next time, before it decodes again.
+                MediaAspectRatioCache.add(url, codec.width, codec.height)
 
-        val frameBitmapSize = codec.width.toLong() * codec.height * 4
-        val totalMemory = frameBitmapSize * frameCount
-        val decodableFrames =
-            if (totalMemory > MAX_BITMAP_MEMORY) {
-                // Only decode first frame for huge GIFs
-                1
-            } else {
-                frameCount
+                val firstFrame =
+                    Bitmap().apply {
+                        allocN32Pixels(codec.width, codec.height)
+                        codec.readPixels(this, 0)
+                        setImmutable()
+                    }
+                GifSource(bytes.takeIf { frameCount > 1 }, firstFrame.asComposeImageBitmap())
             }
-
-        val frameInfos = codec.framesInfo
-        val frames = ArrayList<ImageBitmap>(decodableFrames)
-        val durations = ArrayList<Int>(decodableFrames)
-
-        for (i in 0 until decodableFrames) {
-            val bitmap = Bitmap()
-            bitmap.allocN32Pixels(codec.width, codec.height)
-            codec.readPixels(bitmap, i)
-            bitmap.setImmutable()
-            frames.add(bitmap.asComposeImageBitmap())
-            durations.add(if (frameInfos.size > i) frameInfos[i].duration else 100)
         }
-
-        GifFrames(frames, durations, frameBitmapSize * decodableFrames)
     } catch (e: Exception) {
         currentCoroutineContext().ensureActive()
         println("AnimatedGif: failed to load $url — ${e.message}")
