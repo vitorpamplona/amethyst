@@ -210,15 +210,16 @@ fun RenderVideoPlayer(
                     },
                 ),
     ) {
-        // Fullscreen plays into a SurfaceView: the decoder hands HDR frames straight to the
-        // compositor, which a TextureView's GL copy flattens to SDR. The feed keeps its
-        // TextureView, which clips, scales and sits in a lazy list the way a SurfaceView can't.
-        if (isFullscreen) RequestHdrFor(controllerState.controller)
+        // Fullscreen plays into a SurfaceView so the decoder hands HDR frames straight to the
+        // compositor. The feed keeps its TextureView, which clips, scales and sits in a lazy
+        // list the way a SurfaceView can't; HDR is only requested where the surface can show it.
+        val surfaceType = if (isFullscreen) SURFACE_TYPE_SURFACE_VIEW else SURFACE_TYPE_TEXTURE_VIEW
+        if (surfaceType == SURFACE_TYPE_SURFACE_VIEW) RequestHdrFor(controllerState.controller)
 
         ContentFrame(
             player = controllerState.controller,
             modifier = videoModifier,
-            surfaceType = if (isFullscreen) SURFACE_TYPE_SURFACE_VIEW else SURFACE_TYPE_TEXTURE_VIEW,
+            surfaceType = surfaceType,
             contentScale = contentScale,
             // Transparent shutter — media3's default is an opaque black Box that flashes
             // until EVENT_RENDERED_FIRST_FRAME fires. Letting the layer beneath show

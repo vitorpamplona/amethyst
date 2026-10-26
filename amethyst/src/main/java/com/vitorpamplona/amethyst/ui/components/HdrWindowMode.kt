@@ -26,9 +26,7 @@ import android.view.Window
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.media3.common.C
 import androidx.media3.common.ColorInfo
 import androidx.media3.common.Player
@@ -37,6 +35,7 @@ import coil3.BitmapImage
 import coil3.Image
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
 import com.vitorpamplona.amethyst.commons.ui.components.getDialogWindow
+import com.vitorpamplona.amethyst.service.playback.composable.rememberTracksState
 import java.util.WeakHashMap
 
 /**
@@ -116,25 +115,14 @@ fun RequestHdrFor(
 
 /**
  * Puts the hosting window into HDR mode while the video track [player] renders carries an HDR
- * transfer (HLG or PQ), and follows the track as a quality switch or the next item changes it.
- * For the fullscreen viewer only, where the picture is a `SurfaceView` on the viewer's own
- * window, so it gets the display's full HDR range.
+ * transfer (HLG or PQ), following quality switches and item changes. Only worth calling when the
+ * player draws into a `SurfaceView`: a `TextureView`'s GL copy flattens HDR frames to SDR, so the
+ * window mode would change and the picture would not. That is the fullscreen viewer, on its own
+ * window, so the request is for the display's full HDR range.
  */
 @Composable
 fun RequestHdrFor(player: Player) {
-    var wantsHdr by remember(player) { mutableStateOf(player.currentTracks.hasSelectedHdrVideo()) }
-    DisposableEffect(player) {
-        val listener =
-            object : Player.Listener {
-                override fun onTracksChanged(tracks: Tracks) {
-                    wantsHdr = tracks.hasSelectedHdrVideo()
-                }
-            }
-        player.addListener(listener)
-        // A track change between the initial read above and the listener landing would be missed.
-        wantsHdr = player.currentTracks.hasSelectedHdrVideo()
-        onDispose { player.removeListener(listener) }
-    }
+    val wantsHdr by rememberTracksState(player) { it.hasSelectedHdrVideo() }
     RequestHdr(wantsHdr = wantsHdr, fullscreen = true)
 }
 
@@ -143,7 +131,7 @@ fun RequestHdrFor(player: Player) {
  * [wantsHdr]; the window goes back to its original mode once the last request leaves.
  */
 @Composable
-fun RequestHdr(
+private fun RequestHdr(
     wantsHdr: Boolean,
     fullscreen: Boolean,
 ) {

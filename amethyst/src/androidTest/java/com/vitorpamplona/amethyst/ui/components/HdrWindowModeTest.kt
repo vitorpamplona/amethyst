@@ -115,8 +115,6 @@ class HdrWindowModeTest {
         rule.runOnUiThread { player.render(videoTracks(C.COLOR_TRANSFER_ST2084)) }
         rule.waitForIdle()
         assertEquals("and back to HDR", ActivityInfo.COLOR_MODE_HDR, window!!.colorMode)
-
-        rule.runOnUiThread { player.release() }
     }
 
     @Test
@@ -130,8 +128,6 @@ class HdrWindowModeTest {
         }
         rule.waitForIdle()
         assertEquals(ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
-
-        rule.runOnUiThread { player.release() }
     }
 
     @Test
@@ -150,8 +146,6 @@ class HdrWindowModeTest {
         show = false
         rule.waitForIdle()
         assertEquals(ActivityInfo.COLOR_MODE_DEFAULT, window!!.colorMode)
-
-        rule.runOnUiThread { player.release() }
     }
 
     @Test
