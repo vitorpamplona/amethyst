@@ -815,6 +815,7 @@
     <string name="quick_action_request_deletion_alert_title">Poproś o usunięcie</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst poprosi o usunięcie Twojego wpisu z aktualnie podłączonych transmiterów. Nie ma gwarancji, że Twój wpis zostanie trwale usunięty z tych lub z innych transmiterów, gdzie może być przechowywany.</string>
     <string name="quick_action_request_deletion_alert_body_group">Amethyst poprosi wszystkich w tej zaszyfrowanej grupie o usunięcie tej wiadomości. Ich aplikacje powinny ją usunąć, ale nie ma gwarancji, że każdy członek usunie swoją kopię.</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Amethyst poprosi wszystkich w tym kanale o usunięcie tej wiadomości. Ich aplikacje powinny ją usunąć, ale nie ma gwarancji, że każdy użytkownik usunie swoją kopię.</string>
     <string name="quick_action_request_deletion_alert_body_private">Ametyst wyśle zaszyfrowaną prośbę o usunięcie do osób w tej rozmowie. Ich aplikacje powinny usunąć wiadomość, ale nie ma gwarancji, że każda kopia zostanie usunięta.</string>
     <string name="quick_action_block_dialog_btn">Zablokuj</string>
     <string name="quick_action_delete_dialog_btn">Usuń</string>
@@ -830,6 +831,7 @@
     <string name="report_dialog_blocking_a_user">Zablokowanie użytkownika ukryje jego zawartość w aplikacji. Twoje wpisy będą nadal widoczne publicznie, w tym dla osób, które blokujesz. Zablokowani użytkownicy są wymienieni na ekranie filtrów bezpieczeństwa.</string>
     <string name="report_dialog_report_btn">Zgłoś nadużycie</string>
     <string name="report_dialog_reminder_public">Wszystkie wysłane zgłoszenia będą publicznie dostępne.</string>
+    <string name="report_dialog_reminder_group">Wszyscy członkowie tej grupy zobaczą ten raport oraz informację, że to Ty go wysłałeś. Administratorzy mogą go sprawdzić.</string>
     <string name="report_dialog_additional_reason_placeholder">Opcjonalnie podaj dodatkowe informacje dotyczące zgłoszenia…</string>
     <string name="report_dialog_additional_reason_label">Dodatkowe informacje</string>
     <string name="report_dialog_select_reason_label">Powód</string>
@@ -2108,6 +2110,7 @@
     <string name="tor_keep_waiting">Czekaj</string>
     <string name="tor_splash_connecting">Łączenie z Tor…</string>
     <string name="tor_status_connected">Połączono z Tor</string>
+    <string name="tor_waiting">Oczekiwanie na Tor</string>
     <string name="tor_splash_error">Błąd Tor: %1$s</string>
     <string name="tor_splash_explainer">Amethyst używa Tor, aby ukryć Twój adres IP przed transmiterami. Uruchamianie Tor może potrwać minutę i wymaga dostępu do Internetu.</string>
     <string name="notification_settings_categories_explainer">Kliknij kategorię, aby otworzyć jej ustawienia powiadomień w systemie Android — znajdziesz tam opcje dotyczące dźwięku, priorytetu, ikon powiadomień oraz trybu „Nie przeszkadzać”.</string>
@@ -4820,6 +4823,9 @@
         <item quantity="other">%1$d wiadomości</item>
     </plurals>
     <string name="marmot_not_a_member">Nie jest członkiem tej grupy</string>
+    <string name="marmot_admin_delete_message">Usuń dla wszystkich</string>
+    <string name="room_remove_for_everyone_title">Usunąć dla wszystkich?</string>
+    <string name="room_remove_for_everyone_body">Aplikacja każdego użytkownika usunie tę wiadomość. Tej operacji nie można cofnąć.</string>
     <string name="marmot_unknown_error">nieznany błąd</string>
     <string name="media_added">Dodano pliki</string>
     <string name="media_added_to_profile_gallery">Pliki dodane do Twojej galerii profilu</string>
@@ -8812,4 +8818,24 @@
     <string name="devtools_console_invalid_url">To nie jest adres URL transmitera: %1$s</string>
     <string name="devtools_console_tor">%1$s przechodzi przez Tor, który nie jest jeszcze podłączony. Spróbuj ponownie, gdy Tor będzie już uruchomiony, lub zmień ustawienia Tor na transmiterze.</string>
     <string name="devtools_console_send_failed">Nie połączono, ramka nie została wysłana</string>
+    <string name="local_timestamp_in">w %1$s</string>
+    <string name="local_timestamp_ago">%1$s temu</string>
+    <string name="marmot_poll_label">Ankieta</string>
+    <string name="marmot_poll_preview">Ankieta: %1$s</string>
+    <string name="poll_unsupported">Ta ankieta używa formatu, którego aplikacja nie może wyświetlić.</string>
+    <string name="marmot_poll_not_anonymous">Głosy są widoczne dla wszystkich członków tej grupy.</string>
+    <string name="poll_vote">Głosuj</string>
+    <string name="poll_change_vote">Zmień głos</string>
+    <string name="marmot_poll_create">Utwórz ankietę</string>
+    <string name="marmot_poll_question">Zadaj pytanie</string>
+    <string name="marmot_poll_option">Opcja %1$d</string>
+    <string name="marmot_poll_add_option">Dodaj opcję</string>
+    <string name="marmot_poll_new">Nowa ankieta</string>
+    <string name="marmot_poll_options">Opcje</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_remove_option">Usuń opcję</string>
+    <string name="marmot_poll_multiple_answers">Wiele odpowiedzi</string>
+    <string name="marmot_poll_pick_one">Każdy użytkownik wybiera jedną odpowiedź</string>
+    <string name="marmot_poll_pick_many">Każdy członek może wybrać kilka</string>
+    <string name="marmot_poll_no_deadline">Nigdy</string>
 </resources>
