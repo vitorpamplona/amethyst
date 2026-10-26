@@ -38,7 +38,7 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 `main` has no branch protection, and the JVM/Android builds accept APIs that break the shared code: `HashMap.putIfAbsent`, `Dispatchers.IO` without `import kotlinx.coroutines.IO`, the stdlib `use` on skia or okio types. Four PRs merged in one day broke `main` this way (#4529, #4536, #4540, #4541), each merged while its CI was red or still running. So, before **every** push, `ngit send` or merge:
 
 ```bash
-PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites
+PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites + Android lint
 ```
 
 That is the script the git pre-push hook runs, but a plain `git push` leaves the KMP metadata compiles out unless `PREPUSH_KMP_METADATA=1` is set or it pushes to `main`, and `.git/hooks/pre-push` is a copy that only `:amethyst:preBuild` or `./gradlew installGitHook` refreshes: a fresh clone or web container may have none. Run `./gradlew installGitHook` once per checkout, and run the script by hand before `ngit send` and `ngit pr merge`, which publish without a plain `git push` of your branch. On macOS, when `iosMain` changed, also run `./gradlew :commons:compileKotlinIosSimulatorArm64 :commonsUI:compileKotlinIosSimulatorArm64`.
