@@ -496,7 +496,7 @@ main screen on windows of 1,200 dp and up (`DeckArea`).
 - Commits: Conventional commits (`feat:`, `fix:`, etc.)
 - Never use `--no-verify`
 - The git pre-push hook (`.git-hooks/pre-push`) runs the tests, then Android lint
-  (`:amethyst:lintPlayDebug`, as CI does). With `PREPUSH_KMP_METADATA=1` it also
+  (`:amethyst:lintPlayDebug`). With `PREPUSH_KMP_METADATA=1` it also
   compiles the shared code like CI's `lint` job, catching JVM-only APIs in
   `commonMain`/`skikoMain` that the JVM and Android builds accept. `.git/hooks/` is a
   copy: run `./gradlew installGitHook` after a fresh clone or a hook change. Before

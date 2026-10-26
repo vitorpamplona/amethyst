@@ -146,7 +146,7 @@ When inserting:
 
 2. **`tools/agent-hooks/orphan_strings_check.py`** — sub-second; fails on any locale key the default no longer has (both catalogs). Renaming or removing a source key means deleting it from every locale in the same commit; Crowdin's later cleanup is partial. Details: `amethyst/src/main/res/AGENTS.md` "Renaming or removing a string key".
 3. **`tools/agent-hooks/compose_escaping_check.py`** — Android-only escaping or `tools:` attributes in the commonsUI catalog.
-4. **`./gradlew :amethyst:lintPlayBenchmark`** — the final gate, the task CI runs (`.github/workflows/build.yml`, beside `lintFdroidBenchmark`). Android lint polices only the Android `res/` trees (not composeResources — so for commonsUI the plural categories above are on you). There is **no lint baseline** and only `MissingTranslation` is disabled (`amethyst/build.gradle.kts`), so any error fails CI:
+4. **`./gradlew :amethyst:lintPlayBenchmark`** — the final gate, the task CI runs (`.github/workflows/build.yml`, beside `lintFdroidBenchmark`; the pre-push hook runs its debug twin, `lintPlayDebug`, on every push). Android lint polices only the Android `res/` trees (not composeResources — so for commonsUI the plural categories above are on you). There is **no lint baseline** and only `MissingTranslation` is disabled (`amethyst/build.gradle.kts`), so any error fails CI:
 
    | Rule | Fires when | Severity |
    |--|--|--|

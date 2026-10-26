@@ -70,13 +70,10 @@ else
 fi
 status=$?
 
-# Android lint, the check CI's lint-android job runs and nothing above covers: a media3
-# @UnstableApi call compiles and passes every test, then fails CI with UnsafeOptInUsageError
-# (#4649). It runs in its own Gradle invocation once the test JVMs have exited, because
-# lintAnalyze holds a large analysis graph on the Gradle daemon's heap and running it beside
-# the forked test JVMs is what the OOM killer went for on CI's 16 GB runners. The debug
-# variant shares its compile with :amethyst:testPlayDebugUnitTest above, so this is the
-# analysis alone; CI's benchmark variants would compile a second variant for the same findings.
+# Android lint, CI's lint-android job, which nothing above covers: a media3 @UnstableApi call
+# passes every test and fails only here (#4649). Its own Gradle invocation after the test JVMs
+# have exited, for memory (see the lint-android note in .github/workflows/build.yml). playDebug
+# reuses :amethyst:testPlayDebugUnitTest's compile; CI's benchmark variant would compile a second one.
 if [ "$status" = 0 ] ; then
     echo "Running Android lint... "
     ./gradlew :amethyst:lintPlayDebug --quiet
@@ -89,7 +86,8 @@ if [ "$status" = 0 ] ; then
 else
     echo "*********************************************************"
     echo 1>&2 "Failing check or test"
-    printf "Fix the compile errors, failing tests or lint errors above and push again. Run ${GREEN}./gradlew test${NO_COLOR} for the full JVM suite; the lint report is amethyst/build/reports/lint-results-playDebug.html.\n"
+    printf "Fix the compile errors, failing tests or lint errors above and push again. Run ${GREEN}./gradlew test${NO_COLOR} for the full JVM suite.\n"
+    printf "Lint report: amethyst/build/reports/lint-results-playDebug.html\n"
     echo "*********************************************************"
     exit 1
 fi
