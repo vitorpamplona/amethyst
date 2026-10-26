@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.ui.notifications
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheEventStream
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
@@ -69,7 +70,8 @@ import kotlinx.coroutines.withTimeoutOrNull
  * through [NotificationDispatcher] for events that pass the shared
  * `tagsAnEventForUser` semantic gate + a lightweight suppression pipeline
  * (master toggle, per-kind toggle, DND, window focus, cold-boot,
- * per-event 30-second dedupe).
+ * per-event 30-second dedupe) + [isAcceptable], which holds the
+ * Notifications tab's top-nav filter.
  *
  * Runs one collector for the app's lifetime, scoped to [scope]. Cancel
  * the scope to stop.
@@ -95,8 +97,11 @@ class DesktopNotificationAutoDispatcher(
      * passes none and keeps the generic lines.
      */
     private val compose: suspend (Event) -> NotificationMessage? = { null },
-    /** False for an event the user shouldn't hear about: its author is muted, blocked or reported. */
-    private val isAcceptable: (Event) -> Boolean = { true },
+    /**
+     * False for a note the user shouldn't hear about: its author is muted, blocked or reported,
+     * or the Notifications tab's top-nav filter (Curated, All Follows, a list...) would hide it.
+     */
+    private val isAcceptable: (Note) -> Boolean = { true },
     private val isWindowFocused: StateFlow<Boolean>,
     private val sessionStartSec: Long,
     private val scope: CoroutineScope,
@@ -108,8 +113,7 @@ class DesktopNotificationAutoDispatcher(
             Log.d(TAG) { "Auto-dispatcher started (pubKey=${myPubKeyHex.take(8)}, sessionStart=$sessionStartSec)" }
             eventStream.newEventBundles.collect { bundle ->
                 for (note in bundle) {
-                    val event = note.event ?: continue
-                    tryDispatch(event)
+                    tryDispatch(note)
                 }
             }
         }
@@ -123,7 +127,8 @@ class DesktopNotificationAutoDispatcher(
         Log.d(TAG) { "SKIP kind=$kindLabel id=${eventId.take(8)} reason=${reason()}" }
     }
 
-    private fun tryDispatch(event: Event) {
+    private fun tryDispatch(note: Note) {
+        val event = note.event ?: return
         val eid = event.id
         // Fast-path rejections — cheapest first.
         if (event.kind !in NotificationKinds.SUBSCRIPTION_KINDS) {
@@ -181,7 +186,7 @@ class DesktopNotificationAutoDispatcher(
             logSkip(eid, kind.name) { "not-tagged-for-user (author=${event.pubKey.take(8)})" }
             return
         }
-        if (!isAcceptable(event)) {
+        if (!isAcceptable(note)) {
             logSkip(eid, kind.name) { "not-acceptable (author=${event.pubKey.take(8)})" }
             return
         }
