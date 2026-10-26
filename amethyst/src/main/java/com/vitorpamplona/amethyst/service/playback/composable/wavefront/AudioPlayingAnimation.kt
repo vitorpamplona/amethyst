@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.delayedByFrames
 import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.composable.rememberTracksState
 import com.vitorpamplona.amethyst.service.playback.playerPool.PcmTapRegistry
 import kotlinx.coroutines.flow.emptyFlow
 
@@ -58,22 +59,7 @@ fun Tracks.isAudio() = groups.isNotEmpty() && groups.none { it.type == C.TRACK_T
  * container (to decide whether to size the player as a square).
  */
 @Composable
-fun rememberIsAudioTrack(controller: Player): State<Boolean> {
-    val isAudio = remember(controller) { mutableStateOf(controller.currentTracks.isAudio()) }
-    DisposableEffect(controller) {
-        val listener =
-            object : Player.Listener {
-                override fun onTracksChanged(tracks: Tracks) {
-                    isAudio.value = tracks.isAudio()
-                }
-            }
-        controller.addListener(listener)
-        // Re-read after registering so a track change racing the initial remember{} read isn't missed.
-        isAudio.value = controller.currentTracks.isAudio()
-        onDispose { controller.removeListener(listener) }
-    }
-    return isAudio
-}
+fun rememberIsAudioTrack(controller: Player): State<Boolean> = rememberTracksState(controller) { it.isAudio() }
 
 // Output-latency compensation. The spectrum is tapped upstream of the AudioTrack output buffer (and,
 // over Bluetooth, the codec/transmission lag downstream of it), so the visual leads the speaker and
