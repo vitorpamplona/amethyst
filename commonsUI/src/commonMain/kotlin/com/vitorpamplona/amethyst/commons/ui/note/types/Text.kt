@@ -60,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
+import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -82,11 +83,17 @@ enum class ReplyRenderType {
  * translation cache stores the result under. The copy-text menus look their translation up by
  * the same function — keying on the raw body instead would miss the entry for every
  * subject-carrying note and silently copy the untranslated text.
+ *
+ * A kind-30041 publication section is the other text whose screen string differs from its
+ * content: it renders (and translates) the markdown its AsciiDoc body converts to, so that is
+ * what this returns for one.
  */
 fun displayedNoteText(
     note: Note,
     body: String,
 ): String {
+    (note.event as? PublicationContentEvent)?.let { return publicationSectionMarkdown(it) }
+
     val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
     return if (subject != null && !body.contains(subject, ignoreCase = true)) {
         "$subject\n\n$body"

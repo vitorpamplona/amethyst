@@ -109,10 +109,7 @@ fun RenderPublicationSection(
     // leaves the lazy list, and at chapter size the conversion is far from free (worst measured
     // 7.2ms on a desktop JVM for a 13.5 KB section, and a phone is slower), so scrolling back to
     // a chapter would re-convert it on the composition thread every time.
-    val markdown =
-        remember(noteEvent) {
-            CachedAsciiDocToMarkdown.convert(noteEvent.id, noteEvent.content, wikilinkResolver(noteEvent))
-        }
+    val markdown = remember(noteEvent) { publicationSectionMarkdown(noteEvent) }
 
     Column(Modifier.fillMaxWidth()) {
         // A chapter arrived at from a search, a mention or a wikilink has nothing around it to say
@@ -174,6 +171,13 @@ fun RenderPublicationSection(
         }
     }
 }
+
+/**
+ * The markdown a section's AsciiDoc body renders as. It is also the exact string handed to the
+ * translator, and so the key the translation cache stores the result under: the copy-text menus
+ * look the translation up through [displayedNoteText], which calls this for a section.
+ */
+fun publicationSectionMarkdown(event: PublicationContentEvent): String = CachedAsciiDocToMarkdown.convert(event.id, event.content, wikilinkResolver(event))
 
 /**
  * The index a section belongs to, as one tappable line above the chapter title.
