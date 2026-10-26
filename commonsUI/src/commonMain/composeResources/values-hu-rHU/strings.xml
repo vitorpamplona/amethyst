@@ -793,6 +793,7 @@
     <string name="quick_action_request_deletion_alert_title">Törlés kérése</string>
     <string name="quick_action_request_deletion_alert_body">Az Amethyst kérni fogja, hogy a bejegyzését töröljék azokról az átjátszókról, amelyekhez jelenleg csatlakozik. Nem garantálható, hogy a bejegyzése véglegesen törlődik ezekről az átjátszókról, vagy más átjátszókról, ahol esetleg tárolva van.</string>
     <string name="quick_action_request_deletion_alert_body_group">Az Amethyst arra fogja kérni a titkosított csoport minden tagját, hogy töröljék ezt az üzenetet. Az alkalmazásoknak el kellene távolítaniuk azt, de nincs rá garancia, hogy minden tag törli a saját példányát.</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Az Amethyst megkéri a csatorna minden tagját, hogy töröljék ezt az üzenetet. Az alkalmazásaiknak el kell távolítaniuk, de nincs rá garancia, hogy minden tag törli a saját példányát.</string>
     <string name="quick_action_request_deletion_alert_body_private">Az Amethyst titkosított törlési kérelmet küld a beszélgetés résztvevőinek. Az alkalmazásaiknak el kellene távolítaniuk az üzenetet, de nincs garancia arra, hogy minden példány törlődik.</string>
     <string name="quick_action_block_dialog_btn">Letiltás</string>
     <string name="quick_action_delete_dialog_btn">Törlés</string>
@@ -808,6 +809,7 @@
     <string name="report_dialog_blocking_a_user">A felhasználó letiltásával elrejti annak bejegyzéseit az alkalmazásban. Az Ön bejegyzései továbbra is nyilvánosan megtekinthetők azok számára is, akiket Ön letiltott. A letiltott felhasználók a „Biztonsági szűrők” lapon jelennek meg.</string>
     <string name="report_dialog_report_btn">Visszaélés bejelentése</string>
     <string name="report_dialog_reminder_public">Minden közzétett bejelentés nyilvánosan látható lesz.</string>
+    <string name="report_dialog_reminder_group">A csoport minden tagja látni fogja ezt a bejelentést, és azt is, hogy Ön küldte. Az adminisztrátorok áttekinthetik.</string>
     <string name="report_dialog_additional_reason_placeholder">További részleteket adhat meg a bejelentéssel kapcsolatban (nem kötelező)…</string>
     <string name="report_dialog_additional_reason_label">További részletek</string>
     <string name="report_dialog_select_reason_label">Indoklás</string>
@@ -2072,6 +2074,11 @@
     <string name="tor_keep_waiting">Tovább várok</string>
     <string name="tor_splash_connecting">Kapcsolódás a TOR-hálózathoz…</string>
     <string name="tor_status_connected">Kapcsolódva a TOR-hálózathoz</string>
+    <string name="tor_waiting">Várakozás a Tor-ra</string>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">A Tor nem kapcsolódik. %1$d átjátszó vár rá.</item>
+        <item quantity="other">A Tor nem kapcsolódik. %1$d átjátszó vár rá.</item>
+    </plurals>
     <string name="tor_splash_error">TOR-hálózati hiba: %1$s</string>
     <string name="tor_splash_explainer">Az Amethyst a TOR-hálózatot használja, hogy elrejtse az IP-címet az átjátszók elől. A Tor elindítása több percig is eltarthat, és internetkapcsolatra van szükség hozzá.</string>
     <string name="notification_settings_categories_explainer">Koppintson egy kategóriára, hogy megnyissa az ahhoz tartozó Android értesítési beállításokat – itt találhatók a hang-, a fontossági-, az értesítési jelölők- és a „Ne zavarjanak” beállítások.</string>
@@ -4688,6 +4695,13 @@
         <item quantity="other">%1$d üzenet</item>
     </plurals>
     <string name="marmot_not_a_member">Nem tagja ennek a csoportnak</string>
+    <string name="marmot_admin_delete_message">Törlés mindenkinél</string>
+    <string name="room_remove_for_everyone_title">Biztosan törli mindenkinél?</string>
+    <string name="room_remove_for_everyone_body">Minden tag alkalmazása eltávolítja ezt az üzenetet. Ez a művelet nem vonható vissza.</string>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">%1$d bejelentés eltüntetése</item>
+        <item quantity="other">%1$d bejelentés elvetése</item>
+    </plurals>
     <string name="marmot_unknown_error">ismeretlen hiba</string>
     <string name="media_added">Média hozzáadva</string>
     <string name="media_added_to_profile_gallery">Média hozzáadva az Ön profil-galériájába</string>
@@ -8281,4 +8295,40 @@
     <string name="devtools_console_invalid_url">Nem átjátszó-webcím: %1$s</string>
     <string name="devtools_console_tor">A(z) %1$s a Tor hálózaton keresztül érhető el, amely még nincs csatlakoztatva. Próbálja újra, amint a Tor elindult, vagy módosítsa az átjátszó Tor-beállítását.</string>
     <string name="devtools_console_send_failed">Nincs kapcsolat, a keret nem került elküldésre</string>
+    <string name="local_timestamp_in">%1$s múlva</string>
+    <string name="local_timestamp_ago">%1$s ezelőtt</string>
+    <string name="marmot_poll_label">Szavazás</string>
+    <string name="marmot_poll_preview">Szavazás: %1$s</string>
+    <string name="poll_unsupported">Ez a szavazás olyan formátumot használ, amelyet ez az alkalmazás nem tud megjeleníteni.</string>
+    <string name="marmot_poll_not_anonymous">A szavazatok a csoport minden tagja számára láthatók.</string>
+    <string name="poll_vote">Szavazás</string>
+    <string name="poll_change_vote">Szavazat módosítása</string>
+    <string name="marmot_poll_create">Szavazás létrehozása</string>
+    <string name="marmot_poll_question">Tegyen fel egy kérdést</string>
+    <string name="marmot_poll_option">%1$d. válaszlehetőség</string>
+    <string name="marmot_poll_add_option">Válaszlehetőség hozzáadása</string>
+    <string name="marmot_poll_new">Új szavazás</string>
+    <string name="marmot_poll_options">Válaszlehetőségek</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_remove_option">Válaszlehetőség eltávolítása</string>
+    <string name="marmot_poll_multiple_answers">Több válaszlehetőség</string>
+    <string name="marmot_poll_pick_one">Minden tag egy választ adhat</string>
+    <string name="marmot_poll_pick_many">Minden tag többet is választhat</string>
+    <string name="marmot_poll_closes_at">Lezárul ekkor: %1$s</string>
+    <string name="marmot_poll_stays_open">Nyitva hagyás a szavazásra</string>
+    <string name="marmot_poll_duplicate_option">Két válaszlehetőség ugyanazt jelenti.</string>
+    <string name="marmot_poll_invalid_text">Ez a szöveg túl hosszú, vagy olyan karaktereket tartalmaz, amelyeket a szavazás nem tud megjeleníteni.</string>
+    <string name="marmot_poll_has_deadline">Lezárás ennyi idő után</string>
+    <string name="marmot_poll_no_deadline">Soha</string>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d óra</item>
+        <item quantity="other">%1$d óra</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d nap</item>
+        <item quantity="other">%1$d nap</item>
+    </plurals>
+    <string name="marmot_poll_invalid">Ellenőrizze a kérdést és a válaszlehetőségeket: 2–10 válaszlehetőség, üres szöveg nélkül.</string>
+    <string name="marmot_emoji_upload_failed">Nem sikerült csatolni az egyéni emodzsit, ezért szövegként lett elküldve.</string>
+    <string name="marmot_media_epoch_moved">A csoport megváltozott a fájl feltöltése közben, ezért nem lett elküldve. Küldje el újra.</string>
 </resources>
