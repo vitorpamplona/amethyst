@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
 import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_failed
 import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_updated
 import com.vitorpamplona.amethyst.commons.resources.profile_broadcast_updating
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -186,7 +187,7 @@ private fun getStatusText(status: ProfileBroadcastStatus): String =
 private fun getStatusDetail(status: ProfileBroadcastStatus): String =
     when (status) {
         is ProfileBroadcastStatus.Broadcasting -> "[${status.successCount}/${status.totalRelays}]"
-        is ProfileBroadcastStatus.Success -> stringRes(Res.string.broadcast_banner_relay_count, status.relayCount)
+        is ProfileBroadcastStatus.Success -> pluralStringRes(Res.plurals.broadcast_banner_relay_count, status.relayCount, status.relayCount)
         is ProfileBroadcastStatus.Failed -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ProfileBroadcastStatus.Idle -> ""
     }

@@ -8661,13 +8661,22 @@
     <string name="chess_you_play_white">You play White</string>
     <string name="chess_you_play_black">You play Black</string>
     <string name="chess_watching_game">Watching game</string>
-    <string name="chess_moves_played">%1$d moves played</string>
+    <plurals name="chess_moves_played">
+        <item quantity="one">%1$d move played</item>
+        <item quantity="other">%1$d moves played</item>
+    </plurals>
     <string name="chess_players_versus">%1$s vs %2$s</string>
-    <string name="chess_moves_count">%1$d moves</string>
+    <plurals name="chess_moves_count">
+        <item quantity="one">%1$d move</item>
+        <item quantity="other">%1$d moves</item>
+    </plurals>
     <string name="chess_watch">Watch</string>
     <string name="chess_result_won">Won</string>
     <string name="chess_result_lost">Lost</string>
-    <string name="chess_moves_with_result">%1$d moves • %2$s</string>
+    <plurals name="chess_moves_with_result">
+        <item quantity="one">%1$d move • %2$s</item>
+        <item quantity="other">%1$d moves • %2$s</item>
+    </plurals>
     <string name="signing_waiting_for_signer">Waiting for signer approval... (%1$ss)</string>
     <string name="signing_default_label">Signing</string>
     <string name="signing_progress">%1$s (%2$s of %3$s)</string>
@@ -8787,7 +8796,10 @@
     <string name="profile_broadcast_updating">Updating %1$s...</string>
     <string name="profile_broadcast_updated">Updated %1$s</string>
     <string name="profile_broadcast_failed">Failed to update %1$s</string>
-    <string name="broadcast_banner_relay_count">%1$d relays</string>
+    <plurals name="broadcast_banner_relay_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
     <string name="chess_broadcast_broadcasting">Broadcasting: %1$s</string>
     <string name="chess_broadcast_sent">Sent: %1$s</string>
     <string name="chess_broadcast_failed">Failed: %1$s</string>
@@ -8862,7 +8874,10 @@
     <string name="chess_live_better_luck">Better luck next time!</string>
     <string name="search_people_shared_id">shared id</string>
     <string name="search_group_filtered_on_results">filtered on results</string>
-    <string name="auth_approval_requires_auth_many">requires authentication for %1$d messages</string>
+    <plurals name="auth_approval_requires_auth_many">
+        <item quantity="one">requires authentication for %1$d message</item>
+        <item quantity="other">requires authentication for %1$d messages</item>
+    </plurals>
     <string name="auth_approval_requires_auth_one">requires authentication to deliver this message</string>
     <string name="upload_no_server_title">No upload server selected</string>
     <string name="upload_no_server_message">Pick a media server in settings before uploading.</string>

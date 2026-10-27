@@ -140,7 +140,7 @@ private fun AuthApprovalRow(
                 Text(
                     text =
                         if (approval.pendingCount > 1) {
-                            stringRes(Res.string.auth_approval_requires_auth_many, approval.pendingCount)
+                            pluralStringRes(Res.plurals.auth_approval_requires_auth_many, approval.pendingCount, approval.pendingCount)
                         } else {
                             stringRes(Res.string.auth_approval_requires_auth_one)
                         },

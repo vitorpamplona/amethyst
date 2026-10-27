@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_syncing
 import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_tap_to_resync
 import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_waiting_opponent
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -216,7 +217,7 @@ private fun getStatusText(status: ChessBroadcastStatus): String =
 private fun getStatusDetail(status: ChessBroadcastStatus): String =
     when (status) {
         is ChessBroadcastStatus.Broadcasting -> "[${status.successCount}/${status.totalRelays}]"
-        is ChessBroadcastStatus.Success -> stringRes(Res.string.broadcast_banner_relay_count, status.relayCount)
+        is ChessBroadcastStatus.Success -> pluralStringRes(Res.plurals.broadcast_banner_relay_count, status.relayCount, status.relayCount)
         is ChessBroadcastStatus.Failed -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ChessBroadcastStatus.Syncing -> "${(status.progress * 100).toInt()}%"
         is ChessBroadcastStatus.Desynced -> stringRes(Res.string.chess_broadcast_tap_to_resync)

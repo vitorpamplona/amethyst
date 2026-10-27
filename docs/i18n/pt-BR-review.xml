@@ -18,7 +18,7 @@
         <item quantity="other">O Tor não está conectando. %1$d relays aguardam por ele.</item>
     </plurals>
     <string name="wallet_filter_zaps">Zaps</string>
-    <string name="reactions_settings_boost">Impulsos</string>
+    <string name="reactions_settings_boost">Impulsionar</string>
     <string name="video_quality_auto">Automática</string>
     <string name="buzz_attest_error_not_json_tag">Não é um array de tag JSON válido. Cole a tag ["auth", …] que você recebeu.</string>
     <string name="buzz_attest_error_not_auth_tag">Não é uma tag de autenticação NIP-OA.</string>
@@ -318,13 +318,25 @@
     <string name="chess_you_play_white">Você joga com as brancas</string>
     <string name="chess_you_play_black">Você joga com as pretas</string>
     <string name="chess_watching_game">Assistindo à partida</string>
-    <string name="chess_moves_played">%1$d lances jogados</string>
+    <plurals name="chess_moves_played">
+        <item quantity="one">%1$d lance jogado</item>
+        <item quantity="many">%1$d de lances jogados</item>
+        <item quantity="other">%1$d lances jogados</item>
+    </plurals>
     <string name="chess_players_versus">%1$s vs %2$s</string>
-    <string name="chess_moves_count">%1$d lances</string>
+    <plurals name="chess_moves_count">
+        <item quantity="one">%1$d lance</item>
+        <item quantity="many">%1$d de lances</item>
+        <item quantity="other">%1$d lances</item>
+    </plurals>
     <string name="chess_watch">Assistir</string>
     <string name="chess_result_won">Venceu</string>
     <string name="chess_result_lost">Perdeu</string>
-    <string name="chess_moves_with_result">%1$d lances • %2$s</string>
+    <plurals name="chess_moves_with_result">
+        <item quantity="one">%1$d lance • %2$s</item>
+        <item quantity="many">%1$d de lances • %2$s</item>
+        <item quantity="other">%1$d lances • %2$s</item>
+    </plurals>
     <string name="signing_waiting_for_signer">Aguardando aprovação do assinador... (%1$ss)</string>
     <string name="signing_default_label">Assinando</string>
     <string name="signing_progress">%1$s (%2$s de %3$s)</string>
@@ -444,7 +456,11 @@
     <string name="profile_broadcast_updating">Atualizando %1$s...</string>
     <string name="profile_broadcast_updated">%1$s atualizado</string>
     <string name="profile_broadcast_failed">Falha ao atualizar %1$s</string>
-    <string name="broadcast_banner_relay_count">%1$d relays</string>
+    <plurals name="broadcast_banner_relay_count">
+        <item quantity="one">%1$d relay</item>
+        <item quantity="many">%1$d de relays</item>
+        <item quantity="other">%1$d relays</item>
+    </plurals>
     <string name="chess_broadcast_broadcasting">Transmitindo: %1$s</string>
     <string name="chess_broadcast_sent">Enviado: %1$s</string>
     <string name="chess_broadcast_failed">Falhou: %1$s</string>
@@ -519,7 +535,11 @@
     <string name="chess_live_better_luck">Mais sorte na próxima vez!</string>
     <string name="search_people_shared_id">id compartilhado</string>
     <string name="search_group_filtered_on_results">filtrado pelos resultados</string>
-    <string name="auth_approval_requires_auth_many">requer autenticação para %1$d mensagens</string>
+    <plurals name="auth_approval_requires_auth_many">
+        <item quantity="one">requer autenticação para %1$d mensagem</item>
+        <item quantity="many">requer autenticação para %1$d de mensagens</item>
+        <item quantity="other">requer autenticação para %1$d mensagens</item>
+    </plurals>
     <string name="auth_approval_requires_auth_one">requer autenticação para entregar esta mensagem</string>
     <string name="upload_no_server_title">Nenhum servidor de envio selecionado</string>
     <string name="upload_no_server_message">Escolha um servidor de mídia nas configurações antes de enviar.</string>

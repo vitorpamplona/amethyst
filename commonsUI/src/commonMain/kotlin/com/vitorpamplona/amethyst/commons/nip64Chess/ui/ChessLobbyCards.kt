@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_watching_game
 import com.vitorpamplona.amethyst.commons.resources.chess_you_play_black
 import com.vitorpamplona.amethyst.commons.resources.chess_you_play_white
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
@@ -250,7 +251,7 @@ fun SpectatingGameCard(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    stringRes(Res.string.chess_moves_played, moveCount),
+                    pluralStringRes(Res.plurals.chess_moves_played, moveCount, moveCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -293,7 +294,7 @@ fun PublicGameCard(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    stringRes(Res.string.chess_moves_count, moveCount),
+                    pluralStringRes(Res.plurals.chess_moves_count, moveCount, moveCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -357,7 +358,7 @@ fun CompletedGameCard(
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    stringRes(Res.string.chess_moves_with_result, moveCount, result),
+                    pluralStringRes(Res.plurals.chess_moves_with_result, moveCount, moveCount, result),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
