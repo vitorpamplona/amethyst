@@ -89,6 +89,9 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_add_tag
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_remove_header_image
+import com.vitorpamplona.amethyst.commons.resources.long_form_post_remove_tag
 import com.vitorpamplona.amethyst.commons.resources.markdown_edit
 import com.vitorpamplona.amethyst.commons.resources.markdown_preview
 import com.vitorpamplona.amethyst.commons.resources.new_long_form_post
@@ -634,7 +637,7 @@ private fun BannerImageArea(
             ) {
                 Icon(
                     MaterialSymbols.Close,
-                    contentDescription = "Remove header image",
+                    contentDescription = stringRes(Res.string.long_form_post_remove_header_image),
                     tint = Color.White,
                 )
             }
@@ -730,7 +733,7 @@ private fun TagInputSection(
         ) {
             Icon(
                 MaterialSymbols.Add,
-                contentDescription = "Add tag",
+                contentDescription = stringRes(Res.string.long_form_post_add_tag),
             )
         }
     }
@@ -750,7 +753,7 @@ private fun TagInputSection(
                     trailingIcon = {
                         Icon(
                             MaterialSymbols.Close,
-                            contentDescription = "Remove $tag",
+                            contentDescription = stringRes(Res.string.long_form_post_remove_tag, tag),
                             modifier = Modifier.size(16.dp),
                         )
                     },

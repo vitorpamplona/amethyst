@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_cancel
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_archive_confirm
 import com.vitorpamplona.amethyst.commons.resources.geocache_owner_edit
@@ -223,6 +224,6 @@ private fun ConfirmDialog(
         onDismissRequest = onDismiss,
         text = { Text(body) },
         confirmButton = { TextButton(onClick = onConfirm) { Text(stringRes(Res.string.geocache_owner_archive)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.action_cancel)) } },
     )
 }

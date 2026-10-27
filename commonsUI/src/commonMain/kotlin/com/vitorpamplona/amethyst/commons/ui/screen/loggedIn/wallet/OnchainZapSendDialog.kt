@@ -115,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_success
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow
@@ -869,7 +870,7 @@ private fun SplitsRecipientSection(
                     if (share != null) {
                         val belowDust = share.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS
                         Text(
-                            text = "${formatGrouped(share.sats)} sats",
+                            text = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(share.sats)),
                             style = MaterialTheme.typography.bodySmall,
                             color =
                                 if (belowDust) {

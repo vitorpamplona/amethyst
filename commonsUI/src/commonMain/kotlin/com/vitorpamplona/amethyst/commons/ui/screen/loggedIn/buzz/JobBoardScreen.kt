@@ -83,7 +83,31 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
+import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.job_board_ask_agent_title
+import com.vitorpamplona.amethyst.commons.resources.job_board_cancelled_reason
+import com.vitorpamplona.amethyst.commons.resources.job_board_compose_description
+import com.vitorpamplona.amethyst.commons.resources.job_board_empty_description
+import com.vitorpamplona.amethyst.commons.resources.job_board_empty_title
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_add_setting
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_fix_bug
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_improve_screen
+import com.vitorpamplona.amethyst.commons.resources.job_board_file_task
+import com.vitorpamplona.amethyst.commons.resources.job_board_pill_picked_up
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_up_next
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_working
+import com.vitorpamplona.amethyst.commons.resources.job_board_task_hint
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -98,6 +122,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The shared **backlog** of one Buzz channel — where a team drives an AI agent together.
@@ -141,7 +166,7 @@ fun JobBoardScreen(
             ExtendedFloatingActionButton(
                 onClick = { composing = true },
                 icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                text = { Text("New task") },
+                text = { Text(stringRes(Res.string.agent_work_new_task)) },
             )
         },
     ) { padding ->
@@ -151,6 +176,11 @@ fun JobBoardScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 // Bucketed once per new backlog, not on every recomposition (e.g. isLoading toggles).
                 val groups = remember(jobs) { JobGroups.from(jobs) }
+                // Section titles resolved here — `section()` runs in LazyListScope, not a composable scope.
+                val titleWorking = stringRes(Res.string.job_board_section_working)
+                val titleUpNext = stringRes(Res.string.job_board_section_up_next)
+                val titleShipped = stringRes(Res.string.buzz_workflow_section_shipped)
+                val titleClosed = stringRes(Res.string.buzz_workflow_section_closed)
 
                 if (jobs.isEmpty() && !isLoading) {
                     EmptyBoard()
@@ -160,10 +190,10 @@ fun JobBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     ) {
-                        section("Working now", groups.running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
-                        section("Up next", groups.queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
-                        section("Shipped", groups.done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
-                        section("Closed", groups.closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
+                        section(titleWorking, groups.running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
+                        section(titleUpNext, groups.queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
+                        section(titleShipped, groups.done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
+                        section(titleClosed, groups.closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
                     }
                 }
 
@@ -326,7 +356,7 @@ private fun LazyItemScope.JobCard(
                     JobStyle.SHIPPED ->
                         job.result?.takeIf { it.isNotBlank() }?.let { ResultLine(it) }
                     JobStyle.CLOSED ->
-                        (job.error ?: job.cancelReason?.let { "Cancelled: $it" })?.let {
+                        (job.error ?: job.cancelReason?.let { stringRes(Res.string.job_board_cancelled_reason, it) })?.let {
                             Text(it, style = MaterialTheme.typography.bodyMedium, color = if (job.state == JobState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     JobStyle.QUEUED -> Unit
@@ -334,7 +364,7 @@ private fun LazyItemScope.JobCard(
 
                 if (!job.isTerminal && job.requester == me) {
                     TextButton(onClick = { viewModel.cancel(job.jobId) }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel")
+                        Text(stringRes(Res.string.cancel))
                     }
                 }
             }
@@ -370,7 +400,7 @@ private fun ResultLine(result: String) {
         Button(onClick = { uriHandler.openUri(url) }) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("View PR")
+            Text(stringRes(Res.string.buzz_workflow_view_pr))
         }
     } else {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -401,7 +431,7 @@ private fun StatePill(
     state: JobState,
     accent: Color,
 ) {
-    val (label, symbol) = pillContent(state)
+    val (labelRes, symbol) = pillContent(state)
     Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
@@ -409,7 +439,7 @@ private fun StatePill(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+            Text(text = stringRes(labelRes), style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -429,7 +459,7 @@ private fun UpvoteChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = stringRes(Res.string.agent_work_upvote), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             Text(text = count.toString(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
@@ -445,21 +475,25 @@ private fun NewTaskSheet(
     var text by remember { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ask the workspace agent", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.job_board_ask_agent_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "Describe a feature or fix. The whole channel sees it, and the agent opens a PR.",
+                stringRes(Res.string.job_board_compose_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Fix a bug", "Add a setting", "Improve a screen").forEach { example ->
+                listOf(
+                    stringRes(Res.string.job_board_example_fix_bug),
+                    stringRes(Res.string.job_board_example_add_setting),
+                    stringRes(Res.string.job_board_example_improve_screen),
+                ).forEach { example ->
                     SuggestionChip(onClick = { if (text.isBlank()) text = "$example: " }, label = { Text(example) })
                 }
             }
             SpellCheckedOutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("What should we build?") },
+                label = { Text(stringRes(Res.string.job_board_task_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -470,7 +504,7 @@ private fun NewTaskSheet(
             ) {
                 Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("File task")
+                Text(stringRes(Res.string.job_board_file_task))
             }
         }
     }
@@ -484,9 +518,9 @@ private fun EmptyBoard() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text("No tasks yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.job_board_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Tap “New task” to ask the workspace agent to build or fix something. The whole channel will see it, upvote it, and watch it ship.",
+            stringRes(Res.string.job_board_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -502,12 +536,12 @@ private fun styleColors(style: JobStyle): Pair<Color, Color> =
         JobStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun pillContent(state: JobState): Pair<String, MaterialSymbol> =
+private fun pillContent(state: JobState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        JobState.REQUESTED -> "Queued" to MaterialSymbols.Schedule
-        JobState.ACCEPTED -> "Picked up" to MaterialSymbols.Bolt
-        JobState.IN_PROGRESS -> "Working" to MaterialSymbols.Bolt
-        JobState.COMPLETED -> "Shipped" to MaterialSymbols.CheckCircle
-        JobState.FAILED -> "Failed" to MaterialSymbols.Error
-        JobState.CANCELLED -> "Cancelled" to MaterialSymbols.Cancel
+        JobState.REQUESTED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        JobState.ACCEPTED -> Res.string.job_board_pill_picked_up to MaterialSymbols.Bolt
+        JobState.IN_PROGRESS -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        JobState.COMPLETED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        JobState.FAILED -> Res.string.buzz_workflow_pill_failed to MaterialSymbols.Error
+        JobState.CANCELLED -> Res.string.buzz_workflow_pill_cancelled to MaterialSymbols.Cancel
     }

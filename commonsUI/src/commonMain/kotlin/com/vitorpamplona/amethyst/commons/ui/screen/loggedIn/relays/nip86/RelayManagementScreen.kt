@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_management_error
 import com.vitorpamplona.amethyst.commons.resources.relay_management_event_id_hex
 import com.vitorpamplona.amethyst.commons.resources.relay_management_ip_address
 import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_number
+import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_row
 import com.vitorpamplona.amethyst.commons.resources.relay_management_loading
 import com.vitorpamplona.amethyst.commons.resources.relay_management_moderation_queue
 import com.vitorpamplona.amethyst.commons.resources.relay_management_no_allowed_events
@@ -1019,7 +1020,7 @@ private fun KindEntryCard(
             val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
-                "Kind $kind: $name",
+                stringRes(Res.string.relay_management_kind_row, kind, name),
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
             )

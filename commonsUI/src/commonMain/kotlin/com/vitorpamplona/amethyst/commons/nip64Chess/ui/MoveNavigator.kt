@@ -33,6 +33,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_counter
+import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_final
+import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_next
+import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_previous
+import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_start
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Move navigation controls for stepping through chess game positions
@@ -62,7 +69,7 @@ fun MoveNavigator(
         ) {
             Icon(
                 MaterialSymbols.SkipPrevious,
-                contentDescription = "Start position",
+                contentDescription = stringRes(Res.string.chess_move_navigator_start),
                 tint =
                     if (currentMove > 0) {
                         MaterialTheme.colorScheme.onSurface
@@ -79,7 +86,7 @@ fun MoveNavigator(
         ) {
             Icon(
                 MaterialSymbols.AutoMirrored.KeyboardArrowLeft,
-                contentDescription = "Previous move",
+                contentDescription = stringRes(Res.string.chess_move_navigator_previous),
                 tint =
                     if (currentMove > 0) {
                         MaterialTheme.colorScheme.onSurface
@@ -91,7 +98,7 @@ fun MoveNavigator(
 
         // Current position indicator
         Text(
-            text = "Move $currentMove / $totalMoves",
+            text = stringRes(Res.string.chess_move_navigator_counter, currentMove, totalMoves),
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
@@ -103,7 +110,7 @@ fun MoveNavigator(
         ) {
             Icon(
                 MaterialSymbols.AutoMirrored.KeyboardArrowRight,
-                contentDescription = "Next move",
+                contentDescription = stringRes(Res.string.chess_move_navigator_next),
                 tint =
                     if (currentMove < totalMoves) {
                         MaterialTheme.colorScheme.onSurface
@@ -120,7 +127,7 @@ fun MoveNavigator(
         ) {
             Icon(
                 MaterialSymbols.SkipNext,
-                contentDescription = "Final position",
+                contentDescription = stringRes(Res.string.chess_move_navigator_final),
                 tint =
                     if (currentMove < totalMoves) {
                         MaterialTheme.colorScheme.onSurface

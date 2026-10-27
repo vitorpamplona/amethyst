@@ -27,6 +27,12 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_audio_upload_failed_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_no_audio_url
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_publish_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.AudioFileMetadata
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -182,8 +188,8 @@ class NewPodcastEpisodeViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -219,8 +225,8 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 val finalAudioUrl = newAudioUrl ?: snapshot.existingAudioUrl
                 if (finalAudioUrl.isBlank()) {
                     accountViewModel.toastManager.toast(
-                        "Audio upload failed",
-                        "No audio URL ended up available for the published episode.",
+                        Res.string.podcast_audio_upload_failed_title,
+                        Res.string.podcast_episode_no_audio_url,
                     )
                     return@launchSigner
                 }
@@ -240,8 +246,9 @@ class NewPodcastEpisodeViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to publish episode",
+                    Res.string.podcast_episode_publish_failed_title,
                     t.message ?: t::class.simpleName.orEmpty(),
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

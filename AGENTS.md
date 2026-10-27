@@ -495,13 +495,13 @@ main screen on windows of 1,200 dp and up (`DeckArea`).
 
 - Commits: Conventional commits (`feat:`, `fix:`, etc.)
 - Never use `--no-verify`
-- The git pre-push hook (`.git-hooks/pre-push`) runs the tests. With
-  `PREPUSH_KMP_METADATA=1` it also compiles the shared code the way CI's `lint` job does,
-  catching JVM-only APIs in `commonMain`/`skikoMain` that the JVM and Android builds
-  accept. `.git/hooks/` holds only a copy: run `./gradlew installGitHook` in a fresh
-  clone, container or after pulling a hook change. Before `ngit send` or any merge run
-  `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand.
-  Merge only when the PR's CI is green. The `ngit-pr` skill has the details.
+- The git pre-push hook (`.git-hooks/pre-push`) runs the tests, then Android lint
+  (`:amethyst:lintPlayDebug`). With `PREPUSH_KMP_METADATA=1` it also
+  compiles the shared code like CI's `lint` job, catching JVM-only APIs in
+  `commonMain`/`skikoMain` that the JVM and Android builds accept. `.git/hooks/` is a
+  copy: run `./gradlew installGitHook` after a fresh clone or a hook change. Before
+  `ngit send` or any merge run `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by
+  hand. Merge only when the PR's CI is green. See the `ngit-pr` skill.
 - Never open a PR (GitHub or nostr proposal) on your own. Open one only when
   the human you work for has reviewed the diff, tested the app by hand on a
   device, and asks you to. Until then, hand them the branch and a test plan.

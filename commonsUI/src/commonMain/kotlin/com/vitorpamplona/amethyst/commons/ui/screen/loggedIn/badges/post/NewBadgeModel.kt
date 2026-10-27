@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
+import com.vitorpamplona.amethyst.commons.resources.upload_no_image_url_returned
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -174,7 +175,7 @@ class NewBadgeModel : ViewModel() {
             if (uploaded == null) {
                 onError(
                     loadStringRes(Res.string.failed_to_upload_media_no_details),
-                    "Upload succeeded but no image URL was returned by the server.",
+                    loadStringRes(Res.string.upload_no_image_url_returned),
                 )
                 isUploading = false
                 return@launch

@@ -66,6 +66,55 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
 import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.LiveChessGameState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.chess_challenge_pending
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black_selected
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white_selected
+import com.vitorpamplona.amethyst.commons.resources.chess_continue
+import com.vitorpamplona.amethyst.commons.resources.chess_create_game
+import com.vitorpamplona.amethyst.commons.resources.chess_game_over_result
+import com.vitorpamplona.amethyst.commons.resources.chess_leave_game
+import com.vitorpamplona.amethyst.commons.resources.chess_live_better_luck
+import com.vitorpamplona.amethyst.commons.resources.chess_live_black_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_live_congratulations
+import com.vitorpamplona.amethyst.commons.resources.chess_live_defeat
+import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_exclaim
+import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_subtitle
+import com.vitorpamplona.amethyst.commons.resources.chess_live_game_label
+import com.vitorpamplona.amethyst.commons.resources.chess_live_game_over
+import com.vitorpamplona.amethyst.commons.resources.chess_live_open_challenge
+import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
+import com.vitorpamplona.amethyst.commons.resources.chess_live_victory
+import com.vitorpamplona.amethyst.commons.resources.chess_live_waiting_for
+import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_move_history
+import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
+import com.vitorpamplona.amethyst.commons.resources.chess_no_moves_yet
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_label
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_placeholder
+import com.vitorpamplona.amethyst.commons.resources.chess_playing_as_black
+import com.vitorpamplona.amethyst.commons.resources.chess_playing_as_white
+import com.vitorpamplona.amethyst.commons.resources.chess_resign
+import com.vitorpamplona.amethyst.commons.resources.chess_result_black_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
+import com.vitorpamplona.amethyst.commons.resources.chess_result_game_drawn
+import com.vitorpamplona.amethyst.commons.resources.chess_result_in_progress
+import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_result_you_lost
+import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
+import com.vitorpamplona.amethyst.commons.resources.chess_spectating
+import com.vitorpamplona.amethyst.commons.resources.chess_turn_black
+import com.vitorpamplona.amethyst.commons.resources.chess_turn_white
+import com.vitorpamplona.amethyst.commons.resources.chess_versus_opponent
+import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_watching_spectator_mode
+import com.vitorpamplona.amethyst.commons.resources.chess_your_color
+import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
@@ -97,13 +146,13 @@ fun NewChessGameDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = "New Chess Game",
+                    text = stringRes(Res.string.new_chess_game),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )
 
                 Text(
-                    text = "Create a new chess game challenge",
+                    text = stringRes(Res.string.chess_new_game_subtitle),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -113,14 +162,14 @@ fun NewChessGameDialog(
                 OutlinedTextField(
                     value = opponentPubkey,
                     onValueChange = { opponentPubkey = it },
-                    label = { Text("Opponent npub (optional)") },
-                    placeholder = { Text("Leave blank for open challenge") },
+                    label = { Text(stringRes(Res.string.chess_opponent_npub_label)) },
+                    placeholder = { Text(stringRes(Res.string.chess_opponent_npub_placeholder)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
 
                 Text(
-                    text = "Your color:",
+                    text = stringRes(Res.string.chess_your_color),
                     style = MaterialTheme.typography.labelMedium,
                 )
 
@@ -133,7 +182,7 @@ fun NewChessGameDialog(
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(
-                            text = if (selectedColor == Color.WHITE) "✓ White" else "White",
+                            text = if (selectedColor == Color.WHITE) stringRes(Res.string.chess_color_white_selected) else stringRes(Res.string.chess_color_white),
                             fontWeight = if (selectedColor == Color.WHITE) FontWeight.Bold else FontWeight.Normal,
                         )
                     }
@@ -143,7 +192,7 @@ fun NewChessGameDialog(
                         modifier = Modifier.weight(1f),
                     ) {
                         Text(
-                            text = if (selectedColor == Color.BLACK) "✓ Black" else "Black",
+                            text = if (selectedColor == Color.BLACK) stringRes(Res.string.chess_color_black_selected) else stringRes(Res.string.chess_color_black),
                             fontWeight = if (selectedColor == Color.BLACK) FontWeight.Bold else FontWeight.Normal,
                         )
                     }
@@ -156,7 +205,7 @@ fun NewChessGameDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     OutlinedButton(onClick = onDismiss) {
-                        Text("Cancel")
+                        Text(stringRes(Res.string.cancel))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
@@ -169,7 +218,7 @@ fun NewChessGameDialog(
                             )
                         },
                     ) {
-                        Text("Create Game")
+                        Text(stringRes(Res.string.chess_create_game))
                     }
                 }
             }
@@ -202,10 +251,10 @@ fun LiveChessGameScreen(
     isSpectatorOverride: Boolean? = null,
     onGameEndDismiss: (() -> Unit)? = null,
     onLeaveSpectating: (() -> Unit)? = null,
-    whiteName: String = "White",
+    whiteName: String = stringRes(Res.string.chess_color_white),
     whiteHex: String = "",
     whiteAvatarUrl: String? = null,
-    blackName: String = "Black",
+    blackName: String = stringRes(Res.string.chess_color_black),
     blackHex: String = "",
     blackAvatarUrl: String? = null,
     onPlayerClick: ((pubkeyHex: String) -> Unit)? = null,
@@ -431,7 +480,7 @@ private fun GameInfoHeader(
         }
 
         Text(
-            text = if (gameName != null) gameId.take(16) else "Game: ${gameId.take(8)}...",
+            text = if (gameName != null) gameId.take(16) else stringRes(Res.string.chess_live_game_label, gameId.take(8)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -439,19 +488,19 @@ private fun GameInfoHeader(
         when {
             isPendingChallenge -> {
                 Text(
-                    text = "Challenge Pending",
+                    text = stringRes(Res.string.chess_challenge_pending),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.secondary,
                 )
 
                 Text(
-                    text = "You are playing ${if (playerColor == Color.WHITE) "White" else "Black"}",
+                    text = if (playerColor == Color.WHITE) stringRes(Res.string.chess_playing_as_white) else stringRes(Res.string.chess_playing_as_black),
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
                 Text(
-                    text = if (opponentName.isNotEmpty()) "Waiting for $opponentName" else "Open challenge",
+                    text = if (opponentName.isNotEmpty()) stringRes(Res.string.chess_live_waiting_for, opponentName) else stringRes(Res.string.chess_live_open_challenge),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -459,13 +508,13 @@ private fun GameInfoHeader(
 
             isSpectator -> {
                 Text(
-                    text = "Spectating",
+                    text = stringRes(Res.string.chess_spectating),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary,
                 )
 
-                val turnText = "${if (currentTurn == Color.WHITE) "White" else "Black"}'s turn"
+                val turnText = if (currentTurn == Color.WHITE) stringRes(Res.string.chess_turn_white) else stringRes(Res.string.chess_turn_black)
                 Text(
                     text = turnText,
                     style = MaterialTheme.typography.bodyMedium,
@@ -475,13 +524,13 @@ private fun GameInfoHeader(
 
             else -> {
                 Text(
-                    text = "vs $opponentName",
+                    text = stringRes(Res.string.chess_versus_opponent, opponentName),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
 
                 Text(
-                    text = "You are playing ${if (playerColor == Color.WHITE) "White" else "Black"}",
+                    text = if (playerColor == Color.WHITE) stringRes(Res.string.chess_playing_as_white) else stringRes(Res.string.chess_playing_as_black),
                     style = MaterialTheme.typography.bodyMedium,
                 )
 
@@ -491,12 +540,12 @@ private fun GameInfoHeader(
                         val result = gameStatus.result
                         val resultText =
                             when {
-                                result == GameResult.DRAW -> "Draw"
+                                result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw)
 
                                 (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> "You won!"
+                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> stringRes(Res.string.chess_result_you_won)
 
-                                else -> "You lost"
+                                else -> stringRes(Res.string.chess_result_you_lost)
                             }
                         val resultColor =
                             when {
@@ -524,9 +573,9 @@ private fun GameInfoHeader(
                     else -> {
                         val turnText =
                             if (currentTurn == playerColor) {
-                                "Your turn"
+                                stringRes(Res.string.chess_your_turn)
                             } else {
-                                "Opponent's turn"
+                                stringRes(Res.string.chess_live_opponents_turn)
                             }
 
                         Text(
@@ -568,14 +617,14 @@ private fun SpectatorInfo(onLeaveSpectating: (() -> Unit)? = null) {
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text = "Watching game - spectator mode",
+                text = stringRes(Res.string.chess_watching_spectator_mode),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
         }
         onLeaveSpectating?.let { onLeave ->
             OutlinedButton(onClick = onLeave) {
-                Text("Leave Game")
+                Text(stringRes(Res.string.chess_leave_game))
             }
         }
     }
@@ -597,7 +646,7 @@ private fun PendingChallengeInfo() {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Waiting for opponent to accept challenge",
+            text = stringRes(Res.string.chess_waiting_for_opponent_accept),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
@@ -614,7 +663,7 @@ private fun MoveHistoryDisplay(moves: List<String>) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            text = "Move History",
+            text = stringRes(Res.string.chess_move_history),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 4.dp),
@@ -632,7 +681,7 @@ private fun MoveHistoryDisplay(moves: List<String>) {
         ) {
             if (moves.isEmpty()) {
                 Text(
-                    text = "No moves yet",
+                    text = stringRes(Res.string.chess_no_moves_yet),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.CenterStart),
@@ -707,7 +756,7 @@ private fun GameControls(onResign: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
     ) {
         OutlinedButton(onClick = onResign) {
-            Text("Resign")
+            Text(stringRes(Res.string.chess_resign))
         }
     }
 }
@@ -737,19 +786,19 @@ private fun GameEndOverlay(
             isSpectator -> {
                 val winnerText =
                     when (result) {
-                        GameResult.WHITE_WINS -> "White wins!"
-                        GameResult.BLACK_WINS -> "Black wins!"
-                        GameResult.DRAW -> "Draw!"
-                        GameResult.IN_PROGRESS -> "Game Over"
+                        GameResult.WHITE_WINS -> stringRes(Res.string.chess_live_white_wins)
+                        GameResult.BLACK_WINS -> stringRes(Res.string.chess_live_black_wins)
+                        GameResult.DRAW -> stringRes(Res.string.chess_live_draw_exclaim)
+                        GameResult.IN_PROGRESS -> stringRes(Res.string.chess_live_game_over)
                     }
-                Quadruple("", "Game Over", winnerText, MaterialTheme.colorScheme.surfaceVariant)
+                Quadruple("", stringRes(Res.string.chess_live_game_over), winnerText, MaterialTheme.colorScheme.surfaceVariant)
             }
 
             playerWon -> {
                 Quadruple(
                     "",
-                    "Victory!",
-                    "Congratulations!",
+                    stringRes(Res.string.chess_live_victory),
+                    stringRes(Res.string.chess_live_congratulations),
                     ComposeColor(0xFF4CAF50).copy(alpha = 0.95f),
                 )
             }
@@ -757,8 +806,8 @@ private fun GameEndOverlay(
             isDraw -> {
                 Quadruple(
                     "",
-                    "Draw",
-                    "Game ended in a draw",
+                    stringRes(Res.string.chess_result_draw),
+                    stringRes(Res.string.chess_live_draw_subtitle),
                     MaterialTheme.colorScheme.surfaceVariant,
                 )
             }
@@ -766,8 +815,8 @@ private fun GameEndOverlay(
             else -> {
                 Quadruple(
                     "",
-                    "Defeat",
-                    "Better luck next time!",
+                    stringRes(Res.string.chess_live_defeat),
+                    stringRes(Res.string.chess_live_better_luck),
                     ComposeColor(0xFFE57373).copy(alpha = 0.95f),
                 )
             }
@@ -874,7 +923,7 @@ private fun GameEndOverlay(
                     Button(
                         onClick = onDismiss,
                     ) {
-                        Text("Continue")
+                        Text(stringRes(Res.string.chess_continue))
                     }
                 }
             }
@@ -895,24 +944,24 @@ private fun GameEndInfo(
         when {
             isSpectator -> {
                 when (result) {
-                    GameResult.WHITE_WINS -> "White wins"
-                    GameResult.BLACK_WINS -> "Black wins"
-                    GameResult.DRAW -> "Draw"
-                    GameResult.IN_PROGRESS -> "In progress"
+                    GameResult.WHITE_WINS -> stringRes(Res.string.chess_result_white_wins)
+                    GameResult.BLACK_WINS -> stringRes(Res.string.chess_result_black_wins)
+                    GameResult.DRAW -> stringRes(Res.string.chess_result_draw)
+                    GameResult.IN_PROGRESS -> stringRes(Res.string.chess_result_in_progress)
                 }
             }
 
             result == GameResult.DRAW -> {
-                "Game drawn"
+                stringRes(Res.string.chess_result_game_drawn)
             }
 
             (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
                 (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> {
-                "You won!"
+                stringRes(Res.string.chess_result_you_won)
             }
 
             else -> {
-                "You lost"
+                stringRes(Res.string.chess_result_you_lost)
             }
         }
 
@@ -945,7 +994,7 @@ private fun GameEndInfo(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = "Game Over - $resultText",
+            text = stringRes(Res.string.chess_game_over_result, resultText),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,

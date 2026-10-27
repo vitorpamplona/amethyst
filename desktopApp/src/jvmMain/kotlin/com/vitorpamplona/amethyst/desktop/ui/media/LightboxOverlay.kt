@@ -74,10 +74,19 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.lightbox_copy_url
+import com.vitorpamplona.amethyst.commons.resources.lightbox_more_options
+import com.vitorpamplona.amethyst.commons.resources.lightbox_open_in_browser
+import com.vitorpamplona.amethyst.commons.resources.lightbox_previous
+import com.vitorpamplona.amethyst.commons.resources.next
+import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -482,7 +491,7 @@ fun LightboxOverlay(
             ) {
                 Icon(
                     MaterialSymbols.Close,
-                    contentDescription = "Close",
+                    contentDescription = stringRes(Res.string.close),
                     tint = Color.White,
                     modifier = Modifier.size(32.dp),
                 )
@@ -514,7 +523,7 @@ fun LightboxOverlay(
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowBack,
-                        contentDescription = "Previous",
+                        contentDescription = stringRes(Res.string.lightbox_previous),
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
                     )
@@ -528,7 +537,7 @@ fun LightboxOverlay(
                 ) {
                     Icon(
                         MaterialSymbols.AutoMirrored.ArrowForward,
-                        contentDescription = "Next",
+                        contentDescription = stringRes(Res.string.next),
                         tint = Color.White,
                         modifier = Modifier.size(48.dp),
                     )
@@ -551,7 +560,7 @@ private fun MoreOptionsMenu(
         IconButton(onClick = onExpandMenu, modifier = Modifier.size(32.dp)) {
             Icon(
                 MaterialSymbols.MoreVert,
-                contentDescription = "More options",
+                contentDescription = stringRes(Res.string.lightbox_more_options),
                 tint = Color.White,
                 modifier = Modifier.size(20.dp),
             )
@@ -562,7 +571,7 @@ private fun MoreOptionsMenu(
             onDismissRequest = onDismissMenu,
         ) {
             DropdownMenuItem(
-                text = { Text("Save") },
+                text = { Text(stringRes(Res.string.save)) },
                 leadingIcon = { Icon(MaterialSymbols.Save, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
@@ -570,7 +579,7 @@ private fun MoreOptionsMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Copy URL") },
+                text = { Text(stringRes(Res.string.lightbox_copy_url)) },
                 leadingIcon = { Icon(MaterialSymbols.ContentCopy, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
@@ -578,7 +587,7 @@ private fun MoreOptionsMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text("Open in Browser") },
+                text = { Text(stringRes(Res.string.lightbox_open_in_browser)) },
                 leadingIcon = { Icon(MaterialSymbols.OpenInBrowser, contentDescription = null) },
                 onClick = {
                     onDismissMenu()
