@@ -52,7 +52,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,7 +98,6 @@ import com.vitorpamplona.quartz.nip01Core.core.isValid
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip29RelayGroups.GroupId
-import kotlinx.coroutines.launch
 
 /**
  * Bottom room the inbox leaves for its extended FAB — same clearance the community view uses, and
@@ -222,14 +220,13 @@ private fun DmRowCard(
     val groupId = remember(row.channelId, row.relayUrl) { GroupId(row.channelId, row.relayUrl) }
     var menuOpen by remember { mutableStateOf(false) }
     var addMemberOpen by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     if (addMemberOpen) {
         AddDmMemberDialog(
             onDismiss = { addMemberOpen = false },
             onAdd = { hex ->
                 addMemberOpen = false
-                scope.launch {
+                accountViewModel.launchSigner {
                     val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
                     accountViewModel.account.relayGroups.addBuzzDmMember(channel, hex)
                 }

@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RELAY_G
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.buzz.dvDmVisibility.DmVisibilityEvent
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
@@ -269,7 +270,7 @@ class BuzzDmListViewModel : ViewModel() {
     fun removeFromMessages(row: DmRow) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            account.relayGroups.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl)))
+            logSignerErrors("BuzzDmList") { account.relayGroups.hideBuzzDm(LocalCache.getOrCreateRelayGroupChannel(GroupId(row.channelId, row.relayUrl))) }
         }
     }
 
@@ -283,7 +284,7 @@ class BuzzDmListViewModel : ViewModel() {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val me = account.userProfile().pubkeyHex
-            account.relayGroups.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) })
+            logSignerErrors("BuzzDmList") { account.relayGroups.openBuzzDm(row.relayUrl, row.others.ifEmpty { listOf(me) }) }
             // The relay's new 30622 normally arrives on the live subscription; refresh anyway so the
             // row returns even if this screen's socket missed the snapshot.
             refresh()

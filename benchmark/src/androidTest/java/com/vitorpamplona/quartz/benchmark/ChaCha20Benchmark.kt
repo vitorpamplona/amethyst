@@ -50,21 +50,19 @@ class ChaCha20Benchmark {
         val nonce = RandomInstance.bytes(32)
         val messageKeys = nip44v2.getMessageKeys(sharedKey, nonce)
         val padded = nip44v2.pad(msg)
-
-        val chaCha = ChaCha20
     }
 
     @Test
     fun encrypt() {
         benchmarkRule.measureRepeated {
-            chaCha.encrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+            ChaCha20.encrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
     }
 
     @Test
     fun decrypt() {
         benchmarkRule.measureRepeated {
-            chaCha.decrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
+            ChaCha20.decrypt(padded, messageKeys.chachaNonce, messageKeys.chachaKey)
         }
     }
 

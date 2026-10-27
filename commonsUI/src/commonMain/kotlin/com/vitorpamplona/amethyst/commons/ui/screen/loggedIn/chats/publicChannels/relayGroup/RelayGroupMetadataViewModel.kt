@@ -239,6 +239,10 @@ class RelayGroupMetadataViewModel : ViewModel() {
                         loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
                     )
                     return@launch
+                } catch (_: SignerExceptions) {
+                    // The user rejected it in their signer, or the signer was unavailable: nothing
+                    // was published, so keep the form open instead of reporting success.
+                    return@launch
                 }
                 onSuccess()
             } finally {

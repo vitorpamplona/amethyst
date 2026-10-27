@@ -50,7 +50,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -134,7 +133,6 @@ import com.vitorpamplona.quartz.nip29RelayGroups.metadata.GroupMetadataEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** A first screen's worth of recent messages to prefetch per visible group card, ahead of a tap. */
@@ -411,7 +409,6 @@ fun RelayGroupChannelListScreen(
             disconnectedLongEnough = true
         }
     }
-    val scope = rememberCoroutineScope()
     val showTorHint = shouldOfferTorClearnetFallback(usesTor, torIsUp, trustingMovesToClearnet, disconnectedLongEnough)
 
     // A pinned relay works both as a pushed detail (from the drawer or another screen) and as a
@@ -480,7 +477,7 @@ fun RelayGroupChannelListScreen(
                     TorClearnetBanner(
                         relayName = relay.displayUrl(),
                         onUseClearnet = {
-                            scope.launch { accountViewModel.account.saveTrustedRelayList((trustedRelays + relay).toList()) }
+                            accountViewModel.launchSigner { accountViewModel.account.saveTrustedRelayList((trustedRelays + relay).toList()) }
                         },
                     )
                 }
@@ -509,7 +506,7 @@ fun RelayGroupChannelListScreen(
                         TorClearnetBanner(
                             relayName = relay.displayUrl(),
                             onUseClearnet = {
-                                scope.launch { accountViewModel.account.saveTrustedRelayList((trustedRelays + relay).toList()) }
+                                accountViewModel.launchSigner { accountViewModel.account.saveTrustedRelayList((trustedRelays + relay).toList()) }
                             },
                         )
                     }

@@ -280,10 +280,12 @@ fun ConcordChannelListScreen(
             onConfirm = { newName, makePrivate, accessRoleName ->
                 channelEditor = null
                 scope.launch {
-                    if (editor.channelIdHex == null) {
-                        account.concord.createConcordChannel(communityId, newName, makePrivate, accessRoleName)
-                    } else {
-                        account.concord.renameConcordChannel(communityId, editor.channelIdHex, newName)
+                    accountViewModel.reportSignerErrors {
+                        if (editor.channelIdHex == null) {
+                            account.concord.createConcordChannel(communityId, newName, makePrivate, accessRoleName)
+                        } else {
+                            account.concord.renameConcordChannel(communityId, editor.channelIdHex, newName)
+                        }
                     }
                 }
             },
@@ -300,10 +302,12 @@ fun ConcordChannelListScreen(
             onConfirm = { accessRoleName ->
                 channelToConvert = null
                 scope.launch {
-                    if (target.toPrivate) {
-                        account.concord.privatizeConcordChannel(communityId, target.channelIdHex, accessRoleName)
-                    } else {
-                        account.concord.publicizeConcordChannel(communityId, target.channelIdHex)
+                    accountViewModel.reportSignerErrors {
+                        if (target.toPrivate) {
+                            account.concord.privatizeConcordChannel(communityId, target.channelIdHex, accessRoleName)
+                        } else {
+                            account.concord.publicizeConcordChannel(communityId, target.channelIdHex)
+                        }
                     }
                 }
             },
@@ -319,7 +323,7 @@ fun ConcordChannelListScreen(
             confirmButton = {
                 TextButton(onClick = {
                     channelToDelete = null
-                    scope.launch { account.concord.deleteConcordChannel(communityId, id, target.initialName) }
+                    scope.launch { accountViewModel.reportSignerErrors { account.concord.deleteConcordChannel(communityId, id, target.initialName) } }
                 }) {
                     Text(stringRes(Res.string.concord_channel_delete_confirm))
                 }

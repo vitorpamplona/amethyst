@@ -45,8 +45,6 @@ import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -64,13 +62,13 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -353,16 +351,7 @@ open class NestNewMessageViewModel :
         uploader: MediaUploader,
         onceUploaded: suspend () -> Unit,
     ) {
-        try {
-            uploadUnsafe(onError, uploader, onceUploaded)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(onError, uploader, onceUploaded)
     }
 
     fun uploadUnsafe(
@@ -394,7 +383,7 @@ open class NestNewMessageViewModel :
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                            val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason) } ?: return@mapNotNull null
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 

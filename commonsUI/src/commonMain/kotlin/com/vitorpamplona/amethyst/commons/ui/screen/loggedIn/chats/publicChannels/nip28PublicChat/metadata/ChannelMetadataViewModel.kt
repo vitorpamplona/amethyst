@@ -95,63 +95,65 @@ class ChannelMetadataViewModel : ViewModel() {
 
     fun createOrUpdate(onDone: (PublicChatChannel) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
-            account.let { account ->
-                val channel = originalChannel
-                if (channel == null) {
-                    val template =
-                        ChannelCreateEvent.build(
-                            channelName.value.text,
-                            channelDescription.value.text,
-                            channelPicture.value.text,
-                            channelRelays.value.map { it.relay },
-                        )
-
-                    val signedResult =
-                        account.signAndSendPrivatelyOrBroadcast(
-                            template,
-                            relayList = { it.channelInfo().relays },
-                        )
-                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
-                    // follows the channel
-                    account.follow(channel)
-                    onDone(channel)
-                } else {
-                    val event = channel.event
-
-                    val template =
-                        if (event != null) {
-                            val hint = EventHintBundle(event, channel.relays().firstOrNull())
-
-                            ChannelMetadataEvent.build(
+            accountViewModel.reportSignerErrors {
+                account.let { account ->
+                    val channel = originalChannel
+                    if (channel == null) {
+                        val template =
+                            ChannelCreateEvent.build(
                                 channelName.value.text,
                                 channelDescription.value.text,
                                 channelPicture.value.text,
                                 channelRelays.value.map { it.relay },
-                                hint,
                             )
-                        } else {
-                            val eTag = ETag(channel.idHex, channel.relays().firstOrNull())
 
-                            ChannelMetadataEvent.build(
-                                channelName.value.text,
-                                channelDescription.value.text,
-                                channelPicture.value.text,
-                                channelRelays.value.map { it.relay },
-                                eTag,
+                        val signedResult =
+                            account.signAndSendPrivatelyOrBroadcast(
+                                template,
+                                relayList = { it.channelInfo().relays },
                             )
-                        }
+                        val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                        // follows the channel
+                        account.follow(channel)
+                        onDone(channel)
+                    } else {
+                        val event = channel.event
 
-                    val signedResult =
-                        account.signAndSendPrivatelyOrBroadcast(
-                            template,
-                            relayList = { it.channelInfo().relays },
-                        )
-                    val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
-                    onDone(channel)
+                        val template =
+                            if (event != null) {
+                                val hint = EventHintBundle(event, channel.relays().firstOrNull())
+
+                                ChannelMetadataEvent.build(
+                                    channelName.value.text,
+                                    channelDescription.value.text,
+                                    channelPicture.value.text,
+                                    channelRelays.value.map { it.relay },
+                                    hint,
+                                )
+                            } else {
+                                val eTag = ETag(channel.idHex, channel.relays().firstOrNull())
+
+                                ChannelMetadataEvent.build(
+                                    channelName.value.text,
+                                    channelDescription.value.text,
+                                    channelPicture.value.text,
+                                    channelRelays.value.map { it.relay },
+                                    eTag,
+                                )
+                            }
+
+                        val signedResult =
+                            account.signAndSendPrivatelyOrBroadcast(
+                                template,
+                                relayList = { it.channelInfo().relays },
+                            )
+                        val channel = LocalCache.getOrCreatePublicChatChannel(signedResult.id)
+                        onDone(channel)
+                    }
                 }
-            }
 
-            clear()
+                clear()
+            }
         }
     }
 

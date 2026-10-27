@@ -33,8 +33,6 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.DEFAULT_MEDIA_SERVE
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -46,7 +44,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -107,16 +104,7 @@ open class NewMediaModel : ViewModel() {
         onSucess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        try {
-            uploadUnsafe(uploader, accountViewModel, onSucess, onError)
-        } catch (e: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(uploader, accountViewModel, onSucess, onError)
     }
 
     fun uploadUnsafe(

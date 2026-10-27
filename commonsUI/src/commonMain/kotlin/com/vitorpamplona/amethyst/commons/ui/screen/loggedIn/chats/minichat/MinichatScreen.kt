@@ -262,10 +262,12 @@ fun MinichatScreen(
                                 },
                                 uploader = accountViewModel.host.mediaUploader,
                                 onceUploaded = { uploads ->
-                                    val caption = uploadState.caption
-                                    val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()
-                                    if (imetas.isNotEmpty()) {
-                                        accountViewModel.account.sendMinichatReply(rootNote, caption, imetas)
+                                    accountViewModel.reportSignerErrors {
+                                        val caption = uploadState.caption
+                                        val imetas = if (isConcord) uploads.mapNotNull { it.toConcordImeta() } else uploads.toPlainImetas()
+                                        if (imetas.isNotEmpty()) {
+                                            accountViewModel.account.sendMinichatReply(rootNote, caption, imetas)
+                                        }
                                     }
                                 },
                             )
