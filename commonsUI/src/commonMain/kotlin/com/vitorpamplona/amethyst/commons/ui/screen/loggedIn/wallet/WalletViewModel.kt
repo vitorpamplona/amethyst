@@ -370,17 +370,23 @@ class WalletViewModel : ViewModel() {
     ) {
         val acc = account ?: return
         val pointer = _debitWallets.value.firstOrNull { it.id == walletId }?.pointer ?: return
-        val moneyOpRelays = accountViewModel?.host?.moneyOpRelays ?: return
+        val avm = accountViewModel ?: return
+        val moneyOpRelays = avm.host.moneyOpRelays
         viewModelScope.launch {
-            // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
-            // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
-            val response =
-                try {
-                    ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
-                } catch (_: IllegalArgumentException) {
-                    null
-                }
-            onResult(response)
+            // The request is signed and NIP-44 encrypted. If the signer refuses, nothing reached the
+            // wallet, so that is not reported as a wallet timeout: reportSignerErrors shows the
+            // read-only / missing-signer notices and keeps a user's rejection silent.
+            avm.reportSignerErrors {
+                // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
+                // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
+                val response =
+                    try {
+                        ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
+                    } catch (_: IllegalArgumentException) {
+                        null
+                    }
+                onResult(response)
+            }
         }
     }
 

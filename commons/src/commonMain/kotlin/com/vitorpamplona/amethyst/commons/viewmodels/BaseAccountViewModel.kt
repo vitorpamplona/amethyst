@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCacheAsync
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
@@ -706,7 +707,7 @@ open class BaseAccountViewModel(
      * cold — never through the hub — is only reachable via the relays saved on its tab.
      */
     fun importConcordCommunities() =
-        viewModelScope.launch(Dispatchers.IO) {
+        launchSigner {
             val pinnedRelays =
                 account.settings.syncedSettings.navigation.bottomBarItems.value
                     .flatMap {
@@ -719,12 +720,15 @@ open class BaseAccountViewModel(
             account.concord.importConcordCommunities(pinnedRelays)
         }
 
-    /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
+    /**
+     * Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). Best
+     * effort: a refused or failed signature only skips this beat, so it is logged, never shown.
+     */
     fun sendConcordTyping(
         communityId: String,
         channelIdHex: String,
     ) = viewModelScope.launch(Dispatchers.IO) {
-        account.concord.sendConcordTyping(communityId, channelIdHex)
+        logSignerErrors("ConcordTyping") { account.concord.sendConcordTyping(communityId, channelIdHex) }
     }
 
     fun sendBuzzTyping(
@@ -732,7 +736,8 @@ open class BaseAccountViewModel(
         threadRootId: HexKey? = null,
         replyToId: HexKey? = null,
     ) = viewModelScope.launch(Dispatchers.IO) {
-        account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId)
+        // Best effort, like sendConcordTyping: a refused beat is logged, never shown.
+        logSignerErrors("BuzzTyping") { account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId) }
     }
 
     @Immutable
@@ -1702,6 +1707,9 @@ open class BaseAccountViewModel(
             Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
         } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
             Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+        } catch (e: SignerExceptions) {
+            // Any other refusal (e.g. a bunker without the method): the signer's answer, not a crash.
+            Log.w("AccountViewModel", "SignerExceptions", e)
         } catch (e: IllegalStateException) {
             notices.notify(SignerNotice.Failed(e))
         }
@@ -2068,7 +2076,7 @@ open class BaseAccountViewModel(
     fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
 
     fun setCaptionsEnabled(enabled: Boolean) {
-        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+        launchSigner { account.changeCaptionsEnabled(enabled) }
     }
 
     fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) =

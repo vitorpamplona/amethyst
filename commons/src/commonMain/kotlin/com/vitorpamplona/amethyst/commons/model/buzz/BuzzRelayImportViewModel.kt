@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relayauth.RelayAuthDecision
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.buzz.stream.SystemMessageEvent
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
@@ -217,9 +218,11 @@ class BuzzRelayImportViewModel : ViewModel() {
     fun add(groupId: GroupId) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-            account.settings.undismissChannelInvite(groupId.id)
-            account.follow(channel)
+            logSignerErrors("BuzzRelayImport") {
+                val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+                account.settings.undismissChannelInvite(groupId.id)
+                account.follow(channel)
+            }
         }
     }
 
@@ -232,9 +235,11 @@ class BuzzRelayImportViewModel : ViewModel() {
     fun remove(groupId: GroupId) {
         val account = account ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
-            account.settings.dismissChannelInvite(groupId.id)
-            account.unfollow(channel)
+            logSignerErrors("BuzzRelayImport") {
+                val channel = LocalCache.getOrCreateRelayGroupChannel(groupId)
+                account.settings.dismissChannelInvite(groupId.id)
+                account.unfollow(channel)
+            }
         }
     }
 

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.devtools
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toRelay.AuthCmd
@@ -246,7 +247,7 @@ class RelayConsoleViewModel(
         val relay = relay ?: return
         val signer = signer?.takeIf { it.isWriteable() } ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val event = RelayAuthEvent.create(relay, challenge, signer)
+            val event = logSignerErrors("RelayConsole") { RelayAuthEvent.create(relay, challenge, signer) } ?: return@launch
             if (send(AuthCmd(event).toJson())) _pendingChallenge.value = null
         }
     }

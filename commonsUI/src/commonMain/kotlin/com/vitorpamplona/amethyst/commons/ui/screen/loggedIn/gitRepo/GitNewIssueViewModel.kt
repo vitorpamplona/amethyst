@@ -31,8 +31,6 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
@@ -44,9 +42,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -118,16 +116,7 @@ class GitNewIssueViewModel : ViewModel() {
         stripMetadata: Boolean,
         convertGifToMp4: Boolean,
     ) {
-        try {
-            uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        uploadUnsafe(alt, contentWarningReason, mediaQuality, server, onError, uploader, useH265, stripMetadata, convertGifToMp4)
     }
 
     private fun uploadUnsafe(
@@ -165,7 +154,7 @@ class GitNewIssueViewModel : ViewModel() {
                     results.successful.mapNotNull { state ->
                         when (val uploaded = state.result) {
                             is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
+                                val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
                                 account.consumeNip95(nip95.first, nip95.second)?.let { note ->
                                     val link = "nostr:" + note.toNEvent()
                                     nip95Attachments = nip95Attachments + (link to nip95)

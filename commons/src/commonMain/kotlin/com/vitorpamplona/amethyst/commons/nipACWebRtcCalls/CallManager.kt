@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.nipACWebRtcCalls
 
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager.Companion.CALL_TIMEOUT_MS
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager.Companion.CONNECTING_TIMEOUT_MS
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -52,6 +53,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+
+private const val TAG = "CallManager"
 
 class CallManager(
     private val signer: NostrSigner,
@@ -241,8 +244,10 @@ class CallManager(
         sdpOffer: String,
     ) {
         Log.d("CallManager") { "publishOfferToPeer: to=${calleePubKey.take(8)}, sdpLength=${sdpOffer.length}" }
-        val result = factory.createCallOffer(sdpOffer, calleePubKey, allCalleePubKeys, callId, callType, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createCallOffer(sdpOffer, calleePubKey, allCalleePubKeys, callId, callType, signer)
+            publishEvent(result.wrap)
+        } ?: dropPeerAfterSignerRefusal(calleePubKey, callId)
     }
 
     /**
@@ -257,8 +262,10 @@ class CallManager(
         val callType = currentCallType() ?: return
         val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
         Log.d("CallManager") { "publishOfferToPeer (mid-call): to=${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     /**
@@ -271,8 +278,10 @@ class CallManager(
         val callId = currentCallId() ?: return
         val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
         Log.d("CallManager") { "publishAnswerToPeer: to=${peerPubKey.take(8)}, sdpLength=${sdpAnswer.length}" }
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, allMembers, callId, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createCallAnswer(sdpAnswer, peerPubKey, allMembers, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     // ---- P2P call initiation (convenience) ----
@@ -369,8 +378,10 @@ class CallManager(
 
         if (currentState !is CallState.Idle) {
             scope.launch {
-                val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
-                publishEvent(result.wrap)
+                logSignerErrors(TAG) {
+                    val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
+                    publishEvent(result.wrap)
+                }
             }
             return
         }
@@ -440,23 +451,25 @@ class CallManager(
         val allMembers = current.groupMembers + signer.pubKey
         val otherMembers = allMembers - signer.pubKey
         Log.d("CallManager") { "acceptCall: publishing answer to ${otherMembers.size} recipients" }
-        val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
-        result.wraps.forEach { publishEvent(it) }
+        logSignerErrors(TAG) {
+            val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
+            result.wraps.forEach { publishEvent(it) }
 
-        // Notify our own other devices so they stop ringing. We wrap the
-        // *same* signed answer event for our own pubkey and publish it as
-        // an extra gift wrap. A sibling device in IncomingCall will observe
-        // the self-answer and transition to Ended(ANSWERED_ELSEWHERE)
-        // locally (see onCallAnswered). This call is the only place the
-        // "answered elsewhere" signal is generated — without it, a second
-        // logged-in device keeps ringing until its 60-second local timeout.
-        //
-        // The echo that arrives back at *this* device is ignored in
-        // Connecting/Connected state by the self-answer guard at the top
-        // of onCallAnswered, so it cannot disturb the live call.
-        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
-        publishEvent(selfWrap)
-        Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
+            // Notify our own other devices so they stop ringing. We wrap the
+            // *same* signed answer event for our own pubkey and publish it as
+            // an extra gift wrap. A sibling device in IncomingCall will observe
+            // the self-answer and transition to Ended(ANSWERED_ELSEWHERE)
+            // locally (see onCallAnswered). This call is the only place the
+            // "answered elsewhere" signal is generated — without it, a second
+            // logged-in device keeps ringing until its 60-second local timeout.
+            //
+            // The echo that arrives back at *this* device is ignored in
+            // Connecting/Connected state by the self-answer guard at the top
+            // of onCallAnswered, so it cannot disturb the live call.
+            val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+            publishEvent(selfWrap)
+            Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
+        } ?: return endAfterSignerRefusal(current.callId, EndReason.REJECTED)
 
         // Trigger callee-to-callee mesh connections with peers we discovered
         // while still ringing (their answers arrived before we accepted).
@@ -483,14 +496,16 @@ class CallManager(
         }
 
         val otherMembers = current.groupMembers - signer.pubKey
-        val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
-        result.wraps.forEach { publishEvent(it) }
+        logSignerErrors(TAG) {
+            val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
 
-        // Notify our own other devices so they stop ringing. See the
-        // matching comment in acceptCall — sibling devices in IncomingCall
-        // pick up this echo and transition to Ended(REJECTED) locally.
-        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
-        publishEvent(selfWrap)
+            // Notify our own other devices so they stop ringing. See the
+            // matching comment in acceptCall — sibling devices in IncomingCall
+            // pick up this echo and transition to Ended(REJECTED) locally.
+            val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+            publishEvent(selfWrap)
+        }
     }
 
     private fun onCallAnswered(event: CallAnswerEvent) {
@@ -711,8 +726,10 @@ class CallManager(
     ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
-        val result = factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun sendRenegotiationAnswer(
@@ -721,8 +738,10 @@ class CallManager(
     ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun onPeerConnected() {
@@ -781,8 +800,10 @@ class CallManager(
         schedulePeerTimeout(peerPubKey, callId)
 
         val allMembers = existingMembers + peerPubKey + signer.pubKey
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
-        publishEvent(result.wrap)
+        logSignerErrors(TAG) {
+            val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
+            publishEvent(result.wrap)
+        } ?: dropPeerAfterSignerRefusal(peerPubKey, callId)
     }
 
     suspend fun hangup() {
@@ -815,8 +836,10 @@ class CallManager(
             transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
         }
 
-        val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
-        result.wraps.forEach { publishEvent(it) }
+        logSignerErrors(TAG) {
+            val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
+        }
     }
 
     private suspend fun onPeerHangup(event: CallHangupEvent) {
@@ -931,8 +954,10 @@ class CallManager(
             "publishHangupToInvitedPendingPeers: notifying ${invitedPending.size} invited pending peers to stop ringing"
         }
         for (peer in invitedPending) {
-            val result = factory.createHangup(peer, callId, signer = signer)
-            publishEvent(result.wrap)
+            logSignerErrors(TAG) {
+                val result = factory.createHangup(peer, callId, signer = signer)
+                publishEvent(result.wrap)
+            }
         }
     }
 
@@ -1187,9 +1212,56 @@ class CallManager(
         peerPubKey: HexKey,
         callId: String,
     ) {
+        if (dropPendingPeer(peerPubKey, callId, EndReason.TIMEOUT)) {
+            logSignerErrors(TAG) {
+                val result = factory.createHangup(peerPubKey, callId, signer = signer)
+                publishEvent(result.wrap)
+            }
+        }
+    }
+
+    /**
+     * The signer refused the offer to [peerPubKey] (the user rejected it in their signer app, it
+     * timed out, ...), so that peer never got one. Drops them as if they had timed out, but without
+     * the hangup: there is nothing to hang up, and signing one would only prompt the user again.
+     * The last peer dropped ends the call.
+     */
+    private suspend fun dropPeerAfterSignerRefusal(
+        peerPubKey: HexKey,
+        callId: String,
+    ) {
+        dropPendingPeer(peerPubKey, callId, EndReason.HANGUP, cancelTimer = true)
+    }
+
+    /**
+     * The signer refused our answer, so the call never started on our side. Ends it locally without
+     * signaling anyone: signing a reject now would only prompt the user again.
+     */
+    private suspend fun endAfterSignerRefusal(
+        callId: String,
+        reason: EndReason,
+    ) = stateMutex.withLock {
+        if (currentCallId() == callId) {
+            transitionToEnded(callId, currentPeerPubKeys() ?: emptySet(), reason)
+        }
+    }
+
+    /**
+     * Drops [peerPubKey], who has not joined yet, from the current call; when nobody is left the
+     * call ends with [endReason]. Returns whether we invited that peer, i.e. whether their device may
+     * still be ringing and should get a hangup. [cancelTimer] is false when the peer's own timeout
+     * calls this: cancelling that job would cancel the caller.
+     */
+    private suspend fun dropPendingPeer(
+        peerPubKey: HexKey,
+        callId: String,
+        endReason: EndReason,
+        cancelTimer: Boolean = false,
+    ): Boolean {
         var shouldPublishHangup = false
         stateMutex.withLock {
-            perPeerTimeoutJobs.remove(peerPubKey)
+            val timer = perPeerTimeoutJobs.remove(peerPubKey)
+            if (cancelTimer) timer?.cancel()
             // Only publish a hangup if we were the peer's inviter. Pure
             // "watchdog" timers started by a callee for group members who
             // never joined must NOT publish anything — terminating the
@@ -1203,7 +1275,7 @@ class CallManager(
                     shouldPublishHangup = wasInvitedByUs
                     val remaining = current.peerPubKeys - peerPubKey
                     if (remaining.isEmpty()) {
-                        transitionToEnded(current.callId, current.peerPubKeys, EndReason.TIMEOUT)
+                        transitionToEnded(current.callId, current.peerPubKeys, endReason)
                     } else {
                         _state.value = current.copy(peerPubKeys = remaining)
                         emitSessionEvent(CallSessionEvent.PeerLeft(peerPubKey))
@@ -1220,7 +1292,7 @@ class CallManager(
                         transitionToEnded(
                             current.callId,
                             current.peerPubKeys + current.pendingPeerPubKeys,
-                            EndReason.TIMEOUT,
+                            endReason,
                         )
                     } else {
                         _state.value = current.copy(pendingPeerPubKeys = newPending)
@@ -1243,10 +1315,7 @@ class CallManager(
             }
         }
 
-        if (shouldPublishHangup) {
-            val result = factory.createHangup(peerPubKey, callId, signer = signer)
-            publishEvent(result.wrap)
-        }
+        return shouldPublishHangup
     }
 
     private fun startTimeout(callId: String) {
@@ -1277,8 +1346,10 @@ class CallManager(
                 // Notify peers so their phones stop ringing immediately
                 // instead of waiting for their own 60-second timeout.
                 if (wasOffering && peerPubKeys.isNotEmpty()) {
-                    val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
-                    result.wraps.forEach { publishEvent(it) }
+                    logSignerErrors(TAG) {
+                        val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+                        result.wraps.forEach { publishEvent(it) }
+                    }
                 }
             }
     }

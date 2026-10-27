@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
@@ -222,7 +223,7 @@ class AgentWorkBoardViewModel : ViewModel() {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = block(account, relay, channelId)
+            val ok = logSignerErrors("AgentWorkBoard") { block(account, relay, channelId) } ?: false
             withContext(Dispatchers.Main) { onResult(ok) }
         }
     }

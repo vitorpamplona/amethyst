@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzJobAggregator
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.subscribeAsFlow
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -137,7 +138,7 @@ class JobBoardViewModel : ViewModel() {
         val relay = relay ?: return
         val channelId = channelId ?: return
         // The live subscription picks up the relay's echo of our own write, so no local re-derive here.
-        viewModelScope.launch(Dispatchers.IO) { block(account, relay, channelId) }
+        viewModelScope.launch(Dispatchers.IO) { logSignerErrors("JobBoard") { block(account, relay, channelId) } }
     }
 
     override fun onCleared() {

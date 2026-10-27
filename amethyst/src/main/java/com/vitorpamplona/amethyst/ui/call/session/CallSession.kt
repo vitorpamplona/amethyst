@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_screen_sharing
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallAudioManager
 import com.vitorpamplona.amethyst.service.call.CallForegroundService
@@ -415,9 +416,12 @@ class CallSession(
         val callId = callManager.currentCallId() ?: return
         val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
         scope.launch {
-            val signer = signerProvider()
-            val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
-            publishWrap(result.wrap)
+            // A refused candidate only loses that route; the remaining candidates still connect.
+            logSignerErrors(TAG) {
+                val signer = signerProvider()
+                val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
+                publishWrap(result.wrap)
+            }
         }
     }
 
