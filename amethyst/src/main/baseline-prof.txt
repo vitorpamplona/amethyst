@@ -55,10 +55,8 @@ HPLcom/vitorpamplona/amethyst/service/okhttp/**->**(**)**
 HPLcom/vitorpamplona/amethyst/commons/model/**->**(**)**
 HPLcom/vitorpamplona/amethyst/commons/richtext/**->**(**)**
 
-# --- JSON: every frame is parsed through Jackson ---
-HPLcom/fasterxml/jackson/core/**->**(**)**
-HPLcom/fasterxml/jackson/databind/**->**(**)**
-HPLcom/fasterxml/jackson/module/kotlin/**->**(**)**
+# --- JSON: every frame is parsed by quartz's Kite (nip01Core/kite), covered by
+# the nip01Core rule above. Jackson rules lived here until quartz 2.4.0 dropped it.
 
 # --- Transport: the socket read path under the relay client ---
 HPLokhttp3/internal/ws/**->**(**)**

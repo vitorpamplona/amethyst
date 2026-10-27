@@ -170,7 +170,7 @@ there rather than trusting a number copied here).
 | **UI** | Compose Multiplatform |
 | **Async** | kotlinx.coroutines + Flow |
 | **Network** | OkHttp (JVM) |
-| **Serialization** | kotlinx.serialization; Quartz's Kite for Nostr JSON (no Jackson) |
+| **Serialization** | kotlinx.serialization; Nostr JSON uses quartz's Kite (no Jackson) |
 | **DI** | Manual / Koin |
 | **Build** | Gradle + Kotlin Multiplatform |
 

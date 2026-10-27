@@ -3127,6 +3127,19 @@
     <string name="web_bookmark_open_url">Open URL</string>
     <string name="goal_closed">This goal has closed</string>
     <string name="fundraiser_ends">Ends %1$s</string>
+    <string name="ebook_read">Read</string>
+    <string name="ebook_open_file">Open file</string>
+    <string name="magazine_issue_label">Issue %1$s</string>
+    <string name="magazine_latest_issue">Latest</string>
+    <string name="magazine_show_fewer_issues">Show fewer</string>
+    <plurals name="magazine_issue_count">
+        <item quantity="one">%1$d issue</item>
+        <item quantity="other">%1$d issues</item>
+    </plurals>
+    <plurals name="magazine_show_all_issues">
+        <item quantity="one">Show all %1$d issue</item>
+        <item quantity="other">Show all %1$d issues</item>
+    </plurals>
     <string name="fundraiser_onchain_donation">On-chain donation</string>
     <string name="goal_amount_label">Goal amount (sats)</string>
     <string name="goal_amount_placeholder">100000</string>
@@ -4354,6 +4367,8 @@
     <string name="home_content_type_comments">Comments &amp; replies</string>
     <string name="home_content_type_ephemeral_chat">Ephemeral chats</string>
     <string name="home_content_type_fundraisers">Fundraisers</string>
+    <string name="home_content_type_ebooks">Ebooks</string>
+    <string name="home_content_type_magazines">Magazines</string>
     <string name="home_content_type_highlights">Highlights</string>
     <string name="home_content_type_interactive_stories">Interactive stories</string>
     <string name="home_content_type_live_activities">Live activities</string>
@@ -4522,6 +4537,9 @@
     <string name="kind_meeting_space">Meeting Space</string>
     <string name="kind_music_playlist">Music Playlist</string>
     <string name="kind_music_track">Music Track</string>
+    <string name="kind_ebook">Ebook</string>
+    <string name="kind_magazine">Magazine</string>
+    <string name="kind_magazine_issue">Magazine Issue</string>
     <string name="kind_mute_list">Mute List</string>
     <string name="kind_mute_set_for_kind">Muted for kind %1$s</string>
     <string name="kind_named_bookmarks">Named Bookmarks</string>

@@ -176,26 +176,15 @@
 }
 
 # -----------------------------------------------------------------------------
-# Quartz's wire format — no keeps
+# JSON — nothing to keep
 # -----------------------------------------------------------------------------
-# Quartz 2.4.0 has no Jackson. Event, Filter, Message, Command, Rumor,
-# EventTemplate, TagArray, the NIP-46 Bunker messages and the NIP-55 intent
-# results go through its hand-written Kite reader and writer or its kotlinx
-# serializers, which read and write property names as string literals. Renaming
-# their fields changes nothing on the wire. The notes below record the reflective
-# Jackson binding that used to need keeps here.
-
-# NIP-47 and CLINK used to need a package keep each, because Jackson bound their
-# ~106 concrete classes reflectively. Both are gone: OptimizedJsonMapper routes
-# those types at the hand-written kotlinx serializers, which name every field as a
-# string literal. Nothing to keep, nothing to verify.
-
-# The on-disk stores (scheduled posts, pending PoW jobs, resource usage) used to
-# need a keep each, because Jackson derived their JSON keys from the Kotlin
-# constructor parameter names. They are @Serializable now: kotlinx bakes every key
-# in as a string literal, so the field names can be renamed freely. The formats are
-# pinned by ScheduledPostFileFormatTest and PowAndUsageFileFormatTest instead,
-# which assert the bytes against what the Jackson build wrote.
+# Quartz 2.4.0 dropped Jackson. Nostr JSON (events, filters, messages, commands,
+# rumors, templates, tags, NIP-46/NIP-55) goes through quartz's hand-written Kite
+# reader/writer, and everything else (NIP-47, CLINK, the on-disk stores) through
+# @Serializable kotlinx classes. Both name every field as a string literal, so
+# R8 can rename the Kotlin fields freely without changing the wire format. The
+# on-disk formats are pinned by ScheduledPostFileFormatTest and
+# PowAndUsageFileFormatTest.
 
 # -----------------------------------------------------------------------------
 # Names referenced from outside the DEX

@@ -215,10 +215,6 @@ class RenderableKindsTest {
                 // accepted-badge sets and feed definitions: lists with no card yet
                 30008,
                 31890,
-                // PressStr ebooks, magazines and magazine issues: new in Quartz 2.4.0, no card yet
-                33953,
-                34609,
-                39731,
                 // relay roles, ContextVM server announcements and cyberspace objects: no card yet
                 11316,
                 11333,

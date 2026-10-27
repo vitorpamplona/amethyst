@@ -206,8 +206,6 @@ private fun plainPreview(request: NappletRequest): String =
         else -> ""
     }
 
-private fun prettyJson(build: JsonObjectBuilder.() -> Unit): String = KitePretty.format(buildJsonObject(build).toString())
-
 private fun rawDataFor(request: NappletRequest): String =
     when (request) {
         is NappletRequest.Publish ->
@@ -238,6 +236,9 @@ private fun rawDataFor(request: NappletRequest): String =
             }
         else -> ""
     }
+
+/** A JSON object built in order and laid out the way Quartz lays out events, for the raw-data pane. */
+private inline fun prettyJson(build: JsonObjectBuilder.() -> Unit): String = KitePretty.format(buildJsonObject(build).toString())
 
 /**
  * Creates a [SignerConnectInfo] for the first-connect dialog. [declared] is the capability set the

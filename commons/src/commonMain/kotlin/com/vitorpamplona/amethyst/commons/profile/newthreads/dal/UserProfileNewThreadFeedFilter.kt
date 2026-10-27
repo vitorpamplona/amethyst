@@ -42,6 +42,9 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -89,6 +92,9 @@ class UserProfileNewThreadFeedFilter(
                     it.event is CommentEvent ||
                     it.event is ClassifiedsEvent ||
                     it.event is FundraiserEvent ||
+                    it.event is EbookEvent ||
+                    it.event is MagazineEvent ||
+                    it.event is MagazineIssueEvent ||
                     it.event is BirdexEvent ||
                     it.event is BirdDetectionEvent ||
                     it.event.isRenderableRepost() ||

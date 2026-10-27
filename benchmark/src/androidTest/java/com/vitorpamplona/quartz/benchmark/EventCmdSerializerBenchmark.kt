@@ -39,7 +39,7 @@ class EventCmdSerializerBenchmark {
     @get:Rule val benchmarkRule = BenchmarkRule()
 
     @Test
-    fun eventSerializerTest() {
+    fun eventSerializerKiteTest() {
         val event = Event.fromJson(largeKind1Event)
 
         benchmarkRule.measureRepeated {

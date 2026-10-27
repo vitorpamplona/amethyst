@@ -46,6 +46,9 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -90,6 +93,9 @@ class HomeNewThreadFeedFilter(
                 WikiArticleEvent.KIND,
                 ClassifiedsEvent.KIND,
                 FundraiserEvent.KIND,
+                EbookEvent.KIND,
+                MagazineEvent.KIND,
+                MagazineIssueEvent.KIND,
                 BirdexEvent.KIND,
                 LongFormContentEvent.KIND,
                 LiveChessGameEndEvent.KIND,
@@ -173,6 +179,9 @@ class HomeNewThreadFeedFilter(
             noteEvent is TextNoteEvent ||
                 noteEvent is ClassifiedsEvent ||
                 noteEvent is FundraiserEvent ||
+                noteEvent is EbookEvent ||
+                noteEvent is MagazineEvent ||
+                noteEvent is MagazineIssueEvent ||
                 noteEvent is BirdexEvent ||
                 noteEvent is BirdDetectionEvent ||
                 noteEvent.isRenderableRepost() ||

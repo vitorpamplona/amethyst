@@ -312,6 +312,13 @@ object DesktopNotePlatform : NotePlatform {
     }
 
     @Composable
+    override fun PdfViewerDialog(
+        content: MediaUrlPdf,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = DesktopPdfViewer(content, accountViewModel, onDismiss)
+
+    @Composable
     override fun ZoomableImageDialog(
         imageUrl: BaseMediaContent,
         allImages: ImmutableList<BaseMediaContent>,

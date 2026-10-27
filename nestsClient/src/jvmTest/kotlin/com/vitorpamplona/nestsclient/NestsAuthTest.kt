@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.nestsclient
 
-import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
@@ -44,7 +44,7 @@ class NestsAuthTest {
 
             val token = header.removePrefix("Nostr ")
             val json = Base64.decode(token).decodeToString()
-            val event = OptimizedJsonMapper.fromJson(json) as HTTPAuthorizationEvent
+            val event = Event.fromJson(json) as HTTPAuthorizationEvent
 
             assertEquals(HTTPAuthorizationEvent.KIND, event.kind)
             assertEquals("https://nostrnests.com/api/v1/nests/abc", event.url())
@@ -61,7 +61,7 @@ class NestsAuthTest {
             val c = NestsAuth.header(signer, "https://a.example.com/bar", "GET")
 
             fun tagsOf(header: String) =
-                (OptimizedJsonMapper.fromJson(Base64.decode(header.removePrefix("Nostr ")).decodeToString()) as HTTPAuthorizationEvent).let {
+                (Event.fromJson(Base64.decode(header.removePrefix("Nostr ")).decodeToString()) as HTTPAuthorizationEvent).let {
                     Triple(it.url(), it.method(), it.id)
                 }
 

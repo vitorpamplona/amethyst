@@ -129,8 +129,7 @@ fun sealContents(
                 content = node["content"]?.jsonPrimitive?.content ?: "",
             )
         }.getOrNull()
-    val pretty =
-        runCatching { KitePretty.format(entry.plaintext) }.getOrDefault(entry.plaintext)
+    val pretty = runCatching { KitePretty.format(entry.plaintext) }.getOrDefault(entry.plaintext)
     return SealContents(entry.recipient, rumor, pretty)
 }
 

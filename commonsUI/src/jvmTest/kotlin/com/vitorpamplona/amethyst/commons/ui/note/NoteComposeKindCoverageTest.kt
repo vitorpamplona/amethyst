@@ -20,9 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note
 
-import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
-import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
-import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
@@ -54,18 +51,6 @@ class NoteComposeKindCoverageTest {
                 TextNoteEvent::class.java,
                 CommentEvent::class.java,
                 GitReplyEvent::class.java,
-            )
-
-        /**
-         * Kinds Quartz parses that have no card yet and fall back to the text card meanwhile. Each
-         * entry is a gap, not a decision: remove it when its card lands.
-         */
-        private val AWAITING_A_CARD: Set<Class<out Event>> =
-            setOf(
-                // PressStr, new in Quartz 2.4.0
-                EbookEvent::class.java,
-                MagazineEvent::class.java,
-                MagazineIssueEvent::class.java,
             )
 
         /** EventFactory.kt within quartz's sources: a `commonMain/kotlin` dir, or a sources jar (`commonMain/…`). */
@@ -110,7 +95,7 @@ class NoteComposeKindCoverageTest {
 
         val missing =
             factoryClasses
-                .filter { it !in TEXT_CARD_KINDS && it !in AWAITING_A_CARD }
+                .filter { it !in TEXT_CARD_KINDS }
                 .filter { kind -> branchClasses.none { it.isAssignableFrom(kind) } }
                 .map { it.name }
                 .sorted()

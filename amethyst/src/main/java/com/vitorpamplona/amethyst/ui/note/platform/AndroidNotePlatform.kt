@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
@@ -61,6 +62,7 @@ import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppV
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
+import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog as AppPdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
 import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
@@ -126,6 +128,13 @@ object AndroidNotePlatform : NotePlatform {
         contentScale = contentScale,
         accountViewModel = accountViewModel,
     )
+
+    @Composable
+    override fun PdfViewerDialog(
+        content: MediaUrlPdf,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = AppPdfViewerDialog(content, accountViewModel, onDismiss)
 
     @Composable
     override fun ZoomableImageDialog(

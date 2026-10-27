@@ -13,13 +13,12 @@ adds the source-set mechanics and the build traps.
 
 ## Modules
 
-`settings.gradle.kts` includes 11: `amethyst`, `nappletHost`, `benchmark`,
-`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`, `desktopApp`,
-`cli`, `relayBench`. The protocol libraries are external artifacts from their own repos:
-`libs.quartz`, `libs.crypto`, `libs.mls.kmp`, `libs.marmot` (+ `libs.marmot.quic`),
-`libs.cordn` and `libs.quic` (`AGENTS.md` › Libraries has what each holds). A `-P…Dir` flag
-(`-PquartzDir=../quartz`, `-PmarmotKmpDir=../marmot-kmp`, …) builds a local checkout instead,
-as an included build substituted for the artifact (`settings.gradle.kts`).
+`settings.gradle.kts` includes 13: `amethyst`, `nappletHost`, `benchmark`,
+`baselineprofile`, `geode`, `commons`, `commonsUI`, `nestsClient`,
+`marmotQuic`, `desktopApp`, `cli`, `relayBench`, `marmotBench`. Quartz is the
+external `libs.quartz` (vitorpamplona/quartz) and QUIC the external `libs.quic`
+(vitorpamplona/quic-kmp); `-PquartzDir=../quartz` / `-PquicKmpDir=../quic-kmp` build a
+local checkout instead (an included build, so quic's own quartz dependency follows).
 
 ## Source sets
 
@@ -33,7 +32,7 @@ as an included build substituted for the artifact (`settings.gradle.kts`).
 
 Targets: `quartz` builds android, jvm, iosArm64, iosSimulatorArm64, linuxX64,
 macosArm64. `commons` and `commonsUI` build android, jvm, iosArm64,
-iosSimulatorArm64. `nestsClient` is android + jvm. There is
+iosSimulatorArm64. `nestsClient`, `marmotQuic` are android + jvm. There is
 no `iosX64`.
 
 `jvmAndroid` is a custom intermediate set created with `create("jvmAndroid")`
@@ -41,10 +40,10 @@ before `androidMain`/`jvmMain` depend on it (see `commons/build.gradle.kts`).
 Prefer the most common set that compiles: `commonMain` → `jvmAndroid` → platform.
 
 kotlinx.serialization is the house JSON stack and OkHttp the house HTTP stack
-(`AGENTS.md` › Tech Stack). Nostr JSON goes through Quartz's Kite (`OptimizedJsonMapper`,
-`KiteWriter.toPrettyJson`); Quartz dropped Jackson in 2.4.0, so don't add it back. Don't
-migrate JVM HTTP to Ktor. Jackson and OkHttp are banned in iOS-compiled sets, which the
-purity gate enforces.
+(`AGENTS.md` › Tech Stack). Nostr JSON (events, messages, filters, tags) goes through
+quartz's Kite (`OptimizedJsonMapper`, `KiteWriter`, `KitePretty`); quartz dropped Jackson
+in 2.4.0, so don't add Jackson back. Don't migrate JVM HTTP to Ktor. Jackson and OkHttp
+are banned in iOS-compiled sets, which the purity gate enforces.
 
 ## expect/actual vs ports and slots
 

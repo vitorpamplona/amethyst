@@ -42,7 +42,7 @@ open class BaseCacheBenchmark {
         // This file includes duplicates
         val fullDBInputStream = javaClass.classLoader?.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
-        return OptimizedJsonMapper.fromJsonToEventList(GZIPInputStream(fullDBInputStream).bufferedReader().readText())
+        return OptimizedJsonMapper.fromJsonToEventList(GZIPInputStream(fullDBInputStream).bufferedReader().use { it.readText() })
     }
 
     fun getConcurrentSkipList(db: List<Event>): ConcurrentSkipListMap<HexKey, Event> {
