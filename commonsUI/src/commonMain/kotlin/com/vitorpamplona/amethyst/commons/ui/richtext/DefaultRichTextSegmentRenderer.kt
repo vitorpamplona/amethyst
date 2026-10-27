@@ -166,7 +166,8 @@ open class DefaultRichTextSegmentRenderer(
     ) {
         when (segment) {
             // Don't surface a pay/withdraw affordance when previews are suppressed (reply and quote
-            // previews, reported notes): a one-line label instead of hundreds of bech32 characters.
+            // previews, reported notes, profile bios, channel headers): a one-line label with a copy
+            // button instead of hundreds of bech32 characters.
             is InvoiceSegment -> if (canPreview) MayBeInvoicePreview(segment.segmentText, accountViewModel) else CompactInvoiceLabel(segment.segmentText)
             is WithdrawSegment -> if (canPreview) MayBeWithdrawal(segment.segmentText, accountViewModel) else CompactWithdrawalLabel(segment.segmentText)
             // Cashu + Clink decode locally (network only on tap), so they render in both modes.

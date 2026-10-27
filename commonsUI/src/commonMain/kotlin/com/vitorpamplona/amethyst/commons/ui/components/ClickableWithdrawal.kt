@@ -73,11 +73,11 @@ fun MayBeWithdrawal(
     }
 }
 
-/** [MayBeWithdrawal] for where previews are off: a one-line label instead of the LNURL, and no action. */
+/** [MayBeWithdrawal] for where previews are off: a one-line label instead of the LNURL, copy only. */
 @Composable
 fun CompactWithdrawalLabel(lnurlWord: String) {
-    val isWithdrawal = remember(lnurlWord) { LnWithdrawalUtil.findWithdrawal(lnurlWord) != null }
-    if (!isWithdrawal) {
+    val withdrawal = remember(lnurlWord) { LnWithdrawalUtil.findWithdrawal(lnurlWord) }
+    if (withdrawal == null) {
         Text(
             text = lnurlWord,
             style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -85,7 +85,7 @@ fun CompactWithdrawalLabel(lnurlWord: String) {
         return
     }
 
-    PaymentLabel(stringRes(Res.string.lnurl_label)) {
+    PaymentLabel(stringRes(Res.string.lnurl_label), copyValue = withdrawal) {
         Icon(
             imageVector = CustomHashTagIcons.Lightning,
             contentDescription = null,

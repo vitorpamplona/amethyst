@@ -182,11 +182,13 @@ fun PaymentCardDescription(text: String) {
 
 /**
  * One-line stand-in for a payment card where previews are off (reply and quote previews, reported
- * notes): the card's icon and a short summary instead of the raw payment string, with no actions.
+ * notes, profile bios, channel headers): the card's icon and a short summary instead of the raw
+ * payment string. No pay action, but [copyValue] keeps the string reachable.
  */
 @Composable
 fun PaymentLabel(
     text: String,
+    copyValue: String?,
     icon: @Composable () -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -196,7 +198,10 @@ fun PaymentLabel(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.weight(1f, fill = false).padding(start = 4.dp),
         )
+        if (copyValue != null) {
+            CopyToClipboardButton(copyValue)
+        }
     }
 }

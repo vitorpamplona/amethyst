@@ -108,12 +108,12 @@ fun MayBeInvoicePreview(
 
 /**
  * [MayBeInvoicePreview] for where previews are off: "Lightning Invoice · 50 sats" in one line
- * instead of the invoice's few hundred bech32 characters, and no Pay button.
+ * instead of the invoice's few hundred bech32 characters. No Pay button, only copy.
  */
 @Composable
 fun CompactInvoiceLabel(lnbcWord: String) {
-    val isInvoice = remember(lnbcWord) { LnInvoiceUtil.findInvoice(lnbcWord) != null }
-    if (!isInvoice) {
+    val invoice = remember(lnbcWord) { LnInvoiceUtil.findInvoice(lnbcWord) }
+    if (invoice == null) {
         Text(
             text = lnbcWord,
             style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
@@ -131,7 +131,7 @@ fun CompactInvoiceLabel(lnbcWord: String) {
                 if (isExpired) append(" · ", stringRes(Res.string.invoice_expired))
             }
 
-        PaymentLabel(text) {
+        PaymentLabel(text, copyValue = invoice) {
             Icon(
                 imageVector = CustomHashTagIcons.Lightning,
                 contentDescription = null,
@@ -170,7 +170,8 @@ fun InvoicePreview(
 
     // Snapshot at composition: enough to flag clearly stale invoices without
     // ticking a clock while the card is on screen.
-    val isExpired = remember(expiresAt) { expiresAt != null && expiresAt < TimeUtils.now() }
+    val now = remember(expiresAt) { TimeUtils.now() }
+    val isExpired = expiresAt != null && expiresAt < now
 
     PaymentCard(
         title = stringRes(Res.string.lightning_invoice),
@@ -205,7 +206,7 @@ fun InvoicePreview(
             )
         } else if (expiresAt != null) {
             Text(
-                text = invoiceExpiresLabel(expiresAt),
+                text = invoiceExpiresLabel(expiresAt, now),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -232,13 +233,17 @@ fun InvoicePreview(
 
 /**
  * "Expires in 30d" while the invoice has under a month left, else "Expires Nov 26, 2026, 7:53 AM".
- * The last minute also gets the clock time, since the relative form would read "in now".
+ * The last minute also gets the clock time, since the relative form would read "in now". [now] is
+ * the card's snapshot, the same one its expired check used, so the two always agree.
  */
 @Composable
-private fun invoiceExpiresLabel(expiresAt: Long): String {
-    val left = expiresAt - TimeUtils.now()
+private fun invoiceExpiresLabel(
+    expiresAt: Long,
+    now: Long,
+): String {
+    val left = expiresAt - now
     return if (left > TimeUtils.ONE_MINUTE && left <= TimeUtils.ONE_MONTH) {
-        stringRes(Res.string.invoice_expires_in, timeAheadNoDot(expiresAt))
+        stringRes(Res.string.invoice_expires_in, timeAheadNoDot(expiresAt, now))
     } else {
         stringRes(Res.string.invoice_expires_on, formatDateTime(expiresAt * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT))
     }
