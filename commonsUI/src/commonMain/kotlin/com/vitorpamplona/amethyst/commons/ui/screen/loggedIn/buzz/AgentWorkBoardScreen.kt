@@ -89,6 +89,27 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkKind
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_work_approve_open_pr
+import com.vitorpamplona.amethyst.commons.resources.agent_work_awaiting_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_cannot_sign_decision
+import com.vitorpamplona.amethyst.commons.resources.agent_work_compose_description
+import com.vitorpamplona.amethyst.commons.resources.agent_work_deny
+import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_description
+import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_title
+import com.vitorpamplona.amethyst.commons.resources.agent_work_file_direct
+import com.vitorpamplona.amethyst.commons.resources.agent_work_file_with_gate
+import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_off
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_on
+import com.vitorpamplona.amethyst.commons.resources.agent_work_task_hint
+import com.vitorpamplona.amethyst.commons.resources.agent_work_title
+import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
+import com.vitorpamplona.amethyst.commons.resources.agent_work_view_pr
+import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_for_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on_you
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -99,6 +120,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -141,14 +163,14 @@ fun AgentWorkBoardScreen(
     val scope = rememberCoroutineScope()
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Agent work", nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.agent_work_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (canWrite) {
                 ExtendedFloatingActionButton(
                     onClick = { composing = true },
                     icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                    text = { Text("New task") },
+                    text = { Text(stringRes(Res.string.agent_work_new_task)) },
                 )
             }
         },
@@ -262,7 +284,7 @@ private fun LazyItemScope.GateCard(
                         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
                     }
                     Text(
-                        text = if (mine) "Waiting on you" else "Awaiting approval",
+                        text = if (mine) stringRes(Res.string.agent_work_waiting_on_you) else stringRes(Res.string.agent_work_awaiting_approval),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -277,16 +299,16 @@ private fun LazyItemScope.GateCard(
             if (mine && canWrite) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { onDecide(false) }, colors = ButtonDefaults.textButtonColors(contentColor = scheme.error)) {
-                        Text("Deny", fontWeight = FontWeight.SemiBold)
+                        Text(stringRes(Res.string.agent_work_deny), fontWeight = FontWeight.SemiBold)
                     }
                     Button(onClick = { onDecide(true) }, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                         Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Approve & open PR", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(stringRes(Res.string.agent_work_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (mine) {
-                Text("You're the approver, but this login can't sign a decision.", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+                Text(stringRes(Res.string.agent_work_cannot_sign_decision), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             } else {
                 WaitingPill(item.pendingApprover, accountViewModel, nav)
             }
@@ -360,7 +382,7 @@ private fun LazyItemScope.WorkCard(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         UpvoteChip(item.upvotes ?: 0, onUpvote)
                         TextButton(onClick = onCancel, colors = ButtonDefaults.textButtonColors(contentColor = scheme.onSurfaceVariant)) {
-                            Text("Cancel", style = MaterialTheme.typography.labelLarge)
+                            Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
@@ -382,7 +404,7 @@ private fun UpvoteChip(
         modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick),
     ) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = stringRes(Res.string.agent_work_upvote), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
             Text("$count", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         }
     }
@@ -426,7 +448,7 @@ private fun ResultLine(result: String?) {
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("View PR")
+            Text(stringRes(Res.string.agent_work_view_pr))
         }
     } else if (!result.isNullOrBlank()) {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -469,7 +491,7 @@ private fun WaitingPill(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            if (approver != null) Person("waiting on", approver, accountViewModel, nav) else Text("Waiting for approval", style = MaterialTheme.typography.labelLarge)
+            if (approver != null) Person("waiting on", approver, accountViewModel, nav) else Text(stringRes(Res.string.agent_work_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -499,16 +521,16 @@ private fun NewTaskSheet(
     var requireApproval by remember { mutableStateOf(true) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("New task", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.agent_work_new_task), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "Describe what the agent should do. The whole channel sees it and watches it work.",
+                stringRes(Res.string.agent_work_compose_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SpellCheckedOutlinedTextField(
                 value = task,
                 onValueChange = { task = it },
-                label = { Text("What should it do?") },
+                label = { Text(stringRes(Res.string.agent_work_task_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -519,9 +541,9 @@ private fun NewTaskSheet(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Require approval before it ships", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(stringRes(Res.string.agent_work_require_approval), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         Text(
-                            if (requireApproval) "A human grants it before the PR opens (a workflow run)." else "Ships its PR directly, no gate (a job).",
+                            if (requireApproval) stringRes(Res.string.agent_work_require_approval_on) else stringRes(Res.string.agent_work_require_approval_off),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -532,7 +554,7 @@ private fun NewTaskSheet(
             Button(onClick = { onSubmit(task.trim(), requireApproval) }, enabled = task.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                 Icon(symbol = if (requireApproval) MaterialSymbols.Gavel else MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (requireApproval) "File — with approval gate" else "File — ship directly")
+                Text(if (requireApproval) stringRes(Res.string.agent_work_file_with_gate) else stringRes(Res.string.agent_work_file_direct))
             }
         }
     }
@@ -546,9 +568,9 @@ private fun EmptyAgentWork() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text("No agent work yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.agent_work_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Tap “New task” to ask the agent to build something. Choose whether it ships directly or pauses for a human to approve — either way the whole channel follows along.",
+            stringRes(Res.string.agent_work_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

@@ -83,7 +83,20 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.JobState
 import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
+import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
+import com.vitorpamplona.amethyst.commons.resources.agent_work_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
+import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.job_board_ask_agent_title
+import com.vitorpamplona.amethyst.commons.resources.job_board_compose_description
+import com.vitorpamplona.amethyst.commons.resources.job_board_empty_description
+import com.vitorpamplona.amethyst.commons.resources.job_board_empty_title
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_add_setting
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_fix_bug
+import com.vitorpamplona.amethyst.commons.resources.job_board_example_improve_screen
+import com.vitorpamplona.amethyst.commons.resources.job_board_file_task
+import com.vitorpamplona.amethyst.commons.resources.job_board_task_hint
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -141,7 +154,7 @@ fun JobBoardScreen(
             ExtendedFloatingActionButton(
                 onClick = { composing = true },
                 icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                text = { Text("New task") },
+                text = { Text(stringRes(Res.string.agent_work_new_task)) },
             )
         },
     ) { padding ->
@@ -334,7 +347,7 @@ private fun LazyItemScope.JobCard(
 
                 if (!job.isTerminal && job.requester == me) {
                     TextButton(onClick = { viewModel.cancel(job.jobId) }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Cancel")
+                        Text(stringRes(Res.string.cancel))
                     }
                 }
             }
@@ -370,7 +383,7 @@ private fun ResultLine(result: String) {
         Button(onClick = { uriHandler.openUri(url) }) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("View PR")
+            Text(stringRes(Res.string.agent_work_view_pr))
         }
     } else {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -429,7 +442,7 @@ private fun UpvoteChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = stringRes(Res.string.agent_work_upvote), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
             Text(text = count.toString(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
     }
@@ -445,21 +458,25 @@ private fun NewTaskSheet(
     var text by remember { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Ask the workspace agent", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.job_board_ask_agent_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "Describe a feature or fix. The whole channel sees it, and the agent opens a PR.",
+                stringRes(Res.string.job_board_compose_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("Fix a bug", "Add a setting", "Improve a screen").forEach { example ->
+                listOf(
+                    stringRes(Res.string.job_board_example_fix_bug),
+                    stringRes(Res.string.job_board_example_add_setting),
+                    stringRes(Res.string.job_board_example_improve_screen),
+                ).forEach { example ->
                     SuggestionChip(onClick = { if (text.isBlank()) text = "$example: " }, label = { Text(example) })
                 }
             }
             SpellCheckedOutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("What should we build?") },
+                label = { Text(stringRes(Res.string.job_board_task_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -470,7 +487,7 @@ private fun NewTaskSheet(
             ) {
                 Icon(symbol = MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("File task")
+                Text(stringRes(Res.string.job_board_file_task))
             }
         }
     }
@@ -484,9 +501,9 @@ private fun EmptyBoard() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text("No tasks yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.job_board_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Tap “New task” to ask the workspace agent to build or fix something. The whole channel will see it, upvote it, and watch it ship.",
+            stringRes(Res.string.job_board_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

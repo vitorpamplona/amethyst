@@ -51,7 +51,21 @@ import com.vitorpamplona.amethyst.commons.model.Resource
 import com.vitorpamplona.amethyst.commons.model.VisionPrescription
 import com.vitorpamplona.amethyst.commons.model.findReferenceInDb
 import com.vitorpamplona.amethyst.commons.model.parseResourceBundleOrNull
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.medical_data_add
+import com.vitorpamplona.amethyst.commons.resources.medical_data_axis
+import com.vitorpamplona.amethyst.commons.resources.medical_data_curve
+import com.vitorpamplona.amethyst.commons.resources.medical_data_cylinder
+import com.vitorpamplona.amethyst.commons.resources.medical_data_diameter
+import com.vitorpamplona.amethyst.commons.resources.medical_data_eye
+import com.vitorpamplona.amethyst.commons.resources.medical_data_inter_add
+import com.vitorpamplona.amethyst.commons.resources.medical_data_patient
+import com.vitorpamplona.amethyst.commons.resources.medical_data_prism
+import com.vitorpamplona.amethyst.commons.resources.medical_data_pupillary_distance
+import com.vitorpamplona.amethyst.commons.resources.medical_data_signed_by
+import com.vitorpamplona.amethyst.commons.resources.medical_data_sphere
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.DoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
@@ -249,7 +263,7 @@ fun RenderEyeGlassesPrescription(
 
             patient?.name?.firstOrNull()?.assembleName()?.let {
                 Text(
-                    text = "Patient: $it",
+                    text = stringRes(Res.string.medical_data_patient, it),
                     modifier = Modifier.padding(4.dp).fillMaxWidth(),
                 )
             }
@@ -303,7 +317,7 @@ fun RenderEyeGlassesPrescription(
             practitioner?.name?.firstOrNull()?.assembleName()?.let {
                 Spacer(DoubleVertSpacer)
                 Text(
-                    text = "Signed by: $it",
+                    text = stringRes(Res.string.medical_data_signed_by, it),
                     modifier = Modifier.padding(4.dp).fillMaxWidth(),
                     textAlign = TextAlign.Right,
                 )
@@ -319,28 +333,28 @@ fun RenderEyeGlassesPrescriptionHeaderRow() {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = "Eye",
+            text = stringRes(Res.string.medical_data_eye),
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
         Text(
-            text = "Sph",
+            text = stringRes(Res.string.medical_data_sphere),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         Text(
-            text = "Cyl",
+            text = stringRes(Res.string.medical_data_cylinder),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         Text(
-            text = "Axis",
+            text = stringRes(Res.string.medical_data_axis),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
         Text(
-            text = "PD",
+            text = stringRes(Res.string.medical_data_pupillary_distance),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
@@ -403,7 +417,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
 
             if (data.interAdd != null) {
                 Text(
-                    text = "Inter Add:",
+                    text = stringRes(Res.string.medical_data_inter_add),
                     textAlign = TextAlign.Right,
                     modifier = Modifier.padding(4.dp).weight(2f),
                 )
@@ -431,7 +445,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
 
             if (data.add != null) {
                 Text(
-                    text = "Add:",
+                    text = stringRes(Res.string.medical_data_add),
                     textAlign = TextAlign.Right,
                     modifier = Modifier.padding(4.dp).weight(2f),
                 )
@@ -458,7 +472,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
             VerticalDivider(thickness = DividerThickness)
 
             Text(
-                text = "Prism:",
+                text = stringRes(Res.string.medical_data_prism),
                 textAlign = TextAlign.Right,
                 modifier = Modifier.padding(4.dp).weight(2f),
             )
@@ -485,22 +499,22 @@ fun RenderEyeContactsPrescriptionHeaderRow() {
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
-            text = "Eye",
+            text = stringRes(Res.string.medical_data_eye),
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
         Text(
-            text = "Sph",
+            text = stringRes(Res.string.medical_data_sphere),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         Text(
-            text = "Cyl",
+            text = stringRes(Res.string.medical_data_cylinder),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         Text(
-            text = "Axis",
+            text = stringRes(Res.string.medical_data_axis),
             textAlign = TextAlign.Right,
             modifier = Modifier.padding(4.dp).weight(1f),
         )
@@ -560,7 +574,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
                 modifier = Modifier.padding(4.dp).weight(1f),
             )
             Text(
-                text = "Curve:",
+                text = stringRes(Res.string.medical_data_curve),
                 textAlign = TextAlign.Right,
                 modifier = Modifier.padding(4.dp).weight(1f),
             )
@@ -590,7 +604,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
                 modifier = Modifier.padding(4.dp).weight(1f),
             )
             Text(
-                text = "Diameter:",
+                text = stringRes(Res.string.medical_data_diameter),
                 textAlign = TextAlign.Right,
                 modifier = Modifier.padding(4.dp).weight(1f),
             )
