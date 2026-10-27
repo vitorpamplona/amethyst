@@ -66,7 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
@@ -78,6 +78,12 @@ import com.vitorpamplona.quartz.nip56Reports.ReportEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 /**
  * A kind-22242 that names no relay is a web app proving to its own server who you are (Brainstorm
@@ -110,25 +116,21 @@ fun sealContents(
     val entry = recent?.lookup(content) ?: return null
     val rumor =
         runCatching {
-            val node = JacksonMapper.mapper.readTree(entry.plaintext)
+            val node = Json.parseToJsonElement(entry.plaintext).jsonObject
             val tags =
-                node
-                    .get("tags")
-                    ?.map { tag -> tag.map { it.asText() }.toTypedArray() }
+                node["tags"]
+                    ?.jsonArray
+                    ?.map { tag -> tag.jsonArray.map { it.jsonPrimitive.content }.toTypedArray() }
                     ?.toTypedArray() ?: emptyArray()
             EventTemplate<Event>(
-                createdAt = node.get("created_at")?.asLong() ?: 0L,
-                kind = node.get("kind")?.asInt() ?: return@runCatching null,
+                createdAt = node["created_at"]?.jsonPrimitive?.longOrNull ?: 0L,
+                kind = node["kind"]?.jsonPrimitive?.intOrNull ?: return@runCatching null,
                 tags = tags,
-                content = node.get("content")?.asText() ?: "",
+                content = node["content"]?.jsonPrimitive?.content ?: "",
             )
         }.getOrNull()
     val pretty =
-        runCatching {
-            JacksonMapper.mapper
-                .writerWithDefaultPrettyPrinter()
-                .writeValueAsString(JacksonMapper.mapper.readTree(entry.plaintext))
-        }.getOrDefault(entry.plaintext)
+        runCatching { KitePretty.format(entry.plaintext) }.getOrDefault(entry.plaintext)
     return SealContents(entry.recipient, rumor, pretty)
 }
 

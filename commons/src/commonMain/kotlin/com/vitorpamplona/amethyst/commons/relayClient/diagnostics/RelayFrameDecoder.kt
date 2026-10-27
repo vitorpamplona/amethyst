@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.diagnostics
 
+import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.CachingEventDecoder
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 
-// iOS runs on Quartz's kotlinx path and has no Jackson to compare against.
-actual fun kiteDiagnosticParser(): MessageDecoder = MessageDecoder.Default
+/** The decoder for the app's relay pools: Quartz's duplicate-frame cache over its default parser. */
+fun relayFrameDecoder(): MessageDecoder = CachingEventDecoder()

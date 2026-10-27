@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.util
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.kite.KiteWriter
 
 /** The event as indented JSON, for people to read (the "copy JSON" action), not for the wire. */
-expect fun Event.toPrettyJson(): String
+fun Event.toPrettyJson(): String = KiteWriter.toPrettyJson(this)
