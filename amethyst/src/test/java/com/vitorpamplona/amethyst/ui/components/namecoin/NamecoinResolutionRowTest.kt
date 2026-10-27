@@ -218,8 +218,7 @@ class NamecoinResolutionRowTest {
     fun `no nostr field maps to Error and mentions the name`() {
         val state = mapOutcomeToResolveState(NamecoinResolveOutcome.NoNostrField("d/noname"))
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("d/noname"))
-        assertTrue(state.message.contains("Nostr"))
+        assertEquals(NamecoinResolveState.Reason.NoNostrField("d/noname"), state.reason)
     }
 
     @Test
@@ -232,8 +231,10 @@ class NamecoinResolutionRowTest {
                 ),
             )
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("d/broken"))
-        assertTrue(state.message.contains("Unfinished JSON"))
+        assertEquals(
+            NamecoinResolveState.Reason.MalformedRecord("d/broken", "Unfinished JSON term at EOF at line 1, column 474"),
+            state.reason,
+        )
     }
 
     @Test
@@ -241,7 +242,7 @@ class NamecoinResolutionRowTest {
         val state =
             mapOutcomeToResolveState(NamecoinResolveOutcome.ServersUnreachable("Connection refused"))
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("ElectrumX"))
+        assertSame(NamecoinResolveState.Reason.ServersUnreachable, state.reason)
     }
 
     @Test
@@ -249,14 +250,14 @@ class NamecoinResolutionRowTest {
         val state =
             mapOutcomeToResolveState(NamecoinResolveOutcome.InvalidIdentifier("not_a_name"))
         require(state is NamecoinResolveState.Error)
-        assertEquals("Invalid Namecoin identifier", state.message)
+        assertSame(NamecoinResolveState.Reason.InvalidIdentifier, state.reason)
     }
 
     @Test
     fun `timeout maps to a timeout Error`() {
         val state = mapOutcomeToResolveState(NamecoinResolveOutcome.Timeout)
         require(state is NamecoinResolveState.Error)
-        assertTrue(state.message.contains("timed out"))
+        assertSame(NamecoinResolveState.Reason.Timeout, state.reason)
     }
 
     @Test(expected = IllegalStateException::class)

@@ -73,6 +73,14 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_paste_error
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_authtag_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_before_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_after_range
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_before_range
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_invalid_agent_key
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_kind_range
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_auth_tag
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_for_account
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_json_tag
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_sign_failed
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_change_agent
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_conditions_hint
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_copy_tag
@@ -115,6 +123,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
+import org.jetbrains.compose.resources.StringResource
 
 // Common event kinds an agent might be restricted to — suggestions for the "Restrict to kind" field;
 // any 0–65535 is still accepted by free numeric entry.
@@ -192,7 +201,7 @@ private fun HoldAttestationSection(
     val mine = attestation.flow.collectAsState().value
 
     var input by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<FormError?>(null) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -242,12 +251,12 @@ private fun HoldAttestationSection(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 error?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    Text(text = it.text(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                 }
                 Button(
                     onClick = {
                         when (val outcome = parseHeldAttestation(input, myPubkey)) {
-                            is HoldOutcome.Failure -> error = outcome.message
+                            is HoldOutcome.Failure -> error = outcome.error
                             is HoldOutcome.Success -> {
                                 // put() re-checks the signature, so honour its answer instead of
                                 // assuming it stored: clearing the field on a rejected paste would
@@ -277,12 +286,21 @@ private sealed interface HoldOutcome {
     ) : HoldOutcome
 
     data class Failure(
-        val message: String,
+        val error: FormError,
     ) : HoldOutcome
 }
 
+/** A form error held as a resource, so it is worded when drawn; [detail] is an exception's own text, shown instead when present. */
+private class FormError(
+    val resource: StringResource,
+    val detail: String? = null,
+)
+
+@Composable
+private fun FormError.text(): String = detail ?: stringRes(resource)
+
 /** Shown for both rejection paths — the parse-time check and [BuzzHeldAttestations.put]'s. */
-private const val NOT_FOR_THIS_ACCOUNT = "This attestation does not authorize the current account, or its signature is invalid."
+private val NOT_FOR_THIS_ACCOUNT = FormError(Res.string.buzz_attest_error_not_for_account)
 
 /**
  * Parses a pasted `["auth", owner, conditions, sig]` JSON array and verifies it
@@ -301,11 +319,11 @@ private fun parseHeldAttestation(
                 .map { it.jsonPrimitive.content }
                 .toTypedArray()
         } catch (e: Exception) {
-            return HoldOutcome.Failure("Not a valid JSON tag array. Paste the [\"auth\", …] tag you were given.")
+            return HoldOutcome.Failure(FormError(Res.string.buzz_attest_error_not_json_tag))
         }
     val attestation =
         OwnerAttestation.parse(tag)
-            ?: return HoldOutcome.Failure("Not a NIP-OA auth tag.")
+            ?: return HoldOutcome.Failure(FormError(Res.string.buzz_attest_error_not_auth_tag))
     if (!attestation.verify(myPubkey)) {
         return HoldOutcome.Failure(NOT_FOR_THIS_ACCOUNT)
     }
@@ -342,7 +360,7 @@ private fun AttestationForm(
     var kindInput by remember { mutableStateOf("") }
     var afterInput by remember { mutableStateOf("") }
     var beforeInput by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<FormError?>(null) }
     var result by remember { mutableStateOf<OwnerAttestation?>(null) }
 
     Text(
@@ -420,7 +438,7 @@ private fun AttestationForm(
 
     error?.let {
         Text(
-            text = it,
+            text = it.text(),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.error,
         )
@@ -431,7 +449,7 @@ private fun AttestationForm(
             val agent = selectedAgent ?: return@Button
             when (val outcome = buildAttestation(agent, kindInput, afterInput, beforeInput, ownerKey)) {
                 is AttestationOutcome.Failure -> {
-                    error = outcome.message
+                    error = outcome.error
                     result = null
                 }
                 is AttestationOutcome.Success -> {
@@ -608,7 +626,7 @@ private sealed interface AttestationOutcome {
     ) : AttestationOutcome
 
     data class Failure(
-        val message: String,
+        val error: FormError,
     ) : AttestationOutcome
 }
 
@@ -626,9 +644,9 @@ private fun buildAttestation(
 ): AttestationOutcome {
     val agentHex =
         decodePublicKeyAsHexOrNull(agentInput.trim())
-            ?: return AttestationOutcome.Failure("Invalid agent public key. Enter an npub or 64-char hex key.")
+            ?: return AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_invalid_agent_key))
     if (!agentHex.isValid()) {
-        return AttestationOutcome.Failure("Invalid agent public key. Enter an npub or 64-char hex key.")
+        return AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_invalid_agent_key))
     }
 
     val kind =
@@ -637,20 +655,20 @@ private fun buildAttestation(
         } else {
             val parsed = kindInput.toIntOrNull()
             if (parsed == null || parsed !in 0..65535) {
-                return AttestationOutcome.Failure("Kind must be between 0 and 65535.")
+                return AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_kind_range))
             }
             parsed
         }
 
-    val after = parseOptionalUnix(afterInput) ?: return AttestationOutcome.Failure("\"After\" must be a unix time in 0–4294967295.")
-    val before = parseOptionalUnix(beforeInput) ?: return AttestationOutcome.Failure("\"Before\" must be a unix time in 0–4294967295.")
+    val after = parseOptionalUnix(afterInput) ?: return AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_after_range))
+    val before = parseOptionalUnix(beforeInput) ?: return AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_before_range))
 
     val conditions = AttestationConditions(kind = kind, createdAtBefore = before.value, createdAtAfter = after.value)
 
     return try {
         AttestationOutcome.Success(OwnerAttestation.sign(agentHex, conditions, ownerKey))
     } catch (e: IllegalArgumentException) {
-        AttestationOutcome.Failure(e.message ?: "Could not sign the attestation.")
+        AttestationOutcome.Failure(FormError(Res.string.buzz_attest_error_sign_failed, e.message))
     }
 }
 

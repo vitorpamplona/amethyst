@@ -121,6 +121,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_paste_go
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_options
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_remove
 import com.vitorpamplona.amethyst.commons.resources.browser_suggested
+import com.vitorpamplona.amethyst.commons.resources.browser_napplet_default_label
+import com.vitorpamplona.amethyst.commons.resources.browser_nsite_default_label
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
@@ -266,11 +268,13 @@ private fun BrowserLauncher(
     val favoriteCoordinates = remember(apps) { apps.filterIsInstance<FavoriteApp.NostrApp>().mapTo(HashSet()) { it.coordinate } }
     // Built off the main thread: these walk every cached nsite/napplet note, and the note lists re-emit as
     // relays deliver.
-    val followedNsites by produceState(emptyList<DiscoverNostrApp>(), nsiteNotes, nsiteFollows, favoriteCoordinates) {
-        value = withContext(Dispatchers.IO) { nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates) }
+    val websiteLabel = stringRes(Res.string.browser_nsite_default_label)
+    val appLabel = stringRes(Res.string.browser_napplet_default_label)
+    val followedNsites by produceState(emptyList<DiscoverNostrApp>(), nsiteNotes, nsiteFollows, favoriteCoordinates, websiteLabel) {
+        value = withContext(Dispatchers.IO) { nsiteNotes.toDiscoverApps(nsiteFollows::matchAuthor, favoriteCoordinates, websiteLabel, appLabel) }
     }
-    val followedNapplets by produceState(emptyList<DiscoverNostrApp>(), nappletNotes, nappletFollows, favoriteCoordinates) {
-        value = withContext(Dispatchers.IO) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates) }
+    val followedNapplets by produceState(emptyList<DiscoverNostrApp>(), nappletNotes, nappletFollows, favoriteCoordinates, appLabel) {
+        value = withContext(Dispatchers.IO) { nappletNotes.toDiscoverApps(nappletFollows::matchAuthor, favoriteCoordinates, websiteLabel, appLabel) }
     }
 
     // What the user actually typed, excluding the ghost-completion suffix while one is showing.
@@ -865,12 +869,14 @@ private const val DISCOVER_NOSTR_LIMIT = 12
 private fun List<Note>.toDiscoverApps(
     matchAuthor: (String) -> Boolean,
     excludeCoordinates: Set<String>,
+    websiteLabel: String,
+    appLabel: String,
 ): List<DiscoverNostrApp> =
     asSequence()
         .filter { note ->
             val author = note.event?.pubKey ?: return@filter false
             matchAuthor(author)
-        }.mapNotNull { it.toDiscoverNostrApp() }
+        }.mapNotNull { it.toDiscoverNostrApp(websiteLabel, appLabel) }
         .filter { it.app.coordinate !in excludeCoordinates }
         // The observed store can surface the same addressable manifest twice (a replaceable note whose
         // new version mutates its sort key inside the backing set), so collapse by coordinate to keep the
@@ -880,14 +886,17 @@ private fun List<Note>.toDiscoverApps(
         .toList()
 
 /** Resolve a cached nsite/napplet manifest note into a launchable favorite + its description, or null. */
-private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
+private fun Note.toDiscoverNostrApp(
+    websiteLabel: String,
+    appLabel: String,
+): DiscoverNostrApp? {
     val event = event ?: return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
     val description: String?
     when (event) {
         is RootSiteEvent -> {
-            label = event.title()?.ifBlank { null } ?: "Website"
+            label = event.title()?.ifBlank { null } ?: websiteLabel
             description = event.description()
         }
         is NamedSiteEvent -> {
@@ -895,7 +904,7 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
             description = event.description()
         }
         is RootNappletEvent -> {
-            label = event.title()?.ifBlank { null } ?: "App"
+            label = event.title()?.ifBlank { null } ?: appLabel
             description = event.description()
         }
         is NamedNappletEvent -> {

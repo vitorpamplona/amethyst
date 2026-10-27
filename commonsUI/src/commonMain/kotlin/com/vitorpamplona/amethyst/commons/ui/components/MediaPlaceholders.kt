@@ -50,9 +50,12 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlContent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.media_placeholder_loading_content
 import com.vitorpamplona.amethyst.commons.service.image.placeholderModel
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.note.DownloadForOfflineIcon
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size24dp
@@ -155,9 +158,10 @@ fun DisplayUrlWithLoadingSymbol(
     val clickableTextStyle = remember { SpanStyle(color = primary) }
 
     val blossomOpener = rememberBlossomUriOpener()
+    val loadingText = stringRes(Res.string.media_placeholder_loading_content)
 
     val annotatedTermsString =
-        remember {
+        remember(loadingText) {
             buildAnnotatedString {
                 if (content is MediaUrlContent) {
                     withStyle(clickableTextStyle) {
@@ -166,7 +170,7 @@ fun DisplayUrlWithLoadingSymbol(
                         pop()
                     }
                 } else {
-                    withStyle(regularText) { append("Loading content...") }
+                    withStyle(regularText) { append(loadingText) }
                 }
 
                 withStyle(clickableTextStyle) {

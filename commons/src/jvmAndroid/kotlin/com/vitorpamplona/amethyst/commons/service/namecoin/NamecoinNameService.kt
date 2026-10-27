@@ -136,7 +136,7 @@ class NamecoinNameService(
                 throw e
             } catch (e: Exception) {
                 Log.w("NamecoinNameService", "resolve failed for $identifier", e)
-                state.value = NamecoinResolveState.Error(e.message ?: e::class.simpleName ?: "Unknown error")
+                state.value = NamecoinResolveState.Error(NamecoinResolveState.Reason.Other(e.message ?: e::class.simpleName))
             }
         }
         return state

@@ -51,9 +51,15 @@ import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_badge
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_invalid_identifier
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_pubkey
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_record
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_nostr_field
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_record
 import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_resolving
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_servers_unreachable
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_timeout
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_unknown_error
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -90,22 +96,33 @@ fun mapOutcomeToResolveState(outcome: NamecoinResolveOutcome): NamecoinResolveSt
         is NamecoinResolveOutcome.NameNotFound -> NamecoinResolveState.NotFound
 
         is NamecoinResolveOutcome.NoNostrField ->
-            NamecoinResolveState.Error("${outcome.name} is registered but has no Nostr pubkey")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.NoNostrField(outcome.name))
 
         is NamecoinResolveOutcome.MalformedRecord ->
             // Surface the parser detail verbatim so the publisher of the
             // broken record can locate the bad byte
             // (kotlinx.serialization includes a column number).
-            NamecoinResolveState.Error("${outcome.name} record is malformed: ${outcome.error}")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.MalformedRecord(outcome.name, outcome.error))
 
         is NamecoinResolveOutcome.ServersUnreachable ->
-            NamecoinResolveState.Error("ElectrumX servers unreachable — check your connection or try again")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.ServersUnreachable)
 
         is NamecoinResolveOutcome.InvalidIdentifier ->
-            NamecoinResolveState.Error("Invalid Namecoin identifier")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.InvalidIdentifier)
 
         NamecoinResolveOutcome.Timeout ->
-            NamecoinResolveState.Error("Resolution timed out — servers may be slow, try again")
+            NamecoinResolveState.Error(NamecoinResolveState.Reason.Timeout)
+    }
+
+@Composable
+private fun NamecoinResolveState.Reason.text(): String =
+    when (this) {
+        is NamecoinResolveState.Reason.NoNostrField -> stringRes(Res.string.namecoin_resolution_no_nostr_field, name)
+        is NamecoinResolveState.Reason.MalformedRecord -> stringRes(Res.string.namecoin_resolution_malformed_record, name, detail)
+        NamecoinResolveState.Reason.ServersUnreachable -> stringRes(Res.string.namecoin_resolution_servers_unreachable)
+        NamecoinResolveState.Reason.InvalidIdentifier -> stringRes(Res.string.namecoin_resolution_invalid_identifier)
+        NamecoinResolveState.Reason.Timeout -> stringRes(Res.string.namecoin_resolution_timeout)
+        is NamecoinResolveState.Reason.Other -> message ?: stringRes(Res.string.namecoin_resolution_unknown_error)
     }
 
 /**
@@ -227,7 +244,7 @@ fun NamecoinResolutionRow(
             null, NamecoinResolveState.Loading -> ResolvingChip(term)
             is NamecoinResolveState.Resolved -> ResolvedRow(term, s, accountViewModel, onUserResolved)
             NamecoinResolveState.NotFound -> FailedRow(stringRes(Res.string.namecoin_resolution_no_record, term))
-            is NamecoinResolveState.Error -> FailedRow(s.message)
+            is NamecoinResolveState.Error -> FailedRow(s.reason.text())
         }
     }
 }
