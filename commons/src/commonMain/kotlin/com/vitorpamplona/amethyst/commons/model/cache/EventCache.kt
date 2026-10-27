@@ -204,6 +204,7 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
@@ -4069,6 +4070,7 @@ open class EventCache :
                 is ShippingOptionEvent,
                 is ProductReviewEvent,
                 is FundraiserEvent,
+                is EbookEvent,
                 is BirdexEvent,
                 is Ps1SaveEvent,
                 is CommunityDefinitionEvent,

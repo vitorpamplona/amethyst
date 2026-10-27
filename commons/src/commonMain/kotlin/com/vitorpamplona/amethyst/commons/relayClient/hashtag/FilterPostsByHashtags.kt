@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
 import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -71,6 +72,7 @@ val PostsByHashtagKinds2 =
         PodcastMetadataEvent.KIND,
         NipTextEvent.KIND,
         ZapPollEvent.KIND,
+        EbookEvent.KIND,
     )
 
 fun filterPostsByHashtags(

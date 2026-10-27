@@ -285,6 +285,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmResult
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmStatus
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEbook
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEmojiPack
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderEncryptionKeyList
@@ -648,6 +649,7 @@ import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
@@ -2106,6 +2108,10 @@ internal fun RenderNoteRow(
 
             is FundraiserEvent -> {
                 RenderFundraiser(baseNote, makeItShort, accountViewModel, nav)
+            }
+
+            is EbookEvent -> {
+                RenderEbook(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is BirdexEvent -> {

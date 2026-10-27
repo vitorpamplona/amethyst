@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.home_content_type_calendar_r
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_chess
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_classifieds
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_comments
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_ebooks
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_ephemeral_chat
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_fundraisers
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_highlights
@@ -183,6 +184,7 @@ private val HOME_FEED_TYPES =
         HomeFeedTypeUi(HomeFeedType.MUSIC, Res.string.home_content_type_music, MaterialSymbols.MusicNote),
         HomeFeedTypeUi(HomeFeedType.PODCASTS, Res.string.home_content_type_podcasts, MaterialSymbols.Podcasts),
         HomeFeedTypeUi(HomeFeedType.FUNDRAISERS, Res.string.home_content_type_fundraisers, MaterialSymbols.Paid),
+        HomeFeedTypeUi(HomeFeedType.EBOOKS, Res.string.home_content_type_ebooks, MaterialSymbols.MenuBook),
         HomeFeedTypeUi(HomeFeedType.RATINGS, Res.string.home_content_type_ratings, MaterialSymbols.Star),
         HomeFeedTypeUi(HomeFeedType.CALENDAR_RSVPS, Res.string.home_content_type_calendar_rsvps, MaterialSymbols.CalendarMonth),
     )

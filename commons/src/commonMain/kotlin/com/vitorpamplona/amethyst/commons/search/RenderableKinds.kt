@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nip82SoftwareApps.application.SoftwareApplicationEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -176,6 +177,7 @@ object RenderableKinds {
             HighlightEvent.KIND,
             CodeSnippetEvent.KIND,
             NipTextEvent.KIND,
+            EbookEvent.KIND,
             // pictures, video, audio
             PictureEvent.KIND,
             VideoNormalEvent.KIND,

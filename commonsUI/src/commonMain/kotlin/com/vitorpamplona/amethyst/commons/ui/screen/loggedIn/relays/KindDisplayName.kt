@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_dvm_content_resp
 import com.vitorpamplona.amethyst.commons.resources.kind_dvm_status
 import com.vitorpamplona.amethyst.commons.resources.kind_dvm_user_req
 import com.vitorpamplona.amethyst.commons.resources.kind_dvm_user_resp
+import com.vitorpamplona.amethyst.commons.resources.kind_ebook
 import com.vitorpamplona.amethyst.commons.resources.kind_edits
 import com.vitorpamplona.amethyst.commons.resources.kind_emoji_pack_list
 import com.vitorpamplona.amethyst.commons.resources.kind_emoji_packs
@@ -205,6 +206,7 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -361,6 +363,7 @@ fun kindDisplayName(kind: Int): StringResource? =
         AudioHeaderEvent.KIND -> Res.string.kind_audio_header
         AudioTrackEvent.KIND -> Res.string.kind_audio_track
         MusicTrackEvent.KIND -> Res.string.kind_music_track
+        EbookEvent.KIND -> Res.string.kind_ebook
         MusicPlaylistEvent.KIND -> Res.string.kind_music_playlist
         PodcastEpisodeEvent.KIND -> Res.string.kind_podcast_episode
         PodcastMetadataEvent.KIND -> Res.string.kind_podcast_metadata
