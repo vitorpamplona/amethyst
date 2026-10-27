@@ -37,6 +37,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.signing_default_label
+import com.vitorpamplona.amethyst.commons.resources.signing_progress
+import com.vitorpamplona.amethyst.commons.resources.signing_waiting_for_signer
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.coroutines.delay
 
 @Composable
@@ -81,7 +86,7 @@ fun SigningStatusBar(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
                     Text(
-                        text = "Waiting for signer approval... (${elapsedSeconds}s)",
+                        text = stringRes(Res.string.signing_waiting_for_signer, elapsedSeconds),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -94,9 +99,9 @@ fun SigningStatusBar(
                     contentColor = MaterialTheme.colorScheme.inverseOnSurface,
                     modifier = Modifier.padding(horizontal = 16.dp),
                 ) {
-                    val label = opState.label ?: "Signing"
+                    val label = opState.label ?: stringRes(Res.string.signing_default_label)
                     Text(
-                        text = "$label (${opState.current} of ${opState.total})",
+                        text = stringRes(Res.string.signing_progress, label, opState.current, opState.total),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }

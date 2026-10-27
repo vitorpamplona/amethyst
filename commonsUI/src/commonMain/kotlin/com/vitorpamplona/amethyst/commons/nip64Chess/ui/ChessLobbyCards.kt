@@ -42,6 +42,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_dismiss
+import com.vitorpamplona.amethyst.commons.resources.chess_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_challenge_from
+import com.vitorpamplona.amethyst.commons.resources.chess_challenge_to
+import com.vitorpamplona.amethyst.commons.resources.chess_challenger_plays_black
+import com.vitorpamplona.amethyst.commons.resources.chess_challenger_plays_white
+import com.vitorpamplona.amethyst.commons.resources.chess_moves_count
+import com.vitorpamplona.amethyst.commons.resources.chess_moves_played
+import com.vitorpamplona.amethyst.commons.resources.chess_moves_with_result
+import com.vitorpamplona.amethyst.commons.resources.chess_open_challenge_awaiting
+import com.vitorpamplona.amethyst.commons.resources.chess_open_challenge_by
+import com.vitorpamplona.amethyst.commons.resources.chess_players_versus
+import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
+import com.vitorpamplona.amethyst.commons.resources.chess_result_lost
+import com.vitorpamplona.amethyst.commons.resources.chess_result_won
+import com.vitorpamplona.amethyst.commons.resources.chess_spectating
+import com.vitorpamplona.amethyst.commons.resources.chess_versus_opponent
+import com.vitorpamplona.amethyst.commons.resources.chess_waiting
+import com.vitorpamplona.amethyst.commons.resources.chess_watch
+import com.vitorpamplona.amethyst.commons.resources.chess_watching_game
+import com.vitorpamplona.amethyst.commons.resources.chess_you_play_black
+import com.vitorpamplona.amethyst.commons.resources.chess_you_play_white
+import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
 // Color constants for card borders
@@ -91,13 +116,13 @@ fun ActiveGameCard(
                     color = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    "vs $opponentName",
+                    stringRes(Res.string.chess_versus_opponent, opponentName),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
 
             Text(
-                if (isYourTurn) "Your turn" else "Waiting...",
+                if (isYourTurn) stringRes(Res.string.chess_your_turn) else stringRes(Res.string.chess_waiting),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (isYourTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (isYourTurn) FontWeight.Bold else FontWeight.Normal,
@@ -133,19 +158,19 @@ fun ChallengeCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    if (isIncoming) "Challenge from $challengerName" else "Open challenge by $challengerName",
+                    if (isIncoming) stringRes(Res.string.chess_challenge_from, challengerName) else stringRes(Res.string.chess_open_challenge_by, challengerName),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "Challenger plays ${if (challengerPlaysWhite) "White" else "Black"}",
+                    if (challengerPlaysWhite) stringRes(Res.string.chess_challenger_plays_white) else stringRes(Res.string.chess_challenger_plays_black),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Button(onClick = onAccept) {
-                Text("Accept")
+                Text(stringRes(Res.string.chess_accept))
             }
         }
     }
@@ -177,22 +202,22 @@ fun OutgoingChallengeCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     if (opponentName != null) {
-                        "Challenge to $opponentName"
+                        stringRes(Res.string.chess_challenge_to, opponentName)
                     } else {
-                        "Open challenge (awaiting opponent)"
+                        stringRes(Res.string.chess_open_challenge_awaiting)
                     },
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "You play ${if (userPlaysWhite) "White" else "Black"}",
+                    if (userPlaysWhite) stringRes(Res.string.chess_you_play_white) else stringRes(Res.string.chess_you_play_black),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Text(
-                "Waiting...",
+                stringRes(Res.string.chess_waiting),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -220,19 +245,19 @@ fun SpectatingGameCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Watching game",
+                    stringRes(Res.string.chess_watching_game),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "$moveCount moves played",
+                    stringRes(Res.string.chess_moves_played, moveCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             Text(
-                "Spectating",
+                stringRes(Res.string.chess_spectating),
                 style = MaterialTheme.typography.bodyMedium,
                 color = SpectatingColor,
                 fontWeight = FontWeight.Medium,
@@ -263,19 +288,19 @@ fun PublicGameCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "$whiteName vs $blackName",
+                    stringRes(Res.string.chess_players_versus, whiteName, blackName),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "$moveCount moves",
+                    stringRes(Res.string.chess_moves_count, moveCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
 
             OutlinedButton(onClick = onWatch) {
-                Text("Watch")
+                Text(stringRes(Res.string.chess_watch))
             }
         }
     }
@@ -298,9 +323,9 @@ fun CompletedGameCard(
 ) {
     val resultText =
         when {
-            isDraw -> "Draw"
-            didUserWin -> "Won"
-            else -> "Lost"
+            isDraw -> stringRes(Res.string.chess_result_draw)
+            didUserWin -> stringRes(Res.string.chess_result_won)
+            else -> stringRes(Res.string.chess_result_lost)
         }
 
     val resultColor =
@@ -327,12 +352,12 @@ fun CompletedGameCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "vs $opponentName",
+                    stringRes(Res.string.chess_versus_opponent, opponentName),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                 )
                 Text(
-                    "$moveCount moves • $result",
+                    stringRes(Res.string.chess_moves_with_result, moveCount, result),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -348,7 +373,7 @@ fun CompletedGameCard(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         MaterialSymbols.Close,
-                        contentDescription = "Dismiss",
+                        contentDescription = stringRes(Res.string.action_dismiss),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }

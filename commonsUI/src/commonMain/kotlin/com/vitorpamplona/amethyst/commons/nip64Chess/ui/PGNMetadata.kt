@@ -31,6 +31,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_result_notation
+import com.vitorpamplona.amethyst.commons.resources.chess_round
+import com.vitorpamplona.amethyst.commons.resources.chess_versus
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGame
 
 /**
@@ -93,7 +98,7 @@ fun PGNMetadata(
                 }
 
                 Text(
-                    text = "vs",
+                    text = stringRes(Res.string.chess_versus),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -128,7 +133,7 @@ fun PGNMetadata(
 
             // Result
             Text(
-                text = "Result: ${game.result.notation}",
+                text = stringRes(Res.string.chess_result_notation, game.result.notation),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -138,7 +143,7 @@ fun PGNMetadata(
         // Round (if available)
         game.round?.let { round ->
             Text(
-                text = "Round $round",
+                text = stringRes(Res.string.chess_round, round),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
