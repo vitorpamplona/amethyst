@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -69,8 +70,8 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_explore_nearby
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
-import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_open
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.location_channels
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -367,7 +368,8 @@ private fun EmptyLocationChannels(
         Spacer(Modifier.height(24.dp))
         FilledTonalButton(onClick = onExplore) {
             SymbolIcon(symbol = MaterialSymbols.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("  " + stringRes(Res.string.geohash_chats_explore_nearby))
+            Spacer(Modifier.width(8.dp))
+            Text(stringRes(Res.string.geohash_chats_explore_nearby))
         }
     }
 }

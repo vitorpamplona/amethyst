@@ -8906,4 +8906,5 @@
     <string name="nest_error_pick_start_time">Pick a start time for the scheduled room.</string>
     <string name="nest_error_pick_future_start">Pick a future start time.</string>
     <string name="upload_no_image_url_returned">Upload succeeded but no image URL was returned by the server.</string>
+    <string name="image_upload_video_thumbnail_description">Video thumbnail</string>
 </resources>

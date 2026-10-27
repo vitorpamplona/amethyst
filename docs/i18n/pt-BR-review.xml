@@ -568,4 +568,5 @@
     <string name="nest_error_pick_start_time">Escolha um horário de início para a sala agendada.</string>
     <string name="nest_error_pick_future_start">Escolha um horário de início no futuro.</string>
     <string name="upload_no_image_url_returned">O envio foi concluído, mas o servidor não retornou a URL da imagem.</string>
+    <string name="image_upload_video_thumbnail_description">Miniatura do vídeo</string>
 </resources>

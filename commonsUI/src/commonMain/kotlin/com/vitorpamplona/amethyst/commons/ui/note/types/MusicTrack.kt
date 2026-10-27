@@ -47,6 +47,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.music.MusicTrackMedia
 import com.vitorpamplona.amethyst.commons.music.formatTrackDuration
 import com.vitorpamplona.amethyst.commons.music.media
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_explicit
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
@@ -341,6 +344,7 @@ private fun MetaSeparator() {
 
 @Composable
 private fun ExplicitBadge() {
+    val description = stringRes(Res.string.podcast_explicit)
     Text(
         text = "E",
         style = MaterialTheme.typography.labelSmall,
@@ -351,7 +355,8 @@ private fun ExplicitBadge() {
             Modifier
                 .clip(RoundedCornerShape(3.dp))
                 .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-                .padding(horizontal = 4.dp, vertical = 1.dp),
+                .padding(horizontal = 4.dp, vertical = 1.dp)
+                .semantics { contentDescription = description },
     )
 }
 

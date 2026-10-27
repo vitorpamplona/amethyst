@@ -61,13 +61,13 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_failed
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_nip42
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_required
 import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticated
 import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticating
 import com.vitorpamplona.amethyst.commons.resources.relay_status_buzz
-import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connected
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connected_authenticated
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connection

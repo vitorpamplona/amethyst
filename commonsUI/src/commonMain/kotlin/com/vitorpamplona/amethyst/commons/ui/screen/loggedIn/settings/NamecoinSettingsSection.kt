@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_save
 import com.vitorpamplona.amethyst.commons.resources.namecoin_active_servers
 import com.vitorpamplona.amethyst.commons.resources.namecoin_add_electrumx_server
 import com.vitorpamplona.amethyst.commons.resources.namecoin_add_server
@@ -113,7 +114,6 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_descri
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_title
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_failed
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_password
-import com.vitorpamplona.amethyst.commons.resources.action_save
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_test
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_tls_rejected
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_url

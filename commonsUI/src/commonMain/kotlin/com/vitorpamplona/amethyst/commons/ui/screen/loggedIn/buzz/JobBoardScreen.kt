@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
 import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
@@ -94,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.job_board_ask_agent_title
 import com.vitorpamplona.amethyst.commons.resources.job_board_cancelled_reason

@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -60,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
 import com.vitorpamplona.amethyst.commons.resources.geohash_level_block
 import com.vitorpamplona.amethyst.commons.resources.geohash_level_building
 import com.vitorpamplona.amethyst.commons.resources.geohash_level_city
@@ -73,14 +76,13 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me
 import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me_hint
 import com.vitorpamplona.amethyst.commons.resources.geohash_new_pick_on_map
 import com.vitorpamplona.amethyst.commons.resources.geohash_new_your_channels
-import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
+import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_title
 import com.vitorpamplona.amethyst.commons.resources.join
 import com.vitorpamplona.amethyst.commons.resources.leave
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_locating
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_location_unavailable
-import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_title
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_title
-import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -145,7 +147,7 @@ fun NewGeohashChatScreen(
     }
 }
 
-/** A section title with a small tinted icon, e.g. stringRes(Res.string.geohash_new_near_me). */
+/** A section title with a small tinted icon, e.g. "Near me". */
 @Composable
 private fun SectionHeader(
     icon: MaterialSymbol,
@@ -320,7 +322,8 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
                     )
                     FilledTonalButton(onClick = { permission.launchRequest() }) {
                         SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  " + stringRes(Res.string.geocache_use_my_location))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringRes(Res.string.geocache_use_my_location))
                     }
                 }
             }

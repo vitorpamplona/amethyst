@@ -92,7 +92,6 @@ import com.vitorpamplona.amethyst.commons.resources.chess_live_waiting_for
 import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_move_history
 import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
-import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.resources.chess_no_moves_yet
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_label
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_placeholder
@@ -114,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_a
 import com.vitorpamplona.amethyst.commons.resources.chess_watching_spectator_mode
 import com.vitorpamplona.amethyst.commons.resources.chess_your_color
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.Color

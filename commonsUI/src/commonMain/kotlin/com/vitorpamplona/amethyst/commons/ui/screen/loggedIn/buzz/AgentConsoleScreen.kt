@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -67,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
 import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_estimated_totals_warning
 import com.vitorpamplona.amethyst.commons.resources.agent_console_fleet_total
-import com.vitorpamplona.amethyst.commons.resources.buzz_persona_new_title
 import com.vitorpamplona.amethyst.commons.resources.agent_console_no_personas
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_agents
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_read
@@ -87,6 +88,7 @@ import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_costs
 import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_personas
 import com.vitorpamplona.amethyst.commons.resources.agent_console_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_new_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
@@ -279,7 +281,8 @@ private fun PersonasTab(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(symbol = MaterialSymbols.AddCircle, contentDescription = null)
-                Text("  " + stringRes(Res.string.buzz_persona_new_title))
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(Res.string.buzz_persona_new_title))
             }
         }
         if (personas.isEmpty()) {
