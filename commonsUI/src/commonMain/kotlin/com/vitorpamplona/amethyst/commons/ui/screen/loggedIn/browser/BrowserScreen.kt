@@ -780,13 +780,13 @@ private fun BrowserHome(
         if (nsites.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringRes(Res.string.browser_discover_nsites)) }
             items(nsites, span = { GridItemSpan(maxLineSpan) }, key = { "ns:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.toFavorite()) })
+                NostrAppRow(entry, onClick = onOpenApp, onAddFavorite = onAddApp)
             }
         }
         if (napplets.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringRes(Res.string.browser_discover_napplets)) }
             items(napplets, span = { GridItemSpan(maxLineSpan) }, key = { "np:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.toFavorite()) })
+                NostrAppRow(entry, onClick = onOpenApp, onAddFavorite = onAddApp)
             }
         }
         if (suggested.isNotEmpty()) {
@@ -891,7 +891,7 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val description: String?
     when (event) {
         is RootSiteEvent -> {
-            // Blank, not a localized word: the label is stored when pinned, so it stays locale-neutral.
+            // Blank until composition, where NostrAppRow words it with [fallback].
             label = event.title()?.ifBlank { null } ?: ""
             fallback = Res.string.browser_nsite_default_label
             description = event.description()
@@ -916,24 +916,23 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description, fallback)
 }
 
-/** The favorite to store when pinning: an untitled app falls back to its coordinate, never to a localized word. */
-private fun DiscoverNostrApp.toFavorite(): FavoriteApp = app.copy(label = app.label.ifBlank { app.coordinate })
-
 /** A Discover row for a followed nsite/napplet: its manifest icon, name, and description, with a pin star. */
 @Composable
 private fun NostrAppRow(
     discover: DiscoverNostrApp,
-    onClick: () -> Unit,
-    onAddFavorite: () -> Unit,
+    onClick: (FavoriteApp) -> Unit,
+    onAddFavorite: (FavoriteApp) -> Unit,
 ) {
-    val app = discover.app
+    // An untitled nsite/napplet opens and pins under the localized "Website"/"App" fallback.
+    val fallbackLabel = stringRes(discover.fallbackLabel)
+    val app = remember(discover.app, fallbackLabel) { discover.app.copy(label = discover.app.label.ifBlank { fallbackLabel }) }
     val iconModel = rememberNappletIconModel(app.coordinate)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick)
+                .clickable(onClick = { onClick(app) })
                 .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -946,7 +945,7 @@ private fun NostrAppRow(
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                app.label.ifBlank { stringRes(discover.fallbackLabel) },
+                app.label,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -961,7 +960,7 @@ private fun NostrAppRow(
                 )
             }
         }
-        IconButton(onClick = onAddFavorite) {
+        IconButton(onClick = { onAddFavorite(app) }) {
             Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }

@@ -97,24 +97,23 @@ import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_title
 import com.vitorpamplona.amethyst.commons.resources.agent_work_file_direct
 import com.vitorpamplona.amethyst.commons.resources.agent_work_file_with_gate
 import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
-import com.vitorpamplona.amethyst.commons.resources.agent_work_pill_needs_approval
 import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval
 import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_off
 import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_on
 import com.vitorpamplona.amethyst.commons.resources.agent_work_source_direct
 import com.vitorpamplona.amethyst.commons.resources.agent_work_source_gated
-import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_approved
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_decision_failed
-import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_denied
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_file_failed
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed_gated
 import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
-import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on
 import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on_you
 import com.vitorpamplona.amethyst.commons.resources.buzz_agent_work_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_open_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approved_toast
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_denied_toast
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_gate_awaiting
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_needs_approval
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
@@ -123,6 +122,7 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_task_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_on
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -178,8 +178,8 @@ fun AgentWorkBoardScreen(
     val scope = rememberCoroutineScope()
 
     // Snackbar copy resolved here (composable scope) so the coroutine lambdas below don't call stringRes.
-    val msgApproved = stringRes(Res.string.agent_work_toast_approved)
-    val msgDenied = stringRes(Res.string.agent_work_toast_denied)
+    val msgApproved = stringRes(Res.string.buzz_workflow_approved_toast)
+    val msgDenied = stringRes(Res.string.buzz_workflow_denied_toast)
     val msgDecisionFailed = stringRes(Res.string.agent_work_toast_decision_failed)
     val msgFiledGated = stringRes(Res.string.agent_work_toast_task_filed_gated)
     val msgFiled = stringRes(Res.string.agent_work_toast_task_filed)
@@ -514,7 +514,7 @@ private fun WaitingPill(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            if (approver != null) Person(stringRes(Res.string.agent_work_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
+            if (approver != null) Person(stringRes(Res.string.buzz_workflow_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -622,7 +622,7 @@ private fun containerFor(state: AgentWorkState): Color =
 
 private fun pillContent(state: AgentWorkState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        AgentWorkState.NEEDS_APPROVAL -> Res.string.agent_work_pill_needs_approval to MaterialSymbols.Gavel
+        AgentWorkState.NEEDS_APPROVAL -> Res.string.buzz_workflow_pill_needs_approval to MaterialSymbols.Gavel
         AgentWorkState.WORKING -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
         AgentWorkState.QUEUED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
         AgentWorkState.SHIPPED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
