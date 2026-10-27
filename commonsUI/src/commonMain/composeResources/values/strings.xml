@@ -62,6 +62,7 @@
     <!-- Common Actions -->
     <string name="action_copy">Copy</string>
     <string name="action_paste">Paste</string>
+    <string name="action_scan">Scan</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_ok">OK</string>
     <string name="action_save">Save</string>

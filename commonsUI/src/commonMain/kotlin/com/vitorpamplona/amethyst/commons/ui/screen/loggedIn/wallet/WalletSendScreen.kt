@@ -22,18 +22,21 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -56,7 +59,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.action_paste
+import com.vitorpamplona.amethyst.commons.resources.action_scan
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.ic_qrcode
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_pay
 import com.vitorpamplona.amethyst.commons.resources.wallet_payment_sending
@@ -65,11 +70,14 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_send
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.util.getText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.painterRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.SimpleQrCodeScanner
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.SendState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.WalletViewModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Icon as Material3Icon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,6 +99,7 @@ fun WalletSendScreen(
 
     val sendState by walletViewModel.sendState.collectAsState()
     var invoiceText by remember { mutableStateOf("") }
+    var qrScanning by remember { mutableStateOf(false) }
     val clipboard = LocalClipboard.current
     val clipboardScope = rememberCoroutineScope()
 
@@ -129,17 +138,56 @@ fun WalletSendScreen(
                         shape = RoundedCornerShape(12.dp),
                         minLines = 3,
                         maxLines = 5,
-                        trailingIcon = {
-                            IconButton(onClick = {
-                                clipboardScope.launch { clipboard.getText()?.let { invoiceText = it } }
-                            }) {
-                                Icon(
-                                    symbol = MaterialSymbols.ContentPaste,
-                                    contentDescription = stringRes(Res.string.action_paste),
-                                )
-                            }
-                        },
                     )
+
+                    // Paste and scan sit under the field, not in its trailing
+                    // slot: two icon buttons there took ~100dp of the width and
+                    // left a pasted address too little room to read.
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                clipboardScope.launch { clipboard.getText()?.let { invoiceText = it } }
+                            },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Icon(
+                                symbol = MaterialSymbols.ContentPaste,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(Res.string.action_paste))
+                        }
+                        OutlinedButton(
+                            onClick = { qrScanning = true },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            shape = RoundedCornerShape(12.dp),
+                        ) {
+                            Material3Icon(
+                                painter = painterRes(Res.drawable.ic_qrcode, 3),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(stringRes(Res.string.action_scan))
+                        }
+                    }
+
+                    if (qrScanning) {
+                        SimpleQrCodeScanner {
+                            qrScanning = false
+                            if (!it.isNullOrEmpty()) {
+                                // Lightning QRs usually carry the URI prefix; the
+                                // parser wants the bare invoice.
+                                invoiceText = it.removePrefix("lightning:")
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
