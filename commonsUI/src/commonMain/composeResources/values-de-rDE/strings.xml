@@ -793,6 +793,7 @@
     <string name="quick_action_request_deletion_alert_title">Löschung anfordern</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst wird darum bitten, dass dein Beitrag von den Relays gelöscht wird, mit denen du derzeit verbunden bist. Es gibt keine Garantie dafür, dass dein Beitrag dauerhaft von diesen oder anderen Relays, auf denen er gespeichert sein könnte, gelöscht wird.</string>
     <string name="quick_action_request_deletion_alert_body_group">Amethyst bittet alle in dieser verschlüsselten Gruppe, diese Nachricht zu löschen. Ihre Apps sollten sie entfernen, aber es gibt keine Garantie, dass jedes Mitglied seine Kopie löscht.</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Amethyst bittet alle in diesem Kanal, diese Nachricht zu löschen. Ihre Apps sollten sie entfernen, aber es gibt keine Garantie, dass jedes Mitglied seine Kopie löscht.</string>
     <string name="quick_action_request_deletion_alert_body_private">Amethyst sendet eine verschlüsselte Löschanfrage an die Personen in dieser Unterhaltung. Ihre Apps sollten die Nachricht entfernen, aber es gibt keine Garantie, dass jede Kopie gelöscht wird.</string>
     <string name="quick_action_block_dialog_btn">Blockieren</string>
     <string name="quick_action_delete_dialog_btn">Löschen</string>
@@ -808,6 +809,7 @@
     <string name="report_dialog_blocking_a_user">Durch das Blockieren eines Nutzers werden dessen Inhalte in deiner App ausgeblendet. Deine Beiträge sind weiterhin öffentlich sichtbar, auch für Personen, die du blockiert hast. Blockierte Nutzer werden auf dem Bildschirm "Sicherheitsfilter" aufgelistet.</string>
     <string name="report_dialog_report_btn">Missbrauch melden</string>
     <string name="report_dialog_reminder_public">Alle gemeldeten Beiträge werden öffentlich sichtbar sein.</string>
+    <string name="report_dialog_reminder_group">Alle in dieser Gruppe sehen diese Meldung und dass du sie gesendet hast. Admins können sie prüfen.</string>
     <string name="report_dialog_additional_reason_placeholder">Optional weitere Informationen zu deiner Meldung angeben…</string>
     <string name="report_dialog_additional_reason_label">Zusätzlicher Kontext</string>
     <string name="report_dialog_select_reason_label">Grund</string>
@@ -1855,6 +1857,8 @@
     <string name="language">Sprache</string>
     <string name="accent_color">Akzentfarbe</string>
     <string name="accent_color_description">Hauptfarbe für Schaltflächen und Links</string>
+    <string name="accent_color_account_description">Überschreibt die Akzentfarbe der Anwendung für dieses Konto. Wähle Anwendung, um ihr wieder zu folgen.</string>
+    <string name="accent_color_application">Anwendung</string>
     <string name="action_unmute">Stummschaltung aufheben</string>
     <string name="picture_in_picture">Bild-in-Bild</string>
     <string name="search_button">Lokale und entfernte Einträge durchsuchen</string>
@@ -2070,6 +2074,11 @@
     <string name="tor_keep_waiting">Weiter warten</string>
     <string name="tor_splash_connecting">Verbindung zu Tor wird hergestellt…</string>
     <string name="tor_status_connected">Mit Tor verbunden</string>
+    <string name="tor_waiting">Warte auf Tor</string>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">Tor verbindet sich nicht. %1$d Relay wartet darauf.</item>
+        <item quantity="other">Tor verbindet sich nicht. %1$d Relays warten darauf.</item>
+    </plurals>
     <string name="tor_splash_error">Tor-Fehler: %1$s</string>
     <string name="tor_splash_explainer">Amethyst nutzt Tor, um deine IP-Adresse vor Relays zu verbergen. Der Start von Tor kann eine Minute dauern und benötigt Internetzugang.</string>
     <string name="notification_settings_categories_explainer">Tippe auf eine Kategorie, um die Android-Benachrichtigungseinstellungen dafür zu öffnen — Ton, Wichtigkeit, Badges und „Nicht stören" findest du dort.</string>
@@ -4686,6 +4695,13 @@
         <item quantity="other">%1$d Nachrichten</item>
     </plurals>
     <string name="marmot_not_a_member">Kein Mitglied dieser Gruppe</string>
+    <string name="marmot_admin_delete_message">Für alle löschen</string>
+    <string name="room_remove_for_everyone_title">Für alle löschen?</string>
+    <string name="room_remove_for_everyone_body">Die App jedes Mitglieds entfernt diese Nachricht. Das kann nicht rückgängig gemacht werden.</string>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">%1$d Meldung verwerfen</item>
+        <item quantity="other">%1$d Meldungen verwerfen</item>
+    </plurals>
     <string name="marmot_unknown_error">unbekannter Fehler</string>
     <string name="media_added">Medien hinzugefügt</string>
     <string name="media_added_to_profile_gallery">Medien wurden zu Ihrer Profilgalerie hinzugefügt</string>
@@ -8281,4 +8297,40 @@
     <string name="devtools_console_invalid_url">Keine Relay-URL: %1$s</string>
     <string name="devtools_console_tor">%1$s läuft über Tor, und Tor ist noch nicht verbunden. Versuche es erneut, sobald Tor läuft, oder ändere die Tor-Einstellung des Relays.</string>
     <string name="devtools_console_send_failed">Nicht verbunden, Frame nicht gesendet</string>
+    <string name="local_timestamp_in">in %1$s</string>
+    <string name="local_timestamp_ago">vor %1$s</string>
+    <string name="marmot_poll_label">Umfrage</string>
+    <string name="marmot_poll_preview">Umfrage: %1$s</string>
+    <string name="poll_unsupported">Diese Umfrage verwendet ein Format, das diese App nicht anzeigen kann.</string>
+    <string name="marmot_poll_not_anonymous">Die Stimmen sind für jedes Mitglied dieser Gruppe sichtbar.</string>
+    <string name="poll_vote">Abstimmen</string>
+    <string name="poll_change_vote">Stimme ändern</string>
+    <string name="marmot_poll_create">Umfrage erstellen</string>
+    <string name="marmot_poll_question">Stelle eine Frage</string>
+    <string name="marmot_poll_option">Option %1$d</string>
+    <string name="marmot_poll_add_option">Option hinzufügen</string>
+    <string name="marmot_poll_new">Neue Umfrage</string>
+    <string name="marmot_poll_options">Optionen</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_remove_option">Option entfernen</string>
+    <string name="marmot_poll_multiple_answers">Mehrere Antworten</string>
+    <string name="marmot_poll_pick_one">Jedes Mitglied wählt eine Antwort</string>
+    <string name="marmot_poll_pick_many">Jedes Mitglied kann mehrere wählen</string>
+    <string name="marmot_poll_closes_at">Endet %1$s</string>
+    <string name="marmot_poll_stays_open">Bleibt für Abstimmungen offen</string>
+    <string name="marmot_poll_duplicate_option">Zwei Optionen sagen dasselbe.</string>
+    <string name="marmot_poll_invalid_text">Dieser Text ist zu lang oder enthält Zeichen, die eine Umfrage nicht anzeigen kann.</string>
+    <string name="marmot_poll_has_deadline">Schließen nach</string>
+    <string name="marmot_poll_no_deadline">Nie</string>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d Stunde</item>
+        <item quantity="other">%1$d Stunden</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <string name="marmot_poll_invalid">Prüfe die Frage und die Optionen: 2 bis 10 Optionen, kein leerer Text.</string>
+    <string name="marmot_emoji_upload_failed">Das benutzerdefinierte Emoji konnte nicht angehängt werden und wurde stattdessen als Text gesendet.</string>
+    <string name="marmot_media_epoch_moved">Die Gruppe hat sich geändert, während deine Datei hochgeladen wurde, daher wurde sie nicht gesendet. Sende sie erneut.</string>
 </resources>
