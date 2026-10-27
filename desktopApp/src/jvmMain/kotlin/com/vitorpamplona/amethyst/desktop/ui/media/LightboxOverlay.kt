@@ -87,14 +87,13 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.awt.Desktop
 import java.awt.Toolkit
 import java.awt.datatransfer.StringSelection
 import java.io.File
-import java.net.URI
 
 val LocalAwtWindow = compositionLocalOf<java.awt.Window?> { null }
 
@@ -325,7 +324,7 @@ fun LightboxOverlay(
                                 onSave = { triggerSave() },
                                 onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
                                 onOpenInBrowser = {
-                                    Desktop.getDesktop().browse(URI(urls[currentIndex]))
+                                    DesktopBrowser.open(urls[currentIndex])
                                 },
                             )
                         },
@@ -472,7 +471,7 @@ fun LightboxOverlay(
                     onSave = { triggerSave() },
                     onCopyUrl = { copyUrlToClipboard(urls[currentIndex]) },
                     onOpenInBrowser = {
-                        Desktop.getDesktop().browse(URI(urls[currentIndex]))
+                        DesktopBrowser.open(urls[currentIndex])
                     },
                 )
             }

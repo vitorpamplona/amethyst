@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
@@ -86,8 +87,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.awt.Desktop
-import java.net.URI
 
 // Shorter than this, a video is a still image (one frame); see the poster fade below.
 private const val STILL_VIDEO_MILLIS = 300L
@@ -527,7 +526,7 @@ private fun PlaybackErrorMessage(
             )
             TextButton(
                 onClick = {
-                    runCatching { Desktop.getDesktop().browse(URI(url)) }
+                    DesktopBrowser.open(url)
                 },
             ) {
                 Text(stringRes(Res.string.video_error_open_in_default_player))
