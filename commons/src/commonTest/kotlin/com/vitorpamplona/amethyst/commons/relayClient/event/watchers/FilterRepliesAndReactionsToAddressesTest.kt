@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.relayClient.event.watchers
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -103,5 +105,34 @@ class FilterRepliesAndReactionsToAddressesTest {
             setOf(relay, logRelay),
             filters.map { it.relay }.toSet(),
         )
+    }
+
+    /**
+     * A PressStr magazine lists none of its issues; each points back at it with `a`. The watcher
+     * asks for them in a filter of their own, so live-stream chat on the same screen cannot use up
+     * a shared limit first, and only from the magazine's author, who alone can publish its issues.
+     */
+    @Test
+    fun asksForAMagazinesIssuesFromItsAuthor() {
+        val magazine = addressable(Address(MagazineEvent.KIND, authorKey, "the-mag"))
+
+        val filters = filterRepliesAndReactionsToAddresses(listOf(magazine), null)!!
+        val issues = filters.filter { MagazineIssueEvent.KIND in (it.filter.kinds ?: emptyList()) }
+
+        assertEquals(1, issues.size)
+        val filter = issues.single().filter
+        assertEquals(listOf(MagazineIssueEvent.KIND), filter.kinds)
+        assertEquals(listOf(authorKey), filter.authors)
+        assertEquals(mapOf("a" to listOf("${MagazineEvent.KIND}:$authorKey:the-mag")), filter.tags)
+    }
+
+    /** Any other address on screen has no issues to ask for. */
+    @Test
+    fun noIssueFilterForOtherAddresses() {
+        val cache = addressable(Address(GeocacheListingEvent.KIND, authorKey, "a-cache"))
+
+        val filters = filterRepliesAndReactionsToAddresses(listOf(cache), null)!!
+
+        assertTrue(filters.none { MagazineIssueEvent.KIND in (it.filter.kinds ?: emptyList()) })
     }
 }

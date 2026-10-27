@@ -31,6 +31,9 @@ import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
+import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -83,6 +86,11 @@ val HomePostsNewThreadKinds1 =
         // "Going to <event>" from people you follow. Low-volume per author, so it rides the main
         // leg instead of the 5-item rare-kinds leg below, where it would be starved by the others.
         CalendarRSVPEvent.KIND,
+        // PressStr ebooks, magazines and issues. Low-volume per author but bursty — a publisher
+        // uploads a back catalogue at once — which would fill the 5-item leg below and starve it.
+        EbookEvent.KIND,
+        MagazineEvent.KIND,
+        MagazineIssueEvent.KIND,
     )
 
 val HomePostsNewThreadKinds2 =

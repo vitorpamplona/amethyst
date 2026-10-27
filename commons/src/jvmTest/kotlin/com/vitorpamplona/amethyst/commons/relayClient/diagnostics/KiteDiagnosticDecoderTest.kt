@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.diagnostics
 
-import com.vitorpamplona.quartz.nip01Core.core.JsonEngine
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.EoseMessage
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.utils.Log
@@ -38,7 +37,6 @@ class KiteDiagnosticDecoderTest {
     private val lines = mutableListOf<Pair<LogLevel, String>>()
     private val originalSink = Log.sink
     private val originalLevel = Log.minLevel
-    private val originalEngine = JsonEngine.current
 
     private val failingKite = MessageDecoder { throw IllegalStateException("kite says no") }
 
@@ -46,18 +44,16 @@ class KiteDiagnosticDecoderTest {
     fun setUp() {
         Log.minLevel = LogLevel.DEBUG
         Log.sink = LogSink { level, tag, message, _ -> if (tag == KiteDiagnosticDecoder.TAG) lines += level to message }
-        JsonEngine.current = JsonEngine.KITE
     }
 
     @AfterTest
     fun tearDown() {
         Log.sink = originalSink
         Log.minLevel = originalLevel
-        JsonEngine.current = originalEngine
     }
 
     @Test
-    fun kiteBugIsLoggedWithTheFrameAndJacksonsMessageIsReturned() {
+    fun kiteBugIsLoggedWithTheFrameAndKotlinxsMessageIsReturned() {
         val frame = """["EOSE","sub1"]"""
         val msg = KiteDiagnosticDecoder(failingKite).decode(frame)
 
@@ -76,7 +72,7 @@ class KiteDiagnosticDecoderTest {
         assertEquals("kite says no", error.message)
         assertEquals(1, lines.size)
         assertEquals(LogLevel.INFO, lines[0].first)
-        assertTrue(lines[0].second.startsWith("Bad frame #1, rejected by Kite and Jackson"), lines[0].second)
+        assertTrue(lines[0].second.startsWith("Bad frame #1, rejected by Kite and kotlinx"), lines[0].second)
     }
 
     @Test
@@ -98,13 +94,6 @@ class KiteDiagnosticDecoderTest {
 
         val headers = lines.map { it.second }.filterNot { Regex(" frame \\d+/\\d+: ").containsMatchIn(it) }
         assertEquals(listOf("Kite bug #1", "Kite bug #4"), headers.map { it.substringBefore(":") })
-    }
-
-    @Test
-    fun withJacksonAsTheEngineFailuresPassThroughUnlogged() {
-        JsonEngine.current = JsonEngine.DEFAULT
-        assertFailsWith<IllegalStateException> { KiteDiagnosticDecoder(failingKite).decode("""["EOSE","sub1"]""") }
-        assertTrue(lines.isEmpty())
     }
 
     @Test

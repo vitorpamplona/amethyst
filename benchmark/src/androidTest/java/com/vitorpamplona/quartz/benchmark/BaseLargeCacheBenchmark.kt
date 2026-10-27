@@ -22,7 +22,7 @@ package com.vitorpamplona.quartz.benchmark
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.core.OptimizedJsonMapper
 import com.vitorpamplona.quartz.utils.cache.LargeCache
 import org.junit.Assert.assertTrue
 import java.util.function.Consumer
@@ -34,10 +34,7 @@ open class BaseLargeCacheBenchmark {
             // This file includes duplicates
             val fullDBInputStream = javaClass.classLoader!!.getResourceAsStream("nostr_vitor_startup_data.json.gz")
 
-            return JacksonMapper.mapper.readValue(
-                GZIPInputStream(fullDBInputStream),
-                JacksonMapper.eventListTypeInstance,
-            )
+            return OptimizedJsonMapper.fromJsonToEventList(GZIPInputStream(fullDBInputStream).bufferedReader().use { it.readText() })
         }
     }
 

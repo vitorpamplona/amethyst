@@ -21,16 +21,19 @@
 package com.vitorpamplona.amethyst.commons.ui.note.platform
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -73,6 +76,25 @@ interface NotePlatform {
         onDismiss: () -> Unit,
         accountViewModel: AccountViewModel,
     ) {}
+
+    /**
+     * The full-screen PDF reader, opened from a card that shows its own cover instead of the
+     * inline first-page preview [ZoomableContentView] draws. With no reader, opens the file in
+     * the system's handler.
+     */
+    @Composable
+    fun PdfViewerDialog(
+        content: MediaUrlPdf,
+        onDismiss: () -> Unit,
+        accountViewModel: AccountViewModel,
+    ) {
+        val uriHandler = LocalUriHandler.current
+        LaunchedEffect(content.url) {
+            // The handler throws when no app takes the link; the dialog closes either way.
+            runCatching { uriHandler.openUri(content.url) }
+            onDismiss()
+        }
+    }
 
     @Composable
     fun GifVideoView(

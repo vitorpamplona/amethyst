@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -58,6 +59,13 @@ fun ZoomableContentView(
     contentScale = contentScale,
     accountViewModel = accountViewModel,
 )
+
+@Composable
+fun PdfViewerDialog(
+    content: MediaUrlPdf,
+    onDismiss: () -> Unit,
+    accountViewModel: AccountViewModel,
+) = LocalNotePlatform.current.PdfViewerDialog(content, onDismiss, accountViewModel)
 
 @Composable
 fun ZoomableImageDialog(

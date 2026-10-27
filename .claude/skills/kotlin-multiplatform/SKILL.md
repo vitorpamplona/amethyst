@@ -40,10 +40,10 @@ before `androidMain`/`jvmMain` depend on it (see `commons/build.gradle.kts`).
 Prefer the most common set that compiles: `commonMain` → `jvmAndroid` → platform.
 
 kotlinx.serialization is the house JSON stack and OkHttp the house HTTP stack
-(`AGENTS.md` › Tech Stack). Jackson is left only inside quartz's JVM code and reaches
-the app modules transitively; don't add new Jackson use here. Don't migrate JVM HTTP
-to Ktor. Jackson and OkHttp are banned in iOS-compiled sets, which the purity gate
-enforces.
+(`AGENTS.md` › Tech Stack). Nostr JSON (events, messages, filters, tags) goes through
+quartz's Kite (`OptimizedJsonMapper`, `KiteWriter`, `KitePretty`); quartz dropped Jackson
+in 2.4.0, so don't add Jackson back. Don't migrate JVM HTTP to Ktor. Jackson and OkHttp
+are banned in iOS-compiled sets, which the purity gate enforces.
 
 ## expect/actual vs ports and slots
 
