@@ -26,6 +26,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
+import com.vitorpamplona.amethyst.commons.resources.nest_error_account_not_bound
+import com.vitorpamplona.amethyst.commons.resources.nest_error_endpoint_url_scheme
+import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_future_start
+import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_start_time
+import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_error_room_name_required
+import com.vitorpamplona.amethyst.commons.resources.nest_error_service_url_scheme
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -213,26 +220,26 @@ class CreateNestViewModel : ViewModel() {
         val current = _state.value
         val account =
             account ?: run {
-                _state.update { it.copy(error = "Account not bound; please retry from the spaces screen.") }
+                _state.update { it.copy(error = loadStringRes(Res.string.nest_error_account_not_bound)) }
                 return null
             }
         if (current.roomName.isBlank()) {
-            _state.update { it.copy(error = "Room name is required.") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_room_name_required)) }
             return null
         }
         val service = current.serviceUrl.trim().trimEnd('/')
         val endpoint = current.endpointUrl.trim().trimEnd('/')
         if (service.isBlank() || !service.startsWith("http")) {
-            _state.update { it.copy(error = "MoQ service URL must start with http(s)://") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_service_url_scheme)) }
             return null
         }
         if (endpoint.isBlank() || !endpoint.startsWith("http")) {
-            _state.update { it.copy(error = "MoQ endpoint URL must start with http(s)://") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_endpoint_url_scheme)) }
             return null
         }
 
         if (current.scheduled && current.scheduledStartUnix <= 0L) {
-            _state.update { it.copy(error = "Pick a start time for the scheduled room.") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_pick_start_time)) }
             return null
         }
         // The host may want to backdate a "scheduled" announcement
@@ -244,7 +251,7 @@ class CreateNestViewModel : ViewModel() {
         // starts.)
         val nowSec = TimeUtils.now()
         if (current.scheduled && current.scheduledStartUnix < nowSec) {
-            _state.update { it.copy(error = "Pick a future start time.") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_pick_future_start)) }
             return null
         }
 
@@ -284,7 +291,7 @@ class CreateNestViewModel : ViewModel() {
                 _state.update {
                     it.copy(
                         isPublishing = false,
-                        error = "Failed to publish: ${t.message ?: t::class.simpleName}",
+                        error = loadStringRes(Res.string.nest_error_publish_failed, t.message ?: t::class.simpleName.toString()),
                     )
                 }
                 return null

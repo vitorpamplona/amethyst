@@ -72,6 +72,17 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.PublicGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_clear_all
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_create_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_refresh_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_title
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_finished
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_incoming
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_live
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_open
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_watching
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_challenges
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_games
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
@@ -324,19 +335,19 @@ fun ChessLobbyContent(
         ) {
             item {
                 Text(
-                    "No games or challenges",
+                    stringRes(Res.string.chess_lobby_empty_title),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "Create a new game to get started",
+                    stringRes(Res.string.chess_lobby_empty_create_hint),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Pull down to refresh",
+                    stringRes(Res.string.chess_lobby_empty_refresh_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )
@@ -364,7 +375,7 @@ fun ChessLobbyContent(
         if (activeGames.isNotEmpty()) {
             item {
                 Text(
-                    "Your Games",
+                    stringRes(Res.string.chess_lobby_section_your_games),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -400,7 +411,7 @@ fun ChessLobbyContent(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Your Challenges",
+                    stringRes(Res.string.chess_lobby_section_your_challenges),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -439,7 +450,7 @@ fun ChessLobbyContent(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Watching",
+                    stringRes(Res.string.chess_lobby_section_watching),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -464,7 +475,7 @@ fun ChessLobbyContent(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Incoming Challenges",
+                    stringRes(Res.string.chess_lobby_section_incoming),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -501,7 +512,7 @@ fun ChessLobbyContent(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Open Challenges",
+                    stringRes(Res.string.chess_lobby_section_open),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -537,7 +548,7 @@ fun ChessLobbyContent(
             item {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Live Games",
+                    stringRes(Res.string.chess_lobby_section_live),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -566,13 +577,13 @@ fun ChessLobbyContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "Finished Games",
+                        stringRes(Res.string.chess_lobby_section_finished),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
                     if (completedGames.size >= 2) {
                         TextButton(onClick = { chessViewModel.dismissAllCompletedGames() }) {
-                            Text("Clear all")
+                            Text(stringRes(Res.string.chess_lobby_clear_all))
                         }
                     }
                 }

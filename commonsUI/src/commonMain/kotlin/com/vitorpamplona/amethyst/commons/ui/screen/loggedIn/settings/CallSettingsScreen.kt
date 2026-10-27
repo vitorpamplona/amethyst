@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_settings
 import com.vitorpamplona.amethyst.commons.resources.call_settings_add_turn
+import com.vitorpamplona.amethyst.commons.resources.call_settings_bitrate_default
 import com.vitorpamplona.amethyst.commons.resources.call_settings_custom_turn
 import com.vitorpamplona.amethyst.commons.resources.call_settings_default_servers
 import com.vitorpamplona.amethyst.commons.resources.call_settings_enable_calls
@@ -254,7 +255,7 @@ private fun BitrateSection(
     val bitrateOptions =
         listOf(
             750_000 to "750 kbps",
-            1_500_000 to "1.5 Mbps (default)",
+            1_500_000 to stringRes(Res.string.call_settings_bitrate_default),
             3_000_000 to "3 Mbps",
         )
 

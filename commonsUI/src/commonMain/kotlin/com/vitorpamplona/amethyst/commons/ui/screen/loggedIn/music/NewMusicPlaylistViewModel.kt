@@ -25,6 +25,10 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_send_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -192,8 +196,8 @@ class NewMusicPlaylistViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null && coverMedia.value != null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -239,8 +243,9 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to send playlist",
+                    Res.string.music_playlist_send_failed_title,
                     t.message ?: t::class.simpleName ?: "",
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

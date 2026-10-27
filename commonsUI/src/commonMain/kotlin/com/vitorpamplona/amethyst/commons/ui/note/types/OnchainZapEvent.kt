@@ -71,9 +71,20 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_badge
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_bitcoin
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_confirmed_block
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_confirmed_conf
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_copy_tx_link
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_in_mempool
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_tx
+import com.vitorpamplona.amethyst.commons.resources.onchain_zap_verifying
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
@@ -250,7 +261,7 @@ private fun PulsingBitcoinBadge(orange: Color) {
         ) {
             Icon(
                 symbol = MaterialSymbols.CurrencyBitcoin,
-                contentDescription = "Bitcoin",
+                contentDescription = stringRes(Res.string.onchain_zap_bitcoin),
                 tint = Color.White,
                 modifier = Modifier.size(18.dp),
             )
@@ -301,7 +312,7 @@ private fun OnchainPill(orange: Color) {
                 }.padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Text(
-            text = "ON-CHAIN",
+            text = stringRes(Res.string.onchain_zap_badge),
             style = MaterialTheme.typography.labelSmall,
             color = orange,
             fontWeight = FontWeight.Bold,
@@ -322,7 +333,7 @@ private fun AmountRow(
             color = orange,
         )
         Text(
-            text = "sats",
+            text = stringRes(Res.string.wallet_sats),
             style = MaterialTheme.typography.titleSmall,
             color = orange,
             modifier = Modifier.padding(bottom = 6.dp),
@@ -340,12 +351,15 @@ private fun ConfirmationPill(
         val confirmations = tx?.confirmations ?: -1
         val (label, color) =
             when {
-                tx == null -> "Verifying on chain…" to orange.copy(alpha = 0.75f)
-                confirmations <= 0 -> "In mempool — pending confirmation" to orange
-                confirmations < 6 -> "Confirmed · $confirmations conf" to orange
+                tx == null -> stringRes(Res.string.onchain_zap_verifying) to orange.copy(alpha = 0.75f)
+                confirmations <= 0 -> stringRes(Res.string.onchain_zap_in_mempool) to orange
+                confirmations < 6 -> stringRes(Res.string.onchain_zap_confirmed_conf, confirmations) to orange
                 else ->
-                    "Confirmed · ${tx.blockHeight?.let { "block $it" } ?: "$confirmations conf"}" to
-                        MaterialTheme.colorScheme.primary
+                    (
+                        tx.blockHeight
+                            ?.let { stringRes(Res.string.onchain_zap_confirmed_block, it) }
+                            ?: stringRes(Res.string.onchain_zap_confirmed_conf, confirmations)
+                    ) to MaterialTheme.colorScheme.primary
             }
 
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -411,7 +425,7 @@ private fun TxidRow(
                 }.padding(vertical = 2.dp),
     ) {
         Text(
-            text = "tx",
+            text = stringRes(Res.string.onchain_zap_tx),
             style = MaterialTheme.typography.labelSmall,
             color = orange,
             fontWeight = FontWeight.Bold,
@@ -428,7 +442,7 @@ private fun TxidRow(
         Spacer(Modifier.width(2.dp))
         Icon(
             symbol = MaterialSymbols.ContentCopy,
-            contentDescription = "Copy tx link",
+            contentDescription = stringRes(Res.string.onchain_zap_copy_tx_link),
             tint = orange,
             modifier = Modifier.size(14.dp),
         )

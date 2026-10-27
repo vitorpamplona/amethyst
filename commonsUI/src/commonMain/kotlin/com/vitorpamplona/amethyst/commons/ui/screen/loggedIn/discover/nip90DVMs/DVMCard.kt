@@ -42,6 +42,13 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_generic
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_personalized
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_flexible
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_sats
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_unknown
+import com.vitorpamplona.amethyst.commons.resources.marketplace_shipping_free
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -50,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.FavoriteAlgoFeedToggle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.observeAppDefinition
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImageBorder
@@ -143,22 +151,22 @@ fun RenderContentDVMThumb(
                 when {
                     card.amount == "free" || card.amount == "0" -> {
                         color = MaterialTheme.colorScheme.secondary
-                        amount = "Free"
+                        amount = stringRes(Res.string.marketplace_shipping_free)
                     }
 
                     card.amount == "flexible" -> {
                         color = MaterialTheme.colorScheme.primaryContainer
-                        amount = "Flexible"
+                        amount = stringRes(Res.string.dvm_card_price_flexible)
                     }
 
                     card.amount == "" -> {
                         color = MaterialTheme.colorScheme.grayText
-                        amount = "Unknown"
+                        amount = stringRes(Res.string.dvm_card_price_unknown)
                     }
 
                     else -> {
                         color = MaterialTheme.colorScheme.primary
-                        amount = card.amount + " Sats"
+                        amount = stringRes(Res.string.dvm_card_price_sats, card.amount)
                     }
                 }
                 Text(
@@ -178,10 +186,10 @@ fun RenderContentDVMThumb(
                 var name = "generic"
                 if (card.personalized) {
                     color = MaterialTheme.colorScheme.bitcoinColor
-                    name = "Personalized"
+                    name = stringRes(Res.string.dvm_card_personalized)
                 } else {
                     color = MaterialTheme.colorScheme.nip05
-                    name = "Generic"
+                    name = stringRes(Res.string.dvm_card_generic)
                 }
                 Text(
                     textAlign = TextAlign.End,

@@ -24,6 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_no_url
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_publish_failed_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
@@ -96,8 +102,8 @@ class NewPodcastTrailerViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -130,7 +136,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
                         urlSnap
                     }
                 if (finalUrl.isBlank()) {
-                    accountViewModel.toastManager.toast("Trailer upload failed", "No URL was available for the trailer.")
+                    accountViewModel.toastManager.toast(Res.string.podcast_trailer_upload_failed_title, Res.string.podcast_trailer_no_url)
                     return@launchSigner
                 }
 
@@ -150,7 +156,7 @@ class NewPodcastTrailerViewModel : ViewModel() {
 
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
-                accountViewModel.toastManager.toast("Failed to publish trailer", t.message ?: t::class.simpleName ?: "")
+                accountViewModel.toastManager.toast(Res.string.podcast_trailer_publish_failed_title, t.message ?: t::class.simpleName ?: "", t)
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }
             }

@@ -71,19 +71,63 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinSettings
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_save
+import com.vitorpamplona.amethyst.commons.resources.namecoin_active_servers
+import com.vitorpamplona.amethyst.commons.resources.namecoin_add_electrumx_server
+import com.vitorpamplona.amethyst.commons.resources.namecoin_add_server
+import com.vitorpamplona.amethyst.commons.resources.namecoin_backend_core_rpc_description
+import com.vitorpamplona.amethyst.commons.resources.namecoin_backend_core_rpc_label
+import com.vitorpamplona.amethyst.commons.resources.namecoin_backend_electrumx_description
+import com.vitorpamplona.amethyst.commons.resources.namecoin_backend_electrumx_label
+import com.vitorpamplona.amethyst.commons.resources.namecoin_badge_custom
+import com.vitorpamplona.amethyst.commons.resources.namecoin_badge_default
+import com.vitorpamplona.amethyst.commons.resources.namecoin_cert_fingerprint
+import com.vitorpamplona.amethyst.commons.resources.namecoin_custom_servers_exclusive
 import com.vitorpamplona.amethyst.commons.resources.namecoin_device_info
 import com.vitorpamplona.amethyst.commons.resources.namecoin_diagnostics
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_custom_description
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_custom_label
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_custom_none
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_default_already
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_default_custom_failed
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_default_everything_fails
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_default_label
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_policy
+import com.vitorpamplona.amethyst.commons.resources.namecoin_fallback_policy_description
 import com.vitorpamplona.amethyst.commons.resources.namecoin_last_test
+import com.vitorpamplona.amethyst.commons.resources.namecoin_no_custom_servers
 import com.vitorpamplona.amethyst.commons.resources.namecoin_no_test_yet
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_accept
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_body
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_reject
 import com.vitorpamplona.amethyst.commons.resources.namecoin_pin_cert_title
+import com.vitorpamplona.amethyst.commons.resources.namecoin_remove_server
+import com.vitorpamplona.amethyst.commons.resources.namecoin_reset_to_defaults
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_backend
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_subtitle
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_title
 import com.vitorpamplona.amethyst.commons.resources.namecoin_response_time
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_cert_sha256
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_cert_sha256_pinned
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_connected_ms
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_description
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_title
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_failed
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_password
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_test
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_tls_rejected
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_url
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_url_hint
+import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_username
+import com.vitorpamplona.amethyst.commons.resources.namecoin_server_address_required
+import com.vitorpamplona.amethyst.commons.resources.namecoin_server_input_hint
+import com.vitorpamplona.amethyst.commons.resources.namecoin_server_invalid_format
+import com.vitorpamplona.amethyst.commons.resources.namecoin_settings_explanation
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_connection
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_results
 import com.vitorpamplona.amethyst.commons.resources.namecoin_test_success
 import com.vitorpamplona.amethyst.commons.resources.namecoin_testing
+import com.vitorpamplona.amethyst.commons.resources.namecoin_testing_next_server
 import com.vitorpamplona.amethyst.commons.resources.namecoin_tls_info
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
@@ -145,9 +189,7 @@ fun NamecoinSettingsSection(
 
                 // ── Explanation ─────────────────────────────────────
                 Text(
-                    "Namecoin names (.bit, d/, id/) are resolved by querying the Namecoin " +
-                        "blockchain. Choose ElectrumX (light-client) or Namecoin Core RPC " +
-                        "(your own full node) below.",
+                    stringRes(Res.string.namecoin_settings_explanation),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -222,7 +264,7 @@ fun NamecoinSettingsSection(
                                 modifier = Modifier.size(16.dp),
                             )
                             Spacer(Modifier.width(4.dp))
-                            Text("Reset to defaults")
+                            Text(stringRes(Res.string.namecoin_reset_to_defaults))
                         }
                     }
                 }
@@ -402,7 +444,7 @@ private fun TestConnectionSection(
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Testing next server…",
+                        stringRes(Res.string.namecoin_testing_next_server),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -466,7 +508,7 @@ private fun ServerTestResultRow(result: ServerTestResult) {
                 val fp = result.certFingerprint
                 if (fp != null) {
                     Text(
-                        text = "Cert: ${fp.take(23)}…",
+                        text = stringRes(Res.string.namecoin_cert_fingerprint, fp.take(23)),
                         style = MaterialTheme.typography.labelSmall,
                         fontFamily = FontFamily.Monospace,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -606,12 +648,12 @@ private fun SectionHeader(
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(
-                    "Namecoin Resolution",
+                    stringRes(Res.string.namecoin_resolution_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "Blockchain identity lookups (.bit)",
+                    stringRes(Res.string.namecoin_resolution_subtitle),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -636,13 +678,13 @@ private fun ActiveServersDisplay(settings: NamecoinSettings) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Active servers",
+                stringRes(Res.string.namecoin_active_servers),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
             )
             if (isCustom) {
                 Text(
-                    "CUSTOM",
+                    stringRes(Res.string.namecoin_badge_custom),
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF4A90D9),
@@ -655,7 +697,7 @@ private fun ActiveServersDisplay(settings: NamecoinSettings) {
                 )
             } else {
                 Text(
-                    "DEFAULT",
+                    stringRes(Res.string.namecoin_badge_default),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -680,14 +722,14 @@ private fun CustomServersList(
 ) {
     if (servers.isEmpty()) {
         Text(
-            "No custom servers configured",
+            stringRes(Res.string.namecoin_no_custom_servers),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.padding(vertical = 4.dp),
         )
     } else {
         Text(
-            "Custom servers (used exclusively)",
+            stringRes(Res.string.namecoin_custom_servers_exclusive),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 4.dp),
@@ -715,7 +757,7 @@ private fun CustomServersList(
                 ) {
                     Icon(
                         MaterialSymbols.Close,
-                        contentDescription = "Remove server",
+                        contentDescription = stringRes(Res.string.namecoin_remove_server),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(16.dp),
                     )
@@ -731,16 +773,18 @@ private fun AddServerInput(onAdd: (String) -> Unit) {
     var input by rememberSaveable { mutableStateOf("") }
     var validationError by remember { mutableStateOf<String?>(null) }
     val kb = LocalSoftwareKeyboardController.current
+    val serverAddressRequired = stringRes(Res.string.namecoin_server_address_required)
+    val serverInvalidFormat = stringRes(Res.string.namecoin_server_invalid_format)
 
     fun tryAdd() {
         val trimmed = input.trim()
         if (trimmed.isBlank()) {
-            validationError = "Enter a server address"
+            validationError = serverAddressRequired
             return
         }
         val parsed = NamecoinSettings.parseServerString(trimmed)
         if (parsed == null) {
-            validationError = "Invalid format. Use host:port or host:port:tcp"
+            validationError = serverInvalidFormat
             return
         }
         validationError = null
@@ -759,8 +803,8 @@ private fun AddServerInput(onAdd: (String) -> Unit) {
                 input = it
                 validationError = null
             },
-            label = { Text("Add ElectrumX server") },
-            placeholder = { Text("host:port or host:port:tcp") },
+            label = { Text(stringRes(Res.string.namecoin_add_electrumx_server)) },
+            placeholder = { Text(stringRes(Res.string.namecoin_server_input_hint)) },
             singleLine = true,
             isError = validationError != null,
             supportingText =
@@ -790,7 +834,7 @@ private fun AddServerInput(onAdd: (String) -> Unit) {
         ) {
             Icon(
                 MaterialSymbols.Add,
-                contentDescription = "Add server",
+                contentDescription = stringRes(Res.string.namecoin_add_server),
                 tint = MaterialTheme.colorScheme.primary,
             )
         }
@@ -838,21 +882,21 @@ private fun BackendSelector(
 ) {
     Column {
         Text(
-            "Resolution backend",
+            stringRes(Res.string.namecoin_resolution_backend),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(6.dp))
 
         BackendRadioRow(
-            label = "ElectrumX (light client)",
-            description = "Query public or custom ElectrumX servers. Lightweight, no full node required.",
+            label = stringRes(Res.string.namecoin_backend_electrumx_label),
+            description = stringRes(Res.string.namecoin_backend_electrumx_description),
             selected = selected == NamecoinBackend.ELECTRUMX,
             onClick = { onSelect(NamecoinBackend.ELECTRUMX) },
         )
         BackendRadioRow(
-            label = "Namecoin Core RPC",
-            description = "Query your own Namecoin Core node directly via JSON-RPC. Most sovereign.",
+            label = stringRes(Res.string.namecoin_backend_core_rpc_label),
+            description = stringRes(Res.string.namecoin_backend_core_rpc_description),
             selected = selected == NamecoinBackend.NAMECOIN_CORE_RPC,
             onClick = { onSelect(NamecoinBackend.NAMECOIN_CORE_RPC) },
         )
@@ -977,16 +1021,13 @@ private fun NamecoinCoreRpcSection(
 
     Column {
         Text(
-            "Namecoin Core RPC endpoint",
+            stringRes(Res.string.namecoin_rpc_endpoint_title),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "URL, username and password for your Namecoin Core node. " +
-                "StartOS / Start9 users: copy these from the package's Properties tab. " +
-                "Umbrel users: see the Namecoin Core app's 'Connect From Outside' card. " +
-                "Tor onion URL recommended for remote access.",
+            stringRes(Res.string.namecoin_rpc_endpoint_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -996,8 +1037,8 @@ private fun NamecoinCoreRpcSection(
         OutlinedTextField(
             value = url,
             onValueChange = { url = it },
-            label = { Text("RPC URL") },
-            placeholder = { Text("http://<onion>.onion:8336/") },
+            label = { Text(stringRes(Res.string.namecoin_rpc_url)) },
+            placeholder = { Text(stringRes(Res.string.namecoin_rpc_url_hint)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -1014,7 +1055,7 @@ private fun NamecoinCoreRpcSection(
         OutlinedTextField(
             value = user,
             onValueChange = { user = it },
-            label = { Text("RPC username") },
+            label = { Text(stringRes(Res.string.namecoin_rpc_username)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
@@ -1031,7 +1072,7 @@ private fun NamecoinCoreRpcSection(
         OutlinedTextField(
             value = pass,
             onValueChange = { pass = it },
-            label = { Text("RPC password") },
+            label = { Text(stringRes(Res.string.namecoin_rpc_password)) },
             singleLine = true,
             visualTransformation =
                 if (passVisible) {
@@ -1075,7 +1116,7 @@ private fun NamecoinCoreRpcSection(
                 },
                 modifier = Modifier.weight(1f),
             ) {
-                Text("Save")
+                Text(stringRes(Res.string.action_save))
             }
             Button(
                 onClick = {
@@ -1131,7 +1172,7 @@ private fun NamecoinCoreRpcSection(
                         color = MaterialTheme.colorScheme.onPrimary,
                     )
                 } else {
-                    Text("Test RPC")
+                    Text(stringRes(Res.string.namecoin_rpc_test))
                 }
             }
         }
@@ -1154,7 +1195,7 @@ private fun NamecoinCoreRpcSection(
                 Column(modifier = Modifier.padding(10.dp)) {
                     if (probe.success) {
                         Text(
-                            "Connected (${probe.elapsedMs} ms)",
+                            stringRes(Res.string.namecoin_rpc_connected_ms, probe.elapsedMs),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1171,7 +1212,7 @@ private fun NamecoinCoreRpcSection(
                         )
                     } else {
                         Text(
-                            "Failed",
+                            stringRes(Res.string.namecoin_rpc_failed),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -1183,8 +1224,7 @@ private fun NamecoinCoreRpcSection(
                         if (probe.tlsHandshakeFailed && probe.certFingerprint != null) {
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "TLS rejected by the system trust store. Tap Test RPC " +
-                                    "again, then choose Trust to pin this server's certificate.",
+                                stringRes(Res.string.namecoin_rpc_tls_rejected),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -1195,8 +1235,11 @@ private fun NamecoinCoreRpcSection(
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text =
-                                "cert SHA-256: ${fp.take(23)}\u2026" +
-                                    if (config.usePinnedTrustStore) "  (pinned)" else "",
+                                if (config.usePinnedTrustStore) {
+                                    stringRes(Res.string.namecoin_rpc_cert_sha256_pinned, fp.take(23))
+                                } else {
+                                    stringRes(Res.string.namecoin_rpc_cert_sha256, fp.take(23))
+                                },
                             style = MaterialTheme.typography.labelSmall,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1220,14 +1263,13 @@ private fun FallbacksSection(
 ) {
     Column {
         Text(
-            "Fallback policy",
+            stringRes(Res.string.namecoin_fallback_policy),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "What to try if the primary backend can't be reached. " +
-                "Off by default — fallbacks can leak your lookups to other operators.",
+            stringRes(Res.string.namecoin_fallback_policy_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -1236,12 +1278,12 @@ private fun FallbacksSection(
 
         if (settings.backend == NamecoinBackend.NAMECOIN_CORE_RPC) {
             ToggleRow(
-                label = "Fall back to my custom ElectrumX servers",
+                label = stringRes(Res.string.namecoin_fallback_custom_label),
                 description =
                     if (settings.hasCustomServers) {
-                        "If Namecoin Core RPC fails, try the ${settings.customServers.size} custom ElectrumX server(s) configured below."
+                        stringRes(Res.string.namecoin_fallback_custom_description, settings.customServers.size)
                     } else {
-                        "No custom ElectrumX servers configured. Add one in the section below to enable this option."
+                        stringRes(Res.string.namecoin_fallback_custom_none)
                     },
                 checked = settings.fallbackToCustomElectrumx,
                 onCheckedChange = onSetFallbackToCustomElectrumx,
@@ -1250,16 +1292,16 @@ private fun FallbacksSection(
         }
 
         ToggleRow(
-            label = "Fall back to default public ElectrumX servers",
+            label = stringRes(Res.string.namecoin_fallback_default_label),
             description =
                 if (settings.backend == NamecoinBackend.ELECTRUMX) {
                     if (settings.hasCustomServers) {
-                        "If all of my custom ElectrumX servers fail, also try the hardcoded public defaults."
+                        stringRes(Res.string.namecoin_fallback_default_custom_failed)
                     } else {
-                        "(Already using defaults — toggle has no extra effect.)"
+                        stringRes(Res.string.namecoin_fallback_default_already)
                     }
                 } else {
-                    "If everything above fails, try the hardcoded public ElectrumX servers."
+                    stringRes(Res.string.namecoin_fallback_default_everything_fails)
                 },
             checked = settings.fallbackToDefaultElectrumx,
             onCheckedChange = onSetFallbackToDefaultElectrumx,

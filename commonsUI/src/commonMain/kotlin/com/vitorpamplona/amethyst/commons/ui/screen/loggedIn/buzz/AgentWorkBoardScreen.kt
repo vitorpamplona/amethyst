@@ -89,6 +89,41 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkKind
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_work_compose_description
+import com.vitorpamplona.amethyst.commons.resources.agent_work_deny
+import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_description
+import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_title
+import com.vitorpamplona.amethyst.commons.resources.agent_work_file_direct
+import com.vitorpamplona.amethyst.commons.resources.agent_work_file_with_gate
+import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
+import com.vitorpamplona.amethyst.commons.resources.agent_work_pill_needs_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_off
+import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_on
+import com.vitorpamplona.amethyst.commons.resources.agent_work_source_direct
+import com.vitorpamplona.amethyst.commons.resources.agent_work_source_gated
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_approved
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_decision_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_denied
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_file_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed_gated
+import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
+import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on
+import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on_you
+import com.vitorpamplona.amethyst.commons.resources.buzz_agent_work_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_open_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_gate_awaiting
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_readonly_approver
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_task_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
+import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
@@ -99,10 +134,12 @@ import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgo
 import com.vitorpamplona.amethyst.commons.ui.note.elements.TimeAgoStyle
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The merged **Agent work** board: one channel, one list, both agent protocols (ungated jobs and
@@ -140,15 +177,23 @@ fun AgentWorkBoardScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Snackbar copy resolved here (composable scope) so the coroutine lambdas below don't call stringRes.
+    val msgApproved = stringRes(Res.string.agent_work_toast_approved)
+    val msgDenied = stringRes(Res.string.agent_work_toast_denied)
+    val msgDecisionFailed = stringRes(Res.string.agent_work_toast_decision_failed)
+    val msgFiledGated = stringRes(Res.string.agent_work_toast_task_filed_gated)
+    val msgFiled = stringRes(Res.string.agent_work_toast_task_filed)
+    val msgFileFailed = stringRes(Res.string.agent_work_toast_file_failed)
+
     Scaffold(
-        topBar = { TopBarWithBackButton("Agent work", nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_agent_work_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (canWrite) {
                 ExtendedFloatingActionButton(
                     onClick = { composing = true },
                     icon = { Icon(symbol = MaterialSymbols.Add, contentDescription = null) },
-                    text = { Text("New task") },
+                    text = { Text(stringRes(Res.string.agent_work_new_task)) },
                 )
             }
         },
@@ -172,9 +217,9 @@ fun AgentWorkBoardScreen(
                                         scope.launch {
                                             snackbar.showSnackbar(
                                                 when {
-                                                    ok && grant -> "Approved — the runner is opening a pull request"
-                                                    ok -> "Denied — the work was discarded"
-                                                    else -> "Couldn't publish your decision — check you can post here"
+                                                    ok && grant -> msgApproved
+                                                    ok -> msgDenied
+                                                    else -> msgDecisionFailed
                                                 },
                                             )
                                         }
@@ -213,9 +258,9 @@ fun AgentWorkBoardScreen(
                 viewModel.newTask(text, requireApproval) { ok ->
                     if (ok) {
                         composing = false
-                        scope.launch { snackbar.showSnackbar(if (requireApproval) "Task filed — it'll pause for approval" else "Task filed") }
+                        scope.launch { snackbar.showSnackbar(if (requireApproval) msgFiledGated else msgFiled) }
                     } else {
-                        scope.launch { snackbar.showSnackbar("Couldn't file the task — check you can post here") }
+                        scope.launch { snackbar.showSnackbar(msgFileFailed) }
                     }
                 }
             },
@@ -262,7 +307,7 @@ private fun LazyItemScope.GateCard(
                         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
                     }
                     Text(
-                        text = if (mine) "Waiting on you" else "Awaiting approval",
+                        text = if (mine) stringRes(Res.string.agent_work_waiting_on_you) else stringRes(Res.string.buzz_workflow_gate_awaiting),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -277,16 +322,16 @@ private fun LazyItemScope.GateCard(
             if (mine && canWrite) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                     TextButton(onClick = { onDecide(false) }, colors = ButtonDefaults.textButtonColors(contentColor = scheme.error)) {
-                        Text("Deny", fontWeight = FontWeight.SemiBold)
+                        Text(stringRes(Res.string.agent_work_deny), fontWeight = FontWeight.SemiBold)
                     }
                     Button(onClick = { onDecide(true) }, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                         Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Approve & open PR", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(stringRes(Res.string.buzz_workflow_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (mine) {
-                Text("You're the approver, but this login can't sign a decision.", style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+                Text(stringRes(Res.string.buzz_workflow_readonly_approver), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             } else {
                 WaitingPill(item.pendingApprover, accountViewModel, nav)
             }
@@ -360,7 +405,7 @@ private fun LazyItemScope.WorkCard(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         UpvoteChip(item.upvotes ?: 0, onUpvote)
                         TextButton(onClick = onCancel, colors = ButtonDefaults.textButtonColors(contentColor = scheme.onSurfaceVariant)) {
-                            Text("Cancel", style = MaterialTheme.typography.labelLarge)
+                            Text(stringRes(Res.string.cancel), style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
@@ -382,7 +427,7 @@ private fun UpvoteChip(
         modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick),
     ) {
         Row(modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = "Upvote", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+            Icon(symbol = MaterialSymbols.ThumbUp, contentDescription = stringRes(Res.string.agent_work_upvote), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
             Text("$count", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
         }
     }
@@ -426,7 +471,7 @@ private fun ResultLine(result: String?) {
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("View PR")
+            Text(stringRes(Res.string.buzz_workflow_view_pr))
         }
     } else if (!result.isNullOrBlank()) {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -436,7 +481,7 @@ private fun ResultLine(result: String?) {
 /** A quiet, secondary marker of which protocol an item came from — transparent, never a nav choice. */
 @Composable
 private fun SourceTag(source: AgentWorkKind) {
-    val (label, symbol) = if (source == AgentWorkKind.WORKFLOW) "gated" to MaterialSymbols.Lock else "direct" to MaterialSymbols.LockOpen
+    val (label, symbol) = if (source == AgentWorkKind.WORKFLOW) stringRes(Res.string.agent_work_source_gated) to MaterialSymbols.Lock else stringRes(Res.string.agent_work_source_direct) to MaterialSymbols.LockOpen
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Icon(symbol = symbol, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -469,7 +514,7 @@ private fun WaitingPill(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            if (approver != null) Person("waiting on", approver, accountViewModel, nav) else Text("Waiting for approval", style = MaterialTheme.typography.labelLarge)
+            if (approver != null) Person(stringRes(Res.string.agent_work_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -479,11 +524,11 @@ private fun StatePill(
     state: AgentWorkState,
     accent: Color,
 ) {
-    val (label, symbol) = pillContent(state)
+    val (labelRes, symbol) = pillContent(state)
     Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+            Text(text = stringRes(labelRes), style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -499,16 +544,16 @@ private fun NewTaskSheet(
     var requireApproval by remember { mutableStateOf(true) }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(modifier = Modifier.padding(horizontal = 20.dp).padding(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text("New task", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(stringRes(Res.string.agent_work_new_task), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                "Describe what the agent should do. The whole channel sees it and watches it work.",
+                stringRes(Res.string.agent_work_compose_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             SpellCheckedOutlinedTextField(
                 value = task,
                 onValueChange = { task = it },
-                label = { Text("What should it do?") },
+                label = { Text(stringRes(Res.string.buzz_workflow_task_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
@@ -519,9 +564,9 @@ private fun NewTaskSheet(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Require approval before it ships", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                        Text(stringRes(Res.string.agent_work_require_approval), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         Text(
-                            if (requireApproval) "A human grants it before the PR opens (a workflow run)." else "Ships its PR directly, no gate (a job).",
+                            if (requireApproval) stringRes(Res.string.agent_work_require_approval_on) else stringRes(Res.string.agent_work_require_approval_off),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -532,7 +577,7 @@ private fun NewTaskSheet(
             Button(onClick = { onSubmit(task.trim(), requireApproval) }, enabled = task.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
                 Icon(symbol = if (requireApproval) MaterialSymbols.Gavel else MaterialSymbols.Bolt, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (requireApproval) "File — with approval gate" else "File — ship directly")
+                Text(if (requireApproval) stringRes(Res.string.agent_work_file_with_gate) else stringRes(Res.string.agent_work_file_direct))
             }
         }
     }
@@ -546,9 +591,9 @@ private fun EmptyAgentWork() {
         verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically),
     ) {
         Icon(symbol = MaterialSymbols.Checklist, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-        Text("No agent work yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(stringRes(Res.string.agent_work_empty_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Text(
-            "Tap “New task” to ask the agent to build something. Choose whether it ships directly or pauses for a human to approve — either way the whole channel follows along.",
+            stringRes(Res.string.agent_work_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -575,11 +620,11 @@ private fun containerFor(state: AgentWorkState): Color =
         AgentWorkState.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow
     }
 
-private fun pillContent(state: AgentWorkState): Pair<String, MaterialSymbol> =
+private fun pillContent(state: AgentWorkState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        AgentWorkState.NEEDS_APPROVAL -> "Needs approval" to MaterialSymbols.Gavel
-        AgentWorkState.WORKING -> "Working" to MaterialSymbols.Bolt
-        AgentWorkState.QUEUED -> "Queued" to MaterialSymbols.Schedule
-        AgentWorkState.SHIPPED -> "Shipped" to MaterialSymbols.CheckCircle
-        AgentWorkState.CLOSED -> "Closed" to MaterialSymbols.Cancel
+        AgentWorkState.NEEDS_APPROVAL -> Res.string.agent_work_pill_needs_approval to MaterialSymbols.Gavel
+        AgentWorkState.WORKING -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        AgentWorkState.QUEUED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        AgentWorkState.SHIPPED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        AgentWorkState.CLOSED -> Res.string.buzz_workflow_section_closed to MaterialSymbols.Cancel
     }
