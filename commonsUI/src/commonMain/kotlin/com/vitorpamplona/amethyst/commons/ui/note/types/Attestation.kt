@@ -68,6 +68,7 @@ import com.vitorpamplona.amethyst.commons.resources.attestation_valid_to
 import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation_for_kinds
+import com.vitorpamplona.amethyst.commons.resources.unknown_kind_title
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -554,7 +555,7 @@ fun RenderAttestorProficiency(
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 kinds.forEach { kind ->
                     Text(
-                        text = "Kind $kind",
+                        text = stringRes(Res.string.unknown_kind_title, kind),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier =

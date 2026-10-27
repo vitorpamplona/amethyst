@@ -43,10 +43,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.citation_label_default
+import com.vitorpamplona.amethyst.commons.resources.citation_label_print
+import com.vitorpamplona.amethyst.commons.resources.citation_label_prompt
+import com.vitorpamplona.amethyst.commons.resources.citation_label_web
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -173,12 +179,13 @@ private fun iconFor(event: CitationEvent): MaterialSymbol =
         else -> MaterialSymbols.AutoMirrored.Article
     }
 
+@Composable
 private fun labelFor(event: CitationEvent): String =
     when (event) {
-        is ExternalCitationEvent -> "Cited from the web"
-        is HardcopyCitationEvent -> "Cited from print"
-        is PromptCitationEvent -> "Cited from a prompt"
-        else -> "Citation"
+        is ExternalCitationEvent -> stringRes(Res.string.citation_label_web)
+        is HardcopyCitationEvent -> stringRes(Res.string.citation_label_print)
+        is PromptCitationEvent -> stringRes(Res.string.citation_label_prompt)
+        else -> stringRes(Res.string.citation_label_default)
     }
 
 private fun urlOf(event: CitationEvent): String? =

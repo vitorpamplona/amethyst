@@ -39,6 +39,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.article_author_description
+import com.vitorpamplona.amethyst.commons.resources.article_banner_description
+import com.vitorpamplona.amethyst.commons.resources.article_reading_time_minutes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Composable
 fun ArticleHeader(
@@ -58,7 +63,7 @@ fun ArticleHeader(
         ) {
             AsyncImage(
                 model = bannerUrl,
-                contentDescription = "Article banner",
+                contentDescription = stringRes(Res.string.article_banner_description),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxWidth().height(300.dp),
             )
@@ -86,7 +91,7 @@ fun ArticleHeader(
             ) {
                 AsyncImage(
                     model = authorPicture,
-                    contentDescription = "Author",
+                    contentDescription = stringRes(Res.string.article_author_description),
                     modifier = Modifier.size(40.dp).clip(CircleShape),
                     contentScale = ContentScale.Crop,
                 )
@@ -102,7 +107,7 @@ fun ArticleHeader(
                 }
 
                 val metaParts = mutableListOf<String>()
-                readingTimeMinutes?.let { metaParts.add("$it min read") }
+                readingTimeMinutes?.let { metaParts.add(stringRes(Res.string.article_reading_time_minutes, it)) }
                 publishedAt?.let { metaParts.add(it) }
 
                 if (metaParts.isNotEmpty()) {

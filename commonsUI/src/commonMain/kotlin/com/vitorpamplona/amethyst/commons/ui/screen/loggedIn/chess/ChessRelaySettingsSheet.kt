@@ -47,6 +47,26 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessConfig
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_active_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_active_title
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_connected
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_connected_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_global_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_global_empty
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_global_title
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_inbox_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_inbox_empty
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_inbox_title
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_more
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_not_connected
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_not_connected_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_outbox_description
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_outbox_empty
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_outbox_title
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_preferred
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_settings_title
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_stat_challenges
+import com.vitorpamplona.amethyst.commons.resources.chess_relay_stat_live_games
 import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -78,7 +98,7 @@ fun ChessRelaySettingsSheet(
                 .verticalScroll(rememberScrollState()),
     ) {
         Text(
-            text = "Chess Relay Settings",
+            text = stringRes(Res.string.chess_relay_settings_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -99,12 +119,12 @@ fun ChessRelaySettingsSheet(
 
         // Chess relay info
         Text(
-            text = "Active Chess Relays",
+            text = stringRes(Res.string.chess_relay_active_title),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Chess uses 3 dedicated relays for fast, reliable queries",
+            text = stringRes(Res.string.chess_relay_active_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -125,19 +145,19 @@ fun ChessRelaySettingsSheet(
 
         // Inbox relays (where challenges TO you are fetched)
         Text(
-            text = "Inbox Relays (${inboxRelays.size})",
+            text = stringRes(Res.string.chess_relay_inbox_title, inboxRelays.size),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Personal challenges are fetched from here",
+            text = stringRes(Res.string.chess_relay_inbox_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (inboxRelays.isEmpty()) {
             Text(
-                text = "No inbox relays configured",
+                text = stringRes(Res.string.chess_relay_inbox_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -147,7 +167,7 @@ fun ChessRelaySettingsSheet(
             }
             if (inboxRelays.size > 5) {
                 Text(
-                    text = "+${inboxRelays.size - 5} more",
+                    text = stringRes(Res.string.chess_relay_more, inboxRelays.size - 5),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -158,19 +178,19 @@ fun ChessRelaySettingsSheet(
 
         // Global relays (where open challenges are fetched)
         Text(
-            text = "Global Relays (${globalRelays.size})",
+            text = stringRes(Res.string.chess_relay_global_title, globalRelays.size),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Open challenges and public games are fetched from here",
+            text = stringRes(Res.string.chess_relay_global_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (globalRelays.isEmpty()) {
             Text(
-                text = "No global relays configured - open challenges won't load!",
+                text = stringRes(Res.string.chess_relay_global_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -180,7 +200,7 @@ fun ChessRelaySettingsSheet(
             }
             if (globalRelays.size > 5) {
                 Text(
-                    text = "+${globalRelays.size - 5} more",
+                    text = stringRes(Res.string.chess_relay_more, globalRelays.size - 5),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -191,19 +211,19 @@ fun ChessRelaySettingsSheet(
 
         // Outbox relays (where your challenges are published)
         Text(
-            text = "Outbox Relays (${outboxRelays.size})",
+            text = stringRes(Res.string.chess_relay_outbox_title, outboxRelays.size),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
         )
         Text(
-            text = "Your challenges and moves are published here",
+            text = stringRes(Res.string.chess_relay_outbox_description),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.height(8.dp))
         if (outboxRelays.isEmpty()) {
             Text(
-                text = "No outbox relays configured",
+                text = stringRes(Res.string.chess_relay_outbox_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -213,7 +233,7 @@ fun ChessRelaySettingsSheet(
             }
             if (outboxRelays.size > 5) {
                 Text(
-                    text = "+${outboxRelays.size - 5} more",
+                    text = stringRes(Res.string.chess_relay_more, outboxRelays.size - 5),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -239,7 +259,7 @@ fun StatRow(chessViewModel: ChessViewModel) {
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "Challenges",
+            text = stringRes(Res.string.chess_relay_stat_challenges),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -256,7 +276,7 @@ fun StatRow(chessViewModel: ChessViewModel) {
             color = MaterialTheme.colorScheme.primary,
         )
         Text(
-            text = "Live Games",
+            text = stringRes(Res.string.chess_relay_stat_live_games),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -294,7 +314,7 @@ private fun RelayRow(
         )
         if (isPreferred) {
             Text(
-                text = "preferred",
+                text = stringRes(Res.string.chess_relay_preferred),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.tertiary,
             )
@@ -322,7 +342,7 @@ private fun ChessRelayRow(
                 } else {
                     MaterialSymbols.Close
                 },
-            contentDescription = if (isConnected) "Connected" else "Not connected",
+            contentDescription = if (isConnected) stringRes(Res.string.chess_relay_connected_description) else stringRes(Res.string.chess_relay_not_connected_description),
             tint =
                 if (isConnected) {
                     MaterialTheme.colorScheme.primary
@@ -338,7 +358,7 @@ private fun ChessRelayRow(
         )
         Spacer(Modifier.weight(1f))
         Text(
-            text = if (isConnected) "connected" else "not connected",
+            text = if (isConnected) stringRes(Res.string.chess_relay_connected) else stringRes(Res.string.chess_relay_not_connected),
             style = MaterialTheme.typography.labelSmall,
             color =
                 if (isConnected) {

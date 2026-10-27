@@ -52,9 +52,12 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.screen_search_title
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
 import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -82,7 +85,7 @@ import kotlinx.collections.immutable.toImmutableList
 fun TokenizedSearchField(
     state: SearchFieldState,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search",
+    placeholder: String = stringRes(Res.string.screen_search_title),
     people: ImmutableList<PersonCandidate> = persistentListOf(),
     groups: ImmutableList<GroupCandidate> = persistentListOf(),
     /**

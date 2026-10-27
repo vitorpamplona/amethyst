@@ -114,6 +114,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
 import com.vitorpamplona.amethyst.commons.resources.browser_favorites
 import com.vitorpamplona.amethyst.commons.resources.browser_go
+import com.vitorpamplona.amethyst.commons.resources.browser_napplet_default_label
+import com.vitorpamplona.amethyst.commons.resources.browser_nsite_default_label
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_go_to
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_search_for
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_fill_in
@@ -778,13 +780,13 @@ private fun BrowserHome(
         if (nsites.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringRes(Res.string.browser_discover_nsites)) }
             items(nsites, span = { GridItemSpan(maxLineSpan) }, key = { "ns:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.toFavorite()) })
             }
         }
         if (napplets.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringRes(Res.string.browser_discover_napplets)) }
             items(napplets, span = { GridItemSpan(maxLineSpan) }, key = { "np:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.toFavorite()) })
             }
         }
         if (suggested.isNotEmpty()) {
@@ -852,6 +854,7 @@ private fun SuggestedRow(
 private data class DiscoverNostrApp(
     val app: FavoriteApp.NostrApp,
     val description: String?,
+    val fallbackLabel: StringResource,
 )
 
 /** How many followed nsites/napplets each Discover section surfaces, so the launcher stays tidy. */
@@ -884,28 +887,37 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
+    val fallback: StringResource
     val description: String?
     when (event) {
         is RootSiteEvent -> {
-            label = event.title()?.ifBlank { null } ?: "Website"
+            // Blank, not a localized word: the label is stored when pinned, so it stays locale-neutral.
+            label = event.title()?.ifBlank { null } ?: ""
+            fallback = Res.string.browser_nsite_default_label
             description = event.description()
         }
         is NamedSiteEvent -> {
             label = event.title()?.ifBlank { null } ?: event.identifier()
+            fallback = Res.string.browser_nsite_default_label
             description = event.description()
         }
         is RootNappletEvent -> {
-            label = event.title()?.ifBlank { null } ?: "App"
+            label = event.title()?.ifBlank { null } ?: ""
+            fallback = Res.string.browser_napplet_default_label
             description = event.description()
         }
         is NamedNappletEvent -> {
             label = event.title()?.ifBlank { null } ?: event.identifier()
+            fallback = Res.string.browser_napplet_default_label
             description = event.description()
         }
         else -> return null
     }
-    return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description)
+    return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description, fallback)
 }
+
+/** The favorite to store when pinning: an untitled app falls back to its coordinate, never to a localized word. */
+private fun DiscoverNostrApp.toFavorite(): FavoriteApp = app.copy(label = app.label.ifBlank { app.coordinate })
 
 /** A Discover row for a followed nsite/napplet: its manifest icon, name, and description, with a pin star. */
 @Composable
@@ -934,7 +946,7 @@ private fun NostrAppRow(
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                app.label,
+                app.label.ifBlank { stringRes(discover.fallbackLabel) },
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

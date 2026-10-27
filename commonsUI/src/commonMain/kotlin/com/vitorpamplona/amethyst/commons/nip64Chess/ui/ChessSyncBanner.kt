@@ -61,6 +61,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncState
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_collapse
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_events_count
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_expand
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced_detail
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_detail
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_phase
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Shared banner showing chess sync/subscription status with expandable relay details.
@@ -157,7 +167,7 @@ fun ChessSyncBanner(
                     if (status !is ChessSyncStatus.Idle && getRelayStates(status).isNotEmpty()) {
                         Icon(
                             symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                            contentDescription = if (isExpanded) "Collapse" else "Expand",
+                            contentDescription = if (isExpanded) stringRes(Res.string.chess_sync_collapse) else stringRes(Res.string.chess_sync_expand),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
@@ -225,7 +235,7 @@ private fun RelayStatusRow(relay: RelaySyncState) {
         )
 
         Text(
-            text = "${relay.eventsReceived} events",
+            text = stringRes(Res.string.chess_sync_events_count, relay.eventsReceived),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         )
@@ -283,19 +293,21 @@ private fun getSyncStatusIconColor(status: ChessSyncStatus): Color =
         else -> MaterialTheme.colorScheme.primary
     }
 
+@Composable
 private fun getSyncStatusText(status: ChessSyncStatus): String =
     when (status) {
-        is ChessSyncStatus.Syncing -> "Syncing ${status.phase}..."
-        is ChessSyncStatus.Synced -> "Synced"
+        is ChessSyncStatus.Syncing -> stringRes(Res.string.chess_sync_syncing_phase, status.phase)
+        is ChessSyncStatus.Synced -> stringRes(Res.string.chess_sync_synced)
         is ChessSyncStatus.PartialSync -> status.message
         is ChessSyncStatus.Idle -> ""
     }
 
+@Composable
 private fun getSyncStatusDetail(status: ChessSyncStatus): String =
     when (status) {
-        is ChessSyncStatus.Syncing -> "${status.eoseCount}/${status.totalCount} relays • ${status.totalEventsReceived} events"
-        is ChessSyncStatus.Synced -> "${status.successCount}/${status.totalCount} relays • ${status.challengeCount} challenges • ${status.gameCount} games"
-        is ChessSyncStatus.PartialSync -> "Tap to retry"
+        is ChessSyncStatus.Syncing -> stringRes(Res.string.chess_sync_syncing_detail, status.eoseCount, status.totalCount, status.totalEventsReceived)
+        is ChessSyncStatus.Synced -> stringRes(Res.string.chess_sync_synced_detail, status.successCount, status.totalCount, status.challengeCount, status.gameCount)
+        is ChessSyncStatus.PartialSync -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ChessSyncStatus.Idle -> ""
     }
 

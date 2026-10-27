@@ -38,6 +38,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_game_invalid
+import com.vitorpamplona.amethyst.commons.resources.chess_game_parse_failed
+import com.vitorpamplona.amethyst.commons.resources.chess_game_pgn_content
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.PGNParser
 
 /**
@@ -71,7 +76,7 @@ fun ChessGameViewer(
         },
         onFailure = { error ->
             ChessGameError(
-                errorMessage = error.message ?: "Failed to parse PGN",
+                errorMessage = error.message ?: stringRes(Res.string.chess_game_parse_failed),
                 pgnContent = pgnContent,
                 modifier = modifier,
             )
@@ -144,7 +149,7 @@ private fun ChessGameError(
         ) {
             // Error title
             Text(
-                text = "Invalid Chess Game",
+                text = stringRes(Res.string.chess_game_invalid),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -158,7 +163,7 @@ private fun ChessGameError(
 
             // PGN content label
             Text(
-                text = "PGN Content:",
+                text = stringRes(Res.string.chess_game_pgn_content),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onErrorContainer,
                 modifier = Modifier.padding(top = 4.dp),

@@ -60,6 +60,8 @@ import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.open_dropdown_menu
 import com.vitorpamplona.amethyst.commons.resources.option_of
+import com.vitorpamplona.amethyst.commons.resources.text_spinner_dropdown_not_selected
+import com.vitorpamplona.amethyst.commons.resources.text_spinner_dropdown_selected
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font14SP
 import kotlinx.collections.immutable.ImmutableList
@@ -121,9 +123,9 @@ private fun BaseTextSpinner(
 
     val accessibilityDescription =
         if (currentText == placeholder) {
-            "Dropdown menu, $placeholder, not selected"
+            stringRes(Res.string.text_spinner_dropdown_not_selected, placeholder)
         } else {
-            "Dropdown menu, $currentText selected"
+            stringRes(Res.string.text_spinner_dropdown_selected, currentText)
         }
 
     val openDropdownLabel = stringRes(Res.string.open_dropdown_menu)
