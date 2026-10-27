@@ -424,7 +424,7 @@ private fun PublicationSectionPosition(position: Int) {
 }
 
 @Composable
-internal fun PublicationCover(
+private fun PublicationCover(
     cover: String?,
     accountViewModel: AccountViewModel,
 ) {
