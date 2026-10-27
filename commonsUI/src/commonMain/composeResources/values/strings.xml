@@ -8613,4 +8613,18 @@
     <string name="wallet_onchain_unit_sats">sats</string>
     <string name="wallet_onchain_balance_unavailable">unavailable</string>
     <string name="wallet_onchain_no_backend_short">no backend</string>
+    <string name="agent_console_attest">Attest</string>
+    <string name="agent_console_fleet_total">Fleet total</string>
+    <string name="agent_console_estimated_totals_warning">⚠ Some totals are estimated from per-turn deltas (a session reported no cumulative counts).</string>
+    <string name="agent_console_new_persona">New persona</string>
+    <string name="agent_console_no_personas">No personas published yet. Create one to define an agent (kind:30175).</string>
+    <string name="chess_move_navigator_start">Start position</string>
+    <string name="chess_move_navigator_previous">Previous move</string>
+    <string name="chess_move_navigator_counter">Move %1$d / %2$d</string>
+    <string name="chess_move_navigator_next">Next move</string>
+    <string name="chess_move_navigator_final">Final position</string>
+    <string name="chess_game_relays_title">Chess Game Relays</string>
+    <string name="chess_game_relays_broadcast">Moves are broadcast to these relays:</string>
+    <string name="chess_game_relays_no_write">No write relays configured</string>
+    <string name="chess_game_relays_game_id">Game ID</string>
 </resources>

@@ -67,6 +67,10 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.chess_game_id
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
+import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_broadcast
+import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_game_id
+import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_no_write
+import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_title
 import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
 import com.vitorpamplona.amethyst.commons.resources.go_back
@@ -403,7 +407,7 @@ private fun RelaySettingsSheet(
                 .padding(16.dp),
     ) {
         Text(
-            text = "Chess Game Relays",
+            text = stringRes(Res.string.chess_game_relays_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -411,7 +415,7 @@ private fun RelaySettingsSheet(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Moves are broadcast to these relays:",
+            text = stringRes(Res.string.chess_game_relays_broadcast),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -420,7 +424,7 @@ private fun RelaySettingsSheet(
 
         if (writeRelays.isEmpty()) {
             Text(
-                text = "No write relays configured",
+                text = stringRes(Res.string.chess_game_relays_no_write),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -441,7 +445,7 @@ private fun RelaySettingsSheet(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Game ID",
+            text = stringRes(Res.string.chess_game_relays_game_id),
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
         )

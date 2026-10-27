@@ -62,10 +62,17 @@ import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentUsageSummary
 import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_console_attest
+import com.vitorpamplona.amethyst.commons.resources.agent_console_estimated_totals_warning
+import com.vitorpamplona.amethyst.commons.resources.agent_console_fleet_total
+import com.vitorpamplona.amethyst.commons.resources.agent_console_new_persona
+import com.vitorpamplona.amethyst.commons.resources.agent_console_no_personas
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -122,7 +129,7 @@ fun AgentConsoleScreen(
                 onClick = { nav.nav(Route.AgentAttestation) },
                 shape = CircleShape,
             ) {
-                Icon(symbol = MaterialSymbols.Key, contentDescription = "Attest")
+                Icon(symbol = MaterialSymbols.Key, contentDescription = stringRes(Res.string.agent_console_attest))
             }
         },
     ) { padding ->
@@ -179,7 +186,7 @@ private fun FleetSummaryCard(metrics: AgentFleetMetrics) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "Fleet total",
+                text = stringRes(Res.string.agent_console_fleet_total),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -193,7 +200,7 @@ private fun FleetSummaryCard(metrics: AgentFleetMetrics) {
             TokenBreakdown(metrics.totals)
             if (metrics.hasUnreliableEstimates) {
                 Text(
-                    text = "⚠ Some totals are estimated from per-turn deltas (a session reported no cumulative counts).",
+                    text = stringRes(Res.string.agent_console_estimated_totals_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -253,13 +260,13 @@ private fun PersonasTab(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(symbol = MaterialSymbols.AddCircle, contentDescription = null)
-                Text("  New persona")
+                Text("  " + stringRes(Res.string.agent_console_new_persona))
             }
         }
         if (personas.isEmpty()) {
             item {
                 Text(
-                    text = "No personas published yet. Create one to define an agent (kind:30175).",
+                    text = stringRes(Res.string.agent_console_no_personas),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
