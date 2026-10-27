@@ -24,7 +24,6 @@ import androidx.benchmark.junit4.BenchmarkRule
 import androidx.benchmark.junit4.measureRepeated
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.vitorpamplona.crypto.chacha.ChaCha20
-import com.vitorpamplona.crypto.mac.FixedKey
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.nip01Core.crypto.Nip01Crypto
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
@@ -33,6 +32,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 @RunWith(AndroidJUnit4::class)
 class ChaCha20Benchmark {
@@ -51,7 +51,7 @@ class ChaCha20Benchmark {
         val messageKeys = nip44v2.getMessageKeys(sharedKey, nonce)
         val padded = nip44v2.pad(msg)
 
-        val chaCha = ChaCha20()
+        val chaCha = ChaCha20
     }
 
     @Test
@@ -88,7 +88,7 @@ class ChaCha20Benchmark {
         key: ByteArray,
     ): ByteArray {
         val cipher = Cipher.getInstance("ChaCha20")
-        cipher.init(Cipher.ENCRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "ChaCha20"), IvParameterSpec(nonce))
         return cipher.doFinal(message)
     }
 
@@ -98,7 +98,7 @@ class ChaCha20Benchmark {
         key: ByteArray,
     ): ByteArray {
         val cipher = Cipher.getInstance("ChaCha20")
-        cipher.init(Cipher.DECRYPT_MODE, FixedKey(key, "ChaCha20"), IvParameterSpec(nonce))
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "ChaCha20"), IvParameterSpec(nonce))
         return cipher.doFinal(message)
     }
 }
