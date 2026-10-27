@@ -55,6 +55,10 @@ import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.MonthGridDay
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchCalendar
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * The calendar that opens under a half-written `since:`/`until:` token.
@@ -101,9 +105,9 @@ fun SearchCalendarPicker(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         ) {
-            MonthStep(MaterialSymbols.AutoMirrored.ArrowBack, "Previous month") { onStepMonth(-1) }
+            MonthStep(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.calendar_nav_previous_month)) { onStepMonth(-1) }
             Text(grid.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            MonthStep(MaterialSymbols.AutoMirrored.ArrowForward, "Next month") { onStepMonth(1) }
+            MonthStep(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.calendar_nav_next_month)) { onStepMonth(1) }
         }
 
         // Seven columns of headings, then the blanks before the 1st, then the days. Keeping the

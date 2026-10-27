@@ -58,6 +58,9 @@ import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.screen_search_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * The search box: a plain text field that draws the tokens it holds as chips, with the picker
@@ -82,7 +85,7 @@ import kotlinx.collections.immutable.toImmutableList
 fun TokenizedSearchField(
     state: SearchFieldState,
     modifier: Modifier = Modifier,
-    placeholder: String = "Search",
+    placeholder: String = stringRes(Res.string.screen_search_title),
     people: ImmutableList<PersonCandidate> = persistentListOf(),
     groups: ImmutableList<GroupCandidate> = persistentListOf(),
     /**

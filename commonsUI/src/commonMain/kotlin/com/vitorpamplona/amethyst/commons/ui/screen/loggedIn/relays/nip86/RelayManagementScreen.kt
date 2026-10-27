@@ -160,6 +160,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.resources.relay_management_kind_row
 
 @Composable
 fun RelayManagementScreen(
@@ -1019,7 +1020,7 @@ private fun KindEntryCard(
             val name = if (nameResId != null) stringRes(nameResId) else (KindNames.nameFor(kind) ?: "")
 
             Text(
-                "Kind $kind: $name",
+                stringRes(Res.string.relay_management_kind_row, kind, name),
                 style = MaterialTheme.typography.bodyMedium,
                 fontFamily = FontFamily.Monospace,
             )

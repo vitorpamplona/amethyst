@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected
 import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_disconnected
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected_ago
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,14 +63,14 @@ fun BunkerHeartbeatIndicator(
             is SignerConnectionState.Connected -> {
                 if (lastPingTimeSec != null) {
                     val agoSeconds = TimeUtils.now() - lastPingTimeSec
-                    "Bunker connected \u2014 last pinged ${agoSeconds}s ago"
+                    stringRes(Res.string.bunker_heartbeat_connected_ago, agoSeconds)
                 } else {
-                    "Bunker connected"
+                    stringRes(Res.string.bunker_heartbeat_connected)
                 }
             }
 
             is SignerConnectionState.Disconnected -> {
-                "Bunker disconnected"
+                stringRes(Res.string.bunker_heartbeat_disconnected)
             }
         }
 

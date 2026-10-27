@@ -80,6 +80,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_policy_unknown
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_contacts
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_empty
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_glasses
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_vision
 
 @Preview
 @Composable
@@ -247,10 +252,10 @@ fun RenderEyeGlassesPrescription(
 
         Text(
             when {
-                isGlasses && isContacts -> "Vision Prescription"
-                isGlasses -> "Glasses Prescription"
-                isContacts -> "Contact Lenses Prescription"
-                else -> "Empty Prescription"
+                isGlasses && isContacts -> stringRes(Res.string.medical_prescription_vision)
+                isGlasses -> stringRes(Res.string.medical_prescription_glasses)
+                isContacts -> stringRes(Res.string.medical_prescription_contacts)
+                else -> stringRes(Res.string.medical_prescription_empty)
             },
             modifier = Modifier.padding(4.dp).fillMaxWidth(),
             textAlign = TextAlign.Center,
@@ -376,7 +381,7 @@ fun RenderEyeGlassesPrescriptionRow(data: LensSpecification) {
             text =
                 data.eye?.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase() else it.toString()
-                } ?: "Unknown",
+                } ?: stringRes(Res.string.kc_dev_ci_policy_unknown),
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)
@@ -535,7 +540,7 @@ fun RenderEyeContactsPrescriptionRow(data: LensSpecification) {
             text =
                 data.eye?.replaceFirstChar {
                     if (it.isLowerCase()) it.titlecase() else it.toString()
-                } ?: "Unknown",
+                } ?: stringRes(Res.string.kc_dev_ci_policy_unknown),
             modifier = Modifier.padding(4.dp).weight(1f),
         )
         VerticalDivider(thickness = DividerThickness)

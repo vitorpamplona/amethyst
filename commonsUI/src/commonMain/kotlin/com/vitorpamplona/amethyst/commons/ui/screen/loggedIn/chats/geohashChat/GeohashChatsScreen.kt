@@ -78,6 +78,10 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
 
 /**
  * The dedicated top-level list of the user's joined Bitchat-interoperable location channels — the
@@ -193,13 +197,13 @@ private fun LocationChannelsHero() {
             }
             Column(Modifier.padding(start = 16.dp)) {
                 Text(
-                    "Chat by location",
+                    stringRes(Res.string.geohash_chats_intro_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
                 Text(
-                    "Anonymous, ephemeral rooms shared with everyone in the same map cell. Interoperable with Bitchat.",
+                    stringRes(Res.string.geohash_chats_intro_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier.padding(top = 4.dp),
@@ -269,7 +273,7 @@ private fun LocationPin() {
 /** A subtle "City · Palo Alto" subtitle: the named precision level (from the cell length) then the resolved place. */
 @Composable
 private fun LevelAndCity(cell: String) {
-    val level = remember(cell) { GeohashChannelLevel.forChars(cell.length)?.label() }
+    val level = GeohashChannelLevel.forChars(cell.length)?.label()
     LoadCityName(geohashStr = cell) { city ->
         val text = if (level != null) "$level · $city" else city
         Text(
@@ -348,14 +352,14 @@ private fun EmptyLocationChannels(
         }
         Spacer(Modifier.height(20.dp))
         Text(
-            "No location channels yet",
+            stringRes(Res.string.geohash_chats_empty_title),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "Join a room for your city, neighborhood, or block — or teleport anywhere on the map.",
+            stringRes(Res.string.geohash_chats_empty_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

@@ -82,6 +82,9 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season_episode
 
 /**
  * "Your podcast" — the authoring hub. Shows the creator's own Podcasting-2.0 show (or a create CTA),
@@ -317,13 +320,14 @@ private fun EpisodeRow(
     }
 }
 
+@Composable
 private fun episodeSubtitle(ep: Podcasting20EpisodeEvent): String? {
     val season = ep.season()
     val number = ep.number()
     return when {
-        season != null && number != null -> "S$season · E$number"
-        number != null -> "Ep $number"
-        season != null -> "Season $season"
+        season != null && number != null -> stringRes(Res.string.podcast_episode_subtitle_season_episode, season, number)
+        number != null -> stringRes(Res.string.podcast_episode_subtitle_episode, number)
+        season != null -> stringRes(Res.string.podcast_episode_subtitle_season, season)
         else -> null
     }
 }

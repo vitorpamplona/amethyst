@@ -106,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.TypeModifier
+import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 
 /**
  * The page every geocaching entry point lands on: a feed card, an `naddr` deep link, a
@@ -426,8 +427,9 @@ private fun GeocacheNavigateRow(
     name: String,
 ) {
     val uriHandler = LocalUriHandler.current
+    val unnamedLabel = stringRes(Res.string.geocache_unnamed)
     OutlinedButton(onClick = {
-        val label = name.ifBlank { "Geocache" }
+        val label = name.ifBlank { unnamedLabel }
         runCatching {
             uriHandler.openUri("geo:$latitude,$longitude?q=$latitude,$longitude($label)")
         }

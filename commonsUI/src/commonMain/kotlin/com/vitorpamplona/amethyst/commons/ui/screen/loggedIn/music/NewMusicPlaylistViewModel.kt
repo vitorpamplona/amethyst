@@ -43,6 +43,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_send_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Composer for a kind-34139 Music Playlist. Mirrors the [NewMusicTrackViewModel] flow: the user
@@ -192,8 +196,8 @@ class NewMusicPlaylistViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null && coverMedia.value != null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -239,8 +243,9 @@ class NewMusicPlaylistViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to send playlist",
+                    Res.string.music_playlist_send_failed_title,
                     t.message ?: t::class.simpleName ?: "",
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

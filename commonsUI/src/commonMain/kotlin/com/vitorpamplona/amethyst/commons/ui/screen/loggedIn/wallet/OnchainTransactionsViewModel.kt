@@ -46,6 +46,10 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_more_failed
 
 /**
  * One row in the on-chain transactions list. Combines the chain-level view of
@@ -198,7 +202,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 _hasMoreTransactions.value = lastSeenTxid != null
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
-                _error.value = t.message ?: "Failed to load transactions"
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_failed)
                 _hasMoreTransactions.value = false
             } finally {
                 _isLoading.value = false
@@ -223,7 +227,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 }
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
-                _error.value = t.message ?: "Failed to load more transactions"
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_more_failed)
             } finally {
                 _isLoadingMore.value = false
             }

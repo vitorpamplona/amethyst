@@ -60,6 +60,7 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.launch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import com.vitorpamplona.amethyst.commons.resources.upload_no_image_url_returned
 
 @Immutable
 data class CommunityRelayEntry(
@@ -409,7 +410,7 @@ class NewCommunityModel : ViewModel() {
             } ?: run {
                 onError(
                     loadStringRes(Res.string.failed_to_upload_media_no_details),
-                    "Upload succeeded but no image URL was returned by the server.",
+                    loadStringRes(Res.string.upload_no_image_url_returned),
                 )
                 return null
             }

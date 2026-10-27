@@ -111,6 +111,18 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
+import com.vitorpamplona.amethyst.commons.resources.job_board_cancelled_reason
+import com.vitorpamplona.amethyst.commons.resources.job_board_pill_picked_up
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_up_next
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_working
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The shared **backlog** of one Buzz channel — where a team drives an AI agent together.
@@ -164,6 +176,11 @@ fun JobBoardScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 // Bucketed once per new backlog, not on every recomposition (e.g. isLoading toggles).
                 val groups = remember(jobs) { JobGroups.from(jobs) }
+                // Section titles resolved here — `section()` runs in LazyListScope, not a composable scope.
+                val titleWorking = stringRes(Res.string.job_board_section_working)
+                val titleUpNext = stringRes(Res.string.job_board_section_up_next)
+                val titleShipped = stringRes(Res.string.buzz_workflow_section_shipped)
+                val titleClosed = stringRes(Res.string.buzz_workflow_section_closed)
 
                 if (jobs.isEmpty() && !isLoading) {
                     EmptyBoard()
@@ -173,10 +190,10 @@ fun JobBoardScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 96.dp),
                     ) {
-                        section("Working now", groups.running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
-                        section("Up next", groups.queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
-                        section("Shipped", groups.done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
-                        section("Closed", groups.closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
+                        section(titleWorking, groups.running, JobStyle.HERO, me, accountViewModel, nav, viewModel)
+                        section(titleUpNext, groups.queued, JobStyle.QUEUED, me, accountViewModel, nav, viewModel)
+                        section(titleShipped, groups.done, JobStyle.SHIPPED, me, accountViewModel, nav, viewModel)
+                        section(titleClosed, groups.closed, JobStyle.CLOSED, me, accountViewModel, nav, viewModel)
                     }
                 }
 
@@ -339,7 +356,7 @@ private fun LazyItemScope.JobCard(
                     JobStyle.SHIPPED ->
                         job.result?.takeIf { it.isNotBlank() }?.let { ResultLine(it) }
                     JobStyle.CLOSED ->
-                        (job.error ?: job.cancelReason?.let { "Cancelled: $it" })?.let {
+                        (job.error ?: job.cancelReason?.let { stringRes(Res.string.job_board_cancelled_reason, it) })?.let {
                             Text(it, style = MaterialTheme.typography.bodyMedium, color = if (job.state == JobState.FAILED) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     JobStyle.QUEUED -> Unit
@@ -414,7 +431,7 @@ private fun StatePill(
     state: JobState,
     accent: Color,
 ) {
-    val (label, symbol) = pillContent(state)
+    val (labelRes, symbol) = pillContent(state)
     Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
         Row(
             modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
@@ -422,7 +439,7 @@ private fun StatePill(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+            Text(text = stringRes(labelRes), style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -519,12 +536,12 @@ private fun styleColors(style: JobStyle): Pair<Color, Color> =
         JobStyle.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow to MaterialTheme.colorScheme.outline
     }
 
-private fun pillContent(state: JobState): Pair<String, MaterialSymbol> =
+private fun pillContent(state: JobState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        JobState.REQUESTED -> "Queued" to MaterialSymbols.Schedule
-        JobState.ACCEPTED -> "Picked up" to MaterialSymbols.Bolt
-        JobState.IN_PROGRESS -> "Working" to MaterialSymbols.Bolt
-        JobState.COMPLETED -> "Shipped" to MaterialSymbols.CheckCircle
-        JobState.FAILED -> "Failed" to MaterialSymbols.Error
-        JobState.CANCELLED -> "Cancelled" to MaterialSymbols.Cancel
+        JobState.REQUESTED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        JobState.ACCEPTED -> Res.string.job_board_pill_picked_up to MaterialSymbols.Bolt
+        JobState.IN_PROGRESS -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        JobState.COMPLETED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        JobState.FAILED -> Res.string.buzz_workflow_pill_failed to MaterialSymbols.Error
+        JobState.CANCELLED -> Res.string.buzz_workflow_pill_cancelled to MaterialSymbols.Cancel
     }

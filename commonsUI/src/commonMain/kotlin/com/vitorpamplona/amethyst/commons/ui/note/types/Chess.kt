@@ -74,6 +74,8 @@ import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChalleng
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 
 /**
  * Render NIP-64 Chess Game event (Kind 64)
@@ -215,7 +217,7 @@ fun RenderLiveChessChallenge(
 
                 Text(
                     text =
-                        if (event.playerColor()?.name == "WHITE") "White" else "Black",
+                        if (event.playerColor()?.name == "WHITE") stringRes(Res.string.chess_color_white) else stringRes(Res.string.chess_color_black),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

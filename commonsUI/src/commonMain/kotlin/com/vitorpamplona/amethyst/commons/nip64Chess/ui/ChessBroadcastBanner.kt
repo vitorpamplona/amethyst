@@ -53,6 +53,17 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.broadcast_banner_relay_count
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_broadcasting
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_desynced
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_failed
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_sent
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_syncing
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_tap_to_resync
+import com.vitorpamplona.amethyst.commons.resources.chess_broadcast_waiting_opponent
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Shared banner showing chess broadcast status - broadcast progress, sync status, etc.
@@ -189,24 +200,26 @@ private fun getStatusIconColor(status: ChessBroadcastStatus): Color =
         }
     }
 
+@Composable
 private fun getStatusText(status: ChessBroadcastStatus): String =
     when (status) {
-        is ChessBroadcastStatus.Broadcasting -> "Broadcasting: ${status.san}"
-        is ChessBroadcastStatus.Success -> "Sent: ${status.san}"
-        is ChessBroadcastStatus.Failed -> "Failed: ${status.san}"
-        is ChessBroadcastStatus.WaitingForOpponent -> "Waiting for opponent's move..."
-        is ChessBroadcastStatus.Syncing -> "Syncing game state..."
-        is ChessBroadcastStatus.Desynced -> "Game desynced: ${status.message}"
+        is ChessBroadcastStatus.Broadcasting -> stringRes(Res.string.chess_broadcast_broadcasting, status.san)
+        is ChessBroadcastStatus.Success -> stringRes(Res.string.chess_broadcast_sent, status.san)
+        is ChessBroadcastStatus.Failed -> stringRes(Res.string.chess_broadcast_failed, status.san)
+        is ChessBroadcastStatus.WaitingForOpponent -> stringRes(Res.string.chess_broadcast_waiting_opponent)
+        is ChessBroadcastStatus.Syncing -> stringRes(Res.string.chess_broadcast_syncing)
+        is ChessBroadcastStatus.Desynced -> stringRes(Res.string.chess_broadcast_desynced, status.message)
         is ChessBroadcastStatus.Idle -> ""
     }
 
+@Composable
 private fun getStatusDetail(status: ChessBroadcastStatus): String =
     when (status) {
         is ChessBroadcastStatus.Broadcasting -> "[${status.successCount}/${status.totalRelays}]"
-        is ChessBroadcastStatus.Success -> "${status.relayCount} relays"
-        is ChessBroadcastStatus.Failed -> "Tap to retry"
+        is ChessBroadcastStatus.Success -> stringRes(Res.string.broadcast_banner_relay_count, status.relayCount)
+        is ChessBroadcastStatus.Failed -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ChessBroadcastStatus.Syncing -> "${(status.progress * 100).toInt()}%"
-        is ChessBroadcastStatus.Desynced -> "Tap to resync"
+        is ChessBroadcastStatus.Desynced -> stringRes(Res.string.chess_broadcast_tap_to_resync)
         else -> ""
     }
 

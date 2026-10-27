@@ -53,6 +53,12 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_track_no_audio_url
+import com.vitorpamplona.amethyst.commons.resources.music_track_send_failed_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_audio_upload_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Composer for a kind-36787 Music Track. Mirrors the Badge composer flow: the user picks the
@@ -230,8 +236,8 @@ class NewMusicTrackViewModel : ViewModel() {
         val server = selectedServer.value
         if (server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -268,8 +274,8 @@ class NewMusicTrackViewModel : ViewModel() {
                 val finalAudioUrl = newAudioUrl ?: snapshot.existingAudioUrl
                 if (finalAudioUrl.isBlank()) {
                     accountViewModel.toastManager.toast(
-                        "Audio upload failed",
-                        "No audio URL ended up available for the published track.",
+                        Res.string.podcast_audio_upload_failed_title,
+                        Res.string.music_track_no_audio_url,
                     )
                     return@launchSigner
                 }
@@ -296,8 +302,9 @@ class NewMusicTrackViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to send music track",
+                    Res.string.music_track_send_failed_title,
                     t.message ?: t::class.simpleName.orEmpty(),
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

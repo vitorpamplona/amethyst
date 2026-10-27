@@ -31,6 +31,12 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.resources.signing_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_operation_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_rejected
+import com.vitorpamplona.amethyst.commons.resources.signing_timed_out
 
 sealed class SigningOpState {
     data object Idle : SigningOpState()
@@ -118,16 +124,16 @@ class SigningState {
             GlobalSigningStatus.onIdle()
             throw e
         } catch (e: SignerExceptions.TimedOutException) {
-            setError("Signer timed out")
+            setError(loadStringRes(Res.string.signing_timed_out))
             null
         } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-            setError("Signing rejected")
+            setError(loadStringRes(Res.string.signing_rejected))
             null
         } catch (e: SignerExceptions) {
-            setError(e.message ?: "Signing failed")
+            setError(e.message ?: loadStringRes(Res.string.signing_failed))
             null
         } catch (e: Exception) {
-            setError(e.message ?: "Operation failed")
+            setError(e.message ?: loadStringRes(Res.string.signing_operation_failed))
             null
         }
     }

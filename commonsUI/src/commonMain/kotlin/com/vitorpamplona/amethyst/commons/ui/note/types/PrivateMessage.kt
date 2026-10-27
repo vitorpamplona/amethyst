@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKeyable
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.amethyst.commons.resources.channel_invite_unknown_actor
 
 @Composable
 fun RenderPrivateMessage(
@@ -130,7 +131,7 @@ fun RenderPrivateMessage(
             }
         }
     } else {
-        val recipient = noteEvent.recipientPubKeyBytes()?.toNpub() ?: "Someone"
+        val recipient = noteEvent.recipientPubKeyBytes()?.toNpub() ?: stringRes(Res.string.channel_invite_unknown_actor)
 
         TranslatableRichTextViewer(
             stringRes(

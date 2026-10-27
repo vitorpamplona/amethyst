@@ -54,6 +54,8 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_many
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_one
 
 /**
  * Inline AUTH approval banner.
@@ -138,9 +140,9 @@ private fun AuthApprovalRow(
                 Text(
                     text =
                         if (approval.pendingCount > 1) {
-                            "requires authentication for ${approval.pendingCount} messages"
+                            stringRes(Res.string.auth_approval_requires_auth_many, approval.pendingCount)
                         } else {
-                            "requires authentication to deliver this message"
+                            stringRes(Res.string.auth_approval_requires_auth_one)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),

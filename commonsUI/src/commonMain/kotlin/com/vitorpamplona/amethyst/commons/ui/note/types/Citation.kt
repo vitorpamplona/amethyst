@@ -56,6 +56,12 @@ import com.vitorpamplona.quartz.experimental.citations.CitationEvent
 import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.citation_label_default
+import com.vitorpamplona.amethyst.commons.resources.citation_label_print
+import com.vitorpamplona.amethyst.commons.resources.citation_label_prompt
+import com.vitorpamplona.amethyst.commons.resources.citation_label_web
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Renders a citation (kinds 31, 32 and 33) — a reference to a source, published as its own event.
@@ -173,12 +179,13 @@ private fun iconFor(event: CitationEvent): MaterialSymbol =
         else -> MaterialSymbols.AutoMirrored.Article
     }
 
+@Composable
 private fun labelFor(event: CitationEvent): String =
     when (event) {
-        is ExternalCitationEvent -> "Cited from the web"
-        is HardcopyCitationEvent -> "Cited from print"
-        is PromptCitationEvent -> "Cited from a prompt"
-        else -> "Citation"
+        is ExternalCitationEvent -> stringRes(Res.string.citation_label_web)
+        is HardcopyCitationEvent -> stringRes(Res.string.citation_label_print)
+        is PromptCitationEvent -> stringRes(Res.string.citation_label_prompt)
+        else -> stringRes(Res.string.citation_label_default)
     }
 
 private fun urlOf(event: CitationEvent): String? =

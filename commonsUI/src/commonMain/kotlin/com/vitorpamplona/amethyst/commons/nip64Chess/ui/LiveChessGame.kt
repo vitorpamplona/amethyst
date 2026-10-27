@@ -105,6 +105,20 @@ import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import androidx.compose.ui.graphics.Color as ComposeColor
+import com.vitorpamplona.amethyst.commons.resources.chess_live_better_luck
+import com.vitorpamplona.amethyst.commons.resources.chess_live_black_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_live_congratulations
+import com.vitorpamplona.amethyst.commons.resources.chess_live_defeat
+import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_exclaim
+import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_subtitle
+import com.vitorpamplona.amethyst.commons.resources.chess_live_game_label
+import com.vitorpamplona.amethyst.commons.resources.chess_live_game_over
+import com.vitorpamplona.amethyst.commons.resources.chess_live_open_challenge
+import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
+import com.vitorpamplona.amethyst.commons.resources.chess_live_victory
+import com.vitorpamplona.amethyst.commons.resources.chess_live_waiting_for
+import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
+import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
 
 /**
  * Dialog for creating a new chess game challenge
@@ -466,7 +480,7 @@ private fun GameInfoHeader(
         }
 
         Text(
-            text = if (gameName != null) gameId.take(16) else "Game: ${gameId.take(8)}...",
+            text = if (gameName != null) gameId.take(16) else stringRes(Res.string.chess_live_game_label, gameId.take(8)),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -486,7 +500,7 @@ private fun GameInfoHeader(
                 )
 
                 Text(
-                    text = if (opponentName.isNotEmpty()) "Waiting for $opponentName" else "Open challenge",
+                    text = if (opponentName.isNotEmpty()) stringRes(Res.string.chess_live_waiting_for, opponentName) else stringRes(Res.string.chess_live_open_challenge),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -559,9 +573,9 @@ private fun GameInfoHeader(
                     else -> {
                         val turnText =
                             if (currentTurn == playerColor) {
-                                "Your turn"
+                                stringRes(Res.string.chess_your_turn)
                             } else {
-                                "Opponent's turn"
+                                stringRes(Res.string.chess_live_opponents_turn)
                             }
 
                         Text(
@@ -772,19 +786,19 @@ private fun GameEndOverlay(
             isSpectator -> {
                 val winnerText =
                     when (result) {
-                        GameResult.WHITE_WINS -> "White wins!"
-                        GameResult.BLACK_WINS -> "Black wins!"
-                        GameResult.DRAW -> "Draw!"
-                        GameResult.IN_PROGRESS -> "Game Over"
+                        GameResult.WHITE_WINS -> stringRes(Res.string.chess_live_white_wins)
+                        GameResult.BLACK_WINS -> stringRes(Res.string.chess_live_black_wins)
+                        GameResult.DRAW -> stringRes(Res.string.chess_live_draw_exclaim)
+                        GameResult.IN_PROGRESS -> stringRes(Res.string.chess_live_game_over)
                     }
-                Quadruple("", "Game Over", winnerText, MaterialTheme.colorScheme.surfaceVariant)
+                Quadruple("", stringRes(Res.string.chess_live_game_over), winnerText, MaterialTheme.colorScheme.surfaceVariant)
             }
 
             playerWon -> {
                 Quadruple(
                     "",
-                    "Victory!",
-                    "Congratulations!",
+                    stringRes(Res.string.chess_live_victory),
+                    stringRes(Res.string.chess_live_congratulations),
                     ComposeColor(0xFF4CAF50).copy(alpha = 0.95f),
                 )
             }
@@ -792,8 +806,8 @@ private fun GameEndOverlay(
             isDraw -> {
                 Quadruple(
                     "",
-                    "Draw",
-                    "Game ended in a draw",
+                    stringRes(Res.string.chess_result_draw),
+                    stringRes(Res.string.chess_live_draw_subtitle),
                     MaterialTheme.colorScheme.surfaceVariant,
                 )
             }
@@ -801,8 +815,8 @@ private fun GameEndOverlay(
             else -> {
                 Quadruple(
                     "",
-                    "Defeat",
-                    "Better luck next time!",
+                    stringRes(Res.string.chess_live_defeat),
+                    stringRes(Res.string.chess_live_better_luck),
                     ComposeColor(0xFFE57373).copy(alpha = 0.95f),
                 )
             }

@@ -59,6 +59,14 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_accepted
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_request
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merged_version
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_redirect
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_request
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_version_to_merge
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Renders a kind-818 wiki merge request — NIP-54, Appendix 1: "please fold my fork of this
@@ -84,13 +92,13 @@ fun RenderWikiMergeRequest(
 
     Column(Modifier.fillMaxWidth()) {
         Column(MaterialTheme.colorScheme.replyModifier) {
-            WikiCollabLabel(MaterialSymbols.Forward, "Merge request")
+            WikiCollabLabel(MaterialSymbols.Forward, stringRes(Res.string.wiki_collab_merge_request))
 
             target?.let { WikiArticleRow(it, accountViewModel, nav) }
 
             source?.let {
                 Spacer(Modifier.padding(top = Size5dp))
-                WikiVersionRow(it, "Version to merge", accountViewModel, nav)
+                WikiVersionRow(it, stringRes(Res.string.wiki_collab_version_to_merge), accountViewModel, nav)
             }
         }
 
@@ -130,13 +138,13 @@ fun RenderWikiMergeAcceptance(
     val request = remember(noteEvent) { noteEvent.request() }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        WikiCollabLabel(MaterialSymbols.Check, "Merge accepted")
+        WikiCollabLabel(MaterialSymbols.Check, stringRes(Res.string.wiki_collab_merge_accepted))
 
-        result?.let { WikiVersionRow(it, "Merged version", accountViewModel, nav) }
+        result?.let { WikiVersionRow(it, stringRes(Res.string.wiki_collab_merged_version), accountViewModel, nav) }
 
         request?.let {
             Spacer(Modifier.padding(top = Size5dp))
-            WikiVersionRow(it, "Request", accountViewModel, nav)
+            WikiVersionRow(it, stringRes(Res.string.wiki_collab_request), accountViewModel, nav)
         }
     }
 }
@@ -164,7 +172,7 @@ fun RenderWikiRedirect(
     val target = remember(noteEvent) { noteEvent.target() }
 
     Column(MaterialTheme.colorScheme.replyModifier) {
-        WikiCollabLabel(MaterialSymbols.Forward, "Redirect")
+        WikiCollabLabel(MaterialSymbols.Forward, stringRes(Res.string.wiki_collab_redirect))
 
         if (from.isNotEmpty()) {
             Text(

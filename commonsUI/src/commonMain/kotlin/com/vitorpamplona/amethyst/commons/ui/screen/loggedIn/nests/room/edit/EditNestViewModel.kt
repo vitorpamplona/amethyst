@@ -36,6 +36,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.concurrent.Volatile
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_error_room_fields_required
 
 /**
  * Backing ViewModel for [EditNestSheet]. Loads the existing
@@ -105,7 +109,7 @@ class EditNestViewModel : ViewModel() {
         val current = _state.value
 
         if (current.roomName.isBlank() || current.serviceUrl.isBlank() || current.endpointUrl.isBlank()) {
-            _state.update { it.copy(error = "Room name, service URL and endpoint are required.") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_room_fields_required)) }
             return false
         }
 
@@ -121,7 +125,7 @@ class EditNestViewModel : ViewModel() {
             _state.update {
                 it.copy(
                     isPublishing = false,
-                    error = "Failed to publish: ${t.message ?: t::class.simpleName}",
+                    error = loadStringRes(Res.string.nest_error_publish_failed, t.message ?: t::class.simpleName.toString()),
                 )
             }
             false

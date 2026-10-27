@@ -65,6 +65,12 @@ import com.vitorpamplona.amethyst.commons.resources.save
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_active_explorer
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_custom_url_hint
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_explorer_subtitle
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_explorer_title
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_known_explorers
+import com.vitorpamplona.amethyst.commons.resources.ots_settings_mempool_hint
 
 /**
  * Settings section for configuring the blockchain explorer used for OTS verification.
@@ -94,7 +100,7 @@ fun OtsSettingsSection(
         Text(
             "OpenTimestamps proofs are verified by querying a Bitcoin blockchain explorer. " +
                 "By default, mempool.space is used when Tor is active, and blockstream.info otherwise. " +
-                "Set a custom URL to use your own self-hosted instance or a trusted third party.",
+                stringRes(Res.string.ots_settings_custom_url_hint),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -159,12 +165,12 @@ private fun SectionHeaderOts() {
         Spacer(Modifier.width(10.dp))
         Column {
             Text(
-                "Blockchain Explorer",
+                stringRes(Res.string.ots_settings_explorer_title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                "Used for OTS timestamp verification",
+                stringRes(Res.string.ots_settings_explorer_subtitle),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -189,7 +195,7 @@ private fun ActiveExplorerDisplay(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Active explorer",
+                stringRes(Res.string.ots_settings_active_explorer),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Medium,
             )
@@ -328,7 +334,7 @@ private fun CustomExplorerInput(
 private fun KnownExplorersInfo() {
     Column {
         Text(
-            "Known compatible explorers",
+            stringRes(Res.string.ots_settings_known_explorers),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Medium,
             modifier = Modifier.padding(bottom = 6.dp),
@@ -364,7 +370,7 @@ private fun KnownExplorersInfo() {
         }
         Spacer(Modifier.height(4.dp))
         Text(
-            "Any Mempool-compatible REST API is supported (e.g. self-hosted mempool.space).",
+            stringRes(Res.string.ots_settings_mempool_hint),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

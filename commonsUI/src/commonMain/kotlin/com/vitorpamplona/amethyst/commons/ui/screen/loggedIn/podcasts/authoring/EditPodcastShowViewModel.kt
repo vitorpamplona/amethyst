@@ -41,6 +41,10 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_save_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Editor for a creator's Podcasting-2.0 show metadata — the single replaceable `kind:30078`
@@ -136,8 +140,8 @@ class EditPodcastShowViewModel : ViewModel() {
         val server = selectedServer.value
         if (coverOrch != null && server == null) {
             accountViewModel.toastManager.toast(
-                "No upload server selected",
-                "Pick a media server in settings before uploading.",
+                Res.string.upload_no_server_title,
+                Res.string.upload_no_server_message,
             )
             return
         }
@@ -203,8 +207,9 @@ class EditPodcastShowViewModel : ViewModel() {
                 _completionEvents.tryEmit(Unit)
             } catch (t: Throwable) {
                 accountViewModel.toastManager.toast(
-                    "Failed to save podcast",
+                    Res.string.podcast_show_save_failed_title,
                     t.message ?: t::class.simpleName ?: "",
+                    t,
                 )
             } finally {
                 withContext(Dispatchers.Main.immediate) { isSending.value = false }

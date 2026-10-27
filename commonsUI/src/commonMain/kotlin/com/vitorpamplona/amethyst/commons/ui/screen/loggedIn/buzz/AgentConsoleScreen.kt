@@ -74,6 +74,26 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_agents
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_read
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_write
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_harness
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_input_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_last_turn
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_model
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_models
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_output_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_provider
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_runtime
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_sessions
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_total_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_turns
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_costs
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_observer
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_personas
+import com.vitorpamplona.amethyst.commons.resources.agent_console_title
 
 /**
  * The workspace owner's agent-owner console — a dashboard over the fleet of AI agents
@@ -112,7 +132,7 @@ fun AgentConsoleScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = remember { listOf("Costs", "Personas", "Observer") }
+    val tabs = listOf(stringRes(Res.string.agent_console_tab_costs), stringRes(Res.string.agent_console_tab_personas), stringRes(Res.string.agent_console_tab_observer))
 
     // The observer stream is a live REQ; only keep it open while its tab is on screen.
     if (selectedTab == 2) {
@@ -123,7 +143,7 @@ fun AgentConsoleScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Agent Console", nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.agent_console_title), nav) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { nav.nav(Route.AgentAttestation) },
@@ -164,7 +184,7 @@ fun AgentConsoleScreen(
 @Composable
 private fun CostsTab(metrics: AgentFleetMetrics) {
     if (metrics.agents.isEmpty()) {
-        EmptyState("No agent turn metrics yet. Metrics appear once your agents publish kind:44200 events to you.")
+        EmptyState(stringRes(Res.string.agent_console_empty_metrics))
         return
     }
 
@@ -194,9 +214,9 @@ private fun FleetSummaryCard(metrics: AgentFleetMetrics) {
                 text = formatCost(metrics.totals.costUsd),
                 style = MaterialTheme.typography.headlineMedium,
             )
-            MetaRow("Agents", metrics.agents.size.toString())
-            MetaRow("Sessions", metrics.totalSessions.toString())
-            MetaRow("Turns", metrics.totalTurns.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_agents), metrics.agents.size.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_sessions), metrics.totalSessions.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_turns), metrics.totalTurns.toString())
             TokenBreakdown(metrics.totals)
             if (metrics.hasUnreliableEstimates) {
                 Text(
@@ -223,11 +243,11 @@ private fun AgentCard(agent: AgentUsageSummary) {
                 text = formatCost(agent.totals.costUsd),
                 style = MaterialTheme.typography.titleLarge,
             )
-            MetaRow("Sessions", agent.sessions.toString())
-            MetaRow("Turns", agent.turns.toString())
-            if (agent.models.isNotEmpty()) MetaRow("Models", agent.models.sorted().joinToString(", "))
-            if (agent.harnesses.isNotEmpty()) MetaRow("Harness", agent.harnesses.sorted().joinToString(", "))
-            agent.lastActivity?.let { MetaRow("Last turn", it) }
+            MetaRow(stringRes(Res.string.agent_console_row_sessions), agent.sessions.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_turns), agent.turns.toString())
+            if (agent.models.isNotEmpty()) MetaRow(stringRes(Res.string.agent_console_row_models), agent.models.sorted().joinToString(", "))
+            if (agent.harnesses.isNotEmpty()) MetaRow(stringRes(Res.string.agent_console_row_harness), agent.harnesses.sorted().joinToString(", "))
+            agent.lastActivity?.let { MetaRow(stringRes(Res.string.agent_console_row_last_turn), it) }
             TokenBreakdown(agent.totals)
         }
     }
@@ -236,13 +256,13 @@ private fun AgentCard(agent: AgentUsageSummary) {
 @Composable
 private fun TokenBreakdown(totals: TokenTotals) {
     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-    MetaRow("Input tokens", formatCount(totals.inputTokens))
-    MetaRow("Output tokens", formatCount(totals.outputTokens))
-    MetaRow("Total tokens", formatCount(totals.totalTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_input_tokens), formatCount(totals.inputTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_output_tokens), formatCount(totals.outputTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_total_tokens), formatCount(totals.totalTokens))
     // Null = no turn reported the component. NIP-AM forbids reading that as zero, so show a dash
     // rather than hide the row (which would look the same as a reported 0).
-    MetaRow("Cache read", totals.cacheReadTokens?.let(::formatCount) ?: "—")
-    MetaRow("Cache write", totals.cacheWriteTokens?.let(::formatCount) ?: "—")
+    MetaRow(stringRes(Res.string.agent_console_row_cache_read), totals.cacheReadTokens?.let(::formatCount) ?: "—")
+    MetaRow(stringRes(Res.string.agent_console_row_cache_write), totals.cacheWriteTokens?.let(::formatCount) ?: "—")
 }
 
 @Composable
@@ -297,9 +317,9 @@ private fun PersonaCardView(
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            persona.model?.let { MetaRow("Model", it) }
-            persona.provider?.let { MetaRow("Provider", it) }
-            persona.runtime?.let { MetaRow("Runtime", it) }
+            persona.model?.let { MetaRow(stringRes(Res.string.agent_console_row_model), it) }
+            persona.provider?.let { MetaRow(stringRes(Res.string.agent_console_row_provider), it) }
+            persona.runtime?.let { MetaRow(stringRes(Res.string.agent_console_row_runtime), it) }
             persona.systemPrompt?.takeIf { it.isNotBlank() }?.let {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text(
@@ -314,7 +334,7 @@ private fun PersonaCardView(
 @Composable
 private fun ObserverTab(frames: List<AgentConsoleViewModel.ObserverRow>) {
     if (frames.isEmpty()) {
-        EmptyState("Listening for live agent telemetry (kind:24200). Frames appear here while your agents are running.")
+        EmptyState(stringRes(Res.string.agent_console_empty_observer))
         return
     }
 

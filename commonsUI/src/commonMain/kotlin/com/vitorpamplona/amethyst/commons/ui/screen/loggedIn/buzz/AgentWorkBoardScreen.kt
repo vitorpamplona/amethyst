@@ -125,6 +125,21 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import kotlinx.coroutines.launch
+import com.vitorpamplona.amethyst.commons.resources.agent_work_pill_needs_approval
+import com.vitorpamplona.amethyst.commons.resources.agent_work_source_direct
+import com.vitorpamplona.amethyst.commons.resources.agent_work_source_gated
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_approved
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_decision_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_denied
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_file_failed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed
+import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed_gated
+import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The merged **Agent work** board: one channel, one list, both agent protocols (ungated jobs and
@@ -162,6 +177,14 @@ fun AgentWorkBoardScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
+    // Snackbar copy resolved here (composable scope) so the coroutine lambdas below don't call stringRes.
+    val msgApproved = stringRes(Res.string.agent_work_toast_approved)
+    val msgDenied = stringRes(Res.string.agent_work_toast_denied)
+    val msgDecisionFailed = stringRes(Res.string.agent_work_toast_decision_failed)
+    val msgFiledGated = stringRes(Res.string.agent_work_toast_task_filed_gated)
+    val msgFiled = stringRes(Res.string.agent_work_toast_task_filed)
+    val msgFileFailed = stringRes(Res.string.agent_work_toast_file_failed)
+
     Scaffold(
         topBar = { TopBarWithBackButton(stringRes(Res.string.agent_work_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
@@ -194,9 +217,9 @@ fun AgentWorkBoardScreen(
                                         scope.launch {
                                             snackbar.showSnackbar(
                                                 when {
-                                                    ok && grant -> "Approved — the runner is opening a pull request"
-                                                    ok -> "Denied — the work was discarded"
-                                                    else -> "Couldn't publish your decision — check you can post here"
+                                                    ok && grant -> msgApproved
+                                                    ok -> msgDenied
+                                                    else -> msgDecisionFailed
                                                 },
                                             )
                                         }
@@ -235,9 +258,9 @@ fun AgentWorkBoardScreen(
                 viewModel.newTask(text, requireApproval) { ok ->
                     if (ok) {
                         composing = false
-                        scope.launch { snackbar.showSnackbar(if (requireApproval) "Task filed — it'll pause for approval" else "Task filed") }
+                        scope.launch { snackbar.showSnackbar(if (requireApproval) msgFiledGated else msgFiled) }
                     } else {
-                        scope.launch { snackbar.showSnackbar("Couldn't file the task — check you can post here") }
+                        scope.launch { snackbar.showSnackbar(msgFileFailed) }
                     }
                 }
             },
@@ -458,7 +481,7 @@ private fun ResultLine(result: String?) {
 /** A quiet, secondary marker of which protocol an item came from — transparent, never a nav choice. */
 @Composable
 private fun SourceTag(source: AgentWorkKind) {
-    val (label, symbol) = if (source == AgentWorkKind.WORKFLOW) "gated" to MaterialSymbols.Lock else "direct" to MaterialSymbols.LockOpen
+    val (label, symbol) = if (source == AgentWorkKind.WORKFLOW) stringRes(Res.string.agent_work_source_gated) to MaterialSymbols.Lock else stringRes(Res.string.agent_work_source_direct) to MaterialSymbols.LockOpen
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Icon(symbol = symbol, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(12.dp))
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -491,7 +514,7 @@ private fun WaitingPill(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            if (approver != null) Person("waiting on", approver, accountViewModel, nav) else Text(stringRes(Res.string.agent_work_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
+            if (approver != null) Person(stringRes(Res.string.agent_work_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.agent_work_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -501,11 +524,11 @@ private fun StatePill(
     state: AgentWorkState,
     accent: Color,
 ) {
-    val (label, symbol) = pillContent(state)
+    val (labelRes, symbol) = pillContent(state)
     Surface(color = accent.copy(alpha = 0.14f), shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(symbol = symbol, contentDescription = null, tint = accent, modifier = Modifier.size(15.dp))
-            Text(text = label, style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
+            Text(text = stringRes(labelRes), style = MaterialTheme.typography.labelMedium, color = accent, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -597,11 +620,11 @@ private fun containerFor(state: AgentWorkState): Color =
         AgentWorkState.CLOSED -> MaterialTheme.colorScheme.surfaceContainerLow
     }
 
-private fun pillContent(state: AgentWorkState): Pair<String, MaterialSymbol> =
+private fun pillContent(state: AgentWorkState): Pair<StringResource, MaterialSymbol> =
     when (state) {
-        AgentWorkState.NEEDS_APPROVAL -> "Needs approval" to MaterialSymbols.Gavel
-        AgentWorkState.WORKING -> "Working" to MaterialSymbols.Bolt
-        AgentWorkState.QUEUED -> "Queued" to MaterialSymbols.Schedule
-        AgentWorkState.SHIPPED -> "Shipped" to MaterialSymbols.CheckCircle
-        AgentWorkState.CLOSED -> "Closed" to MaterialSymbols.Cancel
+        AgentWorkState.NEEDS_APPROVAL -> Res.string.agent_work_pill_needs_approval to MaterialSymbols.Gavel
+        AgentWorkState.WORKING -> Res.string.buzz_workflow_pill_working to MaterialSymbols.Bolt
+        AgentWorkState.QUEUED -> Res.string.buzz_workflow_pill_queued to MaterialSymbols.Schedule
+        AgentWorkState.SHIPPED -> Res.string.buzz_workflow_pill_shipped to MaterialSymbols.CheckCircle
+        AgentWorkState.CLOSED -> Res.string.buzz_workflow_section_closed to MaterialSymbols.Cancel
     }

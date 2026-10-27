@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.expand
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -420,7 +422,7 @@ private fun ExpandableSection(
         )
         Icon(
             symbol = if (expanded.value) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-            contentDescription = if (expanded.value) "Collapse" else "Expand",
+            contentDescription = if (expanded.value) stringRes(Res.string.collapse) else stringRes(Res.string.expand),
             tint = MaterialTheme.colorScheme.placeholderText,
         )
     }
