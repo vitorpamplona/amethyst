@@ -24,12 +24,18 @@ import androidx.compose.ui.platform.UriHandler
 import com.vitorpamplona.quartz.utils.Log
 import java.awt.Desktop
 import java.net.URI
+import java.net.URISyntaxException
 import java.util.concurrent.TimeUnit
 
 /**
  * Hands a URI to the operating system: the browser for web links, the registered app for the rest.
  * AWT's BROWSE is missing on many Linux desktops (anything without GNOME's libraries), where the
  * freedesktop `xdg-open` does the same job.
+ *
+ * On Windows the link goes to the shell from a process of its own, rundll32's FileProtocolHandler,
+ * before AWT is tried. AWT's browse makes the same ShellExecute call inside the app, and a Windows 11
+ * user's links did nothing at all there, in every release. When it fails, the error only reaches a
+ * log that the packaged app has no console for.
  *
  * [open] is false when nothing could take the link. AWT can't tell: on macOS its browse returns
  * normally for a scheme no app claims (a `lightning:` invoice with no wallet installed), so links
@@ -61,13 +67,14 @@ object DesktopBrowser {
                 null -> {}
             }
         }
+        if (isWindows && openWithWindowsShell(uri)) return true
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(URI(uri))
                 return true
             }
         } catch (e: Exception) {
-            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link: ${e::class.simpleName}" }
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link: ${e::class.simpleName}${osError(e)}" }
         }
         if (!isLinux) return false
         return try {
@@ -80,6 +87,52 @@ object DesktopBrowser {
             Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with xdg-open: ${e::class.simpleName}" }
             false
         }
+    }
+
+    private fun openWithWindowsShell(uri: String): Boolean {
+        val command = windowsShellCommand(uri, System.getenv("SystemRoot")) ?: return false
+        return try {
+            ProcessBuilder(command)
+                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                .redirectError(ProcessBuilder.Redirect.DISCARD)
+                .start()
+            true
+        } catch (e: Exception) {
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with rundll32: ${e::class.simpleName}" }
+            false
+        }
+    }
+
+    /**
+     * The command that hands [uri] to the Windows shell, or null when [uri] is not a valid URI or
+     * Windows' folder is unknown. rundll32 is named by its full path: Windows looks for a bare
+     * program name in the app's own folder first. The URI goes through no shell, and a valid one
+     * has no spaces or quotes, so it reaches FileProtocolHandler as one argument.
+     */
+    internal fun windowsShellCommand(
+        uri: String,
+        systemRoot: String?,
+    ): List<String>? {
+        if (systemRoot.isNullOrBlank()) return null
+        try {
+            URI(uri)
+        } catch (e: URISyntaxException) {
+            return null
+        }
+        return listOf("${systemRoot.trimEnd('\\')}\\System32\\rundll32.exe", "url.dll,FileProtocolHandler", uri)
+    }
+
+    /**
+     * Windows' reason for a failed browse, the part of AWT's message after the address it quotes:
+     * "Failed to open <uri>. Error message: <reason>". Empty for any other message.
+     */
+    internal fun osError(e: Exception): String {
+        val reason =
+            e.message
+                ?.substringAfterLast("Error message: ", missingDelimiterValue = "")
+                ?.trim()
+                .orEmpty()
+        return if (reason.isEmpty()) "" else " ($reason)"
     }
 
     /**
