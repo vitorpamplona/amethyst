@@ -8736,4 +8736,5 @@
     <string name="article_reading_time_minutes">%1$s min read</string>
     <string name="geocache_new_precision_warning">⚠️ %1$s characters or finer is what a finder needs.</string>
     <string name="chess_lobby_clear_all">Clear all</string>
+    <string name="zap_button_label">⚡Zap</string>
 </resources>
