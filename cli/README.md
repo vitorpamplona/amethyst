@@ -323,7 +323,7 @@ default search relays.
 |---|---|
 | `amy encrypt --to USER [TEXT] [--nip04]` | NIP-44 (default) or NIP-04 encrypt with the active account's key. Reads stdin when TEXT is omitted or `-`. USER accepts npub/nprofile/hex/NIP-05. |
 | `amy decrypt --from USER [CIPHERTEXT] [--nip04]` | Inverse of `encrypt`. |
-| `amy gift wrap --to USER [EVENT-JSON] [--relay …]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. |
+| `amy gift wrap --to USER [EVENT-JSON] [--relay …] [--no-backdate]` | NIP-59: seal a signed inner event for USER and wrap it in a kind:1059 gift wrap. Prints the wrap; `--relay` also broadcasts it. The seal and the wrap are each dated at random up to two days in the past; `--no-backdate` dates both now. |
 | `amy gift unwrap [GIFTWRAP-JSON]` | Decrypt + unseal a kind:1059 wrap addressed to the active account; prints the inner event. |
 
 ### Git (NIP-34)
