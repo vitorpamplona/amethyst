@@ -108,6 +108,8 @@ import com.vitorpamplona.amethyst.commons.resources.kind_http_auth
 import com.vitorpamplona.amethyst.commons.resources.kind_index_relay_list
 import com.vitorpamplona.amethyst.commons.resources.kind_live_chats
 import com.vitorpamplona.amethyst.commons.resources.kind_live_streams
+import com.vitorpamplona.amethyst.commons.resources.kind_magazine
+import com.vitorpamplona.amethyst.commons.resources.kind_magazine_issue
 import com.vitorpamplona.amethyst.commons.resources.kind_medical_data
 import com.vitorpamplona.amethyst.commons.resources.kind_meeting_room
 import com.vitorpamplona.amethyst.commons.resources.kind_meeting_space
@@ -207,6 +209,8 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
@@ -364,6 +368,8 @@ fun kindDisplayName(kind: Int): StringResource? =
         AudioTrackEvent.KIND -> Res.string.kind_audio_track
         MusicTrackEvent.KIND -> Res.string.kind_music_track
         EbookEvent.KIND -> Res.string.kind_ebook
+        MagazineEvent.KIND -> Res.string.kind_magazine
+        MagazineIssueEvent.KIND -> Res.string.kind_magazine_issue
         MusicPlaylistEvent.KIND -> Res.string.kind_music_playlist
         PodcastEpisodeEvent.KIND -> Res.string.kind_podcast_episode
         PodcastMetadataEvent.KIND -> Res.string.kind_podcast_metadata

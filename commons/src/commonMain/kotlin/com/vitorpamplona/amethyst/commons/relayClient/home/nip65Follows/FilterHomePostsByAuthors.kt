@@ -32,6 +32,8 @@ import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -97,6 +99,8 @@ val HomePostsNewThreadKinds2 =
         TorrentEvent.KIND,
         EntityRatingEvent.KIND,
         EbookEvent.KIND,
+        MagazineEvent.KIND,
+        MagazineIssueEvent.KIND,
     )
 
 val HomePostsConversationKinds =

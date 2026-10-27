@@ -348,6 +348,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessGameEnd
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLiveChessMove
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormContent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderLongFormDraft
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazine
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMagazineIssue
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderManagedAgent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMarmotKeyPackage
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderMeetingRoomEvent
@@ -650,6 +652,8 @@ import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.predictionMarkets.PredictionMarketEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
+import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
@@ -2112,6 +2116,14 @@ internal fun RenderNoteRow(
 
             is EbookEvent -> {
                 RenderEbook(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is MagazineEvent -> {
+                RenderMagazine(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
+            is MagazineIssueEvent -> {
+                RenderMagazineIssue(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is BirdexEvent -> {

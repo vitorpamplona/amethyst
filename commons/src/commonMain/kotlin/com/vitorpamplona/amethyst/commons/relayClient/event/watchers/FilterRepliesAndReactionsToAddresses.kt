@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFil
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -72,6 +73,9 @@ val PostsAndChatMessagesToAddresses =
         // common to both shapes in the wild — divine-web keys the event by a random `d`, so
         // there is no coordinate to ask for and this `a` filter is the only way to see it.
         VideoCollaborationEvent.KIND,
+        // A PressStr magazine's issues point at it with `a`, and nothing else lists them, so this
+        // is how a magazine on screen finds its issues.
+        MagazineIssueEvent.KIND,
     )
 
 /**
