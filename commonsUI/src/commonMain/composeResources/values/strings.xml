@@ -8729,6 +8729,11 @@
     <string name="namecoin_resolution_resolving">Resolving %1$s on Namecoin\u2026</string>
     <string name="namecoin_resolution_malformed_pubkey">%1$s record is malformed: pubkey %2$s is not a valid hex key</string>
     <string name="namecoin_resolution_badge">Namecoin</string>
+    <string name="lightbox_previous">Previous</string>
+    <string name="lightbox_more_options">More options</string>
+    <string name="lightbox_copy_url">Copy URL</string>
+    <string name="lightbox_open_in_browser">Open in Browser</string>
+    <string name="video_error_open_in_default_player">Open in default player</string>
     <string name="browser_nsite_default_label">Website</string>
     <string name="browser_napplet_default_label">App</string>
     <string name="media_placeholder_loading_content">Loading content...</string>

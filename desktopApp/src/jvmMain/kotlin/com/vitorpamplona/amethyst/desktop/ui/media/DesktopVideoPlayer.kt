@@ -64,6 +64,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
@@ -503,7 +505,7 @@ private fun PlaybackErrorMessage(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Can't play this video",
+                text = stringRes(Res.string.error_video_playback_failed),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -517,7 +519,7 @@ private fun PlaybackErrorMessage(
                     runCatching { Desktop.getDesktop().browse(URI(url)) }
                 },
             ) {
-                Text("Open in default player")
+                Text(stringRes(Res.string.video_error_open_in_default_player))
             }
         }
     }
