@@ -483,6 +483,9 @@
     <string name="back_to_top">Back to top</string>
     <string name="lightning_invoice">Lightning Invoice</string>
     <string name="invoice_expired">Expired</string>
+    <string name="invoice_expires_in">Expires in %1$s</string>
+    <string name="invoice_expires_on">Expires %1$s</string>
+    <string name="lnurl_label" translatable="false">LNURL</string>
     <string name="clink_lightning_offer">CLINK Offer</string>
     <string name="bolt12_lightning_offer">BOLT12 Offer</string>
     <string name="clink_offer_pay_to">To</string>

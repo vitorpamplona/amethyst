@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.components
 
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,14 +29,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextDirection
+import com.vitorpamplona.amethyst.commons.hashtags.CustomHashTagIcons
+import com.vitorpamplona.amethyst.commons.hashtags.Lightning
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.error_dialog_pay_withdraw_error
+import com.vitorpamplona.amethyst.commons.resources.lnurl_label
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.note.ErrorMessageDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.Size16Modifier
 import com.vitorpamplona.amethyst.commons.ui.wallet.payInvoice
 import com.vitorpamplona.amethyst.commons.ui.wallet.rememberWalletAppLauncher
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -64,6 +70,28 @@ fun MayBeWithdrawal(
                 style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
             )
         }
+    }
+}
+
+/** [MayBeWithdrawal] for where previews are off: a one-line label instead of the LNURL, copy only. */
+@Composable
+fun CompactWithdrawalLabel(lnurlWord: String) {
+    val withdrawal = remember(lnurlWord) { LnWithdrawalUtil.findWithdrawal(lnurlWord) }
+    if (withdrawal == null) {
+        Text(
+            text = lnurlWord,
+            style = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
+        )
+        return
+    }
+
+    PaymentLabel(stringRes(Res.string.lnurl_label), copyValue = withdrawal) {
+        Icon(
+            imageVector = CustomHashTagIcons.Lightning,
+            contentDescription = null,
+            modifier = Size16Modifier,
+            tint = Color.Unspecified,
+        )
     }
 }
 

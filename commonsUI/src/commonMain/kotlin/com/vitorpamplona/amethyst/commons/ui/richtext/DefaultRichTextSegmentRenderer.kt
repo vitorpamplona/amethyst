@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ClickablePhone
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayGroupLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableRelayUrl
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.CompactWithdrawalLabel
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInviteCard
 import com.vitorpamplona.amethyst.commons.ui.components.ImageGallery
 import com.vitorpamplona.amethyst.commons.ui.components.MayBeWithdrawal
@@ -62,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.RelayGroupCard
 import com.vitorpamplona.amethyst.commons.ui.components.TagLink
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.ClinkOfferPreview
+import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.CompactInvoiceLabel
 import com.vitorpamplona.amethyst.commons.ui.note.creators.invoice.MayBeInvoicePreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
@@ -163,9 +165,11 @@ open class DefaultRichTextSegmentRenderer(
         modifier: Modifier,
     ) {
         when (segment) {
-            // Don't surface a pay/withdraw affordance when previews are suppressed: the raw text.
-            is InvoiceSegment -> if (canPreview) MayBeInvoicePreview(segment.segmentText, accountViewModel) else Text(segment.segmentText)
-            is WithdrawSegment -> if (canPreview) MayBeWithdrawal(segment.segmentText, accountViewModel) else Text(segment.segmentText)
+            // Don't surface a pay/withdraw affordance when previews are suppressed (reply and quote
+            // previews, reported notes, profile bios, channel headers): a one-line label with a copy
+            // button instead of hundreds of bech32 characters.
+            is InvoiceSegment -> if (canPreview) MayBeInvoicePreview(segment.segmentText, accountViewModel) else CompactInvoiceLabel(segment.segmentText)
+            is WithdrawSegment -> if (canPreview) MayBeWithdrawal(segment.segmentText, accountViewModel) else CompactWithdrawalLabel(segment.segmentText)
             // Cashu + Clink decode locally (network only on tap), so they render in both modes.
             is CashuSegment -> CashuPreview(segment.segmentText, accountViewModel)
             is ClinkOfferSegment -> ClinkOfferPreview(segment.offer, accountViewModel, nav)
