@@ -109,8 +109,11 @@ class DesktopNotificationsFilterTest {
         vararg tags: Array<String>,
     ): Note {
         val event = signer.sign<Event>(EventTemplate(TimeUtils.now(), kind, arrayOf(*tags), content))
+        // LocalCache holds notes weakly: take the note before consuming, or a GC before a lookup drops it.
+        val note = LocalCache.getOrCreateNote(event.id)
         LocalCache.justConsume(event, null, false)
-        return LocalCache.getNoteIfExists(event.id)!!.also { assertNotNull(it.event) }
+        assertNotNull(note.event)
+        return note
     }
 
     // Distinct text each time: the cache drops the same text from several authors as spam.
