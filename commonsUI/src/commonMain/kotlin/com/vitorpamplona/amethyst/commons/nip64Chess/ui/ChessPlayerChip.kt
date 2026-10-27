@@ -37,7 +37,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_versus
 import com.vitorpamplona.amethyst.commons.ui.components.UserAvatar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 private val ActiveBorderColor = ComposeColor(0xFF4CAF50)
 private val AvatarOuterSize = 36.dp

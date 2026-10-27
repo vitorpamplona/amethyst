@@ -86,9 +86,9 @@ import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.resources.send_onchain_instead
 import com.vitorpamplona.amethyst.commons.resources.send_zap
 import com.vitorpamplona.amethyst.commons.resources.wallet_number
+import com.vitorpamplona.amethyst.commons.resources.zap_button_label
 import com.vitorpamplona.amethyst.commons.resources.zap_type
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous
-import com.vitorpamplona.amethyst.commons.resources.zap_button_label
 import com.vitorpamplona.amethyst.commons.resources.zap_type_anonymous_explainer
 import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap
 import com.vitorpamplona.amethyst.commons.resources.zap_type_nonzap_explainer

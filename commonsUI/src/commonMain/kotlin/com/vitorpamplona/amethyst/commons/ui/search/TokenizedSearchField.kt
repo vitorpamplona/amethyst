@@ -52,15 +52,15 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.screen_search_title
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
 import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.screen_search_title
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * The search box: a plain text field that draws the tokens it holds as chips, with the picker

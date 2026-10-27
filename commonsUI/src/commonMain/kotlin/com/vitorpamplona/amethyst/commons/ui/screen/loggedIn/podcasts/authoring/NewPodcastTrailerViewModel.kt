@@ -24,6 +24,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_no_url
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_publish_failed_title
+import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
@@ -37,12 +43,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_no_url
-import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_publish_failed_title
-import com.vitorpamplona.amethyst.commons.resources.podcast_trailer_upload_failed_title
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Composer for a Podcasting-2.0 trailer (`kind:30055`, addressable). A short preview clip: a title,

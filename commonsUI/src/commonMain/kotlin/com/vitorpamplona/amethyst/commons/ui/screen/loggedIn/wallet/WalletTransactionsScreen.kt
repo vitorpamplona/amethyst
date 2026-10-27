@@ -59,8 +59,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.TransactionRowLabels
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_all
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_non_zaps
 import com.vitorpamplona.amethyst.commons.resources.wallet_filter_zaps

@@ -26,6 +26,13 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_title
 import com.vitorpamplona.amethyst.commons.resources.metadata_strip_failed_upload_cancelled
+import com.vitorpamplona.amethyst.commons.resources.nest_error_account_not_bound
+import com.vitorpamplona.amethyst.commons.resources.nest_error_endpoint_url_scheme
+import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_future_start
+import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_start_time
+import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_error_room_name_required
+import com.vitorpamplona.amethyst.commons.resources.nest_error_service_url_scheme
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -52,13 +59,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.concurrent.Volatile
-import com.vitorpamplona.amethyst.commons.resources.nest_error_account_not_bound
-import com.vitorpamplona.amethyst.commons.resources.nest_error_endpoint_url_scheme
-import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_future_start
-import com.vitorpamplona.amethyst.commons.resources.nest_error_pick_start_time
-import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
-import com.vitorpamplona.amethyst.commons.resources.nest_error_room_name_required
-import com.vitorpamplona.amethyst.commons.resources.nest_error_service_url_scheme
 
 /**
  * Backing ViewModel for [CreateNestSheet]. Holds form state, runs

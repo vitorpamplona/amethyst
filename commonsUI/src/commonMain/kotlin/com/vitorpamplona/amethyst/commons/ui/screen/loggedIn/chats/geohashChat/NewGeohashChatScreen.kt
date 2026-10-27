@@ -60,6 +60,19 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_block
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_building
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_city
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_continent
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_neighborhood
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_province
+import com.vitorpamplona.amethyst.commons.resources.geohash_level_region
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_geohash
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_hint
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me_hint
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_pick_on_map
+import com.vitorpamplona.amethyst.commons.resources.geohash_new_your_channels
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_join
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_leave
@@ -78,21 +91,8 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_block
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_building
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_city
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_continent
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_neighborhood
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_province
-import com.vitorpamplona.amethyst.commons.resources.geohash_level_region
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_geohash
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_enter_hint
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me_hint
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_pick_on_map
-import com.vitorpamplona.amethyst.commons.resources.geohash_new_your_channels
 import org.jetbrains.compose.resources.StringResource
+import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
 
 /**
  * Builder for joining a Bitchat-interoperable geohash location channel. Ways in: a

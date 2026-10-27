@@ -26,6 +26,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.podcasts.V4VSplitEditorState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.podcast_show_save_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -41,10 +45,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.podcast_show_save_failed_title
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Editor for a creator's Podcasting-2.0 show metadata — the single replaceable `kind:30078`

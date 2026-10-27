@@ -42,6 +42,13 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_generic
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_personalized
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_flexible
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_sats
+import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_unknown
+import com.vitorpamplona.amethyst.commons.resources.marketplace_shipping_free
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.LeftPictureLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -50,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ZapReaction
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.FavoriteAlgoFeedToggle
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.observeAppDefinition
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfTopPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SimpleImageBorder
@@ -58,14 +66,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.bitcoinColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.nip05
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.dvm_card_generic
-import com.vitorpamplona.amethyst.commons.resources.dvm_card_personalized
-import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_flexible
-import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_sats
-import com.vitorpamplona.amethyst.commons.resources.dvm_card_price_unknown
-import com.vitorpamplona.amethyst.commons.resources.marketplace_shipping_free
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 @Immutable
 data class DVMCard(

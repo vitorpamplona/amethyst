@@ -46,10 +46,18 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_accepted
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_request
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merged_version
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_redirect
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_request
+import com.vitorpamplona.amethyst.commons.resources.wiki_collab_version_to_merge
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.replyModifier
@@ -59,14 +67,6 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeAcceptanceEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiMergeRequestEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_accepted
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merge_request
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_merged_version
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_redirect
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_request
-import com.vitorpamplona.amethyst.commons.resources.wiki_collab_version_to_merge
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Renders a kind-818 wiki merge request — NIP-54, Appendix 1: "please fold my fork of this

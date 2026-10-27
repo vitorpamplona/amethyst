@@ -56,7 +56,9 @@ import com.vitorpamplona.amethyst.commons.resources.about_me
 import com.vitorpamplona.amethyst.commons.resources.avatar_url
 import com.vitorpamplona.amethyst.commons.resources.banner_url
 import com.vitorpamplona.amethyst.commons.resources.clink_offer_label
+import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.display_name
+import com.vitorpamplona.amethyst.commons.resources.expand
 import com.vitorpamplona.amethyst.commons.resources.github
 import com.vitorpamplona.amethyst.commons.resources.github_proof_url_template
 import com.vitorpamplona.amethyst.commons.resources.lightning_address
@@ -88,8 +90,6 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.SavingTopBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.resources.collapse
-import com.vitorpamplona.amethyst.commons.resources.expand
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

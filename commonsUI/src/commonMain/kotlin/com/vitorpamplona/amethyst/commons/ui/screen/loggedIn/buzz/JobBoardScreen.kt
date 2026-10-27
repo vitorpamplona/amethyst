@@ -87,8 +87,16 @@ import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
 import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
 import com.vitorpamplona.amethyst.commons.resources.agent_work_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.job_board_ask_agent_title
+import com.vitorpamplona.amethyst.commons.resources.job_board_cancelled_reason
 import com.vitorpamplona.amethyst.commons.resources.job_board_compose_description
 import com.vitorpamplona.amethyst.commons.resources.job_board_empty_description
 import com.vitorpamplona.amethyst.commons.resources.job_board_empty_title
@@ -96,6 +104,9 @@ import com.vitorpamplona.amethyst.commons.resources.job_board_example_add_settin
 import com.vitorpamplona.amethyst.commons.resources.job_board_example_fix_bug
 import com.vitorpamplona.amethyst.commons.resources.job_board_example_improve_screen
 import com.vitorpamplona.amethyst.commons.resources.job_board_file_task
+import com.vitorpamplona.amethyst.commons.resources.job_board_pill_picked_up
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_up_next
+import com.vitorpamplona.amethyst.commons.resources.job_board_section_working
 import com.vitorpamplona.amethyst.commons.resources.job_board_task_hint
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -111,17 +122,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_shipped
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_working
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_closed
-import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_section_shipped
-import com.vitorpamplona.amethyst.commons.resources.job_board_cancelled_reason
-import com.vitorpamplona.amethyst.commons.resources.job_board_pill_picked_up
-import com.vitorpamplona.amethyst.commons.resources.job_board_section_up_next
-import com.vitorpamplona.amethyst.commons.resources.job_board_section_working
 import org.jetbrains.compose.resources.StringResource
 
 /**

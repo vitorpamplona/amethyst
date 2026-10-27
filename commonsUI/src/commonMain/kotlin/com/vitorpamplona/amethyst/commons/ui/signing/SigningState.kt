@@ -24,6 +24,12 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.signing_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_operation_failed
+import com.vitorpamplona.amethyst.commons.resources.signing_rejected
+import com.vitorpamplona.amethyst.commons.resources.signing_timed_out
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -31,12 +37,6 @@ import kotlinx.coroutines.withContext
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.coroutines.cancellation.CancellationException
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.resources.signing_failed
-import com.vitorpamplona.amethyst.commons.resources.signing_operation_failed
-import com.vitorpamplona.amethyst.commons.resources.signing_rejected
-import com.vitorpamplona.amethyst.commons.resources.signing_timed_out
 
 sealed class SigningOpState {
     data object Idle : SigningOpState()

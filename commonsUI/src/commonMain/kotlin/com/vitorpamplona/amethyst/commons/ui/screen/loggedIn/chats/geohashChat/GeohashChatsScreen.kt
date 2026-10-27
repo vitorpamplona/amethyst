@@ -64,7 +64,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_explore_nearby
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_leave
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_open
 import com.vitorpamplona.amethyst.commons.resources.location_channels
@@ -78,10 +82,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon as SymbolIcon
-import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_description
-import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
-import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
-import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
 
 /**
  * The dedicated top-level list of the user's joined Bitchat-interoperable location channels — the

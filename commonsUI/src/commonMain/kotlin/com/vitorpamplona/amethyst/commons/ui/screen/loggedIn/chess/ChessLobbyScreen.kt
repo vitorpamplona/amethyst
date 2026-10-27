@@ -73,6 +73,16 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.chess_lobby_clear_all
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_create_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_refresh_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_title
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_finished
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_incoming
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_live
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_open
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_watching
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_challenges
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_games
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
@@ -86,16 +96,6 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.Ch
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_create_hint
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_refresh_hint
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_empty_title
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_finished
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_incoming
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_live
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_open
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_watching
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_challenges
-import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_games
 
 /**
  * Chess lobby screen showing challenges and active games

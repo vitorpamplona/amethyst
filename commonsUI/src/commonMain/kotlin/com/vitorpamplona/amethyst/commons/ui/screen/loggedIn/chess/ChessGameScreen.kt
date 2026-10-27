@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
 import com.vitorpamplona.amethyst.commons.resources.chess_game_id
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
 import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_broadcast
@@ -73,8 +74,10 @@ import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_no_write
 import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_title
 import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
+import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.commons.resources.go_back
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
+import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -84,9 +87,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
-import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
-import com.vitorpamplona.amethyst.commons.resources.connected
-import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
 
 /**
  * Wrapper screen for live chess game

@@ -50,12 +50,12 @@ import com.vitorpamplona.amethyst.commons.resources.auth_approval_always
 import com.vitorpamplona.amethyst.commons.resources.auth_approval_more_relays_pending
 import com.vitorpamplona.amethyst.commons.resources.auth_approval_never
 import com.vitorpamplona.amethyst.commons.resources.auth_approval_once
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_many
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_one
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_many
-import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_one
 
 /**
  * Inline AUTH approval banner.

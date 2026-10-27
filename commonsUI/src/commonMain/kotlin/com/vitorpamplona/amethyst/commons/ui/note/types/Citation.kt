@@ -43,10 +43,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.citation_label_default
+import com.vitorpamplona.amethyst.commons.resources.citation_label_print
+import com.vitorpamplona.amethyst.commons.resources.citation_label_prompt
+import com.vitorpamplona.amethyst.commons.resources.citation_label_web
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -56,12 +62,6 @@ import com.vitorpamplona.quartz.experimental.citations.CitationEvent
 import com.vitorpamplona.quartz.experimental.citations.ExternalCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.HardcopyCitationEvent
 import com.vitorpamplona.quartz.experimental.citations.PromptCitationEvent
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.citation_label_default
-import com.vitorpamplona.amethyst.commons.resources.citation_label_print
-import com.vitorpamplona.amethyst.commons.resources.citation_label_prompt
-import com.vitorpamplona.amethyst.commons.resources.citation_label_web
-import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Renders a citation (kinds 31, 32 and 33) — a reference to a source, published as its own event.

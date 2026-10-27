@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_more_failed
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -46,10 +50,6 @@ import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_failed
-import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_more_failed
 
 /**
  * One row in the on-chain transactions list. Combines the chain-level view of

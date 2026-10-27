@@ -46,7 +46,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,18 +63,12 @@ import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.agent_console_attest
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_estimated_totals_warning
 import com.vitorpamplona.amethyst.commons.resources.agent_console_fleet_total
 import com.vitorpamplona.amethyst.commons.resources.agent_console_new_persona
 import com.vitorpamplona.amethyst.commons.resources.agent_console_no_personas
-import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
-import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
-import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_agents
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_read
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_write
@@ -94,6 +87,12 @@ import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_costs
 import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_personas
 import com.vitorpamplona.amethyst.commons.resources.agent_console_title
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * The workspace owner's agent-owner console — a dashboard over the fleet of AI agents

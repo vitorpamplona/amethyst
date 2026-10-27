@@ -80,7 +80,6 @@ import com.vitorpamplona.amethyst.commons.onchain.ui.labelRes
 import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
 import com.vitorpamplona.amethyst.commons.onchain.ui.userMessageText
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount
@@ -116,6 +115,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_send_success
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_title
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_to
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_use_note_split
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.send
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.components.namecoin.NamecoinResolutionRow

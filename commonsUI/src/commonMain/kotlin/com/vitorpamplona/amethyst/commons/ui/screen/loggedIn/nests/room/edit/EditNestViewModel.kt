@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit
 
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_error_room_fields_required
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit.EditNestSheet
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -36,10 +40,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlin.concurrent.Volatile
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
-import com.vitorpamplona.amethyst.commons.resources.nest_error_room_fields_required
 
 /**
  * Backing ViewModel for [EditNestSheet]. Loads the existing

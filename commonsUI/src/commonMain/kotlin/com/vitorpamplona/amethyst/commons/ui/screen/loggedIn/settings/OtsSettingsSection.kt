@@ -61,16 +61,16 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.clear
 import com.vitorpamplona.amethyst.commons.resources.ots_explorer_api_label
 import com.vitorpamplona.amethyst.commons.resources.ots_reset_to_auto_select
-import com.vitorpamplona.amethyst.commons.resources.save
-import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
-import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_active_explorer
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_custom_url_hint
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_explorer_subtitle
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_explorer_title
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_known_explorers
 import com.vitorpamplona.amethyst.commons.resources.ots_settings_mempool_hint
+import com.vitorpamplona.amethyst.commons.resources.save
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
+import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 
 /**
  * Settings section for configuring the blockchain explorer used for OTS verification.

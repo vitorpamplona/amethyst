@@ -25,6 +25,10 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.music_playlist_send_failed_title
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
+import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -43,10 +47,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.music_playlist_send_failed_title
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_message
-import com.vitorpamplona.amethyst.commons.resources.upload_no_server_title
 
 /**
  * Composer for a kind-34139 Music Playlist. Mirrors the [NewMusicTrackViewModel] flow: the user

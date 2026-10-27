@@ -50,14 +50,14 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
+import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
 import com.vitorpamplona.amethyst.commons.search.ActivePicker
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.MonthGridDay
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchCalendar
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.calendar_nav_next_month
-import com.vitorpamplona.amethyst.commons.resources.calendar_nav_previous_month
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**

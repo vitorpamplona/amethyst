@@ -52,6 +52,7 @@ import com.vitorpamplona.amethyst.commons.model.VisionPrescription
 import com.vitorpamplona.amethyst.commons.model.findReferenceInDb
 import com.vitorpamplona.amethyst.commons.model.parseResourceBundleOrNull
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_policy_unknown
 import com.vitorpamplona.amethyst.commons.resources.medical_data_add
 import com.vitorpamplona.amethyst.commons.resources.medical_data_axis
 import com.vitorpamplona.amethyst.commons.resources.medical_data_curve
@@ -64,6 +65,10 @@ import com.vitorpamplona.amethyst.commons.resources.medical_data_prism
 import com.vitorpamplona.amethyst.commons.resources.medical_data_pupillary_distance
 import com.vitorpamplona.amethyst.commons.resources.medical_data_signed_by
 import com.vitorpamplona.amethyst.commons.resources.medical_data_sphere
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_contacts
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_empty
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_glasses
+import com.vitorpamplona.amethyst.commons.resources.medical_prescription_vision
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
@@ -80,11 +85,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
-import com.vitorpamplona.amethyst.commons.resources.kc_dev_ci_policy_unknown
-import com.vitorpamplona.amethyst.commons.resources.medical_prescription_contacts
-import com.vitorpamplona.amethyst.commons.resources.medical_prescription_empty
-import com.vitorpamplona.amethyst.commons.resources.medical_prescription_glasses
-import com.vitorpamplona.amethyst.commons.resources.medical_prescription_vision
 
 @Preview
 @Composable

@@ -86,6 +86,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_navigate
 import com.vitorpamplona.amethyst.commons.resources.geocache_needs_maintenance
 import com.vitorpamplona.amethyst.commons.resources.geocache_no_logs
 import com.vitorpamplona.amethyst.commons.resources.geocache_photos_section
+import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 import com.vitorpamplona.amethyst.commons.resources.route_geocache_detail
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
@@ -106,7 +107,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.GeocacheListingEvent
 import com.vitorpamplona.quartz.nipCCGeocaching.listing.tags.TypeModifier
-import com.vitorpamplona.amethyst.commons.resources.geocache_unnamed
 
 /**
  * The page every geocaching entry point lands on: a feed card, an `naddr` deep link, a

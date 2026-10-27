@@ -43,10 +43,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected_ago
 import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_disconnected
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected_ago
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

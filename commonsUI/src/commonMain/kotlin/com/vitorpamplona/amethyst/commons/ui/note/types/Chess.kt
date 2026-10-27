@@ -52,6 +52,8 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameViewer
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_decline
 import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_from
 import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_sent_to
@@ -74,8 +76,6 @@ import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChalleng
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
-import com.vitorpamplona.amethyst.commons.resources.chess_color_black
-import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 
 /**
  * Render NIP-64 Chess Game event (Kind 64)

@@ -63,6 +63,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_show_hint
 import com.vitorpamplona.amethyst.commons.resources.podcast_create_your_show
 import com.vitorpamplona.amethyst.commons.resources.podcast_episode_count
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_episode
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season
+import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_new_trailer
 import com.vitorpamplona.amethyst.commons.resources.podcast_no_episodes_yet
@@ -82,9 +85,6 @@ import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
-import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_episode
-import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season
-import com.vitorpamplona.amethyst.commons.resources.podcast_episode_subtitle_season_episode
 
 /**
  * "Your podcast" — the authoring hub. Shows the creator's own Podcasting-2.0 show (or a create CTA),
