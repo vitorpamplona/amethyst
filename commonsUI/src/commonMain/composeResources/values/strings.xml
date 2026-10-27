@@ -2207,6 +2207,15 @@
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
     <string name="wallet_open_zapped_note">Open zapped note</string>
+    <string name="wallet_tx_from">From</string>
+    <string name="wallet_tx_to">To</string>
+    <string name="wallet_tx_note">Note</string>
+    <string name="wallet_tx_amount">Amount</string>
+    <string name="wallet_tx_payment_hash">Payment hash</string>
+    <string name="wallet_tx_preimage">Preimage</string>
+    <string name="wallet_tx_invoice">Invoice</string>
+    <string name="wallet_tx_expand">Show payment details</string>
+    <string name="wallet_tx_collapse">Hide payment details</string>
     <string name="wallet_outgoing">Sent</string>
     <string name="wallet_refresh">Refresh</string>
     <string name="wallet_filter_all">All</string>

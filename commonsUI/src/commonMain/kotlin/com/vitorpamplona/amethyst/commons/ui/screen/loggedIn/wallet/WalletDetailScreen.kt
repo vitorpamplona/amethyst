@@ -252,6 +252,8 @@ fun WalletDetailScreen(
                         tx = tx,
                         accountViewModel = accountViewModel,
                         nav = nav,
+                        expandable = false,
+                        onRowTap = { nav.nav(Route.WalletTransactions(walletId)) },
                     )
                 }
             }
