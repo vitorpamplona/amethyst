@@ -73,6 +73,9 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_agent_paste_error
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_authtag_label
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_before_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_change_agent
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_conditions_hint
+import com.vitorpamplona.amethyst.commons.resources.buzz_attest_copy_tag
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_after_range
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_before_range
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_invalid_agent_key
@@ -81,9 +84,6 @@ import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_auth_t
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_for_account
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_not_json_tag
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_error_sign_failed
-import com.vitorpamplona.amethyst.commons.resources.buzz_attest_change_agent
-import com.vitorpamplona.amethyst.commons.resources.buzz_attest_conditions_hint
-import com.vitorpamplona.amethyst.commons.resources.buzz_attest_copy_tag
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_expired
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_form_desc
 import com.vitorpamplona.amethyst.commons.resources.buzz_attest_generate

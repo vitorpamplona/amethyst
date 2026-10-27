@@ -114,6 +114,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
 import com.vitorpamplona.amethyst.commons.resources.browser_favorites
 import com.vitorpamplona.amethyst.commons.resources.browser_go
+import com.vitorpamplona.amethyst.commons.resources.browser_napplet_default_label
+import com.vitorpamplona.amethyst.commons.resources.browser_nsite_default_label
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_go_to
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_search_for
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_fill_in
@@ -121,8 +123,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_paste_go
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_options
 import com.vitorpamplona.amethyst.commons.resources.browser_recent_remove
 import com.vitorpamplona.amethyst.commons.resources.browser_suggested
-import com.vitorpamplona.amethyst.commons.resources.browser_napplet_default_label
-import com.vitorpamplona.amethyst.commons.resources.browser_nsite_default_label
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_recent
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
