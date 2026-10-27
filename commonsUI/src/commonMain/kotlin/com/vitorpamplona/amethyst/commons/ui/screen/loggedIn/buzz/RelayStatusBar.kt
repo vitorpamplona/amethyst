@@ -60,6 +60,31 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_failed
+import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_nip42
+import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_required
+import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticated
+import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticating
+import com.vitorpamplona.amethyst.commons.resources.relay_status_buzz
+import com.vitorpamplona.amethyst.commons.resources.relay_status_collapse
+import com.vitorpamplona.amethyst.commons.resources.relay_status_connected
+import com.vitorpamplona.amethyst.commons.resources.relay_status_connected_authenticated
+import com.vitorpamplona.amethyst.commons.resources.relay_status_connection
+import com.vitorpamplona.amethyst.commons.resources.relay_status_dialect
+import com.vitorpamplona.amethyst.commons.resources.relay_status_dialect_buzz
+import com.vitorpamplona.amethyst.commons.resources.relay_status_dialect_vanilla
+import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
+import com.vitorpamplona.amethyst.commons.resources.relay_status_expand_details
+import com.vitorpamplona.amethyst.commons.resources.relay_status_host
+import com.vitorpamplona.amethyst.commons.resources.relay_status_latency
+import com.vitorpamplona.amethyst.commons.resources.relay_status_limitations
+import com.vitorpamplona.amethyst.commons.resources.relay_status_not_authenticated
+import com.vitorpamplona.amethyst.commons.resources.relay_status_payment_required
+import com.vitorpamplona.amethyst.commons.resources.relay_status_restricted_writes
+import com.vitorpamplona.amethyst.commons.resources.relay_status_software
+import com.vitorpamplona.amethyst.commons.resources.relay_status_supported_nips
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -121,16 +146,16 @@ fun RelayStatusBar(
                         color = dotColor,
                     )
                 }
-                if (isBuzz) Chip("Buzz", MaterialSymbols.Bolt)
+                if (isBuzz) Chip(stringRes(Res.string.relay_status_buzz), MaterialSymbols.Bolt)
                 Icon(
                     symbol = if (phase == RelayAuthSnapshot.Phase.AUTHENTICATED) MaterialSymbols.Lock else MaterialSymbols.LockOpen,
-                    contentDescription = if (phase == RelayAuthSnapshot.Phase.AUTHENTICATED) "Authenticated" else "Not authenticated",
+                    contentDescription = if (phase == RelayAuthSnapshot.Phase.AUTHENTICATED) stringRes(Res.string.relay_status_authenticated) else stringRes(Res.string.relay_status_not_authenticated),
                     tint = if (phase == RelayAuthSnapshot.Phase.AUTHENTICATED) MaterialTheme.colorScheme.allGoodColor else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp),
                 )
                 Icon(
                     symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                    contentDescription = if (expanded) "Collapse" else "Expand relay details",
+                    contentDescription = if (expanded) stringRes(Res.string.relay_status_collapse) else stringRes(Res.string.relay_status_expand_details),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
@@ -138,21 +163,25 @@ fun RelayStatusBar(
 
             AnimatedVisibility(visible = expanded) {
                 Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    InfoLine("Host", relay.url)
-                    InfoLine("Connection", if (isConnected) "Connected" else "Disconnected")
-                    InfoLine("Auth (NIP-42)", phase.name.lowercase().replace('_', ' '))
-                    InfoLine("Dialect", if (isBuzz) "Buzz workspace" else "vanilla NIP-29")
-                    if (stat.pingInMs > 0) InfoLine("Latency", "${stat.pingInMs} ms")
-                    info.software?.takeIf { it.isNotBlank() }?.let { InfoLine("Software", it + (info.version?.let { v -> " $v" } ?: "")) }
-                    info.supported_nips?.takeIf { it.isNotEmpty() }?.let { InfoLine("Supported NIPs", it.joinToString(", ")) }
+                    InfoLine(stringRes(Res.string.relay_status_host), relay.url)
+                    InfoLine(stringRes(Res.string.relay_status_connection), if (isConnected) stringRes(Res.string.relay_status_connected) else stringRes(Res.string.relay_status_disconnected))
+                    InfoLine(stringRes(Res.string.relay_status_auth_nip42), phase.name.lowercase().replace('_', ' '))
+                    InfoLine(stringRes(Res.string.relay_status_dialect), if (isBuzz) stringRes(Res.string.relay_status_dialect_buzz) else stringRes(Res.string.relay_status_dialect_vanilla))
+                    if (stat.pingInMs > 0) InfoLine(stringRes(Res.string.relay_status_latency), "${stat.pingInMs} ms")
+                    info.software?.takeIf { it.isNotBlank() }?.let { InfoLine(stringRes(Res.string.relay_status_software), it + (info.version?.let { v -> " $v" } ?: "")) }
+                    info.supported_nips?.takeIf { it.isNotEmpty() }?.let { InfoLine(stringRes(Res.string.relay_status_supported_nips), it.joinToString(", ")) }
+                    val authRequiredLabel = stringRes(Res.string.relay_status_auth_required)
+                    val paymentRequiredLabel = stringRes(Res.string.relay_status_payment_required)
+                    val restrictedWritesLabel = stringRes(Res.string.relay_status_restricted_writes)
+                    val limitationsLabel = stringRes(Res.string.relay_status_limitations)
                     info.limitation?.let { lim ->
                         val flags =
                             buildList {
-                                if (lim.auth_required == true) add("auth required")
-                                if (lim.payment_required == true) add("payment required")
-                                if (lim.restricted_writes == true) add("restricted writes")
+                                if (lim.auth_required == true) add(authRequiredLabel)
+                                if (lim.payment_required == true) add(paymentRequiredLabel)
+                                if (lim.restricted_writes == true) add(restrictedWritesLabel)
                             }
-                        if (flags.isNotEmpty()) InfoLine("Limitations", flags.joinToString(", "))
+                        if (flags.isNotEmpty()) InfoLine(limitationsLabel, flags.joinToString(", "))
                     }
                     info.description?.takeIf { it.isNotBlank() }?.let {
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -225,9 +254,9 @@ private fun health(
     phase: RelayAuthSnapshot.Phase,
 ): Pair<Color, String> =
     when {
-        !isConnected -> MaterialTheme.colorScheme.error to "Disconnected"
-        phase == RelayAuthSnapshot.Phase.AUTH_FAILED -> MaterialTheme.colorScheme.error to "Auth failed"
-        phase == RelayAuthSnapshot.Phase.AUTHENTICATING -> MaterialTheme.colorScheme.warningColor to "Authenticating…"
-        phase == RelayAuthSnapshot.Phase.AUTHENTICATED -> MaterialTheme.colorScheme.allGoodColor to "Connected · authenticated"
-        else -> MaterialTheme.colorScheme.allGoodColor to "Connected"
+        !isConnected -> MaterialTheme.colorScheme.error to stringRes(Res.string.relay_status_disconnected)
+        phase == RelayAuthSnapshot.Phase.AUTH_FAILED -> MaterialTheme.colorScheme.error to stringRes(Res.string.relay_status_auth_failed)
+        phase == RelayAuthSnapshot.Phase.AUTHENTICATING -> MaterialTheme.colorScheme.warningColor to stringRes(Res.string.relay_status_authenticating)
+        phase == RelayAuthSnapshot.Phase.AUTHENTICATED -> MaterialTheme.colorScheme.allGoodColor to stringRes(Res.string.relay_status_connected_authenticated)
+        else -> MaterialTheme.colorScheme.allGoodColor to stringRes(Res.string.relay_status_connected)
     }
