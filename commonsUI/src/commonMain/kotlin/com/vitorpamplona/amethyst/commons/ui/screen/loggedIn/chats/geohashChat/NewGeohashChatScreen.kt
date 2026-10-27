@@ -59,12 +59,22 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_join
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_leave
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_locating
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_location_unavailable
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_teleport
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_title
+import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_use_my_location
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarExtensibleWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChannelLevel
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.GeoHash
@@ -94,7 +104,7 @@ fun NewGeohashChatScreen(
     Scaffold(
         topBar = {
             TopBarExtensibleWithBackButton(
-                title = { Text("New location channel") },
+                title = { Text(stringRes(Res.string.new_geohash_chat_title)) },
                 popBack = nav::popBack,
             )
         },
@@ -223,7 +233,7 @@ private fun YourChannelsSection(
                     subtitle = { LoadCityName(geohashStr = cell) { SubtitleText(it) } },
                     onClick = { nav.nav(Route.GeohashChat(cell)) },
                     trailing = {
-                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text("Leave") }
+                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text(stringRes(Res.string.new_geohash_chat_leave)) }
                     },
                 )
             }
@@ -255,7 +265,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
                         onValueChange = { text = it },
                         singleLine = true,
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("e.g. u4pruyd") },
+                        placeholder = { Text(stringRes(Res.string.new_geohash_chat_input_hint)) },
                         isError = text.isNotBlank() && !valid,
                     )
                     FilledTonalButton(
@@ -263,7 +273,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
                         onClick = { onOpen(text) },
                         modifier = Modifier.padding(start = 8.dp),
                     ) {
-                        Text("Join")
+                        Text(stringRes(Res.string.new_geohash_chat_join))
                     }
                 }
             }
@@ -296,7 +306,7 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
                     )
                     FilledTonalButton(onClick = { permission.launchRequest() }) {
                         SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  Use my location")
+                        Text("  " + stringRes(Res.string.new_geohash_chat_use_my_location))
                     }
                 }
             }
@@ -322,10 +332,10 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
             }
 
             LocationResult.Loading ->
-                Text("Locating…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringRes(Res.string.new_geohash_chat_locating), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             LocationResult.LackPermission ->
-                Text("Location unavailable.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringRes(Res.string.new_geohash_chat_location_unavailable), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -356,7 +366,7 @@ private fun TeleportCard(onClick: () -> Unit) {
                 }
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text("Teleport", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringRes(Res.string.new_geohash_chat_teleport), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Text(
                     "Pick any place on the map",
                     style = MaterialTheme.typography.bodySmall,
