@@ -32,8 +32,9 @@ The key is new; the obligation is to delete the old one everywhere at once.
 
 ### Checking before you push
 
-`:amethyst:lintFdroidBenchmark` catches this, but takes ~19 minutes on a warm
-daemon, so it is not a per-commit gate. Use the sub-second scan instead:
+Android lint catches this, but takes minutes, so it is a pre-push gate
+(`:amethyst:lintPlayDebug` in `.git-hooks/pre-push`), not a per-commit one. Use the
+sub-second scan at any time:
 
 ```bash
 tools/agent-hooks/orphan_strings_check.py

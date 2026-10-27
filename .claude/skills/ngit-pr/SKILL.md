@@ -38,7 +38,7 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 `main` has no branch protection, and the JVM/Android builds accept APIs that break the shared code: `HashMap.putIfAbsent`, `Dispatchers.IO` without `import kotlinx.coroutines.IO`, the stdlib `use` on skia or okio types. Four PRs merged in one day broke `main` this way (#4529, #4536, #4540, #4541), each merged while its CI was red or still running. So, before **every** push, `ngit send` or merge:
 
 ```bash
-PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push   # the CI lint job's KMP metadata compiles + the JVM/Android test suites
+PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push   # the pre-push hook with its opt-in KMP metadata compiles on: every check CI runs that a plain push skips
 ```
 
 That is the script the git pre-push hook runs, but a plain `git push` leaves the KMP metadata compiles out unless `PREPUSH_KMP_METADATA=1` is set or it pushes to `main`, and `.git/hooks/pre-push` is a copy that only `:amethyst:preBuild` or `./gradlew installGitHook` refreshes: a fresh clone or web container may have none. Run `./gradlew installGitHook` once per checkout, and run the script by hand before `ngit send` and `ngit pr merge`, which publish without a plain `git push` of your branch. On macOS, when `iosMain` changed, also run `./gradlew :commons:compileKotlinIosSimulatorArm64 :commonsUI:compileKotlinIosSimulatorArm64`.
@@ -173,3 +173,4 @@ Delete throwaway branches pushed to the nostr remote with `git push "$NOSTR_REMO
 | `ngit pr view`/`merge` "failed to parse event id" | used the short prefix | pass the **full** hex id or `nevent` |
 | push hangs / times out at 2 min | normal GRASP fan-out latency | run in background; verify via `git ls-remote` |
 | `main` CI red after a merge: `lint` fails in `compile…KotlinMetadata` | a JVM-only API in shared code, merged without the build gate | fix forward on a branch; run `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` before the next merge |
+| PR CI `lint-android` red with `UnsafeOptInUsageError` | a media3 `@UnstableApi` call without an opt-in; it compiles and passes every test | `@OptIn(UnstableApi::class)` with `import androidx.annotation.OptIn` (Kotlin's `OptIn` does not satisfy lint); the hook's lint step catches it before the push |
