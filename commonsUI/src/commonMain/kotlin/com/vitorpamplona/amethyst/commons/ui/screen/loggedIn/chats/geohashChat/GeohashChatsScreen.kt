@@ -64,6 +64,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_explore_nearby
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_leave
+import com.vitorpamplona.amethyst.commons.resources.geohash_chats_open
 import com.vitorpamplona.amethyst.commons.resources.location_channels
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
@@ -294,14 +297,14 @@ private fun LocationChannelMenu(
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             DropdownMenuItem(
-                text = { Text("Open") },
+                text = { Text(stringRes(Res.string.geohash_chats_open)) },
                 onClick = {
                     expanded = false
                     onOpen()
                 },
             )
             DropdownMenuItem(
-                text = { Text("Leave") },
+                text = { Text(stringRes(Res.string.geohash_chats_leave)) },
                 onClick = {
                     expanded = false
                     onLeave()
@@ -360,7 +363,7 @@ private fun EmptyLocationChannels(
         Spacer(Modifier.height(24.dp))
         FilledTonalButton(onClick = onExplore) {
             SymbolIcon(symbol = MaterialSymbols.Explore, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("  Explore nearby")
+            Text("  " + stringRes(Res.string.geohash_chats_explore_nearby))
         }
     }
 }

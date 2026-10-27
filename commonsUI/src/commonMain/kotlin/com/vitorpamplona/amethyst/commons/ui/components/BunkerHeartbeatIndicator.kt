@@ -41,6 +41,10 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.domain.nip46.SignerConnectionState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_connected
+import com.vitorpamplona.amethyst.commons.resources.bunker_heartbeat_disconnected
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +97,7 @@ fun BunkerHeartbeatIndicator(
                     )
                 Icon(
                     MaterialSymbols.Favorite,
-                    contentDescription = "Bunker connected",
+                    contentDescription = stringRes(Res.string.bunker_heartbeat_connected),
                     tint = Color(0xFF4CAF50),
                     modifier =
                         Modifier.size(20.dp).graphicsLayer {
@@ -106,7 +110,7 @@ fun BunkerHeartbeatIndicator(
             is SignerConnectionState.Disconnected -> {
                 Icon(
                     MaterialSymbols.FavoriteBorder,
-                    contentDescription = "Bunker disconnected",
+                    contentDescription = stringRes(Res.string.bunker_heartbeat_disconnected),
                     tint = Color(0xFFF44336),
                     modifier = Modifier.size(20.dp),
                 )

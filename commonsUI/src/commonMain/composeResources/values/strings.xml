@@ -8627,4 +8627,27 @@
     <string name="chess_game_relays_broadcast">Moves are broadcast to these relays:</string>
     <string name="chess_game_relays_no_write">No write relays configured</string>
     <string name="chess_game_relays_game_id">Game ID</string>
+    <string name="bunker_heartbeat_connected">Bunker connected</string>
+    <string name="bunker_heartbeat_disconnected">Bunker disconnected</string>
+    <string name="auth_approval_once">Once</string>
+    <string name="auth_approval_always">Always</string>
+    <string name="auth_approval_never">Never</string>
+    <string name="relay_info_filter_number">filter %1$d</string>
+    <string name="relay_info_filter_search">🔍 %1$s</string>
+    <string name="relay_info_filter_count">%1$df</string>
+    <string name="long_form_post_remove_header_image">Remove header image</string>
+    <string name="long_form_post_add_tag">Add tag</string>
+    <string name="long_form_post_remove_tag">Remove %1$s</string>
+    <string name="geohash_chats_open">Open</string>
+    <string name="geohash_chats_leave">Leave</string>
+    <string name="geohash_chats_explore_nearby">Explore nearby</string>
+    <string name="ecash_mint_cashu">Cashu Mint</string>
+    <string name="ecash_mint_fedimint">Fedimint</string>
+    <string name="ecash_mint_generic">Ecash Mint</string>
+    <string name="ecash_mint_recommendation">%1$s Recommendation</string>
+    <string name="ecash_mint_modules">Modules</string>
+    <plurals name="auth_approval_more_relays_pending">
+        <item quantity="one">+%1$d more relay pending approval</item>
+        <item quantity="other">+%1$d more relays pending approval</item>
+    </plurals>
 </resources>
