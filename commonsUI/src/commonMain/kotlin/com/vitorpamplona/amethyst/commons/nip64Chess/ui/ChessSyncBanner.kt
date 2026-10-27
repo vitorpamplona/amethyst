@@ -62,14 +62,14 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncState
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chess_sync_collapse
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_events_count
-import com.vitorpamplona.amethyst.commons.resources.chess_sync_expand
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced_detail
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_detail
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_phase
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
+import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.expand
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -167,7 +167,7 @@ fun ChessSyncBanner(
                     if (status !is ChessSyncStatus.Idle && getRelayStates(status).isNotEmpty()) {
                         Icon(
                             symbol = if (isExpanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                            contentDescription = if (isExpanded) stringRes(Res.string.chess_sync_collapse) else stringRes(Res.string.chess_sync_expand),
+                            contentDescription = if (isExpanded) stringRes(Res.string.collapse) else stringRes(Res.string.expand),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )

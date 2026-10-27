@@ -62,6 +62,8 @@ import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.nip11RelayInfo.loadRelayInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.collapse
+import com.vitorpamplona.amethyst.commons.resources.limitations
+import com.vitorpamplona.amethyst.commons.resources.relay_monitor_supported_nips
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_failed
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_nip42
 import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_required
@@ -78,12 +80,10 @@ import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
 import com.vitorpamplona.amethyst.commons.resources.relay_status_expand_details
 import com.vitorpamplona.amethyst.commons.resources.relay_status_host
 import com.vitorpamplona.amethyst.commons.resources.relay_status_latency
-import com.vitorpamplona.amethyst.commons.resources.relay_status_limitations
 import com.vitorpamplona.amethyst.commons.resources.relay_status_not_authenticated
 import com.vitorpamplona.amethyst.commons.resources.relay_status_payment_required
 import com.vitorpamplona.amethyst.commons.resources.relay_status_restricted_writes
-import com.vitorpamplona.amethyst.commons.resources.relay_status_software
-import com.vitorpamplona.amethyst.commons.resources.relay_status_supported_nips
+import com.vitorpamplona.amethyst.commons.resources.software
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.warningColor
@@ -168,12 +168,12 @@ fun RelayStatusBar(
                     InfoLine(stringRes(Res.string.relay_status_auth_nip42), phase.name.lowercase().replace('_', ' '))
                     InfoLine(stringRes(Res.string.relay_status_dialect), if (isBuzz) stringRes(Res.string.relay_status_dialect_buzz) else stringRes(Res.string.relay_status_dialect_vanilla))
                     if (stat.pingInMs > 0) InfoLine(stringRes(Res.string.relay_status_latency), "${stat.pingInMs} ms")
-                    info.software?.takeIf { it.isNotBlank() }?.let { InfoLine(stringRes(Res.string.relay_status_software), it + (info.version?.let { v -> " $v" } ?: "")) }
-                    info.supported_nips?.takeIf { it.isNotEmpty() }?.let { InfoLine(stringRes(Res.string.relay_status_supported_nips), it.joinToString(", ")) }
+                    info.software?.takeIf { it.isNotBlank() }?.let { InfoLine(stringRes(Res.string.software), it + (info.version?.let { v -> " $v" } ?: "")) }
+                    info.supported_nips?.takeIf { it.isNotEmpty() }?.let { InfoLine(stringRes(Res.string.relay_monitor_supported_nips), it.joinToString(", ")) }
                     val authRequiredLabel = stringRes(Res.string.relay_status_auth_required)
                     val paymentRequiredLabel = stringRes(Res.string.relay_status_payment_required)
                     val restrictedWritesLabel = stringRes(Res.string.relay_status_restricted_writes)
-                    val limitationsLabel = stringRes(Res.string.relay_status_limitations)
+                    val limitationsLabel = stringRes(Res.string.limitations)
                     info.limitation?.let { lim ->
                         val flags =
                             buildList {
