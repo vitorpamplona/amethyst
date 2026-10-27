@@ -26,9 +26,11 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.favorites.rememberNappletEventIconModel
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
@@ -51,25 +53,27 @@ fun RenderRootNappletEvent(
     val event = baseNote.event as? RootNappletEvent ?: return
     val context = LocalContext.current
 
-    PrefetchManifestBlobs(event.paths(), event.servers())
+    val manifest = NappletManifestData.parse(event)
+    val icon = rememberNappletEventIconModel(event)
+    PrefetchManifestBlobs(manifest?.paths.orEmpty(), manifest?.servers.orEmpty())
 
     StaticWebsiteCard(
         title = event.title(),
-        description = event.description(),
+        description = event.content,
         source = event.source(),
         servers = event.servers(),
         identifier = null,
         isNapplet = true,
-        requires = event.requires(),
-        icon = event.icon(),
+        requires = manifest?.required.orEmpty(),
+        icon = icon,
         // Tapping Open hands off to the sandboxed :napplet process; the card itself never executes code.
         onOpen =
-            if (event.paths().isNotEmpty()) {
+            if (manifest != null && manifest.unsupportedRequired.isEmpty()) {
                 { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = "") }
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(favoriteCoordinateOf(event), event.title() ?: "Napplet", event.icon()) },
+        headerActions = { FavoriteToggleButton(favoriteCoordinateOf(event), event.title() ?: "Napplet", icon) },
     )
 }
 
@@ -82,24 +86,26 @@ fun RenderNamedNappletEvent(
     val event = baseNote.event as? NamedNappletEvent ?: return
     val context = LocalContext.current
 
-    PrefetchManifestBlobs(event.paths(), event.servers())
+    val manifest = NappletManifestData.parse(event)
+    val icon = rememberNappletEventIconModel(event)
+    PrefetchManifestBlobs(manifest?.paths.orEmpty(), manifest?.servers.orEmpty())
 
     StaticWebsiteCard(
         title = event.title(),
-        description = event.description(),
+        description = event.content,
         source = event.source(),
         servers = event.servers(),
         identifier = event.identifier(),
         isNapplet = true,
-        requires = event.requires(),
-        icon = event.icon(),
+        requires = manifest?.required.orEmpty(),
+        icon = icon,
         onOpen =
-            if (event.paths().isNotEmpty()) {
+            if (manifest != null && manifest.unsupportedRequired.isEmpty()) {
                 { NappletLauncher.launch(context = context, manifest = event, authorPubKey = event.pubKey, identifier = event.identifier()) }
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(favoriteCoordinateOf(event), event.title() ?: event.identifier(), event.icon()) },
+        headerActions = { FavoriteToggleButton(favoriteCoordinateOf(event), event.title() ?: event.identifier(), icon) },
     )
 }
 

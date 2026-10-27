@@ -211,9 +211,9 @@ class NappletSdkConformanceTest {
             NappletRequest.ResourceBytesMany(listOf("https://x", "data:text/plain,hi")),
             NappletProtocolJson.decodeRequest("""{"type":"resource.bytesMany","id":"2","urls":["https://x","data:text/plain,hi"]}"""),
         )
-        // The host emits base64 bytes + mime; shell.html rebuilds the Blob the SDK expects.
+        // The wire carries canonical base64; the web binding rebuilds the Blob.
         val o = result("resource.bytes", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain"))
-        assertEquals("SGk=", o["bytes"]?.jsonPrimitive?.content)
+        assertEquals("SGk=", o["blob"]?.jsonPrimitive?.content)
         assertEquals("text/plain", o["mime"]?.jsonPrimitive?.content)
     }
 

@@ -52,9 +52,26 @@ class NappletWebContractTest {
     }
 
     @Test
+    fun preludePrecedesScriptsEvenWithMisleadingOrMissingHeadMarkup() {
+        for (html in listOf(
+            "<script>early()</script><head></head>",
+            "<!-- <head> --> <script>early()</script>",
+            "<html data-text='> <head>'><script>early()</script>",
+            "<!doctype html><HTML><HEAD><script>early()</script></HEAD>",
+        )) {
+            val injected = NappletWebContract.injectPrelude(html.encodeToByteArray(), "injected()", emptyList(), true).decodeToString()
+            assertTrue(injected.indexOf("Content-Security-Policy") < injected.indexOf("injected()"))
+            assertTrue(injected.indexOf("injected()") < injected.indexOf("early()"))
+            assertTrue(injected.endsWith(html))
+        }
+    }
+
+    @Test
     fun lockedCspMatchesTheConservativeOpaqueOriginPosture() {
         val csp = NappletWebContract.APP_CSP
 
+        assertContains(csp, "script-src 'unsafe-inline' 'wasm-unsafe-eval'")
+        assertFalse(csp.contains("'unsafe-eval'"))
         assertContains(csp, "default-src 'none'")
         assertContains(csp, "connect-src 'none'")
         assertContains(csp, "frame-src 'none'")

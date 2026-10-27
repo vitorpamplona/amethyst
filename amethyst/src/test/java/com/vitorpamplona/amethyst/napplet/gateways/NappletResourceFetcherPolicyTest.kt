@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.napplet.gateways
 
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.net.InetAddress
@@ -66,5 +69,24 @@ class NappletResourceFetcherPolicyTest {
         assertFalse(NappletResourceFetcher.isSafeHttpsResourceUrl("http://example.com/a"))
         assertFalse(NappletResourceFetcher.isSafeHttpsResourceUrl("https://user:secret@example.com/a"))
         assertFalse(NappletResourceFetcher.isSafeHttpsResourceUrl("file:///etc/passwd"))
+    }
+
+    @Test
+    fun bud10ReferencesUseArtifactHashAndUntrustedServerHints() {
+        val hash = "ab".repeat(32)
+        val parsed = NappletResourceFetcher.parseBlossomResource("blossom:$hash.png?xs=https%3A%2F%2Fexample.com&sz=123")!!
+        assertEquals(hash, parsed.sha256)
+        assertEquals(listOf("https://example.com"), parsed.servers)
+        assertNull(NappletResourceFetcher.parseBlossomResource("blossom:sha256:$hash"))
+        assertNull(NappletResourceFetcher.parseBlossomResource("blossom:invalid.png"))
+        assertNull(NappletResourceFetcher.parseBlossomResource("blossom:$hash.png#fragment"))
+    }
+
+    @Test
+    fun dataUrlEscapesAreBytesAndPlusIsLiteral() {
+        assertArrayEquals(byteArrayOf(0, 1, 2, -1), NappletResourceFetcher.decodeDataPayload("%00%01%02%FF"))
+        assertEquals("a+b c", NappletResourceFetcher.decodeDataPayload("a+b%20c").decodeToString())
+        assertTrue(runCatching { NappletResourceFetcher.decodeDataPayload("%GG") }.isFailure)
+        assertTrue(runCatching { NappletResourceFetcher.decodeDataPayload("%1") }.isFailure)
     }
 }

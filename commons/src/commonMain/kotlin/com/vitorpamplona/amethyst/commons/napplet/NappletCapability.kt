@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 /**
  * The capability classes a napplet shell can broker, aligned with the upstream NAP domains
- * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `requires` tags;
+ * (`napplet/naps`, `@napplet/web`). A napplet declares the domains it needs via `R` and `O` tags;
  * [fromNapDomain] maps each bare domain string to the capability the broker enforces.
  *
  * The mapping is **default-deny**: an unrecognized or only partially implemented NAP domain maps
@@ -144,7 +144,7 @@ data class UnknownNapDomain(
     val domain: String,
 )
 
-/** Outcome of resolving a manifest's `requires` list against the capabilities this shell brokers. */
+/** Outcome of resolving a manifest's required domain list against the capabilities this shell brokers. */
 data class NappletRequiredCapabilities(
     val capabilities: Set<NappletCapability>,
     val unknown: List<UnknownNapDomain>,

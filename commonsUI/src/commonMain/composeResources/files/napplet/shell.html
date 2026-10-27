@@ -23,7 +23,7 @@
         var bridge = window.__nappletBridge;
 
         // applet -> native: only forward messages that came from our applet iframe.
-        // The @napplet SDK posts structured-clone objects; our injected shim posts strings. The
+        // The injected NAP binding posts structured-clone JSON objects. The
         // native bridge carries only strings, so serialize objects here. (Requests carry no Blobs.)
         function forward(data) {
           if (typeof data !== 'string') {
@@ -58,26 +58,8 @@
           bridge.onmessage = function (e) {
             var msg;
             try { msg = JSON.parse(e.data); } catch (_) { return; }
-            // resource.bytes resolves to a real Blob in the SDK; rebuild it from the base64 the host sent.
-            if (msg && msg.type === 'resource.bytes.result' && typeof msg.bytes === 'string') {
-              try {
-                var bin = atob(msg.bytes), u = new Uint8Array(bin.length);
-                for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-                msg.blob = new Blob([u], { type: msg.mime || '' });
-                delete msg.bytes;
-              } catch (_) {}
-            }
-            if (msg && msg.type === 'resource.bytesMany.result' && Array.isArray(msg.items)) {
-              msg.items.forEach(function (item) {
-                if (!item || !item.ok || typeof item.bytes !== 'string') return;
-                try {
-                  var bin = atob(item.bytes), u = new Uint8Array(bin.length);
-                  for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
-                  item.blob = new Blob([u], { type: item.mime || '' });
-                  delete item.bytes;
-                } catch (_) {}
-              });
-            }
+            // NAP-RESOURCE wire blobs are canonical base64 strings. The injected domain binding
+            // decodes them into browser Blobs; keep the transport envelope unchanged.
             iframe.contentWindow.postMessage(msg, '*');
           };
         }

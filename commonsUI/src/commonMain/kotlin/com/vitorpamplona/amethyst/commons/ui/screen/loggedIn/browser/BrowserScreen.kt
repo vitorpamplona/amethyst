@@ -904,12 +904,12 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
         is RootNappletEvent -> {
             label = event.title()?.ifBlank { null } ?: ""
             fallback = Res.string.browser_napplet_default_label
-            description = event.description()
+            description = event.content
         }
         is NamedNappletEvent -> {
             label = event.title()?.ifBlank { null } ?: event.identifier()
             fallback = Res.string.browser_napplet_default_label
-            description = event.description()
+            description = event.content
         }
         else -> return null
     }

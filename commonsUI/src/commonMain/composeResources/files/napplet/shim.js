@@ -4,7 +4,7 @@
 (function(){
   if (window.__nappletShimInstalled) return; window.__nappletShimInstalled = true;
 
-  // Web Storage polyfill. The applet runs in an `allow-scripts` (no `allow-same-origin`) iframe, so
+  // Website-only Web Storage polyfill. The applet runs in an `allow-scripts` (no `allow-same-origin`) iframe, so
   // its origin is opaque and reading `window.localStorage`/`sessionStorage` throws a SecurityError —
   // which aborts the bootstrap of essentially every bundler-built SPA (they read storage at init) and
   // leaves a blank page. We can't grant `allow-same-origin` (that would hand the applet the
@@ -13,6 +13,7 @@
   // storage is available separately and asynchronously via `window.napplet.storage.*`. This inline
   // shim runs before the applet's deferred module script, so the polyfill is in place first.
   (function(){
+    if (!window.__nappletNip07) return;
     function makeStorage(){
       var data = Object.create(null);
       var methods = {
@@ -46,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [];
+  var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [], themeHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -60,7 +61,7 @@
       if (!recvWired) { recvWired = true; b.onmessage = function(e){ onIncoming(e.data); }; }
       b.postMessage(s);
     } else {
-      parent.postMessage(s, '*');
+      parent.postMessage(JSON.parse(s), '*');
     }
   }
   function send(env){ env.id = env.id || ('r' + (seq++)); rawSend(JSON.stringify(env)); return env.id; }
@@ -90,9 +91,10 @@
     if (msg.type && msg.type.indexOf('ime.') === 0) { if (window.__nappletImeHandle) window.__nappletImeHandle(msg); return; }
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
+    if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
-    if (msg.ok) p.resolve(msg);
+    if (msg.ok !== false && !msg.error) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   }
   // The shell-relayed path listens for window messages from the parent; the direct-bridge path wires
@@ -119,6 +121,14 @@
         signal.addEventListener('abort', onAbort, { once: true });
       }
     });
+  }
+  function resourceBlob(encoded, mime){
+    if (typeof encoded !== 'string' || typeof mime !== 'string') throw new Error('Invalid resource bytes');
+    var bin = atob(encoded);
+    if (btoa(bin) !== encoded) throw new Error('Non-canonical resource base64');
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
   }
   function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
@@ -188,9 +198,9 @@
     },
     resource: {
       info: function(){ return field(call('resource.info'), 'info'); },
-      // The shell rebuilds Blobs from the host's base64 before these resolve.
-      bytes: function(url, opts){ return field(resourceCall('resource.bytes', { url: url }, opts), 'blob'); },
-      bytesMany: function(urls, opts){ return field(resourceCall('resource.bytesMany', { urls: Array.from(urls || []) }, opts), 'items'); },
+      // The web binding converts canonical wire base64 into actual browser bytes.
+      bytes: function(url, opts){ return resourceCall('resource.bytes', { url: url }, opts).then(function(m){ return resourceBlob(m.blob, m.mime); }); },
+      bytesMany: function(urls, opts){ return resourceCall('resource.bytesMany', { urls: Array.from(urls || []) }, opts).then(function(m){ return m.items.map(function(item){ if (item.ok) { try { item.blob = resourceBlob(item.blob, item.mime); } catch (_) { return { url: item.url, ok: false, error: 'decode-failed' }; } } return item; }); }); },
       bytesAsObjectURL: function(url){
         var objectUrl = '', revoked = false;
         var handle = { url: '', revoke: function(){ if (revoked) return; revoked = true; if (objectUrl) URL.revokeObjectURL(objectUrl); } };
@@ -208,7 +218,14 @@
       blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
     },
     theme: {
-      get: function(){ return field(call('theme.get'), 'theme'); }
+      get: function(){ return field(call('theme.get'), 'theme'); },
+      onChanged: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        themeHandlers.push(handler);
+        return { close: function(){
+          var i = themeHandlers.indexOf(handler); if (i >= 0) themeHandlers.splice(i, 1);
+        } };
+      }
     }
   };
   var requested = [];
