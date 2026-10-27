@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_expla
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_relays
 import com.vitorpamplona.amethyst.commons.resources.concord_invite_preview_unknown_name
 import com.vitorpamplona.amethyst.commons.resources.concord_redeeming_invite
+import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.ui.components.ConcordInvitePreviewRow
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -134,8 +135,16 @@ fun ConcordInviteScreen(
             val result =
                 try {
                     accountViewModel.account.concord.joinConcordViaInvite(link)
+                } catch (_: SignerExceptions.ReadOnlyException) {
+                    // An npub login can never join: say why instead of offering a retry that loops.
+                    state = RedeemState.Failed(Res.string.login_with_a_private_key_to_be_able_to_sign_events, canRetry = false)
+                    return@LaunchedEffect
+                } catch (_: SignerExceptions.ManuallyUnauthorizedException) {
+                    // The user said no in their signer app: back to the Join button, nothing was sent.
+                    state = RedeemState.AwaitingConsent
+                    return@LaunchedEffect
                 } catch (_: SignerExceptions) {
-                    // The signer refused (or the user rejected it there): nothing joined, so let them retry.
+                    // Timed out, signer missing, ...: nothing joined, so let them retry.
                     null
                 }
             state =

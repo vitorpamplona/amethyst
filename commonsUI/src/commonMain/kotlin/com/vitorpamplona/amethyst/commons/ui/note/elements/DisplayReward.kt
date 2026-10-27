@@ -157,6 +157,7 @@ class AddBountyAmountViewModel : ViewModel() {
 
         if (newValue != null) {
             viewModelScope.launch(Dispatchers.IO) {
+                // A refused signature keeps the typed amount so the user can try again.
                 logSignerErrors("AddBountyAmount") {
                     account?.let { myAccount ->
                         bounty?.let { bountyInner ->
@@ -166,9 +167,9 @@ class AddBountyAmountViewModel : ViewModel() {
                             )
                         }
                     }
-                } ?: return@launch
 
-                nextAmount = TextFieldValue("")
+                    nextAmount = TextFieldValue("")
+                }
             }
         }
     }

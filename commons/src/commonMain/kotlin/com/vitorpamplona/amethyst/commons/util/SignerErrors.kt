@@ -40,6 +40,6 @@ suspend inline fun <T> logSignerErrors(
     try {
         action()
     } catch (e: SignerExceptions) {
-        Log.w(tag, "Signer refused: ${e.message}", e)
+        Log.w(tag, "Signer refused", e)
         null
     }

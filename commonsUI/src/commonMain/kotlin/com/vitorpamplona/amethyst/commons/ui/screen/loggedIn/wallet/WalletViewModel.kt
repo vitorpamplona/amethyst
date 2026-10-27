@@ -50,7 +50,6 @@ import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
@@ -371,20 +370,23 @@ class WalletViewModel : ViewModel() {
     ) {
         val acc = account ?: return
         val pointer = _debitWallets.value.firstOrNull { it.id == walletId }?.pointer ?: return
-        val moneyOpRelays = accountViewModel?.host?.moneyOpRelays ?: return
+        val avm = accountViewModel ?: return
+        val moneyOpRelays = avm.host.moneyOpRelays
         viewModelScope.launch {
-            // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
-            // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
-            val response =
-                try {
-                    ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
-                } catch (_: IllegalArgumentException) {
-                    null
-                } catch (_: SignerExceptions) {
-                    // The request is signed and encrypted: a rejection in the signer means nothing was sent.
-                    null
-                }
-            onResult(response)
+            // The request is signed and NIP-44 encrypted. If the signer refuses, nothing reached the
+            // wallet, so that is not reported as a wallet timeout: reportSignerErrors shows the
+            // read-only / missing-signer notices and keeps a user's rejection silent.
+            avm.reportSignerErrors {
+                // A malformed budget (e.g. an out-of-spec frequency unit) makes requestBudget throw;
+                // treat it as "no response" so the dialog dismisses instead of hanging on a spinner.
+                val response =
+                    try {
+                        ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
+                    } catch (_: IllegalArgumentException) {
+                        null
+                    }
+                onResult(response)
+            }
         }
     }
 

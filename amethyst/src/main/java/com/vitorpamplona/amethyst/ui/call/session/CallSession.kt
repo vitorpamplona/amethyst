@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.SignalingState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.call_screen_sharing
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.service.call.AudioRoute
 import com.vitorpamplona.amethyst.service.call.CallAudioManager
 import com.vitorpamplona.amethyst.service.call.CallForegroundService
@@ -48,7 +49,6 @@ import com.vitorpamplona.amethyst.service.call.WebRtcCallSession
 import com.vitorpamplona.amethyst.service.call.WebRtcPeerSessionAdapter
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallIceCandidateEvent
@@ -416,13 +416,11 @@ class CallSession(
         val callId = callManager.currentCallId() ?: return
         val candidateJson = CallIceCandidateEvent.serializeCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
         scope.launch {
-            try {
+            // A refused candidate only loses that route; the remaining candidates still connect.
+            logSignerErrors(TAG) {
                 val signer = signerProvider()
                 val result = callFactory.createIceCandidate(candidateJson, peerPubKey, callId, signer)
                 publishWrap(result.wrap)
-            } catch (e: SignerExceptions) {
-                // A refused candidate only loses that route; the remaining candidates still connect.
-                Log.w(TAG, "Could not sign an ICE candidate", e)
             }
         }
     }

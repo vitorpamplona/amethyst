@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.util.DebouncedPublisher
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCacheAsync
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
@@ -719,20 +720,24 @@ open class BaseAccountViewModel(
             account.concord.importConcordCommunities(pinnedRelays)
         }
 
-    /** Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). */
+    /**
+     * Publish an ephemeral typing heartbeat to a Concord channel (throttled by the caller). Best
+     * effort: a refused or failed signature only skips this beat, so it is logged, never shown.
+     */
     fun sendConcordTyping(
         communityId: String,
         channelIdHex: String,
-    ) = launchSigner {
-        account.concord.sendConcordTyping(communityId, channelIdHex)
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        logSignerErrors("ConcordTyping") { account.concord.sendConcordTyping(communityId, channelIdHex) }
     }
 
     fun sendBuzzTyping(
         channel: RelayGroupChannel,
         threadRootId: HexKey? = null,
         replyToId: HexKey? = null,
-    ) = launchSigner {
-        account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId)
+    ) = viewModelScope.launch(Dispatchers.IO) {
+        // Best effort, like sendConcordTyping: a refused beat is logged, never shown.
+        logSignerErrors("BuzzTyping") { account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId) }
     }
 
     @Immutable
