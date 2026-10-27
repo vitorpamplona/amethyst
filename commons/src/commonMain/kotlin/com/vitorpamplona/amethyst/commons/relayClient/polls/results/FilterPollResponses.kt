@@ -39,7 +39,7 @@ import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 private const val VOTE_LIMIT = 1000
 
 /**
- * Every vote cast on [poll], from the relays a vote could plausibly be on.
+ * Every vote cast on [poll], from every relay a vote could plausibly be on ([voteRelaySet]).
  *
  * NIP-88 tells respondents to publish to the relays the poll itself nominates, and
  * [com.vitorpamplona.amethyst.commons.model.EventBroadcaster] obeys that on the way out — those relays are
@@ -51,10 +51,8 @@ fun filterPollResponses(
     since: SincePerRelayMap?,
 ): List<RelayBasedFilter>? {
     val pollId = poll.event?.id ?: return null
-    val relays = ((poll.event as? PollEvent)?.relays().orEmpty() + poll.relayUrlsForReactions()).toSet()
-    if (relays.isEmpty()) return null
 
-    return relays.map {
+    return voteRelaySet(poll.event as? PollEvent, poll.relayUrlsForReactions()).map {
         RelayBasedFilter(
             relay = it,
             filter =

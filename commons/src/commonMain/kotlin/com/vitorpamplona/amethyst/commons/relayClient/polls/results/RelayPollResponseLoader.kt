@@ -55,7 +55,6 @@ class RelayPollResponseLoader(
 
     override suspend fun load(poll: PollEvent): PollLoadReport {
         val relays = responseRelays(poll)
-        if (relays.isEmpty()) return PollLoadReport(null, approximate = false, relaysAsked = 0, relaysAnswered = 0)
 
         val filter =
             ExplainedFilter(
@@ -78,9 +77,8 @@ class RelayPollResponseLoader(
     }
 
     /**
-     * Where a poll's votes live: the relays the poll itself nominates (NIP-88 tells respondents to
-     * publish there, and [com.vitorpamplona.amethyst.commons.model.EventBroadcaster] obeys it), plus the
-     * relays we would look at for any other engagement. Same set the subscription asks.
+     * Where a poll's votes live: [voteRelaySet]. Same set the subscription asks, so the estimate
+     * cannot disagree with the votes on screen.
      */
-    private fun responseRelays(poll: PollEvent): Set<NormalizedRelayUrl> = (poll.relays() + pollNote.relayUrlsForReactions()).toSet()
+    private fun responseRelays(poll: PollEvent): Set<NormalizedRelayUrl> = voteRelaySet(poll, pollNote.relayUrlsForReactions())
 }
