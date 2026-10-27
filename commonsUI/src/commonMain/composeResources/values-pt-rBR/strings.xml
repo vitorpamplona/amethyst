@@ -8279,4 +8279,56 @@
     <string name="devtools_console_invalid_url">Não é uma URL de relay: %1$s</string>
     <string name="devtools_console_tor">%1$s passa pelo Tor, que ainda não está conectado. Tente de novo quando o Tor estiver ativo, ou altere a configuração de Tor do relay.</string>
     <string name="devtools_console_send_failed">Não conectado, frame não enviado</string>
+    <string name="accent_color_account_description">Substitui a cor de destaque do aplicativo nesta conta. Escolha Aplicativo para voltar a segui-la.</string>
+    <string name="accent_color_application">Aplicativo</string>
+    <string name="local_timestamp_ago">há %1$s</string>
+    <string name="local_timestamp_in">em %1$s</string>
+    <string name="marmot_admin_delete_message">Excluir para todos</string>
+    <string name="marmot_emoji_upload_failed">Não foi possível anexar o emoji personalizado; ele foi enviado como texto.</string>
+    <string name="marmot_media_epoch_moved">O grupo mudou enquanto seu arquivo era carregado, então ele não foi enviado. Envie de novo.</string>
+    <string name="marmot_poll_add_option">Adicionar opção</string>
+    <string name="marmot_poll_closes_at">Encerra %1$s</string>
+    <string name="marmot_poll_create">Criar enquete</string>
+    <string name="marmot_poll_duplicate_option">Duas opções dizem a mesma coisa.</string>
+    <string name="marmot_poll_has_deadline">Encerrar após</string>
+    <string name="marmot_poll_invalid">Verifique a pergunta e as opções: de 2 a 10 opções, sem texto vazio.</string>
+    <string name="marmot_poll_invalid_text">Este texto é longo demais ou tem caracteres que uma enquete não consegue mostrar.</string>
+    <string name="marmot_poll_label">Enquete</string>
+    <string name="marmot_poll_multiple_answers">Múltiplas respostas</string>
+    <string name="marmot_poll_new">Nova enquete</string>
+    <string name="marmot_poll_no_deadline">Nunca</string>
+    <string name="marmot_poll_not_anonymous">Os votos são visíveis para todos os membros deste grupo.</string>
+    <string name="marmot_poll_option">Opção %1$d</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_options">Opções</string>
+    <string name="marmot_poll_pick_many">Cada membro pode escolher várias</string>
+    <string name="marmot_poll_pick_one">Cada membro escolhe uma resposta</string>
+    <string name="marmot_poll_preview">Enquete: %1$s</string>
+    <string name="marmot_poll_question">Faça uma pergunta</string>
+    <string name="marmot_poll_remove_option">Remover opção</string>
+    <string name="marmot_poll_stays_open">Fica aberta para votos</string>
+    <string name="poll_change_vote">Mudar voto</string>
+    <string name="poll_unsupported">Esta enquete usa um formato que este app não consegue mostrar.</string>
+    <string name="poll_vote">Votar</string>
+    <string name="quick_action_request_deletion_alert_body_channel">O Amethyst vai pedir a todos neste canal que excluam esta mensagem. Os apps deles devem removê-la, mas não há garantia de que todos os membros excluirão sua cópia.</string>
+    <string name="report_dialog_reminder_group">Todos neste grupo verão esta denúncia e que foi você quem a enviou. Os administradores podem analisá-la.</string>
+    <string name="room_remove_for_everyone_body">O app de cada membro vai remover esta mensagem. Isso não pode ser desfeito.</string>
+    <string name="room_remove_for_everyone_title">Excluir para todos?</string>
+    <string name="tor_waiting">Aguardando o Tor</string>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d dia</item>
+        <item quantity="other">%1$d dias</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d hora</item>
+        <item quantity="other">%1$d horas</item>
+    </plurals>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">Dispensar %1$d denúncia</item>
+        <item quantity="other">Dispensar %1$d denúncias</item>
+    </plurals>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">O Tor não está conectando. %1$d relay está aguardando.</item>
+        <item quantity="other">O Tor não está conectando. %1$d relays estão aguardando.</item>
+    </plurals>
 </resources>

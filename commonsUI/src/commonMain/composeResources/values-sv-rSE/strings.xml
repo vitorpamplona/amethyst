@@ -8279,4 +8279,56 @@
     <string name="devtools_console_invalid_url">Inte en relä-URL: %1$s</string>
     <string name="devtools_console_tor">%1$s går via Tor, som inte är anslutet än. Försök igen när Tor är igång, eller ändra reläets Tor-inställning.</string>
     <string name="devtools_console_send_failed">Inte ansluten, ramen skickades inte</string>
+    <string name="accent_color_account_description">Ersätter appens accentfärg för det här kontot. Välj Applikation för att följa den igen.</string>
+    <string name="accent_color_application">Applikation</string>
+    <string name="local_timestamp_ago">för %1$s sedan</string>
+    <string name="local_timestamp_in">om %1$s</string>
+    <string name="marmot_admin_delete_message">Radera för alla</string>
+    <string name="marmot_emoji_upload_failed">Kunde inte bifoga den anpassade emojin, den skickades som text i stället.</string>
+    <string name="marmot_media_epoch_moved">Gruppen ändrades medan din fil laddades upp, så den skickades inte. Skicka den igen.</string>
+    <string name="marmot_poll_add_option">Lägg till alternativ</string>
+    <string name="marmot_poll_closes_at">Stänger %1$s</string>
+    <string name="marmot_poll_create">Skapa omröstning</string>
+    <string name="marmot_poll_duplicate_option">Två alternativ säger samma sak.</string>
+    <string name="marmot_poll_has_deadline">Stäng efter</string>
+    <string name="marmot_poll_invalid">Kontrollera frågan och alternativen: 2 till 10 alternativ, ingen tom text.</string>
+    <string name="marmot_poll_invalid_text">Texten är för lång eller innehåller tecken som en omröstning inte kan visa.</string>
+    <string name="marmot_poll_label">Omröstning</string>
+    <string name="marmot_poll_multiple_answers">Flera svar</string>
+    <string name="marmot_poll_new">Ny omröstning</string>
+    <string name="marmot_poll_no_deadline">Aldrig</string>
+    <string name="marmot_poll_not_anonymous">Rösterna är synliga för alla medlemmar i den här gruppen.</string>
+    <string name="marmot_poll_option">Alternativ %1$d</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_options">Alternativ</string>
+    <string name="marmot_poll_pick_many">Varje medlem kan välja flera</string>
+    <string name="marmot_poll_pick_one">Varje medlem väljer ett svar</string>
+    <string name="marmot_poll_preview">Omröstning: %1$s</string>
+    <string name="marmot_poll_question">Ställ en fråga</string>
+    <string name="marmot_poll_remove_option">Ta bort alternativ</string>
+    <string name="marmot_poll_stays_open">Förblir öppen för röster</string>
+    <string name="poll_change_vote">Ändra röst</string>
+    <string name="poll_unsupported">Den här omröstningen använder ett format som appen inte kan visa.</string>
+    <string name="poll_vote">Rösta</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Amethyst ber alla i den här kanalen att radera meddelandet. Deras appar bör ta bort det, men det finns ingen garanti för att varje medlem raderar sin kopia.</string>
+    <string name="report_dialog_reminder_group">Alla i den här gruppen ser rapporten och att du skickade den. Administratörer kan granska den.</string>
+    <string name="room_remove_for_everyone_body">Varje medlems app tar bort meddelandet. Det går inte att ångra.</string>
+    <string name="room_remove_for_everyone_title">Radera för alla?</string>
+    <string name="tor_waiting">Väntar på Tor</string>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d timme</item>
+        <item quantity="other">%1$d timmar</item>
+    </plurals>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">Avfärda %1$d rapport</item>
+        <item quantity="other">Avfärda %1$d rapporter</item>
+    </plurals>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">Tor ansluter inte. %1$d relä väntar på Tor.</item>
+        <item quantity="other">Tor ansluter inte. %1$d reläer väntar på Tor.</item>
+    </plurals>
 </resources>
