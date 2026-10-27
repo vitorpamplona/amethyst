@@ -8716,4 +8716,22 @@
     <string name="relay_status_connected_authenticated">Connected · authenticated</string>
     <string name="new_posts_available_description">New posts available, tap to scroll to top</string>
     <string name="new_posts_chip">New posts</string>
+    <string name="namecoin_resolution_no_record">No record for %1$s on Namecoin.</string>
+    <string name="namecoin_resolution_resolving">Resolving %1$s on Namecoin\u2026</string>
+    <string name="namecoin_resolution_malformed_pubkey">%1$s record is malformed: pubkey %2$s is not a valid hex key</string>
+    <string name="namecoin_resolution_badge">Namecoin</string>
+    <string name="chess_sync_collapse">Collapse</string>
+    <string name="chess_sync_expand">Expand</string>
+    <string name="chess_sync_events_count">%1$s events</string>
+    <string name="chess_sync_syncing_phase">Syncing %1$s...</string>
+    <string name="chess_sync_synced">Synced</string>
+    <string name="chess_sync_syncing_detail">%1$s/%2$s relays • %3$s events</string>
+    <string name="chess_sync_synced_detail">%1$s/%2$s relays • %3$s challenges • %4$s games</string>
+    <string name="chess_sync_tap_to_retry">Tap to retry</string>
+    <string name="chess_game_parse_failed">Failed to parse PGN</string>
+    <string name="chess_game_invalid">Invalid Chess Game</string>
+    <string name="chess_game_pgn_content">PGN Content:</string>
+    <string name="article_banner_description">Article banner</string>
+    <string name="article_author_description">Author</string>
+    <string name="article_reading_time_minutes">%1$s min read</string>
 </resources>

@@ -49,11 +49,17 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip05DnsIdentifiers.namecoin.NamecoinResolveState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_badge
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_malformed_pubkey
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_no_record
+import com.vitorpamplona.amethyst.commons.resources.namecoin_resolution_resolving
 import com.vitorpamplona.amethyst.commons.search.SearchSegment
 import com.vitorpamplona.amethyst.commons.search.SearchTokenizer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinResolveOutcome
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
@@ -220,7 +226,7 @@ fun NamecoinResolutionRow(
         when (val s = state) {
             null, NamecoinResolveState.Loading -> ResolvingChip(term)
             is NamecoinResolveState.Resolved -> ResolvedRow(term, s, accountViewModel, onUserResolved)
-            NamecoinResolveState.NotFound -> FailedRow("No record for $term on Namecoin.")
+            NamecoinResolveState.NotFound -> FailedRow(stringRes(Res.string.namecoin_resolution_no_record, term))
             is NamecoinResolveState.Error -> FailedRow(s.message)
         }
     }
@@ -244,7 +250,7 @@ private fun ResolvingChip(query: String) {
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Resolving $query on Namecoin…",
+                text = stringRes(Res.string.namecoin_resolution_resolving, query),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -270,8 +276,7 @@ private fun ResolvedRow(
         }
     if (user == null) {
         FailedRow(
-            "${state.result.namecoinName} record is malformed: " +
-                "pubkey ${state.result.pubkey} is not a valid hex key",
+            stringRes(Res.string.namecoin_resolution_malformed_pubkey, state.result.namecoinName, state.result.pubkey),
         )
         return
     }
@@ -334,7 +339,7 @@ private fun NamecoinBadge() {
                 modifier = Modifier.size(14.dp),
             )
             Text(
-                text = "Namecoin",
+                text = stringRes(Res.string.namecoin_resolution_badge),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 fontWeight = FontWeight.SemiBold,
