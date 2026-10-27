@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ui.PublicGameCard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.SpectatingGameCard
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
+import com.vitorpamplona.amethyst.commons.resources.chess_lobby_clear_all
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
@@ -572,7 +573,7 @@ fun ChessLobbyContent(
                     )
                     if (completedGames.size >= 2) {
                         TextButton(onClick = { chessViewModel.dismissAllCompletedGames() }) {
-                            Text("Clear all")
+                            Text(stringRes(Res.string.chess_lobby_clear_all))
                         }
                     }
                 }
