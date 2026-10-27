@@ -278,16 +278,7 @@ class NewCommunityModel : ViewModel() {
         onSuccess: () -> Unit,
         onError: (String, String) -> Unit,
     ) {
-        try {
-            publishUnsafe(uploader, onSuccess, onError)
-        } catch (e: SignerExceptions.ReadOnlyException) {
-            viewModelScope.launch {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            }
-        }
+        publishUnsafe(uploader, onSuccess, onError)
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -367,6 +358,14 @@ class NewCommunityModel : ViewModel() {
 
                 reset()
                 onSuccess()
+            } catch (_: SignerExceptions.ReadOnlyException) {
+                onError(
+                    loadStringRes(Res.string.read_only_user),
+                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
+                )
+            } catch (_: SignerExceptions) {
+                // The user rejected it in their signer, or the signer was unavailable: nothing more
+                // is published, so keep the form open instead of reporting success.
             } finally {
                 isPublishing = false
             }

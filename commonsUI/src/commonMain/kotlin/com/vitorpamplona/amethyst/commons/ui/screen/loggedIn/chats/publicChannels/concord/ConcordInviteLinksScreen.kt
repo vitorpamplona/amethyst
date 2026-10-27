@@ -226,14 +226,16 @@ fun ConcordInviteLinksScreen(
                     onClick = {
                         revoking = true
                         scope.launch {
-                            try {
-                                outcome = account.concord.revokeConcordInvite(communityId, link.token)
-                                // Re-read either way: on success the link is gone from the list, and on
-                                // failure the list is the only thing that can say whether it changed.
-                                reloads++
-                            } finally {
-                                revoking = false
-                                confirming = null
+                            accountViewModel.reportSignerErrors {
+                                try {
+                                    outcome = account.concord.revokeConcordInvite(communityId, link.token)
+                                    // Re-read either way: on success the link is gone from the list, and on
+                                    // failure the list is the only thing that can say whether it changed.
+                                    reloads++
+                                } finally {
+                                    revoking = false
+                                    confirming = null
+                                }
                             }
                         }
                     },

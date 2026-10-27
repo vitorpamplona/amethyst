@@ -182,24 +182,26 @@ fun ConcordEditScreen(
                     if (name.value.isBlank() || working) return@Button
                     working = true
                     scope.launch {
-                        val ok =
-                            try {
-                                account.concord.editConcordMetadata(
-                                    communityId = communityId,
-                                    name = name.value.trim(),
-                                    description = about.value.trim().ifBlank { null },
-                                    icon = icon.value,
-                                    banner = banner.value,
-                                    relays = relays.map { it.url },
-                                ) &&
-                                    // A timer change is its own edition, chained on the one above, and
-                                    // posts the CORD-08 §4 notice into each channel.
-                                    (timer == foldedTimer || account.concord.setConcordMessageExpiration(communityId, timer.takeIf { it > 0 }))
-                            } finally {
-                                // Always re-enable — a thrown save would otherwise strand the button.
-                                working = false
-                            }
-                        if (ok) nav.popBack()
+                        accountViewModel.reportSignerErrors {
+                            val ok =
+                                try {
+                                    account.concord.editConcordMetadata(
+                                        communityId = communityId,
+                                        name = name.value.trim(),
+                                        description = about.value.trim().ifBlank { null },
+                                        icon = icon.value,
+                                        banner = banner.value,
+                                        relays = relays.map { it.url },
+                                    ) &&
+                                        // A timer change is its own edition, chained on the one above, and
+                                        // posts the CORD-08 §4 notice into each channel.
+                                        (timer == foldedTimer || account.concord.setConcordMessageExpiration(communityId, timer.takeIf { it > 0 }))
+                                } finally {
+                                    // Always re-enable — a thrown save would otherwise strand the button.
+                                    working = false
+                                }
+                            if (ok) nav.popBack()
+                        }
                     }
                 },
                 enabled = name.value.isNotBlank() && concordNameFits(name.value) && !working,

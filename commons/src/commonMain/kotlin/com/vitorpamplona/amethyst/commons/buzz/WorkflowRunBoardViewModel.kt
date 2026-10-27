@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRun
 import com.vitorpamplona.amethyst.commons.model.buzz.WorkflowRunAggregator
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalDenyEvent
 import com.vitorpamplona.quartz.buzz.workflow.ApprovalGrantEvent
 import com.vitorpamplona.quartz.buzz.workflow.WorkflowApprovalRequestedEvent
@@ -245,7 +246,7 @@ class WorkflowRunBoardViewModel : ViewModel() {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val newId = account.relayGroups.publishBuzzWorkflowDef(relay, channelId, name, yaml)
+            val newId = logSignerErrors("WorkflowRunBoard") { account.relayGroups.publishBuzzWorkflowDef(relay, channelId, name, yaml) }
             withContext(Dispatchers.Main) { onResult(newId) }
         }
     }
@@ -262,7 +263,7 @@ class WorkflowRunBoardViewModel : ViewModel() {
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = block(account, relay, channelId)
+            val ok = logSignerErrors("WorkflowRunBoard") { block(account, relay, channelId) } ?: false
             withContext(Dispatchers.Main) { onResult(ok) }
         }
     }

@@ -44,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
@@ -165,7 +166,7 @@ class GitNewIssueViewModel : ViewModel() {
                     results.successful.mapNotNull { state ->
                         when (val uploaded = state.result) {
                             is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
+                                val nip95 = logSignerErrors("GitNewIssueViewModel") { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
                                 account.consumeNip95(nip95.first, nip95.second)?.let { note ->
                                     val link = "nostr:" + note.toNEvent()
                                     nip95Attachments = nip95Attachments + (link to nip95)

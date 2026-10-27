@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager.Companion
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.EphemeralGiftWrapEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.WebRtcCallFactory
 import com.vitorpamplona.quartz.nipACWebRtcCalls.events.CallAnswerEvent
@@ -103,6 +104,23 @@ class CallManager(
      * because renegotiation has its own glare-resolution logic in
      * CallSession and benefits from a dedicated collector.
      */
+
+    /**
+     * Signs and publishes one call signal. Every caller launches these fire-and-forget, so a signer
+     * that refuses (the user rejected it in their signer app, it timed out, the key is read-only)
+     * must not escape and crash the app. It only costs this signal: the state machine has already
+     * moved, and the ringing/connecting watchdogs end a call that cannot go on.
+     */
+    private suspend inline fun signal(
+        name: String,
+        block: () -> Unit,
+    ) {
+        try {
+            block()
+        } catch (e: SignerExceptions) {
+            Log.w("CallManager", "Could not sign the call $name", e)
+        }
+    }
 
     /** Emits a session event, logging a warning if the buffer overflows. */
     private fun emitSessionEvent(event: CallSessionEvent) {
@@ -241,8 +259,10 @@ class CallManager(
         sdpOffer: String,
     ) {
         Log.d("CallManager") { "publishOfferToPeer: to=${calleePubKey.take(8)}, sdpLength=${sdpOffer.length}" }
-        val result = factory.createCallOffer(sdpOffer, calleePubKey, allCalleePubKeys, callId, callType, signer)
-        publishEvent(result.wrap)
+        signal("offer") {
+            val result = factory.createCallOffer(sdpOffer, calleePubKey, allCalleePubKeys, callId, callType, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     /**
@@ -257,8 +277,10 @@ class CallManager(
         val callType = currentCallType() ?: return
         val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
         Log.d("CallManager") { "publishOfferToPeer (mid-call): to=${peerPubKey.take(8)}, sdpLength=${sdpOffer.length}" }
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
-        publishEvent(result.wrap)
+        signal("mid-call offer") {
+            val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     /**
@@ -271,8 +293,10 @@ class CallManager(
         val callId = currentCallId() ?: return
         val allMembers = (currentPeerPubKeys() ?: emptySet()) + signer.pubKey
         Log.d("CallManager") { "publishAnswerToPeer: to=${peerPubKey.take(8)}, sdpLength=${sdpAnswer.length}" }
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, allMembers, callId, signer)
-        publishEvent(result.wrap)
+        signal("answer") {
+            val result = factory.createCallAnswer(sdpAnswer, peerPubKey, allMembers, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     // ---- P2P call initiation (convenience) ----
@@ -369,8 +393,10 @@ class CallManager(
 
         if (currentState !is CallState.Idle) {
             scope.launch {
-                val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
-                publishEvent(result.wrap)
+                signal("busy reject") {
+                    val result = factory.createReject(callerPubKey, callId, "busy", signer = signer)
+                    publishEvent(result.wrap)
+                }
             }
             return
         }
@@ -440,23 +466,25 @@ class CallManager(
         val allMembers = current.groupMembers + signer.pubKey
         val otherMembers = allMembers - signer.pubKey
         Log.d("CallManager") { "acceptCall: publishing answer to ${otherMembers.size} recipients" }
-        val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
-        result.wraps.forEach { publishEvent(it) }
+        signal("answer") {
+            val result = factory.createGroupCallAnswer(sdpAnswer, otherMembers, current.callId, signer)
+            result.wraps.forEach { publishEvent(it) }
 
-        // Notify our own other devices so they stop ringing. We wrap the
-        // *same* signed answer event for our own pubkey and publish it as
-        // an extra gift wrap. A sibling device in IncomingCall will observe
-        // the self-answer and transition to Ended(ANSWERED_ELSEWHERE)
-        // locally (see onCallAnswered). This call is the only place the
-        // "answered elsewhere" signal is generated — without it, a second
-        // logged-in device keeps ringing until its 60-second local timeout.
-        //
-        // The echo that arrives back at *this* device is ignored in
-        // Connecting/Connected state by the self-answer guard at the top
-        // of onCallAnswered, so it cannot disturb the live call.
-        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
-        publishEvent(selfWrap)
-        Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
+            // Notify our own other devices so they stop ringing. We wrap the
+            // *same* signed answer event for our own pubkey and publish it as
+            // an extra gift wrap. A sibling device in IncomingCall will observe
+            // the self-answer and transition to Ended(ANSWERED_ELSEWHERE)
+            // locally (see onCallAnswered). This call is the only place the
+            // "answered elsewhere" signal is generated — without it, a second
+            // logged-in device keeps ringing until its 60-second local timeout.
+            //
+            // The echo that arrives back at *this* device is ignored in
+            // Connecting/Connected state by the self-answer guard at the top
+            // of onCallAnswered, so it cannot disturb the live call.
+            val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+            publishEvent(selfWrap)
+            Log.d("CallManager") { "acceptCall: answer published, now in Connecting state" }
+        }
 
         // Trigger callee-to-callee mesh connections with peers we discovered
         // while still ringing (their answers arrived before we accepted).
@@ -483,14 +511,16 @@ class CallManager(
         }
 
         val otherMembers = current.groupMembers - signer.pubKey
-        val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
-        result.wraps.forEach { publishEvent(it) }
+        signal("reject") {
+            val result = factory.createGroupReject(otherMembers, current.callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
 
-        // Notify our own other devices so they stop ringing. See the
-        // matching comment in acceptCall — sibling devices in IncomingCall
-        // pick up this echo and transition to Ended(REJECTED) locally.
-        val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
-        publishEvent(selfWrap)
+            // Notify our own other devices so they stop ringing. See the
+            // matching comment in acceptCall — sibling devices in IncomingCall
+            // pick up this echo and transition to Ended(REJECTED) locally.
+            val selfWrap = EphemeralGiftWrapEvent.create(event = result.msg, recipientPubKey = signer.pubKey)
+            publishEvent(selfWrap)
+        }
     }
 
     private fun onCallAnswered(event: CallAnswerEvent) {
@@ -711,8 +741,10 @@ class CallManager(
     ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
-        val result = factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
-        publishEvent(result.wrap)
+        signal("renegotiation") {
+            val result = factory.createRenegotiate(sdpOffer, peerPubKey, peerPubKeys, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun sendRenegotiationAnswer(
@@ -721,8 +753,10 @@ class CallManager(
     ) {
         val callId = currentCallId() ?: return
         val peerPubKeys = currentPeerPubKeys() ?: return
-        val result = factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
-        publishEvent(result.wrap)
+        signal("renegotiation answer") {
+            val result = factory.createCallAnswer(sdpAnswer, peerPubKey, peerPubKeys, callId, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun onPeerConnected() {
@@ -781,8 +815,10 @@ class CallManager(
         schedulePeerTimeout(peerPubKey, callId)
 
         val allMembers = existingMembers + peerPubKey + signer.pubKey
-        val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
-        publishEvent(result.wrap)
+        signal("invite") {
+            val result = factory.createCallOffer(sdpOffer, peerPubKey, allMembers, callId, callType, signer)
+            publishEvent(result.wrap)
+        }
     }
 
     suspend fun hangup() {
@@ -815,8 +851,10 @@ class CallManager(
             transitionToEnded(callId, peerPubKeys, EndReason.HANGUP)
         }
 
-        val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
-        result.wraps.forEach { publishEvent(it) }
+        signal("hangup") {
+            val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+            result.wraps.forEach { publishEvent(it) }
+        }
     }
 
     private suspend fun onPeerHangup(event: CallHangupEvent) {
@@ -931,8 +969,10 @@ class CallManager(
             "publishHangupToInvitedPendingPeers: notifying ${invitedPending.size} invited pending peers to stop ringing"
         }
         for (peer in invitedPending) {
-            val result = factory.createHangup(peer, callId, signer = signer)
-            publishEvent(result.wrap)
+            signal("hangup") {
+                val result = factory.createHangup(peer, callId, signer = signer)
+                publishEvent(result.wrap)
+            }
         }
     }
 
@@ -1244,8 +1284,10 @@ class CallManager(
         }
 
         if (shouldPublishHangup) {
-            val result = factory.createHangup(peerPubKey, callId, signer = signer)
-            publishEvent(result.wrap)
+            signal("hangup") {
+                val result = factory.createHangup(peerPubKey, callId, signer = signer)
+                publishEvent(result.wrap)
+            }
         }
     }
 
@@ -1277,8 +1319,10 @@ class CallManager(
                 // Notify peers so their phones stop ringing immediately
                 // instead of waiting for their own 60-second timeout.
                 if (wasOffering && peerPubKeys.isNotEmpty()) {
-                    val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
-                    result.wraps.forEach { publishEvent(it) }
+                    signal("hangup") {
+                        val result = factory.createGroupHangup(peerPubKeys, callId, signer = signer)
+                        result.wraps.forEach { publishEvent(it) }
+                    }
                 }
             }
     }

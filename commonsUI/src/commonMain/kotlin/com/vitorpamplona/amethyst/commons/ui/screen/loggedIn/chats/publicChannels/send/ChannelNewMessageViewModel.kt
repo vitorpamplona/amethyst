@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
@@ -571,7 +572,7 @@ open class ChannelNewMessageViewModel :
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason)
+                            val nip95 = logSignerErrors("ChannelNewMessageViewModel") { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason) } ?: return@mapNotNull null
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 

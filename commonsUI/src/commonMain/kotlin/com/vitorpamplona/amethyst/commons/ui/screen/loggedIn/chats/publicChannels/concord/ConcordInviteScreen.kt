@@ -64,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord05Invites.ParsedInviteLink
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import org.jetbrains.compose.resources.StringResource
 
 private sealed interface RedeemState {
@@ -130,8 +131,16 @@ fun ConcordInviteScreen(
 
     LaunchedEffect(link, state) {
         if (state is RedeemState.Working) {
+            val result =
+                try {
+                    accountViewModel.account.concord.joinConcordViaInvite(link)
+                } catch (_: SignerExceptions) {
+                    // The signer refused (or the user rejected it there): nothing joined, so let them retry.
+                    null
+                }
             state =
-                when (val result = accountViewModel.account.concord.joinConcordViaInvite(link)) {
+                when (result) {
+                    null -> RedeemState.Failed(Res.string.concord_invite_failed, canRetry = true)
                     is ConcordInviteResult.Joined -> RedeemState.Done(result.communityId)
                     is ConcordInviteResult.InvalidLink ->
                         RedeemState.Failed(Res.string.concord_invite_failed_invalid, canRetry = false)

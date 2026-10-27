@@ -682,11 +682,13 @@ private fun ConcordFileUploadDialog(
                     },
                     uploader = accountViewModel.host.mediaUploader,
                     onceUploaded = { uploads ->
-                        val imetas = uploads.mapNotNull { it.toConcordImeta() }
-                        if (imetas.isNotEmpty()) {
-                            accountViewModel.account.concord.sendConcordChannelImageMessage(community, channel, "", imetas)
+                        accountViewModel.reportSignerErrors {
+                            val imetas = uploads.mapNotNull { it.toConcordImeta() }
+                            if (imetas.isNotEmpty()) {
+                                accountViewModel.account.concord.sendConcordChannelImageMessage(community, channel, "", imetas)
+                            }
+                            onUpload()
                         }
-                        onUpload()
                     },
                 )
 

@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.buttons.PostButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.BitcoinOrange
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.BigDecimal
@@ -156,14 +157,16 @@ class AddBountyAmountViewModel : ViewModel() {
 
         if (newValue != null) {
             viewModelScope.launch(Dispatchers.IO) {
-                account?.let { myAccount ->
-                    bounty?.let { bountyInner ->
-                        myAccount.sendAddBounty(
-                            newValue,
-                            bountyInner,
-                        )
+                logSignerErrors("AddBountyAmount") {
+                    account?.let { myAccount ->
+                        bounty?.let { bountyInner ->
+                            myAccount.sendAddBounty(
+                                newValue,
+                                bountyInner,
+                            )
+                        }
                     }
-                }
+                } ?: return@launch
 
                 nextAmount = TextFieldValue("")
             }

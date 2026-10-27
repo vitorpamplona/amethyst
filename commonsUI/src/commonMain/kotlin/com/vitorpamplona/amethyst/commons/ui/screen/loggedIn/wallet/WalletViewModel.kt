@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip47WalletConnect.Nip47WalletConnect
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceMethod
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.GetBalanceSuccessResponse
@@ -378,6 +379,9 @@ class WalletViewModel : ViewModel() {
                 try {
                     ClinkDebitPayer.requestBudget(acc, moneyOpRelays, pointer, amountSats, frequency)
                 } catch (_: IllegalArgumentException) {
+                    null
+                } catch (_: SignerExceptions) {
+                    // The request is signed and encrypted: a rejection in the signer means nothing was sent.
                     null
                 }
             onResult(response)

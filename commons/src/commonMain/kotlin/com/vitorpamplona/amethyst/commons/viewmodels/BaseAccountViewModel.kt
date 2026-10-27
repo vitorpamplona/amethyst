@@ -706,7 +706,7 @@ open class BaseAccountViewModel(
      * cold — never through the hub — is only reachable via the relays saved on its tab.
      */
     fun importConcordCommunities() =
-        viewModelScope.launch(Dispatchers.IO) {
+        launchSigner {
             val pinnedRelays =
                 account.settings.syncedSettings.navigation.bottomBarItems.value
                     .flatMap {
@@ -723,7 +723,7 @@ open class BaseAccountViewModel(
     fun sendConcordTyping(
         communityId: String,
         channelIdHex: String,
-    ) = viewModelScope.launch(Dispatchers.IO) {
+    ) = launchSigner {
         account.concord.sendConcordTyping(communityId, channelIdHex)
     }
 
@@ -731,7 +731,7 @@ open class BaseAccountViewModel(
         channel: RelayGroupChannel,
         threadRootId: HexKey? = null,
         replyToId: HexKey? = null,
-    ) = viewModelScope.launch(Dispatchers.IO) {
+    ) = launchSigner {
         account.relayGroups.sendBuzzTyping(channel, threadRootId, replyToId)
     }
 
@@ -1702,6 +1702,9 @@ open class BaseAccountViewModel(
             Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
         } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
             Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
+        } catch (e: SignerExceptions) {
+            // Any other refusal (e.g. a bunker without the method): the signer's answer, not a crash.
+            Log.w("AccountViewModel", "SignerExceptions", e)
         } catch (e: IllegalStateException) {
             notices.notify(SignerNotice.Failed(e))
         }
@@ -2068,7 +2071,7 @@ open class BaseAccountViewModel(
     fun captionsEnabledFlow() = account.settings.syncedSettings.videoPlayer.captionsEnabled
 
     fun setCaptionsEnabled(enabled: Boolean) {
-        viewModelScope.launch { account.changeCaptionsEnabled(enabled) }
+        launchSigner { account.changeCaptionsEnabled(enabled) }
     }
 
     fun changeVideoPlayerButtonItems(items: List<VideoPlayerButtonItem>) =

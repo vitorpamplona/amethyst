@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -1607,7 +1608,7 @@ open class ShortNotePostViewModel :
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason)
+                            val nip95 = logSignerErrors("ShortNotePostViewModel") { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
                             nip95attachments = nip95attachments + nip95
                             val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
 

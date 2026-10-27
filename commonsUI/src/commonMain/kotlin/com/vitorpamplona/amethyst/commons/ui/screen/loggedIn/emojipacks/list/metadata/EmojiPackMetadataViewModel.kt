@@ -116,6 +116,10 @@ class EmojiPackMetadataViewModel : ViewModel() {
                     )
                     isWorking = false
                     return@launch
+                } catch (_: SignerExceptions) {
+                    // The user rejected it in their signer, or the signer was unavailable: nothing
+                    // was published, so keep the form open instead of reporting success.
+                    return@launch
                 }
                 clear()
                 onSuccess()

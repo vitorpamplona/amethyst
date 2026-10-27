@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayManagement
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip86RelayManagement.Nip86Client
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Request
 import com.vitorpamplona.quartz.nip86RelayManagement.rpc.Nip86Response
@@ -46,7 +47,14 @@ class Nip86Retriever(
     ): Nip86Response {
         val jsonBody = client.serializeRequest(request)
         val bodyBytes = jsonBody.encodeToByteArray()
-        val authToken = client.buildAuthHeader(bodyBytes)
+        val authToken =
+            try {
+                client.buildAuthHeader(bodyBytes)
+            } catch (e: SignerExceptions) {
+                // Signing the NIP-98 header is up to the user's signer; a rejection is an answer.
+                Log.w("Nip86Retriever", "Could not sign the NIP-98 header for ${client.httpUrl}", e)
+                return Nip86Response(error = e.message ?: "Could not sign the request")
+            }
 
         val httpRequest =
             Request
