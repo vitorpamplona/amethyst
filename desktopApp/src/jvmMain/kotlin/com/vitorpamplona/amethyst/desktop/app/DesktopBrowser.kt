@@ -34,12 +34,16 @@ import java.util.concurrent.TimeUnit
  *
  * On Windows the link goes to the shell from a process of its own, rundll32's FileProtocolHandler,
  * before AWT is tried. AWT's browse makes the same ShellExecute call inside the app, and a Windows 11
- * user's links did nothing at all there, in every release. When it fails, the error only reaches a
- * log that the packaged app has no console for.
+ * user reported that links did nothing there, in every release; the cause was never reproduced.
+ * The cost: once rundll32 starts, [open] says true, and a shell that then fails shows its own
+ * dialog. Links outside the web are still checked against the registry first.
  *
  * [open] is false when nothing could take the link. AWT can't tell: on macOS its browse returns
  * normally for a scheme no app claims (a `lightning:` invoice with no wallet installed), so links
  * outside the web ask the OS for a handler first.
+ *
+ * `file:` links are never opened. Notes and their tags decide what gets here, and opening a file
+ * can run a program: on Windows even one on a share on someone else's server.
  */
 object DesktopBrowser {
     private val os = System.getProperty("os.name").orEmpty().lowercase()
@@ -54,6 +58,10 @@ object DesktopBrowser {
         // A URI never starts with a dash; something that does would reach xdg-open as an option.
         if (uri.startsWith("-")) return false
         val scheme = scheme(uri).lowercase()
+        if (scheme == "file") {
+            Log.w("DesktopBrowser") { "Not opening a file link" }
+            return false
+        }
         if (scheme != "http" && scheme != "https") {
             when (hasHandler(uri, scheme)) {
                 false -> {
@@ -67,72 +75,57 @@ object DesktopBrowser {
                 null -> {}
             }
         }
-        if (isWindows && openWithWindowsShell(uri)) return true
+        if (isWindows) {
+            windowsShellCommand(uri, System.getenv("SystemRoot"))?.let { if (launch("rundll32", uri, it)) return true }
+        }
         try {
             if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
                 Desktop.getDesktop().browse(URI(uri))
                 return true
             }
         } catch (e: Exception) {
-            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link: ${e::class.simpleName}${osError(e)}" }
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link: ${e::class.simpleName}" }
         }
-        if (!isLinux) return false
-        return try {
-            ProcessBuilder("xdg-open", uri)
-                .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                .redirectError(ProcessBuilder.Redirect.DISCARD)
-                .start()
-            true
-        } catch (e: Exception) {
-            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with xdg-open: ${e::class.simpleName}" }
-            false
-        }
+        return isLinux && launch("xdg-open", uri, listOf("xdg-open", uri))
     }
 
-    private fun openWithWindowsShell(uri: String): Boolean {
-        val command = windowsShellCommand(uri, System.getenv("SystemRoot")) ?: return false
-        return try {
+    /** Starts [command] and leaves it running; false when it could not start. */
+    private fun launch(
+        tool: String,
+        uri: String,
+        command: List<String>,
+    ): Boolean =
+        try {
             ProcessBuilder(command)
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
                 .redirectError(ProcessBuilder.Redirect.DISCARD)
                 .start()
             true
         } catch (e: Exception) {
-            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with rundll32: ${e::class.simpleName}" }
+            Log.w("DesktopBrowser") { "Could not open a ${scheme(uri)} link with $tool: ${e::class.simpleName}" }
             false
         }
-    }
 
     /**
      * The command that hands [uri] to the Windows shell, or null when [uri] is not a valid URI or
      * Windows' folder is unknown. rundll32 is named by its full path: Windows looks for a bare
-     * program name in the app's own folder first. The URI goes through no shell, and a valid one
-     * has no spaces or quotes, so it reaches FileProtocolHandler as one argument.
+     * program name in the app's own folder first. url.dll's FileProtocolHandler only takes ANSI
+     * text, which turns a character outside the code page into "?", so the URI goes over
+     * percent-encoded, in ASCII. It goes through no shell, and a valid one has no spaces or quotes,
+     * so it reaches FileProtocolHandler as one argument.
      */
     internal fun windowsShellCommand(
         uri: String,
         systemRoot: String?,
     ): List<String>? {
         if (systemRoot.isNullOrBlank()) return null
-        try {
-            URI(uri)
-        } catch (e: URISyntaxException) {
-            return null
-        }
-        return listOf("${systemRoot.trimEnd('\\')}\\System32\\rundll32.exe", "url.dll,FileProtocolHandler", uri)
-    }
-
-    /**
-     * Windows' reason for a failed browse, the part of AWT's message after the address it quotes:
-     * "Failed to open <uri>. Error message: <reason>". Empty for any other message.
-     */
-    internal fun osError(e: Exception): String {
-        val reason =
-            e.message
-                ?.substringAfterLast("Error message: ", missingDelimiterValue = "")
-                ?.trim()
-                .orEmpty()
-        return if (reason.isEmpty()) "" else " ($reason)"
+        val ascii =
+            try {
+                URI(uri).toASCIIString()
+            } catch (e: URISyntaxException) {
+                return null
+            }
+        return listOf("${systemRoot.trimEnd('\\')}\\System32\\rundll32.exe", "url.dll,FileProtocolHandler", ascii)
     }
 
     /**

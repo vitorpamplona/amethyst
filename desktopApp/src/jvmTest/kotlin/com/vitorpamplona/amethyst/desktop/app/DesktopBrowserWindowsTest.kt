@@ -20,15 +20,14 @@
  */
 package com.vitorpamplona.amethyst.desktop.app
 
-import java.io.IOException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 /**
- * How a link reaches the Windows shell: rundll32 by its full path, with the link as one argument,
- * and a failed AWT browse logged by Windows' reason, not by the address.
+ * How a link reaches the Windows shell: rundll32 by its full path, with the link as one ASCII
+ * argument. And `file:` links, which no OS gets to open.
  */
 class DesktopBrowserWindowsTest {
     @Test
@@ -61,16 +60,18 @@ class DesktopBrowserWindowsTest {
     }
 
     @Test
-    fun theOsReasonIsKeptAndTheAddressDropped() {
-        val e = IOException("Failed to open https://example.com/?secret=5ec2e7. Error message: The system cannot find the file specified.")
-        val reason = DesktopBrowser.osError(e)
-        assertEquals(" (The system cannot find the file specified.)", reason)
-        assertFalse("5ec2e7" in reason)
+    fun nonAsciiGoesOverPercentEncoded() {
+        // url.dll's handler is ANSI-only: 日本 would reach the browser as "??".
+        assertEquals(
+            "https://ja.wikipedia.org/wiki/%E6%97%A5%E6%9C%AC",
+            DesktopBrowser.windowsShellCommand("https://ja.wikipedia.org/wiki/日本", "C:\\Windows")?.last(),
+        )
     }
 
     @Test
-    fun anyOtherMessageAddsNothing() {
-        assertEquals("", DesktopBrowser.osError(IOException("Failed to open https://example.com/?secret=5ec2e7")))
-        assertEquals("", DesktopBrowser.osError(IOException()))
+    fun aFileLinkIsNeverOpened() {
+        // Refused before any OS call, so this launches nothing on any machine.
+        assertFalse(DesktopBrowser.open("file://attacker.example/share/payload.exe"))
+        assertFalse(DesktopBrowser.open("FILE:///C:/Windows/System32/calc.exe"))
     }
 }
