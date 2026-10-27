@@ -69,13 +69,24 @@ else
 fi
 status=$?
 
+# Android lint, CI's lint-android job, which nothing above covers: a media3 @UnstableApi call
+# passes every test and fails only here (#4649). Its own Gradle invocation after the test JVMs
+# have exited, for memory (see the lint-android note in .github/workflows/build.yml). playDebug
+# reuses :amethyst:testPlayDebugUnitTest's compile; CI's benchmark variant would compile a second one.
+if [ "$status" = 0 ] ; then
+    echo "Running Android lint... "
+    ./gradlew :amethyst:lintPlayDebug --quiet
+    status=$?
+fi
+
 if [ "$status" = 0 ] ; then
     echo "All test passed."
     exit 0
 else
     echo "*********************************************************"
     echo 1>&2 "Failing check or test"
-    printf "Fix the compile errors or failing tests above and push again. Run ${GREEN}./gradlew test${NO_COLOR} for the full JVM suite.\n"
+    printf "Fix the compile errors, failing tests or lint errors above and push again. Run ${GREEN}./gradlew test${NO_COLOR} for the full JVM suite.\n"
+    printf "Lint report: amethyst/build/reports/lint-results-playDebug.html\n"
     echo "*********************************************************"
     exit 1
 fi

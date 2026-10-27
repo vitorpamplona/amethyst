@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * `amy gift wrap --to USER [EVENT-JSON]` and `amy gift unwrap [GIFTWRAP-JSON]`
@@ -35,7 +36,10 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
  *
  *   wrap   seals a signed inner event for USER and wraps it in a kind:1059
  *          gift wrap (random ephemeral sender). Prints the wrap; pass
- *          `--relay URL[,URL…]` to also broadcast it.
+ *          `--relay URL[,URL…]` to also broadcast it. The seal and the wrap
+ *          are each dated at random up to two days in the past (NIP-17's
+ *          rule, which nak and nostr-tools apply to every gift wrap);
+ *          `--no-backdate` stamps both with the current time instead.
  *   unwrap decrypts a kind:1059 gift wrap with the active account's key,
  *          unseals it, and prints the inner event.
  *
@@ -50,7 +54,9 @@ object GiftCommands {
         |amy gift — NIP-59 gift-wrap primitives (inner/wrap JSON from arg or stdin/`-`)
         |
         |  gift wrap --to USER [EVENT-JSON]            seal + wrap a signed inner event for
-        |       [--relay URL[,URL…]]                    USER (add --relay to broadcast the wrap)
+        |       [--relay URL[,URL…]]                    USER (add --relay to broadcast the wrap);
+        |       [--no-backdate]                         seal and wrap are dated at random up to two
+        |                                               days back, --no-backdate dates them now
         |  gift unwrap [GIFTWRAP-JSON]                 decrypt + unseal a kind:1059 wrap addressed
         |                                               to the active account
         """.trimMargin()
@@ -76,6 +82,7 @@ object GiftCommands {
     ): Int {
         val args = Args(rest)
         val to = args.flag("to") ?: return Output.error("bad_args", "gift wrap requires --to USER")
+        val backdate = !args.bool("no-backdate")
         val json = RawEventSupport.readArgOrStdin(args)
         if (json.isEmpty()) return Output.error("bad_args", "no inner event JSON on the argument or stdin")
         val inner =
@@ -88,8 +95,8 @@ object GiftCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val peer = ctx.requireUserHex(to)
-            val seal = SealEvent.create(event = inner, encryptTo = peer, signer = ctx.signer)
-            val giftWrap = GiftWrapEvent.create(event = seal, recipientPubKey = peer)
+            val seal = SealEvent.create(event = inner, encryptTo = peer, signer = ctx.signer, createdAt = layerCreatedAt(backdate))
+            val giftWrap = GiftWrapEvent.create(event = seal, recipientPubKey = peer, createdAt = layerCreatedAt(backdate))
             val wrapNode = CliJson.parse(giftWrap.toJson())
 
             val targets = RawEventSupport.relayFlag(args)
@@ -109,6 +116,9 @@ object GiftCommands {
             return 0
         }
     }
+
+    /** A seal's or wrap's `created_at`: each layer draws its own random time up to two days back (NIP-17, NIP-59). */
+    private fun layerCreatedAt(backdate: Boolean): Long = if (backdate) TimeUtils.randomWithTwoDays() else TimeUtils.now()
 
     private suspend fun unwrap(
         dataDir: DataDir,

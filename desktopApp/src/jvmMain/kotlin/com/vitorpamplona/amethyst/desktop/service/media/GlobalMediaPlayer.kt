@@ -91,6 +91,12 @@ data class MediaPlaybackState(
      * the feed starting it on its own. Only such a video keeps playing once its screen closes.
      */
     val isChosen: Boolean = false,
+    /**
+     * The card that plays it, or null when none does (the now-playing bar, full screen, a card that
+     * left). The same video can be on screen in many cards (a note and its quotes, the same file
+     * posted again), each with its own engine: only this one shows this state and drives it.
+     */
+    val owner: Any? = null,
 )
 
 /**
@@ -312,10 +318,12 @@ object GlobalMediaPlayer {
 
         // Reuse the engine only when it's already on this URL AND healthy. If the last attempt
         // errored (a common transient for live HLS — a dead segment, a 403, a stream that just
-        // went live), fall through and re-open instead of leaving a stuck/errored surface.
+        // went live), fall through and re-open instead of leaving a stuck/errored surface. Not
+        // when another card holds it: play on one copy of a video must not start or stop another.
         val loaded = videoPlayer
-        if (loaded != null && current.url == url && current.errorReason == null) {
+        if (loaded != null && current.url == url && current.errorReason == null && !isHeldByOtherCard(loaded, owner)) {
             Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
+            if (owner != null) _videoState.update { it.copy(owner = owner) }
             if (startAt > 0f) {
                 loaded.seekTo(startAt * 1000f)
             } else if (chosen && !current.isPlaying && current.position >= ENDED_POSITION) {
@@ -328,14 +336,18 @@ object GlobalMediaPlayer {
         }
 
         // The card's own engine, or, without a card (full screen, the now-playing bar), the engine
-        // of a card showing this video: the picture on screen is the one that plays.
+        // of a card showing this video: the picture on screen is the one that plays. A card never
+        // takes another card's engine, even on the same video.
         val card =
             synchronized(initLock) {
-                val own = owner?.let { cardEngines[it] }?.takeIf { it.url == url }
-                (own ?: cardEngines.values.firstOrNull { it.url == url })?.engine
+                if (owner != null) {
+                    cardEngines[owner]?.takeIf { it.url == url }?.let { owner to it.engine }
+                } else {
+                    cardEngines.entries.firstOrNull { it.value.url == url }?.let { it.key to it.value.engine }
+                }
             }
-        if (card != null && card.error == null) {
-            startWarmVideo(card, url, startAt, chosen)
+        if (card != null && card.second.error == null) {
+            startWarmVideo(card.second, url, startAt, chosen, card.first)
             return
         }
 
@@ -343,7 +355,7 @@ object GlobalMediaPlayer {
         val warm = synchronized(initLock) { warmEngines.remove(url) }
         if (warm != null) {
             if (warm.error == null) {
-                startWarmVideo(warm, url, startAt, chosen)
+                startWarmVideo(warm, url, startAt, chosen, owner)
                 return
             }
             retireVideoPlayer(warm)
@@ -384,6 +396,7 @@ object GlobalMediaPlayer {
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
                 isChosen = chosen,
+                owner = owner,
             )
         // Only now, so the new engine's first report lands on the new video's state.
         startVideoSync(player, url)
@@ -402,15 +415,16 @@ object GlobalMediaPlayer {
     }
 
     /**
-     * Makes [player], opened paused ahead of time on [url], the playing engine: the one it replaces
-     * retires, and it plays (from [startAt]) as soon as its open has the media, which it usually
-     * already has.
+     * Makes [player], opened paused ahead of time on [url], the playing engine of the card [owner]:
+     * the one it replaces retires, and it plays (from [startAt]) as soon as its open has the media,
+     * which it usually already has.
      */
     private fun startWarmVideo(
         player: VideoPlayerState,
         url: String,
         startAt: Float,
         chosen: Boolean,
+        owner: Any?,
     ) {
         Log.d(TAG) { "playVideo warm url=$url" }
         val previousUrl = _videoState.value.url
@@ -432,6 +446,7 @@ object GlobalMediaPlayer {
                 volume = if (muted) 0 else 100,
                 isMuted = muted,
                 isChosen = chosen,
+                owner = owner,
             )
         startVideoSync(player, url)
 
@@ -446,9 +461,11 @@ object GlobalMediaPlayer {
                     // Pressed play on a card whose engine played to its end: start over. Not when
                     // the feed brings it back on its own: it then stays on the last frame.
                     player.seekTo(0f)
-                } else {
+                } else if (player.currentTime <= 0.0) {
                     // Where this video was, if its paused open had not restored it before it took
-                    // over (a no-op when it had: it is already there).
+                    // over. Not for an engine already somewhere in it: a card's own, paused where
+                    // it stopped, carries on from there, not from where another card showing the
+                    // same video stopped.
                     restorePosition(player, url, restartIfEnded = chosen)
                 }
                 if (!videoPauseRequested) player.play()
@@ -668,9 +685,16 @@ object GlobalMediaPlayer {
                     publishCards()
                     false
                 } else {
-                    val playing = videoPlayer?.takeIf { _videoState.value.url == url && _videoState.value.errorReason == null && !isCardEngine(it) }
+                    // The playing engine goes to the card that started it, not to whichever card
+                    // showing the same video attaches first.
+                    val state = _videoState.value
+                    val playing =
+                        videoPlayer?.takeIf {
+                            state.url == url && state.errorReason == null && (state.owner == null || state.owner === owner) && !isCardEngine(it)
+                        }
                     val adopted = playing ?: warmEngines.remove(url)?.takeIf { it.error == null }
                     if (adopted != null) cardEngines[owner] = CardEngine(url, adopted)
+                    if (playing != null) _videoState.update { it.copy(owner = owner) }
                     publishCards()
                     adopted == null
                 }
@@ -693,10 +717,34 @@ object GlobalMediaPlayer {
             synchronized(initLock) {
                 cardEngines.remove(owner)?.also { publishCards() }
             } ?: return
-        if (card.engine !== videoPlayer) retireVideoPlayer(card.engine)
+        if (card.engine !== videoPlayer) {
+            retireVideoPlayer(card.engine)
+        } else {
+            // Still playing (in the now-playing bar), but no card plays it now.
+            _videoState.update { if (it.owner === owner) it.copy(owner = null) else it }
+        }
     }
 
+    /**
+     * Whether [state], the playing video, is the one the card [owner] showing [url] plays. A card
+     * holding an engine of its own shows only what its engine plays; one without (a feed that does
+     * not play videos on its own, or past [MAX_CARD_ENGINES]) also shows a video no card plays.
+     */
+    fun isPlayedBy(
+        state: MediaPlaybackState,
+        url: String,
+        owner: Any,
+        holdsEngine: Boolean,
+    ): Boolean = state.url == url && (state.owner === owner || (state.owner == null && !holdsEngine))
+
     private fun isCardEngine(engine: VideoPlayerState?) = engine != null && synchronized(initLock) { cardEngines.values.any { it.engine === engine } }
+
+    // Whether a card other than [owner] holds [engine]. Without an owner (full screen, the
+    // now-playing bar) any card's engine will do.
+    private fun isHeldByOtherCard(
+        engine: VideoPlayerState,
+        owner: Any?,
+    ) = owner != null && synchronized(initLock) { cardEngines.any { (key, card) -> key !== owner && card.engine === engine } }
 
     // Callers hold [initLock].
     private fun publishCards() {

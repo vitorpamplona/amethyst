@@ -64,18 +64,22 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
+import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
+import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -128,19 +132,27 @@ fun DesktopVideoPlayer(
     blurhash: String? = null,
     thumbhash: String? = null,
 ) {
-    // Only this video's state: every other card on screen would otherwise recompose on each tick
-    // of whichever video is playing.
+    // This card, as the one composable allowed to draw the engine (see videoSurfaceOwner).
+    val surfaceOwner = remember { Any() }
+
+    // Whether this card holds an engine of its own (see attachCard).
+    val holdsOwnEngine = remember(surfaceOwner) { GlobalMediaPlayer.cardPlayers.map { surfaceOwner in it }.distinctUntilChanged() }
+    // Only the state of the video this card plays: every other card on screen would otherwise
+    // recompose on each tick of whichever video is playing, and a card showing the same video as
+    // another would take that one's state, and its play button that one's engine.
     val ownState =
-        remember(url) {
-            GlobalMediaPlayer.videoState.map { it.takeIf { state -> state.url == url } }.distinctUntilChanged()
+        remember(url, surfaceOwner) {
+            combine(GlobalMediaPlayer.videoState, holdsOwnEngine) { state, holds ->
+                state.takeIf { GlobalMediaPlayer.isPlayedBy(it, url, surfaceOwner, holds) }
+            }.distinctUntilChanged()
         }
-    val videoState by ownState.collectAsState(GlobalMediaPlayer.videoState.value.takeIf { it.url == url })
+
+    // The same check, for the effects below, which read the state once rather than observe it.
+    fun isPlayedHere(state: MediaPlaybackState) = GlobalMediaPlayer.isPlayedBy(state, url, surfaceOwner, surfaceOwner in GlobalMediaPlayer.cardPlayers.value)
+    val videoState by ownState.collectAsState(GlobalMediaPlayer.videoState.value.takeIf(::isPlayedHere))
     val isShortVideo = LocalShortVideo.current
     val isActiveVideo = videoState != null
     val scope = rememberCoroutineScope()
-
-    // This card, as the one composable allowed to draw the engine (see videoSurfaceOwner).
-    val surfaceOwner = remember { Any() }
     val currentSurfaceOwner by GlobalMediaPlayer.videoSurfaceOwner.collectAsState()
     val isFullscreen by GlobalMediaPlayer.isFullscreen.collectAsState()
     LaunchedEffect(isActiveVideo, currentSurfaceOwner) {
@@ -236,22 +248,23 @@ fun DesktopVideoPlayer(
                 // screen there is the one that matters.
                 if (GlobalMediaPlayer.isFullscreen.value) return@LaunchedEffect
                 val state = GlobalMediaPlayer.videoState.value
+                val mine = isPlayedHere(state)
                 if (isWinner.value) {
                     hasBeenVisible[0] = true
                     // The card in view draws the video, also when another card showing it started it.
-                    if (state.url == url) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
-                    val ended = state.url == url && state.position >= 0.99f
-                    if (autoPlayWhenVisible && loaded && !ended && (state.url != url || !state.isPlaying)) {
+                    if (mine) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
+                    val ended = mine && state.position >= 0.99f
+                    if (autoPlayWhenVisible && loaded && !ended && (!mine || !state.isPlaying)) {
                         GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
                     }
-                } else if (hasBeenVisible[0] && pauseWhenHidden && state.url == url) {
+                } else if (hasBeenVisible[0] && pauseWhenHidden && mine) {
                     // A screen sliding or scaling away takes its cards out of view too. Waiting
                     // out that transition lets the card leave first, and releaseVideo decide.
                     delay(SCREEN_TRANSITION_MS)
                     // Meanwhile another card showing the same video may have come into view.
                     val owner = GlobalMediaPlayer.videoSurfaceOwner.value
                     val handedOver = owner != null && owner !== surfaceOwner
-                    if (handedOver || GlobalMediaPlayer.isFullscreen.value || GlobalMediaPlayer.videoState.value.url != url) {
+                    if (handedOver || GlobalMediaPlayer.isFullscreen.value || !isPlayedHere(GlobalMediaPlayer.videoState.value)) {
                         return@LaunchedEffect
                     }
                     // Also while it is still loading, or it would start once loaded, off screen.
@@ -503,7 +516,7 @@ private fun PlaybackErrorMessage(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "Can't play this video",
+                text = stringRes(Res.string.error_video_playback_failed),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -517,7 +530,7 @@ private fun PlaybackErrorMessage(
                     runCatching { Desktop.getDesktop().browse(URI(url)) }
                 },
             ) {
-                Text("Open in default player")
+                Text(stringRes(Res.string.video_error_open_in_default_player))
             }
         }
     }

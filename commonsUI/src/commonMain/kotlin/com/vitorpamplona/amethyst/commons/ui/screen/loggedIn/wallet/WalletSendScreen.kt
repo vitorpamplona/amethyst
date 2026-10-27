@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_paste
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.wallet_paste_invoice
 import com.vitorpamplona.amethyst.commons.resources.wallet_pay
@@ -134,7 +135,7 @@ fun WalletSendScreen(
                             }) {
                                 Icon(
                                     symbol = MaterialSymbols.ContentPaste,
-                                    contentDescription = "Paste",
+                                    contentDescription = stringRes(Res.string.action_paste),
                                 )
                             }
                         },

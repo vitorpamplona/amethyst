@@ -236,12 +236,16 @@ fun timeAgoNoDotNoDay(time: Long?): String {
     }
 }
 
+/** [now] lets a caller that already branched on the time left format against the same instant. */
 @Composable
-fun timeAheadNoDot(time: Long?): String {
+fun timeAheadNoDot(
+    time: Long?,
+    now: Long = TimeUtils.now(),
+): String {
     if (time == null) return " "
     if (time == 0L) return " ${stringRes(Res.string.never)}"
 
-    val timeDifference = time - TimeUtils.now()
+    val timeDifference = time - now
 
     return when {
         timeDifference > TimeUtils.ONE_YEAR -> {

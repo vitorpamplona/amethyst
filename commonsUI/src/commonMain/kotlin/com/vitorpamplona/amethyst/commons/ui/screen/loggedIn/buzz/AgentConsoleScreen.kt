@@ -25,10 +25,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -46,7 +48,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -62,10 +63,37 @@ import com.vitorpamplona.amethyst.commons.model.buzz.AgentFleetMetrics
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentUsageSummary
 import com.vitorpamplona.amethyst.commons.model.buzz.TokenTotals
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.agent_console_attest
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
+import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
+import com.vitorpamplona.amethyst.commons.resources.agent_console_estimated_totals_warning
+import com.vitorpamplona.amethyst.commons.resources.agent_console_fleet_total
+import com.vitorpamplona.amethyst.commons.resources.agent_console_no_personas
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_agents
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_read
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_write
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_harness
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_input_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_last_turn
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_model
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_models
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_output_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_provider
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_runtime
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_sessions
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_total_tokens
+import com.vitorpamplona.amethyst.commons.resources.agent_console_row_turns
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_costs
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_observer
+import com.vitorpamplona.amethyst.commons.resources.agent_console_tab_personas
+import com.vitorpamplona.amethyst.commons.resources.agent_console_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_new_title
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.buzz.AgentAttestationScreen
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -105,7 +133,7 @@ fun AgentConsoleScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
-    val tabs = remember { listOf("Costs", "Personas", "Observer") }
+    val tabs = listOf(stringRes(Res.string.agent_console_tab_costs), stringRes(Res.string.agent_console_tab_personas), stringRes(Res.string.agent_console_tab_observer))
 
     // The observer stream is a live REQ; only keep it open while its tab is on screen.
     if (selectedTab == 2) {
@@ -116,13 +144,13 @@ fun AgentConsoleScreen(
     }
 
     Scaffold(
-        topBar = { TopBarWithBackButton("Agent Console", nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.agent_console_title), nav) },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { nav.nav(Route.AgentAttestation) },
                 shape = CircleShape,
             ) {
-                Icon(symbol = MaterialSymbols.Key, contentDescription = "Attest")
+                Icon(symbol = MaterialSymbols.Key, contentDescription = stringRes(Res.string.agent_console_attest))
             }
         },
     ) { padding ->
@@ -157,7 +185,7 @@ fun AgentConsoleScreen(
 @Composable
 private fun CostsTab(metrics: AgentFleetMetrics) {
     if (metrics.agents.isEmpty()) {
-        EmptyState("No agent turn metrics yet. Metrics appear once your agents publish kind:44200 events to you.")
+        EmptyState(stringRes(Res.string.agent_console_empty_metrics))
         return
     }
 
@@ -179,7 +207,7 @@ private fun FleetSummaryCard(metrics: AgentFleetMetrics) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "Fleet total",
+                text = stringRes(Res.string.agent_console_fleet_total),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -187,13 +215,13 @@ private fun FleetSummaryCard(metrics: AgentFleetMetrics) {
                 text = formatCost(metrics.totals.costUsd),
                 style = MaterialTheme.typography.headlineMedium,
             )
-            MetaRow("Agents", metrics.agents.size.toString())
-            MetaRow("Sessions", metrics.totalSessions.toString())
-            MetaRow("Turns", metrics.totalTurns.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_agents), metrics.agents.size.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_sessions), metrics.totalSessions.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_turns), metrics.totalTurns.toString())
             TokenBreakdown(metrics.totals)
             if (metrics.hasUnreliableEstimates) {
                 Text(
-                    text = "⚠ Some totals are estimated from per-turn deltas (a session reported no cumulative counts).",
+                    text = stringRes(Res.string.agent_console_estimated_totals_warning),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -216,11 +244,11 @@ private fun AgentCard(agent: AgentUsageSummary) {
                 text = formatCost(agent.totals.costUsd),
                 style = MaterialTheme.typography.titleLarge,
             )
-            MetaRow("Sessions", agent.sessions.toString())
-            MetaRow("Turns", agent.turns.toString())
-            if (agent.models.isNotEmpty()) MetaRow("Models", agent.models.sorted().joinToString(", "))
-            if (agent.harnesses.isNotEmpty()) MetaRow("Harness", agent.harnesses.sorted().joinToString(", "))
-            agent.lastActivity?.let { MetaRow("Last turn", it) }
+            MetaRow(stringRes(Res.string.agent_console_row_sessions), agent.sessions.toString())
+            MetaRow(stringRes(Res.string.agent_console_row_turns), agent.turns.toString())
+            if (agent.models.isNotEmpty()) MetaRow(stringRes(Res.string.agent_console_row_models), agent.models.sorted().joinToString(", "))
+            if (agent.harnesses.isNotEmpty()) MetaRow(stringRes(Res.string.agent_console_row_harness), agent.harnesses.sorted().joinToString(", "))
+            agent.lastActivity?.let { MetaRow(stringRes(Res.string.agent_console_row_last_turn), it) }
             TokenBreakdown(agent.totals)
         }
     }
@@ -229,13 +257,13 @@ private fun AgentCard(agent: AgentUsageSummary) {
 @Composable
 private fun TokenBreakdown(totals: TokenTotals) {
     HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-    MetaRow("Input tokens", formatCount(totals.inputTokens))
-    MetaRow("Output tokens", formatCount(totals.outputTokens))
-    MetaRow("Total tokens", formatCount(totals.totalTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_input_tokens), formatCount(totals.inputTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_output_tokens), formatCount(totals.outputTokens))
+    MetaRow(stringRes(Res.string.agent_console_row_total_tokens), formatCount(totals.totalTokens))
     // Null = no turn reported the component. NIP-AM forbids reading that as zero, so show a dash
     // rather than hide the row (which would look the same as a reported 0).
-    MetaRow("Cache read", totals.cacheReadTokens?.let(::formatCount) ?: "—")
-    MetaRow("Cache write", totals.cacheWriteTokens?.let(::formatCount) ?: "—")
+    MetaRow(stringRes(Res.string.agent_console_row_cache_read), totals.cacheReadTokens?.let(::formatCount) ?: "—")
+    MetaRow(stringRes(Res.string.agent_console_row_cache_write), totals.cacheWriteTokens?.let(::formatCount) ?: "—")
 }
 
 @Composable
@@ -253,13 +281,14 @@ private fun PersonasTab(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(symbol = MaterialSymbols.AddCircle, contentDescription = null)
-                Text("  New persona")
+                Spacer(Modifier.width(8.dp))
+                Text(stringRes(Res.string.buzz_persona_new_title))
             }
         }
         if (personas.isEmpty()) {
             item {
                 Text(
-                    text = "No personas published yet. Create one to define an agent (kind:30175).",
+                    text = stringRes(Res.string.agent_console_no_personas),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
@@ -290,9 +319,9 @@ private fun PersonaCardView(
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            persona.model?.let { MetaRow("Model", it) }
-            persona.provider?.let { MetaRow("Provider", it) }
-            persona.runtime?.let { MetaRow("Runtime", it) }
+            persona.model?.let { MetaRow(stringRes(Res.string.agent_console_row_model), it) }
+            persona.provider?.let { MetaRow(stringRes(Res.string.agent_console_row_provider), it) }
+            persona.runtime?.let { MetaRow(stringRes(Res.string.agent_console_row_runtime), it) }
             persona.systemPrompt?.takeIf { it.isNotBlank() }?.let {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
                 Text(
@@ -307,7 +336,7 @@ private fun PersonaCardView(
 @Composable
 private fun ObserverTab(frames: List<AgentConsoleViewModel.ObserverRow>) {
     if (frames.isEmpty()) {
-        EmptyState("Listening for live agent telemetry (kind:24200). Frames appear here while your agents are running.")
+        EmptyState(stringRes(Res.string.agent_console_empty_observer))
         return
     }
 

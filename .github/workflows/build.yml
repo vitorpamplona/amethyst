@@ -430,6 +430,8 @@ jobs:
       # Same daemon cap as the sibling job: lintAnalyze draws on the Gradle
       # daemon's heap, which is why the earlier 4g experiment broke it. Only the
       # Kotlin daemon is trimmed.
+      # .git-hooks/pre-push runs :amethyst:lintPlayDebug, the debug twin of these
+      # two; change the variant in both places.
       - name: Lint Android (gradle)
         run: |
           ./gradlew \

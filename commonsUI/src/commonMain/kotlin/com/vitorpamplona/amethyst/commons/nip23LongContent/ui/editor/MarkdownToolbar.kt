@@ -39,6 +39,19 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_blockquote
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_bold
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_bullet_list
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_horizontal_rule
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_image
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_inline_code
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_italic
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_link
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_numbered_list
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_strikethrough
+import com.vitorpamplona.amethyst.commons.resources.markdown_toolbar_task_list
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
  * Markdown toolbar with Material icons, grouped formatting buttons, and active state.
@@ -65,30 +78,30 @@ fun MarkdownToolbar(
         Separator()
 
         // --- Inline formatting ---
-        ToolbarIconButton(MaterialSymbols.FormatBold, "Bold", state.isBold) { state.toggleBold() }
-        ToolbarIconButton(MaterialSymbols.FormatItalic, "Italic", state.isItalic) { state.toggleItalic() }
-        ToolbarIconButton(MaterialSymbols.FormatStrikethrough, "Strikethrough", state.isStrikethrough) { state.toggleStrikethrough() }
-        ToolbarIconButton(MaterialSymbols.Code, "Inline code", state.isInlineCode) { state.toggleInlineCode() }
+        ToolbarIconButton(MaterialSymbols.FormatBold, stringRes(Res.string.markdown_toolbar_bold), state.isBold) { state.toggleBold() }
+        ToolbarIconButton(MaterialSymbols.FormatItalic, stringRes(Res.string.markdown_toolbar_italic), state.isItalic) { state.toggleItalic() }
+        ToolbarIconButton(MaterialSymbols.FormatStrikethrough, stringRes(Res.string.markdown_toolbar_strikethrough), state.isStrikethrough) { state.toggleStrikethrough() }
+        ToolbarIconButton(MaterialSymbols.Code, stringRes(Res.string.markdown_toolbar_inline_code), state.isInlineCode) { state.toggleInlineCode() }
 
         Separator()
 
         // --- Lists ---
-        ToolbarIconButton(MaterialSymbols.AutoMirrored.FormatListBulleted, "Bullet list", state.isUnorderedList) { state.toggleUnorderedList() }
-        ToolbarIconButton(MaterialSymbols.FormatListNumbered, "Numbered list", state.isOrderedList) { state.toggleOrderedList() }
-        ToolbarIconButton(MaterialSymbols.Checklist, "Task list", state.isTaskList) { state.toggleTaskList() }
+        ToolbarIconButton(MaterialSymbols.AutoMirrored.FormatListBulleted, stringRes(Res.string.markdown_toolbar_bullet_list), state.isUnorderedList) { state.toggleUnorderedList() }
+        ToolbarIconButton(MaterialSymbols.FormatListNumbered, stringRes(Res.string.markdown_toolbar_numbered_list), state.isOrderedList) { state.toggleOrderedList() }
+        ToolbarIconButton(MaterialSymbols.Checklist, stringRes(Res.string.markdown_toolbar_task_list), state.isTaskList) { state.toggleTaskList() }
 
         Separator()
 
         // --- Block elements ---
-        ToolbarIconButton(MaterialSymbols.FormatQuote, "Blockquote", state.isBlockquote) { state.toggleBlockquote() }
+        ToolbarIconButton(MaterialSymbols.FormatQuote, stringRes(Res.string.markdown_toolbar_blockquote), state.isBlockquote) { state.toggleBlockquote() }
         ToolbarButton(label = "```", active = false) { state.toggleCodeBlock() }
-        ToolbarIconButton(MaterialSymbols.HorizontalRule, "Horizontal rule", false) { state.insertHorizontalRule() }
+        ToolbarIconButton(MaterialSymbols.HorizontalRule, stringRes(Res.string.markdown_toolbar_horizontal_rule), false) { state.insertHorizontalRule() }
 
         Separator()
 
         // --- Insert ---
-        ToolbarIconButton(MaterialSymbols.Link, "Link", false) { state.insertLink() }
-        ToolbarIconButton(MaterialSymbols.Image, "Image", false) { state.insertImage() }
+        ToolbarIconButton(MaterialSymbols.Link, stringRes(Res.string.markdown_toolbar_link), false) { state.insertLink() }
+        ToolbarIconButton(MaterialSymbols.Image, stringRes(Res.string.markdown_toolbar_image), false) { state.insertImage() }
     }
 }
 

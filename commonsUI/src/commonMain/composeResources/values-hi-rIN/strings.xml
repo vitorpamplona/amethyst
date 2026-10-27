@@ -8105,7 +8105,7 @@
     </plurals>
     <string name="drawing_open">हाथ से चित्र बनाएँ</string>
     <string name="drawing_add_to_post">पत्र के साथ जोडें</string>
-    <string name="drawing_next">अगला</string>
+    <string name="drawing_next">आगे</string>
     <string name="drawing_preview">पूर्वावलोकन</string>
     <string name="drawing_preview_caption">यह इस प्रकार चलाया जाएगा प्रत्येक सूचनावली में</string>
     <string name="drawing_paper">पत्र</string>
@@ -8122,10 +8122,10 @@
     <string name="drawing_mirror">दर्पण</string>
     <string name="drawing_size">आकार</string>
     <string name="drawing_background_plain">साधारण पत्र</string>
-    <string name="drawing_background_sticky_yellow">पीतल चिपचिपा पत्रक</string>
-    <string name="drawing_background_sticky_pink">श्वेतरक्तवर्ण चिपचिपा पत्रक</string>
-    <string name="drawing_background_sticky_mint">हरितवर्ण चिपचिपा पत्रक</string>
-    <string name="drawing_background_sticky_sky">नील चिपचिपा पत्रक</string>
+    <string name="drawing_background_sticky_yellow">पीतवर्ण चिप्पी</string>
+    <string name="drawing_background_sticky_pink">श्वेतरक्तवर्ण चिप्पी</string>
+    <string name="drawing_background_sticky_mint">हरितवर्ण चिप्पी</string>
+    <string name="drawing_background_sticky_sky">नीलवर्ण चिप्पी</string>
     <string name="drawing_background_notebook">पुस्तक पृष्ठ</string>
     <string name="drawing_background_grid">जाल पत्र</string>
     <string name="drawing_background_dots">बिन्दु जाल</string>

@@ -52,7 +52,17 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameViewer
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_decline
+import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_from
+import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_sent_to
+import com.vitorpamplona.amethyst.commons.resources.chess_note_game_ended
+import com.vitorpamplona.amethyst.commons.resources.chess_note_open_challenge
+import com.vitorpamplona.amethyst.commons.resources.chess_note_result
+import com.vitorpamplona.amethyst.commons.resources.chess_note_termination
+import com.vitorpamplona.amethyst.commons.resources.chess_note_time
+import com.vitorpamplona.amethyst.commons.resources.chess_note_versus
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
@@ -171,7 +181,7 @@ fun RenderLiveChessChallenge(
                     when {
                         isOpenChallenge -> {
                             Text(
-                                text = "🔓 Open Challenge",
+                                text = stringRes(Res.string.chess_note_open_challenge),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -179,7 +189,7 @@ fun RenderLiveChessChallenge(
 
                         isIncomingChallenge -> {
                             Text(
-                                text = "💌 Challenge from",
+                                text = stringRes(Res.string.chess_note_challenge_from),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -190,7 +200,7 @@ fun RenderLiveChessChallenge(
 
                         else -> {
                             Text(
-                                text = "⏳ Challenge sent to",
+                                text = stringRes(Res.string.chess_note_challenge_sent_to),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -207,7 +217,7 @@ fun RenderLiveChessChallenge(
 
                 Text(
                     text =
-                        if (event.playerColor()?.name == "WHITE") "White" else "Black",
+                        if (event.playerColor()?.name == "WHITE") stringRes(Res.string.chess_color_white) else stringRes(Res.string.chess_color_black),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -215,7 +225,7 @@ fun RenderLiveChessChallenge(
 
             event.timeControl()?.let {
                 Text(
-                    text = "Time: $it",
+                    text = stringRes(Res.string.chess_note_time, it),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -291,7 +301,7 @@ fun RenderLiveChessGameEnd(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        text = "🏆 Game Ended",
+                        text = stringRes(Res.string.chess_note_game_ended),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -306,7 +316,7 @@ fun RenderLiveChessGameEnd(
                         }
 
                         Text(
-                            text = "vs",
+                            text = stringRes(Res.string.chess_note_versus),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
@@ -321,12 +331,12 @@ fun RenderLiveChessGameEnd(
                     }
 
                     Text(
-                        text = "Result: ${event.result()}",
+                        text = stringRes(Res.string.chess_note_result, event.result()),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     event.termination()?.let {
                         Text(
-                            text = "By: ${it.replace("_", " ")}",
+                            text = stringRes(Res.string.chess_note_termination, it.replace("_", " ")),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )

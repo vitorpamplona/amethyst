@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
+import com.vitorpamplona.amethyst.commons.resources.voice_anonymization_failed
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistantStatus
@@ -307,11 +308,12 @@ open class ShortNotePostViewModel :
             scope = viewModelScope,
             logTag = "ShortNotePostViewModel",
             onError = { error ->
-                accountViewModel.toastManager.toast(
-                    Res.string.error,
-                    error.message ?: "Voice anonymization failed",
-                    error,
-                )
+                val message = error.message
+                if (message != null) {
+                    accountViewModel.toastManager.toast(Res.string.error, message, error)
+                } else {
+                    accountViewModel.toastManager.toast(Res.string.error, Res.string.voice_anonymization_failed, error)
+                }
             },
             anonymize = { file, preset -> accountViewModel.host.anonymizeVoice(file, preset.name) },
         )

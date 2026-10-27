@@ -9,9 +9,9 @@
 # as an [ExtraTranslation] ERROR, which aborts `:amethyst:lint<Variant>` and
 # therefore the whole `test-and-build-android` CI job.
 #
-# Why a dedicated hook instead of "just run lint": `:amethyst:lintFdroidBenchmark`
-# takes ~19 minutes on a warm daemon, so nobody runs it per-commit. This check is
-# a directory scan and finishes in well under a second.
+# Why a dedicated hook instead of "just run lint": `:amethyst:lint<Variant>` takes
+# minutes, so it is a pre-push gate (`:amethyst:lintPlayDebug` in `.git-hooks/pre-push`),
+# not a per-commit one. This check is a directory scan and finishes in well under a second.
 #
 # Run the scan by hand any time with:  tools/agent-hooks/orphan_strings_check.py
 set -uo pipefail

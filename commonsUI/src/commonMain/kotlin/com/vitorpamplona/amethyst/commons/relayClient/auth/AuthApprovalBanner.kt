@@ -45,6 +45,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_always
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_more_relays_pending
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_never
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_once
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_many
+import com.vitorpamplona.amethyst.commons.resources.auth_approval_requires_auth_one
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
 
@@ -90,7 +99,7 @@ fun AuthApprovalBanner(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        text = "+$hidden more relay${if (hidden == 1) "" else "s"} pending approval",
+                        text = pluralStringRes(Res.plurals.auth_approval_more_relays_pending, hidden, hidden),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -131,9 +140,9 @@ private fun AuthApprovalRow(
                 Text(
                     text =
                         if (approval.pendingCount > 1) {
-                            "requires authentication for ${approval.pendingCount} messages"
+                            pluralStringRes(Res.plurals.auth_approval_requires_auth_many, approval.pendingCount, approval.pendingCount)
                         } else {
-                            "requires authentication to deliver this message"
+                            stringRes(Res.string.auth_approval_requires_auth_one)
                         },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f),
@@ -142,13 +151,13 @@ private fun AuthApprovalRow(
             Spacer(Modifier.width(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TextButton(onClick = { onResolve(approval.relayUrl, AuthApprovalScope.ONCE) }) {
-                    Text("Once", style = MaterialTheme.typography.labelMedium)
+                    Text(stringRes(Res.string.auth_approval_once), style = MaterialTheme.typography.labelMedium)
                 }
                 TextButton(onClick = { onResolve(approval.relayUrl, AuthApprovalScope.ALWAYS) }) {
-                    Text("Always", style = MaterialTheme.typography.labelMedium)
+                    Text(stringRes(Res.string.auth_approval_always), style = MaterialTheme.typography.labelMedium)
                 }
                 TextButton(onClick = { onResolve(approval.relayUrl, AuthApprovalScope.BLOCKED) }) {
-                    Text("Never", style = MaterialTheme.typography.labelMedium)
+                    Text(stringRes(Res.string.auth_approval_never), style = MaterialTheme.typography.labelMedium)
                 }
             }
         }

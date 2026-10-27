@@ -24,6 +24,10 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_failed
+import com.vitorpamplona.amethyst.commons.resources.onchain_transactions_load_more_failed
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.TransactionFilter
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -198,7 +202,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 _hasMoreTransactions.value = lastSeenTxid != null
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
-                _error.value = t.message ?: "Failed to load transactions"
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_failed)
                 _hasMoreTransactions.value = false
             } finally {
                 _isLoading.value = false
@@ -223,7 +227,7 @@ class OnchainTransactionsViewModel : ViewModel() {
                 }
             } catch (t: Throwable) {
                 currentCoroutineContext().ensureActive()
-                _error.value = t.message ?: "Failed to load more transactions"
+                _error.value = t.message ?: loadStringRes(Res.string.onchain_transactions_load_more_failed)
             } finally {
                 _isLoadingMore.value = false
             }

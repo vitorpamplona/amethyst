@@ -21,6 +21,10 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit
 
 import androidx.lifecycle.ViewModel
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nest_error_publish_failed
+import com.vitorpamplona.amethyst.commons.resources.nest_error_room_fields_required
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.nests.room.edit.EditNestSheet
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEvent
@@ -105,7 +109,7 @@ class EditNestViewModel : ViewModel() {
         val current = _state.value
 
         if (current.roomName.isBlank() || current.serviceUrl.isBlank() || current.endpointUrl.isBlank()) {
-            _state.update { it.copy(error = "Room name, service URL and endpoint are required.") }
+            _state.update { it.copy(error = loadStringRes(Res.string.nest_error_room_fields_required)) }
             return false
         }
 
@@ -121,7 +125,7 @@ class EditNestViewModel : ViewModel() {
             _state.update {
                 it.copy(
                     isPublishing = false,
-                    error = "Failed to publish: ${t.message ?: t::class.simpleName}",
+                    error = loadStringRes(Res.string.nest_error_publish_failed, t.message ?: t::class.simpleName.toString()),
                 )
             }
             false

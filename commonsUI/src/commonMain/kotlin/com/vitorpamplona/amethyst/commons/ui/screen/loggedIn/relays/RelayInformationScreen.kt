@@ -126,6 +126,9 @@ import com.vitorpamplona.amethyst.commons.resources.relay_filter_limit
 import com.vitorpamplona.amethyst.commons.resources.relay_filter_since
 import com.vitorpamplona.amethyst.commons.resources.relay_filter_until
 import com.vitorpamplona.amethyst.commons.resources.relay_groups_button
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_count
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_number
+import com.vitorpamplona.amethyst.commons.resources.relay_info_filter_search
 import com.vitorpamplona.amethyst.commons.resources.relay_latency_title
 import com.vitorpamplona.amethyst.commons.resources.relay_members
 import com.vitorpamplona.amethyst.commons.resources.relay_monitor_ms
@@ -508,7 +511,7 @@ private fun FilterVisual(
     ) {
         Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
-                text = "filter ${index + 1}",
+                text = stringRes(Res.string.relay_info_filter_number, index + 1),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
@@ -618,7 +621,7 @@ private fun FilterVisual(
                 filter.search?.let { search ->
                     if (search.isNotEmpty()) {
                         FilterAttributeChip(
-                            text = "🔍 ${search.take(20)}${if (search.length > 20) "…" else ""}",
+                            text = stringRes(Res.string.relay_info_filter_search, search.take(20) + if (search.length > 20) "…" else ""),
                             color = MaterialTheme.colorScheme.primaryContainer,
                             textColor = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -666,7 +669,7 @@ private fun SubscriptionCard(
                     )
                 }
                 Text(
-                    text = "${filters.size}f",
+                    text = stringRes(Res.string.relay_info_filter_count, filters.size),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 )

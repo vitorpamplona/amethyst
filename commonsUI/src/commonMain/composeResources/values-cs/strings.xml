@@ -815,6 +815,7 @@
     <string name="quick_action_request_deletion_alert_title">Požadavek na smazání</string>
     <string name="quick_action_request_deletion_alert_body">Amethyst požádá o smazání vaší poznámky ze spojek, ke kterým jste v současnosti připojeni. Není zaručeno, že vaše poznámka bude trvale smazána z těchto spojek nebo z dalších spojek, kde může být uložena.</string>
     <string name="quick_action_request_deletion_alert_body_group">Amethyst požádá všechny v této šifrované skupině, aby tuto zprávu smazali. Jejich aplikace by ji měly odstranit, ale není zaručeno, že každý člen svou kopii smaže.</string>
+    <string name="quick_action_request_deletion_alert_body_channel">Amethyst požádá všechny v tomto kanálu, aby tuto zprávu smazali. Jejich aplikace by ji měly odstranit, ale není zaručeno, že každý člen svou kopii smaže.</string>
     <string name="quick_action_request_deletion_alert_body_private">Amethyst pošle lidem v této konverzaci šifrovaný požadavek na smazání. Jejich aplikace by měly zprávu odstranit, ale není zaručeno, že budou smazány všechny kopie.</string>
     <string name="quick_action_block_dialog_btn">Blokovat</string>
     <string name="quick_action_delete_dialog_btn">Smazat</string>
@@ -830,6 +831,7 @@
     <string name="report_dialog_blocking_a_user">Blokování uživatele skryje jejich obsah ve vaší aplikaci. Vaše poznámky jsou stále veřejně viditelné, včetně osob, které blokujete. Blokovaní uživatelé jsou uvedeni na obrazovce s bezpečnostními filtry.</string>
     <string name="report_dialog_report_btn">Nahlásit zneužití</string>
     <string name="report_dialog_reminder_public">Všechny zveřejněné zprávy budou veřejně viditelné.</string>
+    <string name="report_dialog_reminder_group">Všichni v této skupině uvidí toto nahlášení i to, že jste ho odeslali. Administrátoři ho mohou posoudit.</string>
     <string name="report_dialog_additional_reason_placeholder">Volitelně poskytněte další kontext k vaší zprávě…</string>
     <string name="report_dialog_additional_reason_label">Další kontext</string>
     <string name="report_dialog_select_reason_label">Důvod</string>
@@ -1887,6 +1889,8 @@
     <string name="language">Jazyk</string>
     <string name="accent_color">Barva zvýraznění</string>
     <string name="accent_color_description">Hlavní barva používaná napříč tlačítky a odkazy</string>
+    <string name="accent_color_account_description">Přepíše barvu zvýraznění aplikace pro tento účet. Zvolte Aplikace, chcete-li se jí znovu řídit.</string>
+    <string name="accent_color_application">Aplikace</string>
     <string name="action_unmute">Zrušit ztlumení</string>
     <string name="picture_in_picture">Obraz v obraze</string>
     <string name="search_button">Hledat lokální a vzdálené záznamy</string>
@@ -2106,6 +2110,13 @@
     <string name="tor_keep_waiting">Pokračovat v čekání</string>
     <string name="tor_splash_connecting">Připojování k Toru…</string>
     <string name="tor_status_connected">Připojeno k Toru</string>
+    <string name="tor_waiting">Čeká se na Tor</string>
+    <plurals name="tor_waiting_relays">
+        <item quantity="one">Tor se nepřipojuje. Čeká na něj %1$d relay.</item>
+        <item quantity="few">Tor se nepřipojuje. Čekají na něj %1$d relaye.</item>
+        <item quantity="many">Tor se nepřipojuje. Čeká na něj %1$d relaye.</item>
+        <item quantity="other">Tor se nepřipojuje. Čeká na něj %1$d relayů.</item>
+    </plurals>
     <string name="tor_splash_error">Chyba Toru: %1$s</string>
     <string name="tor_splash_explainer">Amethyst používá Tor, aby skryl vaši IP adresu před relayi. Spuštění Toru může trvat až minutu a vyžaduje přístup k internetu.</string>
     <string name="notification_settings_categories_explainer">Klepněte na kategorii a otevřete pro ni nastavení oznámení Androidu — zvuk, důležitost, odznaky a režim Nerušit najdete tam.</string>
@@ -4818,6 +4829,15 @@
         <item quantity="other">%1$d zpráv</item>
     </plurals>
     <string name="marmot_not_a_member">Nejste členem této skupiny</string>
+    <string name="marmot_admin_delete_message">Smazat pro všechny</string>
+    <string name="room_remove_for_everyone_title">Smazat pro všechny?</string>
+    <string name="room_remove_for_everyone_body">Aplikace každého člena tuto zprávu odstraní. Tuto akci nelze vrátit zpět.</string>
+    <plurals name="room_dismiss_reports">
+        <item quantity="one">Zamítnout %1$d nahlášení</item>
+        <item quantity="few">Zamítnout %1$d nahlášení</item>
+        <item quantity="many">Zamítnout %1$d nahlášení</item>
+        <item quantity="other">Zamítnout %1$d nahlášení</item>
+    </plurals>
     <string name="marmot_unknown_error">neznámá chyba</string>
     <string name="media_added">Média přidána</string>
     <string name="media_added_to_profile_gallery">Média přidána do vaší profilové galerie</string>
@@ -8817,4 +8837,44 @@
     <string name="devtools_console_invalid_url">Není URL relaye: %1$s</string>
     <string name="devtools_console_tor">%1$s vede přes Tor, který ještě není připojen. Zkuste to znovu, až Tor poběží, nebo změňte nastavení Toru pro tento relay.</string>
     <string name="devtools_console_send_failed">Nepřipojeno, rámec nebyl odeslán</string>
+    <string name="local_timestamp_in">za %1$s</string>
+    <string name="local_timestamp_ago">před %1$s</string>
+    <string name="marmot_poll_label">Anketa</string>
+    <string name="marmot_poll_preview">Anketa: %1$s</string>
+    <string name="poll_unsupported">Tato anketa používá formát, který tato aplikace neumí zobrazit.</string>
+    <string name="marmot_poll_not_anonymous">Hlasy vidí každý člen této skupiny.</string>
+    <string name="poll_vote">Hlasovat</string>
+    <string name="poll_change_vote">Změnit hlas</string>
+    <string name="marmot_poll_create">Vytvořit anketu</string>
+    <string name="marmot_poll_question">Položte otázku</string>
+    <string name="marmot_poll_option">Možnost %1$d</string>
+    <string name="marmot_poll_add_option">Přidat možnost</string>
+    <string name="marmot_poll_new">Nová anketa</string>
+    <string name="marmot_poll_options">Možnosti</string>
+    <string name="marmot_poll_option_count">%1$d/%2$d</string>
+    <string name="marmot_poll_remove_option">Odebrat možnost</string>
+    <string name="marmot_poll_multiple_answers">Více odpovědí</string>
+    <string name="marmot_poll_pick_one">Každý člen vybírá jednu odpověď</string>
+    <string name="marmot_poll_pick_many">Každý člen může vybrat několik</string>
+    <string name="marmot_poll_closes_at">Končí %1$s</string>
+    <string name="marmot_poll_stays_open">Zůstává otevřená pro hlasování</string>
+    <string name="marmot_poll_duplicate_option">Dvě možnosti říkají totéž.</string>
+    <string name="marmot_poll_invalid_text">Tento text je příliš dlouhý nebo obsahuje znaky, které anketa neumí zobrazit.</string>
+    <string name="marmot_poll_has_deadline">Uzavřít po</string>
+    <string name="marmot_poll_no_deadline">Nikdy</string>
+    <plurals name="marmot_poll_deadline_hours">
+        <item quantity="one">%1$d hodina</item>
+        <item quantity="few">%1$d hodiny</item>
+        <item quantity="many">%1$d hodin</item>
+        <item quantity="other">%1$d hodin</item>
+    </plurals>
+    <plurals name="marmot_poll_deadline_days">
+        <item quantity="one">%1$d den</item>
+        <item quantity="few">%1$d dny</item>
+        <item quantity="many">%1$d dnů</item>
+        <item quantity="other">%1$d dnů</item>
+    </plurals>
+    <string name="marmot_poll_invalid">Zkontrolujte otázku a možnosti: 2 až 10 možností, žádný prázdný text.</string>
+    <string name="marmot_emoji_upload_failed">Vlastní emoji se nepodařilo připojit, místo toho bylo odesláno jako text.</string>
+    <string name="marmot_media_epoch_moved">Skupina se během nahrávání vašeho souboru změnila, proto nebyl odeslán. Odešlete ho znovu.</string>
 </resources>

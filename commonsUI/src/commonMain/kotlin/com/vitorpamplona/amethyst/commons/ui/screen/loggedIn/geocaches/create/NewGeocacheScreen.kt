@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.resources.geocache_new_mission
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_modifiers
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_name
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_pick_location
+import com.vitorpamplona.amethyst.commons.resources.geocache_new_precision_warning
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_proof_ready
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_publish
 import com.vitorpamplona.amethyst.commons.resources.geocache_new_require_proof
@@ -238,7 +239,7 @@ fun NewGeocacheScreen(
                     Text(
                         // NIP-CC asks for 8 characters, 9 for a micro. Below that a finder is
                         // searching a block rather than a hiding place.
-                        text = "⚠️  ${GeocacheGeohash.minPublishPrecision(model.size.value)} characters or finer is what a finder needs.",
+                        text = stringRes(Res.string.geocache_new_precision_warning, GeocacheGeohash.minPublishPrecision(model.size.value)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

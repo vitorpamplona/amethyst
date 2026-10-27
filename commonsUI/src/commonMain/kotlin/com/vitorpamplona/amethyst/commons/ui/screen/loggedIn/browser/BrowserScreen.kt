@@ -114,6 +114,8 @@ import com.vitorpamplona.amethyst.commons.resources.browser_discover_napplets
 import com.vitorpamplona.amethyst.commons.resources.browser_discover_nsites
 import com.vitorpamplona.amethyst.commons.resources.browser_favorites
 import com.vitorpamplona.amethyst.commons.resources.browser_go
+import com.vitorpamplona.amethyst.commons.resources.browser_napplet_default_label
+import com.vitorpamplona.amethyst.commons.resources.browser_nsite_default_label
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_go_to
 import com.vitorpamplona.amethyst.commons.resources.browser_omnibox_search_for
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_fill_in
@@ -778,13 +780,13 @@ private fun BrowserHome(
         if (nsites.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-nsite") { SectionHeader(stringRes(Res.string.browser_discover_nsites)) }
             items(nsites, span = { GridItemSpan(maxLineSpan) }, key = { "ns:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+                NostrAppRow(entry, onClick = onOpenApp, onAddFavorite = onAddApp)
             }
         }
         if (napplets.isNotEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }, key = "h-napp") { SectionHeader(stringRes(Res.string.browser_discover_napplets)) }
             items(napplets, span = { GridItemSpan(maxLineSpan) }, key = { "np:" + it.app.coordinate }) { entry ->
-                NostrAppRow(entry, onClick = { onOpenApp(entry.app) }, onAddFavorite = { onAddApp(entry.app) })
+                NostrAppRow(entry, onClick = onOpenApp, onAddFavorite = onAddApp)
             }
         }
         if (suggested.isNotEmpty()) {
@@ -852,6 +854,7 @@ private fun SuggestedRow(
 private data class DiscoverNostrApp(
     val app: FavoriteApp.NostrApp,
     val description: String?,
+    val fallbackLabel: StringResource,
 )
 
 /** How many followed nsites/napplets each Discover section surfaces, so the launcher stays tidy. */
@@ -884,44 +887,52 @@ private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
+    val fallback: StringResource
     val description: String?
     when (event) {
         is RootSiteEvent -> {
-            label = event.title()?.ifBlank { null } ?: "Website"
+            // Blank until composition, where NostrAppRow words it with [fallback].
+            label = event.title()?.ifBlank { null } ?: ""
+            fallback = Res.string.browser_nsite_default_label
             description = event.description()
         }
         is NamedSiteEvent -> {
             label = event.title()?.ifBlank { null } ?: event.identifier()
+            fallback = Res.string.browser_nsite_default_label
             description = event.description()
         }
         is RootNappletEvent -> {
-            label = event.title()?.ifBlank { null } ?: "App"
+            label = event.title()?.ifBlank { null } ?: ""
+            fallback = Res.string.browser_napplet_default_label
             description = event.description()
         }
         is NamedNappletEvent -> {
             label = event.title()?.ifBlank { null } ?: event.identifier()
+            fallback = Res.string.browser_napplet_default_label
             description = event.description()
         }
         else -> return null
     }
-    return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description)
+    return DiscoverNostrApp(FavoriteApp.NostrApp(coordinate, label, 0L), description, fallback)
 }
 
 /** A Discover row for a followed nsite/napplet: its manifest icon, name, and description, with a pin star. */
 @Composable
 private fun NostrAppRow(
     discover: DiscoverNostrApp,
-    onClick: () -> Unit,
-    onAddFavorite: () -> Unit,
+    onClick: (FavoriteApp) -> Unit,
+    onAddFavorite: (FavoriteApp) -> Unit,
 ) {
-    val app = discover.app
+    // An untitled nsite/napplet opens and pins under the localized "Website"/"App" fallback.
+    val fallbackLabel = stringRes(discover.fallbackLabel)
+    val app = remember(discover.app, fallbackLabel) { discover.app.copy(label = discover.app.label.ifBlank { fallbackLabel }) }
     val iconModel = rememberNappletIconModel(app.coordinate)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick)
+                .clickable(onClick = { onClick(app) })
                 .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -949,7 +960,7 @@ private fun NostrAppRow(
                 )
             }
         }
-        IconButton(onClick = onAddFavorite) {
+        IconButton(onClick = { onAddFavorite(app) }) {
             Icon(MaterialSymbols.StarBorder, contentDescription = stringRes(Res.string.favorite_app_add))
         }
     }
