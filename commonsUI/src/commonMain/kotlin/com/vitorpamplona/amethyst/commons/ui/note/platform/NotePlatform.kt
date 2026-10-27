@@ -90,7 +90,8 @@ interface NotePlatform {
     ) {
         val uriHandler = LocalUriHandler.current
         LaunchedEffect(content.url) {
-            uriHandler.openUri(content.url)
+            // The handler throws when no app takes the link; the dialog closes either way.
+            runCatching { uriHandler.openUri(content.url) }
             onDismiss()
         }
     }

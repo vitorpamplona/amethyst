@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,6 +43,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,7 +92,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import kotlinx.collections.immutable.toImmutableList
 
 // A card lists the latest issues rather than a whole run; the rest are a tap away in each issue.
+// A quoted magazine gets fewer, since each row loads a cover and observes its own note.
 private const val MAX_PREVIEW_ISSUES = 12
+private const val MAX_QUOTED_ISSUES = 3
+
+private val MaxMastheadHeight = 240.dp
 
 private const val ISSUE_COVER_ASPECT = 2f / 3f
 private val IssueCoverWidth = 40.dp
@@ -171,7 +177,13 @@ fun RenderMagazineIssue(
 
     val file = remember(noteEvent) { pressStrFile(note, noteEvent.url(), noteEvent.mimeType(), noteEvent.title(), noteEvent.hash()) }
     val open = rememberFileOpener(file, accountViewModel)
-    val magazine = remember(noteEvent) { noteEvent.magazine()?.let { Address(it.kind, it.pubKeyHex, it.dTag) } }
+    // Anyone can tag a magazine's address. Only its own publisher's issues belong to it, so a
+    // stranger's issue gets no byline rather than borrowing a magazine it is not part of.
+    val magazine =
+        remember(noteEvent) {
+            noteEvent.magazine()?.takeIf { it.pubKeyHex == noteEvent.pubKey }?.let { Address(it.kind, it.pubKeyHex, it.dTag) }
+        }
+    val issueLabel = remember(noteEvent) { noteEvent.issue() }
 
     Column(Modifier.fillMaxWidth()) {
         val header =
@@ -183,7 +195,7 @@ fun RenderMagazineIssue(
                     onBylineClick = onBylineClick,
                     detail =
                         listOfNotNull(
-                            noteEvent.issue()?.let { stringRes(Res.string.magazine_issue_label, it) },
+                            issueLabel?.let { issueLabelText(it) },
                             remember(noteEvent) { detailLine(noteEvent.formatLabel(), noteEvent.size(), null, noteEvent.publishedAt()) },
                         ).takeIf { it.isNotEmpty() }?.joinToString(" · "),
                     summary = remember(noteEvent) { noteEvent.summary()?.ifBlank { null } },
@@ -242,8 +254,10 @@ fun RenderMagazine(
                 MyAsyncImage(
                     imageUrl = it,
                     contentDescription = stringRes(Res.string.preview_card_image_for, it),
-                    contentScale = ContentScale.FillWidth,
-                    mainImageModifier = Modifier.fillMaxWidth(),
+                    // Fit within a capped height: a masthead is a logo, so it must not be cropped,
+                    // and a tall one must not take over the feed.
+                    contentScale = ContentScale.Fit,
+                    mainImageModifier = Modifier.fillMaxWidth().heightIn(max = MaxMastheadHeight),
                     loadedImageModifier = Modifier,
                     accountViewModel = accountViewModel,
                     onLoadingBackground = null,
@@ -278,7 +292,8 @@ fun RenderMagazine(
                 color = MaterialTheme.colorScheme.lessImportantLink,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp).clickable { uriHandler.openUri(it) },
+                // runCatching: the handler throws when no app takes the link, and the URL is the publisher's.
+                modifier = Modifier.padding(top = 4.dp).clickable { runCatching { uriHandler.openUri(it) } },
             )
         }
 
@@ -299,7 +314,7 @@ fun RenderMagazine(
             )
         }
 
-        MagazineIssues(noteEvent, accountViewModel, nav)
+        MagazineIssues(noteEvent, if (makeItShort) MAX_QUOTED_ISSUES else MAX_PREVIEW_ISSUES, accountViewModel, nav)
 
         DisplayUncitedHashtags(noteEvent, note.toNostrUri(), accountViewModel, nav)
     }
@@ -308,16 +323,18 @@ fun RenderMagazine(
 @Composable
 private fun MagazineIssues(
     magazine: MagazineEvent,
+    maxIssues: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    val address = remember(magazine) { magazine.addressTag() }
     val issuesFlow =
-        remember(magazine.addressTag()) {
+        remember(address) {
             accountViewModel.account.cache.observeNotes(
                 Filter(
                     kinds = listOf(MagazineIssueEvent.KIND),
                     authors = listOf(magazine.pubKey),
-                    tags = mapOf("a" to listOf(magazine.addressTag())),
+                    tags = mapOf("a" to listOf(address)),
                 ),
             )
         }
@@ -325,13 +342,18 @@ private fun MagazineIssues(
     val notes by issuesFlow.collectAsStateWithLifecycle(emptyList())
 
     // Newest issue first, by when it came out rather than when it was posted: a publisher
-    // uploading a back catalogue posts the oldest issue last.
+    // uploading a back catalogue posts the oldest issue last. Each key is read once before the
+    // sort, since publishedAt() scans the tags. The list only re-emits when an issue is added, so
+    // each row observes its own note for edits.
     val issues =
-        remember(notes) {
+        remember(notes, maxIssues) {
             notes
-                .mapNotNull { issueNote -> (issueNote.event as? MagazineIssueEvent)?.let { issueNote to it } }
-                .sortedByDescending { (_, issue) -> issue.publishedAt() ?: issue.createdAt }
-                .take(MAX_PREVIEW_ISSUES)
+                .map { issueNote ->
+                    val issue = issueNote.event as? MagazineIssueEvent
+                    issueNote to (issue?.let { it.publishedAt() ?: it.createdAt } ?: Long.MIN_VALUE)
+                }.sortedByDescending { it.second }
+                .take(maxIssues)
+                .map { it.first }
                 .toImmutableList()
         }
 
@@ -345,22 +367,33 @@ private fun MagazineIssues(
             modifier = Modifier.padding(bottom = 4.dp),
         )
 
-        issues.forEachIndexed { index, (issueNote, issue) ->
-            if (index > 0) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
-            }
-
-            MagazineIssueRow(issue, accountViewModel) { nav.nav(Route.Note(issueNote.idHex)) }
+        issues.forEachIndexed { index, issueNote ->
+            MagazineIssueRow(issueNote, address, showDivider = index > 0, accountViewModel) { nav.nav(Route.Note(issueNote.idHex)) }
         }
     }
 }
 
 @Composable
 private fun MagazineIssueRow(
-    issue: MagazineIssueEvent,
+    issueNote: Note,
+    magazineAddress: String,
+    showDivider: Boolean,
     accountViewModel: AccountViewModel,
     onClick: () -> Unit,
 ) {
+    // Observed, not read once: an edited issue replaces the event on the same Note, and the list
+    // above does not re-emit for it.
+    val observedIssue by observeNoteEvent<MagazineIssueEvent>(issueNote, accountViewModel)
+    val issue = observedIssue ?: return
+
+    // A newer version can move the issue to another magazine, or drop the link.
+    val stillHere = remember(issue) { issue.magazine()?.toTag() == magazineAddress }
+    if (!stillHere) return
+
+    if (showDivider) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+    }
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
@@ -392,7 +425,7 @@ private fun MagazineIssueRow(
                 overflow = TextOverflow.Ellipsis,
             )
 
-            val label = issue.issue()?.let { stringRes(Res.string.magazine_issue_label, it) }
+            val label = remember(issue) { issue.issue() }?.let { issueLabelText(it) }
             val date = remember(issue) { issue.publishedAt()?.let { formatLongDate(it) } }
             listOfNotNull(label, date).takeIf { it.isNotEmpty() }?.let {
                 Text(
@@ -404,6 +437,13 @@ private fun MagazineIssueRow(
         }
     }
 }
+
+/**
+ * "Issue 7" for a bare number, the label as published otherwise: publishers also write
+ * "Issue 7", "May 2024" or "Spring 2025", and "Issue Issue 7" or "Issue May 2024" read wrong.
+ */
+@Composable
+private fun issueLabelText(label: String): String = if (label.first().isDigit()) stringRes(Res.string.magazine_issue_label, label) else label
 
 /** The cover beside the title, byline, file details and summary: the top of a book-like card. */
 @Composable
@@ -540,20 +580,36 @@ private fun rememberFileOpener(
     file: PressStrFile?,
     accountViewModel: AccountViewModel,
 ): (() -> Unit)? {
-    var reading by remember(file) { mutableStateOf(false) }
-    val uriHandler = LocalUriHandler.current
+    // Keyed on the URL, not the file object: a new version of the event rebuilds the object, and
+    // keying on it closed an open reader whenever an edit arrived.
+    val url = file?.url
+    var reading by remember(url) { mutableStateOf(false) }
+    val currentFile by rememberUpdatedState(file)
+    val uriHandler by rememberUpdatedState(LocalUriHandler.current)
 
     val pdf = file?.pdf
     if (reading && pdf != null) {
         PdfViewerDialog(pdf, onDismiss = { reading = false }, accountViewModel = accountViewModel)
     }
 
-    return remember(file) {
-        file?.let { { if (it.pdf != null) reading = true else uriHandler.openUri(it.url) } }
+    return remember(url) {
+        if (url == null) {
+            null
+        } else {
+            {
+                val current = currentFile
+                if (current?.pdf != null) {
+                    reading = true
+                } else if (current != null) {
+                    // The handler throws when no app takes the scheme (`ipfs:`, `magnet:`, a typo).
+                    runCatching { uriHandler.openUri(current.url) }
+                }
+            }
+        }
     }
 }
 
-/** "PDF · 1.9 MB · EN · Tue, Jun 16, 2026", skipping whatever the event left out. */
+/** "PDF · 2 MB · EN · Tue, Jun 16, 2026", skipping whatever the event left out. */
 private fun detailLine(
     format: String?,
     size: Long?,
