@@ -102,22 +102,7 @@ ROUTE_DIR="$STATE_DIR/routing"
 ROUTE_PORT_A=$((RELAY_PORT + 1))
 ROUTE_PORT_B=$((RELAY_PORT + 2))
 
-# An IPv4 amy routes to: not loopback, RFC 1918 or link-local — the ranges
-# RelayUrlNormalizer.isLocalHost drops from other people's relay lists.
-is_routable_ipv4() {
-  [[ $1 =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
-  case "$1" in 0.*|10.*|127.*|169.254.*|192.168.*) return 1 ;; esac
-  [[ ! $1 =~ ^172\.(1[6-9]|2[0-9]|3[01])\. ]]
-}
-
-# The first routable IPv4 on any interface.
-detect_routing_host() {
-  local addr
-  for addr in $( { hostname -I 2>/dev/null; ip -4 -o addr show 2>/dev/null | awk '{print $4}'; ifconfig 2>/dev/null | awk '/inet /{print $2}'; } | tr ' ' '\n' | sed 's#/.*##'); do
-    is_routable_ipv4 "$addr" && { printf '%s\n' "$addr"; return 0; }
-  done
-  return 1
-}
+# is_routable_ipv4 / detect_routing_host come from ../headless/helpers.sh.
 
 # start_routing_relay NAME PORT — `amy serve` with a persistent --db, so it can be
 # stopped and restarted with its events. Returns 1 when it does not come up.

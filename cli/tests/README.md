@@ -239,13 +239,19 @@ ancestor). Override with `MDK_PIN=<sha>` to test another MDK.
 | dm-05 | File message reference mode round-trip (kind:15 with manual key/nonce) |
 | dm-06 | `dm list --since` filters out older messages (window-slide past the newest event returns 0) |
 
-**Relay binding note:** the DM harness binds the loopback relay to
-`127.0.0.2` (not `127.0.0.1`) because Quartz's `RelayTag.parse` rejects
-localhost URLs via `isLocalHost()` — so `ws://127.0.0.1` in a kind:10050
-event is silently stripped during recipient-relay resolution, which
-would make strict-mode DM sends spuriously fail. `127.0.0.2` is still
-pure loopback and isn't matched by that filter. Override with
-`--host 127.0.0.5` etc. if `127.0.0.2` is taken.
+**Relay binding note:** Quartz's `RelayTag.parse` drops loopback, RFC 1918
+and link-local relays (`isLocalHost()`, all of `127.0.0.0/8` included) from
+other people's relay lists, so a kind:10050 inbox on such a relay never
+reaches A's recipient-relay resolution and strict-mode sends fail with
+`no_dm_relays`. The DM harness therefore runs its relay on the first IPv4
+outside those ranges it finds on an interface, or on `--host IP`. Without
+one it falls back to `127.0.0.2` and records dm-01/02/05/06 as skipped
+(dm-03/04 still run). Any host can provide an address on loopback:
+
+```bash
+sudo ip addr add 192.0.2.2/32 dev lo     # Linux
+sudo ifconfig lo0 alias 192.0.2.2 up     # macOS
+```
 
 **macOS:** Linux answers every `127.0.0.0/8` address on `lo`; macOS only
 answers `127.0.0.1` until you add an alias, once per boot:
