@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.relay_status_auth_required
 import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticated
 import com.vitorpamplona.amethyst.commons.resources.relay_status_authenticating
 import com.vitorpamplona.amethyst.commons.resources.relay_status_buzz
-import com.vitorpamplona.amethyst.commons.resources.relay_status_collapse
+import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connected
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connected_authenticated
 import com.vitorpamplona.amethyst.commons.resources.relay_status_connection
@@ -155,7 +155,7 @@ fun RelayStatusBar(
                 )
                 Icon(
                     symbol = if (expanded) MaterialSymbols.ExpandLess else MaterialSymbols.ExpandMore,
-                    contentDescription = if (expanded) stringRes(Res.string.relay_status_collapse) else stringRes(Res.string.relay_status_expand_details),
+                    contentDescription = if (expanded) stringRes(Res.string.collapse) else stringRes(Res.string.relay_status_expand_details),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )

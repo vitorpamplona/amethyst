@@ -67,7 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_metrics
 import com.vitorpamplona.amethyst.commons.resources.agent_console_empty_observer
 import com.vitorpamplona.amethyst.commons.resources.agent_console_estimated_totals_warning
 import com.vitorpamplona.amethyst.commons.resources.agent_console_fleet_total
-import com.vitorpamplona.amethyst.commons.resources.agent_console_new_persona
+import com.vitorpamplona.amethyst.commons.resources.buzz_persona_new_title
 import com.vitorpamplona.amethyst.commons.resources.agent_console_no_personas
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_agents
 import com.vitorpamplona.amethyst.commons.resources.agent_console_row_cache_read
@@ -279,7 +279,7 @@ private fun PersonasTab(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(symbol = MaterialSymbols.AddCircle, contentDescription = null)
-                Text("  " + stringRes(Res.string.agent_console_new_persona))
+                Text("  " + stringRes(Res.string.buzz_persona_new_title))
             }
         }
         if (personas.isEmpty()) {

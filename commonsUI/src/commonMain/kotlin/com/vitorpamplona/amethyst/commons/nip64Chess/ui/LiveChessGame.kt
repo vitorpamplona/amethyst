@@ -92,7 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_live_waiting_for
 import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_move_history
 import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
-import com.vitorpamplona.amethyst.commons.resources.chess_new_game_title
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.resources.chess_no_moves_yet
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_label
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_placeholder
@@ -146,7 +146,7 @@ fun NewChessGameDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    text = stringRes(Res.string.chess_new_game_title),
+                    text = stringRes(Res.string.new_chess_game),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                 )

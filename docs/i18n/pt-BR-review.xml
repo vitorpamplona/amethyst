@@ -88,7 +88,6 @@
     <string name="marmot_poll_invalid">Confira a pergunta e as opções: de 2 a 10 opções, sem texto vazio.</string>
     <string name="marmot_emoji_upload_failed">Não foi possível anexar o emoji personalizado; ele foi enviado como texto.</string>
     <string name="marmot_media_epoch_moved">O grupo mudou enquanto seu arquivo era enviado, então ele não foi enviado. Envie novamente.</string>
-    <string name="chess_new_game_title">Novo jogo de xadrez</string>
     <string name="chess_new_game_subtitle">Criar um novo desafio de xadrez</string>
     <string name="chess_opponent_npub_label">npub do oponente (opcional)</string>
     <string name="chess_opponent_npub_placeholder">Deixe em branco para um desafio aberto</string>
@@ -168,7 +167,6 @@
     <string name="namecoin_rpc_url_hint">http://&lt;onion>.onion:8336/</string>
     <string name="namecoin_rpc_username">Usuário do RPC</string>
     <string name="namecoin_rpc_password">Senha do RPC</string>
-    <string name="namecoin_rpc_save">Salvar</string>
     <string name="namecoin_rpc_test">Testar RPC</string>
     <string name="namecoin_rpc_connected_ms">Conectado (%1$d ms)</string>
     <string name="namecoin_rpc_failed">Falhou</string>
@@ -184,18 +182,11 @@
     <string name="namecoin_fallback_default_custom_failed">Se todos os meus servidores ElectrumX personalizados falharem, tenta também os padrões públicos fixos no app.</string>
     <string name="namecoin_fallback_default_already">(Já usando os padrões — esta opção não tem efeito adicional.)</string>
     <string name="namecoin_fallback_default_everything_fails">Se tudo acima falhar, tenta os servidores ElectrumX públicos fixos no app.</string>
-    <string name="agent_work_title">Trabalho do agente</string>
     <string name="agent_work_new_task">Nova tarefa</string>
     <string name="agent_work_waiting_on_you">Aguardando você</string>
-    <string name="agent_work_awaiting_approval">Aguardando aprovação</string>
     <string name="agent_work_deny">Negar</string>
-    <string name="agent_work_approve_open_pr">Aprovar e abrir PR</string>
-    <string name="agent_work_cannot_sign_decision">Você é o aprovador, mas este login não pode assinar uma decisão.</string>
     <string name="agent_work_upvote">Votar a favor</string>
-    <string name="agent_work_view_pr">Ver PR</string>
-    <string name="agent_work_waiting_for_approval">Aguardando aprovação</string>
     <string name="agent_work_compose_description">Descreva o que o agente deve fazer. Todo o canal vê e acompanha o trabalho.</string>
-    <string name="agent_work_task_hint">O que ele deve fazer?</string>
     <string name="agent_work_require_approval">Exigir aprovação antes do envio</string>
     <string name="agent_work_require_approval_on">Uma pessoa a aprova antes de o PR ser aberto (uma execução de workflow).</string>
     <string name="agent_work_require_approval_off">Envia o PR diretamente, sem etapa de aprovação (um job).</string>
@@ -226,7 +217,6 @@
     <string name="medical_data_diameter">Diâmetro:</string>
     <string name="onchain_zap_bitcoin">Bitcoin</string>
     <string name="onchain_zap_badge">ON-CHAIN</string>
-    <string name="onchain_zap_sats">sats</string>
     <string name="onchain_zap_verifying">Verificando na blockchain…</string>
     <string name="onchain_zap_in_mempool">No mempool — aguardando confirmação</string>
     <string name="onchain_zap_confirmed_conf">Confirmado · %1$d conf</string>
@@ -244,13 +234,9 @@
     <string name="geohash_chat_relays_title">Relays para #%1$s</string>
     <string name="geohash_chat_no_relays">Nenhum relay configurado para esta célula.</string>
     <string name="new_geohash_chat_title">Novo canal de localização</string>
-    <string name="new_geohash_chat_leave">Sair</string>
     <string name="new_geohash_chat_input_hint">ex.: u4pruyd</string>
-    <string name="new_geohash_chat_join">Entrar</string>
-    <string name="new_geohash_chat_use_my_location">Usar minha localização</string>
     <string name="new_geohash_chat_locating">Localizando…</string>
     <string name="new_geohash_chat_location_unavailable">Localização indisponível.</string>
-    <string name="new_geohash_chat_teleport">Teletransportar</string>
     <string name="chess_note_open_challenge">🔓 Desafio aberto</string>
     <string name="chess_note_challenge_from">💌 Desafio de</string>
     <string name="chess_note_challenge_sent_to">⏳ Desafio enviado para</string>
@@ -275,13 +261,11 @@
     <string name="wallet_onchain_address_unavailable">Derivação de endereço indisponível para esta conta.</string>
     <string name="wallet_onchain_title">Bitcoin</string>
     <string name="wallet_onchain_subtitle">Onchain · Taproot</string>
-    <string name="wallet_onchain_unit_sats">sats</string>
     <string name="wallet_onchain_balance_unavailable">indisponível</string>
     <string name="wallet_onchain_no_backend_short">sem backend</string>
     <string name="agent_console_attest">Atestar</string>
     <string name="agent_console_fleet_total">Total da frota</string>
     <string name="agent_console_estimated_totals_warning">⚠ Alguns totais são estimados a partir das variações por turno (uma sessão não informou contagens acumuladas).</string>
-    <string name="agent_console_new_persona">Nova persona</string>
     <string name="agent_console_no_personas">Nenhuma persona publicada ainda. Crie uma para definir um agente (kind:30175).</string>
     <string name="chess_move_navigator_start">Posição inicial</string>
     <string name="chess_move_navigator_previous">Lance anterior</string>
@@ -304,7 +288,6 @@
     <string name="long_form_post_add_tag">Adicionar tag</string>
     <string name="long_form_post_remove_tag">Remover %1$s</string>
     <string name="geohash_chats_open">Abrir</string>
-    <string name="geohash_chats_leave">Sair</string>
     <string name="geohash_chats_explore_nearby">Explorar próximos</string>
     <string name="ecash_mint_cashu">Mint Cashu</string>
     <string name="ecash_mint_fedimint">Fedimint</string>
@@ -360,7 +343,6 @@
     <string name="relay_status_buzz">Buzz</string>
     <string name="relay_status_authenticated">Autenticado</string>
     <string name="relay_status_not_authenticated">Não autenticado</string>
-    <string name="relay_status_collapse">Recolher</string>
     <string name="relay_status_expand_details">Expandir detalhes do relay</string>
     <string name="relay_status_host">Host</string>
     <string name="relay_status_connection">Conexão</string>

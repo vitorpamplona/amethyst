@@ -80,7 +80,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_public_dialog_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_subtitle
 import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_title
-import com.vitorpamplona.amethyst.commons.resources.wallet_onchain_unit_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.sats
@@ -292,7 +292,7 @@ private fun BalanceBlock(
                     color = orange,
                 )
                 Text(
-                    text = stringRes(Res.string.wallet_onchain_unit_sats),
+                    text = stringRes(Res.string.wallet_sats),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

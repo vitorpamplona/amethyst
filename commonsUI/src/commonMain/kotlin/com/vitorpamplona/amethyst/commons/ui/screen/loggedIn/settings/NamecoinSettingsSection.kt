@@ -113,7 +113,7 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_descri
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_endpoint_title
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_failed
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_password
-import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_save
+import com.vitorpamplona.amethyst.commons.resources.action_save
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_test
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_tls_rejected
 import com.vitorpamplona.amethyst.commons.resources.namecoin_rpc_url
@@ -1116,7 +1116,7 @@ private fun NamecoinCoreRpcSection(
                 },
                 modifier = Modifier.weight(1f),
             ) {
-                Text(stringRes(Res.string.namecoin_rpc_save))
+                Text(stringRes(Res.string.action_save))
             }
             Button(
                 onClick = {

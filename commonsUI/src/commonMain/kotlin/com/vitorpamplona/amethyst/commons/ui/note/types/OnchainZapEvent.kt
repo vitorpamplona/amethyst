@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.onchain_zap_confirmed_block
 import com.vitorpamplona.amethyst.commons.resources.onchain_zap_confirmed_conf
 import com.vitorpamplona.amethyst.commons.resources.onchain_zap_copy_tx_link
 import com.vitorpamplona.amethyst.commons.resources.onchain_zap_in_mempool
-import com.vitorpamplona.amethyst.commons.resources.onchain_zap_sats
+import com.vitorpamplona.amethyst.commons.resources.wallet_sats
 import com.vitorpamplona.amethyst.commons.resources.onchain_zap_tx
 import com.vitorpamplona.amethyst.commons.resources.onchain_zap_verifying
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
@@ -333,7 +333,7 @@ private fun AmountRow(
             color = orange,
         )
         Text(
-            text = stringRes(Res.string.onchain_zap_sats),
+            text = stringRes(Res.string.wallet_sats),
             style = MaterialTheme.typography.titleSmall,
             color = orange,
             modifier = Modifier.padding(bottom = 6.dp),

@@ -69,7 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_chats_empty_title
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_explore_nearby
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_description
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_intro_title
-import com.vitorpamplona.amethyst.commons.resources.geohash_chats_leave
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.geohash_chats_open
 import com.vitorpamplona.amethyst.commons.resources.location_channels
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
@@ -308,7 +308,7 @@ private fun LocationChannelMenu(
                 },
             )
             DropdownMenuItem(
-                text = { Text(stringRes(Res.string.geohash_chats_leave)) },
+                text = { Text(stringRes(Res.string.leave)) },
                 onClick = {
                     expanded = false
                     onLeave()

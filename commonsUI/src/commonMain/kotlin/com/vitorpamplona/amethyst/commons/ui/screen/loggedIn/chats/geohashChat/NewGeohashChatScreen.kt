@@ -74,13 +74,13 @@ import com.vitorpamplona.amethyst.commons.resources.geohash_new_near_me_hint
 import com.vitorpamplona.amethyst.commons.resources.geohash_new_pick_on_map
 import com.vitorpamplona.amethyst.commons.resources.geohash_new_your_channels
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_input_hint
-import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_join
-import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_leave
+import com.vitorpamplona.amethyst.commons.resources.join
+import com.vitorpamplona.amethyst.commons.resources.leave
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_locating
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_location_unavailable
-import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_teleport
+import com.vitorpamplona.amethyst.commons.resources.geohash_teleport_title
 import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_title
-import com.vitorpamplona.amethyst.commons.resources.new_geohash_chat_use_my_location
+import com.vitorpamplona.amethyst.commons.resources.geocache_use_my_location
 import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -247,7 +247,7 @@ private fun YourChannelsSection(
                     subtitle = { LoadCityName(geohashStr = cell) { SubtitleText(it) } },
                     onClick = { nav.nav(Route.GeohashChat(cell)) },
                     trailing = {
-                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text(stringRes(Res.string.new_geohash_chat_leave)) }
+                        TextButton(onClick = { accountViewModel.unfollowGeohash(cell) }) { Text(stringRes(Res.string.leave)) }
                     },
                 )
             }
@@ -287,7 +287,7 @@ private fun ManualEntrySection(onOpen: (String) -> Unit) {
                         onClick = { onOpen(text) },
                         modifier = Modifier.padding(start = 8.dp),
                     ) {
-                        Text(stringRes(Res.string.new_geohash_chat_join))
+                        Text(stringRes(Res.string.join))
                     }
                 }
             }
@@ -320,7 +320,7 @@ private fun NearMeSection(onOpen: (String) -> Unit) {
                     )
                     FilledTonalButton(onClick = { permission.launchRequest() }) {
                         SymbolIcon(symbol = MaterialSymbols.LocationOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  " + stringRes(Res.string.new_geohash_chat_use_my_location))
+                        Text("  " + stringRes(Res.string.geocache_use_my_location))
                     }
                 }
             }
@@ -380,7 +380,7 @@ private fun TeleportCard(onClick: () -> Unit) {
                 }
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(stringRes(Res.string.new_geohash_chat_teleport), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(stringRes(Res.string.geohash_teleport_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Text(
                     stringRes(Res.string.geohash_new_pick_on_map),
                     style = MaterialTheme.typography.bodySmall,

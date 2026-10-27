@@ -85,7 +85,7 @@ import com.vitorpamplona.amethyst.commons.model.buzz.JobView
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.agent_work_new_task
 import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
-import com.vitorpamplona.amethyst.commons.resources.agent_work_view_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
 import com.vitorpamplona.amethyst.commons.resources.buzz_job_board_title
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_cancelled
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_failed
@@ -400,7 +400,7 @@ private fun ResultLine(result: String) {
         Button(onClick = { uriHandler.openUri(url) }) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringRes(Res.string.agent_work_view_pr))
+            Text(stringRes(Res.string.buzz_workflow_view_pr))
         }
     } else {
         Text(result, style = MaterialTheme.typography.bodyMedium)

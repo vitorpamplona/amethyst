@@ -8432,7 +8432,6 @@
     <string name="marmot_poll_invalid">Check the question and the options: 2 to 10 options, no empty text.</string>
     <string name="marmot_emoji_upload_failed">Could not attach the custom emoji, sent as text instead.</string>
     <string name="marmot_media_epoch_moved">The group changed while your file was uploading, so it was not sent. Send it again.</string>
-    <string name="chess_new_game_title">New Chess Game</string>
     <string name="chess_new_game_subtitle">Create a new chess game challenge</string>
     <string name="chess_opponent_npub_label">Opponent npub (optional)</string>
     <string name="chess_opponent_npub_placeholder">Leave blank for open challenge</string>
@@ -8512,7 +8511,6 @@
     <string name="namecoin_rpc_url_hint">http://&lt;onion>.onion:8336/</string>
     <string name="namecoin_rpc_username">RPC username</string>
     <string name="namecoin_rpc_password">RPC password</string>
-    <string name="namecoin_rpc_save">Save</string>
     <string name="namecoin_rpc_test">Test RPC</string>
     <string name="namecoin_rpc_connected_ms">Connected (%1$d ms)</string>
     <string name="namecoin_rpc_failed">Failed</string>
@@ -8528,18 +8526,11 @@
     <string name="namecoin_fallback_default_custom_failed">If all of my custom ElectrumX servers fail, also try the hardcoded public defaults.</string>
     <string name="namecoin_fallback_default_already">(Already using defaults — toggle has no extra effect.)</string>
     <string name="namecoin_fallback_default_everything_fails">If everything above fails, try the hardcoded public ElectrumX servers.</string>
-    <string name="agent_work_title">Agent work</string>
     <string name="agent_work_new_task">New task</string>
     <string name="agent_work_waiting_on_you">Waiting on you</string>
-    <string name="agent_work_awaiting_approval">Awaiting approval</string>
     <string name="agent_work_deny">Deny</string>
-    <string name="agent_work_approve_open_pr">Approve &amp; open PR</string>
-    <string name="agent_work_cannot_sign_decision">You're the approver, but this login can't sign a decision.</string>
     <string name="agent_work_upvote">Upvote</string>
-    <string name="agent_work_view_pr">View PR</string>
-    <string name="agent_work_waiting_for_approval">Waiting for approval</string>
     <string name="agent_work_compose_description">Describe what the agent should do. The whole channel sees it and watches it work.</string>
-    <string name="agent_work_task_hint">What should it do?</string>
     <string name="agent_work_require_approval">Require approval before it ships</string>
     <string name="agent_work_require_approval_on">A human grants it before the PR opens (a workflow run).</string>
     <string name="agent_work_require_approval_off">Ships its PR directly, no gate (a job).</string>
@@ -8570,7 +8561,6 @@
     <string name="medical_data_diameter">Diameter:</string>
     <string name="onchain_zap_bitcoin">Bitcoin</string>
     <string name="onchain_zap_badge">ON-CHAIN</string>
-    <string name="onchain_zap_sats">sats</string>
     <string name="onchain_zap_verifying">Verifying on chain…</string>
     <string name="onchain_zap_in_mempool">In mempool — pending confirmation</string>
     <string name="onchain_zap_confirmed_conf">Confirmed · %1$d conf</string>
@@ -8588,13 +8578,9 @@
     <string name="geohash_chat_relays_title">Relays for #%1$s</string>
     <string name="geohash_chat_no_relays">No relays configured for this cell.</string>
     <string name="new_geohash_chat_title">New location channel</string>
-    <string name="new_geohash_chat_leave">Leave</string>
     <string name="new_geohash_chat_input_hint">e.g. u4pruyd</string>
-    <string name="new_geohash_chat_join">Join</string>
-    <string name="new_geohash_chat_use_my_location">Use my location</string>
     <string name="new_geohash_chat_locating">Locating…</string>
     <string name="new_geohash_chat_location_unavailable">Location unavailable.</string>
-    <string name="new_geohash_chat_teleport">Teleport</string>
     <string name="chess_note_open_challenge">🔓 Open Challenge</string>
     <string name="chess_note_challenge_from">💌 Challenge from</string>
     <string name="chess_note_challenge_sent_to">⏳ Challenge sent to</string>
@@ -8619,13 +8605,11 @@
     <string name="wallet_onchain_address_unavailable">Address derivation unavailable for this account.</string>
     <string name="wallet_onchain_title">Bitcoin</string>
     <string name="wallet_onchain_subtitle">Onchain · Taproot</string>
-    <string name="wallet_onchain_unit_sats">sats</string>
     <string name="wallet_onchain_balance_unavailable">unavailable</string>
     <string name="wallet_onchain_no_backend_short">no backend</string>
     <string name="agent_console_attest">Attest</string>
     <string name="agent_console_fleet_total">Fleet total</string>
     <string name="agent_console_estimated_totals_warning">⚠ Some totals are estimated from per-turn deltas (a session reported no cumulative counts).</string>
-    <string name="agent_console_new_persona">New persona</string>
     <string name="agent_console_no_personas">No personas published yet. Create one to define an agent (kind:30175).</string>
     <string name="chess_move_navigator_start">Start position</string>
     <string name="chess_move_navigator_previous">Previous move</string>
@@ -8648,7 +8632,6 @@
     <string name="long_form_post_add_tag">Add tag</string>
     <string name="long_form_post_remove_tag">Remove %1$s</string>
     <string name="geohash_chats_open">Open</string>
-    <string name="geohash_chats_leave">Leave</string>
     <string name="geohash_chats_explore_nearby">Explore nearby</string>
     <string name="ecash_mint_cashu">Cashu Mint</string>
     <string name="ecash_mint_fedimint">Fedimint</string>
@@ -8703,7 +8686,6 @@
     <string name="relay_status_buzz">Buzz</string>
     <string name="relay_status_authenticated">Authenticated</string>
     <string name="relay_status_not_authenticated">Not authenticated</string>
-    <string name="relay_status_collapse">Collapse</string>
     <string name="relay_status_expand_details">Expand relay details</string>
     <string name="relay_status_host">Host</string>
     <string name="relay_status_connection">Connection</string>

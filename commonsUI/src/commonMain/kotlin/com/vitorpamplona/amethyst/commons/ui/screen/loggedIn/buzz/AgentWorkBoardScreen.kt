@@ -90,9 +90,9 @@ import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkItem
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkKind
 import com.vitorpamplona.amethyst.commons.model.buzz.AgentWorkState
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.agent_work_approve_open_pr
-import com.vitorpamplona.amethyst.commons.resources.agent_work_awaiting_approval
-import com.vitorpamplona.amethyst.commons.resources.agent_work_cannot_sign_decision
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_approve_open_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_gate_awaiting
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_readonly_approver
 import com.vitorpamplona.amethyst.commons.resources.agent_work_compose_description
 import com.vitorpamplona.amethyst.commons.resources.agent_work_deny
 import com.vitorpamplona.amethyst.commons.resources.agent_work_empty_description
@@ -106,8 +106,8 @@ import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_
 import com.vitorpamplona.amethyst.commons.resources.agent_work_require_approval_on
 import com.vitorpamplona.amethyst.commons.resources.agent_work_source_direct
 import com.vitorpamplona.amethyst.commons.resources.agent_work_source_gated
-import com.vitorpamplona.amethyst.commons.resources.agent_work_task_hint
-import com.vitorpamplona.amethyst.commons.resources.agent_work_title
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_task_label
+import com.vitorpamplona.amethyst.commons.resources.buzz_agent_work_title
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_approved
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_decision_failed
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_denied
@@ -115,8 +115,8 @@ import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_file_failed
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed
 import com.vitorpamplona.amethyst.commons.resources.agent_work_toast_task_filed_gated
 import com.vitorpamplona.amethyst.commons.resources.agent_work_upvote
-import com.vitorpamplona.amethyst.commons.resources.agent_work_view_pr
-import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_for_approval
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_view_pr
+import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_waiting_for_approval
 import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on
 import com.vitorpamplona.amethyst.commons.resources.agent_work_waiting_on_you
 import com.vitorpamplona.amethyst.commons.resources.buzz_workflow_pill_queued
@@ -186,7 +186,7 @@ fun AgentWorkBoardScreen(
     val msgFileFailed = stringRes(Res.string.agent_work_toast_file_failed)
 
     Scaffold(
-        topBar = { TopBarWithBackButton(stringRes(Res.string.agent_work_title), nav) },
+        topBar = { TopBarWithBackButton(stringRes(Res.string.buzz_agent_work_title), nav) },
         snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             if (canWrite) {
@@ -307,7 +307,7 @@ private fun LazyItemScope.GateCard(
                         Icon(symbol = MaterialSymbols.Gavel, contentDescription = null, tint = scheme.onPrimary, modifier = Modifier.size(22.dp))
                     }
                     Text(
-                        text = if (mine) stringRes(Res.string.agent_work_waiting_on_you) else stringRes(Res.string.agent_work_awaiting_approval),
+                        text = if (mine) stringRes(Res.string.agent_work_waiting_on_you) else stringRes(Res.string.buzz_workflow_gate_awaiting),
                         style = MaterialTheme.typography.titleSmall,
                         color = scheme.primary,
                         fontWeight = FontWeight.Bold,
@@ -327,11 +327,11 @@ private fun LazyItemScope.GateCard(
                     Button(onClick = { onDecide(true) }, shape = RoundedCornerShape(14.dp), modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
                         Icon(symbol = MaterialSymbols.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringRes(Res.string.agent_work_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                        Text(stringRes(Res.string.buzz_workflow_approve_open_pr), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             } else if (mine) {
-                Text(stringRes(Res.string.agent_work_cannot_sign_decision), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+                Text(stringRes(Res.string.buzz_workflow_readonly_approver), style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
             } else {
                 WaitingPill(item.pendingApprover, accountViewModel, nav)
             }
@@ -471,7 +471,7 @@ private fun ResultLine(result: String?) {
         Button(onClick = { uriHandler.openUri(url) }, shape = RoundedCornerShape(12.dp)) {
             Icon(symbol = MaterialSymbols.OpenInBrowser, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(stringRes(Res.string.agent_work_view_pr))
+            Text(stringRes(Res.string.buzz_workflow_view_pr))
         }
     } else if (!result.isNullOrBlank()) {
         Text(result, style = MaterialTheme.typography.bodyMedium)
@@ -514,7 +514,7 @@ private fun WaitingPill(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(20.dp)) {
         Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(symbol = MaterialSymbols.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
-            if (approver != null) Person(stringRes(Res.string.agent_work_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.agent_work_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
+            if (approver != null) Person(stringRes(Res.string.agent_work_waiting_on), approver, accountViewModel, nav) else Text(stringRes(Res.string.buzz_workflow_waiting_for_approval), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -553,7 +553,7 @@ private fun NewTaskSheet(
             SpellCheckedOutlinedTextField(
                 value = task,
                 onValueChange = { task = it },
-                label = { Text(stringRes(Res.string.agent_work_task_hint)) },
+                label = { Text(stringRes(Res.string.buzz_workflow_task_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
             )
