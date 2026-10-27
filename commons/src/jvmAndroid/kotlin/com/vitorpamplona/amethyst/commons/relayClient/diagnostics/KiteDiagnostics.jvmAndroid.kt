@@ -20,8 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.diagnostics
 
-import com.vitorpamplona.quartz.nip01Core.core.JsonEngine
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.kotlinSerialization.KotlinSerializationMapper
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.Message
 import com.vitorpamplona.quartz.nip01Core.relay.commands.toClient.MessageDecoder
 import com.vitorpamplona.quartz.utils.Log
@@ -31,14 +30,15 @@ import java.util.concurrent.atomic.AtomicLong
 actual fun kiteDiagnosticParser(): MessageDecoder = KiteDiagnosticDecoder()
 
 /**
- * TEMPORARY: parses every relay frame with Quartz's default decoder (Kite, while
- * `JsonEngine.KITE` is on) and, when it throws, parses the same frame again with Jackson to
- * tell a Kite bug from a bad frame. Filter the log with `adb logcat -s KiteDiag`.
+ * TEMPORARY: parses every relay frame with Quartz's default decoder (Kite) and, when it throws,
+ * parses the same frame again with Quartz's kotlinx.serialization decoder, an independent and
+ * lenient parser, to tell a Kite bug from a bad frame. (Jackson was the second opinion until
+ * Quartz 2.4.0 dropped it.) Filter the log with `adb logcat -s KiteDiag`.
  *
- * - **Jackson parses it:** a Kite bug. Logged as a warning with Kite's exception and the
+ * - **kotlinx parses it:** a Kite bug. Logged as a warning with Kite's exception and the
  *   whole frame (split into numbered lines, since logcat cuts a line at about 4 KB), and
- *   Jackson's message is returned so the app still gets the event.
- * - **Jackson rejects it too:** a bad frame, not a Kite bug. Logged as info with both
+ *   kotlinx's message is returned so the app still gets the event.
+ * - **kotlinx rejects it too:** a bad frame, not a Kite bug. Logged as info with both
  *   errors and the frame's start, then the original exception goes up as before.
  *
  * Each distinct frame is logged once; relays resend the same frame, and a burst of
@@ -55,16 +55,15 @@ class KiteDiagnosticDecoder(
         try {
             delegate.decode(text)
         } catch (kiteError: Exception) {
-            if (!JsonEngine.isKite) throw kiteError
-            val jackson =
+            val second =
                 try {
-                    JacksonMapper.fromJsonToMessage(text)
-                } catch (jacksonError: Exception) {
-                    reportBadFrame(text, kiteError, jacksonError)
+                    KotlinSerializationMapper.fromJsonToMessage(text)
+                } catch (secondError: Exception) {
+                    reportBadFrame(text, kiteError, secondError)
                     throw kiteError
                 }
             reportKiteBug(text, kiteError)
-            jackson
+            second
         }
 
     private fun firstTime(text: String): Boolean {
@@ -78,7 +77,7 @@ class KiteDiagnosticDecoder(
     ) {
         val n = kiteBugs.incrementAndGet()
         if (!firstTime(text)) return
-        Log.w(TAG, "Kite bug #$n: Kite rejected a frame Jackson parses (${text.length} chars): $error", error)
+        Log.w(TAG, "Kite bug #$n: Kite rejected a frame kotlinx parses (${text.length} chars): $error", error)
         val chunks = (text.length + CHUNK - 1) / CHUNK
         val shown = minOf(chunks, MAX_CHUNKS)
         for (i in 0 until shown) {
@@ -91,13 +90,13 @@ class KiteDiagnosticDecoder(
     private fun reportBadFrame(
         text: String,
         kiteError: Exception,
-        jacksonError: Exception,
+        secondError: Exception,
     ) {
         val n = badFrames.incrementAndGet()
         if (!firstTime(text)) return
         Log.i(TAG) {
-            "Bad frame #$n, rejected by Kite and Jackson (${text.length} chars). Kite: $kiteError. " +
-                "Jackson: $jacksonError. Frame starts: ${text.take(BAD_FRAME_PREVIEW)}"
+            "Bad frame #$n, rejected by Kite and kotlinx (${text.length} chars). Kite: $kiteError. " +
+                "kotlinx: $secondError. Frame starts: ${text.take(BAD_FRAME_PREVIEW)}"
         }
     }
 

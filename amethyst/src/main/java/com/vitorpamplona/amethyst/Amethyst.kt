@@ -36,7 +36,6 @@ import com.vitorpamplona.amethyst.service.nests.AppForegroundRecycleHook
 import com.vitorpamplona.amethyst.service.okhttp.isEmulator
 import com.vitorpamplona.amethyst.service.priority.WorkerThreadPriorityGovernor
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabHost
-import com.vitorpamplona.quartz.nip01Core.core.JsonEngine
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.CoroutineScope
@@ -121,8 +120,6 @@ class Amethyst : Application() {
         // Before anything logs: shared code's debug-only logging (commons `logTime`) reads this
         // instead of the app's BuildConfig, in both processes.
         AndroidDebugFlag.enabled = isDebug
-        // Quartz's hand-written JSON engine, in both processes, before anything parses an event.
-        JsonEngine.current = JsonEngine.KITE
         Log.d("AmethystApp") { "onCreate $this" }
 
         // Application.onCreate runs in every process. The sandboxed napplet host

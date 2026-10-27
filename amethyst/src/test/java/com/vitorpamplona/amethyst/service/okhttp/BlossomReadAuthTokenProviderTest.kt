@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.service.okhttp
 
 import com.vitorpamplona.amethyst.commons.service.http.BlossomReadAuthTokenProvider
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import kotlinx.coroutines.CoroutineScope
@@ -174,7 +174,7 @@ class BlossomReadAuthTokenProviderTest {
 
             // Strict standard decode, as deployed servers do — see BlossomAuthorizationEvent.rawToken.
             val event = Base64.decode(token).decodeToString()
-            val parsed = JacksonMapper.fromJson(event) as BlossomAuthorizationEvent
+            val parsed = Event.fromJson(event) as BlossomAuthorizationEvent
 
             assertEquals(BlossomAuthorizationEvent.KIND, parsed.kind)
             assertEquals("get", parsed.tags.first { it[0] == "t" }[1])

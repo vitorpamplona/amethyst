@@ -51,13 +51,20 @@ import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.jackson.JacksonMapper
+import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
+import com.vitorpamplona.quartz.nip01Core.kite.KiteWriter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.add
+import kotlinx.serialization.json.addJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.putJsonArray
 
 /** Human-readable label for a [NostrSignerOp]. */
 suspend fun NostrSignerOp.label(context: Context): String =
@@ -202,38 +209,36 @@ private fun plainPreview(request: NappletRequest): String =
 private fun rawDataFor(request: NappletRequest): String =
     when (request) {
         is NappletRequest.Publish ->
-            JacksonMapper.toJsonPretty(EventTemplate<Nothing>(TimeUtils.now(), request.kind, request.tags, request.content))
+            KiteWriter.toPrettyJson(EventTemplate<Nothing>(TimeUtils.now(), request.kind, request.tags, request.content))
         is NappletRequest.SignEvent ->
-            JacksonMapper.toJsonPretty(EventTemplate<Nothing>(request.createdAt, request.kind, request.tags, request.content))
-        is NappletRequest.PublishEncrypted -> {
-            val node = JacksonMapper.mapper.createObjectNode()
-            node.put("kind", request.kind)
-            node.put("recipient", request.recipient)
-            node.put("encryption", request.encryption)
-            val tagsNode = node.putArray("tags")
-            for (tag in request.tags) {
-                val tagNode = tagsNode.addArray()
-                for (item in tag) tagNode.add(item)
+            KiteWriter.toPrettyJson(EventTemplate<Nothing>(request.createdAt, request.kind, request.tags, request.content))
+        is NappletRequest.PublishEncrypted ->
+            prettyJson {
+                put("kind", request.kind)
+                put("recipient", request.recipient)
+                put("encryption", request.encryption)
+                putJsonArray("tags") {
+                    for (tag in request.tags) addJsonArray { for (item in tag) add(item) }
+                }
+                put("content", request.content)
             }
-            node.put("content", request.content)
-            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-        }
-        is NappletRequest.Nip44Encrypt -> {
-            val node = JacksonMapper.mapper.createObjectNode()
-            node.put("operation", "nip44.encrypt")
-            node.put("peer", request.peer)
-            node.put("plaintext", request.plaintext)
-            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-        }
-        is NappletRequest.Nip44Decrypt -> {
-            val node = JacksonMapper.mapper.createObjectNode()
-            node.put("operation", "nip44.decrypt")
-            node.put("peer", request.peer)
-            node.put("ciphertext", request.ciphertext)
-            JacksonMapper.mapper.writerWithDefaultPrettyPrinter().writeValueAsString(node)
-        }
+        is NappletRequest.Nip44Encrypt ->
+            prettyJson {
+                put("operation", "nip44.encrypt")
+                put("peer", request.peer)
+                put("plaintext", request.plaintext)
+            }
+        is NappletRequest.Nip44Decrypt ->
+            prettyJson {
+                put("operation", "nip44.decrypt")
+                put("peer", request.peer)
+                put("ciphertext", request.ciphertext)
+            }
         else -> ""
     }
+
+/** A JSON object built in order and laid out the way Quartz lays out events, for the raw-data pane. */
+private inline fun prettyJson(build: JsonObjectBuilder.() -> Unit): String = KitePretty.format(buildJsonObject(build).toString())
 
 /**
  * Creates a [SignerConnectInfo] for the first-connect dialog. [declared] is the capability set the
