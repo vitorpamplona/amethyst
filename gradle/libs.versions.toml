@@ -79,15 +79,15 @@ kotlinx-coroutines-test = "1.11.0"
 quartzKmp = "2.4.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Both are built against the quartz version above.
-marmotKmp = "2.0.0"
-cordnKmp = "1.0.0"
+marmotKmp = "2.1.0"
+cordnKmp = "1.1.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
 # versions those libraries were built against.
 cryptoKmp = "2.1.0"
-mlsKmp = "1.2.0"
+mlsKmp = "1.3.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
-quicKmp = "1.1.0"
+quicKmp = "1.2.0"
 # Navigation 3, the Compose Multiplatform build (Apache-2.0): Android, desktop and iOS. The
 # ViewModel decorator scopes each back-stack entry's ViewModels; match it to the lifecycle version.
 navigation3 = "1.2.0"
@@ -258,6 +258,7 @@ mockk-android = { group = "io.mockk", name = "mockk-android", version.ref = "moc
 kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test"}
 quartz = { module = "com.vitorpamplona.quartz:quartz", version.ref = "quartzKmp" }
 marmot = { module = "com.vitorpamplona.marmot:marmot", version.ref = "marmotKmp" }
+marmot-quic = { module = "com.vitorpamplona.marmot:marmot-quic", version.ref = "marmotKmp" }
 cordn = { module = "com.vitorpamplona.cordn:cordn", version.ref = "cordnKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }

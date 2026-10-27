@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
@@ -46,7 +47,6 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
-import com.vitorpamplona.amethyst.model.cordn.AndroidCordnBlobStore
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
@@ -103,7 +103,7 @@ object AndroidAppServices : AppServices {
 
     override val appStores: AppPreferenceStores get() = Amethyst.instance.appStores
 
-    override fun cordnBlobStore(servers: List<String>): CordnBlobStore = AndroidCordnBlobStore(servers, Amethyst.instance.appContext)
+    override fun cordnBlobStore(servers: List<String>): CordnBlobStore = BlossomCordnBlobStore(servers, Amethyst.instance::blossomClient)
 
     override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = Amethyst.instance.blossomClient(serverBaseUrl)
 

@@ -29,8 +29,10 @@ A release is one tag push that fans out to these distribution channels:
 | **Homebrew** | **Autobump** — BrewTestBot opens the `amethyst-nostr` cask and `amy` formula PRs itself; `scripts/bump-homebrew-cask.sh` only verifies | Homebrew (we verify) |
 | **Winget** | `scripts/bump-winget.sh` opens the `winget-pkgs` PR with your `gh` auth | Maintainer |
 
-The `quartz` library is not part of this release: it releases to Maven Central from its own
-repository, [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz).
+Nothing here publishes to Maven Central. Quartz ([vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)) and the other libraries (crypto-kmp,
+mls-kmp, marmot-kmp, cordn-kmp, quic-kmp) each release from their own repo's
+`create-release.yml`; an Amethyst release only consumes the versions pinned in
+`gradle/libs.versions.toml`, so those must already be on Maven Central when you tag.
 
 ---
 
@@ -42,8 +44,12 @@ repository, [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz).
    appCode = "449"      # Android versionCode, monotonic — must increment
    ```
    That single edit propagates to Android (`versionName`/`versionCode`),
-   Desktop & CLI (`packageVersion`) and `geode`
-   (`RelayInfo.VERSION`). Nothing else hardcodes the version.
+   Desktop & CLI (`packageVersion`) and `geode` (`RelayInfo.VERSION`). Nothing
+   else hardcodes the version. The libraries version themselves in their own repos.
+
+   Check that every library version pinned in `gradle/libs.versions.toml`
+   (`quartzKmp`, `cryptoKmp`, `mlsKmp`, `marmotKmp`, `cordnKmp`, `quicKmp`)
+   resolves on Maven Central: a pin to an unreleased library fails the build.
 
 2. **Write the changelog** as `docs/changelog/vMAJOR.MINOR.PP.md` (zero-padded,
    e.g. `v1.12.01.md`) and add it to `docs/changelog/README.md`. Follow the
@@ -463,6 +469,10 @@ ownership:
 | `SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`, `SIGNING_PASSWORD` | Nothing here any more: they published `quartz` to Maven Central, which now releases from vitorpamplona/quartz. No workflow in this repo reads them | Delete from this repo's secrets |
 | *(none for Homebrew/Winget)* | — | Homebrew is autobumped by BrewTestBot, and `scripts/bump-winget.sh` runs on a maintainer's machine with `gh` auth, so neither channel needs a CI secret. See BUILDING.md § Package-manager credentials |
 | `CROWDIN_PERSONAL_TOKEN`, `CROWDIN_PROJECT_ID` | Translation sync | On compromise |
+
+The Maven Central secrets (`SONATYPE_USERNAME`, `SONATYPE_PASSWORD`, `SIGNING_PRIVATE_KEY`,
+`SIGNING_PASSWORD`) belong to the library repos' release workflows; no workflow in this repo
+reads them.
 
 Owner assignments and rotation reminders live with the team (issue tracker).
 

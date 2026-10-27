@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.cordn
+package com.vitorpamplona.amethyst.commons.cordn
 
-import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
@@ -560,6 +559,23 @@ class CordnRuntimeTest {
             runtime.adoptMigration(snapshot)
 
             assertFalse(runtime.handoff.handedOff.value)
+        }
+
+    @Test
+    fun `restoring a backup clears a handoff, the same as adopting a snapshot`() =
+        runBlocking {
+            // A restore deletes the on-disk marker with the rest of the account's
+            // directory. Leaving the in-memory flag set made every coordinator
+            // refuse to open until the app was relaunched.
+            val runtime = runtime(runtimeScope())
+            runtime.createGroup(configFor(keyA), CordnGroupMetadata(name = "Mine"), gid = "mine")
+            val archive = runtime.exportArchive("pw")
+            runtime.handoff.markHandedOff()
+
+            runtime.importArchive(archive, "pw")
+
+            assertFalse(runtime.handoff.handedOff.value)
+            assertNotNull(runtime.session(configFor(keyA)))
         }
 
     @Test

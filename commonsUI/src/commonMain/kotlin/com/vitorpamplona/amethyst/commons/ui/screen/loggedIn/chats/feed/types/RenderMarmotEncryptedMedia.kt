@@ -34,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.could_not_decrypt_the_message
@@ -52,6 +51,7 @@ import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.mip04EncryptedMedia.Mip04Cipher
 import com.vitorpamplona.marmot.mip04EncryptedMedia.Mip04MediaMeta
 import com.vitorpamplona.marmot.mip04EncryptedMedia.toMip04MediaMeta

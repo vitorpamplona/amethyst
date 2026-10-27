@@ -219,11 +219,26 @@ Information shared on Nostr can be re-broadcasted to other servers and should be
 
 # Development Overview
 
-This repository is split between Amethyst, Commons, and DesktopApp, on top of Quartz:
-- **Amethyst** - Native Android app with Kotlin and Jetpack Compose
-- **Quartz** - Nostr-commons KMP library for protocol classes shared across platforms, in its own repo: [vitorpamplona/quartz](https://github.com/vitorpamplona/quartz)
-- **Commons** - Kotlin Multiplatform module with shared UI components (icons, robohash, blurhash, composables)
-- **DesktopApp** - Compose Multiplatform Desktop application reusing commons and quartz
+This repository holds the apps and the code they share:
+- **Amethyst** - The Android app: a thin shim around the shared UI, plus Android services and system integrations
+- **Commons** - Kotlin Multiplatform headless layer: models, state, ViewModels, the relay client
+- **CommonsUI** - Compose Multiplatform UI on top of Commons: every screen, the navigation shell, icons, theme, strings
+- **DesktopApp** - The desktop app: a JVM shim that renders the same shared UI
+- **cli** - `amy`, a non-interactive command-line client over Quartz and Commons
+- **nestsClient** - The audio-rooms (MoQ) client; **geode** - a standalone Nostr relay
+
+The protocol code lives in its own Kotlin Multiplatform libraries, each in its own repo and on Maven Central:
+
+| Library | What it is |
+|---|---|
+| [Quartz](https://github.com/vitorpamplona/quartz) | The Nostr protocol: events, NIPs, signers, the relay client, Marmot's event classes |
+| [crypto-kmp](https://github.com/vitorpamplona/crypto-kmp) | Hashes, MACs, HKDF, AES, ChaCha20, X25519 and Ed25519, with no dependencies |
+| [mls-kmp](https://github.com/vitorpamplona/mls-kmp) | The RFC 9420 MLS engine |
+| [marmot-kmp](https://github.com/vitorpamplona/marmot-kmp) | Marmot, MLS group chats over Nostr |
+| [cordn-kmp](https://github.com/vitorpamplona/cordn-kmp) | cordn, MLS group chats over an MCP coordinator |
+| [quic-kmp](https://github.com/vitorpamplona/quic-kmp) | A pure-Kotlin QUIC, HTTP/3 and WebTransport client |
+
+[AGENTS.md](AGENTS.md) says what goes in which repo.
 
 The app architecture consists of the UI, which uses the usual State/ViewModel/Composition, the service layer that connects with Nostr relays,
 and the model/repository layer, which keeps all Nostr objects in memory, in a full OO graph.

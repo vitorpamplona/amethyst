@@ -22,52 +22,31 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.cordn.client.CordnBlobStore
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
-import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
-import kotlinx.coroutines.CancellationException
+import com.vitorpamplona.cordn.client.CordnBlossomHttp
+import com.vitorpamplona.cordn.client.CordnTipBlobStore
 
 /**
- * [CordnBlobStore] over plain Blossom servers. Uploads are signed by a throwaway key, so the server
- * learns a size and a hash and nothing about who stored it or what it is.
+ * Where a migration's sealed documents are stored: cordn-kmp's [CordnTipBlobStore], which holds
+ * the §12 rules (a throwaway signer for every upload, opaque bytes, servers tried in order), over
+ * the app's [BlossomClient] and so over the network route the user picked for uploads.
+ *
+ * Not the attachment path. Message attachments are signed by the account
+ * (`account.createBlossomUploadAuth`, see [CordnMediaService]) because they already ride inside a
+ * group; the point of a migration blob is that nothing links it to anyone.
  */
 class BlossomCordnBlobStore(
-    private val servers: List<String>,
+    servers: List<String>,
+    clientFor: (serverBaseUrl: String) -> BlossomClient,
+) : CordnBlobStore by CordnTipBlobStore(servers, BlossomCordnHttp(clientFor))
+
+private class BlossomCordnHttp(
     private val clientFor: (serverBaseUrl: String) -> BlossomClient,
-) : CordnBlobStore {
-    private val signer = NostrSignerInternal(KeyPair())
+) : CordnBlossomHttp {
+    override suspend fun upload(
+        serverBaseUrl: String,
+        blob: ByteArray,
+        authorization: String,
+    ): Boolean = clientFor(serverBaseUrl).upload(blob, CordnTipBlobStore.CONTENT_TYPE, serverBaseUrl, authorization).url != null
 
-    override suspend fun put(blob: ByteArray): List<String> {
-        val hash = sha256(blob).toHexKey()
-        val auth = BlossomAuthorizationEvent.createUploadAuth(hash, blob.size.toLong(), "", signer).toAuthorizationHeader()
-
-        return servers.filter { server ->
-            try {
-                clientFor(server).upload(blob, OPAQUE, server, auth).url != null
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                false
-            }
-        }
-    }
-
-    // In the order given: the reader tries the tip's servers as listed, most reliable first.
-    override suspend fun get(
-        address: String,
-        servers: List<String>,
-    ): ByteArray? =
-        servers.firstNotNullOfOrNull { server ->
-            try {
-                clientFor(server).download("${server.trimEnd('/')}/$address")
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                null
-            }
-        }
-
-    companion object {
-        private const val OPAQUE = "application/octet-stream"
-    }
+    override suspend fun download(url: String): ByteArray? = clientFor(url).download(url)
 }

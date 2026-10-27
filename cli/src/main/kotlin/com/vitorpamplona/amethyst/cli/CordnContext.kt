@@ -20,15 +20,18 @@
  */
 package com.vitorpamplona.amethyst.cli
 
-import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
+import com.vitorpamplona.amethyst.commons.cordn.NostrClientCvmRelayPool
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.cordn.client.CordnCoordinatorRegistry
+import com.vitorpamplona.cordn.client.CordnLinks
 import com.vitorpamplona.cordn.client.CordnSession
 import com.vitorpamplona.cordn.client.KeyedCordnBlobCipher
+import com.vitorpamplona.cordn.client.remove
+import com.vitorpamplona.cordn.client.upsert
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -75,7 +78,7 @@ class CordnContext(
                 FileBackedCordnScopeFactory(
                     root = migrationRoot,
                     cipher = cipher,
-                    links = CordnLinks.over(ctx.signer, ctx.client),
+                    links = CordnLinks.over(ctx.signer) { relays -> NostrClientCvmRelayPool(ctx.client, relays) },
                 ),
         )
     }
@@ -97,16 +100,10 @@ class CordnContext(
      * second entry for the same key with different relays is a corrected
      * address, not a second coordinator.
      */
-    suspend fun remember(config: CoordinatorConfig) {
-        val kept = coordinators().filterNot { it.pubKey == config.pubKey }
-        coordinatorStore.save(kept + config)
-    }
+    suspend fun remember(config: CoordinatorConfig) = coordinatorStore.upsert(config)
 
     suspend fun forget(coordinatorPubKey: HexKey): Boolean {
-        val before = coordinators()
-        val after = before.filterNot { it.pubKey == coordinatorPubKey }
-        if (after.size == before.size) return false
-        coordinatorStore.save(after)
+        if (!coordinatorStore.remove(coordinatorPubKey)) return false
         registry.forget(coordinatorPubKey)
         return true
     }

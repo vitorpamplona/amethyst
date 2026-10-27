@@ -140,8 +140,8 @@ import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.client.CordnGroupException
 import com.vitorpamplona.cordn.client.GroupExposure
+import com.vitorpamplona.cordn.groups.CordnGroupPolicy
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
-import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.TimeoutCancellationException
@@ -223,7 +223,7 @@ private fun CordnGroupInfo(
     // The same rule the policy enforces, asked here so the screen offers only
     // what would actually go through: empty is egalitarian and everyone
     // administers, otherwise it is the named set.
-    val canAdminister = admins.isEmpty() || me in admins
+    val canAdminister = CordnGroupPolicy.isAdmin(admins, me)
 
     val scope = rememberCoroutineScope()
     val runtime = accountViewModel.account.cordnRuntime
@@ -505,13 +505,12 @@ private fun CordnGroupInfo(
                     onSave = { newName, newDescription ->
                         renaming = false
                         runAdmin {
-                            // The whole metadata travels together, admin list
-                            // included, because the extension is replaced whole.
-                            it.updateGroupMetadata(
-                                coordinatorPubKey,
-                                room.gid,
-                                CordnGroupMetadata(name = newName, description = newDescription, adminPubkeys = admins),
-                            )
+                            // Applied to the metadata the group carries now: the extension is
+                            // replaced whole, so building a fresh one from the two edited fields
+                            // erased the icon and the image on every rename.
+                            it.updateGroupMetadata(coordinatorPubKey, room.gid) { current ->
+                                current.copy(name = newName, description = newDescription)
+                            }
                         }
                     },
                 )

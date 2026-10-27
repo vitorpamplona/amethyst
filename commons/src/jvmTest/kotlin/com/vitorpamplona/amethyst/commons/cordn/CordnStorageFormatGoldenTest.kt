@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.storage.EncryptedAppendLog
 import com.vitorpamplona.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationGroup
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationSnapshot
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.cordn.client.CordnMessageSummary

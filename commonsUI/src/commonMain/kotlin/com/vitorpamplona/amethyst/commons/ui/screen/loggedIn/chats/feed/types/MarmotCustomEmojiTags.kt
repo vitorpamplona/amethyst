@@ -26,11 +26,11 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.marmotGroupIdFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 
 /**
  * The tags a Marmot message renders with, or null when [note] is not a Marmot

@@ -23,11 +23,9 @@ package com.vitorpamplona.amethyst.commons.model
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotCustomEmoji
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiMediaPort
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotEmojiUploadCache
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.syncMetadataTo
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
@@ -35,7 +33,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
-import com.vitorpamplona.marmot.appComponents.BlobStoreEndpointV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2
@@ -47,10 +44,13 @@ import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 import com.vitorpamplona.marmot.appComponents.MessageRetentionV1
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotAppEvent
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotCustomEmoji
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotMessageEdit
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReport
 import com.vitorpamplona.marmot.foundation.appEvents.MarmotReportDismissal
 import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
+import com.vitorpamplona.marmot.groups.MarmotGroupPermissions
 import com.vitorpamplona.marmot.mip00KeyPackages.KeyPackageFetcher
 import com.vitorpamplona.marmot.protocolCore.GroupLifecycleState
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageEvent
@@ -957,10 +957,10 @@ class AccountMarmotActions(
      * profile is decided here, once, and never migrated. Groups made the old
      * way are joinable only by other legacy clients.
      *
-     * The name, description and avatar arrive later through
-     * `updateMarmotGroupMetadata`; the routing component has to exist from
-     * epoch 0 because it carries the `nostr_group_id` every kind-445 event in
-     * this group is addressed to.
+     * The name, description, retention and the routing component (the
+     * `nostr_group_id` every kind-445 event is addressed to, and the relays)
+     * go in at epoch 0. The avatar and the media policy are later commits:
+     * `BaseAccountViewModel.createMarmotGroup` makes them.
      */
     suspend fun createMarmotGroup(
         nostrGroupId: HexKey,
@@ -1001,16 +1001,9 @@ class AccountMarmotActions(
     }
 
     /**
-     * Leave a Marmot MLS group.
-     * Publishes the SelfRemove proposal and removes local state.
-     *
-     * MIP-01/MIP-03: admins MUST first publish a GroupContextExtensions
-     * commit dropping themselves from `admin_pubkeys` before issuing a
-     * SelfRemove proposal. Without that, [MlsGroup.selfRemove] throws
-     * `IllegalStateException("Admin must self-demote via GroupContextExtensions
-     * before SelfRemove (MIP-01)")` and the leave aborts. Demote commit and
-     * SelfRemove proposal both go to the same group relays, demote first so
-     * peers apply it before they see the SelfRemove.
+     * Leave a Marmot MLS group: step down if an admin (naming an heir when no
+     * other admin is a member, see [MarmotManager.leave]), publish the
+     * SelfRemove proposal and drop the chatroom.
      */
     suspend fun leaveMarmotGroup(
         nostrGroupId: HexKey,
@@ -1019,34 +1012,15 @@ class AccountMarmotActions(
         val manager = account.marmotManager ?: return
         if (!account.isWriteable()) return
 
-        val view = manager.groupView(nostrGroupId)
-        if (view != null && view.adminPubkeys.contains(account.signer.pubKey)) {
-            val remaining = view.adminPubkeys.filter { it != account.signer.pubKey }.toMutableList()
-            // MIP-03 also rejects any GCE commit that leaves the group with zero
-            // admins. If we're the only one, promote an arbitrary non-self
-            // member to admin before stepping down.
-            if (remaining.isEmpty()) {
-                val heir =
-                    manager
-                        .memberPubkeys(nostrGroupId)
-                        .map { it.pubkey }
-                        .firstOrNull { it != account.signer.pubKey }
-                if (heir != null) remaining.add(heir)
-            }
-            if (remaining.isNotEmpty()) {
-                manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
-            }
-        }
-
-        val outbound = manager.leaveGroup(nostrGroupId)
-        // manager.leaveGroup already wiped MLS state, relay subscriptions and
+        val departure = manager.leave(nostrGroupId, groupRelays.toList())
+        // manager.leave already wiped MLS state, relay subscriptions and
         // the persisted message log. Drop the in-memory chatroom too — that
         // releases the strong refs to the decrypted inner notes so LocalCache
         // (which holds them weakly) can GC them, and the Notification feed
         // (which iterates account.marmotGroupList.rooms) stops surfacing the group.
         account.marmotGroupList.removeGroup(nostrGroupId)
         emojiUploads.forget(nostrGroupId)
-        account.client.publish(outbound.signedEvent, groupRelays)
+        departure.selfRemove?.let { account.client.publish(it.signedEvent, groupRelays) }
     }
 
     /**
@@ -1192,24 +1166,16 @@ class AccountMarmotActions(
                 account.blossomServers.hostNameFlow.value
                     .filter { it.type == ServerType.Blossom }
                     .map { it.baseUrl }
-            }.mapNotNull { normalizedPolicyBaseUrl(it) }
-            .distinct()
+            }.mapNotNull { url ->
+                // A server with no base-URL form (a query, say) is left out rather than
+                // failing the whole commit.
+                try {
+                    EncryptedMediaPolicyV2.normalizeBaseUrl(url)
+                } catch (e: IllegalArgumentException) {
+                    null
+                }
+            }.distinct()
             .take(EncryptedMediaPolicyV2.MAX_ENTRIES)
-
-    /**
-     * [url] in the byte-exact form the media policy requires, or null when it has none.
-     * The component rejects a base URL that isn't its own WHATWG serialization, so the
-     * everyday spelling without a trailing slash (`https://cdn.nostrcheck.me`) failed the
-     * whole commit.
-     */
-    private fun normalizedPolicyBaseUrl(url: String): String? =
-        try {
-            MarmotWebUrl.normalize(url, allowHttp = true, label = "base_url").also {
-                EncryptedMediaPolicyV2.requireNormalizedBaseUrl(it)
-            }
-        } catch (e: IllegalArgumentException) {
-            null
-        }
 
     suspend fun enableMarmotEncryptedMediaV2(nostrGroupId: HexKey) {
         val manager = account.marmotManager ?: return
@@ -1219,14 +1185,7 @@ class AccountMarmotActions(
         require(servers.isNotEmpty()) {
             "Cannot enable encrypted media without at least one Blossom server configured"
         }
-        val policy =
-            EncryptedMediaPolicyV2(
-                allowedLocatorKinds = listOf(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND),
-                defaultBlobEndpoints =
-                    servers.map {
-                        BlobStoreEndpointV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, it)
-                    },
-            )
+        val policy = EncryptedMediaPolicyV2.forBlossom(servers)
         manager.setEncryptedMediaPolicy(nostrGroupId, policy, marmotGroupRelays(nostrGroupId).toList())
         val chatroom = account.marmotGroupList.getOrCreateGroup(nostrGroupId)
         manager.syncMetadataTo(nostrGroupId, chatroom)
@@ -1283,9 +1242,8 @@ class AccountMarmotActions(
 
     /**
      * Revoke admin privileges from [targetPubKey]. Rejects any change that
-     * would leave the group with zero admins — MIP-03's admin-depletion guard
-     * in [com.vitorpamplona.mls.group.MlsGroup] would otherwise
-     * throw at commit time.
+     * would leave no admin among the members ([MarmotGroupPermissions.canDemote]);
+     * peers refuse that commit as admin depletion.
      */
     suspend fun revokeMarmotGroupAdmin(
         nostrGroupId: HexKey,
@@ -1297,12 +1255,12 @@ class AccountMarmotActions(
 
         val view = manager.groupView(nostrGroupId) ?: return
         if (!view.adminPubkeys.contains(targetPubKey)) return
-        val remaining = view.adminPubkeys.filter { it != targetPubKey }
-        check(remaining.isNotEmpty()) {
-            "Cannot revoke the last admin from a Marmot group (MIP-03)"
+        val members = manager.memberPubkeys(nostrGroupId).map { it.pubkey }
+        check(MarmotGroupPermissions.canDemote(view.adminPubkeys, members, account.signer.pubKey, targetPubKey)) {
+            "Cannot revoke the last admin among the members of a Marmot group (MIP-03)"
         }
 
-        manager.setGroupAdmins(nostrGroupId, remaining, groupRelays.toList())
+        manager.setGroupAdmins(nostrGroupId, view.adminPubkeys.filter { it != targetPubKey }, groupRelays.toList())
         // The commit is canonical once published; without this the roster and the
         // admin badges keep the pre-commit admin list until our own echo or a restart.
         manager.syncMetadataTo(nostrGroupId, account.marmotGroupList.getOrCreateGroup(nostrGroupId))

@@ -156,20 +156,6 @@
 -dontoptimize
 
 # ============================================================================
-# Desktop-only: Jackson — mobile module does not ship Jackson on Android
-# ============================================================================
-# Jackson uses reflection extensively at construction time (ObjectMapper,
-# JsonMapper, SerializationConfig, DeserializationConfig). The
-# `-keep enum **` rule above already covers `values()`/`valueOf()`; this
-# block also keeps the annotation/databind/core/kotlin-module classes
-# intact and silences value-class MethodHandle warnings.
--keep class com.fasterxml.jackson.databind.** { *; }
--keep class com.fasterxml.jackson.annotation.** { *; }
--keep class com.fasterxml.jackson.core.** { *; }
--keep class com.fasterxml.jackson.module.kotlin.** { *; }
--dontwarn com.fasterxml.jackson.module.kotlin.**
-
-# ============================================================================
 # Desktop-only: full JNA — mobile narrows JNA because Android has no AWT
 # ============================================================================
 # On desktop we run a real JVM with AWT, so VLCj / kmp-tor / etc. can use

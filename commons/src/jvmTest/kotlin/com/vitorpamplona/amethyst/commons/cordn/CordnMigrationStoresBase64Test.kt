@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.cordn
 
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationGroup
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationSnapshot
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer

@@ -2,7 +2,7 @@
 #
 # tier-b.sh — the cordn binding, end to end against the REFERENCE coordinator.
 #
-# Tier B of quartz/plans/2026-09-17-cordn-interop.md §6.4: a live
+# Tier B of cordn-kmp's cordn/plans/2026-09-17-cordn-interop.md §6.4: a live
 # counterparty, not a fixture. Three amy accounts, one local relay (geode),
 # one reference coordinator, and the whole lifecycle — publish a KeyPackage,
 # create a group, invite, open the Welcome without joining, join, talk in both

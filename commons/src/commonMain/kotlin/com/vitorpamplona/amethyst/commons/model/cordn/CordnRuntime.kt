@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cordn
 
-import com.vitorpamplona.amethyst.commons.cordn.CordnCoordinatorDiscovery
-import com.vitorpamplona.amethyst.commons.cordn.CordnLinks
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigration
-import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationSnapshot
 import com.vitorpamplona.amethyst.commons.cordn.CordnMigrationStores
 import com.vitorpamplona.amethyst.commons.cordn.CordnStorageLayout
 import com.vitorpamplona.amethyst.commons.cordn.FileBackedCordnScopeFactory
@@ -31,26 +27,38 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
+import com.vitorpamplona.amethyst.commons.cordn.NostrClientCvmRelayPool
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.cordn.appMultiDevice.CordnHandoffCode
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigration
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationSnapshot
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CoordinatorHealth
 import com.vitorpamplona.cordn.client.CordnBackup
 import com.vitorpamplona.cordn.client.CordnBlobCipher
 import com.vitorpamplona.cordn.client.CordnCoordinatorLinkFactory
 import com.vitorpamplona.cordn.client.CordnCoordinatorRegistry
+import com.vitorpamplona.cordn.client.CordnCoverage
 import com.vitorpamplona.cordn.client.CordnGroupManager
 import com.vitorpamplona.cordn.client.CordnHandoffState
+import com.vitorpamplona.cordn.client.CordnInvitation
+import com.vitorpamplona.cordn.client.CordnInvitations
+import com.vitorpamplona.cordn.client.CordnInviteOutcome
+import com.vitorpamplona.cordn.client.CordnKeyPackageRow
+import com.vitorpamplona.cordn.client.CordnLinks
+import com.vitorpamplona.cordn.client.CordnLocalState
 import com.vitorpamplona.cordn.client.CordnRoomState
 import com.vitorpamplona.cordn.client.CordnSession
 import com.vitorpamplona.cordn.client.CordnSyncLoop
 import com.vitorpamplona.cordn.client.CordnSyncSource
-import com.vitorpamplona.cordn.client.OpenedWelcome
+import com.vitorpamplona.cordn.client.rememberOpen
 import com.vitorpamplona.cordn.spec00Coordinator.CoordinatorServerInfo
+import com.vitorpamplona.cordn.spec00Coordinator.CordnCoordinatorDiscovery
 import com.vitorpamplona.cordn.spec00Coordinator.JoinRequest
 import com.vitorpamplona.cordn.spec01GroupMetadata.CordnGroupMetadata
 import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessage
@@ -79,8 +87,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 /**
  * One account's cordn feature, assembled.
@@ -116,15 +122,8 @@ class CordnRuntime(
      * all. The ephemeral signer stays inside the default, because §8's
      * identity split is not a thing a caller should be able to widen.
      */
-    private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner, client),
+    private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner) { relays -> NostrClientCvmRelayPool(client, relays) },
 ) {
-    /** See the class KDoc: per-runtime, never written to disk. */
-    private val registry =
-        CordnCoordinatorRegistry(
-            accountPubKey = accountSigner.pubKey,
-            scopes = FileBackedCordnScopeFactory(filesDir, cipher, links),
-        )
-
     private val coordinatorStore =
         FileCordnCoordinatorStore(
             CordnStorageLayout.accountDirectoryFor(filesDir, accountSigner.pubKey),
@@ -141,6 +140,17 @@ class CordnRuntime(
     val handoff =
         CordnHandoffState(
             FileCordnHandoffStore(CordnStorageLayout.accountDirectoryFor(filesDir, accountSigner.pubKey)),
+        )
+
+    /**
+     * See the class KDoc: per-runtime, never written to disk. It holds [handoff], so a device that
+     * has handed its groups away refuses to open or reuse a session (a label change aside).
+     */
+    private val registry =
+        CordnCoordinatorRegistry(
+            accountPubKey = accountSigner.pubKey,
+            scopes = FileBackedCordnScopeFactory(filesDir, cipher, links),
+            handoff = handoff,
         )
 
     /** Every cordn room this account is in, for the inbox and the screens. */
@@ -180,12 +190,11 @@ class CordnRuntime(
      *
      * Every epoch-advancing path goes through here — creating a group, joining
      * one, accepting a Welcome, sending — so this is where a handed-off device
-     * is stopped. Reads of state already in memory are left alone: showing a
-     * user the conversations they had is harmless, and refusing it would make a
-     * failed migration look like data loss.
+     * is stopped: [registry] holds [handoff] and refuses. Reads of state already
+     * in memory are left alone: showing a user the conversations they had is
+     * harmless, and refusing it would make a failed migration look like data loss.
      */
     suspend fun session(config: CoordinatorConfig): CordnSession {
-        handoff.requireNotHandedOff()
         val session = registry.session(config)
         lock.withLock {
             // Rebuilt, not only created: an existing loop whose source is not
@@ -332,9 +341,7 @@ class CordnRuntime(
     private fun maintainKeyPackages(session: CordnSession) {
         scope.launch {
             try {
-                if (!session.keyPackages.hasPublished()) return@launch
-                session.keyPackages.topUp()
-                session.keyPackages.ensureLastResort()
+                session.keyPackages.maintain()
             } catch (e: Exception) {
                 Log.w(TAG, "could not top up key packages on ${session.coordinatorPubKey.take(8)}\u2026: ${e.message}", e)
             }
@@ -355,11 +362,10 @@ class CordnRuntime(
      * down, and why a group with no other members has told the coordinator
      * nothing at all.
      */
-    @OptIn(ExperimentalUuidApi::class)
     suspend fun createGroup(
         config: CoordinatorConfig,
         metadata: CordnGroupMetadata,
-        gid: String = Uuid.random().toString(),
+        gid: String = CordnGroupManager.newGid(),
     ): String {
         val session = session(config)
         session.manager.createGroup(gid, metadata)
@@ -385,13 +391,7 @@ class CordnRuntime(
     suspend fun coverage(
         coordinatorPubKey: HexKey,
         roster: Set<HexKey>,
-    ): CordnCoverage {
-        val identities =
-            identitiesWithKeyPackages(coordinatorPubKey)
-                ?: return CordnCoverage(coordinatorPubKey, emptySet(), roster, answered = false)
-        val reachable = roster.filterTo(mutableSetOf()) { it in identities }
-        return CordnCoverage(coordinatorPubKey, reachable, roster - reachable, answered = true)
-    }
+    ): CordnCoverage = registry.coverage(coordinatorPubKey, roster)
 
     /**
      * Creates the group, then invites [invitees] into it one at a time.
@@ -418,22 +418,8 @@ class CordnRuntime(
 
         val outcomes =
             try {
-                val batch = session.manager.inviteAll(gid, invitees)
-                // Order follows the roster, not the batch: this is what the
-                // screen lists, and a list that reshuffles by outcome is harder
-                // to read than one that matches what was asked for.
-                invitees.map { target ->
-                    val undelivered = batch.undelivered[target]
-                    CordnInviteOutcome(
-                        pubKey = target,
-                        failure = batch.refused[target] ?: undelivered,
-                        // Added, but with no Welcome to join by. Kept apart from
-                        // a refusal because the two need opposite answers: this
-                        // one is already a member and needs the Welcome resent,
-                        // where a refusal never reached the group at all.
-                        joinedWithoutWelcome = undelivered != null,
-                    )
-                }
+                // Order follows the roster, not the batch: this is what the screen lists.
+                session.manager.inviteAll(gid, invitees).outcomes(invitees)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -487,25 +473,7 @@ class CordnRuntime(
      * dropped. "We could not ask" and "there is nothing for you" look the same
      * on screen and mean opposite things.
      */
-    suspend fun invitations(): CordnInvitations {
-        val pending = mutableListOf<CordnInvitation>()
-        val skipped = mutableListOf<CordnSkippedInvitation>()
-        val unreachable = mutableListOf<CordnCoordinatorFailure>()
-
-        registry.coordinators.value.forEach { config ->
-            val session = registry.sessionOrNull(config.pubKey) ?: return@forEach
-            try {
-                val inbox = session.manager.pendingWelcomes(session.keyPackages::bundleFor)
-                pending += inbox.pending.map { CordnInvitation(config, it) }
-                skipped += inbox.skipped.map { CordnSkippedInvitation(config, it.keyPackageRef, it.reason) }
-            } catch (e: Exception) {
-                currentCoroutineContext().ensureActive()
-                Log.w(TAG, "could not read invitations from ${config.pubKey.take(8)}\u2026: ${e.message}", e)
-                unreachable += CordnCoordinatorFailure(config, e.message ?: "the coordinator did not answer")
-            }
-        }
-        return CordnInvitations(pending, skipped, unreachable)
-    }
+    suspend fun invitations(): CordnInvitations = registry.invitations()
 
     /** Joins the group [invitation] opens, and shows it in the inbox. */
     suspend fun accept(invitation: CordnInvitation): String {
@@ -535,11 +503,7 @@ class CordnRuntime(
     suspend fun requestToJoin(
         config: CoordinatorConfig,
         gid: String,
-    ): Long {
-        val session = session(config)
-        val published = session.keyPackages.publishNew()
-        return session.manager.requestToJoin(gid, published.keyPackageRef)
-    }
+    ): Long = session(config).requestToJoin(gid)
 
     /**
      * Everyone asking to join [gid], or an empty list if we hold no session.
@@ -600,6 +564,20 @@ class CordnRuntime(
     ) {
         val session = requireSession(coordinatorPubKey)
         session.manager.updateGroupMetadata(gid, metadata)
+        refresh(session, gid)
+    }
+
+    /**
+     * Changes [gid]'s metadata by [change], applied to what the group carries now, so an edit of
+     * some fields (a rename) keeps the rest (the icon, the image).
+     */
+    suspend fun updateGroupMetadata(
+        coordinatorPubKey: HexKey,
+        gid: String,
+        change: (CordnGroupMetadata) -> CordnGroupMetadata,
+    ) {
+        val session = requireSession(coordinatorPubKey)
+        session.manager.updateGroupMetadata(gid, change)
         refresh(session, gid)
     }
 
@@ -720,18 +698,12 @@ class CordnRuntime(
      * account — or to an install that is gone, in which case anyone using it
      * sends a Welcome nobody will ever read.
      */
-    suspend fun keyPackages(coordinatorPubKey: HexKey): List<CordnKeyPackageRow> {
-        val session = registry.sessionOrNull(coordinatorPubKey) ?: return emptyList()
-        val held = session.keyPackages.published.value
-        return session.keyPackages.listPublished().map {
-            CordnKeyPackageRow(
-                keyPackageRef = it.keyPackageRef,
-                lastResort = it.lastResort,
-                at = it.at,
-                openableHere = it.keyPackageRef in held,
-            )
-        }
-    }
+    suspend fun keyPackages(coordinatorPubKey: HexKey): List<CordnKeyPackageRow> =
+        registry
+            .sessionOrNull(coordinatorPubKey)
+            ?.keyPackages
+            ?.inventory()
+            .orEmpty()
 
     /**
      * Which identities [coordinatorPubKey] can deliver a Welcome to, or null.
@@ -785,39 +757,8 @@ class CordnRuntime(
      */
     suspend fun exportArchive(passphrase: String): ByteArray {
         val configs = coordinatorStore.load()
-        val groups = mutableListOf<CordnBackup.Archive.Group>()
-        val keyPackages = mutableListOf<CordnBackup.Archive.KeyPackage>()
-
-        withContext(Dispatchers.IO) {
-            configs.forEach { config ->
-                val dir = CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, config.pubKey)
-                val groupStore = FileCordnGroupStore(dir, cipher)
-                val keyPackageStore = FileCordnKeyPackageStore(dir, cipher)
-
-                groupStore.listGroups().forEach { gid ->
-                    val state = groupStore.loadGroup(gid) ?: return@forEach
-                    groups +=
-                        CordnBackup.Archive.Group(
-                            coordinatorPubKey = config.pubKey,
-                            gid = gid,
-                            state = state,
-                            cursor = groupStore.loadCursor(gid),
-                            joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
-                            messages = groupStore.loadMessages(gid),
-                        )
-                }
-
-                keyPackageStore.list().forEach { ref ->
-                    val bundle = keyPackageStore.load(ref) ?: return@forEach
-                    keyPackages += CordnBackup.Archive.KeyPackage(config.pubKey, ref, bundle)
-                }
-            }
-        }
-
-        return CordnBackup.seal(
-            CordnBackup.Archive(accountSigner.pubKey, configs, groups, keyPackages),
-            passphrase,
-        )
+        val state = withContext(Dispatchers.IO) { CordnLocalState.read(configs.map { it.pubKey }, ::storesFor) }
+        return CordnBackup.seal(CordnBackup.Archive.of(accountSigner.pubKey, configs, state), passphrase)
     }
 
     /**
@@ -851,24 +792,13 @@ class CordnRuntime(
             // histories for any gid present in both, which is the one outcome
             // this must never produce.
             platformFileSystem.deleteRecursivelyQuietly(filesDir / "cordn" / accountSigner.pubKey)
-
-            archive.groups.forEach { group ->
-                val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, group.coordinatorPubKey), cipher)
-                store.saveGroup(group.gid, group.state)
-                group.cursor?.let { store.saveCursor(group.gid, it) }
-                if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
-                // Before the cursor is trusted again. The cursor says the
-                // stream has been read to here, so nothing will re-deliver
-                // these -- if they are not written back now they are gone.
-                group.messages.forEach { store.appendMessage(group.gid, it) }
-            }
-
-            archive.keyPackages.forEach { keyPackage ->
-                FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, keyPackage.coordinatorPubKey), cipher)
-                    .save(keyPackage.keyPackageRef, keyPackage.bundle)
-            }
+            CordnLocalState.write(archive.toLocalState(), ::storesFor)
         }
 
+        // The marker went with the directory above; the in-memory flag has to
+        // follow, or every coordinator refuses to open until a relaunch. This
+        // device now holds the restored copy, as after adoptMigration.
+        handoff.resume()
         coordinatorStore.save(archive.coordinators)
         start(archive.coordinators)
     }
@@ -894,7 +824,7 @@ class CordnRuntime(
      * is the whole reason discovery can be offered before the user has
      * committed to anything — see [CordnCoordinatorDiscovery].
      */
-    suspend fun discover(relays: Set<NormalizedRelayUrl>): CordnCoordinatorDiscovery.Result = CordnCoordinatorDiscovery(client).discover(relays)
+    suspend fun discover(relays: Set<NormalizedRelayUrl>): CordnCoordinatorDiscovery.Result = CordnCoordinatorDiscovery(client.taggedAs(SubPurpose.COORDINATOR_GROUPS)).discover(relays)
 
     /**
      * Publishes a handoff and stands this device down.
@@ -961,28 +891,7 @@ class CordnRuntime(
      */
     private suspend fun remember(forgotten: HexKey? = null) {
         try {
-            // Merged with what is already on disk, never replacing it.
-            // `registry.coordinators` is the coordinators with an OPEN
-            // session, so a coordinator whose relay is unreachable this launch
-            // is simply absent from it — and saving that set verbatim would
-            // erase it, turning "your relay was down" into "your groups are
-            // gone", silently and permanently. Keyed by pubkey because that is
-            // the coordinator's identity (§8.5): a reopened one with different
-            // relays is a corrected address, so the live entry wins.
-            //
-            // [forgotten] is the one case the merge cannot infer. A removed
-            // coordinator and one that simply did not open this launch look
-            // identical from here — both are missing from `open` — so without
-            // being told, the merge protects the removed one too and writes it
-            // straight back. Remove was therefore a no-op that survived until
-            // the next launch and then undid itself.
-            val open = registry.coordinators.value
-            val openKeys = open.mapTo(mutableSetOf()) { it.pubKey }
-            val kept =
-                coordinatorStore
-                    .load()
-                    .filterNot { it.pubKey in openKeys || it.pubKey == forgotten }
-            coordinatorStore.save(kept + open)
+            coordinatorStore.rememberOpen(registry.coordinators.value, forgotten)
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
             Log.w(TAG, "could not persist the coordinator list: ${e.message}", e)
@@ -1016,6 +925,12 @@ class CordnRuntime(
         // ingestion, and the room's name and member list are read off MLS
         // state rather than stored, so they are only correct if re-read.
         sessionOrNull(coordinatorPubKey)?.let { refresh(it, delivery.gid) }
+    }
+
+    /** One coordinator's encrypted stores on disk, for [CordnLocalState]. */
+    private fun storesFor(coordinatorPubKey: HexKey): CordnLocalState.Stores {
+        val dir = CordnStorageLayout.directoryFor(filesDir, accountSigner.pubKey, coordinatorPubKey)
+        return CordnLocalState.Stores(FileCordnGroupStore(dir, cipher), FileCordnKeyPackageStore(dir, cipher))
     }
 
     /** Makes sure [gid] has a room, and points it at the current MLS state. */
@@ -1062,75 +977,6 @@ class CordnRuntime(
     companion object {
         private const val TAG = "CordnRuntime"
     }
-}
-
-/** One invitation, and which coordinator it came through. */
-data class CordnInvitation(
-    val coordinator: CoordinatorConfig,
-    val welcome: OpenedWelcome,
-)
-
-/** An invitation that could not be opened, and why — the reason is for a person to read. */
-data class CordnSkippedInvitation(
-    val coordinator: CoordinatorConfig,
-    val keyPackageRef: String,
-    val reason: String,
-)
-
-/** A coordinator that did not answer. Not the same as one with nothing to say. */
-data class CordnCoordinatorFailure(
-    val coordinator: CoordinatorConfig,
-    val reason: String,
-)
-
-/** What every open coordinator had waiting. */
-data class CordnInvitations(
-    val pending: List<CordnInvitation>,
-    val skipped: List<CordnSkippedInvitation>,
-    val unreachable: List<CordnCoordinatorFailure>,
-) {
-    val isEmpty: Boolean get() = pending.isEmpty() && skipped.isEmpty() && unreachable.isEmpty()
-}
-
-/** One published KeyPackage, as the key-package screen shows it. */
-data class CordnKeyPackageRow(
-    val keyPackageRef: String,
-    val lastResort: Boolean,
-    val at: Long,
-    /** Whether this device holds the private half and could open its Welcome. */
-    val openableHere: Boolean,
-)
-
-/**
- * What one coordinator could do with a roster.
- *
- * [answered] apart from [unreachable] deliberately: an empty [reachable] on an
- * unanswered coordinator means nobody asked it, not that it holds nothing. A
- * caller that folds the two together turns a missing session or a failed call
- * into a claim about the people in the roster.
- */
-data class CordnCoverage(
-    val coordinatorPubKey: HexKey,
-    val reachable: Set<HexKey>,
-    val unreachable: Set<HexKey>,
-    val answered: Boolean,
-)
-
-/**
- * One invitation attempt, in one of three states.
- *
- * [sent] is done. A failure with [joinedWithoutWelcome] means the commit that
- * added them went through and only the Welcome did not, so they are a member
- * who cannot join yet -- resending reaches them. A failure without it never
- * touched the group, so there is nothing to resend and a share link is the
- * only way to them.
- */
-data class CordnInviteOutcome(
-    val pubKey: HexKey,
-    val failure: Throwable?,
-    val joinedWithoutWelcome: Boolean = false,
-) {
-    val sent: Boolean get() = failure == null
 }
 
 /** A group that now exists, and how its invitations went. */

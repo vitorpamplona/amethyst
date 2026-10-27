@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.model.backups.ReplaceableBackupConflic
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotPolls
 import com.vitorpamplona.amethyst.commons.model.navigation.BottomBarEntry
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBarItem
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -107,7 +106,10 @@ import com.vitorpamplona.marmot.appComponents.EncryptedMediaReferenceV2
 import com.vitorpamplona.marmot.appComponents.GroupBlossomImageV1
 import com.vitorpamplona.marmot.client.GroupMemberInfo
 import com.vitorpamplona.marmot.client.MarmotGroupIconChange
+import com.vitorpamplona.marmot.client.MarmotGroupIconUpload
+import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MediaUploadKey
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
 import com.vitorpamplona.marmot.groups.MarmotEpochMovedException
 import com.vitorpamplona.quartz.experimental.clink.debits.DebitResponse
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
@@ -125,7 +127,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -162,14 +163,11 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip59Giftwrap.rumors.RumorAssembler
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.imeta
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastBoostagram
 import com.vitorpamplona.quartz.podcasts.PodcastEpisode
@@ -2614,33 +2612,6 @@ open class BaseAccountViewModel(
         return true
     }
 
-    suspend fun sendMarmotGroupMediaMessage(
-        nostrGroupId: String,
-        url: String,
-        imeta: IMetaTag,
-        /** The epoch of the key [MarmotFileUploader] encrypted the file with ([marmotMediaUploadKey]). */
-        sourceEpoch: Long? = null,
-    ) {
-        val template =
-            eventTemplate(
-                kind = 9,
-                description = url,
-            ) {
-                imeta(imeta)
-            }
-        // MIP-03: inner events MUST remain unsigned (no `sig`) so a leaked
-        // plaintext can't be replayed as a valid public kind:9. Authorship
-        // is authenticated by the MLS sender's LeafNode + the pubkey↔
-        // credential-identity equality check on the receive side.
-        val innerEvent =
-            RumorAssembler
-                .assembleRumor<Event>(
-                    account.signer.pubKey,
-                    template,
-                )
-        deliverMarmotGroupMessage(nostrGroupId, innerEvent, sourceEpoch)
-    }
-
     /**
      * The media key for a new upload and the epoch it belongs to, read together. The message
      * carrying the upload is sent pinned to that epoch: a commit landing during a long upload would
@@ -2698,13 +2669,35 @@ open class BaseAccountViewModel(
         deliverMarmotGroupMessage(nostrGroupId, manager.buildMediaRumor(reference, caption), sourceEpoch)
     }
 
+    /**
+     * Create a group and make the commits it needs while its creator is the only member.
+     *
+     * The name, description, relays and retention go in at epoch 0. Then, each as its own
+     * commit: the icon, uploaded by [uploadIcon] once the group exists because its key comes
+     * from group state, and the encrypted-media policy. White Noise (MDK) refuses to send an
+     * attachment in a group without one, and joiners learn it from the Welcome, so nobody has
+     * to apply a later commit before they can share media. The policy is best-effort: a group
+     * without it still works for text and legacy MIP-04.
+     */
     suspend fun createMarmotGroup(
         nostrGroupId: String,
         name: String = "",
         description: String = "",
         disappearingMessageSecs: ULong? = null,
+        uploadIcon: (suspend (nostrGroupId: HexKey) -> MarmotGroupIconUpload)? = null,
     ) {
         account.marmot.createMarmotGroup(nostrGroupId, name, description, disappearingMessageSecs)
+        val manager = account.marmotManager ?: return
+        if (uploadIcon != null) {
+            updateMarmotGroupIcon(manager, nostrGroupId, MarmotGroupIconChange.Set(uploadIcon(nostrGroupId)))
+        }
+        try {
+            account.marmot.enableMarmotEncryptedMediaV2(nostrGroupId)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Log.w("AccountViewModel", "Could not enable encrypted media for $nostrGroupId", e)
+        }
+        account.marmot.syncAndNotify(nostrGroupId)
     }
 
     /** This group's disappearing-message duration in seconds; 0 is off. */
@@ -2852,9 +2845,21 @@ open class BaseAccountViewModel(
         val relays = account.marmot.marmotGroupRelays(nostrGroupId)
 
         manager.setGroupProfile(nostrGroupId, name, description, relays.toList())
+        updateMarmotGroupIcon(manager, nostrGroupId, icon)
+        // The commits are canonical once published. Surface them now: a freshly created
+        // group otherwise sat at "0 members" with no name until our own echo or a restart.
+        account.marmot.syncAndNotify(nostrGroupId)
+    }
+
+    private suspend fun updateMarmotGroupIcon(
+        manager: MarmotManager,
+        nostrGroupId: HexKey,
+        icon: MarmotGroupIconChange,
+    ) {
+        val relays = account.marmot.marmotGroupRelays(nostrGroupId).toList()
         when (icon) {
             is MarmotGroupIconChange.Keep -> Unit
-            is MarmotGroupIconChange.Clear -> manager.setGroupImage(nostrGroupId, null, relays.toList())
+            is MarmotGroupIconChange.Clear -> manager.setGroupImage(nostrGroupId, null, relays)
             is MarmotGroupIconChange.Set ->
                 manager.setGroupImage(
                     nostrGroupId,
@@ -2865,12 +2870,9 @@ open class BaseAccountViewModel(
                         imageUploadKey = icon.upload.imageUploadKey,
                         mediaType = icon.upload.mediaType,
                     ),
-                    relays.toList(),
+                    relays,
                 )
         }
-        // The commits are canonical once published. Surface them now: a freshly created
-        // group otherwise sat at "0 members" with no name until our own echo or a restart.
-        account.marmot.syncAndNotify(nostrGroupId)
     }
 
     override fun onCleared() {

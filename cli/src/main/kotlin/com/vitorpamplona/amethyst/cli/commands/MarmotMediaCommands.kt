@@ -112,14 +112,8 @@ object MarmotMediaCommands {
 
         val policy =
             try {
-                EncryptedMediaPolicyV2(
-                    allowedLocatorKinds = listOf(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND),
-                    // Order is preserved deliberately: it IS the upload/fetch
-                    // fallback priority, so sorting it would change where the
-                    // group uploads.
-                    defaultBlobEndpoints =
-                        urls.map { BlobStoreEndpointV2(EncryptedMediaPolicyV2.INITIAL_LOCATOR_KIND, it) },
-                )
+                // Order is kept: it IS the upload/fetch fallback priority.
+                EncryptedMediaPolicyV2.forBlossom(urls)
             } catch (e: IllegalArgumentException) {
                 return Output.error("bad_args", e.message ?: "invalid media policy")
             }

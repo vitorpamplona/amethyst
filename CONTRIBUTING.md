@@ -187,6 +187,11 @@ of PR churn. Place new code by purpose:
 | Android-only screen, navigation, system integration | `amethyst/` |
 | Desktop-only window, sidebar, menu bar, shortcut | `desktopApp/` |
 | `amy <verb>` subcommand (thin assembly only) | `cli/src/main/kotlin/.../cli/` |
+| Hashes, ciphers, KDFs, curves, secure random | [crypto-kmp](https://github.com/vitorpamplona/crypto-kmp) (its own repo) |
+| The RFC 9420 MLS engine | [mls-kmp](https://github.com/vitorpamplona/mls-kmp) (its own repo) |
+| Marmot group logic that needs MLS state, `MarmotManager`, the QUIC agent-stream transport | [marmot-kmp](https://github.com/vitorpamplona/marmot-kmp) (its own repo; Marmot's event classes are in Quartz) |
+| cordn group logic, `CordnGroupManager`, the coordinator client | [cordn-kmp](https://github.com/vitorpamplona/cordn-kmp) (its own repo) |
+| Encrypted-at-rest store implementations, account wiring for Marmot/cordn | `commons/` |
 | QUIC / HTTP/3 / WebTransport protocol code | [quic-kmp](https://github.com/vitorpamplona/quic-kmp) (its own repo) |
 | MoQ session / audio-room logic | `nestsClient/` |
 
@@ -255,7 +260,8 @@ the PR description. Reviewers may ask if you didn't.
 
 | Suite | Path | What it covers | When you must run it |
 |---|---|---|---|
-| **Marmot / MLS (Whitenoise)** | `cli/tests/marmot/` | NIP-EE MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation — Amethyst (or `amy`) ↔ `whitenoise-rs` Rust reference | Changes to MLS / Marmot code in `quartz/` or `commons/`, or to the Marmot UI / group-chat flow in `amethyst/` |
+| **Marmot / MLS (White Noise)** | `cli/tests/marmot/` | Marmot MLS groups: KeyPackage publish, group create/invite/remove, admin promote/demote, leave, replay, KP rotation, agent-stream previews — Amethyst (or `amy`) ↔ MDK's `wn`/`wnd` Rust reference | A marmot-kmp or mls-kmp version bump, Marmot wiring in `commons/`, or the Marmot UI / group-chat flow |
+| **cordn** | `cli/tests/cordn/` | `amy` against the reference coordinator (`tier-b.sh`), against the reference client in one group (`interop-client.sh`), and a device handoff (`migrate.sh`), over a local geode relay. The coordinator image has no license: pull it by hand | A cordn-kmp or mls-kmp version bump, or cordn wiring in `commons/` (`CordnRuntime`, the file stores, `CordnMigration`) |
 | **NIP-17 DMs (amy ↔ amy)** | `cli/tests/dm/` | Text + file DM round-trip, strict kind:10050, `--allow-fallback` NIP-65 chain, `dm list --since` window slide | Changes to DM, gift-wrap (NIP-59), or NIP-17 code paths in `quartz/` or `commons/` |
 | **Audio rooms (manual)** | `cli/tests/nests/` | 47-test manual harness: Amethyst Android ↔ nostrnests.com reference web client. Host/listener flows, hand-raise, role promotion, kicks, schedule, reconnect, JWT refresh, PIP | Changes to NIP-53 audio rooms (`amethyst/` UI) or `nestsClient/` that affect host/listener UX |
 | **MoQ-lite hang-tier** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` ↔ Amethyst Kotlin through a real `moq-relay` 0.10.x subprocess. Wire-byte capture, FFT-on-PCM, mute / hot-swap / packet-loss / late-join / 60s broadcast / multi-listener fan-out | Changes to `nestsClient/.../moq/lite/`, `nestsClient/.../audio/`, `MoqLite*Speaker.kt` / `*Listener.kt`, `ReconnectingNests*.kt`, or `quartz/.../nip53` |

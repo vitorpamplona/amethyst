@@ -22,36 +22,24 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.util.deleteRecursivelyQuietly
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
-import com.vitorpamplona.cordn.appMultiDevice.CordnCarriedKeyPackage
+import com.vitorpamplona.cordn.appMultiDevice.CordnMigrationSnapshot
 import com.vitorpamplona.cordn.client.CoordinatorConfig
 import com.vitorpamplona.cordn.client.CordnBlobCipher
-import com.vitorpamplona.cordn.client.CordnRoomStateCodec
-import com.vitorpamplona.cordn.client.EchoStateCodec
-import com.vitorpamplona.cordn.spec02Envelopes.CordnDeliveredMessageCodec
-import com.vitorpamplona.cordn.sync.GroupCursor
+import com.vitorpamplona.cordn.client.CordnLocalState
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okio.FileSystem
 import okio.Path
-import kotlin.io.encoding.Base64
 
 /**
- * Reading a handoff snapshot off the cordn stores, and writing one back.
+ * Reading a handoff snapshot off the cordn stores on disk, and writing one back.
  *
- * Here rather than in the Android runtime because `amy` needs exactly the same
- * two operations, and duplicating them would let the CLI and the app disagree
- * about what a migration carries — which the user would discover as a
- * conversation that arrived on one path and not the other.
+ * What a snapshot carries and the order it is laid down in are cordn-kmp's
+ * ([CordnLocalState], [CordnMigrationSnapshot.of], [CordnMigrationSnapshot.toLocalState]); this
+ * only knows where Amethyst keeps the files. Shared by the app and `amy`, so the two cannot
+ * disagree about what a migration carries.
  */
 object CordnMigrationStores {
-    /**
-     * Collects every group on disk for [configs].
-     *
-     * Reads the stores rather than any in-memory state: a coordinator whose
-     * session failed to open today is still migrated, because a handoff that
-     * silently omitted the groups the app could not reach would be wrong
-     * precisely when it matters.
-     */
+    /** Collects every group on disk for [configs], including those whose session failed to open today. */
     suspend fun read(
         root: Path,
         accountPubKey: HexKey,
@@ -59,80 +47,15 @@ object CordnMigrationStores {
         configs: List<CoordinatorConfig>,
         fileSystem: FileSystem = platformFileSystem,
     ): CordnMigrationSnapshot {
-        val groups = mutableListOf<CordnMigrationGroup>()
-        val keyPackages = mutableListOf<CordnCarriedKeyPackage>()
-
-        configs.forEach { config ->
-            val dir = CordnStorageLayout.directoryFor(root, accountPubKey, config.pubKey)
-            val groupStore = FileCordnGroupStore(dir, cipher, fileSystem)
-            val keyPackageStore = FileCordnKeyPackageStore(dir, cipher, fileSystem)
-
-            groupStore.listGroups().forEach { gid ->
-                val state = groupStore.loadGroup(gid) ?: return@forEach
-                groups +=
-                    CordnMigrationGroup(
-                        coordinatorPubKey = config.pubKey,
-                        coordinatorRelays = config.relays.map { it.url },
-                        gid = gid,
-                        clientStateBase64 = state.toBase64(),
-                        cursor = groupStore.loadCursor(gid)?.fetchCursor ?: 0L,
-                        roomStateBase64 = CordnRoomStateCodec.encode(groupStore.loadRoomState(gid)).toBase64(),
-                        echoStateBase64 = EchoStateCodec.encode(groupStore.loadEchoState(gid)).toBase64(),
-                        joinedViaRequest = groupStore.loadJoinedViaRequest(gid),
-                        messages = carriedMessages(groupStore, gid),
-                    )
-            }
-
-            keyPackageStore.list().forEach { ref ->
-                val bundle = keyPackageStore.load(ref) ?: return@forEach
-                keyPackages += CordnCarriedKeyPackage(config.pubKey, ref, bundle.toBase64())
-            }
-        }
-
-        return CordnMigrationSnapshot(accountPubKey, groups, keyPackages = keyPackages)
+        val state = CordnLocalState.read(configs.map { it.pubKey }) { storesFor(root, accountPubKey, cipher, fileSystem, it) }
+        return CordnMigrationSnapshot.of(accountPubKey, configs, state)
     }
 
     /**
-     * Roughly how much conversation one group contributes to a handoff.
+     * Replaces this device's cordn tree with [snapshot]'s, returning the coordinator list to start.
      *
-     * A migration document is sealed and uploaded to blob hosts whose limits we
-     * do not know, and a handoff that fails because one group is chatty is a
-     * worse outcome than one that carries a deep but bounded history. Budgeted
-     * in bytes rather than messages because a single long message can cost as
-     * much as a hundred short ones.
-     */
-    private const val MESSAGE_BUDGET_BYTES = 512 * 1024
-
-    /**
-     * The newest messages that fit the budget, back in oldest-first order.
-     *
-     * Newest-first while accumulating: if something has to be left behind it
-     * should be the oldest part of the conversation, which is the part least
-     * likely to be missed and the part a reader scrolls to last.
-     */
-    private suspend fun carriedMessages(
-        store: FileCordnGroupStore,
-        gid: String,
-    ): List<String> {
-        var budget = MESSAGE_BUDGET_BYTES
-        return store
-            .loadMessages(gid)
-            .asReversed()
-            .map { CordnDeliveredMessageCodec.encode(it) }
-            .takeWhile { entry ->
-                budget -= entry.length
-                budget > 0
-            }.asReversed()
-    }
-
-    /**
-     * Replaces this device's cordn tree with [snapshot]'s, returning the
-     * coordinator list to start.
-     *
-     * **Replaces, and is not a merge.** Two devices holding one group's state
-     * and both committing fork the ratchet tree, and MLS does not recover —
-     * merging would produce that on purpose. The old tree goes first, so a
-     * `gid` present in both cannot end up half from each.
+     * **Replaces, and is not a merge.** The old tree goes first, so a `gid` present in both cannot
+     * end up half from each.
      */
     suspend fun write(
         root: Path,
@@ -146,54 +69,18 @@ object CordnMigrationStores {
         }
 
         fileSystem.deleteRecursivelyQuietly(root / "cordn" / accountPubKey)
-
-        snapshot.groups.forEach { group ->
-            val store = FileCordnGroupStore(CordnStorageLayout.directoryFor(root, accountPubKey, group.coordinatorPubKey), cipher, fileSystem)
-            store.saveGroup(group.gid, group.clientStateBase64.fromBase64())
-            // Before the cursor, for the same reason the live path writes them in
-            // that order: a seeding that wrote the cursor and then failed would
-            // leave a device holding a cursor past a conversation it never
-            // wrote, with no way to ask for it again.
-            group.messages.forEach { entry ->
-                CordnDeliveredMessageCodec.decodeOrNull(entry)?.let { store.appendMessage(group.gid, it) }
-            }
-            // Both halves of the cursor: the writer's snapshot was consistent at
-            // fetchCursor (§4.1), and starting behind it would re-fetch
-            // messages the state has already advanced past.
-            store.saveCursor(group.gid, GroupCursor(fetchCursor = group.cursor, lastCursor = group.cursor))
-            group.roomStateBase64?.let { store.saveRoomState(group.gid, CordnRoomStateCodec.decode(it.fromBase64())) }
-            group.echoStateBase64?.let { store.saveEchoState(group.gid, EchoStateCodec.decode(it.fromBase64())) }
-            if (group.joinedViaRequest) store.saveJoinedViaRequest(group.gid)
-        }
-
-        snapshot.keyPackages.forEach { keyPackage ->
-            FileCordnKeyPackageStore(CordnStorageLayout.directoryFor(root, accountPubKey, keyPackage.coordinatorPubKey), cipher, fileSystem)
-                .save(keyPackage.keyPackageRef, keyPackage.bundle.fromBase64())
-        }
-
-        return snapshot.groups
-            .groupBy { it.coordinatorPubKey }
-            .mapNotNull { (pubKey, groups) ->
-                val relays =
-                    groups
-                        .flatMap { it.coordinatorRelays }
-                        .distinct()
-                        .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                // A coordinator with no reachable relay cannot be talked to, and
-                // CoordinatorConfig refuses to be built without one.
-                if (relays.isEmpty()) null else CoordinatorConfig(pubKey, relays, CoordinatorConfig.Origin.MANUAL)
-            }
+        CordnLocalState.write(snapshot.toLocalState()) { storesFor(root, accountPubKey, cipher, fileSystem, it) }
+        return snapshot.coordinatorConfigs()
     }
 
-    /**
-     * Standard alphabet, padded on the way out and optional on the way in,
-     * which is what `java.util.Base64`'s basic encoder and decoder did — so a
-     * snapshot written by an older build still reads, and one written here
-     * reads on an older build.
-     */
-    private val base64 = Base64.Default.withPadding(Base64.PaddingOption.PRESENT_OPTIONAL)
-
-    private fun ByteArray.toBase64() = base64.encode(this)
-
-    private fun String.fromBase64(): ByteArray = base64.decode(this)
+    private fun storesFor(
+        root: Path,
+        accountPubKey: HexKey,
+        cipher: CordnBlobCipher,
+        fileSystem: FileSystem,
+        coordinatorPubKey: HexKey,
+    ): CordnLocalState.Stores {
+        val dir = CordnStorageLayout.directoryFor(root, accountPubKey, coordinatorPubKey)
+        return CordnLocalState.Stores(FileCordnGroupStore(dir, cipher, fileSystem), FileCordnKeyPackageStore(dir, cipher, fileSystem))
+    }
 }

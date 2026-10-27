@@ -36,29 +36,10 @@ import com.vitorpamplona.marmot.appComponents.EncryptedMediaV2Cipher
 import com.vitorpamplona.marmot.appComponents.MarmotMediaType
 import com.vitorpamplona.marmot.appComponents.MediaLocatorV2
 
-/**
- * MIP-04 upload result containing all info needed to build the imeta tag.
- */
-class Mip04UploadResult(
-    val url: String,
-    val mimeType: String,
-    val filename: String,
-    val originalFileHash: ByteArray,
-    val nonce: ByteArray,
-    val dimensions: String?,
-    val blurhash: String?,
+/** One uploaded attachment: its `encrypted-media-v2` reference and the caption to send with it. */
+class MarmotUploadResult(
+    val reference: EncryptedMediaReferenceV2,
     val caption: String?,
-    val thumbhash: String? = null,
-    /**
-     * The `encrypted-media-v2` reference, when the group's policy asked for
-     * one. Null means this upload is a MIP-04 attachment and the fields above
-     * are what builds its tag.
-     *
-     * The two are carried together rather than as two result types because the
-     * upload pipeline is identical — only the cipher and the tag differ — and
-     * the choice belongs to the group, not to the uploader.
-     */
-    val encryptedMediaV2: EncryptedMediaReferenceV2? = null,
 )
 
 /** What an unparseable media type becomes, so a file is never described in a dialect nobody reads. */
@@ -82,12 +63,12 @@ class MarmotFileUploader(
          * Produce `encrypted-media-v2` references instead of MIP-04 ones.
          * Decided by the group's policy component, not by the uploader.
          */
-        onceUploaded: suspend (List<Mip04UploadResult>) -> Unit,
+        onceUploaded: suspend (List<MarmotUploadResult>) -> Unit,
     ) {
         val multiOrchestrator = viewState.multiOrchestrator ?: return
         viewState.mediaUploadTracker.startUpload(multiOrchestrator.hasNonMedia())
 
-        val results = mutableListOf<Mip04UploadResult>()
+        val results = mutableListOf<MarmotUploadResult>()
         val quality = CompressorQuality.fromSlider(viewState.mediaQualitySlider)
 
         val count = multiOrchestrator.size()
@@ -156,21 +137,9 @@ class MarmotFileUploader(
                         thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
                     )
                 results.add(
-                    Mip04UploadResult(
-                        url = serverResult.url,
-                        mimeType = mimeType,
-                        filename = filename,
-                        // Empty now that nothing is encrypted with the MIP-era
-                        // scheme. The fields stay on the result type because the
-                        // reader still accepts that shape for messages older
-                        // builds already sent.
-                        originalFileHash = ByteArray(0),
-                        nonce = ByteArray(0),
-                        dimensions = serverResult.fileHeader.dim?.toString(),
-                        blurhash = serverResult.fileHeader.blurHash?.blurhash,
+                    MarmotUploadResult(
+                        reference = reference,
                         caption = viewState.caption.ifEmpty { null },
-                        thumbhash = serverResult.fileHeader.thumbHash?.thumbhash,
-                        encryptedMediaV2 = reference,
                     ),
                 )
             } else {

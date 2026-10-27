@@ -34,7 +34,7 @@ KMP: there is no `androidMain` here). Flavor code is in `amethyst/src/play/` and
 
 ## Two processes
 
-The app runs in **main** and **`:napplet`**. Read `AGENTS.md` "Android Runtime Processes" before
+The app runs in **main** and **`:napplet`**. Read `references/two-processes.md` before
 touching `Amethyst.kt`, an Application callback, or anything under `napplet/`. The sandbox
 activities and services (`NappletHostActivity`, `NappletBrowserActivity`, `NappletHostService`,
 `NappletBrowserService`) live in the `:nappletHost` module and are declared with

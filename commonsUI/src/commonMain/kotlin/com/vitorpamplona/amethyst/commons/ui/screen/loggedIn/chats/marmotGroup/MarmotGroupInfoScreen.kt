@@ -148,6 +148,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.theme.ripple24dp
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.marmot.client.GroupMemberInfo
+import com.vitorpamplona.marmot.groups.MarmotGroupPermissions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
@@ -415,23 +416,20 @@ fun MarmotGroupInfoScreen(
                     )
                 }
 
-                val isMeAdmin = myPubkey in adminPubkeys
+                val memberPubkeys = members.map { it.pubkey }
                 items(members, key = { it.leafIndex }) { member ->
                     val isMe = member.pubkey == myPubkey
                     val isAdmin = member.pubkey in adminPubkeys
-                    // Only admins can mutate other members' roles. Self-promote
-                    // is a no-op; self-demote must go through the leave flow so
-                    // we hide the toggle for the current user.
-                    val canToggleAdmin = isMeAdmin && !isMe
-                    // Guard against removing the last admin (MIP-03 depletion
-                    // guard would otherwise reject the commit).
-                    val canDemote = canToggleAdmin && isAdmin && adminPubkeys.size > 1
-                    val canPromote = canToggleAdmin && !isAdmin
+                    // The same rules peers apply to the commit (MIP-03), so the menu only
+                    // offers what would be accepted. Self-promote is a no-op and stepping
+                    // down goes through the leave flow, so the user's own row has no toggle.
+                    val canPromote = !isMe && MarmotGroupPermissions.canPromote(adminPubkeys, myPubkey, member.pubkey)
+                    val canDemote = !isMe && MarmotGroupPermissions.canDemote(adminPubkeys, memberPubkeys, myPubkey, member.pubkey)
                     MemberRow(
                         member = member,
                         isMe = isMe,
                         isAdmin = isAdmin,
-                        canRemove = !isMe,
+                        canRemove = MarmotGroupPermissions.canRemove(adminPubkeys, myPubkey, member.pubkey),
                         canPromote = canPromote,
                         canDemote = canDemote,
                         accountViewModel = accountViewModel,

@@ -206,7 +206,7 @@ ancestor). Override with `MDK_PIN=<sha>` to test another MDK.
 > These harnesses previously targeted `marmot-protocol/whitenoise-rs`, which was
 > archived on 2026-08-05 pinned to `mdk-core 0.8.0`. Testing against it meant
 > testing against a frozen MIP-era client. The reference moved into `mdk`, and
-> so did we — see `quartz/plans/2026-09-08-marmot-spec-resync.md` for what that
+> so did we — see marmot-kmp's `marmot/plans/2026-09-08-marmot-spec-resync.md` for what that
 > change exposed.
 
 ## What gets tested

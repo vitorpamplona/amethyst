@@ -666,15 +666,7 @@ private fun CordnGroupChat(
 }
 
 /** The target fields `CordnMessageReferences` needs, straight off a delivery. */
-private fun CordnDeliveredMessage.target() =
-    CordnMessageReferences.Target(
-        id = envelope.id,
-        pubKey = envelope.pubKey,
-        kind = envelope.kind,
-        // The target's own tags, so replying to a reply keeps the original
-        // thread root instead of starting a new thread at the reply.
-        tags = envelope.tags,
-    )
+private fun CordnDeliveredMessage.target() = CordnMessageReferences.Target.of(envelope)
 
 /**
  * The pinned messages, one line tall however many there are.

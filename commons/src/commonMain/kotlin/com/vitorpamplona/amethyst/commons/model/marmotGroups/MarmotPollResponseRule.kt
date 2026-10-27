@@ -18,24 +18,30 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.viewmodels
+package com.vitorpamplona.amethyst.commons.model.marmotGroups
 
-import com.vitorpamplona.amethyst.commons.feeds.MarmotGroupFeedFilter
-import com.vitorpamplona.amethyst.commons.model.IAccount
-import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotGroupList
+import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponseRule
+import com.vitorpamplona.amethyst.commons.model.nip88Polls.PollResponsesCache
+import com.vitorpamplona.marmot.foundation.appEvents.MarmotPolls
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 
 /**
- * ViewModel for a single Marmot group conversation feed.
- * Exposes the decrypted inner messages for the group.
+ * MDK's reading of the votes on one poll ([MarmotPolls.castVote]), handed to the shared tally
+ * ([PollResponsesCache]) by the group the poll lives in. The rule itself is marmot-kmp's; this
+ * only adapts it to the cache.
  */
-class MarmotGroupFeedViewModel(
-    val nostrGroupId: HexKey,
-    val account: IAccount,
-    marmotGroupList: MarmotGroupList,
-    cacheProvider: ICacheProvider,
-) : ListChangeFeedViewModel(
-        MarmotGroupFeedFilter(nostrGroupId, marmotGroupList, account),
-        cacheProvider,
-    )
+@Immutable
+data class MarmotPollResponseRule(
+    val pollId: HexKey,
+    val poll: MarmotPolls.Definition,
+) : PollResponseRule {
+    override fun cast(response: PollResponseEvent): Set<String>? = MarmotPolls.castVote(pollId, poll, response)
+
+    companion object {
+        /** The rule of [poll], or null when the poll itself breaks MDK's profile. */
+        fun of(poll: Event): MarmotPollResponseRule? = MarmotPolls.parsePoll(poll)?.let { MarmotPollResponseRule(poll.id, it) }
+    }
+}

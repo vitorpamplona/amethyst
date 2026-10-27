@@ -241,7 +241,7 @@ internal object CordnCoordinatorCommands {
         args.rejectUnknown("coordinator", "relay")
 
         return CordnRun.withSession(dataDir, args) { _, scope ->
-            val onCoordinator = scope.keyPackages.listPublished()
+            val onCoordinator = scope.keyPackages.inventory()
             val held = scope.keyPackages.published.value
 
             Output.emit(
@@ -257,7 +257,7 @@ internal object CordnCoordinatorCommands {
                                 // have no private half for cannot open the
                                 // Welcome it produces. It belongs to another
                                 // device of this account, or to a wiped one.
-                                "openable_here" to (it.keyPackageRef in held),
+                                "openable_here" to it.openableHere,
                             )
                         },
                     "held_locally" to held.size,

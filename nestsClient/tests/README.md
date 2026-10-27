@@ -10,9 +10,9 @@ external reference implementations of moq-lite-03:
 | **`HangInteropTest`** | `nestsClient/tests/hang-interop/` | Rust `hang-listen` / `hang-publish` (kixelated reference) ↔ Amethyst Kotlin via a real `moq-relay` 0.10.x subprocess | Wire-byte capture, FFT peaks on decoded PCM, sample-count floors, mute / hot-swap / packet-loss / late-join / 60 s long broadcast / multi-listener fan-out. |
 | **`BrowserInteropTest`** | `nestsClient/tests/browser-interop/` | Headless Chromium running `@moq/lite` + `@moq/hang` via Playwright ↔ Amethyst Kotlin (forward + reverse) | Same scenario family as hang-interop, plus WebCodecs `AudioDecoder` / `AudioEncoder` correctness, ALPN negotiation, browser-side reconnect. |
 
-Coverage matrix: [`nestsClient/plans/2026-05-06-cross-stack-interop-test-gap-matrix.md`][gap]
+Coverage matrix: [`nestsClient/plans/archive/2026-05-06-cross-stack-interop-test-gap-matrix.md`][gap]
 
-[gap]: ../plans/2026-05-06-cross-stack-interop-test-gap-matrix.md
+[gap]: ../plans/archive/2026-05-06-cross-stack-interop-test-gap-matrix.md
 
 ## When to run
 
@@ -94,7 +94,7 @@ Cold first run: ~10 min hang, ~13 min browser. Cached: ~3-4 min hang,
 - **`framesPerGroup`** is pinned to `5` in the test scenarios. Production
   defaults to `50`. The two haven't been reconciled against a single
   multi-rig benchmark — see
-  [`framespergroup-reconciliation`](../plans/2026-05-07-framespergroup-reconciliation.md).
+  [`framespergroup-reconciliation`](../plans/archive/2026-05-07-framespergroup-reconciliation.md).
 - **I7 cycle 2 truncation**: `moq-relay` 0.10.x truncates the second
   cycle of a publisher reconnect at ~1.0 s out of ~2.5 s. Tests assert
   `≥ 2.5 s` floor which the truncated cycle still clears; a future
@@ -105,7 +105,7 @@ Cold first run: ~10 min hang, ~13 min browser. Cached: ~3-4 min hang,
 Full open-issues list:
 [`2026-05-06-cross-stack-interop-test-results.md` § Pending follow-ups][results].
 
-[results]: ../plans/2026-05-06-cross-stack-interop-test-results.md
+[results]: ../plans/archive/2026-05-06-cross-stack-interop-test-results.md
 
 ## Debugging a flaking scenario
 
@@ -177,7 +177,7 @@ review.
 
 ## See also
 
-- [`2026-05-06-cross-stack-interop-test.md`](../plans/2026-05-06-cross-stack-interop-test.md)
+- [`2026-05-06-cross-stack-interop-test.md`](../plans/archive/2026-05-06-cross-stack-interop-test.md)
   — original spec / Definition of Done.
 - [`2026-05-07-t16-closure-roadmap.md`](../plans/2026-05-07-t16-closure-roadmap.md)
   — closure roadmap (Priorities 1, 2 closed; Priority 3 deferred).
