@@ -8690,4 +8690,5 @@
     <string name="markdown_toolbar_horizontal_rule">Horizontal rule</string>
     <string name="markdown_toolbar_link">Link</string>
     <string name="markdown_toolbar_image">Image</string>
+    <string name="call_settings_bitrate_default">1.5 Mbps (default)</string>
 </resources>
