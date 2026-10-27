@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.onchain.ui.labelRes
 import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
 import com.vitorpamplona.amethyst.commons.onchain.ui.userMessageText
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.reload_mint_sats_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_amount
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_broadcast_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.onchain_send_button_amount
@@ -869,7 +870,7 @@ private fun SplitsRecipientSection(
                     if (share != null) {
                         val belowDust = share.sats < OnchainZapBuilder.DUST_THRESHOLD_SATS
                         Text(
-                            text = "${formatGrouped(share.sats)} sats",
+                            text = stringRes(Res.string.reload_mint_sats_amount, formatGrouped(share.sats)),
                             style = MaterialTheme.typography.bodySmall,
                             color =
                                 if (belowDust) {
