@@ -179,3 +179,24 @@ fun PaymentCardDescription(text: String) {
                 .padding(top = 6.dp),
     )
 }
+
+/**
+ * One-line stand-in for a payment card where previews are off (reply and quote previews, reported
+ * notes): the card's icon and a short summary instead of the raw payment string, with no actions.
+ */
+@Composable
+fun PaymentLabel(
+    text: String,
+    icon: @Composable () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        icon()
+        Text(
+            text = text,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+    }
+}
