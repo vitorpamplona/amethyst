@@ -176,19 +176,14 @@
 }
 
 # -----------------------------------------------------------------------------
-# Jackson — reflective data binding only
+# Quartz's wire format — no keeps
 # -----------------------------------------------------------------------------
-# Most of Quartz's wire format does NOT need a keep. Event, Filter, Message,
-# Command, Rumor, EventTemplate, TagArray, the NIP-46 Bunker messages and the
-# NIP-55 intent results all go through hand-written StdSerializer/StdDeserializer
-# pairs registered on JacksonMapper / JsonMapperNip55, which read and write
-# property names as string literals. Renaming their fields changes nothing on
-# the wire.
-#
-# What remains is the code Jackson data-binds REFLECTIVELY — `treeToValue(...)`
-# and `readValue<T>()` with no custom deserializer. There the JSON property
-# names come from the Kotlin constructor parameter names, so a renamed field is
-# a changed wire format.
+# Quartz 2.4.0 has no Jackson. Event, Filter, Message, Command, Rumor,
+# EventTemplate, TagArray, the NIP-46 Bunker messages and the NIP-55 intent
+# results go through its hand-written Kite reader and writer or its kotlinx
+# serializers, which read and write property names as string literals. Renaming
+# their fields changes nothing on the wire. The notes below record the reflective
+# Jackson binding that used to need keeps here.
 
 # NIP-47 and CLINK used to need a package keep each, because Jackson bound their
 # ~106 concrete classes reflectively. Both are gone: OptimizedJsonMapper routes

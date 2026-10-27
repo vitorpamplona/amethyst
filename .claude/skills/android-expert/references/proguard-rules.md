@@ -45,8 +45,8 @@ What does **not** need a keep, and where the temptation usually comes from:
 
 - **Quartz events and tags.** `Event`, `Filter`, `Message`, `Command`, `Rumor`,
   `EventTemplate`, `TagArray`, the NIP-46 Bunker messages and the NIP-55 intent
-  results all go through hand-written `StdSerializer`/`StdDeserializer` pairs
-  registered on `JacksonMapper` / `JsonMapperNip55`. Those read and write
+  results all go through Quartz's hand-written Kite reader and writer, or its
+  kotlinx serializers (`JsonMapperNip55`). Those read and write
   property names as string literals, and `EventFactory` dispatches on kind with
   a `when`, not by reflection. Renaming their fields changes nothing on the wire.
 - **`@Serializable` (kotlinx) classes**, including the type-safe navigation
