@@ -30,7 +30,6 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiRollup
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiState
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.ciLogTailLines
@@ -152,7 +151,7 @@ import com.vitorpamplona.quartz.nip34Git.grasp.UserGraspListEvent
 import com.vitorpamplona.quartz.nip34Git.state.GitRepositoryStateEvent
 import com.vitorpamplona.quartz.nip34Git.state.tags.RefTag
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip78AppData.AppDataEvent
 import org.jetbrains.compose.resources.StringResource
 
@@ -813,7 +812,7 @@ fun RenderNappletSnapshot(
     nav: INav,
 ) {
     val event = baseNote.event as? NappletSnapshotEvent ?: return
-    val requires = remember(event) { NappletManifestData.parse(event)?.required.orEmpty() }
+    val requires = remember(event) { event.required() }
     val title = remember(event) { event.title() }
 
     KindCard(
@@ -821,7 +820,7 @@ fun RenderNappletSnapshot(
         title = stringRes(Res.string.kc_dev_napplet_snapshot),
         subtitle = title,
     ) {
-        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.content, if (NappletManifestData.parse(event) != null) 1 else 0, event.source(), event.servers(), plainText = true) }, backgroundColor, accountViewModel, nav)
+        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.description(), if (event.isValid()) 1 else 0, event.source(), event.servers(), plainText = true) }, backgroundColor, accountViewModel, nav)
         KindCardSectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }

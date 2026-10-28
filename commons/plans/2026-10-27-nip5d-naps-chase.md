@@ -10,6 +10,7 @@ Status: implemented and automated checks passed; interactive device/UI verificat
 - NIP-5D: https://github.com/dskvr/nips/blob/5560820fa4f37f45b8ab742a11aeb3001b17dc67/5D.md (living upstream PR nostr-protocol/nips#2303).
 - NAP registry: https://github.com/napplet/naps/tree/5aadf1bf5d048cb231d683587d8eeef54f961492 .
 - Quartz is now an external Maven dependency (`2.3.0`). Its NIP-5D readers/builders still implement path aggregates. Shared current-schema handling belongs in commons until Quartz offers that contract; no unpublished dependency is required.
+- Follow-up (2026-10-28): quartz 2.5.0 now models the current schema in `nip5dNapplets` (laid out like `nip88Polls`: `root/`, `named/`, `snapshot/`, shared `NappletManifest` and `tags/`). The interim commons reader/writer (`NappletManifestData`) is removed; Amethyst reads the quartz accessors and keeps only its own policy in `commons/napplet/NappletManifestPolicy.kt` (`exposedDomains`, `unsupportedRequired`, `isLaunchable`).
 
 ## Gap and implementation inventory
 

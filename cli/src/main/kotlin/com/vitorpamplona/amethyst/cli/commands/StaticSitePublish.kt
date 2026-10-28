@@ -24,14 +24,14 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestIcon
 import com.vitorpamplona.amethyst.commons.service.upload.StaticSitePublisher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.tags.IconTag
+import com.vitorpamplona.quartz.nip5dNapplets.tags.SourceTag
 import java.io.File
 
 /**
@@ -94,23 +94,14 @@ object StaticSitePublish {
             ) {
                 return Output.error("bad_args", "NIP-5D requires a single self-contained index.html; bundle assets inline before publishing")
             }
-            try {
-                NappletManifestData.build(
-                    "00".repeat(32),
-                    description.orEmpty(),
-                    identifier,
-                    requires,
-                    optional,
-                    servers,
-                    title,
-                    sourceUrl,
-                    icon?.let { NappletManifestIcon(it, iconMime.orEmpty()) },
-                    archetypes,
-                    intents,
-                )
-            } catch (e: IllegalArgumentException) {
-                return Output.error("bad_args", e.message ?: "Invalid NIP-5D metadata")
+            if (description.isNullOrBlank()) return Output.error("bad_args", "NIP-5D requires a non-empty --description")
+            if (icon != null && IconTag.parse(arrayOf(IconTag.TAG_NAME, icon, iconMime.orEmpty())) == null) {
+                return Output.error("bad_args", "--icon takes the icon blob's lowercase sha256 with --icon-mime image/png|image/jpeg|image/webp")
             }
+            if (sourceUrl != null && !SourceTag.isLocation(sourceUrl)) {
+                return Output.error("bad_args", "--source must be an http(s), ssh or git URL, or user@host:path")
+            }
+            if (intents.any { it.isEmpty() }) return Output.error("bad_args", "each --intents entry names an intent, then its parameters")
         }
 
         Context.open(dataDir).use { ctx ->

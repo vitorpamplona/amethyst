@@ -32,18 +32,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -136,14 +134,8 @@ private fun verifiedIcon(
 /** Asks each nsite/napplet event type for its bundled icon blob + the servers that hold it. */
 private fun resolveIconBlob(event: Event?): IconBlob? =
     when (event) {
-        is NappletManifest ->
-            if (event.verify()) {
-                NappletManifestData.parse(event)?.let { manifest ->
-                    manifest.icon?.let { IconBlob(PathTag("/icon", it.hash), manifest.servers, it.mime) }
-                }
-            } else {
-                null
-            }
+        // LocalCache verified the signature on the way in; the blob itself is hash-checked and decoded.
+        is NappletManifest -> event.icon()?.takeIf { event.isValid() }?.let { IconBlob(PathTag("/icon", it.hash), event.servers(), it.mimeType) }
         is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         else -> null

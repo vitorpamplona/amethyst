@@ -47,8 +47,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.datasource
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 
 /**
  * Lists the napplet manifests currently in the local cache (NIP-5D kinds 15129/35129). These are

@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 
 /**
  * The user's published nsites (NIP-5A, kinds 15128/35128) and napplets (NIP-5D, kinds

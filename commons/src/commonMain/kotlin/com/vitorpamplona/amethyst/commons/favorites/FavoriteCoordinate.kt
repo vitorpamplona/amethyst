@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.favorites
 
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 
 /**
  * The addressable coordinate `kind:pubkey:dtag` used to key an nsite/napplet favorite. Stored

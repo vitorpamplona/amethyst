@@ -29,7 +29,8 @@ import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
+import com.vitorpamplona.amethyst.commons.napplet.exposedDomains
+import com.vitorpamplona.amethyst.commons.napplet.unsupportedRequired
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 
@@ -231,18 +233,19 @@ object NappletLauncher {
             return null
         }
         return runCatching {
-            val current = requireNotNull(NappletManifestData.parse(event)) { "Invalid current NIP-5D manifest" }
-            require(identifier == current.identifier) { "Manifest identifier mismatch" }
-            require(current.unsupportedRequired.isEmpty()) { "Unavailable required NAP domains: ${current.unsupportedRequired}" }
+            require(manifest.isValid()) { "Invalid NIP-5D manifest" }
+            require(identifier == ((manifest as? NamedNappletEvent)?.identifier() ?: "")) { "Manifest identifier mismatch" }
+            val unsupported = manifest.unsupportedRequired()
+            require(unsupported.isEmpty()) { "Unavailable required NAP domains: $unsupported" }
             buildLaunchParamsTrusted(
                 context = context,
-                paths = current.paths,
-                servers = current.servers,
+                paths = listOfNotNull(manifest.artifactFile()),
+                servers = manifest.servers(),
                 authorPubKey = authorPubKey,
                 identifier = identifier,
-                aggregateHash = current.artifactHash,
-                title = current.title ?: identifier.ifBlank { "Napplet" },
-                requires = current.exposedDomains,
+                aggregateHash = manifest.artifact(),
+                title = manifest.title() ?: identifier.ifBlank { "Napplet" },
+                requires = manifest.exposedDomains(),
                 profile = HostProfile.NAPPLET,
                 manifestKind = event.kind,
                 manifestEventId = event.id,
