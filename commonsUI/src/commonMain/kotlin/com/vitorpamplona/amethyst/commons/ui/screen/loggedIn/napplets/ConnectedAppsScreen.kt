@@ -83,9 +83,9 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
@@ -272,7 +272,8 @@ private fun NappletAppCard(
         }?.ifBlank { null } ?: identifier.ifBlank { untitled }
     val iconUrl =
         when (event) {
-            is NappletManifest -> event.icon()
+            // A napplet icon is a hash to verify, never a URL to load (see rememberManifestIconModel).
+            is NappletManifest -> null
             is RootSiteEvent -> event.icon()
             is NamedSiteEvent -> event.icon()
             else -> null

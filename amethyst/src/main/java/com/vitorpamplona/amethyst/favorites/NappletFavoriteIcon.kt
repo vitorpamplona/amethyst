@@ -37,8 +37,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -103,8 +104,8 @@ fun rememberNappletIconModel(coordinate: String): String? {
 /** Asks each nsite/napplet event type for its bundled icon blob + the servers that hold it. */
 private fun resolveIconBlob(event: Event?): IconBlob? =
     when (event) {
-        is RootNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
-        is NamedNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
+        // NIP-5D: the declared icon blob, fetched by hash from the manifest's servers and verified.
+        is NappletManifest -> event.icon()?.let { IconBlob(PathTag("/icon." + it.extension(), it.hash), event.servers()) }
         is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         else -> null

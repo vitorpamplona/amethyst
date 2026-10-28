@@ -29,8 +29,8 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
  * Keyed by the **addressable coordinate** — the manifest author's pubkey plus the
  * `d` identifier — and deliberately **not** the bundle's content hash, so a user's
  * grants survive routine code updates. The current [aggregateHash] is carried
- * alongside (the NIP-5A aggregate over the manifest's `path` set, see
- * `NappletManifest.computeAggregateHash()`) so a user who chose "ask again when the
+ * alongside (the sha256 of the verified `/index.html` artifact, `NappletManifest.artifact()`;
+ * the property keeps its name for the persisted ledger) so a user who chose "ask again when the
  * code changes" can be re-prompted when the bundle actually changes.
  *
  * [identifier] is empty for a root (kind 15129) napplet and the `d` value for a

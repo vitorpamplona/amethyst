@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -66,11 +67,12 @@ import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
 import com.vitorpamplona.amethyst.commons.resources.nsite_servers
 import com.vitorpamplona.amethyst.commons.resources.nsite_source
 import com.vitorpamplona.amethyst.commons.resources.nsite_website_kind
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import org.jetbrains.compose.resources.stringResource
 
 private val CardShape = RoundedCornerShape(16.dp)
@@ -94,8 +96,8 @@ fun StaticWebsiteManifestCard(event: Event?) {
                 servers = event.servers(),
                 identifier = (event as? NamedNappletEvent)?.identifier(),
                 isNapplet = true,
-                requires = event.requires(),
-                icon = event.icon(),
+                requires = event.required(),
+                icon = rememberNappletIconModel(favoriteCoordinateOf(event)),
             )
         }
 

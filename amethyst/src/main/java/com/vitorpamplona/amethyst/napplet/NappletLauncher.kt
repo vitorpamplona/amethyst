@@ -140,8 +140,8 @@ object NappletLauncher {
     ): Bundle {
         val effectiveAggregateHash =
             if (profile == HostProfile.NAPPLET) {
-                requireNotNull(NappletArtifactPolicy.verifiedAggregateHash(paths, aggregateHash)) {
-                    "NIP-5D requires one self-contained /index.html with a valid blob hash and matching aggregate."
+                requireNotNull(NappletArtifactPolicy.verifiedArtifactHash(paths, aggregateHash)) {
+                    "NIP-5D requires one self-contained /index.html whose hash is the manifest's x tag."
                 }
             } else {
                 aggregateHash
@@ -228,15 +228,17 @@ object NappletLauncher {
             return null
         }
         return runCatching {
+            require(manifest.isValid()) { "NIP-5D needs exactly one x artifact and a description" }
             buildLaunchParamsTrusted(
                 context = context,
-                paths = manifest.paths(),
+                paths = listOfNotNull(manifest.artifactFile()),
                 servers = manifest.servers(),
                 authorPubKey = authorPubKey,
                 identifier = identifier,
-                aggregateHash = manifest.declaredAggregateHash() ?: manifest.computeAggregateHash(),
+                aggregateHash = manifest.artifact(),
                 title = manifest.title() ?: identifier.ifBlank { "Napplet" },
-                requires = manifest.requires(),
+                // Declarations only: HostProfile still exposes just the domains this shell implements.
+                requires = (manifest.required() + manifest.optional()).distinct(),
                 profile = HostProfile.NAPPLET,
             )
         }.onFailure { Log.w(TAG, "Refusing invalid embedded NIP-5D launch", it) }

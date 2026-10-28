@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 
 /**
  * Looks up the best-effort human title and icon URL for a napplet or nsite from the local cache.
@@ -64,7 +64,8 @@ fun resolveNappletMeta(
         }?.ifBlank { null } ?: identifier.ifBlank { untitled }
     val iconUrl =
         when (match) {
-            is NappletManifest -> match.icon()
+            // A napplet icon is a hash to verify, never a URL to load (see rememberManifestIconModel).
+            is NappletManifest -> null
             is RootSiteEvent -> match.icon()
             is NamedSiteEvent -> match.icon()
             else -> null

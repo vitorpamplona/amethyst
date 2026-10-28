@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.tags.IconTag
 import java.io.File
 
 /**
@@ -50,12 +51,15 @@ object StaticSitePublish {
         val description: String?,
         val source: String?,
         val icon: String?,
+        val optional: List<String> = emptyList(),
+        val iconMime: String? = null,
     )
 
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
         usage: String,
+        napplet: Boolean = false,
         buildEvent: (Manifest) -> EventTemplate<out Event>,
     ): Int {
         val args = Args(rest)
@@ -73,8 +77,23 @@ object StaticSitePublish {
         val description = args.flag("description")
         val sourceUrl = args.flag("source")
         val icon = args.flag("icon")
+        val optional = if (napplet) StaticSiteFetch.commaList(args.flag("optional")) else emptyList()
+        val iconMime = if (napplet) args.flag("icon-mime") else null
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         args.rejectUnknown()
+
+        if (napplet) {
+            // NIP-5D: one self-contained /index.html, described in plain text, with a hash + type icon.
+            val files = if (source.isDirectory) source.walkTopDown().filter { it.isFile }.toList() else listOf(source)
+            val atRoot = !source.isDirectory || files.singleOrNull()?.parentFile?.canonicalFile == source.canonicalFile
+            if (files.size != 1 || files.single().name != "index.html" || !atRoot) {
+                return Output.error("bad_args", "a napplet is a single self-contained index.html; inline its assets first")
+            }
+            if (description.isNullOrBlank()) return Output.error("bad_args", "napplet publish requires --description")
+            if (icon != null && IconTag.parse(arrayOf(IconTag.TAG_NAME, icon, iconMime.orEmpty())) == null) {
+                return Output.error("bad_args", "--icon takes the icon blob's sha256 with --icon-mime image/png|image/jpeg|image/webp")
+            }
+        }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -86,7 +105,7 @@ object StaticSitePublish {
                     return Output.error("upload_failed", e.message ?: "upload failed")
                 }
 
-            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl, icon)
+            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl, icon, optional, iconMime)
             val signed = ctx.signer.sign(buildEvent(manifest))
 
             val relays =
@@ -108,7 +127,11 @@ object StaticSitePublish {
                     "icon" to icon,
                     "servers" to servers,
                     "requires" to requires,
-                    "aggregate_sha256" to SiteAggregateHash.compute(result.pathTags),
+                    if (napplet) {
+                        "artifact_sha256" to result.pathTags.single().hash
+                    } else {
+                        "aggregate_sha256" to SiteAggregateHash.compute(result.pathTags)
+                    },
                     "files" to
                         result.uploaded.map {
                             mapOf("path" to it.path, "sha256" to it.sha256, "size_bytes" to it.size, "url" to it.url)

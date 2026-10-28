@@ -20,35 +20,27 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class NappletArtifactPolicyTest {
-    private val htmlHash = "11".repeat(32)
+    private val htmlHash = "ab".repeat(32)
     private val index = PathTag("/index.html", htmlHash)
 
     @Test
-    fun computesIdentityFromTheSignedSingleIndexPath() {
-        assertEquals(
-            SiteAggregateHash.compute(listOf(index)),
-            NappletArtifactPolicy.verifiedAggregateHash(listOf(index), null),
-        )
-    }
-
-    @Test
-    fun acceptsMatchingDeclaredIdentityCaseInsensitively() {
-        val computed = SiteAggregateHash.compute(listOf(index))
-        assertEquals(computed, NappletArtifactPolicy.verifiedAggregateHash(listOf(index), computed.uppercase()))
+    fun theIdentityIsTheSignedArtifactHash() {
+        assertEquals(htmlHash, NappletArtifactPolicy.verifiedArtifactHash(listOf(index), htmlHash))
     }
 
     @Test
     fun rejectsDriftedOrNonSelfContainedArtifacts() {
-        assertNull(NappletArtifactPolicy.verifiedAggregateHash(listOf(index), "22".repeat(32)))
-        assertNull(NappletArtifactPolicy.verifiedAggregateHash(listOf(PathTag("index.html", htmlHash)), null))
-        assertNull(NappletArtifactPolicy.verifiedAggregateHash(listOf(index, PathTag("/app.js", "22".repeat(32))), null))
-        assertNull(NappletArtifactPolicy.verifiedAggregateHash(listOf(PathTag("/index.html", "not-a-sha256")), null))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(index), null))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(index), "22".repeat(32)))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(index), htmlHash.uppercase()))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(PathTag("index.html", htmlHash)), htmlHash))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(index, PathTag("/app.js", "22".repeat(32))), htmlHash))
+        assertNull(NappletArtifactPolicy.verifiedArtifactHash(listOf(PathTag("/index.html", "not-a-sha256")), "not-a-sha256"))
     }
 }

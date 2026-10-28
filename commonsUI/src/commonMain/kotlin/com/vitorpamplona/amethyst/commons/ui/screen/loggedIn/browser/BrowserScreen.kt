@@ -143,9 +143,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -887,7 +887,7 @@ private fun List<Note>.toDiscoverApps(
 private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
     // Another app's kind 35129 format, or a manifest naming no artifact: nothing to open.
-    if (event is NappletManifest && !event.isLoadable()) return null
+    if (event is NappletManifest && !event.isValid()) return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
     val fallback: StringResource
