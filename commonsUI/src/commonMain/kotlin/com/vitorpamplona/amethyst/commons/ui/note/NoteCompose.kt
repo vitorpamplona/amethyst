@@ -2033,7 +2033,7 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            // Another app's playback-progress records on the podcast-episode kind (30054).
+            // drss.io's listening-progress records on the podcast-episode kind (30054).
             is UnrecognizedKind30054Event,
             -> {}
 
