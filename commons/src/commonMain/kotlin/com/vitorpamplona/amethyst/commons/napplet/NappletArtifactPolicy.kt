@@ -22,8 +22,13 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 
-/** Pure NIP-5D artifact checks shared by every launch surface. */
+/**
+ * Pure NIP-5D artifact checks at the launch boundary, shared by every launch surface. The launcher's
+ * trusted entry point takes plain paths and a hash, not a manifest, so it re-checks here what quartz's
+ * NappletManifest.artifactFile() already guarantees: one `/index.html`, named by the signed `x`.
+ */
 object NappletArtifactPolicy {
     /** Returns the runtime-computed artifact identity, or null when the manifest must not execute. */
     fun verifiedArtifactHash(
@@ -31,7 +36,7 @@ object NappletArtifactPolicy {
         declaredArtifactHash: HexKey?,
     ): HexKey? {
         val entry = paths.singleOrNull() ?: return null
-        if (entry.path != "/index.html" || !SHA256.matches(entry.hash)) return null
+        if (entry.path != NappletManifest.INDEX_PATH || !SHA256.matches(entry.hash)) return null
         if (declaredArtifactHash != entry.hash) return null
         return entry.hash
     }

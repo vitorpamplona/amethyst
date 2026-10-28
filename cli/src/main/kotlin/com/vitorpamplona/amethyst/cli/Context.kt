@@ -299,7 +299,7 @@ class Context(
         com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client(
             fetcher =
                 com.vitorpamplona.quartz.nip05DnsIdentifiers
-                    .OkHttpNip05Fetcher { _ -> okhttp },
+                    .OkHttpNip05Fetcher(okHttpClient = { _ -> okhttp }),
         )
 
     /**

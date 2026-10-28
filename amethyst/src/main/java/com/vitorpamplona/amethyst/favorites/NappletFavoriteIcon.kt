@@ -32,7 +32,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -41,9 +40,9 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,10 +56,10 @@ private class IconBlob(
 )
 
 /**
- * A Coil model (`file://…`) for the app icon an nsite/napplet bundles in its own content — the verified,
- * content-addressed blob the [NappletIconPath][com.vitorpamplona.quartz.nip5aStaticWebsites.NappletIconPath]
- * heuristic picks from the manifest's `path` tags — or null when the manifest declares no such icon (or it
- * hasn't downloaded yet). Used to decorate an nsite/napplet favorite the same way a captured favicon
+ * A Coil model (`file://…`) for an nsite/napplet's app icon — a napplet's declared, content-addressed
+ * `icon` blob (decoded and checked against its declared type), or the blob the
+ * [NappletIconPath][com.vitorpamplona.quartz.nip5aStaticWebsites.NappletIconPath] heuristic picks from an
+ * nsite's `path` tags — or null when there is none (or it hasn't downloaded yet). Used to decorate an nsite/napplet favorite the same way a captured favicon
  * decorates a web favorite, except this rides the same Tor-routed, sha256-verified blob path as the rest of
  * the site instead of a clearnet favicon fetch.
  *
@@ -136,11 +135,12 @@ private fun verifiedIcon(
 /** Asks each nsite/napplet event type for its bundled icon blob + the servers that hold it. */
 private fun resolveIconBlob(event: Event?): IconBlob? =
     when (event) {
+        // Checked here, not assumed from LocalCache: decrypted rumors (NIP-59, Marmot, Concord) are
+        // stored unsigned yet marked verified, and one can become the addressable manifest. Runs once
+        // per event inside remember(event). The blob itself is then hash-checked and decoded.
         is NappletManifest ->
-            if (event.verify()) {
-                NappletManifestData.parse(event)?.let { manifest ->
-                    manifest.icon?.let { IconBlob(PathTag("/icon", it.hash), manifest.servers, it.mime) }
-                }
+            if (event.isValid() && event.verify()) {
+                event.icon()?.let { IconBlob(PathTag("/icon", it.hash), event.servers(), it.mimeType) }
             } else {
                 null
             }

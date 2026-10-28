@@ -30,8 +30,8 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 
 /**
  * The user's published nsites (NIP-5A, kinds 15128/35128) and napplets (NIP-5D, kinds
@@ -67,9 +67,10 @@ class UserProfileAppsFeedFilter(
         params: FilterByListParams,
     ): Boolean {
         val noteEvent = it.event
+        // A kind 15129/35129 that isn't a valid NIP-5D manifest is another app's format, not a napplet.
         val isOwnManifest =
             noteEvent?.pubKey == user.pubkeyHex &&
-                (noteEvent is RootSiteEvent || noteEvent is NamedSiteEvent || noteEvent is RootNappletEvent || noteEvent is NamedNappletEvent)
+                (noteEvent is RootSiteEvent || noteEvent is NamedSiteEvent || ((noteEvent is RootNappletEvent || noteEvent is NamedNappletEvent) && noteEvent.isValid()))
 
         return isOwnManifest && params.match(noteEvent, it.relays) && account.isAcceptable(it)
     }

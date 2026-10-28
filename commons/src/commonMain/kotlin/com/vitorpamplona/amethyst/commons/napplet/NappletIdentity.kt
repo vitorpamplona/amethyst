@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 
 /**
  * Stable identity of a napplet for the permission ledger.
@@ -53,9 +56,9 @@ data class NappletIdentity(
     /** NAP-STORAGE shared namespace: exact publisher + dTag + verified artifact identity. */
     val storageCoordinate: String =
         when (manifestKind) {
-            5129 -> "5129:${requireNotNull(manifestEventId)}:${aggregateHash.orEmpty()}"
-            15129 -> "15129:$authorPubKey:${aggregateHash.orEmpty()}"
-            35129 -> "35129:$coordinate:${aggregateHash.orEmpty()}"
+            NappletSnapshotEvent.KIND -> "${NappletSnapshotEvent.KIND}:${requireNotNull(manifestEventId)}:${aggregateHash.orEmpty()}"
+            RootNappletEvent.KIND -> "${RootNappletEvent.KIND}:$authorPubKey:${aggregateHash.orEmpty()}"
+            NamedNappletEvent.KIND -> "${NamedNappletEvent.KIND}:$coordinate:${aggregateHash.orEmpty()}"
             else -> "$coordinate:${aggregateHash.orEmpty()}"
         }
 

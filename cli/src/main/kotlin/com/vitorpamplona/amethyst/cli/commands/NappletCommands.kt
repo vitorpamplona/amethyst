@@ -24,16 +24,16 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
-import com.vitorpamplona.amethyst.commons.napplet.NappletManifestIcon
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
+import com.vitorpamplona.quartz.nip5dNapplets.tags.NappletIcon
+import com.vitorpamplona.quartz.nip5dNapplets.tags.NappletIntent
 
 /** Current NIP-5D manifest publication and signature/hash-verified artifact retrieval. */
 object NappletCommands {
@@ -110,17 +110,17 @@ object NappletCommands {
                     .mapNotNull { (_, dupes) -> dupes.maxByOrNull { it.createdAt } }
                     .sortedByDescending { it.createdAt }
                     .mapNotNull { ev ->
-                        val m = NappletManifestData.parse(ev) ?: return@mapNotNull null
+                        val m = (ev as? NappletManifest)?.takeIf { it.isValid() } ?: return@mapNotNull null
                         mapOf(
                             "kind" to ev.kind,
                             "d" to (ev as? NamedNappletEvent)?.identifier(),
-                            "title" to m.title,
-                            "description" to m.description,
-                            "paths" to m.paths.size,
-                            "servers" to m.servers,
-                            "requires" to m.required,
-                            "optional" to m.optional,
-                            "artifact_sha256" to m.artifactHash,
+                            "title" to m.title(),
+                            "description" to m.description(),
+                            "paths" to 1,
+                            "servers" to m.servers(),
+                            "requires" to m.required(),
+                            "optional" to m.optional(),
+                            "artifact_sha256" to m.artifact(),
                             "event_id" to ev.id,
                             "created_at" to ev.createdAt,
                         )
@@ -161,9 +161,9 @@ object NappletCommands {
                 fetchByAuthor(ctx, authorHex, identifier, relays, timeoutSecs * 1000)
                     ?: return Output.error("not_found", "no napplet manifest found", mapOf("pubkey" to authorHex, "d" to identifier))
             val manifest =
-                NappletManifestData.parse(event)
+                (event as? NappletManifest)?.takeIf { it.isValid() }
                     ?: return Output.error("invalid_manifest", "Invalid current NIP-5D manifest")
-            return StaticSiteServe.serve(manifest.paths, (manifest.servers + extraServers).distinct(), port)
+            return StaticSiteServe.serve(listOfNotNull(manifest.artifactFile()), (manifest.servers() + extraServers).distinct(), port)
         }
     }
 
@@ -183,19 +183,16 @@ object NappletCommands {
             "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T] [--description D] [--icon HASH --icon-mime MIME]",
             napplet = true,
         ) { m ->
-            NappletManifestData.build(
-                artifactHash = m.paths.single().hash,
-                description = requireNotNull(m.description),
-                identifier = m.identifier,
-                required = m.requires,
-                optional = m.optional,
-                servers = m.servers,
-                title = m.title,
-                source = m.source,
-                icon = m.icon?.let { NappletManifestIcon(it, requireNotNull(m.iconMime)) },
-                archetypes = m.archetypes,
-                intents = m.intents,
-            )
+            // StaticSitePublish.run has already checked the single index.html, description, icon and source.
+            val artifact = m.paths.single().hash
+            val description = requireNotNull(m.description)
+            val icon = m.icon?.let { NappletIcon(it, requireNotNull(m.iconMime)) }
+            val intents = m.intents.map { NappletIntent(it.first(), it.drop(1)) }
+            if (m.identifier != null) {
+                NamedNappletEvent.build(m.identifier, artifact, description, m.servers, m.requires, m.optional, m.archetypes, intents, icon, m.title, m.source)
+            } else {
+                RootNappletEvent.build(artifact, description, m.servers, m.requires, m.optional, m.archetypes, intents, icon, m.title, m.source)
+            }
         }
 
     private suspend fun fetch(
@@ -247,20 +244,20 @@ object NappletCommands {
             }
 
             val manifest =
-                NappletManifestData.parse(event)
+                (event as? NappletManifest)?.takeIf { it.isValid() }
                     ?: return Output.error("invalid_manifest", "Invalid current NIP-5D manifest")
             return StaticSiteFetch.resolveAndEmit(
                 requestPath = requestPath,
-                paths = manifest.paths,
-                servers = (manifest.servers + extraServers).distinct(),
+                paths = listOfNotNull(manifest.artifactFile()),
+                servers = (manifest.servers() + extraServers).distinct(),
                 manifestFields =
                     mapOf(
                         "kind" to event.kind,
                         "manifest_event_id" to event.id,
                         "d" to identifier,
-                        "requires" to manifest.required,
-                        "optional" to manifest.optional,
-                        "artifact_sha256" to manifest.artifactHash,
+                        "requires" to manifest.required(),
+                        "optional" to manifest.optional(),
+                        "artifact_sha256" to manifest.artifact(),
                     ),
                 outFile = outFile,
                 maxInlineBytes = maxInlineBytes,

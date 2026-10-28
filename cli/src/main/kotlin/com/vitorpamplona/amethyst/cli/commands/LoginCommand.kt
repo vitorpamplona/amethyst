@@ -227,7 +227,7 @@ object LoginCommand {
         // Build a throwaway OkHttp client — we don't hold a Context here and
         // login is a one-shot CLI invocation anyway.
         val http = OkHttpClient.Builder().build()
-        Nip05Client(fetcher = OkHttpNip05Fetcher { _ -> http })
+        Nip05Client(fetcher = OkHttpNip05Fetcher(okHttpClient = { _ -> http }))
     }
 
     private fun nip05Client(): Nip05Client = nip05ClientBuilder()

@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPa
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.isLaunchable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_address_hint
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
@@ -143,8 +144,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -885,6 +887,9 @@ private fun List<Note>.toDiscoverApps(
 /** Resolve a cached nsite/napplet manifest note into a launchable favorite + its description, or null. */
 private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
+    // Another app's kind 35129 format, an invalid manifest, or one needing a NAP domain this shell
+    // doesn't implement: nothing this launcher grid could open.
+    if (event is NappletManifest && !event.isLaunchable()) return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
     val fallback: StringResource

@@ -426,7 +426,7 @@ alias of `--d`; `--d` selects a named site/napplet, else the root one.
 
 NIP-5D migration: legacy path-aggregate manifests must be bundled into one `index.html` and republished with a nonempty description. `--icon` now takes an already uploaded SHA-256 plus `--icon-mime` (`image/png`, `image/jpeg`, or `image/webp`). Optional `--archetypes feed,…` and `--intents "napplet:feed/edit filters relays"` preserve discovery metadata.
 
-**JSON contract change:** napplet list/fetch/publish use `artifact_sha256` instead of `aggregate_sha256`; fetch no longer emits `aggregate_verified` (the fetched bytes are still hash verified). `requires` contains `R` domains and `optional` contains `O` domains on list/fetch. Malformed manifests return `invalid_manifest` instead of `aggregate_mismatch`. NIP-5A output is unchanged.
+**JSON contract change:** napplet list/fetch/publish use `artifact_sha256` instead of `aggregate_sha256`; fetch no longer emits `aggregate_verified` (the fetched bytes are still hash verified). `requires` contains `R` domains and `optional` contains `O` domains on list/fetch. A manifest that is not valid NIP-5D (not exactly one lowercase `x`, an empty description, a missing or empty `d` on 35129, a `d` on 15129/5129, or lineage outside a 5129) returns `invalid_manifest` instead of `aggregate_mismatch`, and `list` leaves it out. `publish` refuses flags that would build one (non-bare `--requires`/`--optional` domains, an empty `--d`, a non-origin `--server`, a bad `--icon` or `--source`) before uploading anything. NIP-5A output is unchanged.
 
 ### Blossom blobs (NIP-B7)
 

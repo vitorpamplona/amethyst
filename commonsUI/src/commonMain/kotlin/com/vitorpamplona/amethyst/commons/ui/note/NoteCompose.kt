@@ -833,9 +833,9 @@ import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
-import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
-import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip60Cashu.history.CashuSpendingHistoryEvent
 import com.vitorpamplona.quartz.nip60Cashu.quote.CashuMintQuoteEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuTokenEvent
@@ -1848,12 +1848,22 @@ internal fun RenderNoteRow(
                 RenderNamedSiteEvent(baseNote, accountViewModel, nav)
             }
 
+            // Other apps publish their own formats under these kinds: only a valid NIP-5D manifest
+            // gets the napplet card, the rest get the fallback card that shows what they carry.
             is RootNappletEvent -> {
-                RenderRootNappletEvent(baseNote, accountViewModel, nav)
+                if (noteEvent.isValid()) {
+                    RenderRootNappletEvent(baseNote, accountViewModel, nav)
+                } else {
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is NamedNappletEvent -> {
-                RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+                if (noteEvent.isValid()) {
+                    RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+                } else {
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is GitPatchEvent -> {
