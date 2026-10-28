@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Runs a signing step of an upload, such as building a NIP-95 file event, and returns its result,
+ * Runs a signing step of an upload, such as the server's auth event, and returns its result,
  * or null when the signer refused. The attachment is then left out, so the composer must not
  * show it as uploaded:
  * - a read-only key gets the "log in with a private key" message through [onError];

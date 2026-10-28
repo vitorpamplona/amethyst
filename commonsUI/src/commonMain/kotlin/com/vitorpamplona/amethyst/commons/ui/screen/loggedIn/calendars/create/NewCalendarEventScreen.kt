@@ -259,7 +259,7 @@ private fun FieldLabel(text: String) {
 /**
  * URL field + gallery-picker icon. Tapping the icon launches the system picker; once the user
  * picks an image we hand it to [NewCalendarEventViewModel.uploadAndSetImage], which sends it
- * to the user's configured file server (Blossom / NIP-96 / NIP-95) and writes the resulting
+ * to the user's configured file server (Blossom / NIP-96) and writes the resulting
  * URL into [vm.imageUrl]. A small inline progress indicator covers the upload window.
  */
 @Composable

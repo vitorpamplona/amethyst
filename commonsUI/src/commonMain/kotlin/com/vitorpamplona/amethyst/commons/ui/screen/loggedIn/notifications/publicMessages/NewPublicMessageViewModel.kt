@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -69,12 +70,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -85,7 +83,6 @@ import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
@@ -157,7 +154,6 @@ class NewPublicMessageViewModel :
     var replyingTo: Note? by mutableStateOf(null)
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     override val message = TextFieldState()
 
@@ -340,22 +336,11 @@ class NewPublicMessageViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate()
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        if (nip95attachments.isNotEmpty()) {
-            val usedImages = template.tags.taggedQuoteIds().toSet()
-            nip95attachments.forEach {
-                if (usedImages.contains(it.second.id)) {
-                    extraNotesToBroadcast.add(it.first)
-                    extraNotesToBroadcast.add(it.second)
-                }
-            }
-        }
 
         val draftToDelete = draftNote
         onUiThread { cancel() }
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        accountViewModel.account.signAndComputeBroadcast(template)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
@@ -365,14 +350,8 @@ class NewPublicMessageViewModel :
         if (message.text.toString().isBlank()) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val broadcast = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                broadcast.add(it.first)
-                broadcast.add(it.second)
-            }
-
             val template = createTemplate()
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, broadcast)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -424,6 +403,17 @@ class NewPublicMessageViewModel :
         }
     }
 
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the message. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews)
+        }
+    }
+
     fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -472,15 +462,7 @@ class NewPublicMessageViewModel :
                 val urls =
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.let {
-                                "nostr:" + it.toNEvent()
-                            }
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
                                 IMetaTagBuilder(uploaded.url)
                                     .apply {

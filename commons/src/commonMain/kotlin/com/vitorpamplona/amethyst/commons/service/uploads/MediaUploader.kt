@@ -30,7 +30,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 
 /**
  * The platform's media pipeline: compresses, strips metadata from, optionally encrypts, and
- * uploads a picked file to a NIP-95, NIP-96 or Blossom server, reporting each stage on
+ * uploads a picked file to a NIP-96 or Blossom server, reporting each stage on
  * [progress]. Reached through `AccountViewModelHost.mediaUploader`; [UploadOrchestrator] and
  * [MultiOrchestrator] are the shared front ends composers use.
  */

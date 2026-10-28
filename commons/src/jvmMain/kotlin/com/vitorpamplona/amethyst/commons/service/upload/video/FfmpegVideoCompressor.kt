@@ -59,19 +59,10 @@ class FfmpegVideoCompressor(
         source: File,
         quality: CompressorQuality,
         useH265: Boolean,
-        maxBytes: Long?,
         onProgress: (Double) -> Unit,
     ): VideoCompressionResult {
         val ffmpeg = locator.ffmpeg ?: return VideoCompressionResult.Original(null)
         val plan = plan(source, quality)
-
-        if (maxBytes != null && plan.durationSeconds != null) {
-            val estimate = ((plan.bitrate(useH265) + AUDIO_BITRATE_BPS) / 8.0) * plan.durationSeconds
-            if (estimate > maxBytes) {
-                Log.i(TAG) { "Refusing ${source.name}: estimated ${estimate.toLong()} bytes exceeds $maxBytes" }
-                return VideoCompressionResult.TooBig
-            }
-        }
 
         val candidates = FfmpegEncoders.candidates(encoders(ffmpeg), useH265)
         if (candidates.isEmpty()) return failed(source, plan.notices, "no encoder", remux = true)
@@ -237,6 +228,5 @@ class FfmpegVideoCompressor(
 
     private companion object {
         const val TAG = "FfmpegVideoCompressor"
-        const val AUDIO_BITRATE_BPS = 128_000
     }
 }

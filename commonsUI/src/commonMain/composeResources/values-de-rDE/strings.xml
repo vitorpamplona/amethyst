@@ -4710,7 +4710,6 @@
     <string name="media_server_status_online">Online</string>
     <string name="media_server_status_slow">Langsam</string>
     <string name="media_servers">Medienserver</string>
-    <string name="media_too_big_for_nip95">Medien sind zu groß für NIP-95</string>
     <string name="messages_cant_upload_explainer">Füge das Ziel der Nachricht zuerst ein</string>
     <string name="messages_cant_upload_title">Kann nicht hochladen</string>
     <string name="messages_new_message_subject">Betreff</string>
@@ -5876,7 +5875,6 @@
     <string name="upload_error_title">Upload-Fehler</string>
     <string name="upload_error_voice_message_exception">Sprach-Upload fehlgeschlagen: %1$s</string>
     <string name="upload_error_voice_message_failed">Sprachnachricht konnte nicht hochgeladen werden</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wird für Sprachnachrichten noch nicht unterstützt</string>
     <string name="uptime">%1$d% Verfügbarkeit</string>
     <string name="use_internal_tor">Aktiver Tor-Engine</string>
     <string name="use_internal_tor_explainer">Verwende die interne Version oder Orbot</string>

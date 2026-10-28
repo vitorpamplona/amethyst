@@ -138,47 +138,6 @@ class AndroidMediaUploader(
             newState: UploadingState,
         ) = progress.updateState(newProgress, newState)
 
-        private fun uploadNIP95(
-            fileUri: Uri,
-            contentType: String?,
-            originalContentType: String?,
-            originalHash: String?,
-            context: Context,
-        ): UploadingFinalState {
-            updateState(0.4, UploadingState.Uploading)
-
-            val bytes =
-                context.contentResolver.openInputStream(fileUri)?.use {
-                    it.readBytes()
-                }
-
-            if (bytes != null) {
-                if (bytes.size > 80000) {
-                    return error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
-                }
-
-                updateState(0.8, UploadingState.Hashing)
-
-                val result =
-                    FileHeader.prepare(
-                        bytes,
-                        contentType,
-                        null,
-                    )
-
-                result.fold(
-                    onSuccess = {
-                        return finish(UploadOrchestrator.OrchestratorResult.NIP95Result(it, bytes, originalContentType, originalHash))
-                    },
-                    onFailure = {
-                        return error(UploadError.COULD_NOT_CHECK_DOWNLOADED_FILE, it.message ?: it.javaClass.simpleName)
-                    },
-                )
-            } else {
-                return error(UploadError.COULD_NOT_OPEN_COMPRESSED_FILE)
-            }
-        }
-
         private suspend fun uploadNIP96(
             fileUri: Uri,
             contentType: String?,
@@ -616,7 +575,6 @@ class AndroidMediaUploader(
 
             try {
                 return when (server.type) {
-                    ServerType.NIP95 -> uploadNIP95(finalUri, compressed.contentType, null, null, context)
                     ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
                     ServerType.Blossom ->
                         uploadBlossomWithFallback(server, account) { baseUrl, auth ->
@@ -676,7 +634,6 @@ class AndroidMediaUploader(
 
             try {
                 return when (server.type) {
-                    ServerType.NIP95 -> uploadNIP95(encrypted.uri, encrypted.contentType, compressed.contentType, encrypted.originalHash, context)
                     ServerType.NIP96 -> uploadNIP96(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context)
                     // The same encrypted file goes to every server tried, so its key, nonce and
                     // hash stay valid whichever one ends up holding it.

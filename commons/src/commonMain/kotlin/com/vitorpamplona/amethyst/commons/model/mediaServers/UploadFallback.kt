@@ -33,7 +33,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
  * wrong one meant a failed upload and a retry by hand; the settings screen already told
  * users uploads "try each server from the top down".
  *
- * Blossom only: a NIP-96 or NIP-95 upload keeps its single target, because falling back
+ * Blossom only: a NIP-96 upload keeps its single target, because falling back
  * from one would change the kind of event the upload produces.
  */
 fun blossomUploadOrder(

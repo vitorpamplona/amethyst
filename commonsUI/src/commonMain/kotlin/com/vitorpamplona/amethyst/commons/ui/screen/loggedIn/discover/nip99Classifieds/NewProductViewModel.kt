@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -394,6 +396,30 @@ open class NewProductViewModel :
             }
 
         return template
+    }
+
+    /** Uploads a hand drawing ([uploadDrawing]) and adds its GIF to the product's pictures. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            // A listing's pictures have no `image` preview, so the drawing's still would be an orphan.
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
+            val header = uploaded.gif.fileHeader
+            productImages = productImages +
+                ProductImageMeta(
+                    url = uploaded.link,
+                    mimeType = header.mimeType,
+                    blurhash = header.blurHash?.blurhash,
+                    dimension = header.dim,
+                    alt = alt,
+                    hash = header.hash,
+                    size = header.size,
+                    thumbhash = header.thumbHash?.thumbhash,
+                )
+        }
     }
 
     fun upload(

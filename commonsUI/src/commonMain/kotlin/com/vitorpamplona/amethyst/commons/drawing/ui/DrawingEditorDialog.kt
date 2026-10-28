@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
@@ -136,6 +137,22 @@ fun DrawingButton(
             )
         }
     }
+}
+
+/** [DrawingButton] for a composer: pictures open and papers are saved through [accountViewModel]'s account. */
+@Composable
+fun DrawingButton(
+    accountViewModel: AccountViewModel,
+    enabled: Boolean = true,
+    onDrawing: (drawing: RenderedDrawing, alt: String?) -> Unit,
+) {
+    val pubKey = accountViewModel.account.pubKey
+    DrawingButton(
+        readMedia = accountViewModel.host.mediaUploader::readBytes,
+        backgrounds = remember(pubKey) { accountViewModel.host.drawingBackgroundsDir?.let { DrawingBackgroundStore(it / pubKey) } },
+        enabled = enabled,
+        onDrawing = onDrawing,
+    )
 }
 
 private enum class Step { DRAW, PREVIEW }

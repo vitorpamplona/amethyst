@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
@@ -50,23 +52,12 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
-import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
-import com.vitorpamplona.quartz.nip94FileMetadata.alt
-import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
-import com.vitorpamplona.quartz.nip94FileMetadata.dims
-import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.magnet
-import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
-import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
-import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
-import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
 
 @Stable
 open class EditPostViewModel : ViewModel() {
@@ -76,10 +67,6 @@ open class EditPostViewModel : ViewModel() {
     var editedFromNote: Note? = null
 
     var subject by mutableStateOf(TextFieldValue(""))
-
-    var iMetaAttachments by mutableStateOf<List<IMetaTag>>(emptyList())
-    var nip95attachments by
-        mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
@@ -126,13 +113,6 @@ open class EditPostViewModel : ViewModel() {
     }
 
     suspend fun innerSendPost() {
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        nip95attachments.forEach {
-            extraNotesToBroadcast.add(it.first)
-            extraNotesToBroadcast.add(it.second)
-        }
-
         val notify =
             if (editedFromNote?.author?.pubkeyHex == account.userProfile().pubkeyHex) {
                 null
@@ -146,7 +126,6 @@ open class EditPostViewModel : ViewModel() {
             originalNote = editedFromNote!!,
             notify = notify,
             summary = subject.text.ifBlank { null },
-            extraNotesToBroadcast,
         )
 
         onUiThread { cancel() }
@@ -154,6 +133,22 @@ open class EditPostViewModel : ViewModel() {
 
     open fun updateSubject(it: TextFieldValue) {
         subject = it
+    }
+
+    /**
+     * Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the edited text. An edit carries
+     * no tags (they are never replaced), so there is no `imeta` for the drawing's still preview.
+     */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
+            onUiThread { message.insertUrlAtCursor(uploaded.link) }
+            urlPreview = findUrlInMessage()
+        }
     }
 
     fun upload(
@@ -206,49 +201,8 @@ open class EditPostViewModel : ViewModel() {
 
                 if (results.allGood) {
                     val urls =
-                        results.successful.mapNotNull { state ->
-                            val uploaded = state.result
-                            if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                                val nip95 =
-                                    myAccount.createNip95(
-                                        byteArray = uploaded.bytes,
-                                        headerInfo = uploaded.fileHeader,
-                                        alt = alt,
-                                        contentWarningReason = if (sensitiveContent) "" else null,
-                                    )
-                                nip95attachments = nip95attachments + nip95
-                                val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                                note?.let {
-                                    "nostr:" + it.toNEvent()
-                                }
-                            } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                                val iMeta =
-                                    IMetaTagBuilder(uploaded.url)
-                                        .apply {
-                                            hash(uploaded.fileHeader.hash)
-                                            size(uploaded.fileHeader.size)
-                                            uploaded.fileHeader.mimeType
-                                                ?.let { mimeType(it) }
-                                            uploaded.fileHeader.dim
-                                                ?.let { dims(it) }
-                                            uploaded.fileHeader.blurHash
-                                                ?.let { blurhash(it.blurhash) }
-                                            uploaded.fileHeader.thumbHash
-                                                ?.let { thumbhash(it.thumbhash) }
-                                            uploaded.magnet?.let { magnet(it) }
-                                            uploaded.uploadedHash?.let { originalHash(it) }
-                                            alt?.let { alt(it) }
-                                            if (sensitiveContent) sensitiveContent("")
-                                        }.build()
-
-                                iMetaAttachments = iMetaAttachments.filter { it.url != iMeta.url } + iMeta
-
-                                uploaded.url
-                            } else {
-                                null
-                            }
-                        }
+                        // An edit carries no tags (they are never replaced), so only the links go in.
+                        results.successful.mapNotNull { (it.result as? UploadOrchestrator.OrchestratorResult.ServerResult)?.url }
 
                     onUiThread { message.insertUrlAtCursor(urls.joinToString(" ")) }
                     urlPreview = findUrlInMessage()

@@ -71,7 +71,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.drawing.DrawingBackgroundStore
 import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -845,15 +844,7 @@ private fun BottomRowActions(
                     },
                 )
 
-                DrawingButton(
-                    readMedia = vm.accountViewModel.host.mediaUploader::readBytes,
-                    backgrounds =
-                        remember(vm.account.pubKey) {
-                            vm.accountViewModel.host.drawingBackgroundsDir
-                                ?.let { DrawingBackgroundStore(it / vm.account.pubKey) }
-                        },
-                    enabled = !vm.isUploadingImage && !vm.isUploadingFile,
-                ) { drawing, alt ->
+                DrawingButton(vm.accountViewModel, enabled = !vm.isUploadingImage && !vm.isUploadingFile) { drawing, alt ->
                     vm.uploadDrawing(drawing, alt, vm.accountViewModel.toastManager::toast)
                 }
 

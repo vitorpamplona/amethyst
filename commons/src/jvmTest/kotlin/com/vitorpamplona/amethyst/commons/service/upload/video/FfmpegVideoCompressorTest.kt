@@ -192,14 +192,6 @@ class FfmpegVideoCompressorTest {
         }
 
     @Test
-    fun nip95EstimateRefusesEarly() =
-        runTest {
-            val runner = FakeRunner(listOf(0), outputBytes = 10)
-            assertEquals(VideoCompressionResult.TooBig, compressor(runner, setOf("libx264"), duration = 30.0).compress(source(1000), CompressorQuality.HIGH, false, maxBytes = 80_000) {})
-            assertTrue(runner.commands.isEmpty())
-        }
-
-    @Test
     fun progressIsForwarded() =
         runTest {
             val seen = mutableListOf<Double>()

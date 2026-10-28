@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -71,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -396,7 +398,7 @@ class LongFormPostViewModel :
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, emptyList())
+            accountViewModel.account.signAndComputeBroadcast(template)
         }
     }
 
@@ -406,7 +408,7 @@ class LongFormPostViewModel :
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, emptySet())
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -487,6 +489,17 @@ class LongFormPostViewModel :
         // Cover images were never stripped: keep them as picked, only compressed.
         uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
 
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the article as a markdown image. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message) { markdownImage(alt, it) }
+        }
+    }
+
     fun upload(
         alt: String?,
         contentWarningReason: String?,
@@ -557,8 +570,7 @@ class LongFormPostViewModel :
 
                             iMetaAttachments.replace(iMeta.url, iMeta)
 
-                            val markdownImage = "![${alt ?: ""}](${uploaded.url})"
-                            markdownImage
+                            markdownImage(alt, uploaded.url)
                         } else {
                             null
                         }
@@ -749,4 +761,26 @@ class LongFormPostViewModel :
     }
 
     override fun locationManager(): DeviceLocation = accountViewModel.host.deviceLocation
+}
+
+/**
+ * A markdown image of [url] described by [alt]. The alt text is the user's own words, so the
+ * characters that would end or nest its brackets are escaped and line breaks become spaces: an
+ * alt like `sketch](https://example.com)` stays text instead of turning into a link.
+ */
+fun markdownImage(
+    alt: String?,
+    url: String,
+): String {
+    val text =
+        buildString {
+            alt?.forEach { char ->
+                when (char) {
+                    '\\', '[', ']' -> append('\\').append(char)
+                    '\n', '\r' -> append(' ')
+                    else -> append(char)
+                }
+            }
+        }
+    return "![$text]($url)"
 }

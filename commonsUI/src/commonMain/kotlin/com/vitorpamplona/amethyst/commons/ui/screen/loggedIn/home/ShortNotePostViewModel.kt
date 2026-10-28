@@ -56,19 +56,14 @@ import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.drawing_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
-import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.commons.resources.voice_anonymization_failed
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
@@ -100,12 +95,10 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
 import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
@@ -121,7 +114,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -138,7 +130,6 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -167,13 +158,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
 import com.vitorpamplona.quartz.nip94FileMetadata.dims
 import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.image
 import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
@@ -274,7 +263,6 @@ open class ShortNotePostViewModel :
     override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     override val message = TextFieldState()
 
@@ -1136,17 +1124,6 @@ open class ShortNotePostViewModel :
         }
 
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        if (nip95attachments.isNotEmpty()) {
-            val usedImages = template.tags.taggedQuoteIds().toSet()
-            nip95attachments.forEach {
-                if (usedImages.contains(it.second.id)) {
-                    extraNotesToBroadcast.add(it.first)
-                    extraNotesToBroadcast.add(it.second)
-                }
-            }
-        }
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -1160,8 +1137,7 @@ open class ShortNotePostViewModel :
         if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
             draftNote = account.getOrCreateDraftNote(draftTag.current)
             // the same template sendDraftSync() would rebuild; reuse it.
-            val attachments = nip95attachments.flatMapTo(mutableSetOf()) { listOf(it.first, it.second) }
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
 
         val draftToDelete = draftNote
@@ -1218,10 +1194,10 @@ open class ShortNotePostViewModel :
 
             accountViewModel.account.sendMined(
                 rescheduledTemplate,
-                PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
+                PoWReplay.Schedule(scheduledFor),
                 chosenPow,
             ) { readyTemplate ->
-                storeScheduledPost(readyTemplate, extraNotesToBroadcast, scheduledFor)
+                storeScheduledPost(readyTemplate, scheduledFor)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
@@ -1240,18 +1216,18 @@ open class ShortNotePostViewModel :
                         // (NIP-13 recommendation), starting from the moment a worker
                         // picks the job up rather than when it was queued.
                         val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
-                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, anonymousSigner = anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
-                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, anonymousSigner = anonSigner)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
 
-        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
-            broadcastPublicPost(readyTemplate, extraNotesToBroadcast)
+        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(), chosenPow) { readyTemplate ->
+            broadcastPublicPost(readyTemplate)
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
@@ -1265,10 +1241,9 @@ open class ShortNotePostViewModel :
     @OptIn(ExperimentalUuidApi::class)
     private suspend fun storeScheduledPost(
         template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
         publishAtSec: Long,
     ) {
-        val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+        val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
         val store = accountViewModel.host.scheduledPostStore ?: return
         store.add(
             ScheduledPost(
@@ -1292,12 +1267,9 @@ open class ShortNotePostViewModel :
      * only progress reporting remains). Runs on the mining queue's scope when
      * PoW is on, so it must not touch viewModelScope.
      */
-    private suspend fun broadcastPublicPost(
-        template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
-    ) {
+    private suspend fun broadcastPublicPost(template: EventTemplate<out Event>) {
         if (accountViewModel.settings.useTrackedBroadcasts()) {
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
             accountViewModel.account.scope.launch {
                 accountViewModel.broadcastTracker.trackBroadcast(
                     event = event,
@@ -1307,7 +1279,7 @@ open class ShortNotePostViewModel :
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.signAndComputeBroadcast(template)
         }
     }
 
@@ -1316,14 +1288,8 @@ open class ShortNotePostViewModel :
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -1598,15 +1564,7 @@ open class ShortNotePostViewModel :
                 val urls =
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.let {
-                                "nostr:" + it.toNEvent()
-                            }
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
                                 IMetaTagBuilder(uploaded.url)
                                     .apply {
@@ -1648,125 +1606,17 @@ open class ShortNotePostViewModel :
         }
     }
 
-    /**
-     * Uploads a hand drawing and puts its GIF in the note.
-     *
-     * Both files go up as they are: the composer's own [upload] would re-encode
-     * the PNG as a JPEG and send the GIF through metadata stripping, which a GIF
-     * cannot take. The GIF's `imeta` is built here rather than from the upload
-     * result because the uploader measures a file's first frame, and a replay
-     * starts on blank paper: the blurhash and thumbhash come from the finished
-     * drawing instead, and the PNG becomes the `image` preview for clients that
-     * show a still. The PNG is a nice-to-have; if it fails, the GIF still posts.
-     */
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
     fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            mediaUploadTracker.startUpload(false)
-            try {
-                val server = account.settings.defaultFileServer
-                val signer = if (wantsAnonymousPost) anonymousSigner() else null
-
-                // Both files go up at once: the PNG is only a preview, so the GIF does not wait for it.
-                val url =
-                    coroutineScope {
-                        // A NIP-95 post embeds the GIF itself and has no imeta to hang a preview on.
-                        val stillUpload =
-                            if (server.type == ServerType.NIP95) {
-                                null
-                            } else {
-                                async {
-                                    try {
-                                        (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
-                                    } catch (e: Exception) {
-                                        if (e is CancellationException) throw e
-                                        Log.w("ShortNotePostViewModel", "Could not upload the drawing's still", e)
-                                        null
-                                    }
-                                }
-                            }
-
-                        val gifState = uploadGeneratedFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, server, signer)
-                        val gif = (gifState as? UploadingState.Finished)?.result
-                        if (gif == null) {
-                            stillUpload?.cancel()
-                            val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
-                            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
-                            return@coroutineScope null
-                        }
-
-                        when (gif) {
-                            is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                stillUpload?.cancel()
-                                val nip95 = account.createNip95(gif.bytes, headerInfo = gif.fileHeader, alt, null)
-                                nip95attachments = nip95attachments + nip95
-                                account.consumeNip95(nip95.first, nip95.second)?.let { "nostr:" + it.toNEvent() }
-                            }
-
-                            is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                                val still = stillUpload?.await()
-                                val iMeta =
-                                    IMetaTagBuilder(gif.url)
-                                        .apply {
-                                            hash(gif.fileHeader.hash)
-                                            size(gif.fileHeader.size)
-                                            mimeType(RenderedDrawing.GIF_MIME_TYPE)
-                                            dims(DimensionTag(drawing.width, drawing.height))
-                                            drawing.blurhash?.let { blurhash(it) }
-                                            drawing.thumbhash?.let { thumbhash(it) }
-                                            (still as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { image(it.url) }
-                                            gif.magnet?.let { magnet(it) }
-                                            gif.uploadedHash?.let { originalHash(it) }
-                                            alt?.let { alt(it) }
-                                        }.build()
-                                iMetaAttachments.replace(iMeta.url, iMeta)
-                                gif.url
-                            }
-                        }
-                    }
-
-                if (url != null) {
-                    onUiThread { message.insertUrlAtCursor(url) }
-                    urlPreviews.update(message.text.toString())
-                }
-            } catch (_: SignerExceptions.ReadOnlyException) {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("ShortNotePostViewModel", "Drawing upload failed", e)
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: loadStringRes(Res.string.drawing_upload_failed))
-            } finally {
-                drawing.delete()
-                mediaUploadTracker.finishUpload()
-            }
+            val signer = if (wantsAnonymousPost) anonymousSigner() else null
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
         }
     }
-
-    private suspend fun uploadGeneratedFile(
-        file: Path,
-        mimeType: String,
-        alt: String?,
-        server: ServerName,
-        signer: NostrSigner?,
-    ): UploadingState.UploadingFinalState =
-        UploadOrchestrator().upload(
-            uri = mediaUriOfFile(file),
-            mimeType = mimeType,
-            alt = alt,
-            contentWarningReason = null,
-            compressionQuality = CompressorQuality.UNCOMPRESSED,
-            server = server,
-            account = account,
-            uploader = accountViewModel.host.mediaUploader,
-            stripMetadata = false,
-            forcedSigner = signer,
-        )
 
     open fun cancel() {
         draftTag.rotate()
@@ -2022,7 +1872,6 @@ open class ShortNotePostViewModel :
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
 
         isUploadingVoice = true
@@ -2063,12 +1912,6 @@ open class ShortNotePostViewModel :
                             voiceAnonymization.deleteDistortedFiles()
                             voiceLocalFile = null
                             voiceRecording = null
-                        }
-
-                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                            // For NIP95, we need to create the event and get the nevent URL
-                            // This is handled differently - skip for now
-                            onError(uploadErrorTitle, uploadVoiceNip95NotSupported)
                         }
                     }
                 }

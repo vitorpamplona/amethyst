@@ -2389,7 +2389,6 @@
     <string name="media_added_to_profile_gallery">Media lisätty profiilegalleriaasi</string>
     <string name="media_download_has_started_toast">Median lataus on aloitettu…</string>
     <string name="media_servers">Mediapalvelimet</string>
-    <string name="media_too_big_for_nip95">Media on liian suuri NIP-95:lle</string>
     <string name="messages_cant_upload_explainer">Lisää ensin viestin kohde</string>
     <string name="messages_cant_upload_title">Ei voi ladata</string>
     <string name="messages_new_message_subject">Aihe</string>
@@ -2873,7 +2872,6 @@
     <string name="upload_error_title">Latausvirhe</string>
     <string name="upload_error_voice_message_exception">Ääniviesti epäonnistui: %1$s</string>
     <string name="upload_error_voice_message_failed">Ääniviesti epäonnistui ladata</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 ei tue ääniviestiä vielä</string>
     <string name="uptime">%1$d% käytettävyys</string>
     <string name="use_internal_tor">Aktiivinen Tor-moottori</string>
     <string name="use_internal_tor_explainer">Käytä sisäistä versiota tai Orbotia</string>

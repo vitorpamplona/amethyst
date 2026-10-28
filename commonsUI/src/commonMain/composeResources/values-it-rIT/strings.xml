@@ -2356,7 +2356,6 @@
     <string name="media_added_to_profile_gallery">Media aggiunto alla tua galleria del profilo</string>
     <string name="media_download_has_started_toast">Download del media avviato…</string>
     <string name="media_servers">Server media</string>
-    <string name="media_too_big_for_nip95">Il media è troppo grande per NIP-95</string>
     <string name="messages_cant_upload_explainer">Inserisci prima la destinazione del messaggio</string>
     <string name="messages_cant_upload_title">Impossibile caricare</string>
     <string name="messages_new_message_subject">Soggetto</string>
@@ -2837,7 +2836,6 @@
     <string name="upload_error_title">Errore di caricamento</string>
     <string name="upload_error_voice_message_exception">Caricamento vocale fallito: %1$s</string>
     <string name="upload_error_voice_message_failed">Impossibile caricare il messaggio vocale</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 non è ancora supportato per i messaggi vocali</string>
     <string name="uptime">%1$d% di uptime</string>
     <string name="use_internal_tor">Motore Tor attivo</string>
     <string name="use_internal_tor_explainer">Usa la versione interna o Orbot</string>
