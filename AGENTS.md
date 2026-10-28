@@ -38,7 +38,7 @@ On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
 | mls-kmp (`mls.kmp`) | The RFC 9420 engine. No Nostr, no binding | `mlsKmpDir` |
 | marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic needing MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, MDK bench | `marmotKmpDir` |
 | cordn-kmp (`cordn`) | cordn specs, `CordnGroupManager`, `CordnSyncLoop`, the registry, store interfaces | `cordnKmpDir` |
-| quic-kmp (`quic`) | QUIC v1, TLS 1.3, HTTP/3, QPACK, WebTransport client (JVM, Android) | `quicKmpDir` |
+| quic-kmp (`quic`) | QUIC v1/v2 client and server, TLS 1.3, HTTP/3, QPACK, WebTransport (JVM, Android) | `quicKmpDir` |
 
 Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
 (never each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
