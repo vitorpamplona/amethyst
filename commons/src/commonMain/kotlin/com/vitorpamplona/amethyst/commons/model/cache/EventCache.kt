@@ -268,6 +268,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -1900,6 +1901,8 @@ open class EventCache :
                         }
                     }
 
+                deleteCurrentVersionsWhoseNoteWasCollected(event, event.deleteEventIds())
+
                 val addressList = event.deleteAddressIds()
                 val addressSet = addressList.toSet()
 
@@ -1938,6 +1941,34 @@ open class EventCache :
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * An `e` deletion of the version an address currently shows, when that version's note is gone.
+     * [notes] holds a version only weakly; the addressable note keeps the event, so after a GC the
+     * id lookup above finds nothing and the version stayed on screen. The deletion's `k` tags name
+     * the kinds (NIP-09 asks for them), so look for that version at the author's addresses of each
+     * replaceable or addressable one. Same rules as above: the deleter's own, and no newer than the
+     * deletion.
+     */
+    private fun deleteCurrentVersionsWhoseNoteWasCollected(
+        deletion: DeletionRequestEvent,
+        deletedIds: List<HexKey>,
+    ) {
+        val collected = deletedIds.filterTo(HashSet()) { getNoteIfExists(it)?.event == null }
+        if (collected.isEmpty()) return
+
+        deletion.kinds().forEach { kind ->
+            if (!kind.isAddressable() && !kind.isReplaceable()) return@forEach
+            addressables
+                .filterIntoSet(kind, deletion.pubKey) { _, note -> note.event?.id in collected }
+                .forEach { current ->
+                    if ((current.event?.createdAt ?: Long.MAX_VALUE) <= deletion.createdAt) {
+                        deleteNote(current)
+                        addressables.remove(current.address)
+                    }
+                }
         }
     }
 
