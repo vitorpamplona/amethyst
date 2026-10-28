@@ -27,7 +27,7 @@ import com.vitorpamplona.amethyst.commons.cordn.FileCordnCoordinatorStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnGroupStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnHandoffStore
 import com.vitorpamplona.amethyst.commons.cordn.FileCordnKeyPackageStore
-import com.vitorpamplona.amethyst.commons.cordn.NostrClientCvmRelayPool
+import com.vitorpamplona.amethyst.commons.cordn.coordinatorRelayPool
 import com.vitorpamplona.amethyst.commons.model.cordnGroups.CordnGroupList
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
@@ -122,7 +122,7 @@ class CordnRuntime(
      * all. The ephemeral signer stays inside the default, because §8's
      * identity split is not a thing a caller should be able to widen.
      */
-    private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner) { relays -> NostrClientCvmRelayPool(client, relays) },
+    private val links: CordnCoordinatorLinkFactory = CordnLinks.over(accountSigner) { relays -> coordinatorRelayPool(client, relays) },
 ) {
     private val coordinatorStore =
         FileCordnCoordinatorStore(

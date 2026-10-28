@@ -93,6 +93,13 @@ object CordnCommands {
         |  cordn fetch                                    drain the stream and print it
         |  cordn watch [--timeout MS]                     hold a live subscription
         |
+        |  moving to another device:
+        |  cordn migrate export --relay URL[,URL…]        hand this home's groups over;
+        |                       --server URL[,URL…]       stands it down (handed_off)
+        |  cordn migrate import --code cordndev1…         adopt them, replacing what is here
+        |  cordn migrate resume                           take this home back, only if the
+        |                                                 other device never imported
+        |
         |A group ref is a locator, not an invitation: holding one lets you ASK to
         |join, it does not make you a member. Relays say where to reach the
         |coordinator and are meaningless without --coordinator.
