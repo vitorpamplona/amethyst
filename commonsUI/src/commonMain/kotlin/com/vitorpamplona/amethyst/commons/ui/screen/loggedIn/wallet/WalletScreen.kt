@@ -950,7 +950,7 @@ private fun WalletCard(
                         modifier = Modifier.height(36.dp),
                         shape = RoundedCornerShape(8.dp),
                     ) {
-                        Icon(MaterialSymbols.AutoMirrored.Send, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Icon(MaterialSymbols.ArrowUpward, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(stringRes(Res.string.wallet_send), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                     }

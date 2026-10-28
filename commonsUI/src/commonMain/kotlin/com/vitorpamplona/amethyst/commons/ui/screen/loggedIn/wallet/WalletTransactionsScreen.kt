@@ -25,8 +25,10 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -39,6 +41,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -59,6 +62,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -376,22 +381,40 @@ internal fun TransactionItem(
             )
             Spacer(modifier = Modifier.width(12.dp))
         } else {
-            Icon(
-                symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
-                contentDescription =
-                    if (isIncoming) {
-                        stringRes(Res.string.wallet_incoming)
-                    } else {
-                        stringRes(Res.string.wallet_outgoing)
-                    },
-                modifier = Modifier.size(40.dp),
-                tint =
-                    if (isIncoming) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-            )
+            // No contact to show: a subtle directional badge (bitcoin.design's
+            // activity rows) — green for received, neutral for sent. Nothing is
+            // lost when a face takes this slot instead.
+            Box(
+                modifier =
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isIncoming) {
+                                ReceivedGreen.copy(alpha = 0.16f)
+                            } else {
+                                MaterialTheme.colorScheme.surfaceVariant
+                            },
+                        ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    symbol = if (isIncoming) MaterialSymbols.ArrowDownward else MaterialSymbols.ArrowUpward,
+                    contentDescription =
+                        if (isIncoming) {
+                            stringRes(Res.string.wallet_incoming)
+                        } else {
+                            stringRes(Res.string.wallet_outgoing)
+                        },
+                    modifier = Modifier.size(20.dp),
+                    tint =
+                        if (isIncoming) {
+                            ReceivedGreen
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                )
+            }
             Spacer(modifier = Modifier.width(12.dp))
         }
 
@@ -436,7 +459,7 @@ internal fun TransactionItem(
             fontWeight = FontWeight.SemiBold,
             color =
                 if (isIncoming) {
-                    MaterialTheme.colorScheme.primary
+                    ReceivedGreen
                 } else {
                     MaterialTheme.colorScheme.onBackground
                 },
@@ -650,3 +673,6 @@ private fun middleTruncate(
     head: Int = 16,
     tail: Int = 8,
 ): String = if (value.length <= head + tail + 1) value else value.take(head) + "…" + value.takeLast(tail)
+
+/** bitcoin.design's activity green: received amounts and badges; red stays reserved for errors. */
+private val ReceivedGreen = Color(0xFF16A34A)

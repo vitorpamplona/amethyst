@@ -2203,6 +2203,8 @@
     <string name="wallet_creating_invoice">Creating invoice…</string>
     <string name="wallet_copy_invoice">Copy Invoice</string>
     <string name="wallet_no_transactions">No transactions yet</string>
+    <string name="wallet_copy">Copy</string>
+    <string name="wallet_copied">Copied</string>
     <string name="wallet_no_transactions_for_filter">No transactions match this filter</string>
     <string name="wallet_loading">Loading…</string>
     <string name="wallet_incoming">Received</string>
@@ -2279,8 +2281,6 @@
     <string name="wallet_details_lud16">Lightning address</string>
     <string name="wallet_show_lud16_qr">Show lightning address QR</string>
     <string name="wallet_copy_connection">Copy connection string</string>
-    <string name="wallet_copy">Copy</string>
-    <string name="wallet_copied">Copied</string>
     <string name="wallet_add_choose_type">Choose wallet type</string>
     <string name="wallet_add_nwc_title">Lightning wallet (NWC)</string>
     <string name="wallet_add_nwc_description">Pay via an external Lightning wallet using Nostr Wallet Connect.</string>

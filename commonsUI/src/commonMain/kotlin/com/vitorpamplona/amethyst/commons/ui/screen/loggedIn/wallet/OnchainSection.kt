@@ -396,7 +396,7 @@ private fun ActionRow(
                 ),
         ) {
             Icon(
-                symbol = MaterialSymbols.AutoMirrored.Send,
+                symbol = MaterialSymbols.ArrowUpward,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
             )
