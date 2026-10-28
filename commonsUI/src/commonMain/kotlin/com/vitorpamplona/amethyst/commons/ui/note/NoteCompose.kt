@@ -597,6 +597,18 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -2033,9 +2045,26 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            // drss.io's listening-progress records on the podcast-episode kind (30054).
+            // drss.io's listening progress on the podcast-episode kind (30054), and whatever else lands
+            // there: a position in an episode, nothing to draw on its own.
+            is DrssListenProgressEvent,
             is UnrecognizedKind30054Event,
             -> {}
+
+            // drss.io's lists, show settings and provenance records, and the other apps' events on
+            // those kinds. Before Quartz typed them they drew the unknown-kind card; they still do.
+            is DrssFeedListEvent,
+            is DrssListFolderEvent,
+            is DrssEventListEvent,
+            is DrssProvenanceFolderEvent,
+            is DrssProvenanceEvent,
+            is DrssShowEvent,
+            is UnrecognizedKind30100Event,
+            is UnrecognizedKind30101Event,
+            is UnrecognizedKind30102Event,
+            is UnrecognizedKind30104Event,
+            is UnrecognizedKind31985Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {
                 RenderPredictionMarket(baseNote, makeItShort, accountViewModel)

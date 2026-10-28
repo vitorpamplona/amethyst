@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
 import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
@@ -29,7 +32,6 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
-import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -109,13 +111,29 @@ class SharedKindCardsConsumeTest {
             )
 
         assertIs<Podcasting20EpisodeEvent>(episode)
-        assertIs<UnrecognizedKind30054Event>(progress)
+        assertIs<DrssListenProgressEvent>(progress)
 
         assertTrue(cache.justConsume(episode, null, true))
         assertSame(episode, cache.stored(episode))
 
         assertFalse(cache.justConsume(progress, null, true))
         assertNull(cache.stored(progress))
+    }
+
+    @Test
+    fun storesDrssListsAndTheOtherAppsOnTheirKindsAsTheyWereWhileUntyped() {
+        val cache = EventCache()
+
+        val folder = event("0a", 30101, 1_700_000_000L, arrayOf("d", "drss"), arrayOf("title", "DRSS lists"), arrayOf("a", "30000:$owner:drss-feeds", "wss://relay.nostr.io"))
+        val round = event("0b", 30101, 1_700_000_000L, arrayOf("d", "rodada-002"), arrayOf("title", "Rodada 2"), arrayOf("projeto", "30100:${"cc".repeat(32)}:x"))
+
+        assertIs<DrssListFolderEvent>(folder)
+        assertIs<UnrecognizedKind30101Event>(round)
+
+        listOf(folder, round).forEach {
+            assertTrue(cache.justConsume(it, null, true), it.toJson())
+            assertSame(it, cache.stored(it))
+        }
     }
 
     @Test

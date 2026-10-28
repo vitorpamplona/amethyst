@@ -159,6 +159,17 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -4151,8 +4162,8 @@ open class EventCache :
                 is MusicPlaylistEvent,
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
-                // drss.io's listening-progress records on 30054 split off as
-                // UnrecognizedKind30054Event and stay unconsumed, so no feed draws an empty episode.
+                // drss.io's listening progress on 30054 is a DrssListenProgressEvent, which stays
+                // unconsumed like UnrecognizedKind30054Event, so no feed draws an empty episode.
                 is Podcasting20EpisodeEvent,
                 is Podcasting20TrailerEvent,
                 is MuteListEvent,
@@ -4224,6 +4235,20 @@ open class EventCache :
                 is PredictionMarketEvent,
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
+                // drss.io's lists, show settings and provenance records, and the other apps' events
+                // on those kinds: stored as they were while untyped, so a quote or a link draws the
+                // unknown-kind card. No feed asks for these kinds.
+                is DrssFeedListEvent,
+                is DrssListFolderEvent,
+                is DrssEventListEvent,
+                is DrssProvenanceFolderEvent,
+                is DrssProvenanceEvent,
+                is DrssShowEvent,
+                is UnrecognizedKind30100Event,
+                is UnrecognizedKind30101Event,
+                is UnrecognizedKind30102Event,
+                is UnrecognizedKind30104Event,
+                is UnrecognizedKind31985Event,
                 // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
                 // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
                 // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so

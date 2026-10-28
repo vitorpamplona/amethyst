@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.feeds
 
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
@@ -189,4 +195,12 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         ThemeDefinitionEvent.KIND,
         PostingStreakEvent.KIND,
         TopEightEvent.KIND,
+        // drss.io's lists, show settings and provenance records (and the other apps on those kinds):
+        // only quotes and links draw them, with the unknown-kind card.
+        DrssFeedListEvent.KIND,
+        DrssListFolderEvent.KIND,
+        DrssEventListEvent.KIND,
+        DrssProvenanceFolderEvent.KIND,
+        DrssProvenanceEvent.KIND,
+        DrssShowEvent.KIND,
     )

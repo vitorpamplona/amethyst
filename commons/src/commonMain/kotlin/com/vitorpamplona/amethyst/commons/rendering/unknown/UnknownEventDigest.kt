@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.commons.rendering.unknown
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -270,7 +275,7 @@ class UnknownEventDigest(
 
             return UnknownEventDigest(
                 kind = event.kind,
-                kindName = KindNames.nameFor(event.kind),
+                kindName = if (event.isOtherAppOnADrssKind()) null else KindNames.nameFor(event.kind),
                 alt = alt,
                 title = title ?: name ?: subject,
                 summary = summary ?: description,
@@ -329,6 +334,17 @@ class UnknownEventDigest(
         private fun String.isWebUrl() = startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
     }
 }
+
+/**
+ * True for another app's event on a kind drss.io shares, which the unknown-kind card draws: the kind's
+ * name is drss's ("DRSS List Folder"), so the card names it by number instead.
+ */
+private fun Event.isOtherAppOnADrssKind(): Boolean =
+    this is UnrecognizedKind30100Event ||
+        this is UnrecognizedKind30101Event ||
+        this is UnrecognizedKind30102Event ||
+        this is UnrecognizedKind30104Event ||
+        this is UnrecognizedKind31985Event
 
 /** True when [event] is of a kind quartz has no class for: EventFactory's plain [Event]. */
 fun isUnknownKind(event: Event): Boolean = event::class == Event::class
