@@ -32,6 +32,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -95,7 +96,7 @@ class SharedKindCardsConsumeTest {
     }
 
     @Test
-    fun storesPodcastEpisodesButNotPlaybackProgressOnTheSameKind() {
+    fun storesPodcastEpisodesAndDrssProgressAtTheirAddresses() {
         val cache = EventCache()
 
         val episode = event("08", 30054, 1_700_000_000L, arrayOf("d", "ep-1"), arrayOf("title", "Episode 1"), arrayOf("audio", "https://example.com/ep-1.mp3", "audio/mpeg"))
@@ -116,8 +117,22 @@ class SharedKindCardsConsumeTest {
         assertTrue(cache.justConsume(episode, null, true))
         assertSame(episode, cache.stored(episode))
 
-        assertFalse(cache.justConsume(progress, null, true))
-        assertNull(cache.stored(progress))
+        // Stored, so a quote finds it; the episode feeds pick `is PodcastEpisode` and never draw it.
+        assertTrue(cache.justConsume(progress, null, true))
+        assertSame(progress, cache.stored(progress))
+    }
+
+    @Test
+    fun aNonEpisodeVersionStillSupersedesAnEpisodeAtItsAddress() {
+        val cache = EventCache()
+
+        val episode = event("0c", 30054, 1_700_000_000L, arrayOf("d", "ep-2"), arrayOf("title", "Episode 2"), arrayOf("audio", "https://example.com/ep-2.mp3"))
+        val blanked = event("0d", 30054, 1_700_000_100L, arrayOf("d", "ep-2"))
+        assertIs<UnrecognizedKind30054Event>(blanked)
+
+        assertTrue(cache.justConsume(episode, null, true))
+        assertTrue(cache.justConsume(blanked, null, true))
+        assertSame(blanked, cache.stored(blanked))
     }
 
     @Test

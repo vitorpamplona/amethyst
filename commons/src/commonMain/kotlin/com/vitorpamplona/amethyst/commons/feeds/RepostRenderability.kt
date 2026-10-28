@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.feeds
 import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.show.DrssShowEvent
@@ -30,9 +31,7 @@ import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.Encrypt
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
-import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
 import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
-import com.vitorpamplona.quartz.experimental.kanban.card.UnrecognizedKind30302Event
 import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
 import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
@@ -41,6 +40,7 @@ import com.vitorpamplona.quartz.experimental.walletScrutiny.assetBundle.AssetBun
 import com.vitorpamplona.quartz.experimental.zapstore.identityProof.IdentityProofEvent
 import com.vitorpamplona.quartz.marmot.mip00KeyPackages.LegacyKeyPackageEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.UnrecognizedShape
 import com.vitorpamplona.quartz.nip18Reposts.BaseRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
@@ -60,13 +60,11 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteSnapshotEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDevFee.MostroDevFeePaymentEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroDispute.MostroDisputeEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
-import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroRating.MostroUserRatingEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.robosatsRating.RoboSatsCoordinatorRatingEvent
 import com.vitorpamplona.quartz.nip99Classifieds.collection.ProductCollectionEvent
-import com.vitorpamplona.quartz.nip99Classifieds.collection.UnrecognizedKind30405Event
 import com.vitorpamplona.quartz.nip99Classifieds.shipping.ShippingOptionEvent
-import com.vitorpamplona.quartz.nip99Classifieds.shipping.UnrecognizedKind30406Event
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.contracts.ExperimentalContracts
@@ -89,7 +87,9 @@ import kotlin.contracts.contract
  * fall through to the plain-text card and show its raw `content` — a CI log tail, an empty theme.
  *
  * A kind shared by a carded class and uncarded ones ([KINDS_WITH_A_CARD_BY_CLASS]) is decided per
- * event: the repost is shown only when the event it embeds parses to a class with a card.
+ * event: the repost is shown only when the event it embeds parses to a class with a card. A shared
+ * kind whose carded shape is the usual one ([KINDS_USUALLY_WITH_A_CARD]) is shown unless the event it
+ * embeds proves otherwise.
  *
  * Conservative: a repost that declares no boosted `k` kind is assumed renderable
  * — we only hide when we can positively prove the inner kind is unknown.
@@ -104,6 +104,7 @@ fun Event?.isRenderableRepost(): Boolean {
     if (this !is BaseRepostEvent) return false
     val boostedKind = boostedKind()
     if (boostedKind != null && boostedKind in KINDS_WITH_A_CARD_BY_CLASS) return embeddedEvent()?.hasACardOfItsShape() == true
+    if (boostedKind != null && boostedKind in KINDS_USUALLY_WITH_A_CARD) return embeddedEvent()?.hasACardOfItsShape() ?: true
     return boostedKind == null || (EventFactory.isKnownKind(boostedKind) && boostedKind !in TYPED_WITHOUT_A_CARD)
 }
 
@@ -125,15 +126,21 @@ val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
     )
 
 /**
- * False for the shapes of a [KINDS_WITH_A_CARD_BY_CLASS] kind that Amethyst draws nothing for (the
- * `UnrecognizedKind…Event` classes `EventFactory` builds for other apps' formats); true otherwise.
+ * Shared kinds where the carded shape is the one a repost almost always carries: 30054 is a
+ * Podcasting-2.0 episode far more often than drss.io's listening progress. A repost that embeds
+ * nothing is shown, as it was before the kind was split; one that embeds progress is not.
  */
-fun Event.hasACardOfItsShape(): Boolean =
-    this !is UnrecognizedKind30301Event &&
-        this !is UnrecognizedKind30302Event &&
-        this !is UnrecognizedKind38385Event &&
-        this !is UnrecognizedKind30405Event &&
-        this !is UnrecognizedKind30406Event
+val KINDS_USUALLY_WITH_A_CARD: Set<Int> =
+    setOf(
+        Podcasting20EpisodeEvent.KIND,
+    )
+
+/**
+ * False for the shapes of a shared kind that Amethyst draws no card for: the `UnrecognizedKind…Event`
+ * classes `EventFactory` builds for other apps' formats ([UnrecognizedShape]), and drss.io's
+ * listening progress; true otherwise.
+ */
+fun Event.hasACardOfItsShape(): Boolean = this !is UnrecognizedShape && this !is DrssListenProgressEvent
 
 /**
  * The event a repost carries in its `content` (NIP-18 asks for the stringified event). Parsed only

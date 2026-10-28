@@ -137,6 +137,17 @@ class RepostRenderabilityTest {
     }
 
     @Test
+    fun aPodcastEpisodeRepostIsShownUnlessItEmbedsDrssProgress() {
+        val episode = embedded(30054, arrayOf("title", "Episode 1"), arrayOf("audio", "https://example.com/ep-1.mp3"))
+        val progress = embedded(30054, arrayOf("a", "30023:$pubKey:x"), arrayOf("position", "733"))
+
+        assertTrue(repostOf(30054, episode).isRenderableRepost(), "episode")
+        assertFalse(repostOf(30054, progress).isRenderableRepost(), "progress")
+        // Nothing embedded: the episode is by far the usual shape, so the repost stays.
+        assertTrue(genericRepost(arrayOf(arrayOf("e", boostedEventId), arrayOf("k", "30054"))).isRenderableRepost(), "bare")
+    }
+
+    @Test
     fun sharedKindsAreDecidedByClassNotListedAsCardless() {
         assertTrue((KINDS_WITH_A_CARD_BY_CLASS intersect TYPED_WITHOUT_A_CARD).isEmpty())
     }

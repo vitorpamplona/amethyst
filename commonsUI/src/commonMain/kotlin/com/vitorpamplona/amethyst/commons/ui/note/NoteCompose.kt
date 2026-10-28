@@ -2045,14 +2045,11 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            // drss.io's listening progress on the podcast-episode kind (30054), and whatever else lands
-            // there: a position in an episode, nothing to draw on its own.
+            // drss.io's lists, show settings, provenance records and listening progress, and the
+            // other apps' events on those kinds. Before Quartz typed them they drew the unknown-kind
+            // card; they still do. No feed asks for them, so this is what a quote or a link shows.
             is DrssListenProgressEvent,
             is UnrecognizedKind30054Event,
-            -> {}
-
-            // drss.io's lists, show settings and provenance records, and the other apps' events on
-            // those kinds. Before Quartz typed them they drew the unknown-kind card; they still do.
             is DrssFeedListEvent,
             is DrssListFolderEvent,
             is DrssEventListEvent,

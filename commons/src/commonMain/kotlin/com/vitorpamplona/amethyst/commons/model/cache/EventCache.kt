@@ -165,6 +165,7 @@ import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
@@ -506,6 +507,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
@@ -4162,9 +4164,12 @@ open class EventCache :
                 is MusicPlaylistEvent,
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
-                // drss.io's listening progress on 30054 is a DrssListenProgressEvent, which stays
-                // unconsumed like UnrecognizedKind30054Event, so no feed draws an empty episode.
                 is Podcasting20EpisodeEvent,
+                // drss.io's listening progress and other shapes on 30054: stored at their address,
+                // so a newer non-episode version still supersedes an older episode there and a quote
+                // finds them. The episode feeds pick `is PodcastEpisode`, so no feed draws them.
+                is DrssListenProgressEvent,
+                is UnrecognizedKind30054Event,
                 is Podcasting20TrailerEvent,
                 is MuteListEvent,
                 is NNSEvent,
