@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.app.Service
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -120,6 +121,33 @@ class NappletBrokerService : Service() {
                 .map { loaded -> if (loaded.containsKey(boundPubKey)) boundPubKey else "" }
         }
 
+    private val themeRecipients = mutableMapOf<Messenger, String>()
+    private var lastTheme: String? = null
+
+    override fun onCreate() {
+        super.onCreate()
+        scope.launch(Dispatchers.Main.immediate) {
+            Amethyst.instance.uiPrefs.value.theme
+                .collect { broadcastTheme() }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        broadcastTheme()
+    }
+
+    private fun broadcastTheme() {
+        val colors = currentNappletThemeColors(this)
+        val payload = NappletProtocolJson.encodeThemeChanged(colors.background, colors.text, colors.primary)
+        if (payload == lastTheme) return
+        lastTheme = payload
+        themeRecipients.entries.removeAll { (_, token) ->
+            NappletLaunchRegistry.resolve(token)?.declared?.contains(NappletCapability.THEME) != true
+        }
+        themeRecipients.keys.toList().forEach { push(it, payload) }
+    }
+
     // Binding is restricted to our own UID by exported=false in the manifest, enforced by the OS.
     // A UID check here would be useless: onBind() runs once (the binder is cached and reused for all
     // later clients) and outside any binder transaction, so getCallingUid() returns our own UID anyway.
@@ -128,6 +156,7 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stopAll()
+        themeRecipients.clear()
         // Every applet/browser surface has unbound, so the "session" the user granted for is over.
         // The ledger and the broker cache are now app-wide singletons that outlive this service, so
         // their in-memory session grants have to be dropped explicitly here — that keeps the lifetime
@@ -166,6 +195,7 @@ class NappletBrokerService : Service() {
                 incBus.removeAll(it)
                 liveSubscriptions.closeAllFor(it)
                 attendance.forget(it)
+                themeRecipients.remove(it)
             }
             // Tokens the surface will never use again: drop their sessions and whatever runs under them.
             // Only the surface that minted a token holds it (tokens are unguessable), so it can only ever
@@ -192,6 +222,12 @@ class NappletBrokerService : Service() {
             val owner = msg.replyTo ?: return true
             val attended = msg.data?.getBoolean(NappletIpc.KEY_ATTENDED, false) ?: false
             attendance.set(owner, attended)
+            val token = msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)
+            if (token != null && NappletLaunchRegistry.resolve(token)?.declared?.contains(NappletCapability.THEME) == true) {
+                themeRecipients[owner] = token
+            } else {
+                themeRecipients.remove(owner)
+            }
             // Encrypted events its subscriptions received meanwhile can be decrypted and delivered now.
             if (attended) liveSubscriptions.onAttended(owner)
             return true

@@ -40,6 +40,8 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NProfile
 import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -59,7 +61,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.InterruptedIOException
 import java.net.InetAddress
-import java.net.URLDecoder
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
 import java.util.concurrent.TimeUnit
@@ -137,6 +138,7 @@ class NappletResourceFetcher(
     private suspend fun fetchHttps(
         url: String,
         client: OkHttpClient,
+        expectedHash: String? = null,
     ): NappletResourceResult {
         var current = safeHttpsUrl(url) ?: return failure(ERROR_BLOCKED, "Only credential-free HTTPS URLs are allowed.")
         repeat(MAX_REDIRECTS + 1) { hop ->
@@ -160,6 +162,9 @@ class NappletResourceFetcher(
                         if (!response.isSuccessful) return failure(ERROR_NETWORK, "Upstream returned HTTP ${response.code}.")
                         if (response.body.contentLength() > MAX_RESOURCE_BYTES) return failure(ERROR_TOO_LARGE)
                         val body = readBounded(response.body.byteStream()) ?: return failure(ERROR_TOO_LARGE)
+                        if (expectedHash != null && !StaticSiteResolver.verify(body, expectedHash)) {
+                            return failure(ERROR_DECODE_FAILED, "Blossom SHA-256 verification failed.")
+                        }
                         return classify(body)
                     }
             } catch (e: BlockedResourceException) {
@@ -232,7 +237,7 @@ class NappletResourceFetcher(
     }
 
     /**
-     * Fetches a `blossom:<sha256>` (or `blossom://<sha256>`) blob from the user's Blossom servers
+     * Fetches a BUD-10 `blossom:<sha256>.<ext>` blob from the user's Blossom servers
      * (kind:10063) over [client], verifying the sha256 before returning — content-addressed, so a
      * wrong server can never substitute the blob. Returns null for a malformed hash or if no server
      * serves it.
@@ -241,18 +246,25 @@ class NappletResourceFetcher(
         url: String,
         client: OkHttpClient,
     ): NappletResourceResult {
-        if (!url.startsWith(BLOSSOM_SHA256_PREFIX)) return failure(ERROR_INVALID_REQUEST, "Malformed Blossom SHA-256 URL.")
-        val hash = url.removePrefix(BLOSSOM_SHA256_PREFIX).lowercase()
-        if (!hash.matches(SHA256)) return failure(ERROR_INVALID_REQUEST, "Malformed Blossom SHA-256 URL.")
-
+        val reference = parseBlossomResource(url) ?: return failure(ERROR_INVALID_REQUEST, "Malformed BUD-10 Blossom URI.")
+        val hash = reference.sha256
+        val authorServers =
+            reference.authors.take(10).flatMap { author ->
+                (resolveReplaceable(BlossomServersEvent.KIND, author) as? BlossomServersEvent)?.servers().orEmpty()
+            }
         val servers =
-            account.blossomServers
-                .getBlossomServersList()
-                ?.servers()
-                .orEmpty()
+            (
+                reference.servers + authorServers +
+                    account.blossomServers
+                        .getBlossomServersList()
+                        ?.servers()
+                        .orEmpty()
+            ).map { if ("://" in it) it else "https://$it" }
+                .filter(::isSafeHttpsResourceUrl)
+                .distinct()
         var sawHashMismatch = false
         for (candidate in StaticSiteResolver.candidateUrls(servers, hash)) {
-            when (val fetched = fetchHttps(candidate, client)) {
+            when (val fetched = fetchHttps(candidate, client, hash)) {
                 is NappletResourceResult.Success -> {
                     if (!StaticSiteResolver.verify(fetched.resource.bytes, hash)) {
                         sawHashMismatch = true
@@ -260,7 +272,10 @@ class NappletResourceFetcher(
                     }
                     return fetched
                 }
-                is NappletResourceResult.Failure -> if (fetched.error == ERROR_BLOCKED) return fetched
+                is NappletResourceResult.Failure -> {
+                    if (fetched.error == ERROR_DECODE_FAILED) sawHashMismatch = true
+                    if (fetched.error == ERROR_BLOCKED) return fetched
+                }
             }
         }
         if (sawHashMismatch) return failure(ERROR_DECODE_FAILED, "Blossom SHA-256 verification failed.")
@@ -312,7 +327,7 @@ class NappletResourceFetcher(
                 runCatching { Base64.decode(data, Base64.DEFAULT) }.getOrNull()
                     ?: return failure(ERROR_DECODE_FAILED, "Invalid base64 data URL.")
             } else {
-                runCatching { URLDecoder.decode(data, "UTF-8").encodeToByteArray() }.getOrNull()
+                runCatching { decodeDataPayload(data) }.getOrNull()
                     ?: return failure(ERROR_DECODE_FAILED, "Invalid escaped data URL.")
             }
         if (bytes.size > MAX_RESOURCE_BYTES) return failure(ERROR_TOO_LARGE)
@@ -375,6 +390,29 @@ class NappletResourceFetcher(
     }
 
     companion object {
+        internal fun parseBlossomResource(url: String): BlossomUri? {
+            if (!Regex("^blossom:[0-9a-fA-F]{64}\\.[a-zA-Z0-9]+(?:\\?[^#]*)?$").matches(url)) return null
+            return BlossomUri.parse(url)
+        }
+
+        /** data: percent escapes encode bytes, and '+' is literal (not HTML form encoding). */
+        internal fun decodeDataPayload(data: String): ByteArray {
+            val output = ByteArrayOutputStream()
+            var start = 0
+            while (start < data.length) {
+                val escaped = data.indexOf('%', start)
+                val end = if (escaped < 0) data.length else escaped
+                output.write(data.substring(start, end).encodeToByteArray())
+                if (escaped < 0) break
+                require(escaped + 2 < data.length) { "Incomplete data URL escape" }
+                val high = data[escaped + 1].digitToIntOrNull(16) ?: error("Invalid data URL escape")
+                val low = data[escaped + 2].digitToIntOrNull(16) ?: error("Invalid data URL escape")
+                output.write(high * 16 + low)
+                start = escaped + 3
+            }
+            return output.toByteArray()
+        }
+
         internal fun isSafeHttpsResourceUrl(url: String): Boolean = url.toHttpUrlOrNull()?.let { it.scheme == "https" && it.username.isEmpty() && it.password.isEmpty() } == true
 
         internal fun isPublicAddress(address: InetAddress): Boolean {
@@ -412,7 +450,6 @@ class NappletResourceFetcher(
         private const val MAX_REDIRECTS = 5
         private const val MIME_PREFIX_BYTES = 8 * 1024
         private const val MAX_DATA_URL_CHARS = 24 * 1024 * 1024
-        private const val BLOSSOM_SHA256_PREFIX = "blossom:sha256:"
         const val MAX_RESOURCE_BYTES = 10 * 1024 * 1024
         private const val ERROR_INVALID_REQUEST = "invalid-request"
         private const val ERROR_NOT_FOUND = "not-found"
@@ -424,7 +461,6 @@ class NappletResourceFetcher(
         private const val ERROR_NETWORK = "network-error"
         private const val MIME_JSON = "application/json"
         private const val MIME_PLAIN_TEXT = "text/plain"
-        private val SHA256 = Regex("^[0-9a-f]{64}$")
         private val ALLOWED_SNIFFED_TYPES =
             setOf(
                 "image/png",

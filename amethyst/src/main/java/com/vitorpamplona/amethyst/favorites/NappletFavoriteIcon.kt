@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.favorites
 
+import android.graphics.BitmapFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,13 +32,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
 import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +53,7 @@ import java.io.File
 private class IconBlob(
     val path: PathTag,
     val servers: List<String>,
+    val mime: String? = null,
 )
 
 /**
@@ -71,8 +77,6 @@ private class IconBlob(
  */
 @Composable
 fun rememberNappletIconModel(coordinate: String): String? {
-    val context = LocalContext.current
-
     // checkGetOrCreate returns null only for a malformed coordinate, so this early return is stable for a
     // given coordinate (it never flips across recompositions, which would break composition structure).
     val note = remember(coordinate) { LocalCache.checkGetOrCreateAddressableNote(coordinate) } ?: return null
@@ -86,25 +90,60 @@ fun rememberNappletIconModel(coordinate: String): String? {
     val event = noteState.note.event
     val icon = remember(event) { resolveIconBlob(event) } ?: return null
 
-    var model by remember(icon.path.hash) { mutableStateOf<String?>(null) }
-    LaunchedEffect(icon.path.hash) {
+    return rememberVerifiedIconModel(icon)
+}
+
+/** Used by feed cards as well as favorite/connected-app surfaces. Never returns a remote icon URL. */
+@Composable
+fun rememberNappletEventIconModel(event: Event): String? = rememberVerifiedIconModel(remember(event) { resolveIconBlob(event) })
+
+@Composable
+private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
+    val context = LocalContext.current
+    var model by remember(icon?.path?.hash, icon?.mime) { mutableStateOf<String?>(null) }
+    LaunchedEffect(icon?.path?.hash, icon?.mime, icon?.servers) {
+        if (icon == null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             val file = File(NappletBlobCache.dirFor(context.cacheDir), icon.path.hash.lowercase())
             if (!file.isFile) {
                 val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
                 runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort) }
             }
-            if (file.isFile) model = "file://" + file.absolutePath
+            if (file.isFile && (icon.mime == null || verifiedIcon(file, icon))) model = "file://" + file.absolutePath
         }
     }
     return model
 }
 
+private fun verifiedIcon(
+    file: File,
+    icon: IconBlob,
+): Boolean =
+    runCatching {
+        // Icons are optional. Bound decoding work and fall back to generic artwork for oversized input.
+        if (file.length() > 2 * 1024 * 1024) return@runCatching false
+        val bytes = file.readBytes()
+        if (!StaticSiteResolver.verify(bytes, icon.path.hash)) return@runCatching false
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+        if (bounds.outMimeType != icon.mime || bounds.outWidth !in 1..4096 || bounds.outHeight !in 1..4096) return@runCatching false
+        val options = BitmapFactory.Options().apply { inSampleSize = maxOf(1, maxOf(bounds.outWidth, bounds.outHeight) / 256) }
+        val decoded = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return@runCatching false
+        decoded.recycle()
+        true
+    }.getOrDefault(false)
+
 /** Asks each nsite/napplet event type for its bundled icon blob + the servers that hold it. */
 private fun resolveIconBlob(event: Event?): IconBlob? =
     when (event) {
-        is RootNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
-        is NamedNappletEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
+        is NappletManifest ->
+            if (event.verify()) {
+                NappletManifestData.parse(event)?.let { manifest ->
+                    manifest.icon?.let { IconBlob(PathTag("/icon", it.hash), manifest.servers, it.mime) }
+                }
+            } else {
+                null
+            }
         is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
         else -> null
@@ -145,5 +184,15 @@ fun rememberManifestIconModel(
         remember(author, identifier) {
             if (identifier.isEmpty()) "${RootSiteEvent.KIND}:$author:" else "${NamedSiteEvent.KIND}:$author:$identifier"
         }
-    return rememberNappletIconModel(nappletCoord) ?: rememberNappletIconModel(nsiteCoord)
+    val nappletIcon = rememberNappletIconModel(nappletCoord)
+    val nappletNote = remember(nappletCoord) { LocalCache.checkGetOrCreateAddressableNote(nappletCoord) }
+    if (nappletNote != null) {
+        val state by nappletNote
+            .flow()
+            .metadata.stateFlow
+            .collectAsStateWithLifecycle()
+        // A declared napplet with no usable icon gets generic artwork, not another app's icon.
+        if (state.note.event is NappletManifest) return nappletIcon
+    }
+    return nappletIcon ?: rememberNappletIconModel(nsiteCoord)
 }

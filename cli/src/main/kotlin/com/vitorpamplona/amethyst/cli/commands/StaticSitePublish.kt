@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestIcon
 import com.vitorpamplona.amethyst.commons.service.upload.StaticSitePublisher
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
@@ -50,12 +52,17 @@ object StaticSitePublish {
         val description: String?,
         val source: String?,
         val icon: String?,
+        val optional: List<String> = emptyList(),
+        val iconMime: String? = null,
+        val archetypes: List<String> = emptyList(),
+        val intents: List<List<String>> = emptyList(),
     )
 
     suspend fun run(
         dataDir: DataDir,
         rest: Array<String>,
         usage: String,
+        napplet: Boolean = false,
         buildEvent: (Manifest) -> EventTemplate<out Event>,
     ): Int {
         val args = Args(rest)
@@ -73,8 +80,38 @@ object StaticSitePublish {
         val description = args.flag("description")
         val sourceUrl = args.flag("source")
         val icon = args.flag("icon")
+        val optional = if (napplet) StaticSiteFetch.commaList(args.flag("optional")) else emptyList()
+        val iconMime = if (napplet) args.flag("icon-mime") else null
+        val archetypes = if (napplet) StaticSiteFetch.commaList(args.flag("archetypes")) else emptyList()
+        val intents = if (napplet) StaticSiteFetch.commaList(args.flag("intents")).map { it.split(' ').filter(String::isNotBlank) } else emptyList()
         val extraRelays = StaticSiteFetch.commaList(args.flag("relay"))
         args.rejectUnknown()
+
+        if (napplet) {
+            val files = if (source.isDirectory) source.walkTopDown().filter { it.isFile }.toList() else listOf(source)
+            if (files.size != 1 || files.single().name != "index.html" ||
+                (source.isDirectory && files.single().parentFile.canonicalFile != source.canonicalFile)
+            ) {
+                return Output.error("bad_args", "NIP-5D requires a single self-contained index.html; bundle assets inline before publishing")
+            }
+            try {
+                NappletManifestData.build(
+                    "00".repeat(32),
+                    description.orEmpty(),
+                    identifier,
+                    requires,
+                    optional,
+                    servers,
+                    title,
+                    sourceUrl,
+                    icon?.let { NappletManifestIcon(it, iconMime.orEmpty()) },
+                    archetypes,
+                    intents,
+                )
+            } catch (e: IllegalArgumentException) {
+                return Output.error("bad_args", e.message ?: "Invalid NIP-5D metadata")
+            }
+        }
 
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
@@ -86,7 +123,7 @@ object StaticSitePublish {
                     return Output.error("upload_failed", e.message ?: "upload failed")
                 }
 
-            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl, icon)
+            val manifest = Manifest(identifier, result.pathTags, servers, requires, title, description, sourceUrl, icon, optional, iconMime, archetypes, intents)
             val signed = ctx.signer.sign(buildEvent(manifest))
 
             val relays =
@@ -108,7 +145,7 @@ object StaticSitePublish {
                     "icon" to icon,
                     "servers" to servers,
                     "requires" to requires,
-                    "aggregate_sha256" to SiteAggregateHash.compute(result.pathTags),
+                    (if (napplet) "artifact_sha256" else "aggregate_sha256") to (if (napplet) result.pathTags.single().hash else SiteAggregateHash.compute(result.pathTags)),
                     "files" to
                         result.uploaded.map {
                             mapOf("path" to it.path, "sha256" to it.sha256, "size_bytes" to it.size, "url" to it.url)

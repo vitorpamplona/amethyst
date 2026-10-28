@@ -272,7 +272,7 @@ private fun NappletAppCard(
         }?.ifBlank { null } ?: identifier.ifBlank { untitled }
     val iconUrl =
         when (event) {
-            is NappletManifest -> event.icon()
+            is NappletManifest -> null // The verified local icon model is resolved separately.
             is RootSiteEvent -> event.icon()
             is NamedSiteEvent -> event.icon()
             else -> null

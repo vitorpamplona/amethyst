@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.napplet.gateways
 
 import android.content.Context
-import android.content.res.Configuration
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -43,7 +42,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
-import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
@@ -60,6 +58,7 @@ import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentSummary
 import com.vitorpamplona.amethyst.napplet.buildConnectInfo
 import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
+import com.vitorpamplona.amethyst.napplet.currentNappletThemeColors
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -126,7 +125,7 @@ class AccountNappletGateways(
         val resource = NappletResourceGateway { url, coordinate -> resourceFetcher.fetch(url, coordinate) }
         val identityReads = NappletIdentityGateway { method, argument -> identityReader.read(method, argument) }
         val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) }
-        val theme = NappletThemeGateway { currentThemeColors() }
+        val theme = NappletThemeGateway { currentNappletThemeColors(context) }
         val notify =
             object : NappletNotifyGateway {
                 override suspend fun create(
@@ -215,20 +214,6 @@ class AccountNappletGateways(
     }
 
     /**
-     * The host theme colors a napplet maps to its CSS variables (`theme.get`): Amethyst's brand
-     * purple plus a background/text pair chosen from the current dark/light mode. Read-only and
-     * cheap; the napplet falls back to its own defaults if this is ever unavailable.
-     */
-    private fun currentThemeColors(): NappletThemeColors {
-        val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-        return if (night) {
-            NappletThemeColors(background = "#0E0E10", text = "#E6E6E6", primary = AMETHYST_PURPLE)
-        } else {
-            NappletThemeColors(background = "#FFFFFF", text = "#1A1A1A", primary = AMETHYST_PURPLE)
-        }
-    }
-
-    /**
      * Uploads [bytes] to the user's first Blossom server (kind:10063) with a signed authorization
      * event, via the app's existing [BlossomUploader]. Returns null when there's no server or the
      * upload fails. Consent is enforced by the broker before this runs.
@@ -313,9 +298,6 @@ class AccountNappletGateways(
         private val QUERY_TIMEOUT = 8.seconds
         private val WALLET_TIMEOUT = 60.seconds
         private val SIGNER_CONSENT_TIMEOUT = 120.seconds
-
-        /** Amethyst's brand purple (`AmethystPurple`, commons Colors.kt), exposed as the theme primary. */
-        private const val AMETHYST_PURPLE = "#9A82DB"
 
         /** Notification channel for napplet-originated notifications (NAP `notify`). */
         private const val NOTIFY_CHANNEL_ID = "napplet_notifications"

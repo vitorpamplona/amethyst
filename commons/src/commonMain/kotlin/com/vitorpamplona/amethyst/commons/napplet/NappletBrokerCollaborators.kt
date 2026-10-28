@@ -106,7 +106,7 @@ fun interface NappletWalletGateway {
 }
 
 /** The host's current theme, as hex color strings the applet maps to CSS variables. */
-class NappletThemeColors(
+data class NappletThemeColors(
     val background: String,
     val text: String,
     val primary: String,

@@ -491,7 +491,11 @@ class NappletHostActivity : ComponentActivity() {
         val msg =
             Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
                 replyTo = replyMessenger
-                data = Bundle().apply { putBoolean(NappletIpc.KEY_ATTENDED, resumed) }
+                data =
+                    Bundle().apply {
+                        putBoolean(NappletIpc.KEY_ATTENDED, resumed)
+                        putString(NappletIpc.KEY_LAUNCH_TOKEN, launchToken)
+                    }
             }
         if (brokerMessenger == null) pendingRequests.add(msg) else sendToBroker(msg)
     }

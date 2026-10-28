@@ -31,8 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
  * transport (Messenger / IPC / in-process) and the live relay subscription, which are the host's job.
  *
  * Both the Android `:napplet` service and a future desktop host route through here, so their wire
- * behavior can't drift. (The `shell.ready` handshake is handled at the WebView edge before the
- * boundary, so the router never sees it.)
+ * behavior can't drift. Domain availability is injected before scripts; no shell handshake is required.
  */
 object NappletRequestRouter {
     sealed interface Outcome {
@@ -114,13 +113,14 @@ object NappletRequestRouter {
         }
 
         val request =
-            runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrNull()
-                ?: return if (runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
-                    val failure = NappletResponse.Failed("Malformed or unsupported request.")
+            runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrElse {
+                return if (runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
+                    val failure = if (requestType.startsWith("resource.")) NappletResponse.ResourceFailure("invalid-request", "Malformed resource request.") else NappletResponse.Failed("Malformed request.")
                     Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, failure), failure)
                 } else {
                     Outcome.Ignore
                 }
+            } ?: return Outcome.Ignore
 
         val response = broker.handle(identity, request, declared)
 

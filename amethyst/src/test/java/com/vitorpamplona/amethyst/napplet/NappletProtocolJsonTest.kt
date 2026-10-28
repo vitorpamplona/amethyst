@@ -47,6 +47,24 @@ import org.junit.Test
 class NappletProtocolJsonTest {
     private val json = Json
 
+    @Test
+    fun resourcePolicyAndTransportFailuresUseResourceErrorEnvelopes() {
+        val failures =
+            listOf(
+                NappletResponse.Denied(NappletCapability.RESOURCE, "No consent") to "blocked-by-policy",
+                NappletResponse.Unsupported("resource.bytes") to "blocked-by-policy",
+                NappletResponse.Failed("Fetch failed") to "network-error",
+            )
+        for (method in listOf("resource.info", "resource.bytes", "resource.bytesMany")) {
+            for ((failure, code) in failures) {
+                val result = json.parseToJsonElement(NappletProtocolJson.encodeResponse(method, failure)).jsonObject
+                assertEquals("$method.error", result["type"]?.jsonPrimitive?.content)
+                assertEquals(code, result["error"]?.jsonPrimitive?.content)
+                assertFalse(result.containsKey("blob"))
+            }
+        }
+    }
+
     private inline fun assertThrowsAny(block: () -> Unit) {
         try {
             block()
@@ -331,7 +349,7 @@ class NappletProtocolJsonTest {
             items
                 ?.first()
                 ?.jsonObject
-                ?.get("bytes")
+                ?.get("blob")
                 ?.jsonPrimitive
                 ?.content,
         )
@@ -357,7 +375,7 @@ class NappletProtocolJsonTest {
     @Test
     fun encodesBytesAsBase64WithMime() {
         val o = json.parseToJsonElement(NappletProtocolJson.encodeResponse("resource.bytes", NappletResponse.Bytes("Hi".encodeToByteArray(), "text/plain"))).jsonObject
-        assertEquals("SGk=", o["bytes"]?.jsonPrimitive?.content)
+        assertEquals("SGk=", o["blob"]?.jsonPrimitive?.content)
         assertEquals("text/plain", o["mime"]?.jsonPrimitive?.content)
     }
 

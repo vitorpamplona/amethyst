@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiRollup
 import com.vitorpamplona.amethyst.commons.nip34Git.ci.CiState
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.ciLogTailLines
@@ -811,7 +813,7 @@ fun RenderNappletSnapshot(
     nav: INav,
 ) {
     val event = baseNote.event as? NappletSnapshotEvent ?: return
-    val requires = remember(event) { event.requires() }
+    val requires = remember(event) { NappletManifestData.parse(event)?.required.orEmpty() }
     val title = remember(event) { event.title() }
 
     KindCard(
@@ -819,7 +821,7 @@ fun RenderNappletSnapshot(
         title = stringRes(Res.string.kc_dev_napplet_snapshot),
         subtitle = title,
     ) {
-        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.description(), event.paths().size, event.source(), event.servers()) }, backgroundColor, accountViewModel, nav)
+        SnapshotFacts(baseNote, remember(event) { SnapshotInfo(event.content, if (NappletManifestData.parse(event) != null) 1 else 0, event.source(), event.servers(), plainText = true) }, backgroundColor, accountViewModel, nav)
         KindCardSectionChips(stringRes(Res.string.kc_dev_permissions), requires)
     }
 }
@@ -833,6 +835,7 @@ private class SnapshotInfo(
     val fileCount: Int,
     val source: String?,
     serverUrls: List<String>,
+    val plainText: Boolean = false,
 ) {
     val servers = serverUrls.map { HttpUrlFormatter.displayUrl(it) }
 }
@@ -845,7 +848,11 @@ private fun SnapshotFacts(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    KindCardProse(null, baseNote, info.description, backgroundColor, accountViewModel, nav)
+    if (info.plainText) {
+        info.description?.let { Text(it) }
+    } else {
+        KindCardProse(null, baseNote, info.description, backgroundColor, accountViewModel, nav)
+    }
     KindCardMeta(listOf(if (info.fileCount > 0) pluralStringRes(Res.plurals.kc_dev_files_count, info.fileCount, info.fileCount) else null))
     KindCardField(stringRes(Res.string.kc_dev_source), info.source, maxLines = 1)
     KindCardSectionChips(stringRes(Res.string.kc_dev_servers), info.servers, MAX_SERVER_CHIPS)

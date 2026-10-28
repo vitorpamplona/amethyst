@@ -89,7 +89,8 @@ class StaticSitePublisher(
                 val mime = runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: "application/octet-stream"
                 val auth = BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", signer)
                 val result = client.upload(file, mime, server, auth)
-                UploadedFile(webPath, result.sha256 ?: hash, result.size ?: file.length(), result.url)
+                require(result.sha256 == null || result.sha256.equals(hash, ignoreCase = true)) { "Upload server returned a different artifact hash" }
+                UploadedFile(webPath, hash, file.length(), result.url)
             }
         return Result(uploaded)
     }

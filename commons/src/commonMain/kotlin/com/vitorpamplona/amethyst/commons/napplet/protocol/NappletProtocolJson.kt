@@ -52,11 +52,27 @@ import kotlin.io.encoding.Base64
  * — no platform-UI or process APIs.
  *
  * This is the only place the boundary parses untrusted applet input, so it is deliberately
- * strict: an unrecognized `type` decodes to `null` (the broker denies it) and a malformed/short
+ * strict: an unrecognized `type` decodes to `null` (the router silently ignores it) and a malformed/short
  * body throws (the host wraps it into a `Failed`). Uses kotlinx.serialization so it is
  * unit-testable off-device.
  */
 object NappletProtocolJson {
+    fun encodeThemeChanged(
+        background: String,
+        text: String,
+        primary: String,
+    ): String =
+        buildJsonObject {
+            put("type", "theme.changed")
+            putJsonObject("theme") {
+                putJsonObject("colors") {
+                    put("background", background)
+                    put("text", text)
+                    put("primary", primary)
+                }
+            }
+        }.toString()
+
     private val json = Json { ignoreUnknownKeys = true }
 
     // Accepts unpadded input, as java.util.Base64's decoder did before this moved to commonMain.
@@ -143,7 +159,7 @@ object NappletProtocolJson {
             put("reason", reason)
         }.toString()
 
-    /** Parses a request envelope. Returns `null` for an unrecognized `type` so the broker can deny it. */
+    /** Parses a request envelope. Returns `null` for an unrecognized `type` so the router can ignore it. */
     fun decodeRequest(envelopeJson: String): NappletRequest? {
         val o = json.parseToJsonElement(envelopeJson).jsonObject
         return when (o.str("type")) {
@@ -193,8 +209,22 @@ object NappletProtocolJson {
             "keys.unregisterAction" -> NappletRequest.UnregisterAction(o.req("actionId"))
             "value.payInvoice" -> NappletRequest.PayInvoice(o.req("invoice"))
             "resource.info" -> NappletRequest.ResourceInfo
-            "resource.bytes" -> NappletRequest.ResourceBytes(o.req("url"))
-            "resource.bytesMany" -> NappletRequest.ResourceBytesMany(o.getValue("urls").jsonArray.map { it.jsonPrimitive.content })
+            "resource.bytes" ->
+                NappletRequest.ResourceBytes(
+                    o.getValue("url").jsonPrimitive.let {
+                        require(it.isString)
+                        it.content
+                    },
+                )
+            "resource.bytesMany" ->
+                NappletRequest.ResourceBytesMany(
+                    o.getValue("urls").jsonArray.map { value ->
+                        value.jsonPrimitive.let {
+                            require(it.isString)
+                            it.content
+                        }
+                    },
+                )
             "upload.upload" -> {
                 // UploadUploadMessage: { type, id, request: { data, mimeType?, filename?, ... } }.
                 // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
@@ -222,8 +252,18 @@ object NappletProtocolJson {
     fun encodeResponse(
         requestType: String,
         response: NappletResponse,
-    ): String =
-        buildJsonObject {
+    ): String {
+        if (requestType in setOf("resource.info", "resource.bytes", "resource.bytesMany")) {
+            val failure =
+                when (response) {
+                    is NappletResponse.Denied -> NappletResponse.ResourceFailure("blocked-by-policy", response.reason)
+                    is NappletResponse.Unsupported -> NappletResponse.ResourceFailure("blocked-by-policy", "Resource operation unavailable.")
+                    is NappletResponse.Failed -> NappletResponse.ResourceFailure("network-error", response.reason)
+                    else -> null
+                }
+            if (failure != null) return encodeResponse(requestType, failure)
+        }
+        return buildJsonObject {
             // Most replies are `<requestType>.result`; a few NAP domains use a bespoke past-tense
             // reply type the client listens for instead (e.g. notify.create → notify.created).
             val responseType =
@@ -281,7 +321,7 @@ object NappletProtocolJson {
                 }
                 is NappletResponse.Bytes -> {
                     put("ok", true)
-                    put("bytes", Base64.encode(response.bytes))
+                    put("blob", Base64.encode(response.bytes))
                     put("mime", response.contentType)
                 }
                 is NappletResponse.ResourceInfo -> {
@@ -307,7 +347,7 @@ object NappletProtocolJson {
                                 put("url", item.url)
                                 put("ok", item.resource != null)
                                 item.resource?.let {
-                                    put("bytes", Base64.encode(it.bytes))
+                                    put("blob", Base64.encode(it.bytes))
                                     put("mime", it.contentType)
                                 }
                                 item.error?.let { put("error", it) }
@@ -390,6 +430,7 @@ object NappletProtocolJson {
                 }
             }
         }.toString()
+    }
 
     /** Parses every Nostr filter from a `filters` array (each entry) or a single `filter` object. */
     fun decodeFilterList(envelopeJson: String): List<Filter> = decodeFilterList(json.parseToJsonElement(envelopeJson).jsonObject)

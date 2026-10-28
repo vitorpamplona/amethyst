@@ -48,7 +48,8 @@ fun FavoriteAppIcon(
     colorFilter: ColorFilter? = null,
 ) {
     val symbol = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-    val model = iconModel ?: app.iconUrl?.takeIf { it.isNotBlank() }
+    val isNapplet = app is FavoriteApp.NostrApp && app.coordinate.substringBefore(':') in setOf("5129", "15129", "35129")
+    val model = iconModel ?: app.iconUrl?.takeIf { !isNapplet && it.isNotBlank() }
 
     if (model == null) {
         Icon(symbol, contentDescription = null, modifier = modifier, tint = tint)
