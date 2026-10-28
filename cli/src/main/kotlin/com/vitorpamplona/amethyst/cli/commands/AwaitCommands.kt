@@ -83,8 +83,8 @@ object AwaitCommands {
             val target = ctx.requireUserHex(rest[0])
             // MIP-00: target's KeyPackages live on the relays advertised in
             // their kind:10051 (fallback: kind:10002 write). Resolve the
-            // right relay set once up front against bootstrap seeds; the
-            // polling loop then hits those relays on every tick. If the
+            // relay lists once up front against bootstrap seeds; the
+            // polling loop then asks the same relays on every tick. If the
             // target hasn't published either list yet, fall back to the
             // bootstrap pool so the loop still has something to query.
             val seed = ctx.bootstrapRelays()
@@ -95,35 +95,32 @@ object AwaitCommands {
             val lists =
                 ctx.cachedRelayListsOf(target)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, target, seed)
-            val relays =
-                KeyPackageFetcher.fetchRelaysFor(
-                    targetKeyPackageRelays = lists.keyPackage,
-                    targetOutbox = lists.nip65Write(),
-                    myOutbox = seed,
-                )
-            if (relays.isEmpty()) {
-                throw AwaitTimeout("no relays to query for $target (configure relays or bootstrap defaults first)")
-            }
             val deadline = System.currentTimeMillis() + timeoutSecs * 1000
             while (System.currentTimeMillis() < deadline) {
                 // Waits for what `group add` would actually invite with: a
                 // valid kind:30443, else a valid legacy kind:443. Settling on
                 // any 30443, valid or not, let the wait succeed and the add
                 // then fail, and never saw a 443-only peer at all.
-                val event =
-                    KeyPackageFetcher.fetchKeyPackageForInvite(
+                val lookup =
+                    KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,
                         targetPubKey = target,
-                        relays = relays,
+                        targetOutbox = lists.nip65Write(),
+                        myOutbox = seed,
+                        targetKeyPackageRelays = lists.keyPackage,
                         idleTimeoutMs = 3_000,
                     )
+                if (lookup.relays.isEmpty()) {
+                    throw AwaitTimeout("no relays to query for $target (configure relays or bootstrap defaults first)")
+                }
+                val event = lookup.keyPackage
                 if (event != null) {
                     Output.emit(
                         mapOf(
                             "event_id" to event.id,
                             "author" to event.pubKey,
                             "kind" to event.kind,
-                            "found_on" to relays.map { it.url },
+                            "found_on" to lookup.relays.map { it.url },
                         ),
                     )
                     return 0

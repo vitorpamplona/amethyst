@@ -141,6 +141,17 @@ if [ -n "$CODE" ] && [ "${CODE:0:9}" = "cordndev1" ]; then ok "code minted"; els
 [ "$(echo "$EXPORT" | field "['groups']")" = "1" ] && ok "one group in the snapshot" || bad "wrong group count"
 [ "$(echo "$EXPORT" | field "['uploaded']")" = "true" ] && ok "documents stored" || bad "nothing stored"
 
+[ "$(echo "$EXPORT" | field "['this_device_stopped']")" = "true" ] && ok "old phone stood down" || bad "old phone still live"
+
+step "the old phone refuses to open a session once it handed off"
+# Two homes holding one leaf and both committing fork the ratchet tree, so the
+# exporter must not send. Called directly for the same reason as the
+# stranger-code check below: the --json error goes to stderr.
+STOOD_DOWN=$(HOME="$WORK/old" "$AMY" --account me --secret-backend ncryptsec \
+  cordn group list --json 2>&1 || true)
+echo "   $STOOD_DOWN"
+echo "$STOOD_DOWN" | grep -q "handed_off" && ok "refused with handed_off" || bad "old phone still opens sessions"
+
 step "blobs really landed on the server"
 COUNT=$(ls "$BLOB_DIR" 2>/dev/null | wc -l | tr -d ' ')
 # One group document plus the meta document.
@@ -169,6 +180,13 @@ STRANGER=$(HOME="$WORK/new" "$AMY" --account me --secret-backend ncryptsec \
   cordn migrate import --code "cordn1qqqqqq" --json 2>&1 || true)
 echo "   $STRANGER"
 echo "$STRANGER" | grep -q "bad_args" && ok "refused" || bad "accepted a non-handoff code"
+
+step "resume takes a home back"
+# Only safe while the other device never imported; here it is just the verb.
+RESUME=$(old cordn migrate resume --json)
+echo "   $RESUME"
+[ "$(echo "$RESUME" | field "['was_handed_off']")" = "true" ] && ok "it was handed off" || bad "resume saw no handoff"
+old cordn group list --json >/dev/null 2>&1 && ok "sessions open again" || bad "still refused after resume"
 
 echo
 if [ "$fail" -eq 0 ]; then

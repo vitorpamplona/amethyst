@@ -91,21 +91,19 @@ object KeyPackageCommands {
             val recipient =
                 ctx.cachedRelayListsOf(targetHex)
                     ?: RecipientRelayFetcher.fetchRelayLists(ctx.client, targetHex, seed)
-            val relays =
-                KeyPackageFetcher.fetchRelaysFor(
-                    targetKeyPackageRelays = recipient.keyPackage,
-                    targetOutbox = recipient.nip65Write(),
-                    myOutbox = seed,
-                )
             // The one `group add` would invite with: newest valid kind:30443,
             // else newest valid legacy kind:443.
-            val event =
-                KeyPackageFetcher.fetchKeyPackageForInvite(
+            val lookup =
+                KeyPackageFetcher.fetchForInvite(
                     client = ctx.client,
                     targetPubKey = targetHex,
-                    relays = relays,
+                    targetOutbox = recipient.nip65Write(),
+                    myOutbox = seed,
+                    targetKeyPackageRelays = recipient.keyPackage,
                     idleTimeoutMs = 10_000,
                 )
+            val relays = lookup.relays
+            val event = lookup.keyPackage
             if (event == null) {
                 return Output.error("not_found", "no valid KeyPackage for $targetHex on ${relays.size} relay(s)")
             }

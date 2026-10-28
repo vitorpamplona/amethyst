@@ -76,11 +76,11 @@ media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
-quartzKmp = "2.4.0"
+quartzKmp = "2.5.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Both are built against the quartz version above.
-marmotKmp = "2.1.0"
-cordnKmp = "1.1.0"
+marmotKmp = "2.2.0"
+cordnKmp = "1.2.0"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
 # versions those libraries were built against.
