@@ -86,9 +86,9 @@
     "since": "2026-10-24T16:25:42-04:00",
     "translators": [
       {
-        "user": "raj2516",
+        "user": "Bardesss",
         "languages": [
-          "Hindi"
+          "Dutch"
         ]
       },
       {
@@ -98,15 +98,27 @@
         ]
       },
       {
-        "user": "maxblake2015",
+        "user": "StellarStoic",
         "languages": [
-          "Polish"
+          "Slovenian"
+        ]
+      },
+      {
+        "user": "raj2516",
+        "languages": [
+          "Hindi"
         ]
       },
       {
         "user": "fiddleway",
         "languages": [
           "Uzbek"
+        ]
+      },
+      {
+        "user": "maxblake2015",
+        "languages": [
+          "Polish"
         ]
       }
     ]
