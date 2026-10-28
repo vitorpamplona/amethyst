@@ -4834,7 +4834,6 @@
     <string name="media_server_status_online">Online</string>
     <string name="media_server_status_slow">Wolny</string>
     <string name="media_servers">Serwery Multimediów</string>
-    <string name="media_too_big_for_nip95">Pliki są zbyt duże dla NIP-95</string>
     <string name="messages_cant_upload_explainer">Najpierw podaj adresata wiadomości</string>
     <string name="messages_cant_upload_title">Nie można wysłać</string>
     <string name="messages_new_message_subject">Temat</string>
@@ -6138,7 +6137,6 @@
     <string name="upload_error_title">Błąd przesyłania</string>
     <string name="upload_error_voice_message_exception">Nie udało się przesłać głosu: %1$s</string>
     <string name="upload_error_voice_message_failed">Nie udało się przesłać wiadomości głosowej</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 nie jest jeszcze dostępny dla wiadomości głosowych</string>
     <string name="uptime">Czas działania %1$d%</string>
     <string name="use_internal_tor">Aktywny silnik Tor</string>
     <string name="use_internal_tor_explainer">Użyj wersji wewnętrznej lub Orbota</string>

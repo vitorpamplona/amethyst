@@ -64,8 +64,6 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.aes.AESGCM
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -88,8 +86,7 @@ import org.jetbrains.skia.Image as SkiaImage
  * [videoCompressor], which transcodes it with the composer's quality level or remuxes the original
  * without metadata; every server type then starts from the bytes the JVM pipeline prepares
  * (re-encoded, or stripped of metadata). Blossom and Buzz workspaces go through its BUD-02 upload
- * with fallbacks, NIP-96 through the shared [Nip96Uploader], and NIP-95 hands the bytes back to be
- * published as events.
+ * with fallbacks, and NIP-96 through the shared [Nip96Uploader].
  */
 class DesktopMediaUploader(
     private val clientFor: (serverBaseUrl: String) -> BlossomClient,
@@ -159,7 +156,6 @@ class DesktopMediaUploader(
         convertGifToMp4: Boolean,
         forcedSigner: NostrSigner?,
     ): UploadingState.UploadingFinalState {
-        if (server.type == ServerType.NIP95) return nip95(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, null)
         if (server.type == ServerType.NIP96) return nip96(progress, uri, mimeType, alt, contentWarningReason, compressionQuality, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, server, account, forcedSigner, null)
         if (!isBlossom(server)) return notSupported(progress)
         return try {
@@ -208,7 +204,6 @@ class DesktopMediaUploader(
         forcedSigner: NostrSigner?,
     ): UploadingState.UploadingFinalState {
         val cipher = encrypt as? AESGCM ?: return notSupported(progress)
-        if (server.type == ServerType.NIP95) return nip95(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, cipher)
         if (server.type == ServerType.NIP96) return nip96(progress, uri, mimeType, alt, contentWarningReason, compressionQuality, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, server, account, forcedSigner, cipher)
         if (!isBlossom(server)) return notSupported(progress)
         return try {
@@ -250,67 +245,21 @@ class DesktopMediaUploader(
         val encrypted: Boolean,
     )
 
-    /**
-     * Null when the prepared file is over [maxBytes]: checked before it is read, so a video picked
-     * for a NIP-95 note is not loaded (and encrypted, a second copy) only to be refused. A file the
-     * video compressor already [prepared] skips the image pipeline's re-encode and strip.
-     */
+    /** The file to send, read and encrypted when [cipher] is set. A file the video compressor already [prepared] skips the image pipeline's re-encode and strip. */
     private suspend fun preparePayload(
         file: File,
         prepared: Boolean,
         compressionQuality: CompressorQuality,
         stripMetadata: Boolean,
         cipher: AESGCM?,
-        maxBytes: Long = Long.MAX_VALUE,
-    ): Payload? =
+    ): Payload =
         BlossomUploadPipeline.withPreparedFile(file, stripMetadata && !prepared, if (prepared) null else compressionQuality.toTarget()) { ready, metadata ->
-            if (ready.length() > maxBytes) return@withPreparedFile null
             val plain = withContext(Dispatchers.IO) { ready.readBytes() }
             if (cipher == null) {
                 Payload(plain, metadata.mimeType, metadata, encrypted = false)
             } else {
                 Payload(cipher.encrypt(plain), ENCRYPTED_CONTENT_TYPE, metadata, encrypted = true)
             }
-        }
-
-    // NIP-95 keeps the file in a relay event, so it is small and goes nowhere: the caller publishes it.
-    private suspend fun nip95(
-        progress: UploadOrchestrator,
-        uri: MediaUri,
-        mimeType: String?,
-        compressionQuality: CompressorQuality,
-        useH265: Boolean,
-        stripMetadata: Boolean,
-        onStrippingFailed: suspend () -> Boolean,
-        convertGifToMp4: Boolean,
-        cipher: AESGCM?,
-    ): UploadingState.UploadingFinalState =
-        try {
-            withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, NIP95_COMPRESSING_CEILING, maxBytes = NIP95_MAX_BYTES.toLong(), onStrippingFailed = onStrippingFailed) { file, prepared ->
-                progress.updateState(NIP95_COMPRESSING_CEILING, UploadingState.Uploading)
-                val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher, maxBytes = NIP95_MAX_BYTES.toLong())
-                if (payload == null || payload.bytes.size > NIP95_MAX_BYTES) {
-                    progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
-                } else {
-                    progress.updateState(0.8, UploadingState.Hashing)
-                    val header =
-                        if (payload.encrypted) {
-                            payload.metadata.header(hash = sha256(payload.bytes).toHexKey(), size = payload.bytes.size).withMimeType(payload.contentType)
-                        } else {
-                            payload.metadata.header()
-                        }
-                    progress.finish(
-                        UploadOrchestrator.OrchestratorResult.NIP95Result(
-                            fileHeader = header,
-                            bytes = payload.bytes,
-                            mimeTypeBeforeEncryption = if (payload.encrypted) payload.metadata.mimeType else null,
-                            hashBeforeEncryption = if (payload.encrypted) payload.metadata.sha256 else null,
-                        ),
-                    )
-                }
-            }
-        } catch (e: Exception) {
-            failed(progress, e)
         }
 
     private suspend fun nip96(
@@ -331,7 +280,7 @@ class DesktopMediaUploader(
     ): UploadingState.UploadingFinalState =
         try {
             withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING, onStrippingFailed = onStrippingFailed) { file, prepared ->
-                val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher)!!
+                val payload = preparePayload(file, prepared, compressionQuality, stripMetadata, cipher)
                 progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
                 val httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent? =
                     if (forcedSigner != null) {
@@ -396,8 +345,6 @@ class DesktopMediaUploader(
         )
     }
 
-    private fun FileHeader.withMimeType(type: String) = FileHeader(type, hash, size, dim, blurHash, thumbHash)
-
     /**
      * What the video compressor does with [source], or null when it has nothing to do (not a
      * video, no ffmpeg, UNCOMPRESSED without a strip owed) and the file goes on as it is.
@@ -409,7 +356,6 @@ class DesktopMediaUploader(
         useH265: Boolean,
         stripMetadata: Boolean,
         convertGifToMp4: Boolean,
-        maxBytes: Long?,
         onProgress: (Double) -> Unit,
     ): VideoCompressionResult? {
         if (!videoCompressor.available) return null
@@ -418,7 +364,7 @@ class DesktopMediaUploader(
         val result =
             when {
                 isGif && convertGifToMp4 -> videoCompressor.convertGif(source, onProgress)
-                isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, maxBytes, onProgress)
+                isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, onProgress = onProgress)
                 // The dialog promised a strip; without an encode only the remux can keep it.
                 isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
                 else -> return null
@@ -443,8 +389,7 @@ class DesktopMediaUploader(
      * Runs [block] with the file to upload: the picked file as it is (`prepared = false`), or a
      * compressed or remuxed temp the compressor wrote (`prepared = true`), deleted when [block]
      * returns, throws or is cancelled. Progress during the encode climbs from 0.02 to
-     * [progressCeiling] as [UploadingState.Compressing]. An estimated output over [maxBytes] ends
-     * as the NIP-95 size error. When a strip was owed (a video with [stripMetadata] on and ffmpeg
+     * [progressCeiling] as [UploadingState.Compressing]. When a strip was owed (a video with [stripMetadata] on and ffmpeg
      * at hand) but neither an encode nor a remux could deliver it, [onStrippingFailed] asks the
      * user, as on Android; a `false` ends as a cancelled upload.
      */
@@ -457,17 +402,16 @@ class DesktopMediaUploader(
         stripMetadata: Boolean,
         convertGifToMp4: Boolean,
         progressCeiling: Double,
-        maxBytes: Long? = null,
         onStrippingFailed: suspend () -> Boolean = { true },
         block: suspend (file: File, prepared: Boolean) -> UploadingState.UploadingFinalState,
     ): UploadingState.UploadingFinalState {
         val source = fileOf(uri)
         val mime = mimeType ?: mimeType(uri)
         val result =
-            prepareVideo(source, mime, quality, useH265, stripMetadata, convertGifToMp4, maxBytes, compressingProgress(progress, progressCeiling))
+            prepareVideo(source, mime, quality, useH265, stripMetadata, convertGifToMp4, compressingProgress(progress, progressCeiling))
                 ?: return block(source, false)
         return when (result) {
-            VideoCompressionResult.TooBig -> progress.error(UploadError.MEDIA_TOO_BIG_FOR_NIP95)
+            VideoCompressionResult.TooBig -> progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA) // cannot occur without a size cap
             is VideoCompressionResult.Compressed -> usingTemp(result.file) { block(it, true) }
             is VideoCompressionResult.Original -> {
                 val stripped = result.stripped
@@ -506,10 +450,10 @@ class DesktopMediaUploader(
     ): MediaCompressorResult {
         val unchanged = MediaCompressorResult(uri, mimeType, null)
         val result =
-            prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, maxBytes = null, compressingProgress(progress, BLOSSOM_COMPRESSING_CEILING))
+            prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, compressingProgress(progress, BLOSSOM_COMPRESSING_CEILING))
                 ?: return unchanged
         return when (result) {
-            VideoCompressionResult.TooBig -> unchanged // cannot occur without maxBytes
+            VideoCompressionResult.TooBig -> unchanged // cannot occur without a size cap
             is VideoCompressionResult.Compressed -> mp4Result(result.file)
             is VideoCompressionResult.Original -> result.stripped?.let(::mp4Result) ?: unchanged
         }
@@ -624,8 +568,6 @@ class DesktopMediaUploader(
     private companion object {
         const val TAG = "DesktopMediaUploader"
 
-        // What Android allows in a NIP-95 event: larger files make relay events too heavy.
-        const val NIP95_MAX_BYTES = 80_000
         const val ENCRYPTED_CONTENT_TYPE = "application/octet-stream"
         const val OCTET_STREAM = "application/octet-stream"
         const val MP4_CONTENT_TYPE = "video/mp4"
@@ -634,7 +576,6 @@ class DesktopMediaUploader(
         // so the bar never jumps backwards.
         const val COMPRESSING_FLOOR = 0.02
         const val BLOSSOM_COMPRESSING_CEILING = 0.2
-        const val NIP95_COMPRESSING_CEILING = 0.4
     }
 }
 

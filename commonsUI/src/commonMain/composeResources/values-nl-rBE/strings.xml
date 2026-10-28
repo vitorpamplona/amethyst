@@ -2450,7 +2450,6 @@
     <string name="media_added_to_profile_gallery">Media toegevoegd aan je profielgalerij</string>
     <string name="media_download_has_started_toast">Media download gestart…</string>
     <string name="media_servers">Mediaservers</string>
-    <string name="media_too_big_for_nip95">Media is te groot voor NIP-95</string>
     <string name="messages_cant_upload_explainer">Voeg eerst een bestemming toe</string>
     <string name="messages_cant_upload_title">Kan niet uploaden</string>
     <string name="messages_new_message_subject">Onderwerp</string>
@@ -2948,7 +2947,6 @@
     <string name="upload_error_title">Uploadfout</string>
     <string name="upload_error_voice_message_exception">Spraakbericht uploaden mislukt: %1$s</string>
     <string name="upload_error_voice_message_failed">Spraakbericht uploaden mislukt</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 wordt nog niet ondersteund voor spraakberichten</string>
     <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Interne Tor-engine gebruiken</string>
     <string name="use_internal_tor_explainer">Gebruik de ingebouwde versie van Orbot</string>

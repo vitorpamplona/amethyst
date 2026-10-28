@@ -69,7 +69,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -399,14 +398,14 @@ open class NewProductViewModel :
         return template
     }
 
-    /** Uploads a hand drawing ([uploadDrawing]) and adds its GIF to the product's pictures. A listing carries no NIP-95 events. */
+    /** Uploads a hand drawing ([uploadDrawing]) and adds its GIF to the product's pictures. */
     fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, allowNip95 = false) as? UploadedDrawing.OnServer ?: return@launch
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError) ?: return@launch
             val header = uploaded.gif.fileHeader
             productImages = productImages +
                 ProductImageMeta(

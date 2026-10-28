@@ -154,7 +154,7 @@ class DesktopMediaUploaderVideoTest {
     private fun tempVideo(bytes: Int): File = File.createTempFile("amethyst_video_", ".mp4", tempDir).apply { writeBytes(ByteArray(bytes)) }
 
     /** What a block hands back once it has "uploaded". */
-    private fun finished(): UploadingState.UploadingFinalState = UploadingState.Finished(UploadOrchestrator.OrchestratorResult.NIP95Result(FileHeader("video/mp4", "0", 0, null, null), ByteArray(0), null, null))
+    private fun finished(): UploadingState.UploadingFinalState = UploadingState.Finished(UploadOrchestrator.OrchestratorResult.ServerResult(FileHeader("video/mp4", "0", 0, null, null), "https://example.com/v.mp4", null, null, null, null))
 
     private fun errorOf(state: UploadingState.UploadingFinalState): UploadError = (state as UploadingState.Error).error
 
@@ -335,13 +335,6 @@ class DesktopMediaUploaderVideoTest {
                 false
             }) { _, _ -> finished() }
             assertFalse(asked)
-        }
-
-    @Test
-    fun tooBigIsTheNip95SizeError() =
-        runTest {
-            val r = uploader(result = { VideoCompressionResult.TooBig }).withVideoPrepared(UploadOrchestrator(), uri(src), "video/mp4", CompressorQuality.HIGH, false, true, false, 0.4, maxBytes = 80_000) { _, _ -> finished() }
-            assertEquals(UploadError.MEDIA_TOO_BIG_FOR_NIP95, errorOf(r))
         }
 
     @Test

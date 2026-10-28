@@ -228,13 +228,6 @@ import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStory
 import com.vitorpamplona.quartz.experimental.interactiveStories.image
 import com.vitorpamplona.quartz.experimental.interactiveStories.summary
 import com.vitorpamplona.quartz.experimental.interactiveStories.tags.StoryOptionTag
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.blurhash
-import com.vitorpamplona.quartz.experimental.nip95.header.dimension
-import com.vitorpamplona.quartz.experimental.nip95.header.fileSize
-import com.vitorpamplona.quartz.experimental.nip95.header.hash
-import com.vitorpamplona.quartz.experimental.nip95.header.mimeType
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.blurhash
 import com.vitorpamplona.quartz.experimental.profileGallery.dimension
@@ -410,7 +403,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okio.Path
 import kotlin.coroutines.cancellation.CancellationException
-import com.vitorpamplona.quartz.experimental.nip95.header.thumbhash as nip95thumbhash
 import com.vitorpamplona.quartz.experimental.profileGallery.thumbhash as galleryThumbhash
 
 /** How long past a disappearing message's deadline the sweep waits, to purge nearby deadlines in one pass (CORD-08). */
@@ -2709,67 +2701,6 @@ class Account(
         }
     }
 
-    suspend fun createNip95(
-        byteArray: ByteArray,
-        headerInfo: FileHeader,
-        alt: String?,
-        contentWarningReason: String?,
-    ): Pair<FileStorageEvent, FileStorageHeaderEvent> {
-        val data = signer.sign(FileStorageEvent.build(byteArray, headerInfo.mimeType))
-
-        val template =
-            FileStorageHeaderEvent.build(EventHintBundle(data, userProfile().bestRelayHint()), alt) {
-                hash(headerInfo.hash)
-                fileSize(headerInfo.size)
-
-                headerInfo.mimeType?.let { mimeType(it) }
-                headerInfo.dim?.let { dimension(it) }
-                headerInfo.blurHash?.let { blurhash(it.blurhash) }
-                headerInfo.thumbHash?.let { nip95thumbhash(it.thumbhash) }
-
-                contentWarningReason?.let { contentWarning(contentWarningReason) }
-            }
-
-        val signedEvent = signer.sign(template)
-        return Pair(data, signedEvent)
-    }
-
-    fun consumeAndSendNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-    ): Note? {
-        if (!isWriteable()) return null
-
-        val relayList = computeRelayListToBroadcast(signedEvent)
-
-        client.publish(data, relayList = relayList)
-        cache.justConsumeMyOwnEvent(data)
-
-        client.publish(signedEvent, relayList = relayList)
-        cache.justConsumeMyOwnEvent(signedEvent)
-
-        return cache.getNoteIfExists(signedEvent.id)
-    }
-
-    fun consumeNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-    ): Note? {
-        cache.justConsumeMyOwnEvent(data)
-        cache.justConsumeMyOwnEvent(signedEvent)
-
-        return cache.getNoteIfExists(signedEvent.id)
-    }
-
-    fun sendNip95(
-        data: FileStorageEvent,
-        signedEvent: FileStorageHeaderEvent,
-        relayList: Set<NormalizedRelayUrl>,
-    ) {
-        client.publish(data, relayList = relayList)
-        client.publish(signedEvent, relayList = relayList)
-    }
-
     fun sendHeader(
         signedEvent: Event,
         relayList: Set<NormalizedRelayUrl>,
@@ -3223,7 +3154,6 @@ class Account(
         originalNote: Note,
         notify: HexKey?,
         summary: String? = null,
-        broadcast: List<Event>,
     ) {
         if (!isWriteable()) return
 
@@ -3243,8 +3173,6 @@ class Account(
         val relayList = computeRelayListToBroadcast(note)
 
         client.publish(event, relayList = relayList)
-
-        broadcast.forEach { client.publish(it, relayList) }
     }
 
     override suspend fun sendNip04PrivateMessage(eventTemplate: EventTemplate<EncryptedDmEvent>) {

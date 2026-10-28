@@ -4879,7 +4879,6 @@
     <string name="media_server_status_online">Povezano</string>
     <string name="media_server_status_slow">Počasno</string>
     <string name="media_servers">Medijski strežniki</string>
-    <string name="media_too_big_for_nip95">Medij je prevelik za NIP-95</string>
     <string name="messages_cant_upload_explainer">Najprej vnesi cilj sporočila</string>
     <string name="messages_cant_upload_title">Nalaganje ni uspelo</string>
     <string name="messages_new_message_subject">Zadeva</string>
@@ -6183,7 +6182,6 @@
     <string name="upload_error_title">Naloži napako</string>
     <string name="upload_error_voice_message_exception">Neuspešno nalaganje zvočnega posnetka: %1$s</string>
     <string name="upload_error_voice_message_failed">Neuspešno nalaganje zvočnega sporočila</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 še ne podpira zvočnih posnetkov</string>
     <string name="uptime">%1$d% časa delovanja</string>
     <string name="use_internal_tor">Aktivni Tor stroj</string>
     <string name="use_internal_tor_explainer">Uporabi interno različico ali Orbot</string>

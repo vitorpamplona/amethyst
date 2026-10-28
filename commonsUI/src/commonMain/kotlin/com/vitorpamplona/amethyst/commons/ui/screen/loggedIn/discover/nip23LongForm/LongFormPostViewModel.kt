@@ -71,7 +71,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
@@ -490,16 +489,16 @@ class LongFormPostViewModel :
         // Cover images were never stripped: keep them as picked, only compressed.
         uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
 
-    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the article as a markdown image. An article carries no NIP-95 events. */
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the article as a markdown image. */
     fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, allowNip95 = false) as? UploadedDrawing.OnServer ?: return@launch
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError) ?: return@launch
             iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            onUiThread { message.insertUrlAtCursor("![${alt ?: ""}](${uploaded.link})") }
+            onUiThread { message.insertUrlAtCursor(markdownImage(alt, uploaded.link)) }
         }
     }
 
@@ -573,8 +572,7 @@ class LongFormPostViewModel :
 
                             iMetaAttachments.replace(iMeta.url, iMeta)
 
-                            val markdownImage = "![${alt ?: ""}](${uploaded.url})"
-                            markdownImage
+                            markdownImage(alt, uploaded.url)
                         } else {
                             null
                         }
@@ -765,4 +763,26 @@ class LongFormPostViewModel :
     }
 
     override fun locationManager(): DeviceLocation = accountViewModel.host.deviceLocation
+}
+
+/**
+ * A markdown image of [url] described by [alt]. The alt text is the user's own words, so the
+ * characters that would end or nest its brackets are escaped and line breaks become spaces: an
+ * alt like `sketch](https://example.com)` stays text instead of turning into a link.
+ */
+fun markdownImage(
+    alt: String?,
+    url: String,
+): String {
+    val text =
+        buildString {
+            alt?.forEach { char ->
+                when (char) {
+                    '\\', '[', ']' -> append('\\').append(char)
+                    '\n', '\r' -> append(' ')
+                    else -> append(char)
+                }
+            }
+        }
+    return "![$text]($url)"
 }

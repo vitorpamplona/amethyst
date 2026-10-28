@@ -30,6 +30,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class SyncedLocalSettingsTest {
     private val keys = AccountSettings(KeyPair())
@@ -92,12 +93,23 @@ class SyncedLocalSettingsTest {
     @Test
     fun aServerTypeThisVersionDoesNotKnowIsSkipped() {
         assertNull(decodeFileServer(SyncedFileServer("X", "https://x.example.com", "NIP999")))
+        // NIP-95 uploads were dropped: a default synced from an older version is skipped too.
+        assertNull(decodeFileServer(SyncedFileServer("NIP-95", "", "NIP95")))
         assertNull(decodeFileServer(null))
     }
 
     @Test
     fun anEnumNameThisVersionDoesNotKnowKeepsTheCurrentOne() {
-        assertEquals(ServerType.NIP95, enumByName("NOPE", ServerType.NIP95))
-        assertEquals(ServerType.Blossom, enumByName("Blossom", ServerType.NIP95))
+        assertEquals(ServerType.NIP96, enumByName("NOPE", ServerType.NIP96))
+        assertEquals(ServerType.Blossom, enumByName("Blossom", ServerType.NIP96))
+    }
+
+    @Test
+    fun aSavedNip95DefaultNoLongerDecodes() {
+        // The local store reads its default server with parseOrNull, which turns this failure into
+        // the first default server: an old NIP-95 default must not decode as some other type.
+        val legacy = """{"name":"NIP-95","baseUrl":"","type":"NIP95"}"""
+        val decoded = runCatching { JsonMapper.fromJson<ServerName>(legacy) }
+        assertTrue(decoded.isFailure, "decoded as ${decoded.getOrNull()}")
     }
 }

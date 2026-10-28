@@ -47,9 +47,13 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -63,7 +67,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
-import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.aes.AESGCM
@@ -477,7 +480,9 @@ class ChatNewMessageViewModel :
 
     /**
      * Uploads a hand drawing ([uploadDrawing]), encrypted unless the chat's uploads were switched
-     * to plain ones, and holds it to go out as a file message with the next send.
+     * to plain ones, and holds it to go out as a file message with the next send. When the server
+     * refuses the encrypted GIF, the drawing is kept and the user is offered the same retry without
+     * encryption as a picked file ([retryWithoutEncryption]).
      */
     fun uploadDrawing(
         drawing: RenderedDrawing,
@@ -491,6 +496,10 @@ class ChatNewMessageViewModel :
                 return@launch
             }
             val cipher = if (uploadState.encryptFiles) AESGCM() else null
+            // Resolved here: the upload reports its failure from a plain callback.
+            val retryTitle = loadStringRes(Res.string.failed_to_upload_encrypted_media_title)
+            val retryExplainer = loadStringRes(Res.string.failed_to_upload_encrypted_media_message)
+            var offeredRetry = false
             val uploaded =
                 uploadDrawing(
                     drawing,
@@ -501,11 +510,42 @@ class ChatNewMessageViewModel :
                     onError,
                     server = uploadState.selectedServer,
                     encrypt = cipher,
-                    allowNip95 = false,
-                ) as? UploadedDrawing.OnServer ?: return@launch
+                    keepFilesOnFailure = cipher != null,
+                    onUploadError = { title, message ->
+                        if (cipher == null) {
+                            onError(title, message)
+                        } else {
+                            offeredRetry = true
+                            pendingRetryDrawing = PendingDrawing(drawing, alt, onError)
+                            encryptedUploadErrorTitle = retryTitle
+                            encryptedUploadErrorMessage = retryExplainer + "\n\n" + message
+                        }
+                    },
+                )
+            if (uploaded == null) {
+                // Kept only for the retry; any other failure leaves nothing to retry.
+                if (cipher != null && !offeredRetry) drawing.delete()
+                return@launch
+            }
             uploadsWaitingToBeSent += SuccessfulUploads(uploaded.gif, alt, null, cipher)
             draftTag.newVersion()
         }
+    }
+
+    /** A drawing whose encrypted upload failed, kept until the user retries without encryption or dismisses. */
+    class PendingDrawing(
+        val drawing: RenderedDrawing,
+        val alt: String?,
+        val onError: (title: String, message: String) -> Unit,
+    )
+
+    private var pendingRetryDrawing: PendingDrawing? = null
+
+    /** Deletes the files of a drawing kept for a retry that will not happen. */
+    private fun discardPendingDrawing() {
+        val pending = pendingRetryDrawing ?: return
+        pendingRetryDrawing = null
+        viewModelScope.launch(Dispatchers.IO) { pending.drawing.delete() }
     }
 
     fun uploadAndHold(
@@ -578,6 +618,7 @@ class ChatNewMessageViewModel :
     enum class RetryMode { HOLD, SEND }
 
     fun dismissEncryptedUploadError() {
+        discardPendingDrawing()
         encryptedUploadErrorTitle = null
         encryptedUploadErrorMessage = null
         pendingRetryMode = null
@@ -587,6 +628,14 @@ class ChatNewMessageViewModel :
     }
 
     fun retryWithoutEncryption() {
+        pendingRetryDrawing?.let { pending ->
+            pendingRetryDrawing = null
+            dismissEncryptedUploadError()
+            uploadState?.encryptFiles = false
+            uploadDrawing(pending.drawing, pending.alt, pending.onError)
+            return
+        }
+
         val mode = pendingRetryMode ?: return
         val onError = pendingRetryOnError
         val uploader = pendingRetryUploader
@@ -734,6 +783,7 @@ class ChatNewMessageViewModel :
 
         uploadsWaitingToBeSent = emptyList()
         uploadState?.reset()
+        discardPendingDrawing()
 
         dismissEncryptedUploadError()
 
@@ -869,6 +919,9 @@ class ChatNewMessageViewModel :
 
     override fun onCleared() {
         Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
+        // viewModelScope is already cancelled here, so the kept drawing is deleted in place.
+        pendingRetryDrawing?.drawing?.delete()
+        pendingRetryDrawing = null
     }
 
     // NIP-04 sending is deprecated. NIP-17 is always used.

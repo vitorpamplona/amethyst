@@ -23,9 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.uploads
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.drawing_nip95_not_supported
 import com.vitorpamplona.amethyst.commons.resources.drawing_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
 import com.vitorpamplona.amethyst.commons.service.image.BlurhashWrapper
@@ -39,8 +37,6 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.crypto.SymmetricCipher
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTagBuilder
@@ -61,43 +57,32 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import okio.Path
 
-/** Where [uploadDrawing] put a hand drawing's GIF, for the composer to link and attach. */
-sealed interface UploadedDrawing {
-    /** The text to put in the post: the GIF's URL, or a `nostr:` link to its NIP-95 event. */
-    val link: String
-
-    /**
-     * On a media server. [gif]'s header carries the drawing's own size and preview hashes, and
-     * [iMeta] describes it, with the PNG still as its `image` when that upload worked.
-     */
-    class OnServer(
-        val gif: UploadOrchestrator.OrchestratorResult.ServerResult,
-        val iMeta: IMetaTag,
-    ) : UploadedDrawing {
-        override val link: String get() = gif.url
-    }
-
-    /** Embedded with NIP-95: [events] go out with the post. */
-    class Embedded(
-        val events: Pair<FileStorageEvent, FileStorageHeaderEvent>,
-        override val link: String,
-    ) : UploadedDrawing
+/**
+ * A hand drawing's GIF on a media server. [gif]'s header carries the drawing's own size and preview
+ * hashes, and [iMeta] describes it, with the PNG still as its `image` when that upload worked.
+ */
+class UploadedDrawing(
+    val gif: UploadOrchestrator.OrchestratorResult.ServerResult,
+    val iMeta: IMetaTag,
+) {
+    /** The text to put in the post. */
+    val link: String get() = gif.url
 }
 
 /**
  * Uploads a hand drawing from [DrawingButton][com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton]
- * to [server], marking [tracker] busy meanwhile, and deletes its files once done. Every failure is
- * reported through [onError] and yields null.
+ * to [server], marking [tracker] busy meanwhile. Every failure yields null and is reported through
+ * [onError], except the server refusing the GIF, which goes to [onUploadError] (an encrypted chat
+ * offers its unencrypted retry there). The drawing's files are deleted once done, unless the
+ * upload failed and [keepFilesOnFailure] is set: the caller then owns them, to retry or delete.
  *
  * Both files go up as they are: a composer's own upload would re-encode the PNG as a JPEG and send
  * the GIF through metadata stripping, which a GIF cannot take. The uploader measures a file's first
  * frame, and a replay starts on blank paper, so the GIF's size and blurhash/thumbhash come from the
  * finished drawing instead, and the PNG becomes the `image` preview for clients that show a still.
- * The PNG is a nice-to-have; if it fails, the GIF still posts.
- *
- * With [encrypt], only the GIF goes up, encrypted: an unencrypted still would leak the drawing. A
- * NIP-95 [server] embeds the GIF in events of its own, which have no `imeta` to hang a preview on;
- * a composer that cannot carry those events passes [allowNip95] false and gets an error instead.
+ * The PNG is a nice-to-have; if it fails, the GIF still posts. Without [uploadStill], for a post
+ * that carries no `imeta` to hang it on, only the GIF goes up; with [encrypt], too, and encrypted:
+ * an unencrypted still would leak the drawing.
  */
 suspend fun uploadDrawing(
     drawing: RenderedDrawing,
@@ -109,26 +94,24 @@ suspend fun uploadDrawing(
     server: ServerName = account.settings.defaultFileServer,
     signer: NostrSigner? = null,
     encrypt: SymmetricCipher? = null,
-    allowNip95: Boolean = true,
+    uploadStill: Boolean = true,
+    keepFilesOnFailure: Boolean = false,
+    onUploadError: (title: String, message: String) -> Unit = onError,
 ): UploadedDrawing? {
     tracker.startUpload(false)
-    return try {
-        if (server.type == ServerType.NIP95 && (!allowNip95 || encrypt != null)) {
-            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), loadStringRes(Res.string.drawing_nip95_not_supported))
-            null
-        } else {
-            // A signer that refuses the server's auth is reported like any other upload's.
-            signForUpload(onError) { uploadDrawingFiles(drawing, alt, account, uploader, onError, server, signer, encrypt) }
-        }
+    var uploaded: UploadedDrawing? = null
+    try {
+        // A signer that refuses the server's auth is reported like any other upload's.
+        uploaded = signForUpload(onError) { uploadDrawingFiles(drawing, alt, account, uploader, onUploadError, server, signer, encrypt, uploadStill && encrypt == null) }
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         Log.w("UploadDrawing", "Drawing upload failed", e)
         onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: loadStringRes(Res.string.drawing_upload_failed))
-        null
     } finally {
-        drawing.delete()
+        if (uploaded != null || !keepFilesOnFailure) drawing.delete()
         tracker.finishUpload()
     }
+    return uploaded
 }
 
 private suspend fun uploadDrawingFiles(
@@ -136,15 +119,16 @@ private suspend fun uploadDrawingFiles(
     alt: String?,
     account: Account,
     uploader: MediaUploader,
-    onError: (title: String, message: String) -> Unit,
+    onUploadError: (title: String, message: String) -> Unit,
     server: ServerName,
     signer: NostrSigner?,
     encrypt: SymmetricCipher?,
+    uploadStill: Boolean,
 ): UploadedDrawing? =
     coroutineScope {
         // Both files go up at once: the PNG is only a preview, so the GIF does not wait for it.
         val stillUpload =
-            if (server.type == ServerType.NIP95 || encrypt != null) {
+            if (!uploadStill) {
                 null
             } else {
                 async {
@@ -159,48 +143,39 @@ private suspend fun uploadDrawingFiles(
             }
 
         val gifState = uploadDrawingFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, account, uploader, server, signer, encrypt)
-        when (val gif = (gifState as? UploadingState.Finished)?.result) {
-            null -> {
-                stillUpload?.cancel()
-                val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
-                null
-            }
-
-            is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                stillUpload?.cancel()
-                val events = account.createNip95(gif.bytes, headerInfo = drawingHeader(gif.fileHeader, drawing), alt, null)
-                account.consumeNip95(events.first, events.second)?.let { UploadedDrawing.Embedded(events, "nostr:" + it.toNEvent()) }
-            }
-
-            is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                val still = stillUpload?.await() as? UploadOrchestrator.OrchestratorResult.ServerResult
-                val described =
-                    UploadOrchestrator.OrchestratorResult.ServerResult(
-                        fileHeader = drawingHeader(gif.fileHeader, drawing),
-                        url = gif.url,
-                        magnet = gif.magnet,
-                        uploadedHash = gif.uploadedHash,
-                        mimeTypeBeforeEncryption = gif.mimeTypeBeforeEncryption,
-                        hashBeforeEncryption = gif.hashBeforeEncryption,
-                    )
-                val iMeta =
-                    IMetaTagBuilder(gif.url)
-                        .apply {
-                            hash(gif.fileHeader.hash)
-                            size(gif.fileHeader.size)
-                            mimeType(RenderedDrawing.GIF_MIME_TYPE)
-                            dims(DimensionTag(drawing.width, drawing.height))
-                            drawing.blurhash?.let { blurhash(it) }
-                            drawing.thumbhash?.let { thumbhash(it) }
-                            still?.let { image(it.url) }
-                            gif.magnet?.let { magnet(it) }
-                            gif.uploadedHash?.let { originalHash(it) }
-                            alt?.let { alt(it) }
-                        }.build()
-                UploadedDrawing.OnServer(described, iMeta)
-            }
+        val gif = (gifState as? UploadingState.Finished)?.result as? UploadOrchestrator.OrchestratorResult.ServerResult
+        if (gif == null) {
+            stillUpload?.cancel()
+            val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
+            onUploadError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
+            return@coroutineScope null
         }
+
+        val still = stillUpload?.await() as? UploadOrchestrator.OrchestratorResult.ServerResult
+        val described =
+            UploadOrchestrator.OrchestratorResult.ServerResult(
+                fileHeader = drawingHeader(gif.fileHeader, drawing),
+                url = gif.url,
+                magnet = gif.magnet,
+                uploadedHash = gif.uploadedHash,
+                mimeTypeBeforeEncryption = gif.mimeTypeBeforeEncryption,
+                hashBeforeEncryption = gif.hashBeforeEncryption,
+            )
+        val iMeta =
+            IMetaTagBuilder(gif.url)
+                .apply {
+                    hash(gif.fileHeader.hash)
+                    size(gif.fileHeader.size)
+                    mimeType(RenderedDrawing.GIF_MIME_TYPE)
+                    dims(DimensionTag(drawing.width, drawing.height))
+                    drawing.blurhash?.let { blurhash(it) }
+                    drawing.thumbhash?.let { thumbhash(it) }
+                    still?.let { image(it.url) }
+                    gif.magnet?.let { magnet(it) }
+                    gif.uploadedHash?.let { originalHash(it) }
+                    alt?.let { alt(it) }
+                }.build()
+        UploadedDrawing(described, iMeta)
     }
 
 /** [header] as uploaded, with the finished drawing's size and preview hashes instead of its first frame's. */

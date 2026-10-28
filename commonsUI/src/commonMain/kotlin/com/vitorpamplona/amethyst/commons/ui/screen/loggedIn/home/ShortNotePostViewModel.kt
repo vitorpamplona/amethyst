@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_de
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
-import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_nip95_not_supported
 import com.vitorpamplona.amethyst.commons.resources.voice_anonymization_failed
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPost
 import com.vitorpamplona.amethyst.commons.service.ai.WritingAssistant
@@ -95,15 +94,11 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
-import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
 import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
@@ -135,7 +130,6 @@ import com.vitorpamplona.quartz.nip10Notes.tags.prepareETagsAsReplyTo
 import com.vitorpamplona.quartz.nip13Pow.miner.PoWMiner
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
-import com.vitorpamplona.quartz.nip18Reposts.quotes.taggedQuoteIds
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
@@ -269,7 +263,6 @@ open class ShortNotePostViewModel :
     override fun onAudienceChanged() = draftTag.newVersion()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     override val message = TextFieldState()
 
@@ -1131,17 +1124,7 @@ open class ShortNotePostViewModel :
         }
 
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = mutableListOf<Event>()
-
-        if (nip95attachments.isNotEmpty()) {
-            val usedImages = template.tags.taggedQuoteIds().toSet()
-            nip95attachments.forEach {
-                if (usedImages.contains(it.second.id)) {
-                    extraNotesToBroadcast.add(it.first)
-                    extraNotesToBroadcast.add(it.second)
-                }
-            }
-        }
+        val extraNotesToBroadcast = emptyList<Event>()
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -1155,8 +1138,7 @@ open class ShortNotePostViewModel :
         if (accountViewModel.settings.automaticallyCreateDrafts() && accountViewModel.account.powDifficultyFor(minedKind, chosenPow) != null) {
             draftNote = account.getOrCreateDraftNote(draftTag.current)
             // the same template sendDraftSync() would rebuild; reuse it.
-            val attachments = nip95attachments.flatMapTo(mutableSetOf()) { listOf(it.first, it.second) }
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
 
         val draftToDelete = draftNote
@@ -1311,14 +1293,8 @@ open class ShortNotePostViewModel :
         if (text.isBlank() || text.trim() == appliedSignature) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -1593,15 +1569,7 @@ open class ShortNotePostViewModel :
                 val urls =
                     results.successful.mapNotNull { state ->
                         val uploaded = state.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.let {
-                                "nostr:" + it.toNEvent()
-                            }
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             val iMeta =
                                 IMetaTagBuilder(uploaded.url)
                                     .apply {
@@ -1652,10 +1620,7 @@ open class ShortNotePostViewModel :
         viewModelScope.launch(Dispatchers.IO) {
             val signer = if (wantsAnonymousPost) anonymousSigner() else null
             val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, signer = signer) ?: return@launch
-            when (uploaded) {
-                is UploadedDrawing.Embedded -> nip95attachments = nip95attachments + uploaded.events
-                is UploadedDrawing.OnServer -> iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            }
+            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
             onUiThread { message.insertUrlAtCursor(uploaded.link) }
             urlPreviews.update(message.text.toString())
         }
@@ -1915,7 +1880,6 @@ open class ShortNotePostViewModel :
         val fileToUpload = activeFile ?: recording.file
         val waveform = activeWaveform ?: recording.amplitudes
         val uploadErrorTitle = loadStringRes(Res.string.upload_error_title)
-        val uploadVoiceNip95NotSupported = loadStringRes(Res.string.upload_error_voice_message_nip95_not_supported)
         val uploadVoiceFailed = loadStringRes(Res.string.upload_error_voice_message_failed)
 
         isUploadingVoice = true
@@ -1956,12 +1920,6 @@ open class ShortNotePostViewModel :
                             voiceAnonymization.deleteDistortedFiles()
                             voiceLocalFile = null
                             voiceRecording = null
-                        }
-
-                        is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                            // For NIP95, we need to create the event and get the nevent URL
-                            // This is handled differently - skip for now
-                            onError(uploadErrorTitle, uploadVoiceNip95NotSupported)
                         }
                     }
                 }

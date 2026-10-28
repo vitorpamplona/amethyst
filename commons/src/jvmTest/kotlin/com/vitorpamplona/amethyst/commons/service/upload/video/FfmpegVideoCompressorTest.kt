@@ -192,7 +192,7 @@ class FfmpegVideoCompressorTest {
         }
 
     @Test
-    fun nip95EstimateRefusesEarly() =
+    fun aSizeCapRefusesEarly() =
         runTest {
             val runner = FakeRunner(listOf(0), outputBytes = 10)
             assertEquals(VideoCompressionResult.TooBig, compressor(runner, setOf("libx264"), duration = 30.0).compress(source(1000), CompressorQuality.HIGH, false, maxBytes = 80_000) {})

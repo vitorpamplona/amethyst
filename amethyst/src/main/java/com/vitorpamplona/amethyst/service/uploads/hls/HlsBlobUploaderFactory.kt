@@ -70,12 +70,6 @@ object HlsBlobUploaderFactory {
                 nip96Adapter(server.baseUrl, account, context)
             }
 
-            ServerType.NIP95 -> {
-                throw IllegalArgumentException(
-                    "NIP-95 storage stores each blob as an event and is not suitable for HLS renditions",
-                )
-            }
-
             ServerType.BuzzWorkspace -> {
                 throw IllegalArgumentException("HLS publishing does not target a Buzz workspace's media server")
             }
