@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.napplets.datasource
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 
@@ -82,7 +83,11 @@ fun NappletsScreen(
     val visible =
         remember(napplets, followFilter) {
             napplets.filter { note ->
-                val author = note.event?.pubKey ?: return@filter false
+                val event = note.event ?: return@filter false
+                // Other apps publish their own formats under kind 35129 too; without exactly one
+                // artifact `x` tag (or an older napplet's path tags) there is nothing to load.
+                if ((event as? NappletManifest)?.isValid() != true) return@filter false
+                val author = event.pubKey
                 // Covers "Mine" too: the shared author-matcher now resolves Mine to the user's own
                 // pubkey, so matchAuthor already narrows to the user.
                 followFilter.matchAuthor(author)
