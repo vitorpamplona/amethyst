@@ -932,6 +932,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
@@ -2032,6 +2033,8 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
+            // Another app's playback-progress records on the podcast-episode kind (30054).
+            is UnrecognizedKind30054Event,
             -> {}
 
             is PredictionMarketEvent -> {

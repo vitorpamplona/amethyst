@@ -4151,6 +4151,8 @@ open class EventCache :
                 is MusicPlaylistEvent,
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
+                // Another app's playback-progress records on 30054 split off as
+                // UnrecognizedKind30054Event and stay unconsumed, so no feed draws an empty episode.
                 is Podcasting20EpisodeEvent,
                 is Podcasting20TrailerEvent,
                 is MuteListEvent,

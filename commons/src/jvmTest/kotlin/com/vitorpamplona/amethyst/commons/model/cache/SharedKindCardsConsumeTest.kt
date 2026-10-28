@@ -28,6 +28,8 @@ import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.utils.EventFactory
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,7 +40,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
- * The carded shapes of the shared kinds 30301, 30302 and 38385 reach the addressable cache, where
+ * The carded shapes of the shared kinds 30301, 30302, 38385 and 30054 reach the addressable cache, where
  * their cards read them; the other apps' shapes on the same kinds do not, so nothing draws them.
  * A Kanban card is also filed under its board's replies, which is where the board card counts it.
  */
@@ -88,6 +90,32 @@ class SharedKindCardsConsumeTest {
         assertFalse(cache.justConsume(paygress, null, true))
         assertNull(cache.stored(planner))
         assertNull(cache.stored(paygress))
+    }
+
+    @Test
+    fun storesPodcastEpisodesButNotPlaybackProgressOnTheSameKind() {
+        val cache = EventCache()
+
+        val episode = event("08", 30054, 1_700_000_000L, arrayOf("d", "ep-1"), arrayOf("title", "Episode 1"), arrayOf("audio", "https://example.com/ep-1.mp3", "audio/mpeg"))
+        val progress =
+            event(
+                "09",
+                30054,
+                1_700_000_000L,
+                arrayOf("d", "981a23b01dc9f1a65527b005b2e8af0a6e38a5c6af460692ab7b0c2cac692160"),
+                arrayOf("a", "30023:${"bb".repeat(32)}:981a23b01dc9f1a65527b005b2e8af0a6e38a5c6af460692ab7b0c2cac692160"),
+                arrayOf("position", "733"),
+                arrayOf("duration", "2744"),
+            )
+
+        assertIs<Podcasting20EpisodeEvent>(episode)
+        assertIs<UnrecognizedKind30054Event>(progress)
+
+        assertTrue(cache.justConsume(episode, null, true))
+        assertSame(episode, cache.stored(episode))
+
+        assertFalse(cache.justConsume(progress, null, true))
+        assertNull(cache.stored(progress))
     }
 
     @Test
