@@ -66,12 +66,50 @@ import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
 import com.vitorpamplona.amethyst.commons.resources.nsite_servers
 import com.vitorpamplona.amethyst.commons.resources.nsite_source
 import com.vitorpamplona.amethyst.commons.resources.nsite_website_kind
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import org.jetbrains.compose.resources.stringResource
 
 private val CardShape = RoundedCornerShape(16.dp)
 private val IconShape = RoundedCornerShape(14.dp)
 private val CardPadding = 12.dp
 private val IconSize = 56.dp
+
+/**
+ * [StaticWebsiteCard] for a NIP-5A site or NIP-5D napplet on a platform with no sandbox host to run
+ * it in (desktop, for now): what it is and what it would access, without an Open button. Renders
+ * nothing for any other event.
+ */
+@Composable
+fun StaticWebsiteManifestCard(event: Event?) {
+    when (event) {
+        is NappletManifest -> {
+            StaticWebsiteCard(
+                title = event.title(),
+                description = event.description(),
+                source = event.source(),
+                servers = event.servers(),
+                identifier = (event as? NamedNappletEvent)?.identifier(),
+                isNapplet = true,
+                requires = event.requires(),
+                icon = event.icon(),
+            )
+        }
+
+        is RootSiteEvent -> {
+            StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), null, isNapplet = false, icon = event.icon())
+        }
+
+        is NamedSiteEvent -> {
+            StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), event.identifier(), isNapplet = false, icon = event.icon())
+        }
+
+        else -> {}
+    }
+}
 
 /**
  * The inert, host-agnostic preview card for a NIP-5A static site or NIP-5D napplet event, styled like
