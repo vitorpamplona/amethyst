@@ -22,7 +22,8 @@ package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
-import com.vitorpamplona.quartz.contextvm.transport.NostrClientCvmRelayPool
+import com.vitorpamplona.quartz.contextvm.transport.CvmRelayPool
+import com.vitorpamplona.quartz.contextvm.transport.cvmRelayPool
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -31,12 +32,12 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
  *
  * [relays] is the coordinator's own relay list, not the account's: a coordinator has no address
  * beyond its pubkey (`spec/00.md` §8.5). What this adds to quartz's pool is only Amethyst's: the
- * `cordn-` subscription names and the [SubPurpose.COORDINATOR_GROUPS] label the relay-activity
- * screens group by.
+ * [SubPurpose.COORDINATOR_GROUPS] label the relay-activity screens group by.
  */
 fun coordinatorRelayPool(
     client: INostrClient,
     relays: Set<NormalizedRelayUrl>,
-) = NostrClientCvmRelayPool(client, relays, subIdPrefix = "cordn") { pubKey, kinds ->
-    ExplainedFilter(kinds = kinds.toList(), tags = mapOf("p" to listOf(pubKey)), purpose = SubPurpose.COORDINATOR_GROUPS)
-}
+): CvmRelayPool =
+    client.cvmRelayPool(relays) { pubKey, kinds ->
+        ExplainedFilter(kinds = kinds.toList(), tags = mapOf("p" to listOf(pubKey)), purpose = SubPurpose.COORDINATOR_GROUPS)
+    }
