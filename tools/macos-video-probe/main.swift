@@ -69,10 +69,10 @@ func enginePlay(_ uri: String) {
     var info = [Int32](repeating: 0, count: 8)
     for _ in 0..<200 {
         let f = info.withUnsafeMutableBufferPointer { lockLatestFrame(p, $0.baseAddress) }
-        if let f = f { if f != last { frames += 1 }; last = f; unlockLatestFrame(p) }
+        if let f = f { if f != last || frames == 0 { frames += 1 }; last = f; unlockLatestFrame(p) }
         Thread.sleep(forTimeInterval: 0.02)
     }
-    log("  [engine] after 4s play: currentTime=\(String(format: "%.2f", getCurrentTime(p))) distinctFrames=\(frames)")
+    log("  [engine] after 4s play: currentTime=\(String(format: "%.2f", getCurrentTime(p))) distinctFrames=\(frames) lastFrame=\(info[0])x\(info[1])")
     pauseVideo(p)
     Thread.sleep(forTimeInterval: 0.3)
     disposeVideoPlayer(p)
@@ -86,4 +86,5 @@ DispatchQueue.global().async {
     }
     exit(0)
 }
-dispatchMain()
+// The engine's frame timer is scheduled on the main run loop, which dispatchMain() does not run.
+RunLoop.main.run()

@@ -22,7 +22,7 @@ server=$!
 sleep 1
 
 uris=("$URL")
-for f in orig faststart nobframes aaclc noaudio reencoded; do
+for f in orig reencoded; do
   uris+=("$media/$f.mp4" "http://127.0.0.1:8765/$f.mp4")
 done
 "$work/probe" "${uris[@]}"
