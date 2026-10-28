@@ -1848,12 +1848,22 @@ internal fun RenderNoteRow(
                 RenderNamedSiteEvent(baseNote, accountViewModel, nav)
             }
 
+            // Other apps publish their own formats under these kinds: only a valid NIP-5D manifest
+            // gets the napplet card, the rest get the fallback card that shows what they carry.
             is RootNappletEvent -> {
-                RenderRootNappletEvent(baseNote, accountViewModel, nav)
+                if (noteEvent.isValid()) {
+                    RenderRootNappletEvent(baseNote, accountViewModel, nav)
+                } else {
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is NamedNappletEvent -> {
-                RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+                if (noteEvent.isValid()) {
+                    RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+                } else {
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is GitPatchEvent -> {

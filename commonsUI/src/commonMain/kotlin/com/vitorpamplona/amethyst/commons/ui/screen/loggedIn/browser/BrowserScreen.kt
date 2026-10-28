@@ -107,6 +107,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPa
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.isLaunchable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_address_hint
 import com.vitorpamplona.amethyst.commons.resources.browser_clear
@@ -886,8 +887,9 @@ private fun List<Note>.toDiscoverApps(
 /** Resolve a cached nsite/napplet manifest note into a launchable favorite + its description, or null. */
 private fun Note.toDiscoverNostrApp(): DiscoverNostrApp? {
     val event = event ?: return null
-    // Another app's kind 35129 format, or a manifest naming no artifact: nothing to open.
-    if (event is NappletManifest && !event.isValid()) return null
+    // Another app's kind 35129 format, an invalid manifest, or one needing a NAP domain this shell
+    // doesn't implement: nothing this launcher grid could open.
+    if (event is NappletManifest && !event.isLaunchable()) return null
     val coordinate = favoriteCoordinateOf(event)
     val label: String
     val fallback: StringResource

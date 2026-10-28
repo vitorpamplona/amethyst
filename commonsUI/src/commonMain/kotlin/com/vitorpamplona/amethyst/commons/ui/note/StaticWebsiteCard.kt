@@ -42,6 +42,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,7 @@ import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.napplet.isLaunchable
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_card_kind
 import com.vitorpamplona.amethyst.commons.resources.napplet_card_permissions
@@ -71,8 +73,10 @@ import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import org.jetbrains.compose.resources.stringResource
 
 private val CardShape = RoundedCornerShape(16.dp)
@@ -81,25 +85,34 @@ private val CardPadding = 12.dp
 private val IconSize = 56.dp
 
 /**
+ * What a napplet card shows and gates on, read off its manifest once per event (`remember(event)`)
+ * instead of re-scanning the tags on every recomposition.
+ */
+@Immutable
+class NappletCardInfo(
+    event: NappletManifest,
+) {
+    val title: String? = event.title()
+    val description: String = event.description()
+    val source: String? = event.source()
+    val servers: List<String> = event.servers()
+    val required: List<String> = event.required()
+    val artifactFiles: List<PathTag> = listOfNotNull(event.artifactFile())
+
+    /** Valid NIP-5D, and every required domain is one this shell implements. */
+    val launchable: Boolean = event.isLaunchable()
+}
+
+/**
  * [StaticWebsiteCard] for a NIP-5A site or NIP-5D napplet on a platform with no sandbox host to run
  * it in (desktop, for now): what it is and what it would access, without an Open button. Renders
- * nothing for any other event.
+ * nothing for any other event; NoteCompose sends invalid napplet manifests to the fallback card.
  */
 @Composable
 fun StaticWebsiteManifestCard(event: Event?) {
     when (event) {
-        is NappletManifest -> {
-            StaticWebsiteCard(
-                title = event.title(),
-                description = event.description(),
-                source = event.source(),
-                servers = event.servers(),
-                identifier = (event as? NamedNappletEvent)?.identifier(),
-                isNapplet = true,
-                requires = event.required(),
-                icon = rememberNappletIconModel(favoriteCoordinateOf(event)),
-            )
-        }
+        is RootNappletEvent -> NappletManifestCard(event, identifier = null)
+        is NamedNappletEvent -> NappletManifestCard(event, identifier = event.identifier())
 
         is RootSiteEvent -> {
             StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), null, isNapplet = false, icon = event.icon())
@@ -111,6 +124,25 @@ fun StaticWebsiteManifestCard(event: Event?) {
 
         else -> {}
     }
+}
+
+@Composable
+private fun NappletManifestCard(
+    event: NappletManifest,
+    identifier: String?,
+) {
+    val info = remember(event) { NappletCardInfo(event) }
+    val coordinate = remember(event) { favoriteCoordinateOf(event as Event) }
+    StaticWebsiteCard(
+        title = info.title,
+        description = info.description,
+        source = info.source,
+        servers = info.servers,
+        identifier = identifier,
+        isNapplet = true,
+        requires = info.required,
+        icon = rememberNappletIconModel(coordinate),
+    )
 }
 
 /**

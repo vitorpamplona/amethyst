@@ -84,8 +84,8 @@ fun NappletsScreen(
         remember(napplets, followFilter) {
             napplets.filter { note ->
                 val event = note.event ?: return@filter false
-                // Other apps publish their own formats under kind 35129 too; without exactly one
-                // artifact `x` tag (or an older napplet's path tags) there is nothing to load.
+                // Other apps publish their own formats under kind 35129 too: only a valid NIP-5D
+                // manifest (one `x` artifact, a description) is a napplet.
                 if ((event as? NappletManifest)?.isValid() != true) return@filter false
                 val author = event.pubKey
                 // Covers "Mine" too: the shared author-matcher now resolves Mine to the user's own

@@ -67,9 +67,10 @@ class UserProfileAppsFeedFilter(
         params: FilterByListParams,
     ): Boolean {
         val noteEvent = it.event
+        // A kind 15129/35129 that isn't a valid NIP-5D manifest is another app's format, not a napplet.
         val isOwnManifest =
             noteEvent?.pubKey == user.pubkeyHex &&
-                (noteEvent is RootSiteEvent || noteEvent is NamedSiteEvent || noteEvent is RootNappletEvent || noteEvent is NamedNappletEvent)
+                (noteEvent is RootSiteEvent || noteEvent is NamedSiteEvent || ((noteEvent is RootNappletEvent || noteEvent is NamedNappletEvent) && noteEvent.isValid()))
 
         return isOwnManifest && params.match(noteEvent, it.relays) && account.isAcceptable(it)
     }

@@ -30,8 +30,11 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip5aStaticWebsites.SiteAggregateHash
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.tags.IconTag
+import com.vitorpamplona.quartz.nip5dNapplets.tags.ServerOrigin
 import com.vitorpamplona.quartz.nip5dNapplets.tags.SourceTag
+import com.vitorpamplona.quartz.utils.EventFactory
 import java.io.File
 
 /**
@@ -42,6 +45,9 @@ import java.io.File
  * the event shape in quartz, and the publish plumbing in [Context].
  */
 object StaticSitePublish {
+    /** A bare NAP domain name (`relay`, `theme`), as NIP-5D's R and O tags carry it. */
+    private val NAP_DOMAIN = Regex("[a-z][a-z0-9-]*")
+
     /** Pieces resolved from the CLI args, handed to the kind-specific event builder. */
     class Manifest(
         val identifier: String?,
@@ -102,6 +108,18 @@ object StaticSitePublish {
                 return Output.error("bad_args", "--source must be an http(s), ssh or git URL, or user@host:path")
             }
             if (intents.any { it.isEmpty() }) return Output.error("bad_args", "each --intents entry names an intent, then its parameters")
+            (requires + optional).firstOrNull { !NAP_DOMAIN.matches(it) }?.let {
+                return Output.error("bad_args", "--requires/--optional take bare lowercase NAP domains (relay, theme), not '$it'")
+            }
+            if (identifier != null && identifier.isBlank()) return Output.error("bad_args", "--d needs a non-empty identifier; omit it for a root napplet")
+            servers.firstOrNull { !ServerOrigin.isValid(it) }?.let {
+                return Output.error("bad_args", "--server takes Blossom origins (https://host[:port]), not '$it'")
+            }
+            // Dry-build the manifest with a placeholder artifact and refuse what quartz would call
+            // invalid, before uploading anything: amy must never publish a napplet it then rejects.
+            val draft = buildEvent(Manifest(identifier, listOf(PathTag(NappletManifest.INDEX_PATH, "00".repeat(32))), servers, requires, title, description, sourceUrl, icon, optional, iconMime, archetypes, intents))
+            val draftEvent = EventFactory.create<Event>("00".repeat(32), "00".repeat(32), draft.createdAt, draft.kind, draft.tags, draft.content, "")
+            if ((draftEvent as? NappletManifest)?.isValid() != true) return Output.error("bad_args", "these flags do not make a valid NIP-5D manifest")
         }
 
         Context.open(dataDir).use { ctx ->

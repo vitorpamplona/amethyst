@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,5 +51,21 @@ class NappletManifestPolicyTest {
     @Test
     fun anInvalidManifestIsNotLaunchable() {
         assertFalse(RootNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash)), " ", zero).isLaunchable())
+        // The retired multi-file form must not run under any identity.
+        assertFalse(RootNappletEvent(zero, zero, 0, arrayOf(arrayOf("path", "/index.html", hash), arrayOf("x", hash, "aggregate")), "", zero).isLaunchable())
+        assertFalse(RootNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash), arrayOf("x", hash)), "d", zero).isLaunchable())
+        assertFalse(RootNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash), arrayOf("d", "root")), "d", zero).isLaunchable())
+        assertFalse(NamedNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash)), "d", zero).isLaunchable())
+        assertFalse(NamedNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash), arrayOf("d", "")), "d", zero).isLaunchable())
+        assertTrue(NamedNappletEvent(zero, zero, 0, arrayOf(arrayOf("x", hash), arrayOf("d", "feed")), "d", zero).isLaunchable())
+    }
+
+    @Test
+    fun aDomainIsMatchedExactly() {
+        // Domain names are exact lowercase strings: `Theme` is not `theme`, and is never exposed.
+        val event = manifest(arrayOf("O", "Theme"), arrayOf("R", "relay"))
+        assertEquals(listOf("relay"), event.exposedDomains())
+        assertTrue(event.isLaunchable())
+        assertEquals(listOf("NAP-RELAY"), manifest(arrayOf("R", "NAP-RELAY")).unsupportedRequired())
     }
 }

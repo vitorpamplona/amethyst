@@ -42,4 +42,16 @@ class NappletIdentityTest {
         assertTrue(root.copy(aggregateHash = "cd".repeat(32)).storageCoordinate != root.storageCoordinate)
         assertTrue(root.copy(instanceId = "one").instanceStorageCoordinate != root.copy(instanceId = "two").instanceStorageCoordinate)
     }
+
+    @Test
+    fun storageKeysKeepTheirPersistedFormat() {
+        // These strings name napplets' saved storage on disk: changing them orphans users' data.
+        val author = "aa".repeat(32)
+        assertEquals("15129:$author:$hash", NappletIdentity(author, "", hash, manifestKind = RootNappletEvent.KIND).storageCoordinate)
+        assertEquals("35129:$author:feed:$hash", NappletIdentity(author, "feed", hash, manifestKind = NamedNappletEvent.KIND).storageCoordinate)
+        val id = "01".repeat(32)
+        assertEquals("5129:$id:$hash", NappletIdentity(author, "", hash, manifestKind = NappletSnapshotEvent.KIND, manifestEventId = id).storageCoordinate)
+        assertEquals("$author:feed:$hash", NappletIdentity(author, "feed", hash).storageCoordinate)
+        assertEquals("$author:feed:$hash:instance:one", NappletIdentity(author, "feed", hash, instanceId = "one").instanceStorageCoordinate)
+    }
 }
