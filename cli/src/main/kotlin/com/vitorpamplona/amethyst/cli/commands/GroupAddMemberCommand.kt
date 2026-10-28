@@ -85,22 +85,20 @@ object GroupAddMemberCommand {
 
                 // KeyPackage discovery: the invitee's kind:10002 write set is
                 // the rule now; their kind:10051 is a legacy hint and our
-                // bootstrap pool a last-resort fallback.
-                val kpRelays =
-                    KeyPackageFetcher.fetchRelaysFor(
-                        targetKeyPackageRelays = recipient.keyPackage,
-                        targetOutbox = recipient.nip65Write(),
-                        myOutbox = seed,
-                    )
-                // Newest valid kind:30443, else newest valid legacy kind:443
-                // (White Noise's MDK still publishes 443).
-                val kpEvent =
-                    KeyPackageFetcher.fetchKeyPackageForInvite(
+                // bootstrap pool a last-resort fallback. Newest valid
+                // kind:30443, else newest valid legacy kind:443 (White
+                // Noise's MDK still publishes 443).
+                val lookup =
+                    KeyPackageFetcher.fetchForInvite(
                         client = ctx.client,
                         targetPubKey = pub,
-                        relays = kpRelays,
+                        targetOutbox = recipient.nip65Write(),
+                        myOutbox = seed,
+                        targetKeyPackageRelays = recipient.keyPackage,
                         idleTimeoutMs = 10_000,
                     )
+                val kpRelays = lookup.relays
+                val kpEvent = lookup.keyPackage
                 if (kpEvent == null) {
                     report.add(mapOf("pubkey" to pub, "status" to "no_key_package"))
                     continue
