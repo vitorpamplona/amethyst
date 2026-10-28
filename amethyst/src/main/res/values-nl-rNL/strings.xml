@@ -83,6 +83,9 @@
     <string name="share_target_as_picture">Nieuwe afbeelding</string>
     <string name="share_target_as_short_video">Nieuwe Short</string>
     <string name="share_target_as_video">Nieuwe video</string>
+    <string name="share_target_scan_qr">QR-code scannen</string>
+    <string name="shortcut_scan_qr_short">QR scannen</string>
+    <string name="shortcut_scan_qr_long">Een QR-code scannen</string>
     <!-- Label for the mixed media feed: pictures + every NIP-71 video kind + NIP-94 files.
          Distinct from the "shorts" string, which labels the vertical/short-video-only feed. -->
     <!-- Onchain zap send dialog -->
@@ -121,6 +124,8 @@
         <item quantity="other">Verbonden met %1$d relays</item>
     </plurals>
     <string name="always_on_notif_connecting">Verbinden met inbox-relays…</string>
+    <string name="always_on_notif_hide_details">Details verbergen</string>
+    <string name="always_on_notif_show_details">Details tonen</string>
     <string name="always_on_notif_tile_subtitle_off">Uit</string>
     <string name="always_on_notif_tile_subtitle_on">Aan</string>
     <string name="always_on_notif_title">Amethyst-meldingen actief</string>
@@ -144,6 +149,7 @@
         <item quantity="other">Proof of work minen… (%1$d posts in wachtrij)</item>
     </plurals>
     <string name="pow_mining_title">Proof of work minen</string>
+    <string name="pow_notification_sending">Versturen naar relays…</string>
     <string name="pow_notification_cancel_all">Annuleren</string>
     <string name="pow_time_left">≈ %1$s resterend</string>
     <string name="pow_time_left_soon">elk moment nu</string>
@@ -171,6 +177,7 @@
     <string name="voice_reply">Spraakreactie</string>
     <string name="pow_kind_report">Melding</string>
     <!-- Emoji packs -->
+    <string name="health_connect_rationale_activity_label">Health Connect en Amethyst</string>
     <!-- My Fitness: the signed-in user's own training summary. Android resource because
          NavBarItemDef labels are R.string ids. -->
     <string name="private_message">Privébericht</string>
@@ -189,6 +196,7 @@
     <string name="napplet_cap_identity">Identiteit</string>
     <string name="napplet_cap_keys">Toetsenbordacties</string>
     <string name="napplet_cap_relay">Relays</string>
+    <string name="napplet_cap_signer">Versleuteling</string>
     <string name="napplet_cap_storage">Opslag</string>
     <string name="napplet_cap_value">Betalingen</string>
     <string name="napplet_cap_resource">Netwerk</string>
