@@ -20,8 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.uploads
 
+import androidx.compose.foundation.text.input.TextFieldState
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.composer.PreviewState
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.drawing_upload_failed
@@ -36,6 +38,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.mediaUriOfFile
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
+import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip92IMeta.IMetaTag
@@ -71,18 +76,19 @@ class UploadedDrawing(
 
 /**
  * Uploads a hand drawing from [DrawingButton][com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton]
- * to [server], marking [tracker] busy meanwhile. Every failure yields null and is reported through
- * [onError], except the server refusing the GIF, which goes to [onUploadError] (an encrypted chat
- * offers its unencrypted retry there). The drawing's files are deleted once done, unless the
- * upload failed and [keepFilesOnFailure] is set: the caller then owns them, to retry or delete.
+ * to [server], counted as a side upload on [tracker] meanwhile. Every failure yields null and is
+ * reported through [onError], except the server refusing the GIF, which goes to [onUploadError]
+ * (an encrypted chat offers its unencrypted retry there). The drawing's files are deleted once
+ * done, unless the upload failed and [keepFilesOnFailure] is set: the caller then owns them, to
+ * retry or delete. A cancelled upload always deletes them.
  *
  * Both files go up as they are: a composer's own upload would re-encode the PNG as a JPEG and send
  * the GIF through metadata stripping, which a GIF cannot take. The uploader measures a file's first
  * frame, and a replay starts on blank paper, so the GIF's size and blurhash/thumbhash come from the
- * finished drawing instead, and the PNG becomes the `image` preview for clients that show a still.
- * The PNG is a nice-to-have; if it fails, the GIF still posts. Without [uploadStill], for a post
- * that carries no `imeta` to hang it on, only the GIF goes up; with [encrypt], too, and encrypted:
- * an unencrypted still would leak the drawing.
+ * finished drawing instead. The PNG is the `image` preview of the GIF's `imeta`, so [uploadStill]
+ * is set only by a composer whose post carries that `imeta`; anywhere else it would be an orphan
+ * copy of the drawing. It is a nice-to-have: if it fails, the GIF still posts. With [encrypt] it
+ * never goes up, as an unencrypted still would leak the drawing.
  */
 suspend fun uploadDrawing(
     drawing: RenderedDrawing,
@@ -90,28 +96,56 @@ suspend fun uploadDrawing(
     account: Account,
     uploader: MediaUploader,
     tracker: MediaUploadTracker,
+    uploadStill: Boolean,
     onError: (title: String, message: String) -> Unit,
     server: ServerName = account.settings.defaultFileServer,
     signer: NostrSigner? = null,
     encrypt: SymmetricCipher? = null,
-    uploadStill: Boolean = true,
     keepFilesOnFailure: Boolean = false,
     onUploadError: (title: String, message: String) -> Unit = onError,
 ): UploadedDrawing? {
-    tracker.startUpload(false)
+    tracker.startSideUpload()
     var uploaded: UploadedDrawing? = null
+    var keepFiles = false
     try {
         // A signer that refuses the server's auth is reported like any other upload's.
         uploaded = signForUpload(onError) { uploadDrawingFiles(drawing, alt, account, uploader, onUploadError, server, signer, encrypt, uploadStill && encrypt == null) }
+        keepFiles = uploaded == null && keepFilesOnFailure
     } catch (e: Exception) {
         if (e is CancellationException) throw e
         Log.w("UploadDrawing", "Drawing upload failed", e)
         onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: loadStringRes(Res.string.drawing_upload_failed))
+        keepFiles = keepFilesOnFailure
     } finally {
-        if (uploaded != null || !keepFilesOnFailure) drawing.delete()
-        tracker.finishUpload()
+        if (!keepFiles) drawing.delete()
+        tracker.finishSideUpload()
     }
     return uploaded
+}
+
+/**
+ * [uploadDrawing] for a composer whose [message] takes the drawing's link and whose post carries
+ * the `imeta` tags in [iMetaAttachments], so the still goes up as the GIF's preview. [asText] turns
+ * the GIF's URL into what goes in the text; [urlPreviews], when the composer shows them, are
+ * refreshed after.
+ */
+suspend fun uploadDrawingIntoText(
+    drawing: RenderedDrawing,
+    alt: String?,
+    account: Account,
+    uploader: MediaUploader,
+    tracker: MediaUploadTracker,
+    onError: (title: String, message: String) -> Unit,
+    iMetaAttachments: IMetaAttachments,
+    message: TextFieldState,
+    urlPreviews: PreviewState? = null,
+    signer: NostrSigner? = null,
+    asText: (url: String) -> String = { it },
+) {
+    val uploaded = uploadDrawing(drawing, alt, account, uploader, tracker, uploadStill = true, onError, signer = signer) ?: return
+    iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
+    onUiThread { message.insertUrlAtCursor(asText(uploaded.link)) }
+    urlPreviews?.update(message.text.toString())
 }
 
 private suspend fun uploadDrawingFiles(

@@ -2898,10 +2898,9 @@ class Account(
     suspend fun createAndSendDraftIgnoreErrors(
         draftTag: String,
         template: EventTemplate<out Event>,
-        broadcast: Set<Event> = emptySet(),
     ) {
         try {
-            createAndSendDraftInner(draftTag, template, broadcast)
+            createAndSendDraftInner(draftTag, template)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
         }
@@ -2910,7 +2909,6 @@ class Account(
     suspend fun createAndSendDraftInner(
         draftTag: String,
         template: EventTemplate<out Event>,
-        broadcast: Set<Event> = emptySet(),
     ) {
         if (!isWriteable()) return
 
@@ -2925,9 +2923,6 @@ class Account(
         val relayList = (privateStorageRelayList.flow.value + localRelayList.flow.value + extraRelays).toSet()
         if (relayList.isNotEmpty()) {
             client.publish(draftEvent, relayList)
-            broadcast.forEach {
-                client.publish(it, relayList.toSet())
-            }
         }
     }
 

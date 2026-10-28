@@ -405,7 +405,8 @@ open class NewProductViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError) ?: return@launch
+            // A listing's pictures have no `image` preview, so the drawing's still would be an orphan.
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, uploadStill = false, onError) ?: return@launch
             val header = uploaded.gif.fileHeader
             productImages = productImages +
                 ProductImageMeta(

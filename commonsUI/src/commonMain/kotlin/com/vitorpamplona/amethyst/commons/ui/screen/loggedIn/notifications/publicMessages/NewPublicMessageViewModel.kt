@@ -70,10 +70,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
@@ -337,12 +336,11 @@ class NewPublicMessageViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate()
-        val extraNotesToBroadcast = emptyList<Event>()
 
         val draftToDelete = draftNote
         onUiThread { cancel() }
 
-        accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+        accountViewModel.account.signAndComputeBroadcast(template)
         accountViewModel.viewModelScope.launch(Dispatchers.IO) {
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
@@ -412,10 +410,7 @@ class NewPublicMessageViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError) ?: return@launch
-            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            onUiThread { message.insertUrlAtCursor(uploaded.link) }
-            urlPreviews.update(message.text.toString())
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews)
         }
     }
 

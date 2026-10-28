@@ -74,7 +74,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -570,7 +570,6 @@ open class CommentPostViewModel :
 
     suspend fun sendPostSync() {
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = emptyList<Event>()
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -623,11 +622,11 @@ open class CommentPostViewModel :
                         // (NIP-13 recommendation), starting from the moment a worker
                         // picks the job up rather than when it was queued.
                         val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
-                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, anonymousSigner = anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
-                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, anonymousSigner = anonSigner)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else if (replyGroupId != null) {
@@ -640,8 +639,8 @@ open class CommentPostViewModel :
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         } else {
-            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
-                accountViewModel.account.signAndComputeBroadcast(readyTemplate, extraNotesToBroadcast)
+            accountViewModel.account.sendMined(template, PoWReplay.Broadcast(), chosenPow) { readyTemplate ->
+                accountViewModel.account.signAndComputeBroadcast(readyTemplate)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
         }
@@ -766,10 +765,8 @@ open class CommentPostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, signer = if (wantsAnonymousPost) anonymousSigner() else null) ?: return@launch
-            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            onUiThread { message.insertUrlAtCursor(uploaded.link) }
-            urlPreviews.update(message.text.toString())
+            val signer = if (wantsAnonymousPost) anonymousSigner() else null
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
         }
     }
 

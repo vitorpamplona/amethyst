@@ -41,9 +41,6 @@ sealed interface VideoCompressionResult {
         val stripped: File?,
         val notices: List<UserNotice> = emptyList(),
     ) : VideoCompressionResult
-
-    /** The estimated output would exceed the caller's byte limit; nothing was encoded. */
-    data object TooBig : VideoCompressionResult
 }
 
 /** Prepares videos (and GIFs) for upload on a platform that can transcode. */
@@ -56,14 +53,12 @@ interface VideoCompressor {
 
     /**
      * Transcodes [source] at [quality] (through its video level), H.265 when [useH265] and an
-     * HEVC encoder works. With [maxBytes] the estimated size is checked before encoding.
-     * [onProgress] receives fractions in 0..1.
+     * HEVC encoder works. [onProgress] receives fractions in 0..1.
      */
     suspend fun compress(
         source: File,
         quality: CompressorQuality,
         useH265: Boolean,
-        maxBytes: Long? = null,
         onProgress: (Double) -> Unit,
     ): VideoCompressionResult
 

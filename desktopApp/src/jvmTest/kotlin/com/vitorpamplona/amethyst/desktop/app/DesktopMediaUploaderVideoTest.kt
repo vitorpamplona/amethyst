@@ -87,7 +87,6 @@ class DesktopMediaUploaderVideoTest {
             source: File,
             quality: CompressorQuality,
             useH265: Boolean,
-            maxBytes: Long?,
             onProgress: (Double) -> Unit,
         ): VideoCompressionResult {
             onCompress(source, quality, useH265)

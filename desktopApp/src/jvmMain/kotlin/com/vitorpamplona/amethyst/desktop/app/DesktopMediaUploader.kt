@@ -364,7 +364,7 @@ class DesktopMediaUploader(
         val result =
             when {
                 isGif && convertGifToMp4 -> videoCompressor.convertGif(source, onProgress)
-                isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, onProgress = onProgress)
+                isVideo && quality != CompressorQuality.UNCOMPRESSED -> videoCompressor.compress(source, quality, useH265, onProgress)
                 // The dialog promised a strip; without an encode only the remux can keep it.
                 isVideo && stripMetadata -> VideoCompressionResult.Original(videoCompressor.strip(source))
                 else -> return null
@@ -372,7 +372,6 @@ class DesktopMediaUploader(
         when (result) {
             is VideoCompressionResult.Compressed -> result.notices.forEach(notices::notify)
             is VideoCompressionResult.Original -> result.notices.forEach(notices::notify)
-            VideoCompressionResult.TooBig -> Unit
         }
         return result
     }
@@ -411,7 +410,6 @@ class DesktopMediaUploader(
             prepareVideo(source, mime, quality, useH265, stripMetadata, convertGifToMp4, compressingProgress(progress, progressCeiling))
                 ?: return block(source, false)
         return when (result) {
-            VideoCompressionResult.TooBig -> progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA) // cannot occur without a size cap
             is VideoCompressionResult.Compressed -> usingTemp(result.file) { block(it, true) }
             is VideoCompressionResult.Original -> {
                 val stripped = result.stripped
@@ -453,7 +451,6 @@ class DesktopMediaUploader(
             prepareVideo(fileOf(uri), mimeType ?: mimeType(uri), compressionQuality, useH265, stripMetadata = false, convertGifToMp4, compressingProgress(progress, BLOSSOM_COMPRESSING_CEILING))
                 ?: return unchanged
         return when (result) {
-            VideoCompressionResult.TooBig -> unchanged // cannot occur without a size cap
             is VideoCompressionResult.Compressed -> mp4Result(result.file)
             is VideoCompressionResult.Original -> result.stripped?.let(::mp4Result) ?: unchanged
         }

@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -398,7 +398,7 @@ class LongFormPostViewModel :
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, emptyList())
+            accountViewModel.account.signAndComputeBroadcast(template)
         }
     }
 
@@ -408,7 +408,7 @@ class LongFormPostViewModel :
             accountViewModel.account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, emptySet())
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -496,9 +496,7 @@ class LongFormPostViewModel :
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError) ?: return@launch
-            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            onUiThread { message.insertUrlAtCursor(markdownImage(alt, uploaded.link)) }
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message) { markdownImage(alt, it) }
         }
     }
 

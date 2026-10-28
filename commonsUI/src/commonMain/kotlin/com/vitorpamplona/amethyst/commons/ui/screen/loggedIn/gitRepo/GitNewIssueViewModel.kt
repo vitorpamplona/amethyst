@@ -109,7 +109,7 @@ class GitNewIssueViewModel : ViewModel() {
         uploader: MediaUploader,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            val uploaded = uploadDrawing(drawing, alt, account, uploader, mediaUploadTracker, onError) ?: return@launch
+            val uploaded = uploadDrawing(drawing, alt, account, uploader, mediaUploadTracker, uploadStill = true, onError) ?: return@launch
             iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
             appendToBody(uploaded.link)
         }

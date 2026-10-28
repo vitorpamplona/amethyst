@@ -95,7 +95,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -1124,7 +1124,6 @@ open class ShortNotePostViewModel :
         }
 
         val template = createTemplate() ?: return
-        val extraNotesToBroadcast = emptyList<Event>()
 
         // captured before cancel() resets the chip
         val chosenPow = powOverride
@@ -1195,10 +1194,10 @@ open class ShortNotePostViewModel :
 
             accountViewModel.account.sendMined(
                 rescheduledTemplate,
-                PoWReplay.Schedule(scheduledFor, extraNotesToBroadcast),
+                PoWReplay.Schedule(scheduledFor),
                 chosenPow,
             ) { readyTemplate ->
-                storeScheduledPost(readyTemplate, extraNotesToBroadcast, scheduledFor)
+                storeScheduledPost(readyTemplate, scheduledFor)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
@@ -1217,18 +1216,18 @@ open class ShortNotePostViewModel :
                         // (NIP-13 recommendation), starting from the moment a worker
                         // picks the job up rather than when it was queued.
                         val mined = PoWMiner.mine(template, anonSigner.pubKey, powDifficulty, accountViewModel.account.powMinerWorkers(), isActive, TimeUtils::now)
-                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, extraNotesToBroadcast, anonSigner)
+                        accountViewModel.account.signAnonymouslyAndBroadcast(mined, anonymousSigner = anonSigner)
                         accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
                     }
             if (!enqueued) {
-                accountViewModel.account.signAnonymouslyAndBroadcast(template, extraNotesToBroadcast, anonSigner)
+                accountViewModel.account.signAnonymouslyAndBroadcast(template, anonymousSigner = anonSigner)
                 accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
             }
             return
         }
 
-        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(extraNotesToBroadcast), chosenPow) { readyTemplate ->
-            broadcastPublicPost(readyTemplate, extraNotesToBroadcast)
+        accountViewModel.account.sendMined(template, PoWReplay.Broadcast(), chosenPow) { readyTemplate ->
+            broadcastPublicPost(readyTemplate)
             accountViewModel.account.deleteDraftIgnoreErrors(draftToDelete)
         }
     }
@@ -1242,10 +1241,9 @@ open class ShortNotePostViewModel :
     @OptIn(ExperimentalUuidApi::class)
     private suspend fun storeScheduledPost(
         template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
         publishAtSec: Long,
     ) {
-        val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+        val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
         val store = accountViewModel.host.scheduledPostStore ?: return
         store.add(
             ScheduledPost(
@@ -1269,12 +1267,9 @@ open class ShortNotePostViewModel :
      * only progress reporting remains). Runs on the mining queue's scope when
      * PoW is on, so it must not touch viewModelScope.
      */
-    private suspend fun broadcastPublicPost(
-        template: EventTemplate<out Event>,
-        extraNotesToBroadcast: List<Event>,
-    ) {
+    private suspend fun broadcastPublicPost(template: EventTemplate<out Event>) {
         if (accountViewModel.settings.useTrackedBroadcasts()) {
-            val (event, relays, extras) = accountViewModel.account.createPostEvent(template, extraNotesToBroadcast)
+            val (event, relays, extras) = accountViewModel.account.createPostEvent(template)
             accountViewModel.account.scope.launch {
                 accountViewModel.broadcastTracker.trackBroadcast(
                     event = event,
@@ -1284,7 +1279,7 @@ open class ShortNotePostViewModel :
                 accountViewModel.account.consumePostEvent(event, relays, extras)
             }
         } else {
-            accountViewModel.account.signAndComputeBroadcast(template, extraNotesToBroadcast)
+            accountViewModel.account.signAndComputeBroadcast(template)
         }
     }
 
@@ -1619,10 +1614,7 @@ open class ShortNotePostViewModel :
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val signer = if (wantsAnonymousPost) anonymousSigner() else null
-            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, signer = signer) ?: return@launch
-            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
-            onUiThread { message.insertUrlAtCursor(uploaded.link) }
-            urlPreviews.update(message.text.toString())
+            uploadDrawingIntoText(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, iMetaAttachments, message, urlPreviews, signer)
         }
     }
 
