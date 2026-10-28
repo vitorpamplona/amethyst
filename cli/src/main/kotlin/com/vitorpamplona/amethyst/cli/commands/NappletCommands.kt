@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.cli.Args
 import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestIcon
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -33,38 +35,25 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.NappletSnapshotEvent
 import com.vitorpamplona.quartz.nip5dNapplets.RootNappletEvent
 
-/**
- * `amy napplet fetch` — resolve a single path of a NIP-5D napplet over
- * Nostr + Blossom with the full runtime verification contract:
- *
- *  1. fetch + signature-verify the manifest (kind 15129 root, 35129 named with
- *     `--d`, or 5129 snapshot with `--snapshot <event-id>`),
- *  2. recompute the NIP-5A aggregate hash and check it against the manifest's `x`
- *     tag — a mismatch is refused up front (`aggregate_mismatch`),
- *  3. download the path's blob from Blossom and accept only a copy whose sha256
- *     matches the per-path pin (an untrusted server cannot substitute a blob).
- *
- * It also reports the napplet's `requires` capabilities, so a shell can see which
- * NAP domains it would have to broker. Steps 2–3 live in quartz
- * (`NappletManifest.verifyAggregate`, `StaticSiteResolver`); this is thin glue,
- * shared with `amy nsite` via [StaticSiteFetch].
- */
+/** Current NIP-5D manifest publication and signature/hash-verified artifact retrieval. */
 object NappletCommands {
     val USAGE: String =
         """
         |Napplets (NIP-5D kind:5129/15129/35129):
         |  napplet fetch AUTHOR [--d ID] [--path P]    like `nsite fetch`, plus NIP-5D verification:
-        |        [--server URL[,URL]] [--relay URL[,URL]]  recompute + check the `x` aggregate hash and
-        |        [--out FILE] [--timeout SECS]          report the napplet's `requires` capabilities
+        |        [--server URL[,URL]] [--relay URL[,URL]]  verify the single `x` artifact hash and
+        |        [--out FILE] [--timeout SECS]          report required R and optional O domains
         |        [--max-inline-bytes N]                 (--d selects a kind:35129 named napplet, else
         |  napplet fetch --snapshot EVENT-ID            the kind:15129 root; --snapshot pins a kind:5129
         |        [--path P] …                            immutable snapshot; --identifier aliases --d)
-        |  napplet publish DIR --server URL[,URL]      upload a napplet directory to Blossom and
+        |  napplet publish DIR --server URL[,URL]      upload one self-contained index.html to Blossom and
         |        [--requires identity,relay,…]           broadcast its NIP-5D manifest (kind:15129
         |        [--d ID] [--relay URL[,URL]]            root, or 35129 named with --d); adds the x
-        |        [--title T] [--description D]           aggregate hash and the `requires` capability
-        |        [--source URL] [--icon URL]             tags the shell gates on
-        |  napplet serve AUTHOR [--d ID] [--port N]    fetch + aggregate-verify the manifest and serve
+        |        [--title T] [--description D]           artifact hash and the R/O capability
+        |        [--source URL] [--icon HASH --icon-mime MIME]             tags the shell gates on
+        |        [--optional theme,…] [--archetypes feed,…]
+        |        [--intents "napplet:feed/edit filters relays"]
+        |  napplet serve AUTHOR [--d ID] [--port N]    fetch + artifact-verify the manifest and serve
         |        [--server URL[,URL]] [--relay URL[,URL]]  its static content over local HTTP (the
         |        [--timeout SECS]                        window.napplet.* runtime needs the app host)
         |  napplet list AUTHOR [--relay URL[,URL]]     enumerate an author's napplets: the root and
@@ -120,18 +109,18 @@ object NappletCommands {
                     .groupBy { it.kind to (it as? NamedNappletEvent)?.identifier() }
                     .mapNotNull { (_, dupes) -> dupes.maxByOrNull { it.createdAt } }
                     .sortedByDescending { it.createdAt }
-                    .map { ev ->
-                        val m = ev as NappletManifest
+                    .mapNotNull { ev ->
+                        val m = NappletManifestData.parse(ev) ?: return@mapNotNull null
                         mapOf(
                             "kind" to ev.kind,
                             "d" to (ev as? NamedNappletEvent)?.identifier(),
-                            "title" to m.title(),
-                            "description" to m.description(),
-                            "paths" to m.paths().size,
-                            "servers" to m.servers(),
-                            "requires" to m.requires(),
-                            "aggregate_sha256" to m.declaredAggregateHash(),
-                            "aggregate_verified" to m.verifyAggregate(),
+                            "title" to m.title,
+                            "description" to m.description,
+                            "paths" to m.paths.size,
+                            "servers" to m.servers,
+                            "requires" to m.required,
+                            "optional" to m.optional,
+                            "artifact_sha256" to m.artifactHash,
                             "event_id" to ev.id,
                             "created_at" to ev.createdAt,
                         )
@@ -142,7 +131,7 @@ object NappletCommands {
     }
 
     /**
-     * `amy napplet serve <author> [--d ID] [--port N]` — fetch + aggregate-verify the manifest and
+     * `amy napplet serve <author> [--d ID] [--port N]` — fetch + artifact-verify the manifest and
      * serve its static content over a local HTTP server. NOTE: the napplet's window.napplet.* runtime
      * needs the Amethyst host; this serves the files only, for inspecting that they load/route.
      */
@@ -171,18 +160,17 @@ object NappletCommands {
             val event =
                 fetchByAuthor(ctx, authorHex, identifier, relays, timeoutSecs * 1000)
                     ?: return Output.error("not_found", "no napplet manifest found", mapOf("pubkey" to authorHex, "d" to identifier))
-            val manifest = event as NappletManifest
-            if (!manifest.verifyAggregate()) {
-                return Output.error("aggregate_mismatch", "manifest x aggregate does not match its path tags")
-            }
-            return StaticSiteServe.serve(manifest.paths(), (manifest.servers() + extraServers).distinct(), port)
+            val manifest =
+                NappletManifestData.parse(event)
+                    ?: return Output.error("invalid_manifest", "Invalid current NIP-5D manifest")
+            return StaticSiteServe.serve(manifest.paths, (manifest.servers + extraServers).distinct(), port)
         }
     }
 
     /**
      * `amy napplet publish <dir> --server <blossom> [--requires identity,relay,…] [--d ID] [--relay …]`
-     * — upload a napplet directory to Blossom and broadcast its NIP-5D manifest (kind 15129 root, or
-     * 35129 named with `--d`). The builder adds the `x` aggregate hash and the `requires` capability
+     * — upload one self-contained index.html to Blossom and broadcast its NIP-5D manifest (kind 15129 root, or
+     * 35129 named with `--d`). The builder adds the `x` artifact hash and the R/O capability
      * tags the shell gates on.
      */
     private suspend fun publish(
@@ -192,13 +180,22 @@ object NappletCommands {
         StaticSitePublish.run(
             dataDir,
             rest,
-            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T] [--icon URL]",
+            "napplet publish <dir> --server <blossom-url> [--requires identity,relay,…] [--d ID] [--relay R] [--title T] [--description D] [--icon HASH --icon-mime MIME]",
+            napplet = true,
         ) { m ->
-            if (m.identifier != null) {
-                NamedNappletEvent.build(m.identifier, m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
-            } else {
-                RootNappletEvent.build(m.paths, m.servers, m.requires, m.title, m.description, m.source, m.icon)
-            }
+            NappletManifestData.build(
+                artifactHash = m.paths.single().hash,
+                description = requireNotNull(m.description),
+                identifier = m.identifier,
+                required = m.requires,
+                optional = m.optional,
+                servers = m.servers,
+                title = m.title,
+                source = m.source,
+                icon = m.icon?.let { NappletManifestIcon(it, requireNotNull(m.iconMime)) },
+                archetypes = m.archetypes,
+                intents = m.intents,
+            )
         }
 
     private suspend fun fetch(
@@ -249,36 +246,21 @@ object NappletCommands {
                 )
             }
 
-            val manifest = event as NappletManifest
-
-            // NIP-5D step 3: the signed aggregate MUST match the path tags. Refuse a
-            // tampered/inconsistent manifest before fetching any third-party blob.
-            if (!manifest.verifyAggregate()) {
-                return Output.error(
-                    "aggregate_mismatch",
-                    "manifest x aggregate does not match its path tags",
-                    mapOf(
-                        "kind" to event.kind,
-                        "manifest_event_id" to event.id,
-                        "declared" to manifest.declaredAggregateHash(),
-                        "computed" to manifest.computeAggregateHash(),
-                    ),
-                )
-            }
-
-            val declaredAggregate = manifest.declaredAggregateHash()
+            val manifest =
+                NappletManifestData.parse(event)
+                    ?: return Output.error("invalid_manifest", "Invalid current NIP-5D manifest")
             return StaticSiteFetch.resolveAndEmit(
                 requestPath = requestPath,
-                paths = manifest.paths(),
-                servers = (manifest.servers() + extraServers).distinct(),
+                paths = manifest.paths,
+                servers = (manifest.servers + extraServers).distinct(),
                 manifestFields =
                     mapOf(
                         "kind" to event.kind,
                         "manifest_event_id" to event.id,
                         "d" to identifier,
-                        "requires" to manifest.requires(),
-                        "aggregate_sha256" to declaredAggregate,
-                        "aggregate_verified" to (declaredAggregate != null),
+                        "requires" to manifest.required,
+                        "optional" to manifest.optional,
+                        "artifact_sha256" to manifest.artifactHash,
                     ),
                 outFile = outFile,
                 maxInlineBytes = maxInlineBytes,

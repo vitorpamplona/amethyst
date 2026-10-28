@@ -64,7 +64,7 @@ fun resolveNappletMeta(
         }?.ifBlank { null } ?: identifier.ifBlank { untitled }
     val iconUrl =
         when (match) {
-            is NappletManifest -> match.icon()
+            is NappletManifest -> null // Current icons are verified blobs, never remote URLs.
             is RootSiteEvent -> match.icon()
             is NamedSiteEvent -> match.icon()
             else -> null

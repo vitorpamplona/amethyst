@@ -63,7 +63,7 @@ object NappletWebContract {
      * applet's** origin, but has no network and cannot navigate or submit anywhere.
      */
     fun shellCsp(frameSource: String): String =
-        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+        "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
             "frame-src $frameSource; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     /**
@@ -72,7 +72,7 @@ object NappletWebContract {
      * intentionally unavailable; a conforming napplet is one self-contained `/index.html`.
      */
     const val APP_CSP: String =
-        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; " +
+        "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
             "img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; " +
             "child-src 'none'; frame-src 'none'; media-src 'none'; object-src 'none'; " +
             "manifest-src 'none'; base-uri 'none'; form-action 'none'"
@@ -109,23 +109,12 @@ object NappletWebContract {
                 .distinct()
         val domainsJson = safeDomains.joinToString(prefix = "[", postfix = "]") { "\"$it\"" }
         val prelude = "$policy$style$flags<script>window.__nappletDomains=$domainsJson;$shimJs</script>"
-        val headIdx = text.indexOf("<head", ignoreCase = true)
-        val injected =
-            when {
-                headIdx >= 0 -> {
-                    val close = text.indexOf('>', headIdx)
-                    if (close >= 0) text.substring(0, close + 1) + prelude + text.substring(close + 1) else prelude + text
-                }
-                else -> {
-                    val htmlIdx = text.indexOf("<html", ignoreCase = true)
-                    val htmlClose = if (htmlIdx >= 0) text.indexOf('>', htmlIdx) else -1
-                    if (htmlClose >= 0) {
-                        text.substring(0, htmlClose + 1) + "<head>$prelude</head>" + text.substring(htmlClose + 1)
-                    } else {
-                        "<head>$prelude</head>$text"
-                    }
-                }
-            }
+        // Establish the parser's head before *any* authored input. Searching for "<head" is unsafe:
+        // it may be in a comment, quoted attribute, or after an already executable script. HTML's
+        // parser merges a subsequent html element's attributes and ignores a second head start tag;
+        // the authored head end/body start still closes this head normally. A repeated doctype is
+        // ignored. The original artifact bytes used for verification remain untouched by this step.
+        val injected = "<!doctype html><html><head>$prelude$text"
         return injected.encodeToByteArray()
     }
 

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletManifestData
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
@@ -137,11 +138,13 @@ object NappletLauncher {
         title: String,
         requires: List<String>,
         profile: HostProfile,
+        manifestKind: Int? = null,
+        manifestEventId: String? = null,
     ): Bundle {
         val effectiveAggregateHash =
             if (profile == HostProfile.NAPPLET) {
-                requireNotNull(NappletArtifactPolicy.verifiedAggregateHash(paths, aggregateHash)) {
-                    "NIP-5D requires one self-contained /index.html with a valid blob hash and matching aggregate."
+                requireNotNull(NappletArtifactPolicy.verifiedArtifactHash(paths, aggregateHash)) {
+                    "NIP-5D requires one self-contained /index.html with a valid artifact hash matching its x tag."
                 }
             } else {
                 aggregateHash
@@ -159,7 +162,7 @@ object NappletLauncher {
 
         // Mint the launch token in the (trusted) main process: the broker resolves the sandbox's
         // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
-        val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = effectiveAggregateHash)
+        val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = effectiveAggregateHash, manifestKind = manifestKind, manifestEventId = manifestEventId)
         val declared = profile.declaredCapabilities(requires)
         // Bound to the account launching it, so the surface keeps signing as that account even if the
         // user switches while it is open (an embedded surface is rebuilt on a switch and re-mints).
@@ -228,16 +231,21 @@ object NappletLauncher {
             return null
         }
         return runCatching {
+            val current = requireNotNull(NappletManifestData.parse(event)) { "Invalid current NIP-5D manifest" }
+            require(identifier == current.identifier) { "Manifest identifier mismatch" }
+            require(current.unsupportedRequired.isEmpty()) { "Unavailable required NAP domains: ${current.unsupportedRequired}" }
             buildLaunchParamsTrusted(
                 context = context,
-                paths = manifest.paths(),
-                servers = manifest.servers(),
+                paths = current.paths,
+                servers = current.servers,
                 authorPubKey = authorPubKey,
                 identifier = identifier,
-                aggregateHash = manifest.declaredAggregateHash() ?: manifest.computeAggregateHash(),
-                title = manifest.title() ?: identifier.ifBlank { "Napplet" },
-                requires = manifest.requires(),
+                aggregateHash = current.artifactHash,
+                title = current.title ?: identifier.ifBlank { "Napplet" },
+                requires = current.exposedDomains,
                 profile = HostProfile.NAPPLET,
+                manifestKind = event.kind,
+                manifestEventId = event.id,
             )
         }.onFailure { Log.w(TAG, "Refusing invalid embedded NIP-5D launch", it) }
             .getOrNull()
