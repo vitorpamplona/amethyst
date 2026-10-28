@@ -78,10 +78,48 @@ func enginePlay(_ uri: String) {
     disposeVideoPlayer(p)
 }
 
+
+// How a feed card opens a video: paused (kdroidFilter's InitialPlayerState.PAUSE never calls play),
+// shown on its first frame, moved to where it was (restorePosition), then played.
+func enginePausedCard(_ uri: String) {
+    guard let p = createVideoPlayer() else { log("  [card] create failed"); return }
+    setVolume(p, 0)
+    uri.withCString { openUri(p, $0) }
+    var sized = false
+    for _ in 0..<20 { if getFrameWidth(p) > 0 { sized = true; break }; Thread.sleep(forTimeInterval: 0.25) }
+    if !sized { log("  [card] no size in 5 s"); disposeVideoPlayer(p); return }
+    // kdroidFilter scales output to the card's surface.
+    _ = setOutputSize(p, 360, 640)
+    func countFrames(_ seconds: Double) -> (Int, Int32, Int32) {
+        var frames = 0
+        var last: UnsafeMutableRawPointer? = nil
+        var info = [Int32](repeating: 0, count: 8)
+        let end = Date().addingTimeInterval(seconds)
+        while Date() < end {
+            let f = info.withUnsafeMutableBufferPointer { lockLatestFrame(p, $0.baseAddress) }
+            if let f = f { if f != last || frames == 0 { frames += 1 }; last = f; unlockLatestFrame(p) }
+            Thread.sleep(forTimeInterval: 0.02)
+        }
+        return (frames, info[0], info[1])
+    }
+    let paused = countFrames(3)
+    log("  [card] paused 3s: frames=\(paused.0) size=\(paused.1)x\(paused.2) time=\(String(format: "%.2f", getCurrentTime(p)))")
+    seekTo(p, 0)
+    let afterSeek = countFrames(1)
+    log("  [card] paused after seek(0): frames=\(afterSeek.0) time=\(String(format: "%.2f", getCurrentTime(p)))")
+    playVideo(p)
+    let playing = countFrames(3)
+    log("  [card] playing 3s: frames=\(playing.0) size=\(playing.1)x\(playing.2) time=\(String(format: "%.2f", getCurrentTime(p)))")
+    pauseVideo(p)
+    Thread.sleep(forTimeInterval: 0.3)
+    disposeVideoPlayer(p)
+}
+
 DispatchQueue.global().async {
     for uri in CommandLine.arguments.dropFirst() {
         log("=== \(uri)")
         enginePlay(uri)
+        enginePausedCard(uri)
         avProbe(uri)
     }
     exit(0)
