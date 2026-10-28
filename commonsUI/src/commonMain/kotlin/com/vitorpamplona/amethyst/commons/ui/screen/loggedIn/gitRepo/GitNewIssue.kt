@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_new_issue_body
@@ -138,13 +139,18 @@ private fun GitNewIssueForm(
             )
             // Pictures and videos of the problem: uploaded, linked in the body, and described by
             // an imeta tag on the issue, as in a comment.
-            SelectFromGallery(
-                isUploading = viewModel.mediaUploadTracker.isUploadingImage,
-                enabled = !viewModel.mediaUploadTracker.isUploadingFile,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier,
-            ) {
-                viewModel.selectMedia(it)
+            Row {
+                SelectFromGallery(
+                    isUploading = viewModel.mediaUploadTracker.isUploadingImage,
+                    enabled = !viewModel.mediaUploadTracker.isUploadingFile,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier,
+                ) {
+                    viewModel.selectMedia(it)
+                }
+                DrawingButton(accountViewModel, enabled = !viewModel.mediaUploadTracker.isUploading) { drawing, alt ->
+                    viewModel.uploadDrawing(drawing, alt, accountViewModel.toastManager::toast, accountViewModel.host.mediaUploader)
+                }
             }
             viewModel.multiOrchestrator?.let {
                 ImageVideoDescription(

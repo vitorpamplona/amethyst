@@ -52,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -607,6 +608,10 @@ private fun BottomRowActions(postViewModel: CommentPostViewModel) {
                 postViewModel.selectImage(it)
             },
         )
+
+        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
+        }
 
         EmojiPickerButton(postViewModel.emojiSuggestions?.emojiPacks, postViewModel.message)
 

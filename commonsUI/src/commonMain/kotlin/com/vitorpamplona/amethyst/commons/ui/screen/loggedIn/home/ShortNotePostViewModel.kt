@@ -56,15 +56,11 @@ import com.vitorpamplona.amethyst.commons.model.composer.toZapSplitSetup
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
-import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.drawing_upload_failed
 import com.vitorpamplona.amethyst.commons.resources.error
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media_no_details
-import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_sign_events
-import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.upload_error_title
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_exception
 import com.vitorpamplona.amethyst.commons.resources.upload_error_voice_message_failed
@@ -99,8 +95,10 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.text.setTextAndPlaceCursorAtBeginning
+import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -121,7 +119,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -167,13 +164,11 @@ import com.vitorpamplona.quartz.nip94FileMetadata.alt
 import com.vitorpamplona.quartz.nip94FileMetadata.blurhash
 import com.vitorpamplona.quartz.nip94FileMetadata.dims
 import com.vitorpamplona.quartz.nip94FileMetadata.hash
-import com.vitorpamplona.quartz.nip94FileMetadata.image
 import com.vitorpamplona.quartz.nip94FileMetadata.magnet
 import com.vitorpamplona.quartz.nip94FileMetadata.mimeType
 import com.vitorpamplona.quartz.nip94FileMetadata.originalHash
 import com.vitorpamplona.quartz.nip94FileMetadata.sensitiveContent
 import com.vitorpamplona.quartz.nip94FileMetadata.size
-import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.nip94FileMetadata.thumbhash
 import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.nipA0VoiceMessages.BaseVoiceEvent
@@ -1648,125 +1643,23 @@ open class ShortNotePostViewModel :
         }
     }
 
-    /**
-     * Uploads a hand drawing and puts its GIF in the note.
-     *
-     * Both files go up as they are: the composer's own [upload] would re-encode
-     * the PNG as a JPEG and send the GIF through metadata stripping, which a GIF
-     * cannot take. The GIF's `imeta` is built here rather than from the upload
-     * result because the uploader measures a file's first frame, and a replay
-     * starts on blank paper: the blurhash and thumbhash come from the finished
-     * drawing instead, and the PNG becomes the `image` preview for clients that
-     * show a still. The PNG is a nice-to-have; if it fails, the GIF still posts.
-     */
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the note. */
     fun uploadDrawing(
         drawing: RenderedDrawing,
         alt: String?,
         onError: (title: String, message: String) -> Unit,
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            mediaUploadTracker.startUpload(false)
-            try {
-                val server = account.settings.defaultFileServer
-                val signer = if (wantsAnonymousPost) anonymousSigner() else null
-
-                // Both files go up at once: the PNG is only a preview, so the GIF does not wait for it.
-                val url =
-                    coroutineScope {
-                        // A NIP-95 post embeds the GIF itself and has no imeta to hang a preview on.
-                        val stillUpload =
-                            if (server.type == ServerType.NIP95) {
-                                null
-                            } else {
-                                async {
-                                    try {
-                                        (uploadGeneratedFile(drawing.still, RenderedDrawing.PNG_MIME_TYPE, alt, server, signer) as? UploadingState.Finished)?.result
-                                    } catch (e: Exception) {
-                                        if (e is CancellationException) throw e
-                                        Log.w("ShortNotePostViewModel", "Could not upload the drawing's still", e)
-                                        null
-                                    }
-                                }
-                            }
-
-                        val gifState = uploadGeneratedFile(drawing.gif, RenderedDrawing.GIF_MIME_TYPE, alt, server, signer)
-                        val gif = (gifState as? UploadingState.Finished)?.result
-                        if (gif == null) {
-                            stillUpload?.cancel()
-                            val reason = (gifState as? UploadingState.Error)?.let { loadStringRes(it.errorResource, *it.params) }
-                            onError(loadStringRes(Res.string.failed_to_upload_media_no_details), reason ?: loadStringRes(Res.string.drawing_upload_failed))
-                            return@coroutineScope null
-                        }
-
-                        when (gif) {
-                            is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                stillUpload?.cancel()
-                                val nip95 = account.createNip95(gif.bytes, headerInfo = gif.fileHeader, alt, null)
-                                nip95attachments = nip95attachments + nip95
-                                account.consumeNip95(nip95.first, nip95.second)?.let { "nostr:" + it.toNEvent() }
-                            }
-
-                            is UploadOrchestrator.OrchestratorResult.ServerResult -> {
-                                val still = stillUpload?.await()
-                                val iMeta =
-                                    IMetaTagBuilder(gif.url)
-                                        .apply {
-                                            hash(gif.fileHeader.hash)
-                                            size(gif.fileHeader.size)
-                                            mimeType(RenderedDrawing.GIF_MIME_TYPE)
-                                            dims(DimensionTag(drawing.width, drawing.height))
-                                            drawing.blurhash?.let { blurhash(it) }
-                                            drawing.thumbhash?.let { thumbhash(it) }
-                                            (still as? UploadOrchestrator.OrchestratorResult.ServerResult)?.let { image(it.url) }
-                                            gif.magnet?.let { magnet(it) }
-                                            gif.uploadedHash?.let { originalHash(it) }
-                                            alt?.let { alt(it) }
-                                        }.build()
-                                iMetaAttachments.replace(iMeta.url, iMeta)
-                                gif.url
-                            }
-                        }
-                    }
-
-                if (url != null) {
-                    onUiThread { message.insertUrlAtCursor(url) }
-                    urlPreviews.update(message.text.toString())
-                }
-            } catch (_: SignerExceptions.ReadOnlyException) {
-                onError(
-                    loadStringRes(Res.string.read_only_user),
-                    loadStringRes(Res.string.login_with_a_private_key_to_be_able_to_sign_events),
-                )
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("ShortNotePostViewModel", "Drawing upload failed", e)
-                onError(loadStringRes(Res.string.failed_to_upload_media_no_details), e.message ?: loadStringRes(Res.string.drawing_upload_failed))
-            } finally {
-                drawing.delete()
-                mediaUploadTracker.finishUpload()
+            val signer = if (wantsAnonymousPost) anonymousSigner() else null
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, signer = signer) ?: return@launch
+            when (uploaded) {
+                is UploadedDrawing.Embedded -> nip95attachments = nip95attachments + uploaded.events
+                is UploadedDrawing.OnServer -> iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
             }
+            onUiThread { message.insertUrlAtCursor(uploaded.link) }
+            urlPreviews.update(message.text.toString())
         }
     }
-
-    private suspend fun uploadGeneratedFile(
-        file: Path,
-        mimeType: String,
-        alt: String?,
-        server: ServerName,
-        signer: NostrSigner?,
-    ): UploadingState.UploadingFinalState =
-        UploadOrchestrator().upload(
-            uri = mediaUriOfFile(file),
-            mimeType = mimeType,
-            alt = alt,
-            contentWarningReason = null,
-            compressionQuality = CompressorQuality.UNCOMPRESSED,
-            server = server,
-            account = account,
-            uploader = accountViewModel.host.mediaUploader,
-            stripMetadata = false,
-            forcedSigner = signer,
-        )
 
     open fun cancel() {
         draftTag.rotate()

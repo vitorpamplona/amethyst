@@ -8268,6 +8268,7 @@
     <string name="drawing_making_gif">Making the replay…</string>
     <string name="drawing_export_failed">Could not make the drawing's replay</string>
     <string name="drawing_upload_failed">The drawing could not be uploaded</string>
+    <string name="drawing_nip95_not_supported">Drawings can't be embedded with NIP-95 here. Choose a default server in Media Servers.</string>
     <string name="drawing_discard_title">Discard this drawing?</string>
     <string name="drawing_discard_message">It has not been added to your post yet.</string>
     <string name="drawing_discard">Discard</string>

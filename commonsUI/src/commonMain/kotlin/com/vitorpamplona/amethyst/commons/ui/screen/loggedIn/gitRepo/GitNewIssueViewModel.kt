@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -41,8 +42,10 @@ import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMediaProcessin
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
+import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
 import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
@@ -103,6 +106,23 @@ class GitNewIssueViewModel : ViewModel() {
         orchestrator.remove(selected)
         // An empty orchestrator still renders the gallery, which reads its first item.
         if (orchestrator.size() == 0) multiOrchestrator = null
+    }
+
+    /** Uploads a hand drawing ([uploadDrawing]) and links its GIF at the end of the body. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+        uploader: MediaUploader,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uploaded = uploadDrawing(drawing, alt, account, uploader, mediaUploadTracker, onError) ?: return@launch
+            when (uploaded) {
+                is UploadedDrawing.Embedded -> nip95Attachments = nip95Attachments + (uploaded.link to uploaded.events)
+                is UploadedDrawing.OnServer -> iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
+            }
+            appendToBody(uploaded.link)
+        }
     }
 
     fun upload(

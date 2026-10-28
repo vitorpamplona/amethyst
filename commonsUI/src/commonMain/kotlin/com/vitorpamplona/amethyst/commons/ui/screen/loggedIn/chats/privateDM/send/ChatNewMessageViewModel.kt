@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -62,7 +63,10 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -469,6 +473,39 @@ class ChatNewMessageViewModel :
         }
 
         return location!!
+    }
+
+    /**
+     * Uploads a hand drawing ([uploadDrawing]), encrypted unless the chat's uploads were switched
+     * to plain ones, and holds it to go out as a file message with the next send.
+     */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        val uploadState = uploadState
+        viewModelScope.launch(Dispatchers.IO) {
+            if (uploadState == null) {
+                drawing.delete()
+                return@launch
+            }
+            val cipher = if (uploadState.encryptFiles) AESGCM() else null
+            val uploaded =
+                uploadDrawing(
+                    drawing,
+                    alt,
+                    account,
+                    accountViewModel.host.mediaUploader,
+                    uploadState.mediaUploadTracker,
+                    onError,
+                    server = uploadState.selectedServer,
+                    encrypt = cipher,
+                    allowNip95 = false,
+                ) as? UploadedDrawing.OnServer ?: return@launch
+            uploadsWaitingToBeSent += SuccessfulUploads(uploaded.gif, alt, null, cipher)
+            draftTag.newVersion()
+        }
     }
 
     fun uploadAndHold(

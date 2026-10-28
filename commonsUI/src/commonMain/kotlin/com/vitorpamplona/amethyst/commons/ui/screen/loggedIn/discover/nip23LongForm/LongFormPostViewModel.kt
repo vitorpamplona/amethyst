@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -70,7 +71,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.UploadedDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -486,6 +489,19 @@ class LongFormPostViewModel :
     ): String? =
         // Cover images were never stripped: keep them as picked, only compressed.
         uploadToDefaultServer(galleryUri, account, uploader, onError, stripMetadata = false)
+
+    /** Uploads a hand drawing ([uploadDrawing]) and puts its GIF in the article as a markdown image. An article carries no NIP-95 events. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uploaded = uploadDrawing(drawing, alt, account, accountViewModel.host.mediaUploader, mediaUploadTracker, onError, allowNip95 = false) as? UploadedDrawing.OnServer ?: return@launch
+            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
+            onUiThread { message.insertUrlAtCursor("![${alt ?: ""}](${uploaded.link})") }
+        }
+    }
 
     fun upload(
         alt: String?,
