@@ -100,6 +100,11 @@
 -dontwarn org.cef.**
 -dontwarn com.jogamp.**
 -dontwarn me.friwi.jcefmaven.**
+# jcefmaven unpacks its bundle with commons-compress (tar + gzip only); the xz, brotli, zstd and
+# pack200 (ASM) codecs it can also reach are optional and absent. JOGL's NEWT can drive SWT and
+# JavaFX windows; JCEF's windowed browser uses neither.
+-dontwarn org.apache.commons.compress.**
+-dontwarn jogamp.**
 
 -keep class androidx.sqlite.** { *; }
 -keepclassmembers class androidx.sqlite.** {
