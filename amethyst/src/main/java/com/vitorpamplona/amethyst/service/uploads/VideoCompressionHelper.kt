@@ -27,6 +27,7 @@ import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.davotoula.lightcompressor.CompressionListener
 import com.davotoula.lightcompressor.VideoCodec
 import com.davotoula.lightcompressor.VideoCompressor
@@ -40,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompression
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -59,13 +61,20 @@ object VideoCompressionHelper {
     ): VideoInfo? = getVideoInfo(uri, context, videoPixelAspectRatio(context, uri))
 
     /**
-     * Whether [uri] is HDR and whether [compressVideo] with H.265 keeps it so on this device. The
-     * library answers from the same policy compression uses, so the two cannot drift.
+     * Whether [uri] is HDR and whether [compressVideo] with H.265 keeps it so on this device; null
+     * when unreadable, like [probe]. The library answers from the same policy compression uses, so
+     * the two cannot drift.
      */
     fun probeHdr(
         context: Context,
         uri: Uri,
-    ): VideoHdrInfo = VideoCompressor.probeHdr(context, uri).let { VideoHdrInfo(isHdr = it.input != HdrInput.SDR, canKeepHdr = it.canKeepHdr) }
+    ): VideoHdrInfo? =
+        try {
+            VideoCompressor.probeHdr(context, uri).let { VideoHdrInfo(isHdr = it.input != HdrInput.SDR, canKeepHdr = it.canKeepHdr) }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "HDR probe failed", e)
+            null
+        }
 
     suspend fun compressVideo(
         uri: Uri,
@@ -141,15 +150,6 @@ object VideoCompressionHelper {
                                         size: Long,
                                         path: String?,
                                     ) {
-                                        // The encode finished just as the timeout fired or the post was cancelled
-                                        // (handle.cancel() below only reaches a video still encoding), so nobody
-                                        // holds this path any more. The library sends one terminal callback per
-                                        // video, so this is never a second onSuccess for a result already taken.
-                                        if (!continuation.isActive) {
-                                            path?.let { deleteOutput(it) }
-                                            return
-                                        }
-
                                         if (path == null) {
                                             applicationContext.notifyUser(
                                                 "Video compression succeeded, but path was null",
@@ -177,8 +177,8 @@ object VideoCompressionHelper {
                                             return
                                         }
 
-                                        // Show compression result
-                                        if (originalSize > 0 && size > 0) {
+                                        // No toast for a post that was cancelled or timed out while the encode finished.
+                                        if (continuation.isActive && originalSize > 0 && size > 0) {
                                             val sizeLabel = formatFileSize(applicationContext, size)
                                             val percentLabel =
                                                 if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
@@ -192,8 +192,9 @@ object VideoCompressionHelper {
                                                 "Compressed [$size] ($reductionPercent% reduction)"
                                         }
 
-                                        // Cancelled between the check above and here: the value is dropped, so the file goes too.
-                                        continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size)) { _, _, _ -> deleteOutput(path) }
+                                        // A continuation cancelled before or during this resume drops the value and
+                                        // runs the handler instead, so the finished file goes with it.
+                                        continuation.resume(MediaCompressorResult(File(path).toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                     }
 
                                     override fun onFailure(
@@ -204,18 +205,20 @@ object VideoCompressionHelper {
                                             "Video compression failed: $failureMessage",
                                             LogLevel.ERROR,
                                         )
-                                        if (continuation.isActive) continuation.resume(null)
+                                        continuation.resume(null)
                                     }
 
                                     override fun onCancelled(index: Int) {
                                         Log.w(LOG_TAG, "Video compression cancelled")
-                                        if (continuation.isActive) continuation.resume(null)
+                                        continuation.resume(null)
                                     }
                                 },
                         )
                     // The timeout or a cancelled post stops this encode (and only this one: the
                     // handle covers one start() call, so sibling uploads keep compressing). Runs at
                     // once if the continuation is already cancelled; a no-op once the batch finished.
+                    // The library sends exactly one terminal callback per video, and a resume on a
+                    // cancelled continuation is a no-op, so no callback above needs an isActive guard.
                     continuation.invokeOnCancellation { handle.cancel() }
                 }
             }
@@ -224,7 +227,7 @@ object VideoCompressionHelper {
     }
 
     private fun deleteOutput(path: String) {
-        if (!File(path).delete()) Log.w(LOG_TAG) { "Failed to delete compressed file: $path" }
+        File(path).deleteOrWarn(LOG_TAG, "compressed output")
     }
 
     private fun Context.getFileSize(uri: Uri): Long =

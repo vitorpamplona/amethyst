@@ -267,7 +267,6 @@ private fun ImageVideoPostChat(
     }
 
     VideoCompressionNeedsFfmpegHint(controls)
-    // Chat uploads have no codec switch and always compress as H.264, so an HDR clip is always converted.
     if (controls.videoWillBeCompressed) {
         VideoHdrHint(fileUploadState.multiOrchestrator, accountViewModel.host.mediaUploader, useH265 = false, offersH265 = false)
     }

@@ -710,18 +710,7 @@ class AndroidMediaUploader(
 
     override suspend fun probeVideo(uri: MediaUri): VideoInfo? = withContext(Dispatchers.IO) { VideoCompressionHelper.probe(appContext, uri) }
 
-    override suspend fun probeHdr(uri: MediaUri): VideoHdrInfo? =
-        withContext(Dispatchers.IO) {
-            // The library documents the probe as never throwing; a codec enumeration that does
-            // anyway must not take the upload dialog down, so "unknown" is the fallback.
-            try {
-                VideoCompressionHelper.probeHdr(appContext, uri)
-            } catch (e: Exception) {
-                if (e is CancellationException) throw e
-                Log.w("AndroidMediaUploader", "HDR probe failed", e)
-                null
-            }
-        }
+    override suspend fun probeHdr(uri: MediaUri): VideoHdrInfo? = withContext(Dispatchers.IO) { VideoCompressionHelper.probeHdr(appContext, uri) }
 
     override fun displayName(uri: MediaUri): String? =
         appContext.contentResolver.query(uri, null, null, null, null)?.use {

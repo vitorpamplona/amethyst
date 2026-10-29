@@ -106,6 +106,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoStandard
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.QuoteBorder
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import net.engawapg.lib.zoomable.MouseWheelZoom
 import net.engawapg.lib.zoomable.rememberZoomState
@@ -236,7 +239,10 @@ fun VideoHdrHint(
 ) {
     // Read each time, like the slider's image: removing a video changes the same orchestrator.
     val videos = media?.videos().orEmpty()
-    val probes by produceState(emptyList<VideoHdrInfo>(), videos) { value = videos.mapNotNull { uploader.probeHdr(it.uri) } }
+    val probes by
+        produceState(emptyList<VideoHdrInfo>(), videos) {
+            value = coroutineScope { videos.map { async { uploader.probeHdr(it.uri) } }.awaitAll().filterNotNull() }
+        }
     val outcome = hdrUploadOutcome(probes, useH265) ?: return
     val text =
         when (outcome) {
