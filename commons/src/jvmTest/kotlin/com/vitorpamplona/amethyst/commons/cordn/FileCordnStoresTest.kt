@@ -30,8 +30,17 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import okio.FileSystem
+import okio.ForwardingFileSystem
+import okio.ForwardingSource
+import okio.IOException
+import okio.Path
 import okio.Path.Companion.toOkioPath
+import okio.Source
 import java.io.File
+import java.io.FileNotFoundException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -297,6 +306,72 @@ class FileCordnStoresTest {
 
             assertEquals(24, store.listGroups().size)
             (1..24).forEach { assertContentEquals(byteArrayOf(it.toByte()), store.loadGroup("g$it")) }
+        }
+
+    /**
+     * The file-sharing rules Windows applies and POSIX does not: a file being
+     * renamed over cannot be opened, and a file someone is reading cannot be
+     * renamed over. Each window is widened so a race lands every run rather
+     * than once a week on the Windows CI job.
+     */
+    private class WindowsSharingFileSystem : ForwardingFileSystem(FileSystem.SYSTEM) {
+        private val replacing = ConcurrentHashMap.newKeySet<Path>()
+        private val reading = ConcurrentHashMap<Path, AtomicInteger>()
+        val refusedMoves = AtomicInteger()
+
+        override fun atomicMove(
+            source: Path,
+            target: Path,
+        ) {
+            if ((reading[target]?.get() ?: 0) > 0) {
+                refusedMoves.incrementAndGet()
+                throw IOException("$target: Access is denied")
+            }
+            replacing += target
+            try {
+                Thread.sleep(1)
+                super.atomicMove(source, target)
+            } finally {
+                replacing -= target
+            }
+        }
+
+        override fun source(file: Path): Source {
+            if (file in replacing) {
+                throw FileNotFoundException("$file (The process cannot access the file because it is being used by another process)")
+            }
+            val readers = reading.getOrPut(file) { AtomicInteger() }
+            readers.incrementAndGet()
+            Thread.sleep(1)
+            return object : ForwardingSource(super.source(file)) {
+                override fun close() {
+                    readers.decrementAndGet()
+                    super.close()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `a read racing a save of the same group neither fails nor forces a copy`() =
+        runTest {
+            // What the sync loop and a backup export do at once: one store
+            // persisting the group, another, separate instance reading it off
+            // disk. On Windows the read failed with a sharing violation, or the
+            // rename was refused and the write fell back to a non-atomic copy.
+            val fs = WindowsSharingFileSystem()
+            val writer = FileCordnGroupStore(dir(), cipher, fs)
+            val reader = FileCordnGroupStore(dir(), cipher, fs)
+            writer.saveGroup("g1", byteArrayOf(0))
+
+            withContext(Dispatchers.IO) {
+                listOf(
+                    async { repeat(100) { writer.saveGroup("g1", byteArrayOf(it.toByte())) } },
+                    async { repeat(100) { assertNotNull(reader.loadGroup("g1")) } },
+                ).awaitAll()
+            }
+
+            assertEquals(0, fs.refusedMoves.get(), "a rename was refused, so the write fell back to a copy")
         }
 
     @Test
