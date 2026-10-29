@@ -142,7 +142,8 @@ object VideoCompressionHelper {
                                 ) {
                                     // The timeout fired or the caller was cancelled: the library kept encoding
                                     // (cancel() would also stop the other uploads compressing alongside), and
-                                    // nobody holds this path any more.
+                                    // nobody holds this path any more. The library sends one terminal callback
+                                    // per video, so this is never a second onSuccess for a result already taken.
                                     if (!continuation.isActive) {
                                         path?.let { deleteOutput(it) }
                                         return
@@ -190,7 +191,8 @@ object VideoCompressionHelper {
                                             "Compressed [$size] ($reductionPercent% reduction)"
                                     }
 
-                                    continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
+                                    // Cancelled between the check above and here: the value is dropped, so the file goes too.
+                                    continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                 }
 
                                 override fun onFailure(
