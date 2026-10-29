@@ -97,20 +97,31 @@ and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each 
   `ListAccounts`, search prefetch, network time, DNS over HTTPS) ignore that flag, so every
   connection Chromium makes, loopback included, goes through `DesktopSocksRouter`, a SOCKS5 server
   in the app that refuses all of it unless an open nSite asked for a route (a net log of the test
-  run showed nothing else leaving). Permission prompts (camera, microphone, location) are denied.
+  run showed nothing else leaving). The router resolves a name before connecting directly and
+  refuses one that lands on this machine (DNS rebinding, `::ffff:127.0.0.1`), and closes every
+  refused connection; its pumps run on virtual threads. WebRTC can't go around it: UDP ignores a
+  SOCKS proxy, so the profile sets `webrtc.ip_handling_policy` to `disable_non_proxied_udp` (CEF
+  ignores the command-line switch; preferences can only be set on its UI thread, once the global
+  context starts, and the engine fails closed if one is refused). Third-party cookies are blocked
+  (`profile.cookie_controls_mode`). Permission prompts (camera, microphone, location) are denied.
   The profile is `jcef-cache/Default`: a napplet's opaque srcdoc keeps nothing there, an nSite's
   localStorage, IndexedDB and cookies persist under its own origin.
 - **Isolation:** renderer sandbox + the shared CSPs + opaque-origin srcdoc, in process. No child
   JVM: the trust boundary is the bridge check below.
-- **Serving:** `DesktopNappletSession` serves only `SHELL_URL` from memory (shell CSP header) and
-  cancels every other request before it leaves (data:, blob: and about:srcdoc stay local).
-  `DesktopNappletBlobs` fetches the artifact from the manifest's servers plus the author's
-  kind:10063 list into a content-addressed cache, writing only bytes that hash to their name;
-  quartz's `StaticSiteResolver` hashes again on every launch.
+- **Serving:** shared with Android: `NappletSiteServer` (commons) decides every response and the
+  session only translates it for Chromium. A napplet gets only `SHELL_URL` (shell CSP header); every
+  other request is cancelled before it leaves (data:, blob: and about:srcdoc stay local).
+  `NappletBlobStore` fetches each file from the event's servers into the content-addressed
+  `NappletBlobCache`, writing only bytes that hash to their name, with one download per blob however
+  many requests miss it at once. Files stream from the cache (a cancelled request closes its file);
+  only HTML is read whole, to prepend the prelude, which is built once per launch. The shell
+  base64-encodes the napplet into one presized array: a 20 MB napplet allocates its 28 MB page and
+  nothing more. The cache trims to 256 MB least recently used first, from one job as windows close.
 - **Transport:** CEF's message router. Chromium injects its query function into every frame,
   so only a query from the main frame at `SHELL_URL` is accepted; the shell captures the function
   and deletes it from its window. Replies go back through `executeJavaScript` into the shell's
-  `__nappletBridge.onmessage`, with the request id added as on Android.
+  `__nappletBridge.onmessage`, with the request id added as on Android; replies queued together go
+  in one script, in order.
 - **Broker:** `DesktopNappletHost` builds one per account with the gateways now shared in
   commons (`AccountNappletRelayGateway`, `AccountNappletWalletGateway`, `NappletResourceFetcher`,
   `AccountIdentityReader`, `DataStoreNappletStorage`) and the persisted
@@ -150,8 +161,10 @@ and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each 
   saves, and a site runs at its own per-account origin (verified files, 404 for unlisted ones, the
   client-route fallback, localStorage, `window.nostr` getPublicKey and signEvent through the
   connect and signer prompts, and no navigation away). `DesktopSocksRouterTest` covers the routes,
-  the loopback refusal, Tor carrying the connection, cutting open connections on a switch, and the
-  arbitration.
+  the loopback refusal, Tor carrying the connection, cutting open connections on a switch, closing
+  a refused connection, and the arbitration. With Chromium, a napplet's `RTCPeerConnection` sends
+  no packet to a STUN server on the machine's LAN address, and a burst of 100 replies reaches its
+  requests whole.
 - **Checked in the running app:** published nSites (Hallway logged in through NIP-07 and kept its
   login across a restart) and napplets (Mini Samurai) open from their cards; waiting for Tor,
   the fail-closed pane, the onion switch, find, zoom, the access window and Close.
@@ -161,8 +174,6 @@ Open:
 - "Manage permissions" is hidden on desktop: the per-app permission screen
   (`ConnectedAppDetailScreen`) is still Android's.
 - A site's service worker can't register on either platform: neither host serves worker scripts.
-- One storage jar for every account: a site's own origin is per account, but third-party cookies
-  it sets are shared.
 - While any site is on the open web, Chromium's own services go direct too (one process-wide
   route, as on Android).
 - No developer console panel: console messages and load errors go to the log.
@@ -175,7 +186,8 @@ Open:
 
 ## Status
 
-Shared core (broker, protocol, codec, resolver) is ready and unit-tested. The codec now lives in
-`commons/jvmAndroid` specifically so this desktop host can consume it. The remaining work is the
-desktop **edge** (engine + scheme handler + transport + gateways + UI) plus the three recommended
-extractions above — and on-device/desktop verification of the whole round-trip.
+Built and shipping behind the feed's Open button; the open items above remain. A 2026-10-29 audit
+fixed: blob downloads read with an API-33 call on Android (minSdk 26), WebRTC leaking around the
+router, refused SOCKS connections left open, names resolving to loopback, a broker kept for a
+logged-out account, races between a window's start and close and between route claims, and the
+performance items folded into Serving and Transport above.
