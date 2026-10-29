@@ -70,12 +70,11 @@ object NappletBlobHttp {
                     if (!r.isSuccessful || declared > MAX_BLOB_BYTES) {
                         null
                     } else {
-                        // A server that sends no length is still held to the cap: read one byte past it
-                        // and refuse anything that fills it.
-                        r.body
-                            .byteStream()
-                            .use { it.readNBytes(MAX_BLOB_BYTES.toInt() + 1) }
-                            .takeIf { it.size <= MAX_BLOB_BYTES }
+                        // A server that sends no length is still held to the cap: buffer one byte past
+                        // it and refuse anything that fills it. (Okio, not InputStream.readNBytes, which
+                        // Android only has from API 33.)
+                        val source = r.body.source()
+                        if (source.request(MAX_BLOB_BYTES + 1)) null else source.buffer.readByteArray()
                     }
                 }
         } catch (e: Exception) {
