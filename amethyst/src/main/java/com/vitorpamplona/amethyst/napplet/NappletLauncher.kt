@@ -24,10 +24,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.stringRes
@@ -35,6 +39,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Opens a napplet or nSite in the sandboxed [NappletHostActivity] (the `:napplet` process). The
@@ -53,12 +60,24 @@ object NappletLauncher {
         buildLaunchParams(context, manifest, authorPubKey, identifier)?.let { openHost(context, it) }
     }
 
-    /** Opens a NIP-5A nSite ([com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent] or `NamedSiteEvent`). */
+    /**
+     * Opens a NIP-5A nSite ([com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent] or
+     * `NamedSiteEvent`). A refused site says so, instead of the tap doing nothing.
+     */
     fun launchSite(
         context: Context,
         event: Event,
     ) {
-        buildSiteLaunchParams(context, event)?.let { openHost(context, it) }
+        val params = buildSiteLaunchParams(context, event)
+        if (params != null) {
+            openHost(context, params)
+        } else {
+            val app = context.applicationContext
+            Amethyst.instance.applicationIOScope.launch {
+                val message = loadStringRes(Res.string.nsite_open_failed)
+                withContext(Dispatchers.Main) { Toast.makeText(app, message, Toast.LENGTH_SHORT).show() }
+            }
+        }
     }
 
     private fun openHost(

@@ -26,7 +26,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
-import com.vitorpamplona.amethyst.commons.resources.nsite_desktop_open_failed
+import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.ui.note.NappletCardInfo
 import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
@@ -105,7 +105,7 @@ fun openSite(
 fun DesktopSiteCard(event: Event) {
     val host = LocalDesktopNappletHost.current
     val toaster = LocalAppPlatform.current.rememberToaster()
-    val openFailed = stringRes(Res.string.nsite_desktop_open_failed)
+    val openFailed = stringRes(Res.string.nsite_open_failed)
     val launchable = host != null && (event as? RootSiteEvent)?.paths()?.isNotEmpty() ?: (event as? NamedSiteEvent)?.paths()?.isNotEmpty() ?: false
     val onOpen = if (launchable) ({ openSite(host, event, toaster, openFailed) }) else null
     when (event) {

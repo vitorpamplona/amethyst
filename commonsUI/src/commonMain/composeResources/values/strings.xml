@@ -1148,7 +1148,7 @@
     <string name="napplet_desktop_failed_engine">The browser engine napplets run in did not start.</string>
     <string name="napplet_desktop_permission_title">%1$s asks for permission</string>
     <string name="napplet_desktop_open_failed">This napplet can’t be opened here.</string>
-    <string name="nsite_desktop_open_failed">This site can’t be opened here.</string>
+    <string name="nsite_open_failed">This site can’t be opened here.</string>
     <string name="napplet_desktop_failed_route">Tor isn’t running, so %1$s didn’t open. Nothing left this computer.</string>
     <string name="napplet_desktop_retry">Try again</string>
     <string name="napplet_signer_allow_once">Allow once</string>
