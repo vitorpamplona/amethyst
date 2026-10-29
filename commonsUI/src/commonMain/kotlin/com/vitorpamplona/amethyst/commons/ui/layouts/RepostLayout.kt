@@ -33,9 +33,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.note.RepostIcon
-import com.vitorpamplona.amethyst.commons.ui.theme.Size18Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
-import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 
@@ -55,27 +52,11 @@ fun GenericRepostLayout(
     repostAuthorPicture: @Composable () -> Unit,
     size: Dp = Size55dp,
 ) {
-    if (size == Size55dp) {
-        GenericRepostLayout(Size55Modifier, Size35Modifier, Size18Modifier, baseAuthorPicture, repostAuthorPicture)
-    } else {
-        // Keeps the proportions of the 55dp layout: two 35dp pictures and an 18dp icon.
-        val modifiers =
-            remember(size) {
-                Triple(Modifier.size(size), Modifier.size(size * 35 / 55), Modifier.size(size * 18 / 55))
-            }
-        GenericRepostLayout(modifiers.first, modifiers.second, modifiers.third, baseAuthorPicture, repostAuthorPicture)
-    }
-}
+    // The proportions of the 55dp layout: two 35dp pictures in opposite corners and an 18dp icon.
+    val picture = remember(size) { Modifier.size(size * 35 / 55) }
+    val icon = remember(size) { Modifier.size(size * 18 / 55) }
 
-@Composable
-private fun GenericRepostLayout(
-    outer: Modifier,
-    picture: Modifier,
-    icon: Modifier,
-    baseAuthorPicture: @Composable () -> Unit,
-    repostAuthorPicture: @Composable () -> Unit,
-) {
-    Box(modifier = outer) {
+    Box(modifier = remember(size) { Modifier.size(size) }) {
         Box(remember(picture) { picture.align(Alignment.TopStart) }) { baseAuthorPicture() }
 
         Box(

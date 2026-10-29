@@ -42,6 +42,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -493,7 +494,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
@@ -1300,6 +1300,29 @@ fun ClickableNote(
     }
 }
 
+/**
+ * The bleed a reposted note's body takes from its repost. Only that note's [InnerNoteWithReactions]
+ * reads it, so the rest of what a boosted note draws (its header, hidden-note and community cards,
+ * reactions) never sees one.
+ */
+private val LocalBoostedNoteBleed = compositionLocalOf { 0.dp }
+
+/** Provides [LocalMediaBleed] and [LocalBoostedNoteBleed], skipping whichever already holds its value. */
+@Composable
+private fun ProvideNoteBleeds(
+    media: Dp,
+    boostedNote: Dp,
+    content: @Composable () -> Unit,
+) {
+    if (LocalBoostedNoteBleed.current == boostedNote) {
+        ProvideMediaBleed(media, content)
+    } else {
+        CompositionLocalProvider(LocalBoostedNoteBleed provides boostedNote) {
+            ProvideMediaBleed(media, content)
+        }
+    }
+}
+
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
@@ -1330,12 +1353,12 @@ fun InnerNoteWithReactions(
     val gutter = if (notBoostedNorQuote && !fullWidth) remember { ExpandedTextGutterState() } else null
     val providedGutter = if (isQuotedNote || fullWidth) null else gutter ?: LocalExpandedTextGutter.current
 
-    // A full-width note's media runs out to the screen edges, over its side padding. A boosted
+    // An edge-to-edge note's media runs out to the screen edges, over its side padding. A boosted
     // note sits in its booster's column and follows it; a quote is a box its media must stay in.
     val mediaBleed =
         when {
-            fullWidth -> NoteHorizontalPadding
-            isBoostedNote && !isQuotedNote -> LocalMediaBleed.current
+            fullWidth -> if (LocalDisplaySettings.current.edgeToEdgeMedia) NoteHorizontalPadding else 0.dp
+            isBoostedNote && !isQuotedNote -> LocalBoostedNoteBleed.current
             else -> 0.dp
         }
 
@@ -1383,7 +1406,7 @@ fun InnerNoteWithReactions(
             },
             noteContent = {
                 // Only the kinds RenderNoteRow hands mediaBleed to let their media run past the column.
-                ProvideMediaBleed(0.dp) {
+                ProvideNoteBleeds(0.dp, 0.dp) {
                     RenderNoteRow(
                         baseNote = baseNote,
                         backgroundColor = backgroundColor,
@@ -1676,13 +1699,13 @@ internal fun RenderNoteRow(
             }
 
             is RepostEvent -> {
-                ProvideMediaBleed(mediaBleed) {
+                ProvideNoteBleeds(0.dp, mediaBleed) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is GenericRepostEvent -> {
-                ProvideMediaBleed(mediaBleed) {
+                ProvideNoteBleeds(0.dp, mediaBleed) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
@@ -3444,8 +3467,8 @@ private fun RepostNoteAuthorPicture(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Each picture fills its 35/55 corner of the layout, less a 1dp sliver.
-    val pictureSize = if (size == Size55dp) Size34dp else size * 35 / 55 - 1.dp
+    // Each picture fills its 35/55 corner of the layout, less a 1dp sliver: 34dp at 55dp.
+    val pictureSize = size * 35 / 55 - 1.dp
     GenericRepostLayout(
         baseAuthorPicture = {
             NoteAuthorPicture(

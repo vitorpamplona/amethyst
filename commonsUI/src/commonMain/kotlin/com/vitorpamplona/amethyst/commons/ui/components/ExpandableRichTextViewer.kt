@@ -175,6 +175,8 @@ fun ExpandableTextViewer(
                 modifier =
                     Modifier
                         .align(Alignment.BottomCenter)
+                        // Fades the edges of media that bleeds past the text, too.
+                        .bleedHorizontally(LocalMediaBleed.current)
                         .fillMaxWidth()
                         .background(getGradient(backgroundColor)),
             ) {

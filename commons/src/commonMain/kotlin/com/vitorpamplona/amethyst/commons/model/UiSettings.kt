@@ -76,13 +76,15 @@ data class UiSettings(
 )
 
 /**
- * How feed notes place their author. [AUTHOR_COLUMN] keeps the picture in a column to the left
- * of the whole note (Twitter style); [FULL_WIDTH] puts it in a header row with the name, like the
- * Picture feed cards, and lets the content use the full width below.
+ * How feed notes place their author and media. [AUTHOR_COLUMN] keeps the picture in a column to
+ * the left of the whole note (Twitter style). [FULL_WIDTH] puts it in a header row with the name,
+ * like the Picture feed cards, and lets the content use the full width below. [EDGE_TO_EDGE] is
+ * [FULL_WIDTH] with the note's own images and videos running out to the screen edges.
  */
 enum class NoteLayoutType {
     AUTHOR_COLUMN,
     FULL_WIDTH,
+    EDGE_TO_EDGE,
 }
 
 /**

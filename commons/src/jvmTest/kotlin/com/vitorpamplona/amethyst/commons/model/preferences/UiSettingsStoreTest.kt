@@ -143,7 +143,7 @@ class UiSettingsStoreTest {
                     showOnchainWallet = false,
                     showPayToZapChip = false,
                     spellCheck = SpellCheckType.BUILT_IN,
-                    noteLayout = NoteLayoutType.FULL_WIDTH,
+                    noteLayout = NoteLayoutType.EDGE_TO_EDGE,
                 )
 
             store.save(settings)

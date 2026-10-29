@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
@@ -90,7 +91,7 @@ fun BlossomUriRenderer(
 ) {
     val media = state.mediaForPager[word]
     if (media != null) {
-        BleedingMedia(HalfVertPadding) { roundedCorner ->
+        BleedingMedia(HalfVertPadding, enabled = media !is MediaUrlPdf) { roundedCorner ->
             ZoomableContentView(
                 content = media,
                 images = state.mediaList,

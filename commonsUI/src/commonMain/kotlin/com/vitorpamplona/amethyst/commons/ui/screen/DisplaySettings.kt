@@ -48,6 +48,8 @@ data class DisplaySettings(
     val autoPlayVideos: Boolean = true,
     /** Notes put the author above a full-width body instead of in a picture column beside it. */
     val fullWidthNotes: Boolean = false,
+    /** Full-width notes also run their own images and videos out to the screen edges. */
+    val edgeToEdgeMedia: Boolean = false,
 ) {
     /** Robohash fallbacks are skipped in performance mode (a plain face icon instead). */
     val loadRobohash: Boolean get() = !performanceMode
@@ -70,7 +72,8 @@ fun collectDisplaySettings(settings: UiSettingsState): DisplaySettings {
             showProfilePictures = showProfilePictures,
             performanceMode = featureSet == FeatureSetType.PERFORMANCE,
             autoPlayVideos = autoPlayVideos,
-            fullWidthNotes = noteLayout == NoteLayoutType.FULL_WIDTH,
+            fullWidthNotes = noteLayout != NoteLayoutType.AUTHOR_COLUMN,
+            edgeToEdgeMedia = noteLayout == NoteLayoutType.EDGE_TO_EDGE,
         )
     }
 }

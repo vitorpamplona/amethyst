@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.resources.gallery_type_classic
 import com.vitorpamplona.amethyst.commons.resources.gallery_type_modern
 import com.vitorpamplona.amethyst.commons.resources.light
 import com.vitorpamplona.amethyst.commons.resources.note_layout_author_column
+import com.vitorpamplona.amethyst.commons.resources.note_layout_edge_to_edge
 import com.vitorpamplona.amethyst.commons.resources.note_layout_full_width
 import com.vitorpamplona.amethyst.commons.resources.system
 import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_complete
@@ -121,6 +122,7 @@ val NoteLayoutType.resourceId: StringResource
         when (this) {
             NoteLayoutType.AUTHOR_COLUMN -> Res.string.note_layout_author_column
             NoteLayoutType.FULL_WIDTH -> Res.string.note_layout_full_width
+            NoteLayoutType.EDGE_TO_EDGE -> Res.string.note_layout_edge_to_edge
         }
 
 val WarningType.resourceId: StringResource

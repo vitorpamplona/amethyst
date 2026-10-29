@@ -56,7 +56,7 @@ fun FileMetadataDisplay(
         if (content == null) {
             FileMetadataAttachmentCard(event, fullUrl, mimeType)
         } else {
-            BleedingMedia(roundedCorner = roundedCorner) { rounded ->
+            BleedingMedia(roundedCorner = roundedCorner, enabled = content !is MediaUrlPdf) { rounded ->
                 ZoomableContentView(
                     content = content,
                     roundedCorner = rounded,

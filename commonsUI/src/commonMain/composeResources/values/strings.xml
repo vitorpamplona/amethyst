@@ -5957,13 +5957,14 @@
     <string name="ui_feature_set_type_simplified">Simplified</string>
     <string name="ui_feature_set_type_simplified_short">Simple</string>
     <string name="ui_preferences">UI Preferences</string>
-    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, full width, twitter, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download</string>
+    <string name="ui_preferences_search_keywords" translatable="false">application, dark mode, light mode, theme, accent color, font, font size, language, appearance, ui mode, simple, fast, post layout, indented, full width, borderless, edge to edge, twitter, immersive scrolling, hide nav bars, deck, columns, workspaces, image preview, video playback, videos, autoplay, url preview, link preview, profile picture, media, data, wi-fi, updates, update, upgrade, version, download</string>
     <string name="ui_style">UI Mode</string>
     <string name="ui_style_description">Choose the post style</string>
     <string name="note_layout">Post Layout</string>
-    <string name="note_layout_description">Keep the author's picture in a column beside each post, or above it so the post uses the full width</string>
-    <string name="note_layout_author_column">Twitter</string>
+    <string name="note_layout_description">Indent posts past the author's picture, put the picture above so posts use the full width, or also run images and videos to the screen edges</string>
+    <string name="note_layout_author_column">Indented</string>
     <string name="note_layout_full_width">Full Width</string>
+    <string name="note_layout_edge_to_edge">Borderless</string>
     <string name="unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error">Unable to create a lightning invoice before sending the zap. The receiver's lightning wallet sent the following error: %1$s</string>
     <string name="unable_to_share_image">Unable to share image, please try again later…</string>
     <string name="unable_to_share_video">Unable to share video, please try again later…</string>

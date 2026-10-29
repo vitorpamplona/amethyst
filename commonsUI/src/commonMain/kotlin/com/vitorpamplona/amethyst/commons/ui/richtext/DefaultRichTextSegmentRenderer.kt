@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.richtext.HashIndexUserSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageGalleryParagraph
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.NowhereLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayGroupLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
@@ -98,7 +99,7 @@ open class DefaultRichTextSegmentRenderer(
 
         if (canPreview) {
             state.mediaForPager[segment.segmentText]?.let {
-                BleedingMedia(HalfVertPadding) { roundedCorner ->
+                BleedingMedia(HalfVertPadding, enabled = it !is MediaUrlPdf) { roundedCorner ->
                     ZoomableContentView(
                         content = it,
                         images = state.mediaList,
@@ -118,7 +119,7 @@ open class DefaultRichTextSegmentRenderer(
         paragraph: ImageGalleryParagraph,
         state: RichTextViewerState,
         modifier: Modifier,
-    ) = BleedingMedia { roundedCorner -> ImageGallery(paragraph, state, accountViewModel, modifier, roundedCorner = roundedCorner) }
+    ) = BleedingMedia(modifier) { roundedCorner -> ImageGallery(paragraph, state, accountViewModel, roundedCorner = roundedCorner) }
 
     @Composable
     override fun Equation(
