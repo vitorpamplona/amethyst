@@ -648,7 +648,16 @@ class DesktopAppModules(
      * `AMETHYST_LOGIN` to open the same account.
      */
     private suspend fun startupSignUp(name: String) {
-        val account = sessionManager.signUp(name, transientAccount = true)
+        val account =
+            try {
+                sessionManager.signUp(name, transientAccount = true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // signUp set the loading screen; without this it would stay there.
+                Log.e("DesktopAppModules", "Could not sign up at start", e)
+                openKeysAndLogIn()
+                return
+            }
         val keyFile = File(filesDir, SIGNUP_KEY_FILE)
         try {
             // Restricted while still empty, so the key is never readable by others.

@@ -81,8 +81,9 @@ case "${1:-}" in
         --login)
           [ $# -ge 2 ] || { echo "--login needs a key" >&2; exit 2; }
           # On the command line the key shows in `ps` and in the shell history: public keys only.
-          # The app reads a bare 64-char hex key as a private key.
-          if [[ "$2" == nsec1* || "$2" == ncryptsec1* || "$2" =~ ^[0-9a-fA-F]{64}$ ]]; then
+          # Any case, as the app reads keys; a bare 64-char hex key or a seed phrase is a private key.
+          login_lower="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$login_lower" == nsec1* || "$login_lower" == ncryptsec1* || "$login_lower" =~ ^[0-9a-f]{64}$ || "$2" =~ [[:space:]] ]]; then
             echo "--login takes public keys only: a private key on the command line shows in ps. Use --login-file." >&2
             exit 2
           fi

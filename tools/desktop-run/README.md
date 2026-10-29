@@ -72,9 +72,9 @@ AMETHYST_DISPLAY=:98 AMETHYST_SCREEN=480x900x24 tools/desktop-run/run-headless.s
 | `--login-file <path>` | Logged in with the key in that file, an `nsec` included |
 | `--signup "<name>"` | A new account, signed up as the Sign Up button does (below) |
 
-Pass at most one. `--login` refuses an `nsec`, `ncryptsec` or 64-character hex key (the app reads
-that as a private key): arguments show in `ps` and in the shell history, so a private key goes in a
-file. `--login-file` is read before `--fresh` clears the profile, so
+Pass at most one. `--login` refuses an `nsec`, an `ncryptsec`, a 64-character hex key (the app
+reads that as a private key) and a seed phrase: arguments show in `ps` and in the shell history, so
+a private key goes in a file. `--login-file` is read before `--fresh` clears the profile, so
 `start --fresh --login-file /tmp/amethyst-desktop-run/profile/signup.nsec` works.
 
 The login is transient: the key goes to no keyring, password file or account list, so no key prompt
@@ -94,8 +94,8 @@ also works there, but shows in `ps`, so keep it to public keys).
 - **Sign up without the screen:** `start --signup "<display name>"` does what the Sign Up button
   does with that name: a new key, Amethyst's default relays and lists published to public relays,
   and the Import Follow List screen to start on. The account is transient like `--login` (no
-  password prompt), so its nsec is written to `profile/signup.nsec` (owner-only) and the log names
-  the npub; reopen the same account later with
+  password prompt), so its nsec is written to `profile/signup.nsec` (owner-only, replacing the last
+  sign-up's) and the log names the npub; reopen the same account later with
   `start --login-file /tmp/amethyst-desktop-run/profile/signup.nsec`. It publishes, so the rule
   above applies.
 - The container has no OS keyring, so a key that is remembered goes to the NIP-49 password file.
