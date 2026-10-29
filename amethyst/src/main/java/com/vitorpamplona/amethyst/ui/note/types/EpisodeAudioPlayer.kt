@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -106,6 +107,11 @@ fun EpisodeAudioPlayer(
 
             LaunchedEffect(controller, speed) {
                 controller.controller.setPlaybackSpeed(speed)
+            }
+
+            // Players are pooled and reused for other media: the feed's speed stays with this episode.
+            DisposableEffect(controller) {
+                onDispose { if (controller.controller.playbackParameters.speed != 1f) controller.controller.setPlaybackSpeed(1f) }
             }
 
             LaunchedEffect(controller, control) {

@@ -533,7 +533,8 @@ class DrssState(
         account: Account,
     ): Boolean {
         val event = list.event as? DrssEventListEvent ?: return false
-        val eventId = item.event?.id ?: item.idHex
+        // A collection holds event ids: an addressable note's id is its address, so it waits for its event.
+        val eventId = item.event?.id ?: if (item is AddressableNote) return false else item.idHex
         val next =
             if (eventListHolds(list, eventId)) {
                 if (event.items().size <= 1) return false

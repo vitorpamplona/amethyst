@@ -75,7 +75,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 
 /** How many of the river's latest articles the queue looks through for episodes. */
 private const val RIVER_SCAN_LIMIT = 300
@@ -113,7 +115,9 @@ fun DrssListenScreen(
         if (authors.isEmpty()) {
             flowOf(emptyList())
         } else {
-            LocalCache.observeNotes(Filter(kinds = listOf(LongFormContentEvent.KIND), authors = authors.toList(), limit = RIVER_SCAN_LIMIT))
+            LocalCache
+                .observeNotes(Filter(kinds = listOf(LongFormContentEvent.KIND), authors = authors.toList(), limit = RIVER_SCAN_LIMIT))
+                .flowOn(Dispatchers.Default)
         }
     }.collectAsStateWithLifecycle(emptyList())
 

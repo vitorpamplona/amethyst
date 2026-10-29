@@ -39,6 +39,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -100,6 +102,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 
 private const val SKIP_BACK_MS = 15_000L
 private const val SKIP_FORWARD_MS = 30_000L
@@ -137,8 +142,10 @@ fun DrssEpisodeAudio(
         .collectAsStateWithLifecycle()
     val speed = rates[feed] ?: 1f
 
-    var playhead by remember(note.address) { mutableStateOf<EpisodePlayhead?>(null) }
-    var clipWatch by remember(note.address) { mutableStateOf<DrssClipWatch?>(null) }
+    // Read only where it is needed (a click, the current chapter): it changes every second, and
+    // reading it here would redraw the whole player that often.
+    val playhead = remember(note.address) { mutableStateOf<EpisodePlayhead?>(null) }
+    val clipWatch = remember(note.address) { mutableStateOf<DrssClipWatch?>(null) }
     var capture by remember(note.address) { mutableStateOf<LongRange?>(null) }
 
     val save: (DrssListenSession.Save) -> Unit =
@@ -159,32 +166,26 @@ fun DrssEpisodeAudio(
         onDispose { session.onLeave()?.let(currentSave) }
     }
 
-    val playRange: (LongRange) -> Unit = { range ->
-        clipWatch = DrssClipWatch(range)
-        control.seek(range.first, play = true)
-    }
+    val playRange: (LongRange) -> Unit =
+        remember(control) {
+            { range ->
+                clipWatch.value = DrssClipWatch(range)
+                control.seek(range.first, play = true)
+            }
+        }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        progress?.let { DrssHeardBadge(it) }
-        LocalNotePlatform.current.EpisodeAudioPlayer(
-            audioUrl = audio.url,
-            mimeType = audio.mimeType,
-            title = event.title(),
-            image = event.image(),
-            note = note,
-            startAtSeconds = progress?.position()?.takeIf { it > 0 },
-            speed = speed,
-            control = control,
-            onPlayhead = { sample ->
-                val wasEnded = playhead?.hasEnded == true
-                playhead = sample
-                clipWatch?.let { watch ->
+    val onPlayhead: (EpisodePlayhead) -> Unit =
+        remember(session, control) {
+            { sample ->
+                val wasEnded = playhead.value?.hasEnded == true
+                playhead.value = sample
+                clipWatch.value?.let { watch ->
                     when (watch.onSample(sample.positionMillis, sample.isPlaying)) {
                         DrssClipWatch.Step.PAUSE -> {
                             control.pause()
-                            clipWatch = null
+                            clipWatch.value = null
                         }
-                        DrssClipWatch.Step.DONE -> clipWatch = null
+                        DrssClipWatch.Step.DONE -> clipWatch.value = null
                         DrssClipWatch.Step.KEEP -> {}
                     }
                 }
@@ -197,21 +198,35 @@ fun DrssEpisodeAudio(
                         nowMillis = TimeUtils.nowMillis(),
                     )?.let(currentSave)
                 if (sample.hasEnded && !wasEnded) ended?.invoke()
-            },
+            }
+        }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        progress?.let { DrssHeardBadge(it) }
+        LocalNotePlatform.current.EpisodeAudioPlayer(
+            audioUrl = audio.url,
+            mimeType = audio.mimeType,
+            title = event.title(),
+            image = event.image(),
+            note = note,
+            startAtSeconds = progress?.position()?.takeIf { it > 0 },
+            speed = speed,
+            control = control,
+            onPlayhead = onPlayhead,
             accountViewModel = accountViewModel,
         )
 
         DrssEpisodeControls(
-            positionMillis = playhead?.positionMillis ?: 0,
-            durationMillis = playhead?.durationMillis,
+            playhead = playhead,
             chapters = chapters,
             speed = speed,
             onSpeed = { account.drss.rates.set(feed, it) },
             control = control,
             canClip = account.isWriteable() && capture == null,
             onClip = {
-                val now = playhead?.positionMillis ?: 0
-                val end = if (now > 0) now else CLIP_WINDOW_MS
+                val now = playhead.value?.positionMillis ?: 0
+                val duration = playhead.value?.durationMillis
+                val end = if (now > 0) now else CLIP_WINDOW_MS.coerceAtMost(duration ?: CLIP_WINDOW_MS)
                 capture = (end - CLIP_WINDOW_MS).coerceAtLeast(0)..end
             },
         )
@@ -219,7 +234,7 @@ fun DrssEpisodeAudio(
         capture?.let { range ->
             DrssClipMaker(
                 range = range,
-                durationMillis = playhead?.durationMillis,
+                durationMillis = { playhead.value?.durationMillis },
                 onChange = { capture = it },
                 onPreview = playRange,
                 onSave = { comment ->
@@ -233,7 +248,7 @@ fun DrssEpisodeAudio(
         }
 
         if (chapters.isNotEmpty()) {
-            DrssChapterList(chapters, (playhead?.positionMillis ?: 0) / 1000) { control.seek(it * 1000, play = true) }
+            DrssChapterList(chapters, playhead) { control.seek(it * 1000, play = true) }
         }
 
         DrssEpisodeClips(note, accountViewModel, playRange)
@@ -242,8 +257,7 @@ fun DrssEpisodeAudio(
 
 @Composable
 private fun DrssEpisodeControls(
-    positionMillis: Long,
-    durationMillis: Long?,
+    playhead: State<EpisodePlayhead?>,
     chapters: List<DrssChapter>,
     speed: Float,
     onSpeed: (Float) -> Unit,
@@ -251,26 +265,28 @@ private fun DrssEpisodeControls(
     canClip: Boolean,
     onClip: () -> Unit,
 ) {
-    val seconds = positionMillis / 1000
+    fun positionMillis() = playhead.value?.positionMillis ?: 0
+
     // Spoken labels for the text buttons, which show only "−15s", "+30s" and the speed.
     val backLabel = stringRes(Res.string.drss_skip_back)
     val forwardLabel = stringRes(Res.string.drss_skip_forward)
     val speedLabel = stringRes(Res.string.drss_speed_description)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (chapters.isNotEmpty()) {
-            IconButton(onClick = { control.seek(DrssChapters.previousStart(chapters, seconds) * 1000) }) {
+            IconButton(onClick = { control.seek(DrssChapters.previousStart(chapters, positionMillis() / 1000) * 1000) }) {
                 Icon(symbol = MaterialSymbols.SkipPrevious, contentDescription = stringRes(Res.string.drss_chapter_previous))
             }
         }
         TextButton(
-            onClick = { control.seek((positionMillis - SKIP_BACK_MS).coerceAtLeast(0)) },
+            onClick = { control.seek((positionMillis() - SKIP_BACK_MS).coerceAtLeast(0)) },
             modifier = Modifier.semantics { contentDescription = backLabel },
         ) {
             Text(stringRes(Res.string.drss_skip_back_short), maxLines = 1)
         }
         TextButton(
             onClick = {
-                val target = positionMillis + SKIP_FORWARD_MS
+                val target = positionMillis() + SKIP_FORWARD_MS
+                val durationMillis = playhead.value?.durationMillis
                 control.seek(if (durationMillis != null) target.coerceAtMost(durationMillis) else target)
             },
             modifier = Modifier.semantics { contentDescription = forwardLabel },
@@ -278,8 +294,8 @@ private fun DrssEpisodeControls(
             Text(stringRes(Res.string.drss_skip_forward_short), maxLines = 1)
         }
         if (chapters.isNotEmpty()) {
-            val next = DrssChapters.nextStart(chapters, seconds)
-            IconButton(onClick = { next?.let { control.seek(it * 1000) } }, enabled = next != null) {
+            val hasNext by remember(chapters) { derivedStateOf { DrssChapters.nextStart(chapters, positionMillis() / 1000) != null } }
+            IconButton(onClick = { DrssChapters.nextStart(chapters, positionMillis() / 1000)?.let { control.seek(it * 1000) } }, enabled = hasNext) {
                 Icon(symbol = MaterialSymbols.SkipNext, contentDescription = stringRes(Res.string.drss_chapter_next))
             }
         }
@@ -316,10 +332,10 @@ private fun formatRate(rate: Float): String {
 @Composable
 private fun DrssChapterList(
     chapters: List<DrssChapter>,
-    positionSeconds: Long,
+    playhead: State<EpisodePlayhead?>,
     onSeek: (Long) -> Unit,
 ) {
-    val current = DrssChapters.currentIndex(chapters, positionSeconds)
+    val current by remember(chapters) { derivedStateOf { DrssChapters.currentIndex(chapters, (playhead.value?.positionMillis ?: 0) / 1000) } }
     Text(stringRes(Res.string.drss_chapters), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)
     Column(Modifier.fillMaxWidth().clip(PanelShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))) {
         chapters.forEachIndexed { index, chapter ->
@@ -352,7 +368,7 @@ private fun DrssChapterList(
 @Composable
 private fun DrssClipMaker(
     range: LongRange,
-    durationMillis: Long?,
+    durationMillis: () -> Long?,
     onChange: (LongRange) -> Unit,
     onPreview: (LongRange) -> Unit,
     onSave: (String) -> Unit,
@@ -366,7 +382,7 @@ private fun DrssClipMaker(
             first = (first + direction * CLIP_NUDGE_MS).coerceAtLeast(0)
         } else {
             last = last + direction * CLIP_NUDGE_MS
-            if (durationMillis != null) last = last.coerceAtMost(durationMillis)
+            durationMillis()?.let { last = last.coerceAtMost(it) }
         }
         if (last > first && last - first <= CLIP_MAX_MS) onChange(first..last)
     }
@@ -428,10 +444,14 @@ private fun DrssEpisodeClips(
     accountViewModel: AccountViewModel,
     onPlay: (LongRange) -> Unit,
 ) {
-    val clips by remember(episode.address) {
-        LocalCache.observeNotes(Filter(kinds = listOf(HighlightEvent.KIND), tags = mapOf("a" to listOf(episode.address.toValue()))))
+    // Highlights are kept by no index the cache can use for an `a` filter, so the first look reads
+    // the whole cache: off the main thread, with the ranges read there too.
+    val ranged by remember(episode.address) {
+        LocalCache
+            .observeNotes(Filter(kinds = listOf(HighlightEvent.KIND), tags = mapOf("a" to listOf(episode.address.toValue()))))
+            .map { clips -> clips.mapNotNull { clip -> (clip.event as? HighlightEvent)?.clipRangeMillis()?.let { clip to it } }.sortedBy { it.second.first } }
+            .flowOn(Dispatchers.Default)
     }.collectAsStateWithLifecycle(emptyList())
-    val ranged = clips.mapNotNull { clip -> (clip.event as? HighlightEvent)?.clipRangeMillis()?.let { clip to it } }.sortedBy { it.second.first }
     if (ranged.isEmpty()) return
 
     Text(stringRes(Res.string.drss_clips), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)

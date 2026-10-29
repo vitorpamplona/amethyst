@@ -839,6 +839,8 @@ object GlobalMediaPlayer {
             return
         }
         player.play(source.uri, loop = false)
+        // The engine may keep the last track's speed: a new one starts at the speed the state shows.
+        player.setRate(_audioState.value.speed)
         pendingAudioStartMillis?.let { start ->
             pendingAudioStartMillis = null
             seekAudioTo(player, start)
