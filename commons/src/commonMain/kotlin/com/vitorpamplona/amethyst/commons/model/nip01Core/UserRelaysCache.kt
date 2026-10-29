@@ -91,4 +91,13 @@ class UserRelaysCache {
      * hints we hand to someone else.
      */
     fun mostUsedDialable(): List<NormalizedRelayUrl> = mostUsed().filter { it.isDialableFromOthers() }
+
+    /** The first of [mostUsedDialable], in one pass instead of a sort. */
+    fun mostUsedDialableRelay(): NormalizedRelayUrl? {
+        var best: Map.Entry<NormalizedRelayUrl, RelayInfo>? = null
+        for (entry in data.entries) {
+            if (entry.key.isDialableFromOthers() && (best == null || DefaultOrder.compare(entry, best) < 0)) best = entry
+        }
+        return best?.key
+    }
 }

@@ -163,23 +163,30 @@ class TorRelayEvaluationTest {
         assertFalse(eval.useTor(dmRelay))
     }
 
-    // --- Localhost bypass ---
+    // --- Localhost bypass: only for the user's own relays ---
+    private val tailnetRelay = NormalizedRelayUrl("ws://100.100.10.10:4848/")
+    private val lanNamedRelay = NormalizedRelayUrl("ws://nas.lan:7777/")
+    private val singleLabelRelay = NormalizedRelayUrl("ws://beelink:7777/")
+    private val allLocal = setOf(localhostRelay, localhostNameRelay, localNetworkRelay, tailnetRelay, lanNamedRelay, singleLabelRelay)
+
     @Test
-    fun localhost_alwaysFalse() {
-        val eval = buildEvaluation()
-        assertFalse(eval.useTor(localhostRelay))
-        assertFalse(eval.useTor(localhostNameRelay))
-        assertFalse(eval.useTor(localNetworkRelay))
+    fun ownLocalRelays_alwaysFalse() {
+        // Tor cannot reach the user's own local relays, whatever list they are in.
+        val eval = buildEvaluation(trustedRelays = allLocal)
+        allLocal.forEach { assertFalse(eval.useTor(it), "$it") }
+        assertFalse(buildEvaluation(dmRelays = setOf(localhostRelay)).useTor(localhostRelay))
+        assertFalse(buildEvaluation(moneyOpRelays = setOf(localNetworkRelay), moneyViaTor = true).useTor(localNetworkRelay))
+        assertFalse(buildEvaluation(signerRelays = setOf(lanNamedRelay)).useTor(lanNamedRelay))
     }
 
     @Test
-    fun ownTailnetAndLanNamedRelays_alwaysFalse() {
-        // The user's own relays on a tailnet or behind a LAN-only name: Tor cannot reach them.
-        // Someone else's never reach useTor, the dial boundary drops them first.
-        val eval = buildEvaluation()
-        assertFalse(eval.useTor(NormalizedRelayUrl("ws://100.100.10.10:4848/")))
-        assertFalse(eval.useTor(NormalizedRelayUrl("ws://nas.lan:7777/")))
-        assertFalse(eval.useTor(NormalizedRelayUrl("ws://beelink:7777/")))
+    fun someoneElsesLocalRelay_followsTheNewRelayPolicy() {
+        // A local url from someone else's data that reached the pool (a stream's relay tag, a
+        // link's hint) is never dialed on our network off Tor: with Tor on it fails inside Tor.
+        allLocal.forEach {
+            assertTrue(buildEvaluation(newViaTor = true).useTor(it), "$it")
+            assertFalse(buildEvaluation(newViaTor = false).useTor(it), "$it")
+        }
     }
 
     // --- .onion ---
@@ -287,7 +294,7 @@ class TorRelayEvaluationTest {
     // --- External mode ---
     @Test
     fun torExternal_routesLikeInternal() {
-        val eval = buildEvaluation(torType = TorType.EXTERNAL, newViaTor = true)
+        val eval = buildEvaluation(torType = TorType.EXTERNAL, newViaTor = true, trustedRelays = setOf(trustedRelay, localhostRelay))
         assertTrue(eval.useTor(clearnetRelay))
         assertFalse(eval.useTor(localhostRelay))
     }

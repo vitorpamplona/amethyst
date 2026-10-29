@@ -188,7 +188,7 @@ class User(
 
     fun allUsedRelays() = relays?.allOrNull() ?: emptySet()
 
-    fun mostUsedDialableRelay() = relays?.mostUsedDialable()?.firstOrNull()
+    fun mostUsedDialableRelay() = relays?.mostUsedDialableRelay()
 
     fun toPTag() = PTag(pubkeyHex, bestRelayHint())
 
