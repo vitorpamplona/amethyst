@@ -27,7 +27,9 @@ The test plays the build inside Amethyst's real `shell.html` and `shim.js`, with
 injected the way `NappletWebContract.injectPrelude` does on the device, and a fake native bridge
 that keeps storage in memory. It boots to the title loop with music, starts a game from the
 keyboard, turns and fires, saves to napplet storage, loads that save on a fresh launch, and keeps
-playing when storage is denied or not declared. Screenshots land in `build/screens/`. It uses the
+playing when storage is denied or not declared. The mods test builds a PWAD that replaces the title
+picture, serves it through a `nostr:` note that links it by `blossom:` hash, and checks the title,
+the remembered mod list, the per-mod saves, and that a wrong hash is refused. Screenshots land in `build/screens/`. It uses the
 preinstalled `playwright`; set `PLAYWRIGHT_MODULE` and `CHROMIUM` to use others.
 
 Opening `build/index.html` straight in a browser also works (no napplet, so saves last only for
@@ -39,16 +41,40 @@ that session).
 ./gradlew :cli:installDist
 cli/build/install/amy/bin/amy napplet publish tools/napplet-doom/build/index.html \
   --server https://blossom.primal.net \
-  --optional storage \
+  --optional storage,resource \
   --d freedoom --title "Freedoom" \
   --description "DOOM-engine shooter: doomgeneric + Freedoom Phase 1, all in one napplet" \
   --source https://github.com/vitorpamplona/amethyst/tree/main/tools/napplet-doom \
   --relay wss://relay.damus.io,wss://nos.lol
 ```
 
-`storage` is optional: the game asks for it in the background (Amethyst prompts once) and plays
-either way. The Blossom server must accept a 14 MB blob. On a device, follow
+`storage` keeps saves and settings; `resource` fetches mods. Both are optional: the game asks for
+them only when it needs them (Amethyst prompts once) and plays either way. The Blossom server must accept a 14 MB blob. On a device, follow
 `tools/napplet-test/README.md` to find and open it.
+
+## Mods
+
+The start screen has a **Mods** panel. Paste a link to a PWAD, or pick a local `.wad`, and it loads
+on top of the game, in order, like `-file`:
+
+- a `nostr:` note or event that links one: a `blossom:` URI or an `https://….wad` URL in its text,
+  NIP-94 `url`/`x` tags, or an `imeta` tag;
+- a `blossom:<sha256>.wad` URI, or an `https:` URL.
+
+The napplet fetches it through the host's `resource` capability (up to 10 MiB, Amethyst's
+`resource.bytes` cap), checks the WAD directory, refuses an IWAD, and refuses a file whose sha256
+differs from the one the link names. Linked mods are remembered and fetched again on the next
+launch; a local file lasts for the session. Saves and settings are kept per set of mods
+(`fs:<id>:` keys), so a save from one mod never loads into another; the plain game keeps `fs:`.
+
+Sharing a level is two steps with `amy`: `amy blossom upload --server URL level.wad`, then post a
+note that contains the `blossom:` URI it prints (or the URL). Anyone can paste that note's
+`nevent` into the panel.
+
+Limits, from vanilla Doom: the shareware `doom1.wad` refuses PWADs by design ("You cannot -file
+with the shareware version"), so mods need Freedoom or a registered IWAD; DeHackEd patches and
+`-merge`-style sprite or flat replacements are not compiled in (`FEATURE_DEHACKED`,
+`FEATURE_WAD_MERGE`). New maps, textures, music, sounds and graphics that replace lumps work.
 
 ## How it fits the sandbox
 

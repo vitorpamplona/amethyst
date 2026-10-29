@@ -46,11 +46,37 @@ boolean D_WipeInProgress(void);
 // The page writes the IWAD's file name here before dg_start(); doomgeneric tells shareware,
 // registered and Freedoom apart partly by that name.
 static char iwad_name[64] = "freedoom1.wad";
-static char *dg_argv[] = {"doom", "-iwad", iwad_name, NULL};
+
+// Mods: the page mounts each PWAD in the file system and writes its name into a slot here; an
+// empty slot ends the list. They load in order after the IWAD, as `-file` does.
+#define MAX_PWADS 8
+static char pwad_names[MAX_PWADS][64];
+static char *dg_argv[4 + MAX_PWADS];
 
 EXPORT("dg_iwad_name") char *dg_iwad_name(void)
 {
     return iwad_name;
+}
+
+EXPORT("dg_pwad_name") char *dg_pwad_name(int slot)
+{
+    return slot >= 0 && slot < MAX_PWADS ? pwad_names[slot] : NULL;
+}
+
+static int build_argv(void)
+{
+    int argc = 0;
+    dg_argv[argc++] = "doom";
+    dg_argv[argc++] = "-iwad";
+    dg_argv[argc++] = iwad_name;
+    if (pwad_names[0][0] != '\0')
+    {
+        dg_argv[argc++] = "-file";
+        for (int i = 0; i < MAX_PWADS && pwad_names[i][0] != '\0'; i++)
+            dg_argv[argc++] = pwad_names[i];
+    }
+    dg_argv[argc] = NULL;
+    return argc;
 }
 
 extern int key_prevweapon;
@@ -61,7 +87,7 @@ EXPORT("dg_start") void dg_start(void)
     // Vanilla leaves weapon cycling unbound; the touch controls need it. A saved config wins.
     key_prevweapon = '[';
     key_nextweapon = ']';
-    doomgeneric_Create(3, dg_argv);
+    doomgeneric_Create(build_argv(), dg_argv);
 }
 
 EXPORT("dg_tick") void dg_tick(void)
