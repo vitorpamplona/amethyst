@@ -42,7 +42,8 @@ class TorWaitTest {
     private val evaluation =
         TorRelayEvaluation(
             TorRelaySettings(torType = TorType.INTERNAL, dmRelaysViaTor = true, newRelaysViaTor = true, trustedRelaysViaTor = false),
-            RelayClassification(trusted = setOf(dmRelay, trustedRelay), dm = setOf(dmRelay)),
+            // The local relay is the user's own; someone else's would wait for Tor like a new relay.
+            RelayClassification(trusted = setOf(dmRelay, trustedRelay, localRelay), dm = setOf(dmRelay)),
         )
 
     @Test

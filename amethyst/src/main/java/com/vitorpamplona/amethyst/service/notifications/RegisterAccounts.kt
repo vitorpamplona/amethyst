@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountInfo
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
@@ -83,8 +84,12 @@ class RegisterAccounts(
 
                         val acc = LocalPreferences.loadAccountConfigFromEncryptedStorage(account.npub)
                         if (acc != null && acc.isWriteable()) {
-                            val nip65Read = acc.backupNIP65RelayList?.readRelaysNorm() ?: emptyList()
-                            val nip17Read = acc.backupDMRelayList?.relays() ?: emptyList()
+                            // Our own lists, but the push server is the one that dials them: a
+                            // local relay names our machine, which it cannot reach, and on its
+                            // side would name its own network. So the same rule as a stranger's
+                            // list applies.
+                            val nip65Read = acc.backupNIP65RelayList?.allReadRelaysNorm()?.filter { it.isDialableFromOthers() } ?: emptyList()
+                            val nip17Read = acc.backupDMRelayList?.allRelays()?.filter { it.isDialableFromOthers() } ?: emptyList()
 
                             if (isDebug) {
                                 val readRelays = nip65Read.joinToString(", ") { it.url }

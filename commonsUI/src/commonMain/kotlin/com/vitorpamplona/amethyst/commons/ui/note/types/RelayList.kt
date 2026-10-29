@@ -69,6 +69,9 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.GenericRelayListCache
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.relayLists.RelayListCard
 import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserRelayIntoList
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.auth_required
 import com.vitorpamplona.amethyst.commons.resources.blocked_relays_title
@@ -110,7 +113,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip11RelayInfo.Nip11RelayInformation
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip37Drafts.privateOutbox.PrivateOutboxRelayListEvent
@@ -174,13 +177,21 @@ fun observeRelayListSections(
             parsedSections(event, listOf(title), listOf(event.description())) { listOf(event.relays()) }
         }
 
+        // The viewer's own lists show every entry, local relays included; anyone else's show only
+        // the relays we may dial, since each row fetches its relay's NIP-11 document.
         is DmRelayListEvent -> {
-            parsedSections(event, listOf(stringRes(Res.string.dm_relays_title))) { listOf(event.relays()) }
+            val mine = event.pubKey == account.signer.pubKey
+            parsedSections(event, listOf(stringRes(Res.string.dm_relays_title))) { listOf(if (mine) event.allRelays() else event.dialableRelays()) }
         }
 
         is AdvertisedRelayListEvent -> {
+            val mine = event.pubKey == account.signer.pubKey
             parsedSections(event, listOf(stringRes(Res.string.public_home_section), stringRes(Res.string.public_notif_section))) {
-                listOf(event.writeRelaysNorm() ?: emptyList(), event.readRelaysNorm() ?: emptyList())
+                if (mine) {
+                    listOf(event.allWriteRelaysNorm() ?: emptyList(), event.allReadRelaysNorm() ?: emptyList())
+                } else {
+                    listOf(event.dialableWriteRelays() ?: emptyList(), event.dialableReadRelays() ?: emptyList())
+                }
             }
         }
 
@@ -193,7 +204,8 @@ fun observeRelayListSections(
         is BroadcastRelayListEvent -> decryptedSection(baseNote, account.broadcastRelayListDecryptionCache, stringRes(Res.string.broadcast_relays_title))
 
         is KeyPackageRelayListEvent -> {
-            parsedSections(event, listOf(stringRes(Res.string.keypackage_section))) { listOf(event.relays()) }
+            val mine = event.pubKey == account.signer.pubKey
+            parsedSections(event, listOf(stringRes(Res.string.keypackage_section))) { listOf(if (mine) event.allRelays() else event.dialableRelays()) }
         }
 
         is PrivateOutboxRelayListEvent -> {
@@ -477,7 +489,8 @@ private fun loadListedRelayInfo(relay: NormalizedRelayUrl): State<Nip11RelayInfo
     val info = remember(relay) { mutableStateOf(cache.peek(relay)) }
 
     LaunchedEffect(relay) {
-        if (info.value != null || relay.isLocalHost()) return@LaunchedEffect
+        // Rows also list other people's relays (relay sets, favorites): never contact a local one.
+        if (info.value != null || !relay.isDialableFromOthers()) return@LaunchedEffect
         delay(NIP11_SETTLE_MS)
         cache.loadRelayInfo(relay, onInfo = { info.value = it }, onError = { _, _, _ -> })
     }

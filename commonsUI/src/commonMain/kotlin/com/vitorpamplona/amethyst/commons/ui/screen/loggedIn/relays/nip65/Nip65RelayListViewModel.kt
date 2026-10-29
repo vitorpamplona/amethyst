@@ -25,6 +25,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.nip65ListOf
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.relays.ui.RelayCountResult
@@ -38,8 +39,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.count
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayInfo
-import com.vitorpamplona.quartz.nip65RelayList.tags.AdvertisedRelayType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -83,22 +82,7 @@ class Nip65RelayListViewModel : ViewModel() {
                 val writes = _homeRelays.value.map { it.relay }.toSet()
                 val reads = _notificationRelays.value.map { it.relay }.toSet()
 
-                val urls = writes.union(reads)
-
-                account.sendNip65RelayList(
-                    urls.map {
-                        val type =
-                            if (writes.contains(it) && reads.contains(it)) {
-                                AdvertisedRelayType.BOTH
-                            } else if (writes.contains(it)) {
-                                AdvertisedRelayType.WRITE
-                            } else {
-                                AdvertisedRelayType.READ
-                            }
-
-                        AdvertisedRelayInfo(it, type)
-                    },
-                )
+                account.sendNip65RelayList(nip65ListOf(writes, reads))
                 clear()
             }
         }
@@ -178,7 +162,8 @@ class Nip65RelayListViewModel : ViewModel() {
         // Marked like every other relay list, so the outbox shows when it waits for Tor.
         val torEvaluation = accountViewModel.host.torRelayEvaluation.value
         _homeRelays.update {
-            val relayList = account.nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
+            // Every entry of the user's own list, local ones included, so saving round-trips it.
+            val relayList = account.nip65RelayList.ownWriteRelays()
 
             relayList
                 .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }
@@ -186,7 +171,7 @@ class Nip65RelayListViewModel : ViewModel() {
         }
 
         _notificationRelays.update {
-            val relayList = account.nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
+            val relayList = account.nip65RelayList.ownReadRelays()
 
             relayList
                 .map { relaySetupInfoBuilder(it, forcesTor = torEvaluation.useTor(it)) }

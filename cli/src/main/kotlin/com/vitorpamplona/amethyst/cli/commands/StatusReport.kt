@@ -354,7 +354,7 @@ internal object StatusReport {
                 relays = relayList?.relays()?.size ?: 0,
                 relaysWrite = relayList?.writeRelays()?.size ?: 0,
                 relaysRead = relayList?.readRelays()?.size ?: 0,
-                dmRelays = dmInbox?.relays()?.size ?: 0,
+                dmRelays = dmInbox?.allRelays()?.size ?: 0,
             )
         }.getOrElse { OwnEvents() }
 

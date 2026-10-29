@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.defaults.DefaultDMRelayList
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.marmot.RecipientRelayFetcher
 import com.vitorpamplona.marmot.client.MarmotManager
 import com.vitorpamplona.marmot.client.MarmotPublisher
@@ -530,12 +531,13 @@ class Context(
      * [outboxRelays] when no kind:10051 has been seen — the same fallback the
      * Android app uses for KeyPackage discovery.
      *
-     * `allRelays()`, not `relays()`: the filtered accessor drops local-network
-     * entries because someone else's list is attacker-supplied input, but this
-     * is a list we published ourselves. Reading it filtered made a deliberately
-     * configured local relay look like no configuration at all, and the
-     * publisher then fell back to a default relay set the operator never chose
-     * — sending a KeyPackage somewhere they did not pick.
+     * `allRelays()`: this is a list we published ourselves, so every entry
+     * counts. Someone else's list is read through `dialableRelays()`
+     * (commons `relays/OthersRelays.kt`), which drops their local relays.
+     * Reading our own filtered made a deliberately configured local relay look
+     * like no configuration at all, and the publisher then fell back to a
+     * default relay set the operator never chose — sending a KeyPackage
+     * somewhere they did not pick.
      */
     suspend fun keyPackageRelays(): Set<NormalizedRelayUrl> =
         keyPackageRelaysOf(identity.pubKeyHex)?.allRelays()?.takeIf { it.isNotEmpty() }?.toSet()
@@ -885,10 +887,12 @@ class Context(
         val kp = keyPackageRelaysOf(pubKey)
         val nip65 = relaysOf(pubKey)
         if (dm == null && kp == null && nip65 == null) return null
-        val dmInbox = dm?.relays().orEmpty()
+        // Someone else's lists: only the relays we may dial. A recipient whose DM inbox is all
+        // local relays reads as withheld rather than as having no list.
+        val dmInbox = dm?.dialableRelays().orEmpty()
         return RecipientRelayFetcher.Lists(
             dmInbox = dmInbox,
-            keyPackage = kp?.relays().orEmpty(),
+            keyPackage = kp?.dialableRelays().orEmpty(),
             nip65 = nip65,
             dmInboxWithheld = dmInbox.isEmpty() && dm?.allRelays().orEmpty().isNotEmpty(),
         )

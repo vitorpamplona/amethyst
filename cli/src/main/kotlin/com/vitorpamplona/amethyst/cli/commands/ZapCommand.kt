@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
 import com.vitorpamplona.amethyst.commons.service.lnurl.LightningAddressResolver
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
 import com.vitorpamplona.quartz.experimental.clink.pointers.NDebit
@@ -188,7 +189,7 @@ object ZapCommand {
             val lookupInboxRelays: suspend (HexKey) -> Set<NormalizedRelayUrl> = { pk ->
                 ctx
                     .relaysOf(pk)
-                    ?.readRelaysNorm()
+                    ?.dialableReadRelays()
                     ?.toSet()
                     .orEmpty()
             }

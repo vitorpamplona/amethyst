@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
@@ -195,7 +196,7 @@ class ChatNewMessageViewModel :
                             dmRelayListNotes
                                 .mapNotNull { noteState ->
                                     val noteEvent = noteState.note.event as? DmRelayListEvent
-                                    if (noteEvent == null || noteEvent.relays().isEmpty()) {
+                                    if (noteEvent == null || noteEvent.dialableRelays().isEmpty()) {
                                         noteState.note.author
                                     } else {
                                         null

@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.cli.Context
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.FollowActions
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -106,7 +107,7 @@ object FollowCommand {
                 if (op == FollowOp.FOLLOW) {
                     ctx
                         .relaysOf(target)
-                        ?.writeRelaysNorm()
+                        ?.dialableWriteRelays()
                         ?.firstOrNull()
                 } else {
                     null

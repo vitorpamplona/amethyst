@@ -60,13 +60,24 @@ class Nip65RelayListState(
 
     fun nip65Event(note: Note) = note.event as? AdvertisedRelayListEvent ?: settings.backupNIP65RelayList
 
-    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.eventFinderRelays) { it.writeRelaysNorm()?.toSet() }
+    /**
+     * Every write relay of the account's own published list, local ones included: what its
+     * settings screen shows, and so what it saves back.
+     */
+    fun ownWriteRelays(): List<NormalizedRelayUrl> = getNIP65RelayList()?.allWriteRelaysNorm() ?: emptyList()
 
-    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.bootstrapInbox) { it.readRelaysNorm()?.toSet() }
+    /** Every read relay of the account's own published list, local ones included. See [ownWriteRelays]. */
+    fun ownReadRelays(): List<NormalizedRelayUrl> = getNIP65RelayList()?.allReadRelaysNorm() ?: emptyList()
 
-    fun normalizeNIP65WriteRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.writeRelaysNorm()?.toSet() ?: emptySet()
+    // The account's OWN list, so every entry counts, local relays included: the user configured
+    // them. Other users' lists go through relays/OthersRelays.kt instead.
+    fun normalizeNIP65WriteRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.eventFinderRelays) { it.allWriteRelaysNorm()?.toSet() }
 
-    fun normalizeNIP65ReadRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.readRelaysNorm()?.toSet() ?: emptySet()
+    fun normalizeNIP65ReadRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = relayListOrDefaultsWhenUnknown(nip65Event(note), Constants.bootstrapInbox) { it.allReadRelaysNorm()?.toSet() }
+
+    fun normalizeNIP65WriteRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.allWriteRelaysNorm()?.toSet() ?: emptySet()
+
+    fun normalizeNIP65ReadRelayListNoDefaults(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.allReadRelaysNorm()?.toSet() ?: emptySet()
 
     fun normalizeNIP65AllRelayListWithBackup(note: Note): Set<NormalizedRelayUrl> = nip65Event(note)?.relays()?.map { it.relayUrl }?.toSet() ?: Constants.eventFinderRelays
 
