@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -161,12 +162,14 @@ fun VideoDisplay(
                     }
                 }
             } else {
-                ZoomableContentView(
-                    content = content,
-                    roundedCorner = true,
-                    contentScale = contentScale,
-                    accountViewModel = accountViewModel,
-                )
+                BleedingMedia { roundedCorner ->
+                    ZoomableContentView(
+                        content = content,
+                        roundedCorner = roundedCorner,
+                        contentScale = contentScale,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
 
             title?.let {

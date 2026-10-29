@@ -54,6 +54,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -75,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
@@ -118,7 +120,10 @@ fun RichTextViewer(
 
     Column(modifier = modifier) {
         if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
-            platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+            // Markdown nests media in lists and quotes, so none of it runs past the text column.
+            ProvideMediaBleed(0.dp) {
+                platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
+            }
             return@Column
         }
 

@@ -44,6 +44,9 @@ import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 
+/** The side padding of a note's author + content area in [NoteComposeLayout]. */
+val NoteHorizontalPadding = 12.dp
+
 /**
  * Pre-computed pixel dimensions for [NoteComposeLayout], cached via [remember]
  * so dp-to-px conversion only runs once per density change.
@@ -56,6 +59,8 @@ private data class NoteLayoutPx(
     val authorContentGap: Int,
     /** Vertical spacer between header rows and note content: 4dp */
     val contentSpacer: Int,
+    /** Vertical spacer between the full-width header (picture + rows) and note content: 8dp */
+    val headerSpacer: Int,
     /** Left padding for the content area: 12dp */
     val padStart: Int,
     /** Right padding for the content area: 12dp */
@@ -176,7 +181,7 @@ private fun NoteComposeLayoutBoostedPreview() {
  * │ │author│  gap  │ firstRow                    │ │
  * │ │      │       │ secondRow (optional)        │ │
  * │ └──────┘       └─────────────────────────────┘ │
- * │ 4dp spacer (optional)                         │
+ * │ 8dp spacer (optional)                         │
  * │ noteContent (full inner width)                │
  * ├───────────────────────────────────────────────┤
  * │ reactionsRow (full width, no side padding)    │
@@ -249,8 +254,8 @@ private fun NoteComposeLayoutBoostedPreview() {
  *   Only matters when [showAuthorColumn] is true.
  * @param showSecondRow Whether to measure and place the second header row
  *   (NIP-05 status, location, PoW). Requires complete UI mode.
- * @param showContentSpacer Whether to add a 4dp spacer between header rows and
- *   note content. False for repost events.
+ * @param showContentSpacer Whether to add a spacer between header rows and
+ *   note content (4dp, or 8dp under a [fullWidth] header). False for repost events.
  * @param authorPicture Slot for the author's profile picture (55x55dp area).
  *   Should emit nothing when [showAuthorColumn] is false to skip composition.
  * @param firstRow Slot for the primary header: author name, time, more options.
@@ -288,8 +293,9 @@ fun NoteComposeLayout(
                     authorWidth = Size55dp.roundToPx(),
                     authorContentGap = 10.dp.roundToPx(),
                     contentSpacer = 4.dp.roundToPx(),
-                    padStart = 12.dp.roundToPx(),
-                    padEnd = 12.dp.roundToPx(),
+                    headerSpacer = 8.dp.roundToPx(),
+                    padStart = NoteHorizontalPadding.roundToPx(),
+                    padEnd = NoteHorizontalPadding.roundToPx(),
                     padTop = 10.dp.roundToPx(),
                 )
             }
@@ -362,7 +368,13 @@ fun NoteComposeLayout(
         }
 
         // Height calculation
-        val spacer = if (showContentSpacer) px.contentSpacer else 0
+        // Under a full-width header the body clears the picture, as on the Picture feed cards.
+        val spacer =
+            when {
+                !showContentSpacer -> 0
+                authorOnTop -> px.headerSpacer
+                else -> px.contentSpacer
+            }
 
         val headerRowsHeight = (firstRowPlaceable?.height ?: 0) + (secondRowPlaceable?.height ?: 0)
         val headerHeight = if (authorOnTop) maxOf(authorPlaceable?.height ?: 0, headerRowsHeight) else headerRowsHeight

@@ -110,9 +110,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutterState
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
@@ -1327,6 +1330,15 @@ fun InnerNoteWithReactions(
     val gutter = if (notBoostedNorQuote && !fullWidth) remember { ExpandedTextGutterState() } else null
     val providedGutter = if (isQuotedNote || fullWidth) null else gutter ?: LocalExpandedTextGutter.current
 
+    // A full-width note's media runs out to the screen edges, over its side padding. A boosted
+    // note sits in its booster's column and follows it; a quote is a box its media must stay in.
+    val mediaBleed =
+        when {
+            fullWidth -> NoteHorizontalPadding
+            isBoostedNote && !isQuotedNote -> LocalMediaBleed.current
+            else -> 0.dp
+        }
+
     CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
         NoteComposeLayout(
             modifier =
@@ -1370,18 +1382,22 @@ fun InnerNoteWithReactions(
                 }
             },
             noteContent = {
-                RenderNoteRow(
-                    baseNote = baseNote,
-                    backgroundColor = backgroundColor,
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    editState = editState,
-                    quotesLeft = quotesLeft,
-                    unPackReply = unPackReply,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    isBoostedNote = isBoostedNote,
-                )
+                // Only the kinds RenderNoteRow hands mediaBleed to let their media run past the column.
+                ProvideMediaBleed(0.dp) {
+                    RenderNoteRow(
+                        baseNote = baseNote,
+                        backgroundColor = backgroundColor,
+                        makeItShort = makeItShort,
+                        canPreview = canPreview,
+                        editState = editState,
+                        quotesLeft = quotesLeft,
+                        unPackReply = unPackReply,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        isBoostedNote = isBoostedNote,
+                        mediaBleed = mediaBleed,
+                    )
+                }
 
                 if (!makeItShort) {
                     val noteEvent = baseNote.event
@@ -1526,6 +1542,10 @@ fun NoteBody(
  * it. The feed cards call it, and so does the thread view's master note (ThreadFeedView) for every
  * kind that has no thread-specific header, so a kind added here renders in both without a second
  * branch to keep in sync.
+ *
+ * [mediaBleed] reaches only the kinds whose body is the note's own text or media (text notes,
+ * pictures, videos, files, reposts); every other kind draws cards and must keep its media inside
+ * them, so callers render this with no bleed of their own in effect.
  */
 @Composable
 internal fun RenderNoteRow(
@@ -1539,6 +1559,7 @@ internal fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: INav,
     isBoostedNote: Boolean = false,
+    mediaBleed: Dp = 0.dp,
 ) {
     // The kind cards below read the row's quote budget and preview permission from here, so a card
     // quoted inside another (or inside itself) never quotes deeper than the row allows.
@@ -1655,11 +1676,15 @@ internal fun RenderNoteRow(
             }
 
             is RepostEvent -> {
-                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is GenericRepostEvent -> {
-                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is ReportEvent -> {
@@ -2279,13 +2304,17 @@ internal fun RenderNoteRow(
             }
 
             is FileMetadataEvent -> {
-                FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                ProvideMediaBleed(mediaBleed) {
+                    FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                }
             }
 
             // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
             // so new video subtypes render automatically instead of falling through to text.
             is VideoEvent -> {
-                VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                }
             }
 
             is VideoCollaborationEvent -> {
@@ -2297,7 +2326,9 @@ internal fun RenderNoteRow(
             }
 
             is PictureEvent -> {
-                PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+                }
             }
 
             is WorkoutRecordEvent -> {
@@ -2313,7 +2344,9 @@ internal fun RenderNoteRow(
             }
 
             is FileStorageHeaderEvent -> {
-                FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                ProvideMediaBleed(mediaBleed) {
+                    FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                }
             }
 
             is CommunityPostApprovalEvent -> {
@@ -2884,18 +2917,20 @@ internal fun RenderNoteRow(
                     // tags carry what it is about, so it gets the fallback card, not the text path.
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
-                    RenderTextEvent(
-                        baseNote,
-                        makeItShort,
-                        canPreview,
-                        quotesLeft,
-                        unPackReply,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                        isBoostedNote = isBoostedNote,
-                    )
+                    ProvideMediaBleed(mediaBleed) {
+                        RenderTextEvent(
+                            baseNote,
+                            makeItShort,
+                            canPreview,
+                            quotesLeft,
+                            unPackReply,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                            isBoostedNote = isBoostedNote,
+                        )
+                    }
                 }
             }
         }

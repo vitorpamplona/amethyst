@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.richtext
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -46,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.BechLink
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.CashuPreview
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBuzzInviteLink
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableConcordInviteLink
@@ -98,11 +98,11 @@ open class DefaultRichTextSegmentRenderer(
 
         if (canPreview) {
             state.mediaForPager[segment.segmentText]?.let {
-                Box(HalfVertPadding) {
+                BleedingMedia(HalfVertPadding) { roundedCorner ->
                     ZoomableContentView(
                         content = it,
                         images = state.mediaList,
-                        roundedCorner = true,
+                        roundedCorner = roundedCorner,
                         contentScale = ContentScale.FillWidth,
                         accountViewModel = accountViewModel,
                     )
@@ -118,7 +118,7 @@ open class DefaultRichTextSegmentRenderer(
         paragraph: ImageGalleryParagraph,
         state: RichTextViewerState,
         modifier: Modifier,
-    ) = ImageGallery(paragraph, state, accountViewModel, modifier, roundedCorner = true)
+    ) = BleedingMedia { roundedCorner -> ImageGallery(paragraph, state, accountViewModel, modifier, roundedCorner = roundedCorner) }
 
     @Composable
     override fun Equation(

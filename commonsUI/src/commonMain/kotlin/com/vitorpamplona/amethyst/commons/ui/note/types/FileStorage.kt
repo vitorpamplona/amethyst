@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaLocalVideo
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -112,12 +113,14 @@ private fun ObserverAndRenderNIP95(
     CrossfadeIfEnabled(targetState = content) {
         if (it != null) {
             SensitivityWarning(note = header, accountViewModel = accountViewModel) {
-                ZoomableContentView(
-                    content = it,
-                    roundedCorner = roundedCorner,
-                    contentScale = contentScale,
-                    accountViewModel = accountViewModel,
-                )
+                BleedingMedia(roundedCorner = roundedCorner) { rounded ->
+                    ZoomableContentView(
+                        content = it,
+                        roundedCorner = rounded,
+                        contentScale = contentScale,
+                        accountViewModel = accountViewModel,
+                    )
+                }
             }
         }
     }
