@@ -94,6 +94,10 @@ class DesktopSocksRouter(
 
     private fun serve(client: Socket) {
         track(client)
+        var upstream: Socket? = null
+        // Once both sockets are handed to the pumps, they close them; until then, every way out of
+        // here closes them, a refusal included (RFC 1928: the server closes after a failure reply).
+        var pumping = false
         try {
             client.soTimeout = HANDSHAKE_TIMEOUT_MS
             val input = DataInputStream(client.getInputStream())
@@ -105,28 +109,36 @@ class DesktopSocksRouter(
                 reply(output, REPLY_NOT_ALLOWED)
                 return
             }
-            val upstream =
+            val connected =
                 try {
                     connect(route, target)
+                } catch (e: LoopbackRefused) {
+                    reply(output, REPLY_NOT_ALLOWED)
+                    return
                 } catch (e: IOException) {
                     Log.d(TAG) { "SOCKS connect to ${target.hostString}:${target.port} failed: ${e.message}" }
                     reply(output, REPLY_HOST_UNREACHABLE)
                     return
                 }
-            // The route may have changed while connecting, or a name resolved to this machine (DNS
-            // rebinding); either way this connection must not stand.
-            if (route != this.route || (!allowLoopback && upstream.inetAddress?.let { it.isLoopbackAddress || it.isAnyLocalAddress } == true)) {
-                closeQuietly(upstream)
+            upstream = connected
+            // The route may have changed while connecting; then this connection must not stand.
+            if (route != this.route) {
                 reply(output, REPLY_NOT_ALLOWED)
                 return
             }
-            track(upstream)
+            track(connected)
             reply(output, REPLY_OK)
             client.soTimeout = 0
-            thread("napplet-socks-up") { pump(client.getInputStream(), upstream.getOutputStream(), client, upstream) }
-            pump(upstream.getInputStream(), output, client, upstream)
+            pumping = true
+            thread("napplet-socks-up") { pump(client.getInputStream(), connected.getOutputStream(), client, connected) }
+            pump(connected.getInputStream(), output, client, connected)
         } catch (e: IOException) {
-            closeQuietly(client)
+            // The client went away mid-handshake, or a pump failed to start; closed below or by the pump.
+        } finally {
+            if (!pumping) {
+                closeQuietly(client)
+                upstream?.let(::closeQuietly)
+            }
         }
     }
 
@@ -185,7 +197,15 @@ class DesktopSocksRouter(
                 Socket(Proxy(Proxy.Type.SOCKS, InetSocketAddress(InetAddress.getLoopbackAddress(), route.port))).apply {
                     connect(target, CONNECT_TIMEOUT_MS)
                 }
-            Route.Direct -> Socket().apply { connect(InetSocketAddress(target.hostString, target.port), CONNECT_TIMEOUT_MS) }
+            Route.Direct -> {
+                // Resolved and checked before connecting, so a page can't reach this machine through a
+                // name (DNS rebinding) or an address form the literal check misses (::ffff:127.0.0.1),
+                // nor learn which local ports are open from how the handshake fails.
+                val address =
+                    InetAddress.getAllByName(target.hostString).firstOrNull { allowLoopback || !isThisMachine(it) }
+                        ?: throw LoopbackRefused()
+                Socket().apply { connect(InetSocketAddress(address, target.port), CONNECT_TIMEOUT_MS) }
+            }
             Route.Blocked -> throw IOException("Blocked")
         }
 
@@ -252,6 +272,9 @@ class DesktopSocksRouter(
         start()
     }
 
+    /** A destination that resolves only to this machine. */
+    private class LoopbackRefused : IOException("Refused: a local address")
+
     companion object {
         private const val TAG = "DesktopSocksRouter"
 
@@ -271,11 +294,13 @@ class DesktopSocksRouter(
         private const val HANDSHAKE_TIMEOUT_MS = 10_000
         private const val CONNECT_TIMEOUT_MS = 30_000
 
+        private fun isThisMachine(address: InetAddress): Boolean = address.isLoopbackAddress || address.isAnyLocalAddress
+
         private fun isLoopback(host: String): Boolean {
             val name = host.lowercase().trimEnd('.')
             if (name == "localhost" || name.endsWith(".localhost")) return true
             // Literal addresses only: a name is never resolved here for a Tor route, and on the open
-            // web the connected address is checked once the name resolves.
+            // web it is resolved and checked before connecting.
             return name.startsWith("127.") || name == "::1" || name == "0:0:0:0:0:0:0:1" || name == "0.0.0.0"
         }
     }

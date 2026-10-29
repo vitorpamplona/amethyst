@@ -101,6 +101,20 @@ class DesktopSocksRouterTest {
     }
 
     @Test
+    fun aRefusedConnectionIsClosed() {
+        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val (code, socket) = connect(router.port, "127.0.0.1", echoServer().localPort)
+        assertEquals(2, code)
+        // The router hung up after its reply, instead of leaving the socket open until a route change.
+        assertEquals(-1, socket.getInputStream().read())
+        val loopbackGuard = DesktopSocksRouter().closing()
+        loopbackGuard.route = DesktopSocksRouter.Route.Direct
+        val (refused, other) = connect(loopbackGuard.port, "localhost", 9)
+        assertEquals(2, refused)
+        assertEquals(-1, other.getInputStream().read())
+    }
+
+    @Test
     fun theOpenWebGoesStraightOut() {
         val router = DesktopSocksRouter(allowLoopback = true).closing()
         router.route = DesktopSocksRouter.Route.Direct
