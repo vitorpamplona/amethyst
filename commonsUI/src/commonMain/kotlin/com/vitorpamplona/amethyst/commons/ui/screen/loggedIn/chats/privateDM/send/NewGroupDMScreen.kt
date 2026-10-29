@@ -61,11 +61,13 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drawing_open
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_explainer
 import com.vitorpamplona.amethyst.commons.resources.messages_cant_upload_title
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
@@ -468,6 +470,26 @@ private fun BottomRowActions(
                 Icon(
                     symbol = MaterialSymbols.Videocam,
                     contentDescription = stringRes(id = Res.string.record_a_video),
+                    modifier = Modifier.height(22.dp),
+                    tint = MaterialTheme.colorScheme.placeholderText,
+                )
+            }
+        }
+
+        // Like the camera, it waits for a room: a drawing goes out as a file message to its members.
+        if (room != null) {
+            DrawingButton(accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+                postViewModel.uploadDrawing(drawing, alt, accountViewModel.toastManager::toast)
+            }
+        } else {
+            IconButton(
+                onClick = {
+                    accountViewModel.toastManager.toast(Res.string.messages_cant_upload_title, Res.string.messages_cant_upload_explainer)
+                },
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.Draw,
+                    contentDescription = stringRes(id = Res.string.drawing_open),
                     modifier = Modifier.height(22.dp),
                     tint = MaterialTheme.colorScheme.placeholderText,
                 )

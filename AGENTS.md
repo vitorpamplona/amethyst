@@ -268,8 +268,11 @@ tools/desktop-run/run-headless.sh start
 # Run Android app
 ./gradlew :amethyst:installDebug
 
-# Build against a local quartz checkout (../quartz) instead of the published artifact
+# Build against a local quartz checkout (../quartz) instead of the published artifact.
+# Switching -PquartzDir on or off changes every module's classpath: stop the daemons first
+# (`./gradlew --stop` leaves the Kotlin daemon running), or one daemon ends up holding both.
 ./gradlew -PquartzDir=../quartz :commons:jvmTest
+./gradlew --stop; pkill -f '[o]rg.jetbrains.kotlin.daemon.KotlinCompileDaemon'
 
 # Run the JVM tests of every module, KMP ones included. KMP modules register no
 # `test` task of their own; the root build aliases it onto their jvmTest.

@@ -472,7 +472,6 @@ class AccountMarmotActions(
      * Fetch a user's KeyPackage from relays and add them to a Marmot group.
      * Returns a status message describing the outcome.
      */
-    @OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
     suspend fun fetchKeyPackageAndAddMember(
         nostrGroupId: HexKey,
         memberPubKey: HexKey,
@@ -504,38 +503,30 @@ class AccountMarmotActions(
                 .outboxRelays()
                 ?.toSet()
                 .orEmpty()
-        val fetchRelays =
-            KeyPackageFetcher.fetchRelaysFor(
+        // Both kinds: White Noise's MDK still publishes legacy kind:443, some
+        // of its users nothing else. The newest valid 30443 wins; a valid 443
+        // is the fallback (MIP-00 migration rules). A package that comes back
+        // is valid, so it has content.
+        val lookup =
+            KeyPackageFetcher.fetchForInvite(
+                client = account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS),
+                targetPubKey = memberPubKey,
                 targetOutbox = memberOutbox,
                 myOutbox = myOutbox,
                 targetKeyPackageRelays = memberKeyPackageRelays,
             )
-
-        Log.d("MarmotDbg") {
-            "fetchKeyPackageAndAddMember: querying ${fetchRelays.size} relay(s) for ${memberPubKey.take(8)}… KeyPackage " +
-                "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${fetchRelays.map { it.url }}"
-        }
-
-        // Both kinds: White Noise's MDK still publishes legacy kind:443, some
-        // of its users nothing else. The newest valid 30443 wins; a valid 443
-        // is the fallback (MIP-00 migration rules).
-        val event = KeyPackageFetcher.fetchKeyPackageForInvite(account.client.taggedAs(SubPurpose.ENCRYPTED_GROUPS), memberPubKey, fetchRelays)
+        val event = lookup.keyPackage
 
         if (event == null) {
             Log.w("MarmotDbg") {
-                "fetchKeyPackageAndAddMember: NO valid KeyPackage found for ${memberPubKey.take(8)}… on any of ${fetchRelays.size} relay(s)"
+                "fetchKeyPackageAndAddMember: NO valid KeyPackage found for ${memberPubKey.take(8)}… on any of ${lookup.relays.size} relay(s) " +
+                    "(memberKeyPackageRelays=${memberKeyPackageRelays.size}, memberOutbox=${memberOutbox.size}, myOutbox=${myOutbox.size}): ${lookup.relays.map { it.url }}"
             }
             return "Error: No KeyPackage found for this user. They may not have published one yet."
         }
 
         Log.d("MarmotDbg") {
             "fetchKeyPackageAndAddMember: got KeyPackage event id=${event.id.take(8)}… kind=${event.kind} authored=${event.pubKey.take(8)}…"
-        }
-
-        val keyPackageBase64 = event.keyPackageBase64()
-        if (keyPackageBase64.isBlank()) {
-            Log.w("MarmotDbg") { "fetchKeyPackageAndAddMember: KeyPackage event has empty content" }
-            return "Error: KeyPackage event has empty content"
         }
 
         // The commit goes to the GROUP's relays (its routing component), where

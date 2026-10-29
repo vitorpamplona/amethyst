@@ -102,13 +102,6 @@ class UploadOrchestrator {
     ): UploadingState.UploadingFinalState = uploader.uploadEncrypted(this, uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
 
     sealed class OrchestratorResult {
-        class NIP95Result(
-            val fileHeader: FileHeader,
-            val bytes: ByteArray,
-            val mimeTypeBeforeEncryption: String?,
-            val hashBeforeEncryption: String?,
-        ) : OrchestratorResult()
-
         class ServerResult(
             val fileHeader: FileHeader,
             val url: String,

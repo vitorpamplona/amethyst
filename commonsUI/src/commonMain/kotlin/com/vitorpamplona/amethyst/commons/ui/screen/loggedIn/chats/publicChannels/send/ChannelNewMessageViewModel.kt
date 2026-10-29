@@ -73,7 +73,6 @@ import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.quartz.buzz.media.BuzzImeta
@@ -85,8 +84,6 @@ import com.vitorpamplona.quartz.buzz.threading.buzzThreadRootForReplyTo
 import com.vitorpamplona.quartz.buzz.workspace.isBuzzDm
 import com.vitorpamplona.quartz.experimental.bitchat.geohash.GeohashChatEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -203,7 +200,6 @@ open class ChannelNewMessageViewModel :
     val strippingFailureConfirmation = SuspendableConfirmation()
 
     val iMetaAttachments = IMetaAttachments()
-    var nip95attachments by mutableStateOf<List<Pair<FileStorageEvent, FileStorageHeaderEvent>>>(emptyList())
 
     val message = TextFieldState()
     var urlPreview by mutableStateOf<String?>(null)
@@ -498,14 +494,8 @@ open class ChannelNewMessageViewModel :
         if (message.text.toString().isBlank()) {
             account.deleteDraftIgnoreErrors(draftNote)
         } else if (accountViewModel.settings.automaticallyCreateDrafts()) {
-            val attachments = mutableSetOf<Event>()
-            nip95attachments.forEach {
-                attachments.add(it.first)
-                attachments.add(it.second)
-            }
-
             val template = createTemplate() ?: return
-            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template, attachments)
+            accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
     }
 
@@ -559,13 +549,7 @@ open class ChannelNewMessageViewModel :
                 val urls =
                     results.successful.mapNotNull { upload ->
                         val uploaded = upload.result
-                        if (uploaded is UploadOrchestrator.OrchestratorResult.NIP95Result) {
-                            val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, uploadState.caption, uploadState.contentWarningReason) } ?: return@mapNotNull null
-                            nip95attachments = nip95attachments + nip95
-                            val note = nip95.let { it1 -> account.consumeNip95(it1.first, it1.second) }
-
-                            note?.toNostrUri()
-                        } else if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
                             iMetaAttachments.add(uploaded, uploadState.caption, uploadState.contentWarningReason)
 
                             uploaded.url

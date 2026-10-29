@@ -2420,7 +2420,6 @@
     <string name="media_added_to_profile_gallery">Медиа добавлено в галерею вашего профиля</string>
     <string name="media_download_has_started_toast">Загрузка вложений было запущено…</string>
     <string name="media_servers">Медиасерверы</string>
-    <string name="media_too_big_for_nip95">Медиафайл слишком большой для NIP-95</string>
     <string name="messages_cant_upload_explainer">Сначала укажите получателя сообщения</string>
     <string name="messages_cant_upload_title">Невозможно загрузить</string>
     <string name="messages_new_message_subject">Заголовок</string>
@@ -2944,7 +2943,6 @@
     <string name="upload_error_title">Ошибка загрузки</string>
     <string name="upload_error_voice_message_exception">Ошибка загрузки голосового сообщения: %1$s</string>
     <string name="upload_error_voice_message_failed">Неудалось загрузить голосовое сообщение</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 пока не поддерживается для голосовых сообщений</string>
     <string name="uptime">%1$d% времени работы</string>
     <string name="use_internal_tor">Встроенный движок Tor</string>
     <string name="use_internal_tor_explainer">Использовать встроенную версию или Orbot</string>

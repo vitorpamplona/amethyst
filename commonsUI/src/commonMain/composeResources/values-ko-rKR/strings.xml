@@ -2373,7 +2373,6 @@
     <string name="media_added_to_profile_gallery">프로필 갤러리에 미디어가 추가됨</string>
     <string name="media_download_has_started_toast">미디어 다운로드를 시작했습니다…</string>
     <string name="media_servers">미디어 서버</string>
-    <string name="media_too_big_for_nip95">미디어가 NIP-95에 비해 너무 큽니다</string>
     <string name="messages_cant_upload_explainer">먼저 메시지 대상을 입력하세요</string>
     <string name="messages_cant_upload_title">업로드 불가</string>
     <string name="messages_new_message_subject">제목</string>
@@ -2842,7 +2841,6 @@
     <string name="upload_error_title">업로드 오류</string>
     <string name="upload_error_voice_message_exception">음성 업로드 실패: %1$s</string>
     <string name="upload_error_voice_message_failed">음성 메시지 업로드에 실패했습니다</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95는 아직 음성 메시지를 지원하지 않습니다</string>
     <string name="uptime">%1$d% 업타임</string>
     <string name="use_internal_tor">내장 Tor 엔진</string>
     <string name="use_internal_tor_explainer">내장 버전 또는 Orbot을 사용하세요</string>

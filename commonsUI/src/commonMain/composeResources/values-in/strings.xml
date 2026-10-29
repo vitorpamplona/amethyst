@@ -2432,7 +2432,6 @@
     <string name="media_added_to_profile_gallery">Media ditambahkan ke Galeri Profil Anda</string>
     <string name="media_download_has_started_toast">Unduhan media telah dimulai…</string>
     <string name="media_servers">Server Media</string>
-    <string name="media_too_big_for_nip95">Media terlalu besar untuk NIP-95</string>
     <string name="messages_cant_upload_explainer">Masukkan tujuan pesan terlebih dahulu</string>
     <string name="messages_cant_upload_title">Tidak Dapat Mengunggah</string>
     <string name="messages_new_message_subject">Subjek</string>
@@ -2911,7 +2910,6 @@
     <string name="upload_error_title">Kesalahan Unggahan</string>
     <string name="upload_error_voice_message_exception">Unggahan suara gagal: %1$s</string>
     <string name="upload_error_voice_message_failed">Gagal mengunggah pesan suara</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 belum didukung untuk pesan suara</string>
     <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Mesin Tor Aktif</string>
     <string name="use_internal_tor_explainer">Gunakan versi internal atau Orbot</string>

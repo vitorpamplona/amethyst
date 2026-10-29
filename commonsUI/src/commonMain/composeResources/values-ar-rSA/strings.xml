@@ -2463,7 +2463,6 @@
     <string name="media_added_to_profile_gallery">تمت إضافة الوسائط إلى معرض ملفك الشخصي</string>
     <string name="media_download_has_started_toast">بدأ تنزيل الوسائط…</string>
     <string name="media_servers">خوادم الوسائط</string>
-    <string name="media_too_big_for_nip95">الوسائط أكبر من اللازم لـ NIP-95</string>
     <string name="messages_cant_upload_explainer">أدخل وجهة الرسالة أولًا</string>
     <string name="messages_cant_upload_title">تعذّر الرفع</string>
     <string name="messages_new_message_subject">الموضوع</string>
@@ -3017,7 +3016,6 @@
     <string name="upload_error_title">خطأ في الرفع</string>
     <string name="upload_error_voice_message_exception">فشل رفع الصوت: %1$s</string>
     <string name="upload_error_voice_message_failed">فشل رفع الرسالة الصوتية</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 غير مدعوم للرسائل الصوتية بعد</string>
     <string name="uptime">%1$d% وقت التشغيل</string>
     <string name="use_internal_tor">محرك Tor النشط</string>
     <string name="use_internal_tor_explainer">استخدم الإصدار الداخلي أو Orbot</string>

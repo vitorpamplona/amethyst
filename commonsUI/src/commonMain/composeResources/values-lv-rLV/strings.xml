@@ -2422,7 +2422,6 @@
     <string name="media_added_to_profile_gallery">Multivide pievienota jūsu profila galerijai</string>
     <string name="media_download_has_started_toast">Multivides lejupielāde ir sākusies…</string>
     <string name="media_servers">Mediju serveri</string>
-    <string name="media_too_big_for_nip95">Multivide ir pārāk liela NIP-95</string>
     <string name="messages_cant_upload_explainer">Vispirms ievadiet ziņojuma galamērķi</string>
     <string name="messages_cant_upload_title">Nevar augšupielādēt</string>
     <string name="messages_new_message_subject">Temats</string>
@@ -2926,7 +2925,6 @@
     <string name="upload_error_title">Augšupielādes kļūda</string>
     <string name="upload_error_voice_message_exception">Balss augšupielāde neizdevās: %1$s</string>
     <string name="upload_error_voice_message_failed">Neizdevās augšupielādēt balss ziņojumu</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 balss ziņojumiem vēl netiek atbalstīts</string>
     <string name="uptime">%1$d% darbalaiks</string>
     <string name="use_internal_tor">Aktīvs Tor dzinējs</string>
     <string name="use_internal_tor_explainer">Izmantot iekšējo versiju vai Orbot</string>

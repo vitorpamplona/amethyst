@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteManifestCard
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -364,35 +365,35 @@ interface NotePlatform {
         nav: INav,
     ) {}
 
-    // Napplets and nsites
+    // Napplets and nsites: the card without an Open button until a platform has a sandbox host to run them in.
 
     @Composable
     fun RenderRootNappletEvent(
         baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) {}
+    ) = StaticWebsiteManifestCard(baseNote.event)
 
     @Composable
     fun RenderNamedNappletEvent(
         baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) {}
+    ) = StaticWebsiteManifestCard(baseNote.event)
 
     @Composable
     fun RenderRootSiteEvent(
         baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) {}
+    ) = StaticWebsiteManifestCard(baseNote.event)
 
     @Composable
     fun RenderNamedSiteEvent(
         baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) {}
+    ) = StaticWebsiteManifestCard(baseNote.event)
 
     // Reactions, zaps and editing
 

@@ -23,25 +23,49 @@ package com.vitorpamplona.amethyst.commons.service.upload
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 
+/**
+ * Whether a composer is uploading. The picked files go up as one batch ([startUpload] and
+ * [finishUpload], which also resets it); side uploads such as a hand drawing run beside that batch
+ * and are counted on their own ([startSideUpload], [finishSideUpload]), so a drawing that finishes
+ * does not mark a still-running batch as done, nor the other way round. A side upload shows as an
+ * image upload.
+ */
+@OptIn(ExperimentalAtomicApi::class)
 class MediaUploadTracker {
-    var isUploadingImage by mutableStateOf(false)
-        private set
-    var isUploadingFile by mutableStateOf(false)
-        private set
+    private var batchImage by mutableStateOf(false)
+    private var batchFile by mutableStateOf(false)
+
+    private val sideUploadCount = AtomicInt(0)
+    private var sideUploading by mutableStateOf(false)
+
+    val isUploadingImage: Boolean get() = batchImage || sideUploading
+    val isUploadingFile: Boolean get() = batchFile
 
     val isUploading: Boolean get() = isUploadingImage || isUploadingFile
 
     fun startUpload(hasNonMedia: Boolean) {
         if (hasNonMedia) {
-            isUploadingFile = true
+            batchFile = true
         } else {
-            isUploadingImage = true
+            batchImage = true
         }
     }
 
     fun finishUpload() {
-        isUploadingImage = false
-        isUploadingFile = false
+        batchImage = false
+        batchFile = false
+    }
+
+    fun startSideUpload() {
+        sideUploading = sideUploadCount.incrementAndFetch() > 0
+    }
+
+    fun finishSideUpload() {
+        sideUploading = sideUploadCount.decrementAndFetch() > 0
     }
 }

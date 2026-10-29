@@ -136,11 +136,6 @@ open class NewMediaModel : ViewModel() {
 
             if (results.allGood) {
                 // It all finished successfully
-                val nip95s =
-                    results.successful.mapNotNull {
-                        it.result as? UploadOrchestrator.OrchestratorResult.NIP95Result
-                    }
-
                 val videosAndOthers =
                     results.successful.mapNotNull {
                         val map = it.result as? UploadOrchestrator.OrchestratorResult.ServerResult
@@ -165,15 +160,6 @@ open class NewMediaModel : ViewModel() {
                 // Sign + publish via launchSigner so SignerExceptions surface
                 // through the standard toastManager pipeline (and timed-out /
                 // rejected prompts get logged instead of crashing the process).
-                val nip95jobs =
-                    nip95s.map {
-                        // upload each file as an individual nip95 event.
-                        accountViewModel.launchSigner {
-                            val nip95 = myAccount.createNip95(it.bytes, headerInfo = it.fileHeader, caption, if (sensitiveContent) "" else null)
-                            myAccount.consumeAndSendNip95(nip95.first, nip95.second)
-                        }
-                    }
-
                 val videoJobs =
                     videosAndOthers.map {
                         accountViewModel.launchSigner {
@@ -204,7 +190,6 @@ open class NewMediaModel : ViewModel() {
                         emptyList()
                     }
 
-                nip95jobs.joinAll()
                 videoJobs.joinAll()
                 imageJobs.joinAll()
 

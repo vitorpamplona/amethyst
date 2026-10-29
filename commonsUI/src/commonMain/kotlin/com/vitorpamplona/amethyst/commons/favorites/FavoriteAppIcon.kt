@@ -31,6 +31,9 @@ import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.icons.symbols.rememberMaterialSymbolPainter
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.snapshot.NappletSnapshotEvent
 
 /**
  * The icon for a favorite app: [iconModel] (e.g. a captured favicon the host app resolves) when given,
@@ -48,7 +51,7 @@ fun FavoriteAppIcon(
     colorFilter: ColorFilter? = null,
 ) {
     val symbol = if (app is FavoriteApp.NostrApp) MaterialSymbols.Apps else MaterialSymbols.Public
-    val isNapplet = app is FavoriteApp.NostrApp && app.coordinate.substringBefore(':') in setOf("5129", "15129", "35129")
+    val isNapplet = app is FavoriteApp.NostrApp && app.coordinate.substringBefore(':').toIntOrNull() in NAPPLET_KINDS
     val model = iconModel ?: app.iconUrl?.takeIf { !isNapplet && it.isNotBlank() }
 
     if (model == null) {
@@ -66,3 +69,5 @@ fun FavoriteAppIcon(
         )
     }
 }
+
+private val NAPPLET_KINDS = setOf(NappletSnapshotEvent.KIND, RootNappletEvent.KIND, NamedNappletEvent.KIND)

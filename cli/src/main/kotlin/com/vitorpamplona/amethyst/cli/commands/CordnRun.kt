@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.CordnArgException
 import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.cordn.client.CoordinatorConfig
+import com.vitorpamplona.cordn.client.CordnHandedOffException
 import com.vitorpamplona.cordn.client.CordnSession
 
 /**
@@ -33,10 +34,10 @@ import com.vitorpamplona.cordn.client.CordnSession
  *
  * Two things live here rather than in each command. The first is opening and
  * closing a session around a block, because a CLI run that forgets to close
- * leaves a relay subscription behind. The second is turning the three ways a
- * cordn call fails into the CLI's three error codes, which matters more than
- * it looks: `bad_args` means the caller can fix it, `coordinator` means the
- * other end did something, and anything else is ours. A script that cannot
+ * leaves a relay subscription behind. The second is turning the ways a cordn
+ * call fails into the CLI's error codes, which matters more than it looks: `bad_args` means the caller can fix it, `coordinator` means the
+ * other end did something, `handed_off` means this home exported its groups
+ * and stood down, and anything else is ours. A script that cannot
  * tell those apart has to treat every failure as fatal.
  */
 internal object CordnRun {
@@ -66,6 +67,8 @@ internal object CordnRun {
                 }
             } catch (e: CordnArgException) {
                 Output.error("bad_args", e.message ?: "bad coordinator selection")
+            } catch (e: CordnHandedOffException) {
+                Output.error("handed_off", "${e.message}. If the other device never imported it, take this home back with: amy cordn migrate resume")
             }
         }
 

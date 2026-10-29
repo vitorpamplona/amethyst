@@ -40,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.drawing.ui.DrawingButton
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip30CustomEmojis.ui.ShowEmojiSuggestionList
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -403,6 +404,10 @@ private fun BottomRowActions(postViewModel: NewProductViewModel) {
                 postViewModel.selectImage(it)
             },
         )
+
+        DrawingButton(postViewModel.accountViewModel, enabled = !postViewModel.isUploadingImage && !postViewModel.isUploadingFile) { drawing, alt ->
+            postViewModel.uploadDrawing(drawing, alt, postViewModel.accountViewModel.toastManager::toast)
+        }
 
         ForwardZapToButton(postViewModel.wantsForwardZapTo) {
             postViewModel.wantsForwardZapTo = !postViewModel.wantsForwardZapTo

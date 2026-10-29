@@ -30,7 +30,10 @@ import com.vitorpamplona.amethyst.commons.model.privateChats.ChatroomList
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.marmot.GroupEventResult
 import com.vitorpamplona.marmot.MarmotInboundProcessor
-import com.vitorpamplona.marmot.WelcomeResult
+import com.vitorpamplona.marmot.client.MarmotIngestResult
+import com.vitorpamplona.marmot.client.MarmotManager
+import com.vitorpamplona.marmot.client.MarmotReceiver
+import com.vitorpamplona.marmot.client.ingestWelcome
 import com.vitorpamplona.quartz.concord.cord05Invites.ConcordDirectInvite
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.marmot.mip02Welcome.WelcomeEvent
@@ -63,8 +66,6 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 class EventProcessor(
     private val account: Account,
@@ -458,14 +459,12 @@ private suspend fun processMarmotWelcomeFlow(
     // Out of retries this session: a re-delivered wrap waits for the next app start.
     if (attempt == 0 && account.marmot.welcomeRetriesExhausted(innerEvent.id)) return
 
-    // "h" tag is optional per MIP-02 — some senders (e.g. whitenoise-rs) omit it.
-    // nostrGroupId is derived from the MLS GroupContext's NostrGroupData extension instead.
-    val hintNostrGroupId = innerEvent.nostrGroupId()
-    val result = manager.processWelcome(innerEvent, hintNostrGroupId)
-
-    when (result) {
-        is WelcomeResult.Joined -> {
-            manager.markTerminallyIngested(innerEvent.id)
+    // The same join amy's catch-up runs: it also records the group's system-row baseline, and
+    // marks the Welcome terminally ingested once nothing more can come of it (joined, already
+    // in, or naming a KeyPackage this device never held). "h" is optional per MIP-02 — some
+    // senders (e.g. whitenoise-rs) omit it — so the group id comes from the MLS GroupContext.
+    when (val result = manager.ingestWelcome(innerEvent)) {
+        is MarmotIngestResult.JoinedGroup -> {
             Log.d("MarmotDbg") {
                 "processMarmotWelcomeFlow: Joined ${result.nostrGroupId.take(8)}… needsKeyPackageRotation=${result.needsKeyPackageRotation}"
             }
@@ -496,8 +495,7 @@ private suspend fun processMarmotWelcomeFlow(
             account.marmotNotifier().notifyWelcome(innerEvent, account)
         }
 
-        is WelcomeResult.AlreadyJoined -> {
-            manager.markTerminallyIngested(innerEvent.id)
+        is MarmotIngestResult.AlreadyInGroup -> {
             // Benign replay of a gift-wrapped Welcome (kind:1059) we already
             // processed in a prior session — the relay is just re-delivering
             // it after app restart. Log at DEBUG, not WARN.
@@ -506,15 +504,14 @@ private suspend fun processMarmotWelcomeFlow(
             }
         }
 
-        is WelcomeResult.Error -> {
+        is MarmotIngestResult.Failure -> {
             Log.w("MarmotDbg") { "processMarmotWelcomeFlow: ERROR (attempt ${attempt + 1}) ${result.message}" }
-            if (result.message.contains("No matching KeyPackageBundle")) {
-                // Bundles are generated before their KeyPackage is published, so a Welcome
-                // for one we never held can never become processable.
-                manager.markTerminallyIngested(innerEvent.id)
-            } else {
-                scheduleWelcomeRetry(innerEvent, account, attempt)
-            }
+            // One that can never succeed is already marked terminal; anything else can pass.
+            if (!manager.isTerminallyIngested(innerEvent.id)) scheduleWelcomeRetry(innerEvent, account, attempt)
+        }
+
+        else -> {
+            Log.d("MarmotDbg") { "processMarmotWelcomeFlow: ${innerEvent.id.take(8)}… → ${result::class.simpleName}" }
         }
     }
 }
@@ -699,35 +696,33 @@ class ZapReceiptEventHandler(
 /**
  * Handles inbound GroupEvent (kind:445) for Marmot MLS group messaging.
  *
- * Decrypts the outer ChaCha20-Poly1305 layer and the inner MLS layer,
- * then indexes the resulting inner event in LocalCache.
+ * The protocol half is marmot-kmp's [MarmotReceiver], the same one amy's catch-up runs: it
+ * decrypts, persists, derives system rows, holds an event that arrived ahead of the commit it
+ * needs and replays it once that commit lands, and collects staged departures for an admin to
+ * commit. What this class adds is Amethyst's: indexing the inner event in LocalCache, the chat
+ * room, push token gossip and notifications.
  */
 class GroupEventHandler(
     private val account: Account,
     private val cache: LocalCache,
 ) : EventHandler<GroupEvent> {
     /**
-     * Per-group buffer of kind:445 events whose outer ChaCha20-Poly1305
-     * layer couldn't be decrypted yet — typically because they carry an
-     * epoch the receiver hasn't advanced to. The relay subscription
-     * doesn't guarantee arrival order, so a run like
+     * One per account, because it holds state across events: relays do not deliver kind:445 in
+     * order, so a run like
      *
      *   1) B sends msg-1..5 at epoch 1
      *   2) B adds C (commit advances B → epoch 2)
      *   3) B sends msg-6..8 at epoch 2
      *   4) B renames (commit advances B → epoch 3)
      *
-     * can reach a receiver in the order {msg-6, msg-7, msg-8, rename,
-     * add-C, msg-1..5} depending on relay ordering. Everything from step
-     * 3+ above is `UndecryptableOuterLayer` until the add-C commit lands;
-     * we re-run those pending events every time an epoch-advancing
-     * CommitProcessed fires for the same group.
-     *
-     * Bounded per-group so a stuck stream of "truly undecryptable"
-     * pre-join events can't grow unbounded. FIFO eviction on overflow.
+     * can reach a receiver as {msg-6, msg-7, msg-8, rename, add-C, msg-1..5}. Everything from
+     * step 3 on is held until the add-C commit lands, then replayed, bounded per group.
      */
-    private val pendingUndecryptable: MutableMap<String, ArrayDeque<GroupEvent>> = mutableMapOf()
-    private val pendingMutex = Mutex()
+    private val receiver: MarmotReceiver? by lazy {
+        account.marmotManager?.let { manager ->
+            MarmotReceiver(manager, MAX_PENDING_PER_GROUP) { event, result -> onResult(manager, event, result) }
+        }
+    }
 
     override suspend fun add(
         event: GroupEvent,
@@ -738,7 +733,8 @@ class GroupEventHandler(
             "GroupEventHandler.add: kind:445 id=${event.id.take(8)}… groupId=${event.groupId()?.take(8)}…"
         }
         val manager = account.marmotManager
-        if (manager == null) {
+        val receiver = receiver
+        if (manager == null || receiver == null) {
             Log.w("MarmotDbg") { "GroupEventHandler.add: marmotManager is null" }
             return
         }
@@ -764,273 +760,196 @@ class GroupEventHandler(
         eventNote.relays.forEach { chatroom.recordRelayActivity(it, event.createdAt) }
 
         try {
-            val result = manager.processGroupEvent(event)
-            Log.d("MarmotDbg") {
-                "GroupEventHandler.add: processGroupEvent returned ${result::class.simpleName} for group=${groupId.take(8)}…"
-            }
-
-            when (result) {
-                is GroupEventResult.ApplicationMessage -> {
-                    // A message that decrypts means this device is back in step.
-                    account.marmotGroupList
-                        .getOrCreateGroup(result.groupId)
-                        .isOutOfSync.value = false
-                    // Parse the inner event JSON and index it
-                    val innerEvent = Event.fromJson(result.innerEventJson)
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
-                            "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
-                    }
-                    // wasVerified=true: MIP-03 inner events are unsigned
-                    // rumors (empty sig); LocalCache.justVerify would reject
-                    // every one on Schnorr verification. Authenticity is
-                    // already guaranteed by MLS — MarmotInboundProcessor
-                    // enforces innerEvent.pubKey == MLS sender's credential
-                    // identity before returning ApplicationMessage. Without
-                    // this, wn-signed kind:9 chat messages, kind:7 reactions,
-                    // and kind:5 deletions would all silently drop here.
-                    //
-                    // Always call marmotGroupList.addMessage regardless of
-                    // justConsume's return value. `addMessageSync` dedupes
-                    // by Note identity, so a duplicate is a cheap no-op —
-                    // but a previous-session persist that hydrated the
-                    // cache at startup without populating the chatroom
-                    // needs this path to surface the note (otherwise the
-                    // operator saw nothing but a misleading "inner event
-                    // already in cache" log and the message never rendered).
-                    val indexed = account.marmot.indexMarmotInnerEvent(innerEvent)
-                    val innerNote = indexed.note
-                    val isNew = indexed.isNew
-
-                    // Link the envelope to its inner note and copy over the
-                    // relays that delivered/accepted the kind-445 so far, so
-                    // the chat row shows relay icons. Later acceptances drill
-                    // down on their own via LocalCache.addRelayToNoteAndInners
-                    // once innerEventId is set. The outer note is looked up by
-                    // event.id — NOT eventNote/publicNote, which belong to the
-                    // *triggering* event when this runs from retryPendingFor.
-                    event.innerEventId = innerEvent.id
-                    cache.getNoteIfExists(event.id)?.let { outerNote ->
-                        cache.copyRelaysFromTo(outerNote, innerEvent.id)
-                    }
-
-                    // A kind:1009 edit was linked to the message it replaces by
-                    // indexMarmotInnerEvent, which also holds it on its note.
-
-                    // Push token gossip (kinds 447/448/449) is routing data for
-                    // a notification server, addressed to the other members'
-                    // clients rather than to the people in the room. It still
-                    // reaches the feed's dedupe and cache paths above like any
-                    // inner event — `MarmotGroupList` is what keeps it off the
-                    // screen — but its meaning is applied here.
-                    //
-                    // Everything this call does is advisory: a malformed entry,
-                    // a signature that does not verify, a list that lost its
-                    // ordering race are all dropped on their own and none of
-                    // them may reach the validity of the kind:445 that carried
-                    // them. That is why it neither throws nor is checked.
-                    account.marmotPushCoordinator?.let { push ->
-                        push.apply(result.groupId, innerEvent)
-                        // A peer asking for records gets our view, once. We
-                        // answer with the records we hold — including other
-                        // members' — with their owner signatures untouched, so
-                        // a member who has been offline can be caught up by
-                        // whoever happens to be around.
-                        if (push.isTokenRequest(innerEvent) && innerEvent.pubKey != account.signer.pubKey) {
-                            push.buildTokenList(result.groupId)?.let { response ->
-                                account.marmot.sendMarmotGroupMessage(
-                                    result.groupId,
-                                    response,
-                                    account.marmot.marmotGroupRelays(result.groupId),
-                                )
-                            }
-                        }
-                    }
-
-                    // Track the message in the Marmot group chatroom. A
-                    // peer-sent kind:1210 is dropped inside addMessage — see
-                    // `MarmotGroupList.isDisplayableFeedMessage`.
-                    account.marmotGroupList.addMessage(result.groupId, innerNote)
-                    account.marmot.applyMarmotModeration(result.groupId, innerEvent)
-
-                    // Traffic is the natural clock for disappearing messages: a
-                    // group being read is a group whose expired messages should
-                    // already be gone.
-                    manager.pruneExpiredMessages(result.groupId)
-
-                    // Persist the decrypted plaintext so the message
-                    // survives an app restart. Marmot/MLS application
-                    // messages cannot be re-decrypted once the ratchet
-                    // has advanced, so we must capture them here. Skip
-                    // when the cache reported duplicate — the message
-                    // was already persisted on the run that originally
-                    // decrypted it (the message store appends, so a
-                    // re-persist would silently grow the on-disk log).
-                    //
-                    // Our OWN messages always take the duplicate branch:
-                    // `AccountMarmotActions.sendMarmotGroupMessage` puts the
-                    // inner rumor in the cache before it encrypts anything, so
-                    // the bubble can be drawn immediately. That send path owns
-                    // the persist for those — don't relax this gate to cover
-                    // them, or every own message would be written twice.
-                    if (isNew) {
-                        manager.persistDecryptedMessage(result.groupId, result.innerEventJson, result.epoch)
-
-                        // GroupEvents have no `p` tag, so the cache-observer
-                        // notification path can't route them. Fire the popup
-                        // directly here — only on first-time decryption, so
-                        // a relay re-broadcast or persist-replay doesn't
-                        // double-notify. Restrict to ChatEvent (kind:9) so
-                        // reactions, deletions, and control messages stay
-                        // silent. A message an admin removed before it
-                        // landed is never shown, so it never notifies either.
-                        if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
-                            account.marmotNotifier().notifyGroupMessage(
-                                innerEvent,
-                                result.groupId,
-                                account,
-                            )
-                        }
-                    }
-                }
-
-                is GroupEventResult.CommitProcessed -> {
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: CommitProcessed group=${result.groupId.take(8)}… newEpoch=${result.newEpoch}"
-                    }
-                    // Sync MIP-01 metadata after epoch advance (extensions may have changed)
-                    val chatroom = account.marmotGroupList.getOrCreateGroup(result.groupId)
-                    manager.syncMetadataTo(result.groupId, chatroom)
-                    // The epoch just advanced, so whatever this commit changed
-                    // is now canonical state — which is exactly what a kind:1210
-                    // row is derived from. Deriving here covers OTHER members'
-                    // commits; our own are derived by `commitAndPublish`. Both
-                    // reach the feed through `onSystemRowDerived`.
-                    manager.recordRetentionForCurrentEpoch(result.groupId)
-                    manager.syncGroupSystemRows(result.groupId)
-                    // Epoch just advanced — drain any kind:445 events that
-                    // previously failed as UndecryptableOuterLayer for this
-                    // group. See `pendingUndecryptable` for the scenario.
-                    retryPendingFor(result.groupId, eventNote, publicNote)
-                }
-
-                is GroupEventResult.CommitPending -> {
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: CommitPending group=${result.groupId.take(8)}… epoch=${result.epoch}"
-                    }
-                }
-
-                is GroupEventResult.Duplicate -> {
-                    Log.d("MarmotDbg") { "GroupEventHandler.add: Duplicate kind:445 for group=${result.groupId.take(8)}…" }
-                }
-
-                is GroupEventResult.UndecryptableOuterLayer -> {
-                    // Two common causes for this result:
-                    //   (a) event's epoch predates our join — we never held
-                    //       those exporter keys, nothing to retry later.
-                    //   (b) event's epoch is ahead of our current one — the
-                    //       epoch-advancing commit for this group hasn't
-                    //       arrived yet but will in a moment (relays don't
-                    //       guarantee arrival order across a kind:445
-                    //       subscription). We can't tell (a) from (b) here,
-                    //       so buffer the event and retry after any future
-                    //       CommitProcessed for this group advances us.
-                    //
-                    // Bounded per-group: keep the most recent
-                    // MAX_PENDING_PER_GROUP events, FIFO-evict on overflow.
-                    // Prevents a flood of genuinely pre-join events from
-                    // pinning unbounded memory.
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: undecryptable outer layer for group=${result.groupId.take(8)}… " +
-                            "(current + ${result.retainedEpochCount} retained epoch key(s) tried) — buffering for post-commit retry"
-                    }
-                    pendingMutex.withLock {
-                        val queue = pendingUndecryptable.getOrPut(result.groupId) { ArrayDeque() }
-                        if (queue.size >= MAX_PENDING_PER_GROUP) {
-                            queue.removeFirst()
-                        }
-                        queue.addLast(event)
-                    }
-                }
-
-                is GroupEventResult.ProposalStaged -> {
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
-                    }
-                    // A departure only takes effect once an admin commits it; if that is us, do it.
-                    val groupId = result.groupId
-                    account.scope.launch(Dispatchers.IO) {
-                        if (manager.commitStagedProposalsIfAdmin(groupId) != null) {
-                            manager.syncMetadataTo(groupId, account.marmotGroupList.getOrCreateGroup(groupId))
-                            account.marmotGroupList.notifyGroupChanged(groupId)
-                        }
-                    }
-                }
-
-                is GroupEventResult.AppMessageOnCandidateBranch -> {
-                    // Decrypted on a branch that is not canonical. Not shown:
-                    // the canonical state contradicts it. If convergence later
-                    // selects that branch the message arrives again through
-                    // the normal path, so nothing is lost by not rendering it
-                    // now.
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: app payload on candidate branch for group=${result.groupId.take(8)}… " +
-                            "epoch=${result.epoch} witness=${result.countedAsWitness}"
-                    }
-                }
-
-                is GroupEventResult.RefusedByLifecycle -> {
-                    // Disbanded is absorbing and Unrecoverable needs a repair
-                    // before anything more may be applied, so this input was
-                    // refused before decryption. Nothing to render, nothing to
-                    // retain, and nothing the user can do about it here.
-                    Log.d("MarmotDbg") {
-                        "GroupEventHandler.add: refused for group=${result.groupId.take(8)}… " +
-                            "lifecycle=${result.lifecycle}"
-                    }
-                }
-
-                is GroupEventResult.Error -> {
-                    Log.w("MarmotDbg") { "GroupEventHandler.add: ERROR group=${result.groupId?.take(8)} ${result.message}" }
-                    result.groupId?.let { groupId ->
-                        val outOfSync = manager.isOutOfSync(groupId)
-                        val chatroom = account.marmotGroupList.getOrCreateGroup(groupId)
-                        if (chatroom.isOutOfSync.value != outOfSync) chatroom.isOutOfSync.value = outOfSync
-                    }
-                }
-            }
+            receiver.receive(event)
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("MarmotDbg", "GroupEventHandler.add: exception processing kind:445", e)
         }
     }
 
-    /**
-     * Drain the pending-undecryptable queue for [groupId] and re-run each
-     * event through `add`. A successful retry may itself emit another
-     * CommitProcessed and trigger recursive draining — that's fine, MLS
-     * epoch advances are strictly monotonic so recursion depth is bounded
-     * by the number of queued events.
-     *
-     * `eventNote` / `publicNote` are re-used for the retry path; they only
-     * feed into relay-activity tracking and compose-note lookup, both of
-     * which are safe to re-fire with the triggering event's notes.
-     */
-    private suspend fun retryPendingFor(
-        groupId: String,
-        eventNote: Note,
-        publicNote: Note,
+    /** Amethyst's side of one result, for [event] or for a held event the receiver replayed. */
+    private suspend fun onResult(
+        manager: MarmotManager,
+        event: Event,
+        result: MarmotIngestResult,
     ) {
-        val drained =
-            pendingMutex.withLock {
-                pendingUndecryptable.remove(groupId)?.toList() ?: return
-            }
-        if (drained.isEmpty()) return
         Log.d("MarmotDbg") {
-            "GroupEventHandler.retryPendingFor: replaying ${drained.size} previously-undecryptable kind:445 event(s) for group=${groupId.take(8)}…"
+            "GroupEventHandler: ${event.id.take(8)}… → ${result::class.simpleName}"
         }
-        for (pending in drained) {
-            add(pending, eventNote, publicNote)
+        when (result) {
+            is MarmotIngestResult.Message -> {
+                if (event is GroupEvent) indexApplicationMessage(manager, event, result.inner)
+            }
+
+            is MarmotIngestResult.Commit -> {
+                Log.d("MarmotDbg") {
+                    "GroupEventHandler: CommitProcessed group=${result.inner.groupId.take(8)}… newEpoch=${result.inner.newEpoch}"
+                }
+                // Sync MIP-01 metadata after epoch advance (extensions may have changed). The
+                // kind:1210 rows this commit implies were derived by the ingest and reach the
+                // feed through `onSystemRowDerived`.
+                manager.syncMetadataTo(result.inner.groupId, account.marmotGroupList.getOrCreateGroup(result.inner.groupId))
+            }
+
+            is MarmotIngestResult.ProposalStaged -> {
+                Log.d("MarmotDbg") {
+                    "GroupEventHandler: ProposalStaged group=${result.groupId.take(8)}… senderLeaf=${result.senderLeafIndex}"
+                }
+                // A departure only takes effect once an admin commits it; if that is us, do it.
+                // Off this coroutine, and for everything staged by the time it runs, so the
+                // departures of one catch-up go out in one commit.
+                account.scope.launch(Dispatchers.IO) {
+                    for (groupId in receiver?.commitStagedProposals()?.keys.orEmpty()) {
+                        manager.syncMetadataTo(groupId, account.marmotGroupList.getOrCreateGroup(groupId))
+                        account.marmotGroupList.notifyGroupChanged(groupId)
+                    }
+                }
+            }
+
+            is MarmotIngestResult.UndecryptableOuter -> {
+                // Either the epoch predates our join, or the commit that advances us to it has
+                // not arrived yet; the receiver holds it for a retry after the next commit.
+                Log.d("MarmotDbg") {
+                    "GroupEventHandler: undecryptable outer layer for group=${result.groupId.take(8)}… " +
+                        "(current + ${result.retainedEpochCount} retained epoch key(s) tried) — held for post-commit retry"
+                }
+            }
+
+            is MarmotIngestResult.Ignored -> {
+                Log.d("MarmotDbg") { "GroupEventHandler: ${event.id.take(8)}… ignored (${result.reason})" }
+            }
+
+            is MarmotIngestResult.Failure -> {
+                val groupId = (event as? GroupEvent)?.groupId()
+                Log.w("MarmotDbg") { "GroupEventHandler: ERROR group=${groupId?.take(8)} ${result.message}" }
+                groupId?.let {
+                    val outOfSync = manager.isOutOfSync(it)
+                    val chatroom = account.marmotGroupList.getOrCreateGroup(it)
+                    if (chatroom.isOutOfSync.value != outOfSync) chatroom.isOutOfSync.value = outOfSync
+                }
+            }
+
+            is MarmotIngestResult.JoinedGroup, is MarmotIngestResult.AlreadyInGroup -> {}
+        }
+    }
+
+    /**
+     * Index a decrypted application message. The ingest already persisted it, so it survives a
+     * restart even though the ratchet has advanced past it.
+     */
+    private suspend fun indexApplicationMessage(
+        manager: MarmotManager,
+        event: GroupEvent,
+        result: GroupEventResult.ApplicationMessage,
+    ) {
+        // A message that decrypts means this device is back in step.
+        account.marmotGroupList
+            .getOrCreateGroup(result.groupId)
+            .isOutOfSync.value = false
+        // Parse the inner event JSON and index it
+        val innerEvent = Event.fromJson(result.innerEventJson)
+        Log.d("MarmotDbg") {
+            "GroupEventHandler: ApplicationMessage decrypted innerKind=${innerEvent.kind} " +
+                "innerId=${innerEvent.id.take(8)}… author=${innerEvent.pubKey.take(8)}…"
+        }
+        // wasVerified=true: MIP-03 inner events are unsigned
+        // rumors (empty sig); LocalCache.justVerify would reject
+        // every one on Schnorr verification. Authenticity is
+        // already guaranteed by MLS — MarmotInboundProcessor
+        // enforces innerEvent.pubKey == MLS sender's credential
+        // identity before returning ApplicationMessage. Without
+        // this, wn-signed kind:9 chat messages, kind:7 reactions,
+        // and kind:5 deletions would all silently drop here.
+        //
+        // Always call marmotGroupList.addMessage regardless of
+        // justConsume's return value. `addMessageSync` dedupes
+        // by Note identity, so a duplicate is a cheap no-op —
+        // but a previous-session persist that hydrated the
+        // cache at startup without populating the chatroom
+        // needs this path to surface the note (otherwise the
+        // operator saw nothing but a misleading "inner event
+        // already in cache" log and the message never rendered).
+        val indexed = account.marmot.indexMarmotInnerEvent(innerEvent)
+        val innerNote = indexed.note
+        val isNew = indexed.isNew
+
+        // Link the envelope to its inner note and copy over the
+        // relays that delivered/accepted the kind-445 so far, so
+        // the chat row shows relay icons. Later acceptances drill
+        // down on their own via LocalCache.addRelayToNoteAndInners
+        // once innerEventId is set. The outer note is looked up by
+        // event.id — NOT eventNote/publicNote, which belong to the
+        // *triggering* event when this runs from retryPendingFor.
+        event.innerEventId = innerEvent.id
+        cache.getNoteIfExists(event.id)?.let { outerNote ->
+            cache.copyRelaysFromTo(outerNote, innerEvent.id)
+        }
+
+        // A kind:1009 edit was linked to the message it replaces by
+        // indexMarmotInnerEvent, which also holds it on its note.
+
+        // Push token gossip (kinds 447/448/449) is routing data for
+        // a notification server, addressed to the other members'
+        // clients rather than to the people in the room. It still
+        // reaches the feed's dedupe and cache paths above like any
+        // inner event — `MarmotGroupList` is what keeps it off the
+        // screen — but its meaning is applied here.
+        //
+        // Everything this call does is advisory: a malformed entry,
+        // a signature that does not verify, a list that lost its
+        // ordering race are all dropped on their own and none of
+        // them may reach the validity of the kind:445 that carried
+        // them. That is why it neither throws nor is checked.
+        account.marmotPushCoordinator?.let { push ->
+            push.apply(result.groupId, innerEvent)
+            // A peer asking for records gets our view, once. We
+            // answer with the records we hold — including other
+            // members' — with their owner signatures untouched, so
+            // a member who has been offline can be caught up by
+            // whoever happens to be around.
+            if (push.isTokenRequest(innerEvent) && innerEvent.pubKey != account.signer.pubKey) {
+                push.buildTokenList(result.groupId)?.let { response ->
+                    account.marmot.sendMarmotGroupMessage(
+                        result.groupId,
+                        response,
+                        account.marmot.marmotGroupRelays(result.groupId),
+                    )
+                }
+            }
+        }
+
+        // Track the message in the Marmot group chatroom. A
+        // peer-sent kind:1210 is dropped inside addMessage — see
+        // `MarmotGroupList.isDisplayableFeedMessage`.
+        account.marmotGroupList.addMessage(result.groupId, innerNote)
+        account.marmot.applyMarmotModeration(result.groupId, innerEvent)
+
+        // Traffic is the natural clock for disappearing messages: a
+        // group being read is a group whose expired messages should
+        // already be gone.
+        manager.pruneExpiredMessages(result.groupId)
+
+        // Notify only on first-time indexing, so a relay re-broadcast or a
+        // persist-replay doesn't double-notify. Our OWN messages are never
+        // new here: `AccountMarmotActions.sendMarmotGroupMessage` puts the
+        // inner rumor in the cache before it encrypts anything, so the bubble
+        // can be drawn immediately.
+        if (isNew) {
+            // GroupEvents have no `p` tag, so the cache-observer
+            // notification path can't route them. Fire the popup
+            // directly here — only on first-time decryption, so
+            // a relay re-broadcast or persist-replay doesn't
+            // double-notify. Restrict to ChatEvent (kind:9) so
+            // reactions, deletions, and control messages stay
+            // silent. A message an admin removed before it
+            // landed is never shown, so it never notifies either.
+            if (innerEvent is ChatEvent && !account.marmotGroupList.isAdminRemoved(result.groupId, innerEvent.id)) {
+                account.marmotNotifier().notifyGroupMessage(
+                    innerEvent,
+                    result.groupId,
+                    account,
+                )
+            }
         }
     }
 

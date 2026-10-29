@@ -2418,7 +2418,6 @@
     <string name="media_added_to_profile_gallery">媒体已添加到个人资料相册中</string>
     <string name="media_download_has_started_toast">媒体下载已开始…</string>
     <string name="media_servers">媒体服务器</string>
-    <string name="media_too_big_for_nip95">文件过大，无法使用 NIP-95</string>
     <string name="messages_cant_upload_explainer">需要首先输入消息的目标位置</string>
     <string name="messages_cant_upload_title">无法上传</string>
     <string name="messages_new_message_subject">主题</string>
@@ -2890,7 +2889,6 @@
     <string name="upload_error_title">上传出错</string>
     <string name="upload_error_voice_message_exception">语音上传失败：%1$s</string>
     <string name="upload_error_voice_message_failed">上传语音消息失败</string>
-    <string name="upload_error_voice_message_nip95_not_supported">语音消息尚不支持 NIP-95</string>
     <string name="uptime">%1$d% 运行时间</string>
     <string name="use_internal_tor">启动 Tor</string>
     <string name="use_internal_tor_explainer">使用内置 Tor 或者 Orbot</string>

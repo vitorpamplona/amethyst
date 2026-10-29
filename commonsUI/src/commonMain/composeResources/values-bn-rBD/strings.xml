@@ -2405,7 +2405,6 @@
     <string name="media_added_to_profile_gallery">আপনার প্রোফাইল গ্যালারিতে মিডিয়া যোগ হয়েছে</string>
     <string name="media_download_has_started_toast">মিডিয়া ডাউনলোড শুরু হয়েছে…</string>
     <string name="media_servers">মিডিয়া সার্ভার</string>
-    <string name="media_too_big_for_nip95">NIP-95 এর জন্য মিডিয়া অনেক বড়</string>
     <string name="messages_cant_upload_explainer">প্রথমে বার্তার গন্তব্য লিখুন</string>
     <string name="messages_cant_upload_title">আপলোড করা যাচ্ছে না</string>
     <string name="messages_new_message_subject">বিষয়</string>
@@ -2893,7 +2892,6 @@
     <string name="upload_error_title">আপলোড ত্রুটি</string>
     <string name="upload_error_voice_message_exception">ভয়েস আপলোড ব্যর্থ হয়েছে: %1$s</string>
     <string name="upload_error_voice_message_failed">ভয়েস বার্তা আপলোড করতে ব্যর্থ হয়েছে</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 এখনও ভয়েস বার্তার জন্য সমর্থিত নয়</string>
     <string name="uptime">%1$d% আপটাইম</string>
     <string name="use_internal_tor">সক্রিয় Tor ইঞ্জিন</string>
     <string name="use_internal_tor_explainer">অভ্যন্তরীণ সংস্করণ বা Orbot ব্যবহার করুন</string>

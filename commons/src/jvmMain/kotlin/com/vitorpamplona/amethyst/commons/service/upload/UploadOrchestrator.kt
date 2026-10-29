@@ -294,7 +294,7 @@ class UploadOrchestrator(
 
     companion object {
         /**
-         * The bytes [upload] would send, for servers this class doesn't speak to (NIP-96, NIP-95):
+         * The bytes [upload] would send, for servers this class doesn't speak to (NIP-96):
          * re-encoded at [quality], or, when passed through, stripped of EXIF if [stripExif]. [block]
          * gets that file and its metadata; every temp is deleted afterwards, even on cancellation.
          */

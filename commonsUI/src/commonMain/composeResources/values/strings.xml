@@ -4790,7 +4790,6 @@
     <string name="media_server_status_slow">Slow</string>
     <string name="media_servers">Media Servers</string>
     <string name="media_servers_search_keywords" translatable="false">blossom, uploads, images, photos, files, cdn, storage</string>
-    <string name="media_too_big_for_nip95">Media is too big for NIP-95</string>
     <string name="messages_cant_upload_explainer">Insert the destination of the message first</string>
     <string name="messages_cant_upload_title">Can't Upload</string>
     <string name="messages_new_message_subject">Subject</string>
@@ -5975,7 +5974,6 @@
     <string name="upload_error_title">Upload Error</string>
     <string name="upload_error_voice_message_exception">Voice upload failed: %1$s</string>
     <string name="upload_error_voice_message_failed">Failed to upload voice message</string>
-    <string name="upload_error_voice_message_nip95_not_supported">NIP-95 is not supported for voice messages yet</string>
     <string name="uptime">%1$d% uptime</string>
     <string name="use_internal_tor">Active Tor Engine</string>
     <string name="use_internal_tor_explainer">Use the internal version or Orbot</string>

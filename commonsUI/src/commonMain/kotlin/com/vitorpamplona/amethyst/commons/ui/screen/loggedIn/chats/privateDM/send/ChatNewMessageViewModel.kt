@@ -30,6 +30,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -46,9 +47,13 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_message
+import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_encrypted_media_title
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
+import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.note.creators.location.ILocationGrabber
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
@@ -62,7 +67,9 @@ import com.vitorpamplona.amethyst.commons.ui.text.currentWord
 import com.vitorpamplona.amethyst.commons.ui.text.insertUrlAtCursor
 import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.text.replaceCurrentWord
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.crypto.aes.AESGCM
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geohash
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.getGeoHash
@@ -111,11 +118,13 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @Stable
@@ -471,6 +480,82 @@ class ChatNewMessageViewModel :
         return location!!
     }
 
+    /**
+     * Uploads a hand drawing ([uploadDrawing]), encrypted unless the chat's uploads were switched
+     * to plain ones, and holds it to go out as a file message with the next send. When the server
+     * refuses the encrypted GIF, the drawing is kept and the user is offered the same retry without
+     * encryption as a picked file ([retryWithoutEncryption]). A held file message has no `imeta`
+     * to hang a still on, so only the GIF goes up.
+     */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+    ) {
+        val uploadState = uploadState
+        viewModelScope.launch(Dispatchers.IO) {
+            if (uploadState == null) {
+                drawing.delete()
+                return@launch
+            }
+            val cipher = if (uploadState.encryptFiles) AESGCM() else null
+            // Resolved here: the upload reports its failure from a plain callback.
+            val retryTitle = loadStringRes(Res.string.failed_to_upload_encrypted_media_title)
+            val retryExplainer = loadStringRes(Res.string.failed_to_upload_encrypted_media_message)
+            var offeredRetry = false
+            val uploaded =
+                uploadDrawing(
+                    drawing,
+                    alt,
+                    account,
+                    accountViewModel.host.mediaUploader,
+                    uploadState.mediaUploadTracker,
+                    uploadStill = false,
+                    onError,
+                    server = uploadState.selectedServer,
+                    encrypt = cipher,
+                    keepFilesOnFailure = cipher != null,
+                    onUploadError = { title, message ->
+                        if (cipher == null) {
+                            onError(title, message)
+                        } else {
+                            offeredRetry = true
+                            pendingRetryDrawings.update { it + PendingDrawing(drawing, alt, onError) }
+                            encryptedUploadErrorTitle = retryTitle
+                            encryptedUploadErrorMessage = retryExplainer + "\n\n" + message
+                        }
+                    },
+                )
+            if (uploaded == null) {
+                // Kept only for the retry; any other failure leaves nothing to retry.
+                if (cipher != null && !offeredRetry) drawing.delete()
+                return@launch
+            }
+            uploadsWaitingToBeSent += SuccessfulUploads(uploaded.gif, alt, null, cipher)
+            draftTag.newVersion()
+        }
+    }
+
+    /** A drawing whose encrypted upload failed, kept until the user retries without encryption or dismisses. */
+    class PendingDrawing(
+        val drawing: RenderedDrawing,
+        val alt: String?,
+        val onError: (title: String, message: String) -> Unit,
+    )
+
+    // Written by the upload's IO callback and taken on the main thread, so it is swapped atomically.
+    private val pendingRetryDrawings = MutableStateFlow<List<PendingDrawing>>(emptyList())
+
+    /**
+     * Deletes the files of the drawings kept for a retry that will not happen. On the account's
+     * scope, which outlives this one: it also runs from [onCleared].
+     */
+    private fun discardPendingDrawings() {
+        val pending = pendingRetryDrawings.getAndUpdate { emptyList() }
+        if (pending.isEmpty()) return
+        accountViewModel.viewModelScope.launch(Dispatchers.IO) { pending.forEach { it.drawing.delete() } }
+    }
+
     fun uploadAndHold(
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
@@ -541,6 +626,7 @@ class ChatNewMessageViewModel :
     enum class RetryMode { HOLD, SEND }
 
     fun dismissEncryptedUploadError() {
+        discardPendingDrawings()
         encryptedUploadErrorTitle = null
         encryptedUploadErrorMessage = null
         pendingRetryMode = null
@@ -550,7 +636,10 @@ class ChatNewMessageViewModel :
     }
 
     fun retryWithoutEncryption() {
-        val mode = pendingRetryMode ?: return
+        // Taken before the dialog is dismissed, which would delete them. The dialog may stand for
+        // both kept drawings and picked files: each kind is retried.
+        val drawings = pendingRetryDrawings.getAndUpdate { emptyList() }
+        val mode = pendingRetryMode
         val onError = pendingRetryOnError
         val uploader = pendingRetryUploader
         val onceUploaded = pendingRetryOnceUploaded
@@ -558,6 +647,13 @@ class ChatNewMessageViewModel :
         val uploadState = uploadState
 
         dismissEncryptedUploadError()
+
+        if (drawings.isNotEmpty()) {
+            uploadState?.encryptFiles = false
+            drawings.forEach { uploadDrawing(it.drawing, it.alt, it.onError) }
+        }
+
+        if (mode == null) return
 
         // HOLD only uploads; SEND also needs the room to send into.
         if (uploadState == null || uploader == null) return
@@ -602,6 +698,14 @@ class ChatNewMessageViewModel :
         onSent: suspend () -> Unit = {},
     ) {
         val room = room.value ?: return
+
+        if (draftTag == null && message.text.isBlank()) {
+            // Only held files (a drawing, say): they go out as file messages, with no empty chat
+            // message beside them.
+            ChatFileSender(room, accountViewModel.account).sendNIP17(uploadsWaitingToBeSent)
+            onSent()
+            return
+        }
 
         // Rewrites typed `@npub…`/`note1…` references into `nostr:` URIs. Only the rewritten text is
         // used: the tagger's pTags must NOT reach the event, since a NIP-17 room is defined by its
@@ -697,6 +801,7 @@ class ChatNewMessageViewModel :
 
         uploadsWaitingToBeSent = emptyList()
         uploadState?.reset()
+        discardPendingDrawings()
 
         dismissEncryptedUploadError()
 
@@ -817,7 +922,7 @@ class ChatNewMessageViewModel :
     }
 
     fun canPost(): Boolean =
-        message.text.isNotBlank() &&
+        (message.text.isNotBlank() || uploadsWaitingToBeSent.isNotEmpty()) &&
             uploadState?.mediaUploadTracker?.isUploading != true &&
             !wantsInvoice &&
             (!wantsZapraiser || zapRaiserAmount.value != null) &&
@@ -832,6 +937,7 @@ class ChatNewMessageViewModel :
 
     override fun onCleared() {
         Log.d("Init") { "OnCleared: ${this::class.simpleName}" }
+        discardPendingDrawings()
     }
 
     // NIP-04 sending is deprecated. NIP-17 is always used.

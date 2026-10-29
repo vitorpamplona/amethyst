@@ -26,6 +26,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
@@ -42,9 +43,7 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadOrchestrator
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.send.IMetaAttachments
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
-import com.vitorpamplona.amethyst.commons.ui.uploads.signForUpload
-import com.vitorpamplona.quartz.experimental.nip95.data.FileStorageEvent
-import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawing
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
@@ -68,7 +67,7 @@ import kotlinx.coroutines.launch
 /**
  * State of the "New issue" composer: the subject, the markdown body, the labels, and the media
  * attached to the body. An upload works as in the comment composer ([CommentPostViewModel]): the
- * file goes to the chosen server (or into a NIP-95 event), its link is added to the body, and the
+ * file goes to the chosen server, its link is added to the body, and the
  * issue carries an `imeta` tag for each link still in the body when it is sent.
  */
 @Stable
@@ -85,9 +84,6 @@ class GitNewIssueViewModel : ViewModel() {
 
     private val iMetaAttachments = IMetaAttachments()
 
-    /** NIP-95 uploads, keyed by the `nostr:` link added to the body. */
-    private var nip95Attachments = mapOf<String, Pair<FileStorageEvent, FileStorageHeaderEvent>>()
-
     fun init(account: Account) {
         this.account = account
     }
@@ -103,6 +99,20 @@ class GitNewIssueViewModel : ViewModel() {
         orchestrator.remove(selected)
         // An empty orchestrator still renders the gallery, which reads its first item.
         if (orchestrator.size() == 0) multiOrchestrator = null
+    }
+
+    /** Uploads a hand drawing ([uploadDrawing]) and links its GIF at the end of the body. */
+    fun uploadDrawing(
+        drawing: RenderedDrawing,
+        alt: String?,
+        onError: (title: String, message: String) -> Unit,
+        uploader: MediaUploader,
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val uploaded = uploadDrawing(drawing, alt, account, uploader, mediaUploadTracker, uploadStill = true, onError) ?: return@launch
+            iMetaAttachments.replace(uploaded.iMeta.url, uploaded.iMeta)
+            appendToBody(uploaded.link)
+        }
     }
 
     fun upload(
@@ -153,15 +163,6 @@ class GitNewIssueViewModel : ViewModel() {
                 val links =
                     results.successful.mapNotNull { state ->
                         when (val uploaded = state.result) {
-                            is UploadOrchestrator.OrchestratorResult.NIP95Result -> {
-                                val nip95 = signForUpload(onError) { account.createNip95(uploaded.bytes, headerInfo = uploaded.fileHeader, alt, contentWarningReason) } ?: return@mapNotNull null
-                                account.consumeNip95(nip95.first, nip95.second)?.let { note ->
-                                    val link = "nostr:" + note.toNEvent()
-                                    nip95Attachments = nip95Attachments + (link to nip95)
-                                    link
-                                }
-                            }
-
                             is UploadOrchestrator.OrchestratorResult.ServerResult -> {
                                 val iMeta =
                                     IMetaTagBuilder(uploaded.url)
@@ -207,22 +208,19 @@ class GitNewIssueViewModel : ViewModel() {
 
     /**
      * Signs and broadcasts the issue for [repoNote] (run it through `launchSigner`, which outlives
-     * this screen), with an `imeta` tag for each uploaded file
-     * still linked from the body, plus the NIP-95 events the body still points to.
+     * this screen), with an `imeta` tag for each uploaded file still linked from the body.
      */
     suspend fun send(repoNote: AddressableNote) {
         val repositoryHint = repoNote.toEventHint<GitRepositoryEvent>() ?: return
         val body = body.trim()
 
         val usedIMetas = iMetaAttachments.filterIsIn(findURLs(body).toSet())
-        val usedNip95 = nip95Attachments.filterKeys { body.contains(it) }.values
 
         val template =
             GitIssueEvent.build(subject.trim(), body, repositoryHint, emptyList(), parseLabels(labels)) {
                 if (usedIMetas.isNotEmpty()) imetas(usedIMetas)
             }
         val signed = account.signer.sign(template)
-        usedNip95.forEach { (data, header) -> account.sendAutomatic(listOf(data, header)) }
         account.sendAutomatic(signed)
     }
 }
