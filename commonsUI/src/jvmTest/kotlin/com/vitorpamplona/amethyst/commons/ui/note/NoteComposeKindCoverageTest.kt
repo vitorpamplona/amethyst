@@ -53,6 +53,30 @@ class NoteComposeKindCoverageTest {
                 GitReplyEvent::class.java,
             )
 
+        /**
+         * Kinds Quartz parses that still have no card, so they render as a plain text note today.
+         * Not a decision that the text card is right: each one is waiting for a card. Listed by
+         * name so the list can name kinds of a Quartz this build does not compile against.
+         */
+        private val AWAITING_A_CARD: Set<String> =
+            setOf(
+                // drss.io's reader kinds, added in Quartz 2.7.0
+                "com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent",
+                "com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event",
+                "com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent",
+                "com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event",
+                "com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent",
+                "com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event",
+                "com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent",
+                "com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent",
+                "com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent",
+                "com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event",
+                "com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event",
+                "com.vitorpamplona.quartz.drss.show.DrssShowEvent",
+                // kind 30054 that is not a Podcasting 2.0 episode, split out in Quartz 2.7.0
+                "com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event",
+            )
+
         /** EventFactory.kt within quartz's sources: a `commonMain/kotlin` dir, or a sources jar (`commonMain/…`). */
         private const val EVENT_FACTORY = "com/vitorpamplona/quartz/utils/EventFactory.kt"
         private const val NOTE_COMPOSE = "commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/ui/note/NoteCompose.kt"
@@ -95,7 +119,7 @@ class NoteComposeKindCoverageTest {
 
         val missing =
             factoryClasses
-                .filter { it !in TEXT_CARD_KINDS }
+                .filter { it !in TEXT_CARD_KINDS && it.name !in AWAITING_A_CARD }
                 .filter { kind -> branchClasses.none { it.isAssignableFrom(kind) } }
                 .map { it.name }
                 .sorted()

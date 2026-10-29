@@ -169,6 +169,14 @@ class RenderableKindsTest {
                 // podcasting 2.0 mirrors of kinds already in the window
                 30054,
                 30055,
+                // drss.io reader lists, shows and provenance (Quartz 2.7.0): no card yet, so a
+                // result would be a plain text row
+                30100,
+                30101,
+                30102,
+                30104,
+                31341,
+                31985,
                 // agents and personas
                 10100,
                 30175,
