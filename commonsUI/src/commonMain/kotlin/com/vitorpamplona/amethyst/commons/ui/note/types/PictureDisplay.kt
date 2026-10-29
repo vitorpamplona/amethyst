@@ -40,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.ui.components.AutoNonlazyGrid
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.BlurhashGridBackdrop
 import com.vitorpamplona.amethyst.commons.ui.components.ContentWarningGate
@@ -106,41 +107,43 @@ fun PictureDisplay(
                 Spacer(StdVertSpacer)
             }
 
-            if (images.size == 1) {
-                val ratio = first.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(first.url)
-                ContentWarningGate(
-                    isSensitive = isSensitive,
-                    reasons = reasons,
-                    preloadUrls = preloadUrls,
-                    accountViewModel = accountViewModel,
-                    modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
-                    backdrop = (first.thumbhash ?: first.blurhash)?.let { { BlurhashBackdrop(first.blurhash, first.description, first.thumbhash) } },
-                ) {
-                    ZoomableContentView(
-                        content = first,
-                        images = images,
-                        roundedCorner = roundedCorner,
-                        contentScale = ContentScale.FillWidth,
+            BleedingMedia(roundedCorner = roundedCorner) { rounded ->
+                if (images.size == 1) {
+                    val ratio = first.dim?.aspectRatioOrNull() ?: MediaAspectRatioCache.get(first.url)
+                    ContentWarningGate(
+                        isSensitive = isSensitive,
+                        reasons = reasons,
+                        preloadUrls = preloadUrls,
                         accountViewModel = accountViewModel,
-                    )
-                }
-            } else {
-                ContentWarningGate(
-                    isSensitive = isSensitive,
-                    reasons = reasons,
-                    preloadUrls = preloadUrls,
-                    accountViewModel = accountViewModel,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                    backdrop = { BlurhashGridBackdrop(images) },
-                ) {
-                    AutoNonlazyGrid(images.size) {
+                        modifier = mediaSizingModifier(ratio, ContentScale.FillWidth),
+                        backdrop = (first.thumbhash ?: first.blurhash)?.let { { BlurhashBackdrop(first.blurhash, first.description, first.thumbhash) } },
+                    ) {
                         ZoomableContentView(
-                            content = images[it],
+                            content = first,
                             images = images,
-                            roundedCorner = roundedCorner,
-                            contentScale = ContentScale.Crop,
+                            roundedCorner = rounded,
+                            contentScale = ContentScale.FillWidth,
                             accountViewModel = accountViewModel,
                         )
+                    }
+                } else {
+                    ContentWarningGate(
+                        isSensitive = isSensitive,
+                        reasons = reasons,
+                        preloadUrls = preloadUrls,
+                        accountViewModel = accountViewModel,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                        backdrop = { BlurhashGridBackdrop(images) },
+                    ) {
+                        AutoNonlazyGrid(images.size) {
+                            ZoomableContentView(
+                                content = images[it],
+                                images = images,
+                                roundedCorner = rounded,
+                                contentScale = ContentScale.Crop,
+                                accountViewModel = accountViewModel,
+                            )
+                        }
                     }
                 }
             }

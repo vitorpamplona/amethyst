@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.richtext
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,9 +38,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.ui.components.AnimatedBorderTextCornerRadius
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
 import com.vitorpamplona.amethyst.commons.ui.components.rememberBlossomUriOpener
@@ -90,11 +91,11 @@ fun BlossomUriRenderer(
 ) {
     val media = state.mediaForPager[word]
     if (media != null) {
-        Box(modifier = HalfVertPadding) {
+        BleedingMedia(HalfVertPadding, enabled = media !is MediaUrlPdf) { roundedCorner ->
             ZoomableContentView(
                 content = media,
                 images = state.mediaList,
-                roundedCorner = true,
+                roundedCorner = roundedCorner,
                 contentScale = ContentScale.FillWidth,
                 accountViewModel = accountViewModel,
             )

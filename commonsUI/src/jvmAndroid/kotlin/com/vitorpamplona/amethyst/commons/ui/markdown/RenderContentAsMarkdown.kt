@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.material3.RichText
@@ -43,7 +44,9 @@ import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
 import com.vitorpamplona.amethyst.commons.preview.UrlInfoItem
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -93,8 +96,9 @@ fun RenderContentAsMarkdown(
             }
 
         val forCapture = LocalMediaCapture.current != null
+        val mediaBleed = LocalMediaBleed.current
         val renderer =
-            remember(content, tags, canPreview, quotesLeft, callbackUri, accountViewModel, nav, forCapture) {
+            remember(content, tags, canPreview, quotesLeft, callbackUri, accountViewModel, nav, forCapture, mediaBleed) {
                 MarkdownMediaRenderer(
                     startOfText = content.take(100),
                     imetaByUrl = tags?.lists?.imetasByUrl() ?: emptyMap(),
@@ -105,15 +109,20 @@ fun RenderContentAsMarkdown(
                     accountViewModel = accountViewModel,
                     nav = nav,
                     forCapture = forCapture,
+                    mediaBleed = mediaBleed,
+                    topLevelUrls = if (mediaBleed > 0.dp) markdownTopLevelUrls(content) else emptySet(),
                 )
             }
 
         CompositionLocalProvider(LocalUriHandler provides onClick) {
-            RichText(
-                style = MaterialTheme.colorScheme.markdownStyle,
-                renderer = renderer,
-            ) {
-                BasicMarkdown(astNode)
+            // The renderer hands the bleed back to its top-level media; nothing else in here bleeds.
+            ProvideMediaBleed(0.dp) {
+                RichText(
+                    style = MaterialTheme.colorScheme.markdownStyle,
+                    renderer = renderer,
+                ) {
+                    BasicMarkdown(astNode)
+                }
             }
         }
     }

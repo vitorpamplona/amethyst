@@ -28,6 +28,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.ui.MediaRenderer
@@ -36,11 +37,16 @@ import com.halilibo.richtext.ui.string.RichTextString
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.fragmentHashtagOrNull
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayFullNote
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayUser
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.richtext.HashtagIcon
@@ -70,7 +76,13 @@ class MarkdownMediaRenderer(
     val nav: INav,
     /** Rendering for a share-as-image capture, which shows link previews whatever the settings say. */
     val forCapture: Boolean = false,
+    /** How far media on a top-level line may run past the column; see [LocalMediaBleed]. */
+    val mediaBleed: Dp = 0.dp,
+    /** The URLs on the post's top-level lines ([markdownTopLevelUrls]): the only media that bleeds. */
+    val topLevelUrls: Set<String> = emptySet(),
 ) : MediaRenderer {
+    private fun bleedFor(uri: String): Dp = if (uri in topLevelUrls) mediaBleed else 0.dp
+
     val parser = RichTextParser()
 
     override fun shouldRenderLinkPreview(
@@ -104,15 +116,27 @@ class MarkdownMediaRenderer(
                 ) ?: MediaUrlImage(url = uri, description = title?.ifEmpty { null } ?: startOfText)
 
             renderInlineFullWidth(richTextStringBuilder) {
+                RenderMedia(content, bleedFor(uri))
+            }
+        } else {
+            renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
+        }
+    }
+
+    @Composable
+    private fun RenderMedia(
+        content: BaseMediaContent,
+        bleed: Dp,
+    ) {
+        ProvideMediaBleed(bleed) {
+            BleedingMedia(enabled = content !is MediaUrlPdf) { roundedCorner ->
                 ZoomableContentView(
                     content = content,
-                    roundedCorner = true,
+                    roundedCorner = roundedCorner,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
             }
-        } else {
-            renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
         }
     }
 
@@ -132,19 +156,16 @@ class MarkdownMediaRenderer(
         if (canPreview) {
             if (content != null) {
                 renderInlineFullWidth(richTextStringBuilder) {
-                    ZoomableContentView(
-                        content = content,
-                        roundedCorner = true,
-                        contentScale = ContentScale.FillWidth,
-                        accountViewModel = accountViewModel,
-                    )
+                    RenderMedia(content, bleedFor(uri))
                 }
             } else {
                 if (!forCapture && !accountViewModel.settings.showUrlPreview()) {
                     renderAsCompleteLink(title ?: uri, uri, richTextStringBuilder)
                 } else {
                     renderInlineFullWidth(richTextStringBuilder) {
-                        LoadUrlPreview(uri, title ?: uri, callbackUri, accountViewModel, nav)
+                        ProvideMediaBleed(bleedFor(uri)) {
+                            LoadUrlPreview(uri, title ?: uri, callbackUri, accountViewModel, nav)
+                        }
                     }
                 }
             }

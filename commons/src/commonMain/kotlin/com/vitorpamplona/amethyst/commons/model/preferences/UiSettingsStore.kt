@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.ProfileGalleryType
 import com.vitorpamplona.amethyst.commons.model.SpellCheckType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
@@ -134,6 +135,7 @@ class UiSettingsStore(
         val UI_SEARCH_ENGINE = stringPreferencesKey("ui.search_engine")
         val UI_DECK_MODE = booleanPreferencesKey("ui.deck_mode")
         val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
+        val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -183,6 +185,9 @@ class UiSettingsStore(
                 spellCheck =
                     preferences[UI_SPELL_CHECK]?.let { name -> SpellCheckType.entries.firstOrNull { it.name == name } }
                         ?: SpellCheckType.AUTOMATIC,
+                noteLayout =
+                    preferences[UI_NOTE_LAYOUT]?.let { name -> NoteLayoutType.entries.firstOrNull { it.name == name } }
+                        ?: NoteLayoutType.AUTHOR_COLUMN,
             )
         }
 
@@ -228,6 +233,7 @@ class UiSettingsStore(
             preferences[UI_SEARCH_ENGINE] = sharedSettings.searchEngine
             preferences[UI_DECK_MODE] = sharedSettings.deckMode
             preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
+            preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
         }
 
         /**

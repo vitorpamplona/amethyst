@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -46,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -159,7 +161,8 @@ fun RenderTextEvent(
             }
         } else if (!makeItShort && noteEvent is CommentEvent) {
             // No in-cache parent note: this comment answers a scope rather than a note.
-            DisplayCommentScope(noteEvent, accountViewModel, nav)
+            // What a comment answers is context, like a quote: its card keeps the margin.
+            ProvideMediaBleed(0.dp) { DisplayCommentScope(noteEvent, accountViewModel, nav) }
         }
     }
 
