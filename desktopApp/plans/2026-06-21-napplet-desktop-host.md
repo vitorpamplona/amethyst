@@ -85,17 +85,21 @@ These reduce desktop reimplementation and prevent drift:
 
 ## Built (2026-10-29)
 
-Napplets open from the feed card's Open button (`DesktopNotePlatform` → `DesktopNappletCard`) and
-from favorites and the browser home (`DesktopAppPlatform`'s launcher), each in its own window.
+Napplets and nSites open from the feed card's Open button (`DesktopNotePlatform` →
+`DesktopNappletCard`, `DesktopSiteCard`; the shared nSites and nApplets screens render through it)
+and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each in its own window.
 
 - **Engine:** raw JCEF through jcefmaven (`me.friwi:jcefmaven`, Apache-2.0; JCEF and CEF BSD-3;
   Chromium's `libcef.so` includes FFmpeg, LGPL-2.1). KCEF was dropped: no release since 2025-03.
   `DesktopCefEngine` downloads the native bundle into the data dir on first use, with progress in
   the window, and runs Chromium with background networking off (its startup otherwise waits on
-  Google services, forever behind a TLS-breaking proxy) and no disk cache. Chromium's own
-  services (account `ListAccounts`, search prefetch, network time, DNS over HTTPS) ignore that
-  flag, so all of its traffic goes to a proxy that does not exist (`127.0.0.1:9`, loopback
-  included); a net log of the test run shows no other connection.
+  Google services, forever behind a TLS-breaking proxy). Chromium's own services (account
+  `ListAccounts`, search prefetch, network time, DNS over HTTPS) ignore that flag, so every
+  connection Chromium makes, loopback included, goes through `DesktopSocksRouter`, a SOCKS5 server
+  in the app that refuses all of it unless an open nSite asked for a route (a net log of the test
+  run showed nothing else leaving). Permission prompts (camera, microphone, location) are denied.
+  The profile is `jcef-cache/Default`: a napplet's opaque srcdoc keeps nothing there, an nSite's
+  localStorage, IndexedDB and cookies persist under its own origin.
 - **Isolation:** renderer sandbox + the shared CSPs + opaque-origin srcdoc, in process. No child
   JVM: the trust boundary is the bridge check below.
 - **Serving:** `DesktopNappletSession` serves only `SHELL_URL` from memory (shell CSP header) and
@@ -116,14 +120,52 @@ from favorites and the browser home (`DesktopAppPlatform`'s launcher), each in i
   `DialogWindow`, so Chromium's heavyweight view can't cover it; text from the shared
   `NappletConsentSummary`.
 - **Theme:** `theme.get` and `theme.changed` follow the app's Material colors.
-- **Tests:** `DesktopNappletSessionTest`: a tampered blob never loads; with `AMETHYST_CEF_TEST=1`
-  under a display, a probe napplet's direct call to the bridge from its iframe is refused while
-  the shim's storage round trip works and its `fetch` never reaches the server, and the Doom
-  napplet boots and asks for its saves.
+- **nSites** (`HostProfile.WEBSITE`, now in commonsUI and shared with Android): the shell from the
+  shared `NappletWebContract.shell`, the site at its own `napplet.local` origin with
+  `allow-scripts allow-same-origin`. Every file from that origin is a verified blob from the event
+  (a document navigation to an unlisted path falls back to `/`, a missing script or image is a 404);
+  HTML gets the prelude with NIP-07. The origin includes the account (`NappletWebContract.appId`'s
+  `partition`), because CEF keeps one storage jar where Android picks a WebView profile per
+  account. Requests to other hosts go out on the site's route. The shell and the site's own frame
+  never navigate away (a clicked link opens the system browser); embeds inside the site may.
+- **Network:** `NappletNetworkChoices` (commons, Android's `NappletNetworkRegistry` now delegates
+  to it) keeps each site's Tor or open-web choice, Tor by default while Tor is on.
+  `DesktopNappletRoutes` arbitrates the router's one route like Android's process-wide WebView
+  proxy: any site on Tor takes everything through Tor (an open-web site then says so), otherwise
+  any site on the open web goes direct, otherwise nothing leaves. With Tor on and not running, a
+  site, and a napplet's blob fetch, waits up to 30 s and then fails closed with "nothing left this
+  computer". Switching a site reopens its window, as Android relaunches its activity.
+- **NIP-07 consent:** the broker gets the signer ledger, the connect prompt and the per-operation
+  prompt (120 s, then deny). Their UI is shared now: `SignerConnectCard`, `SignerConsentCard` and
+  `BatchedConsentCard` (commonsUI) with `buildConnectInfo`/`buildSignerConsentInfo`, and
+  `Nip46ConsentInfoBuilder` in commons; Android's activities wrap the same cards.
+- **Window chrome:** a toolbar above the page, which the page can't draw over: back, forward,
+  reload/stop, the title and posture (opens Android's `AccessInfoSheet`), find, zoom, the onion
+  switch for a site while Tor is on, and Close. Loading, waiting for Tor and each failure have
+  their own pane with Try again.
+- **Tests:** `DesktopNappletSessionTest`: a tampered blob never loads; a Tor site doesn't open
+  while Tor is down and fetches nothing; with `AMETHYST_CEF_TEST=1` under a display, a probe
+  napplet's direct call to the bridge from its iframe is refused while the shim's storage round
+  trip works and its `fetch` never reaches the server, the Doom napplet boots and asks for its
+  saves, and a site runs at its own per-account origin (verified files, 404 for unlisted ones, the
+  client-route fallback, localStorage, `window.nostr` getPublicKey and signEvent through the
+  connect and signer prompts, and no navigation away). `DesktopSocksRouterTest` covers the routes,
+  the loopback refusal, Tor carrying the connection, cutting open connections on a switch, and the
+  arbitration.
+- **Checked in the running app:** published nSites (Hallway logged in through NIP-07 and kept its
+  login across a restart) and napplets (Mini Samurai) open from their cards; waiting for Tor,
+  the fail-closed pane, the onion switch, find, zoom, the access window and Close.
 
 Open:
 
-- nSites (NIP-5A website posture: real origin, NIP-07) are not hosted on desktop yet.
+- "Manage permissions" is hidden on desktop: the per-app permission screen
+  (`ConnectedAppDetailScreen`) is still Android's.
+- A site's service worker can't register on either platform: neither host serves worker scripts.
+- One storage jar for every account: a site's own origin is per account, but third-party cookies
+  it sets are shared.
+- While any site is on the open web, Chromium's own services go direct too (one process-wide
+  route, as on Android).
+- No developer console panel: console messages and load errors go to the log.
 - Not offered: upload, notify, keys.onAction, the inc bus (not in Amethyst's supported domains).
 - No foreground hold (`NappletHeldRequests`) or `identity.changed` push yet; acting requests are
   still consent-gated.

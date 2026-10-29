@@ -42,10 +42,13 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
 import com.vitorpamplona.amethyst.desktop.napplet.openNapplet
+import com.vitorpamplona.amethyst.desktop.napplet.openSite
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
@@ -142,8 +145,8 @@ class DesktopAppPlatform(
 }
 
 /**
- * Web apps and links open in the system browser; napplets open in [DesktopNappletHost]'s sandboxed
- * window. nSites (NIP-5A) still need a host on desktop, so they do nothing yet.
+ * Web apps and links open in the system browser; napplets and nSites open in [DesktopNappletHost]'s
+ * sandboxed windows.
  */
 private class DesktopAppLauncher(
     private val napplets: DesktopNappletHost?,
@@ -160,6 +163,7 @@ private class DesktopAppLauncher(
                 when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
                     null -> toaster.show(stillLoading, false)
                     is NappletManifest -> openNapplet(napplets, event, toaster, openFailed)
+                    is RootSiteEvent, is NamedSiteEvent -> openSite(napplets, event, toaster, openFailed)
                     else -> Unit
                 }
             }

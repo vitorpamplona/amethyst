@@ -21,18 +21,22 @@
 package com.vitorpamplona.amethyst.connectedApps.consent
 
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentInfoBuilder
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentStrings
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerFace
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
+import com.vitorpamplona.amethyst.commons.napplet.ui.label
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_decrypt_failed
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_remote_app
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.napplet.label
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerRequest
@@ -114,7 +118,7 @@ object Nip46ConsentBridge : Nip46ConsentPrompter {
                 accountName = face.name,
                 accountPicture = face.picture,
                 accountPubKey = face.pubKey,
-                requestedPermissions = requestedOps.map { it.label(context) },
+                requestedPermissions = requestedOps.map { it.label() },
             )
         return withTimeoutOrNull(CONSENT_TIMEOUT_MS) {
             SignerConnectCoordinator.requestConnect(context, info)
@@ -153,7 +157,7 @@ object Nip46ConsentBridge : Nip46ConsentPrompter {
                 faceOf = ::userFace,
                 strings =
                     Nip46ConsentStrings(
-                        opLabel = { it.label(context) },
+                        opLabel = { it.label() },
                         allowAlwaysFor = { loadStringRes(Res.string.nip46_signer_allow_always_for, it) },
                         decryptFailed = loadStringRes(Res.string.nip46_signer_decrypt_failed),
                     ),

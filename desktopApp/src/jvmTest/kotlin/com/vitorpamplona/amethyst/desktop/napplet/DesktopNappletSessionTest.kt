@@ -21,11 +21,19 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -33,12 +41,15 @@ import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -51,6 +62,7 @@ import java.awt.Rectangle
 import java.awt.Robot
 import java.io.File
 import java.net.InetSocketAddress
+import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.imageio.ImageIO
@@ -79,10 +91,16 @@ class DesktopNappletSessionTest {
     private val tmp = createTempDirectory("napplet-session-test").toFile()
     private val blobs = ConcurrentHashMap<String, ByteArray>()
     private val requested = ConcurrentHashMap.newKeySet<String>()
+    private val reports = ConcurrentHashMap<String, String>()
     private val server =
         HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/") { exchange ->
                 requested += exchange.requestURI.path
+                exchange.requestURI.rawQuery?.let { query ->
+                    query.split('&').forEach { pair ->
+                        reports[pair.substringBefore('=')] = URLDecoder.decode(pair.substringAfter('=', ""), Charsets.UTF_8)
+                    }
+                }
                 val body = blobs[exchange.requestURI.path.trimStart('/')]
                 if (body == null) {
                     exchange.sendResponseHeaders(404, -1)
@@ -102,7 +120,8 @@ class DesktopNappletSessionTest {
         /** Chromium starts once per process, as in the app; every test shares it. */
         private val sharedEngine by lazy {
             val installDir = System.getenv("AMETHYST_CEF_DIR")?.let(::File) ?: File(System.getProperty("java.io.tmpdir"), "amethyst-jcef-test")
-            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile())
+            // Loopback allowed: the test's local server stands in for the web a site talks to.
+            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile(), DesktopSocksRouter(allowLoopback = true))
         }
     }
 
@@ -146,7 +165,10 @@ class DesktopNappletSessionTest {
         }
     }
 
-    private fun runtime(engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "jcef-cache"))) = DesktopNappletRuntime(engine, DesktopNappletBlobs(File(tmp, "blobs")) { OkHttpClient() }, scope)
+    private fun runtime(
+        engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "jcef-cache")),
+        torPort: StateFlow<Int?> = MutableStateFlow(null),
+    ) = DesktopNappletRuntime(engine, DesktopNappletBlobs(File(tmp, "blobs")) { OkHttpClient() }, scope, torPort, torWaitMs = 500)
 
     private fun session(
         html: ByteArray,
@@ -181,7 +203,7 @@ class DesktopNappletSessionTest {
         runBlocking {
             val session = session("<p>signed</p>".encodeToByteArray(), RecordingStorage(), runtime(), servedBytes = "<p>swapped</p>".encodeToByteArray())
             session.start()
-            val state = withTimeout(30_000) { session.state.first { it !is DesktopNappletSession.State.Loading } }
+            val state = withTimeout(30_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
             assertIs<DesktopNappletSession.State.Failed>(state)
             assertEquals(DesktopNappletSession.Failure.UNREACHABLE, state.reason)
         }
@@ -193,7 +215,7 @@ class DesktopNappletSessionTest {
 
     private suspend fun show(session: DesktopNappletSession) {
         session.start()
-        val state = withTimeout(600_000) { session.state.first { it !is DesktopNappletSession.State.Loading } }
+        val state = withTimeout(600_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
         assertIs<DesktopNappletSession.State.Showing>(state, "the napplet did not open: $state")
         // A windowed CEF browser is created when its component is first shown.
         SwingUtilities.invokeAndWait {
@@ -256,5 +278,107 @@ class DesktopNappletSessionTest {
             for (y in 0 until shot.height step 8) for (x in 0 until shot.width step 8) colors += shot.getRGB(x, y)
             System.getenv("AMETHYST_TEST_SHOT")?.let { ImageIO.write(shot, "png", File(it)) }
             assertTrue(colors.size > 8, "the napplet window shows more than a blank page (${colors.size} colors)")
+        }
+
+    /** Counts the NIP-07 prompts a site raised; every prompt says yes. */
+    private class SitePrompts {
+        val connects = AtomicInteger()
+        val signatures = AtomicInteger()
+    }
+
+    private suspend fun site(
+        files: Map<String, ByteArray>,
+        runtime: DesktopNappletRuntime,
+        user: NostrSignerInternal,
+        author: NostrSignerInternal,
+        prompts: SitePrompts = SitePrompts(),
+        useTor: Boolean = false,
+    ): DesktopNappletSession {
+        files.values.forEach { blobs[sha256(it).toHexKey()] = it }
+        val paths = files.map { (path, bytes) -> PathTag(path, sha256(bytes).toHexKey()) }
+        val event: NamedSiteEvent = author.sign(NamedSiteEvent.build("blog", paths, servers = listOf(serverUrl), title = "Blog"))
+        val broker =
+            NappletBroker(
+                signer = user,
+                ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { user.pubKey },
+                consentPrompt = NappletConsentPrompt { _, _, _ -> GrantState.ALLOW_ONCE },
+                signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore()),
+                nostrConnectPrompt =
+                    NostrConnectPrompt { _, _ ->
+                        prompts.connects.incrementAndGet()
+                        // Paranoid: every signature asks, so the test sees the per-operation prompt.
+                        AppConnectResult.Connected(AppSignerPolicy.PARANOID)
+                    },
+                signerConsentPrompt =
+                    NostrSignerConsentPrompt { _, _, _ ->
+                        prompts.signatures.incrementAndGet()
+                        SignerOpGrant.AllowOnce
+                    },
+            )
+        val launch = DesktopNappletLaunch.fromSite(event, user.pubKey, useTor).getOrThrow()
+        return DesktopNappletSession(launch, null, broker, runtime).also { sessions += it }
+    }
+
+    @Test
+    fun aTorSiteDoesNotOpenWhileTorIsDown() =
+        runBlocking {
+            val user = NostrSignerInternal(KeyPair())
+            val session = site(mapOf("/index.html" to "<p>hi</p>".encodeToByteArray()), runtime(), user, NostrSignerInternal(KeyPair()), useTor = true)
+            session.start()
+            val state = withTimeout(30_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
+            assertIs<DesktopNappletSession.State.Failed>(state)
+            assertEquals(DesktopNappletSession.Failure.ROUTE_BLOCKED, state.reason)
+            assertTrue(requested.isEmpty(), "not even its files were fetched: $requested")
+        }
+
+    @Test
+    fun aSiteRunsAtItsOwnOriginWithNip07() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val user = NostrSignerInternal(KeyPair())
+            val author = NostrSignerInternal(KeyPair())
+            val prompts = SitePrompts()
+            val index = "<!doctype html><html><body><p>SITE-MARKER</p><script src=\"/app.js\"></script></body></html>"
+            val app =
+                """
+                (async function () {
+                  var server = '$serverUrl';
+                  function report(key, value) {
+                    return fetch(server + '/report?' + key + '=' + encodeURIComponent(String(value)), { mode: 'no-cors' }).catch(function () {});
+                  }
+                  try {
+                    await report('origin', location.origin);
+                    await report('missing', (await fetch('/missing.js')).status);
+                    var deep = await (await fetch('/deep/route', { headers: { Accept: 'text/html' } })).text();
+                    await report('spa', deep.indexOf('SITE-MARKER') >= 0);
+                    localStorage.setItem('k', 'stored');
+                    await report('storage', localStorage.getItem('k'));
+                    await report('pubkey', await window.nostr.getPublicKey());
+                    var signed = await window.nostr.signEvent({ kind: 1, created_at: 1700000000, tags: [], content: 'hello from an nsite' });
+                    await report('signed', signed.pubkey + ':' + (signed.sig ? signed.sig.length : 0));
+                  } catch (e) {
+                    await report('error', (e && e.message) || e);
+                  }
+                  await report('done', 1);
+                  // Not a click: the page's own frame must stay where it is.
+                  location.href = server + '/escaped';
+                })();
+                """.trimIndent()
+            show(site(mapOf("/index.html" to index.encodeToByteArray(), "/app.js" to app.encodeToByteArray()), runtime, user, author, prompts))
+
+            withTimeout(60_000) { while (reports["done"] == null) delay(100) }
+            assertEquals(null, reports["error"], "the page ran without an error")
+            val origin = NappletWebContract.appOrigin(NappletWebContract.appId(author.pubKey, "blog", partition = user.pubKey))
+            assertEquals(origin, reports["origin"], "its own origin, for this account")
+            assertEquals("404", reports["missing"], "a file the site doesn't list is a 404")
+            assertEquals("true", reports["spa"], "a client route falls back to the page")
+            assertEquals("stored", reports["storage"])
+            assertEquals(user.pubKey, reports["pubkey"], "window.nostr reached the signer")
+            assertEquals("${user.pubKey}:128", reports["signed"], "and signed as the user")
+            assertEquals(1, prompts.connects.get(), "the first NIP-07 call asked to connect")
+            assertTrue(prompts.signatures.get() >= 1, "the signature asked first")
+
+            delay(2_000)
+            assertFalse("/escaped" in requested, "the page could not navigate itself away")
         }
 }

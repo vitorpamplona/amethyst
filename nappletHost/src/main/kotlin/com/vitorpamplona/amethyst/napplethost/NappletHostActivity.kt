@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
@@ -75,8 +76,6 @@ import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
@@ -295,7 +294,7 @@ class NappletHostActivity : ComponentActivity() {
         fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
         val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier))
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
@@ -588,19 +587,6 @@ class NappletHostActivity : ComponentActivity() {
 
         return author.isNotEmpty() && launchToken.isNotEmpty()
     }
-
-    /**
-     * Stable, unique, DNS-label-safe id for this applet's sandbox origin: a sha256 of
-     * `author:identifier`, hex, truncated to 31 chars and letter-prefixed (`n`). The leading letter
-     * avoids any numeric-host parsing quirk and keeps it ≤63 chars (a valid DNS label). The same
-     * applet always derives the same id, so its origin — and therefore its localStorage/IndexedDB —
-     * persists across launches; different applets derive different subdomains, so their storage is
-     * isolated from one another.
-     */
-    private fun deriveAppId(
-        author: String,
-        identifier: String,
-    ): String = "n" + sha256("$author:$identifier".encodeToByteArray()).toHexKey().take(31)
 
     private var title: String = ""
 

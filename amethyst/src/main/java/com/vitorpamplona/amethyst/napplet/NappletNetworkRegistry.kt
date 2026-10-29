@@ -21,93 +21,45 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.napplet.NappletNetworkChoices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * The per-napplet routing file, on the app-wide holder rather than a `Context` delegate.
- * Same path the delegate resolved to, so nothing migrates.
- *
- * Main process only: [Amethyst.instance] is deliberately unset in the
- * `:napplet` sandbox.
- */
-private val nappletNetworkDataStore: DataStore<Preferences>
-    get() = Amethyst.instance.appStores.getDataStore("napplet_network")
-
-/**
- * Per-nSite network-routing preference: whether a site's traffic goes through **Tor** (the default)
- * or over the **open web**. Keyed by the site's coordinate (`author:identifier`), like the permission
- * ledger, so the choice survives across launches and routine code updates.
- *
- * When Tor is active, nSites route through it by default; a user can opt a specific site out (e.g. a
- * site that breaks or is unusably slow over Tor) from the sandbox top bar. "Open web" makes
- * *everything* for that site direct — both its live web traffic and its blob fetches.
- *
- * An in-memory map is authoritative for the session ([NappletLauncher] reads it synchronously while
- * building the launch intent) with write-through persistence. Absent = Tor (the safe default), so a
- * site never silently starts on the open web before the on-disk preference has hydrated.
+ * The app-wide [NappletNetworkChoices]: whether each nSite routes through Tor (the default) or over
+ * the open web, on the same `napplet_network` file as before, so nothing migrates.
  *
  * Lives only in the **main process**: the launcher reads it, and [NappletBrokerService] writes it
- * when the key-free `:napplet` sandbox relays a toggle over IPC. The sandbox never touches it.
+ * when the key-free `:napplet` sandbox relays a toggle over IPC. The sandbox never touches it, and
+ * [Amethyst.instance] is deliberately unset there.
  */
 object NappletNetworkRegistry {
-    private const val OPEN_WEB = "OPEN"
-    private const val TOR = "TOR"
+    private val choices by lazy {
+        NappletNetworkChoices(Amethyst.instance.appStores.getDataStore("napplet_network"), CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    }
 
-    // coordinate -> useTor. Absent means "never chosen" -> Tor.
-    private val modes = ConcurrentHashMap<String, Boolean>()
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-
-    @Volatile private var appContext: Context? = null
-
-    @Volatile private var hydration: Job? = null
-
-    /** Binds the app context and hydrates the on-disk preferences into memory. Idempotent. */
+    /** Starts loading the on-disk choices. Idempotent. */
+    @Suppress("UNUSED_PARAMETER")
     fun init(context: Context) {
-        if (appContext != null) return
-        val ctx = context.applicationContext
-        appContext = ctx
-        hydration =
-            scope.launch {
-                nappletNetworkDataStore.data.first().asMap().forEach { (key, value) ->
-                    // putIfAbsent: never clobber a choice made in this session before hydration finished.
-                    modes.putIfAbsent(key.name, value != OPEN_WEB)
-                }
-            }
+        choices
     }
 
     /**
-     * Suspends until [init]'s on-disk hydration has finished, so [useTor] reflects the user's remembered
-     * per-site choices instead of the bare Tor default. The startup preloader awaits this before making
-     * any routing decision, so a site the user pinned to the open web isn't wrongly treated as Tor on a
-     * cold start. Returns at once once hydrated, or immediately if [init] was never called.
+     * Suspends until the on-disk choices have loaded, so [useTor] reflects the user's remembered
+     * per-site choices instead of the bare Tor default. The startup preloader awaits this before
+     * making any routing decision, so a site the user pinned to the open web isn't wrongly treated
+     * as Tor on a cold start.
      */
-    suspend fun awaitReady() {
-        hydration?.join()
-    }
+    suspend fun awaitReady() = choices.awaitReady()
 
     /** Whether [coordinate] routes through Tor. Defaults to true (Tor) for any site never set. */
-    fun useTor(coordinate: String): Boolean = modes[coordinate] ?: true
+    fun useTor(coordinate: String): Boolean = choices.useTor(coordinate)
 
     /** Records [useTor] for [coordinate] in memory and persists it. */
     fun set(
         coordinate: String,
         useTor: Boolean,
-    ) {
-        modes[coordinate] = useTor
-        appContext ?: return
-        scope.launch {
-            nappletNetworkDataStore.edit { it[stringPreferencesKey(coordinate)] = if (useTor) TOR else OPEN_WEB }
-        }
-    }
+    ) = choices.set(coordinate, useTor)
 }

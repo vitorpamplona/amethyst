@@ -43,12 +43,18 @@ import java.io.File
  *
  * Chromium runs without its background networking: no component updates, field trials or Safe
  * Browsing pings leave the machine on a napplet's account, and its startup does not wait on them
- * (behind a proxy that breaks TLS it would wait forever). Nothing is cached to disk: a napplet's
- * document is an opaque-origin srcdoc that cannot keep anything, and its storage is the broker's.
+ * (behind a proxy that breaks TLS it would wait forever). Every connection it makes goes through
+ * [router], which refuses all of them unless an open nSite has asked for Tor or the open web.
+ *
+ * Its profile lives in [cacheRoot] (`Default/`): a napplet's document is an opaque-origin srcdoc that
+ * cannot keep anything there, but an nSite's localStorage, IndexedDB and cookies persist under its
+ * own origin, as on Android.
  */
 class DesktopCefEngine(
     private val installDir: File,
     private val cacheRoot: File,
+    /** Chromium's only way out; its route is set by whoever opens nSites. */
+    val router: DesktopSocksRouter = DesktopSocksRouter(),
 ) {
     sealed interface State {
         data object Idle : State
@@ -97,7 +103,7 @@ class DesktopCefEngine(
             builder.cefSettings.root_cache_path = cacheRoot.absolutePath
             builder.cefSettings.persist_session_cookies = false
             builder.cefSettings.log_severity = CefSettings.LogSeverity.LOGSEVERITY_WARNING
-            builder.addJcefArgs(*CHROMIUM_ARGS)
+            builder.addJcefArgs(*CHROMIUM_ARGS, "--proxy-server=socks5://127.0.0.1:${router.port}", "--proxy-bypass-list=<-loopback>")
             builder.setAppHandler(object : MavenCefAppHandlerAdapter() {})
             builder.build().also { mutableState.value = State.Ready(it) }
         } catch (e: Throwable) {
@@ -112,12 +118,15 @@ class DesktopCefEngine(
      * the AWT event thread, which may already be gone, and must not keep the JVM from exiting.
      */
     fun shutdown() {
-        val app = (mutableState.value as? State.Ready)?.app ?: return
-        val teardown =
-            Thread({ runCatching { app.dispose() }.onFailure { Log.w(TAG, "Chromium did not shut down cleanly", it) } }, "cef-shutdown")
-        teardown.isDaemon = true
-        teardown.start()
-        teardown.join(SHUTDOWN_WAIT_MS)
+        val app = (mutableState.value as? State.Ready)?.app
+        if (app != null) {
+            val teardown =
+                Thread({ runCatching { app.dispose() }.onFailure { Log.w(TAG, "Chromium did not shut down cleanly", it) } }, "cef-shutdown")
+            teardown.isDaemon = true
+            teardown.start()
+            teardown.join(SHUTDOWN_WAIT_MS)
+        }
+        router.close()
     }
 
     companion object {
@@ -131,12 +140,9 @@ class DesktopCefEngine(
                 "--disable-sync",
                 "--no-first-run",
                 "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying",
-                // Chromium never needs the network here: the shell is served from memory and blobs come
-                // through the app. Its own services (account checks, search prefetch, DNS over HTTPS)
-                // ignore the flags above, so every request goes to a proxy that does not exist,
-                // loopback included.
-                "--proxy-server=socks5://127.0.0.1:9",
-                "--proxy-bypass-list=<-loopback>",
+                // No camera, microphone, location or notification prompts: a page asking is told no,
+                // as Android's host answers.
+                "--deny-permission-prompts",
                 // No OS keyring prompt for a profile that stores nothing worth encrypting.
                 "--password-store=basic",
                 "--use-mock-keychain",

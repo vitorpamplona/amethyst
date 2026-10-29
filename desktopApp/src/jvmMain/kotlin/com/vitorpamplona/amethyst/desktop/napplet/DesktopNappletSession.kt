@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
@@ -30,8 +31,6 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -42,15 +41,20 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
+import org.cef.CefSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.browser.CefMessageRouter
 import org.cef.callback.CefCallback
 import org.cef.callback.CefQueryCallback
+import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
+import org.cef.handler.CefLoadHandler
+import org.cef.handler.CefLoadHandlerAdapter
 import org.cef.handler.CefMessageRouterHandlerAdapter
 import org.cef.handler.CefRequestHandlerAdapter
 import org.cef.handler.CefResourceHandler
@@ -64,21 +68,28 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
 import java.net.URI
-import java.util.Base64
+import kotlin.math.ln
 
 /**
- * One open napplet window: its Chromium browser, the trusted shell it loads, and the bridge between
- * that shell and the shared [NappletBroker].
+ * One open napplet or nSite window: its Chromium browser, the trusted shell it loads, and the bridge
+ * between that shell and the shared [NappletBroker].
  *
  * The trust model is Android's (`nappletHost`), on CEF:
- * - The browser loads only [NappletWebContract.SHELL_URL], served from memory with the shell CSP.
- *   Every other request is cancelled before it reaches the network; the napplet's own document is a
- *   `srcdoc` in a `sandbox="allow-scripts"` iframe (an opaque origin) with the locked app CSP
- *   (`connect-src 'none'`), built from the sha256-verified artifact by the shared
- *   [NappletWebContract.injectPrelude].
+ * - The browser's top frame is only ever [NappletWebContract.SHELL_URL], served from memory with
+ *   the shell CSP, built by the shared [NappletWebContract.shell].
+ * - A [HostProfile.NAPPLET] runs as a `srcdoc` in a `sandbox="allow-scripts"` iframe (an opaque
+ *   origin) with the locked app CSP (`connect-src 'none'`), from the sha256-verified artifact. Every
+ *   request that isn't the shell is cancelled before it reaches the network.
+ * - A [HostProfile.WEBSITE] runs at its own origin under `napplet.local`, one per site and per
+ *   account, so its storage persists and stays its own. Every file it loads from that origin is a
+ *   sha256-verified blob from its event (a client-routed page falls back to `/`); requests to other
+ *   hosts go out through [DesktopNappletRoutes]' route (Tor or the open web, as the user chose for
+ *   this site). `window.nostr` (NIP-07) reaches the broker through the same bridge.
  * - The bridge is CEF's message router, which Chromium injects into every frame. Only a query from
- *   the main frame at the shell URL is accepted, so the napplet's iframe, which can see the
- *   function, gets nothing from calling it.
+ *   the main frame at the shell URL is accepted, so the page's frames, which can see the function,
+ *   get nothing from calling it.
+ * - Neither the shell nor the page's own frame may navigate away; a link the user clicks opens in the
+ *   system browser. Embeds inside a website (a video player) may load their own pages.
  * - Every request is decided by [NappletRequestRouter] and the broker, as on Android.
  */
 class DesktopNappletSession(
@@ -91,6 +102,9 @@ class DesktopNappletSession(
     sealed interface State {
         data object Loading : State
 
+        /** A site that goes through Tor, waiting for Tor to come up before anything is fetched. */
+        data object WaitingForTor : State
+
         data class Showing(
             val component: Component,
         ) : State
@@ -101,21 +115,54 @@ class DesktopNappletSession(
     }
 
     enum class Failure {
-        /** No server returned the signed artifact. */
+        /** No server returned the signed files. */
         UNREACHABLE,
 
         /** Chromium did not download or start. */
         ENGINE,
+
+        /** Tor is on and isn't running: nothing may leave until it is. */
+        ROUTE_BLOCKED,
     }
+
+    /** What the window's toolbar shows about the page. */
+    data class Page(
+        val isLoading: Boolean = false,
+        val canGoBack: Boolean = false,
+        val canGoForward: Boolean = false,
+        val zoomPercent: Int = 100,
+    )
 
     private val mutableState = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = mutableState.asStateFlow()
+
+    private val mutablePage = MutableStateFlow(Page())
+    val page: StateFlow<Page> = mutablePage.asStateFlow()
+
+    /** Whether this window's traffic goes through Tor right now (a website on the open web can be forced). */
+    val routedOverTor: StateFlow<Boolean> get() = runtime.routes.routedOverTor
+
+    private val isWebsite = launch.profile == HostProfile.WEBSITE
+
+    // A website's origin is its own per account: this browser keeps one storage jar for everyone, so
+    // the account goes into the origin instead of choosing a separate jar as Android does.
+    private val appOrigin =
+        NappletWebContract.appOrigin(
+            NappletWebContract.appId(
+                author = launch.identity.authorPubKey,
+                identifier = launch.identity.identifier,
+                partition = if (isWebsite) launch.accountPubKey else null,
+            ),
+        )
+
+    private val blobsUseTor: Boolean get() = if (isWebsite) launch.useTor else runtime.nappletBlobsUseTor()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
     private var browser: CefBrowser? = null
     private var router: CefMessageRouter? = null
-    private var shell: ByteArray = ByteArray(0)
+    private var shell = NappletWebContract.ShellPage(ByteArray(0), "")
+    private var shim: String = ""
 
     @Volatile
     private var closed = false
@@ -123,13 +170,41 @@ class DesktopNappletSession(
     fun start() {
         scope.launch {
             try {
-                val artifact = runtime.blobs.resolve(launch) as? StaticSiteResolution.Resolved
-                if (artifact == null) {
-                    Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s artifact" }
+                // With Tor on, nothing is fetched until Tor runs, so no request leaves early or around
+                // it: a site's own traffic, or a napplet's blobs. Android fails closed the same way.
+                val needsTor = blobsUseTor
+                if (needsTor && !runtime.routes.torRunning) mutableState.value = State.WaitingForTor
+                val routed =
+                    if (isWebsite) {
+                        runtime.routes.claim(this@DesktopNappletSession, launch.useTor, runtime.torWaitMs)
+                    } else {
+                        !needsTor || runtime.routes.awaitTor(runtime.torWaitMs)
+                    }
+                if (!routed) {
+                    Log.w(TAG) { "Tor is not running; not opening ${launch.identity.coordinate}" }
+                    mutableState.value = State.Failed(Failure.ROUTE_BLOCKED)
+                    return@launch
+                }
+                mutableState.value = State.Loading
+                shim = NappletWebContract.shimJs().decodeToString()
+                // The entry point must resolve before a window shows: a missing site is a clear
+                // message, not a blank page.
+                val entry = runtime.blobs.resolve(launch, if (isWebsite) "/" else DesktopNappletBlobs.INDEX_PATH, blobsUseTor) as? StaticSiteResolution.Resolved
+                if (entry == null) {
+                    Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
                     return@launch
                 }
-                shell = buildShell(artifact.bytes)
+                val artifact = if (isWebsite) null else NappletWebContract.injectPrelude(entry.bytes, shim, launch.declaredDomains, locked = true)
+                val page = NappletWebContract.shell(NappletWebContract.shellHtml(), launch.profile, appOrigin, artifact)
+                shell =
+                    NappletWebContract.ShellPage(
+                        page.html
+                            .decodeToString()
+                            .replaceFirst("<head>", "<head>$BRIDGE_SCRIPT")
+                            .encodeToByteArray(),
+                        page.csp,
+                    )
                 val app = runtime.engine.app()
                 if (closed) return@launch
                 val client = app.createClient()
@@ -141,29 +216,10 @@ class DesktopNappletSession(
                 mutableState.value = State.Showing(browser.uiComponent)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
-                Log.w(TAG, "Napplet ${launch.identity.coordinate} did not open", e)
+                Log.w(TAG, "${launch.identity.coordinate} did not open", e)
                 mutableState.value = State.Failed(Failure.ENGINE)
             }
         }
-    }
-
-    private suspend fun buildShell(artifact: ByteArray): ByteArray {
-        val shim = NappletWebContract.shimJs().decodeToString()
-        val injected = NappletWebContract.injectPrelude(artifact, shim, launch.declaredDomains, locked = true)
-        val encoded = Base64.getEncoder().encodeToString(injected)
-        val appId = "n" + sha256("${launch.identity.authorPubKey}:${launch.identity.identifier}".encodeToByteArray()).toHexKey().take(31)
-        return NappletWebContract
-            .shellHtml()
-            .decodeToString()
-            .replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, NappletWebContract.appOrigin(appId))
-            .replace(NappletWebContract.APP_SANDBOX_PLACEHOLDER, "allow-scripts")
-            .replace(
-                NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER,
-                "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
-                    "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
-                    "iframe.srcdoc=new TextDecoder('utf-8').decode(u);",
-            ).replaceFirst("<head>", "<head>$BRIDGE_SCRIPT")
-            .encodeToByteArray()
     }
 
     private fun installHandlers(client: CefClient) {
@@ -203,7 +259,10 @@ class DesktopNappletSession(
                     isRedirect: Boolean,
                 ): Boolean {
                     if (isInternal(request.url) || isLocal(request.url)) return false
-                    // A link out leaves through the system browser, and only when the user clicked it.
+                    // A website's embeds (frames inside its own frame) are ordinary web pages.
+                    if (isWebsite && !frame.isMain && frame.parent?.isMain == false && isWebLink(request.url)) return false
+                    // The shell and the page's own frame never leave; a link the user clicked opens in
+                    // the system browser, and only then.
                     if (userGesture && isWebLink(request.url)) DesktopBrowser.open(request.url)
                     return true
                 }
@@ -216,7 +275,14 @@ class DesktopNappletSession(
                     isDownload: Boolean,
                     requestInitiator: String?,
                     disableDefaultHandling: BoolRef,
-                ): CefResourceRequestHandler? = if (isLocal(request.url)) null else resourceHandler
+                ): CefResourceRequestHandler? =
+                    when {
+                        isLocal(request.url) -> null
+                        isInternal(request.url) -> internalHandler
+                        // A website talks to the web through the router's route; a napplet has no network.
+                        isWebsite -> null
+                        else -> cancelHandler
+                    }
             },
         )
         client.addLifeSpanHandler(
@@ -232,28 +298,152 @@ class DesktopNappletSession(
                 }
             },
         )
+        client.addLoadHandler(
+            object : CefLoadHandlerAdapter() {
+                override fun onLoadingStateChange(
+                    browser: CefBrowser,
+                    isLoading: Boolean,
+                    canGoBack: Boolean,
+                    canGoForward: Boolean,
+                ) {
+                    mutablePage.update { it.copy(isLoading = isLoading, canGoBack = canGoBack, canGoForward = canGoForward) }
+                }
+
+                // A missing blob, a verify miss or a request the posture refused, so a site's author can
+                // see what broke (Android's host logs these to its console panel).
+                override fun onLoadError(
+                    browser: CefBrowser,
+                    frame: CefFrame,
+                    errorCode: CefLoadHandler.ErrorCode,
+                    errorText: String?,
+                    failedUrl: String,
+                ) {
+                    if (errorCode != CefLoadHandler.ErrorCode.ERR_ABORTED) {
+                        Log.w(TAG) { "${launch.identity.coordinate}: $errorCode loading ${failedUrl.take(120)} ($errorText)" }
+                    }
+                }
+            },
+        )
+        client.addDisplayHandler(
+            object : CefDisplayHandlerAdapter() {
+                override fun onConsoleMessage(
+                    browser: CefBrowser,
+                    level: CefSettings.LogSeverity,
+                    message: String,
+                    source: String,
+                    line: Int,
+                ): Boolean {
+                    Log.d(TAG) { "${launch.identity.coordinate} console [$level] $message ($source:$line)" }
+                    return false
+                }
+            },
+        )
     }
 
-    /** Serves the shell; refuses everything else before it leaves the machine. */
-    private val resourceHandler =
+    /** Cancels a napplet's off-origin request before it leaves the machine. */
+    private val cancelHandler =
         object : CefResourceRequestHandlerAdapter() {
             override fun onBeforeResourceLoad(
                 browser: CefBrowser,
                 frame: CefFrame,
                 request: CefRequest,
-            ): Boolean = !isInternal(request.url)
+            ): Boolean = true
+        }
 
+    /** Serves the shell and, for a website, its verified files; everything else internal is a 404. */
+    private val internalHandler =
+        object : CefResourceRequestHandlerAdapter() {
             override fun getResourceHandler(
                 browser: CefBrowser,
                 frame: CefFrame,
                 request: CefRequest,
-            ): CefResourceHandler =
-                if (request.url == NappletWebContract.SHELL_URL && request.method.equals("GET", ignoreCase = true)) {
-                    BytesResourceHandler(200, shell, "text/html", mapOf("Content-Security-Policy" to NappletWebContract.shellCsp("'self'")))
-                } else {
-                    BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
+            ): CefResourceHandler {
+                val url = request.url
+                if (!request.method.equals("GET", ignoreCase = true)) return notFound()
+                if (url == NappletWebContract.SHELL_URL) {
+                    return BytesResourceHandler(200, shell.html, "text/html", mapOf("Content-Security-Policy" to shell.csp, "Cache-Control" to "no-store"))
                 }
+                if (isWebsite && (url == appOrigin || url.startsWith("$appOrigin/"))) {
+                    // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
+                    val acceptsHtml =
+                        request.resourceType == CefRequest.ResourceType.RT_MAIN_FRAME ||
+                            request.resourceType == CefRequest.ResourceType.RT_SUB_FRAME ||
+                            request.getHeaderByName("Accept")?.contains(MIME_HTML, ignoreCase = true) == true
+                    return SiteResourceHandler(url, acceptsHtml)
+                }
+                return notFound()
+            }
         }
+
+    /**
+     * One file of a website, fetched and verified off the IO thread CEF asks on. A client-routed
+     * page (a document navigation to a path the event doesn't list) falls back to the verified `/`,
+     * so deep links and reloads work; a missing script or image is still a 404, never the page.
+     */
+    private inner class SiteResourceHandler(
+        private val url: String,
+        private val acceptsHtml: Boolean,
+    ) : CefResourceHandlerAdapter() {
+        private var response = BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
+
+        override fun processRequest(
+            request: CefRequest,
+            callback: CefCallback,
+        ): Boolean {
+            scope.launch {
+                try {
+                    response = serve()
+                } catch (e: Throwable) {
+                    if (e is CancellationException) throw e
+                    Log.w(TAG, "Could not serve $url", e)
+                } finally {
+                    callback.Continue()
+                }
+            }
+            return true
+        }
+
+        private suspend fun serve(): BytesResourceHandler {
+            val requestPath =
+                url
+                    .removePrefix(appOrigin)
+                    .substringBefore('?')
+                    .substringBefore('#')
+                    .ifEmpty { "/" }
+            var resolution = runtime.blobs.resolve(launch, requestPath, blobsUseTor)
+            if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
+                resolution = runtime.blobs.resolve(launch, "/", blobsUseTor)
+            }
+            if (resolution !is StaticSiteResolution.Resolved) return BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
+            val contentType = resolution.contentType
+            val mime = contentType.substringBefore(';').trim().ifEmpty { "application/octet-stream" }
+            val isHtml = mime.equals(MIME_HTML, ignoreCase = true)
+            val bytes =
+                if (isHtml) {
+                    NappletWebContract.injectPrelude(resolution.bytes, shim, launch.declaredDomains, locked = false, injectNip07 = true)
+                } else {
+                    resolution.bytes
+                }
+            val charset =
+                contentType.substringAfter("charset=", "").trim().ifEmpty { null }
+                    ?: if (mime.startsWith("text/") || mime.endsWith("javascript") || mime.endsWith("json")) "utf-8" else null
+            val header = if (charset != null) "$mime; charset=$charset" else mime
+            return BytesResourceHandler(200, bytes, mime, mapOf("Content-Type" to header, "Cache-Control" to "no-store"))
+        }
+
+        override fun getResponseHeaders(
+            response: CefResponse,
+            responseLength: IntRef,
+            redirectUrl: StringRef,
+        ) = this.response.getResponseHeaders(response, responseLength, redirectUrl)
+
+        override fun readResponse(
+            dataOut: ByteArray,
+            bytesToRead: Int,
+            bytesRead: IntRef,
+            callback: CefCallback,
+        ): Boolean = response.readResponse(dataOut, bytesToRead, bytesRead, callback)
+    }
 
     private fun handle(payload: String) {
         if (closed) return
@@ -276,6 +466,44 @@ class DesktopNappletSession(
         if (NappletCapability.THEME in launch.declared) send(NappletProtocolJson.encodeThemeChanged(colors.background, colors.text, colors.primary))
     }
 
+    fun reload() {
+        browser?.reload()
+    }
+
+    fun stop() {
+        browser?.stopLoad()
+    }
+
+    fun goBack() {
+        browser?.goBack()
+    }
+
+    fun goForward() {
+        browser?.goForward()
+    }
+
+    /** Highlights [text] on the page; [forward] steps through the matches. An empty text clears it. */
+    fun find(
+        text: String,
+        forward: Boolean = true,
+        findNext: Boolean = false,
+    ) {
+        val browser = browser ?: return
+        if (text.isEmpty()) browser.stopFinding(true) else browser.find(text, forward, false, findNext)
+    }
+
+    fun stopFinding() {
+        browser?.stopFinding(true)
+    }
+
+    /** Page zoom as a percentage of normal size, like Android's text zoom. */
+    fun setZoom(percent: Int) {
+        val clamped = percent.coerceIn(MIN_ZOOM, MAX_ZOOM)
+        // Chromium's zoom level is a power of 1.2: level 0 is 100%.
+        browser?.zoomLevel = ln(clamped / 100.0) / ln(1.2)
+        mutablePage.update { it.copy(zoomPercent = clamped) }
+    }
+
     private fun withId(
         payload: String,
         id: String?,
@@ -296,6 +524,7 @@ class DesktopNappletSession(
         closed = true
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.attendance.forget(this)
+        if (isWebsite) runtime.routes.release(this)
         scope.cancel()
         val client = client
         val browser = browser
@@ -308,7 +537,7 @@ class DesktopNappletSession(
             if (client != null && router != null) client.removeMessageRouter(router)
             router?.dispose()
             client?.dispose()
-        }.onFailure { Log.w(TAG, "Napplet browser did not close cleanly", it) }
+        }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
     }
 
     private class BytesResourceHandler(
@@ -360,6 +589,9 @@ class DesktopNappletSession(
         private const val TAG = "DesktopNappletSession"
         private const val QUERY_FUNCTION = "__amethystNappletQuery"
         private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
+        private const val MIME_HTML = "text/html"
+        const val MIN_ZOOM = 50
+        const val MAX_ZOOM = 300
 
         /**
          * The object the shared shell expects at [NappletWebContract.BRIDGE_NAME]: `postMessage(String)`
@@ -371,11 +603,13 @@ class DesktopNappletSession(
                 "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +
                 "q({request:String(s),persistent:false,onSuccess:function(){},onFailure:function(){}});}};})();</script>"
 
+        private fun notFound(): CefResourceHandler = BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
+
         private fun isInternal(url: String): Boolean = runCatching { NappletWebContract.isInternalHost(URI(url).host) && url.startsWith("https://") }.getOrDefault(false)
 
         private fun isWebLink(url: String): Boolean = url.startsWith("https://") || url.startsWith("http://")
 
-        /** The napplet's srcdoc document and the data/blob URLs a page makes itself: none leave the machine. */
+        /** A napplet's srcdoc document and the data/blob URLs a page makes itself: none leave the machine. */
         private fun isLocal(url: String): Boolean = url == "about:srcdoc" || url == "about:blank" || url.startsWith("data:") || url.startsWith("blob:")
     }
 }

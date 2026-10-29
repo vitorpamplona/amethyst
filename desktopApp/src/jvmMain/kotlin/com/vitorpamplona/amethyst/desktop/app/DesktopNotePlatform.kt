@@ -97,6 +97,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletCard
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopSiteCard
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
@@ -107,6 +108,8 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
@@ -130,8 +133,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent
 object DesktopNotePlatform : NotePlatform {
     private val MaxInlineMediaHeight = 600.dp
 
-    // Napplets open in the desktop's sandboxed Chromium window; nSites keep the shared card until
-    // the desktop hosts them too.
+    // Napplets and nSites open in the desktop's sandboxed Chromium windows.
     @Composable
     override fun RenderRootNappletEvent(
         baseNote: Note,
@@ -150,6 +152,26 @@ object DesktopNotePlatform : NotePlatform {
     ) {
         val event = baseNote.event as? NamedNappletEvent ?: return
         DesktopNappletCard(event, identifier = event.identifier())
+    }
+
+    @Composable
+    override fun RenderRootSiteEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {
+        val event = baseNote.event as? RootSiteEvent ?: return
+        DesktopSiteCard(event)
+    }
+
+    @Composable
+    override fun RenderNamedSiteEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {
+        val event = baseNote.event as? NamedSiteEvent ?: return
+        DesktopSiteCard(event)
     }
 
     private fun BaseMediaContent.mediaUrl(): String? =

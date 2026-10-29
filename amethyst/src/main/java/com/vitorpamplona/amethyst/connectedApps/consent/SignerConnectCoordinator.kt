@@ -22,34 +22,13 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_connect_title
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-
-/** Everything the "Connect to Nostr" dialog needs to render. */
-data class SignerConnectInfo(
-    val appletTitle: String,
-    val coordinate: String,
-    val domain: String,
-    val iconUrl: String? = null,
-    /**
-     * The account the app is connecting to, shown as an avatar + name instead of a raw pubkey. When
-     * [accountName] is null (e.g. napplet/browser paths that don't resolve it) the dialog falls back
-     * to [domain]. [accountPubKey] seeds the robohash avatar fallback when there's no picture.
-     */
-    val accountName: String? = null,
-    val accountPicture: String? = null,
-    val accountPubKey: String? = null,
-    /**
-     * Human-readable permissions the app declared it needs (from a `nostrconnect://…?perms=` offer),
-     * shown so the user gives INFORMED consent before those ops are pre-granted. Empty for flows that
-     * carry no declaration (bunker connect), which just show the trust picker.
-     */
-    val requestedPermissions: List<String> = emptyList(),
-)
 
 /**
  * Bridges the broker to the "Connect to Nostr" first-connect UI. Suspends in [requestConnect];

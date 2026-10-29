@@ -18,11 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet.ui
 
-import android.content.Context
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentInfoBuilder
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -33,14 +35,6 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.counterpartyPubKey
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
-import com.vitorpamplona.amethyst.commons.napplet.ui.counterpartyLabel
-import com.vitorpamplona.amethyst.commons.napplet.ui.deletionChange
-import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
-import com.vitorpamplona.amethyst.commons.napplet.ui.listChange
-import com.vitorpamplona.amethyst.commons.napplet.ui.profileChange
-import com.vitorpamplona.amethyst.commons.napplet.ui.reportChange
-import com.vitorpamplona.amethyst.commons.napplet.ui.sealContents
-import com.vitorpamplona.amethyst.commons.napplet.ui.signRequestSummary
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
@@ -55,9 +49,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
-import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentInfoBuilder
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
-import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
 import com.vitorpamplona.quartz.nip01Core.kite.KiteWriter
@@ -74,7 +65,7 @@ import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 
 /** Human-readable label for a [NostrSignerOp]. */
-suspend fun NostrSignerOp.label(context: Context): String =
+suspend fun NostrSignerOp.label(): String =
     when (this) {
         is NostrSignerOp.SignKind ->
             if (kind == RelayAuthEvent.KIND) {
@@ -94,7 +85,7 @@ suspend fun NostrSignerOp.label(context: Context): String =
 
 /** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 suspend fun buildSignerConsentInfo(
-    context: Context,
+    browserIcons: BrowserIconRegistry,
     identity: NappletIdentity,
     op: NostrSignerOp,
     request: NappletRequest,
@@ -105,7 +96,7 @@ suspend fun buildSignerConsentInfo(
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-            host to Amethyst.instance.browserIcons.iconModelFor(host)
+            host to browserIcons.iconModelFor(host)
         } else {
             resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         }
@@ -133,7 +124,7 @@ suspend fun buildSignerConsentInfo(
         when {
             seal != null -> loadStringRes(Res.string.napplet_op_seal_message_to, counterpartyLabel(seal.recipient))
             isUnreadableSeal -> loadStringRes(Res.string.napplet_op_seal_message)
-            else -> (signKind?.let { k -> signTags?.let { signRequestSummary(k, it) } }) ?: (narrowOp ?: op).label(context)
+            else -> (signKind?.let { k -> signTags?.let { signRequestSummary(k, it) } }) ?: (narrowOp ?: op).label()
         }
     val preview =
         when {
@@ -180,7 +171,7 @@ suspend fun buildSignerConsentInfo(
             (narrowOp as? NostrSignerOp.DecryptFrom)?.let {
                 loadStringRes(Res.string.nip46_signer_allow_always_for, counterpartyLabel(it.counterparty))
             },
-        rememberedOpLabel = op.label(context),
+        rememberedOpLabel = op.label(),
         changeSummary = change?.text,
         changeIsWarning = change?.warning ?: false,
     )
@@ -239,7 +230,7 @@ private inline fun prettyJson(build: JsonObjectBuilder.() -> Unit): String = Kit
  * approve a set it never showed them.
  */
 suspend fun buildConnectInfo(
-    context: Context,
+    browserIcons: BrowserIconRegistry,
     identity: NappletIdentity,
     declared: Set<NappletCapability> = emptySet(),
 ): SignerConnectInfo {
@@ -247,7 +238,7 @@ suspend fun buildConnectInfo(
     val (title, iconUrl) =
         if (identity.authorPubKey == "browser") {
             val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-            host to Amethyst.instance.browserIcons.iconModelFor(host)
+            host to browserIcons.iconModelFor(host)
         } else {
             resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
         }

@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletG
 import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentSummary
+import com.vitorpamplona.amethyst.commons.napplet.ui.buildConnectInfo
+import com.vitorpamplona.amethyst.commons.napplet.ui.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -56,8 +58,6 @@ import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
-import com.vitorpamplona.amethyst.napplet.buildConnectInfo
-import com.vitorpamplona.amethyst.napplet.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.napplet.currentNappletThemeColors
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.crypto.sha2.sha256
@@ -140,7 +140,7 @@ class AccountNappletGateways(
             NostrConnectPrompt { identity, declared ->
                 SignerConnectCoordinator.requestConnect(
                     context = context,
-                    info = buildConnectInfo(context, identity, declared),
+                    info = buildConnectInfo(Amethyst.instance.browserIcons, identity, declared),
                 )
             }
 
@@ -155,7 +155,7 @@ class AccountNappletGateways(
                 withTimeoutOrNull(SIGNER_CONSENT_TIMEOUT) {
                     SignerConsentCoordinator.requestConsent(
                         context = context,
-                        info = buildSignerConsentInfo(context, identity, op, request, account, recentEncryptions),
+                        info = buildSignerConsentInfo(Amethyst.instance.browserIcons, identity, op, request, account, recentEncryptions),
                     )
                 } ?: SignerOpGrant.DenyOnce
             }

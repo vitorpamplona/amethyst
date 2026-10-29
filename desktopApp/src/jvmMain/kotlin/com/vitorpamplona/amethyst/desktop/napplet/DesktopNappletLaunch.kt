@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
@@ -30,16 +31,22 @@ import com.vitorpamplona.amethyst.commons.napplet.unsupportedRequired
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 
 /**
- * Everything a desktop napplet window needs, checked the way Android's `NappletLauncher` checks it:
- * a signed, valid NIP-5D manifest whose required domains this host brokers, with exactly one
- * `/index.html` artifact. [declared] is the security decision: the capabilities the broker may
- * grant this launch, from the manifest and nothing the page says later.
+ * Everything a desktop napplet or nSite window needs, checked the way Android's `NappletLauncher`
+ * checks it.
+ *
+ * A [HostProfile.NAPPLET] is a signed, valid NIP-5D manifest whose required domains this host
+ * brokers, with exactly one `/index.html` artifact. A [HostProfile.WEBSITE] is a signed NIP-5A site:
+ * every path it lists, served at its own origin, with NIP-07 behind the consent broker. [declared] is
+ * the security decision: the capabilities the broker may grant this launch, from the manifest or the
+ * posture and nothing the page says later.
  */
 class DesktopNappletLaunch(
     val identity: NappletIdentity,
@@ -49,9 +56,18 @@ class DesktopNappletLaunch(
     val servers: List<String>,
     /** The account that opened it: the window keeps signing as this account, whoever is active later. */
     val accountPubKey: HexKey,
+    val profile: HostProfile = HostProfile.NAPPLET,
+    /**
+     * Whether a website's traffic and blobs go through Tor, from the user's choice for this site. A
+     * napplet has no network of its own; its blobs follow the app's Tor setting.
+     */
+    val useTor: Boolean = false,
 ) {
     /** Exact NAP domain names the prelude projects onto `window.napplet`; absence is the availability signal. */
-    val declaredDomains: List<String> = declared.map { it.name.lowercase() }
+    val declaredDomains: List<String> = declared.map { it.name.lowercase() }.distinct()
+
+    /** The same launch on the other network route, to reopen a site after the user switches it. */
+    fun withUseTor(useTor: Boolean) = DesktopNappletLaunch(identity, declared, title, paths, servers, accountPubKey, profile, useTor)
 
     companion object {
         fun from(
@@ -71,13 +87,6 @@ class DesktopNappletLaunch(
                         "A napplet is one self-contained /index.html with a valid artifact hash"
                     }
 
-                // The author's own Blossom list (kind:10063), when cached, backs up the manifest's
-                // servers. Every blob is checked against its sha256, so an extra server can't inject.
-                val authorServers =
-                    (LocalCache.getAddressableNoteIfExists(BlossomServersEvent.createAddressTag(event.pubKey))?.event as? BlossomServersEvent)
-                        ?.servers()
-                        .orEmpty()
-
                 DesktopNappletLaunch(
                     identity =
                         NappletIdentity(
@@ -90,9 +99,58 @@ class DesktopNappletLaunch(
                     declared = resolveRequiredCapabilities(manifest.exposedDomains()).capabilities,
                     title = manifest.title()?.ifBlank { null } ?: identifier.ifBlank { "Napplet" },
                     paths = paths,
-                    servers = (manifest.servers() + authorServers).distinct(),
+                    servers = (manifest.servers() + authorServers(event.pubKey)).distinct(),
                     accountPubKey = accountPubKey,
                 )
             }
+
+        /**
+         * An nSite ([RootSiteEvent] or [NamedSiteEvent]), opened in the website posture. [useTor] is
+         * where its traffic goes; the caller resolves it from the user's choice for this site.
+         */
+        fun fromSite(
+            event: Event,
+            accountPubKey: HexKey,
+            useTor: Boolean,
+        ): Result<DesktopNappletLaunch> =
+            runCatching {
+                require(event.verify()) { "The site's signature does not verify" }
+                val (identifier, paths, servers, title) =
+                    when (event) {
+                        is RootSiteEvent -> SiteFields("", event.paths(), event.servers(), event.title())
+                        is NamedSiteEvent -> SiteFields(event.identifier(), event.paths(), event.servers(), event.title())
+                        else -> throw IllegalArgumentException("Not a NIP-5A site")
+                    }
+                require(paths.isNotEmpty()) { "The site lists no files" }
+                DesktopNappletLaunch(
+                    identity =
+                        NappletIdentity(
+                            authorPubKey = event.pubKey,
+                            identifier = identifier,
+                            aggregateHash = null,
+                        ),
+                    declared = HostProfile.WEBSITE.declaredCapabilities(emptyList()),
+                    title = title?.ifBlank { null } ?: identifier.ifBlank { "nsite" },
+                    paths = paths,
+                    servers = (servers + authorServers(event.pubKey)).distinct(),
+                    accountPubKey = accountPubKey,
+                    profile = HostProfile.WEBSITE,
+                    useTor = useTor,
+                )
+            }
+
+        private data class SiteFields(
+            val identifier: String,
+            val paths: List<PathTag>,
+            val servers: List<String>,
+            val title: String?,
+        )
+
+        // The author's own Blossom list (kind:10063), when cached, backs up the event's servers. Every
+        // blob is checked against its sha256, so an extra server can't inject anything.
+        private fun authorServers(author: HexKey): List<String> =
+            (LocalCache.getAddressableNoteIfExists(BlossomServersEvent.createAddressTag(author))?.event as? BlossomServersEvent)
+                ?.servers()
+                .orEmpty()
     }
 }

@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
+import com.vitorpamplona.amethyst.commons.resources.nsite_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.ui.note.NappletCardInfo
 import com.vitorpamplona.amethyst.commons.ui.note.StaticWebsiteCard
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
@@ -33,6 +34,8 @@ import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 
@@ -78,4 +81,35 @@ fun DesktopNappletCard(
         icon = rememberNappletIconModel(coordinate),
         onOpen = if (info.launchable && host != null) ({ openNapplet(host, event, toaster, openFailed) }) else null,
     )
+}
+
+/** Opens the nSite [event], and tells the user (with the reason in the log) when it can't. */
+fun openSite(
+    host: DesktopNappletHost?,
+    event: Event,
+    toaster: Toaster,
+    openFailed: String,
+) {
+    if (host == null) return
+    host.openSite(event).onFailure {
+        Log.w("DesktopNappletHost", "Refusing to open nSite ${event.id}", it)
+        toaster.show(openFailed, false)
+    }
+}
+
+/**
+ * The shared nSite card with an Open button that runs the site in [DesktopNappletHost], in the
+ * website posture. The card itself never runs the site's code.
+ */
+@Composable
+fun DesktopSiteCard(event: Event) {
+    val host = LocalDesktopNappletHost.current
+    val toaster = LocalAppPlatform.current.rememberToaster()
+    val openFailed = stringRes(Res.string.nsite_desktop_open_failed)
+    val launchable = host != null && (event as? RootSiteEvent)?.paths()?.isNotEmpty() ?: (event as? NamedSiteEvent)?.paths()?.isNotEmpty() ?: false
+    val onOpen = if (launchable) ({ openSite(host, event, toaster, openFailed) }) else null
+    when (event) {
+        is RootSiteEvent -> StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), null, isNapplet = false, icon = event.icon(), onOpen = onOpen)
+        is NamedSiteEvent -> StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), event.identifier(), isNapplet = false, icon = event.icon(), onOpen = onOpen)
+    }
 }

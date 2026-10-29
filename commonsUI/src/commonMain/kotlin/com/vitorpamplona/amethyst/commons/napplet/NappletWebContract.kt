@@ -21,7 +21,11 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import org.jetbrains.compose.resources.ExperimentalResourceApi
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * The single source of truth for the napplet **web contract** — the trusted shell page, the injected
@@ -46,6 +50,72 @@ object NappletWebContract {
      * executes with an opaque origin in an `allow-scripts`-only sandbox.
      */
     fun appOrigin(appId: String): String = "https://$appId.$HOST"
+
+    /**
+     * Stable, unique, DNS-label-safe id for an applet's sandbox origin: a sha256 of
+     * `author:identifier`, hex, truncated to 31 chars and letter-prefixed (`n`). The leading letter
+     * avoids any numeric-host parsing quirk and keeps it ≤63 chars (a valid DNS label). The same
+     * applet always derives the same id, so its origin, and therefore its localStorage/IndexedDB,
+     * persists across launches; different applets derive different subdomains, so their storage is
+     * isolated from one another. A host whose browser keeps one storage jar for every account passes
+     * that account as [partition], so each account gets its own origin.
+     */
+    fun appId(
+        author: String,
+        identifier: String,
+        partition: String? = null,
+    ): String {
+        val seed = if (partition == null) "$author:$identifier" else "$partition:$author:$identifier"
+        return "n" + sha256(seed.encodeToByteArray()).toHexKey().take(31)
+    }
+
+    /** A filled-in shell page and the Content-Security-Policy header it must be served with. */
+    class ShellPage(
+        val html: ByteArray,
+        val csp: String,
+    )
+
+    /**
+     * The trusted shell for one launch: [shellHtml] with its placeholders filled for [profile].
+     *
+     * A NIP-5D napplet's identity is bound to the exact verified bytes that execute, so the host
+     * resolves its sole `/index.html`, injects the prelude outside the aggregate hash, and passes the
+     * result here as [injectedArtifact]; it reaches the opaque-origin child through `srcdoc`, never a
+     * navigated `src`. A NIP-5A website keeps a dedicated real origin ([appOrigin]) with normal
+     * storage and network, and NIP-07 behind the consent broker.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    fun shell(
+        shellHtml: ByteArray,
+        profile: HostProfile,
+        appOrigin: String,
+        injectedArtifact: ByteArray?,
+    ): ShellPage {
+        val sandbox: String
+        val frameSource: String
+        val bootstrap: String
+        if (profile == HostProfile.NAPPLET) {
+            val encoded = Base64.encode(requireNotNull(injectedArtifact) { "A napplet's shell needs its verified artifact" })
+            sandbox = "allow-scripts"
+            frameSource = "'self'"
+            bootstrap =
+                "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
+                "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
+                "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
+        } else {
+            sandbox = "allow-scripts allow-same-origin"
+            frameSource = appOrigin
+            bootstrap = "iframe.src = '$appOrigin/';"
+        }
+        val html =
+            shellHtml
+                .decodeToString()
+                .replace(APP_ORIGIN_PLACEHOLDER, appOrigin)
+                .replace(APP_SANDBOX_PLACEHOLDER, sandbox)
+                .replace(APP_BOOTSTRAP_PLACEHOLDER, bootstrap)
+                .encodeToByteArray()
+        return ShellPage(html, shellCsp(frameSource))
+    }
 
     /** True for the shell host and any per-applet subdomain — i.e. everything we serve internally. */
     fun isInternalHost(host: String?): Boolean = host == HOST || (host != null && host.endsWith(".$HOST"))

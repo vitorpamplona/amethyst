@@ -20,6 +20,11 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.PendingConsent
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import kotlinx.coroutines.CompletableDeferred
@@ -27,22 +32,65 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import java.util.UUID
 
 /**
- * The consent questions napplets are waiting on. The broker's consent prompt suspends in [request];
- * the napplet's window shows the oldest question for its coordinate and answers it. A window that
- * closes first answers [GrantState.ASK] (not now), which grants nothing.
+ * The questions open napplets and nSites are waiting on. The broker's prompts suspend here; the
+ * window for that coordinate shows the oldest question and answers it. Every question fails closed:
+ * a window that closes first, or a dialog closed without a choice, grants nothing.
+ *
+ * - [Capability]: may this app use a capability (NIP-5D, and NIP-07's identity and relays).
+ * - [Connect]: a site's first NIP-07 call, asking how much to trust it.
+ * - [SignerOp]: one signature, encryption or decryption. Several waiting at once are shown together.
  */
 class DesktopNappletConsent {
-    class Request(
+    sealed class Request(
         val coordinate: String,
-        val info: NappletConsentInfo,
     ) {
+        /** Answers it as "no" without the user, when its window goes away. */
+        abstract fun cancel()
+    }
+
+    class Capability(
+        coordinate: String,
+        val info: NappletConsentInfo,
+    ) : Request(coordinate) {
         internal val answer = CompletableDeferred<GrantState>()
 
         fun answer(decision: GrantState) {
             answer.complete(decision)
         }
+
+        override fun cancel() = answer(GrantState.ASK)
+    }
+
+    class Connect(
+        coordinate: String,
+        val info: SignerConnectInfo,
+    ) : Request(coordinate) {
+        internal val answer = CompletableDeferred<AppConnectResult>()
+
+        fun answer(result: AppConnectResult) {
+            answer.complete(result)
+        }
+
+        override fun cancel() = answer(AppConnectResult.Cancelled)
+    }
+
+    class SignerOp(
+        coordinate: String,
+        val info: SignerConsentInfo,
+    ) : Request(coordinate) {
+        val token: String = UUID.randomUUID().toString()
+        internal val answer = CompletableDeferred<SignerOpGrant>()
+
+        fun answer(grant: SignerOpGrant) {
+            answer.complete(grant)
+        }
+
+        override fun cancel() = answer(SignerOpGrant.DenyOnce)
+
+        fun asPending() = PendingConsent(token, info)
     }
 
     private val mutablePending = MutableStateFlow<List<Request>>(emptyList())
@@ -51,18 +99,32 @@ class DesktopNappletConsent {
     suspend fun request(
         coordinate: String,
         info: NappletConsentInfo,
-    ): GrantState {
-        val request = Request(coordinate, info)
+    ): GrantState = ask(Capability(coordinate, info)) { it.answer.await() }
+
+    suspend fun connect(
+        coordinate: String,
+        info: SignerConnectInfo,
+    ): AppConnectResult = ask(Connect(coordinate, info)) { it.answer.await() }
+
+    suspend fun signerOp(
+        coordinate: String,
+        info: SignerConsentInfo,
+    ): SignerOpGrant = ask(SignerOp(coordinate, info)) { it.answer.await() }
+
+    private suspend fun <R : Request, T> ask(
+        request: R,
+        await: suspend (R) -> T,
+    ): T {
         mutablePending.update { it + request }
         try {
-            return request.answer.await()
+            return await(request)
         } finally {
             mutablePending.update { it - request }
         }
     }
 
-    /** Answers "not now" for every question a closed napplet left behind. */
+    /** Answers "no" for every question a closed napplet or site left behind. */
     fun dismissAll(coordinate: String) {
-        pending.value.filter { it.coordinate == coordinate }.forEach { it.answer(GrantState.ASK) }
+        pending.value.filter { it.coordinate == coordinate }.forEach { it.cancel() }
     }
 }

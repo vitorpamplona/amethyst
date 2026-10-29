@@ -20,9 +20,9 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
-import android.util.Base64
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.GENERIC_CONTENT_TYPE
@@ -134,45 +134,24 @@ class NappletContentServer(
     }
 
     private fun serveShell(): WebResourceResponse {
-        val sandbox: String
-        val frameSource: String
-        val bootstrap: String
-
-        if (profile == HostProfile.NAPPLET) {
-            // NIP-5D identity is bound to the exact verified bytes that execute. Resolve the sole
-            // /index.html blob, inject host-owned policy/prelude outside its aggregate hash, then
-            // hand those bytes to the opaque-origin child via srcdoc (never a navigated src).
-            val resolution = resolveCacheFirst("/index.html")
-            if (resolution !is StaticSiteResolution.Resolved) return notFound()
-            val encoded = Base64.encodeToString(injectShim(resolution.bytes), Base64.NO_WRAP)
-            sandbox = "allow-scripts"
-            frameSource = "'self'"
-            bootstrap =
-                "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
-                "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
-                "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
-        } else {
-            // Amethyst's NIP-5A website posture is intentionally unchanged: a dedicated real origin,
-            // normal website storage/network, and NIP-07 behind the existing consent broker.
-            sandbox = "allow-scripts allow-same-origin"
-            frameSource = appOrigin
-            bootstrap = "iframe.src = '$appOrigin/';"
-        }
-
-        val html =
-            shellHtmlBytes
-                .decodeToString()
-                .replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, appOrigin)
-                .replace(NappletWebContract.APP_SANDBOX_PLACEHOLDER, sandbox)
-                .replace(NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER, bootstrap)
-                .encodeToByteArray()
+        val artifact =
+            if (profile == HostProfile.NAPPLET) {
+                // NIP-5D identity is bound to the exact verified bytes that execute: resolve the sole
+                // /index.html blob and inject host-owned policy/prelude outside its aggregate hash.
+                val resolution = resolveCacheFirst("/index.html")
+                if (resolution !is StaticSiteResolution.Resolved) return notFound()
+                injectShim(resolution.bytes)
+            } else {
+                null
+            }
+        val shell = NappletWebContract.shell(shellHtmlBytes, profile, appOrigin, artifact)
         return WebResourceResponse(
             MIME_HTML,
             "utf-8",
             200,
             "OK",
-            mapOf("Content-Security-Policy" to NappletWebContract.shellCsp(frameSource)),
-            ByteArrayInputStream(html),
+            mapOf("Content-Security-Policy" to shell.csp),
+            ByteArrayInputStream(shell.html),
         )
     }
 
