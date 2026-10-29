@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -149,6 +150,11 @@ fun LongFormHeader(
 
             Spacer(Modifier.padding(top = 12.dp))
             AuthorMetaRow(note, publishedAt, readingMinutes, accountViewModel)
+
+            // How much of this episode the user has heard, when it is one.
+            (note as? AddressableNote)?.let {
+                DrssHeardBadge(it, noteEvent, accountViewModel, Modifier.padding(top = 8.dp))
+            }
 
             if (topics.isNotEmpty()) {
                 Spacer(Modifier.padding(top = 8.dp))

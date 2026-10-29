@@ -839,6 +839,8 @@ object GlobalMediaPlayer {
             return
         }
         player.play(source.uri, loop = false)
+        // The engine may keep the last track's speed: a new one starts at the speed the state shows.
+        player.setRate(_audioState.value.speed)
         pendingAudioStartMillis?.let { start ->
             pendingAudioStartMillis = null
             seekAudioTo(player, start)
@@ -947,6 +949,25 @@ object GlobalMediaPlayer {
         val targetMillis = (target * durationMillis).toLong()
         player.seekTo(targetMillis)
         _audioState.update { it.copy(position = target, currentTime = targetMillis) }
+    }
+
+    /** Seeks the loaded audio to [millis], playing or not. */
+    fun seekAudioMillis(millis: Long) {
+        val player = audioPlayer ?: return
+        val durationMillis = player.currentDuration() ?: _audioState.value.duration
+        if (durationMillis <= 0L) return
+        seekAudio((millis.toDouble() / durationMillis).toFloat())
+    }
+
+    fun pauseAudio() {
+        audioPlayer?.pause()
+    }
+
+    /** Plays the loaded audio at [speed], 1 = normal. */
+    fun setAudioSpeed(speed: Float) {
+        val player = audioPlayer ?: return
+        player.setRate(speed)
+        _audioState.update { it.copy(speed = speed) }
     }
 
     /** UI passes volume in 0..100. kdroidFilter wants 0..1. */

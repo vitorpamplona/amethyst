@@ -148,7 +148,9 @@ class KindRegistryTest {
             // 7516 is a found log: read inside a cache's thread, where `kind:geocache` already
             // leads, rather than looked up on its own. 30301 and 30302 are Kanban boards and cards,
             // but 30301 is also WalletScrutiny's build verdicts, so no one word names it honestly.
-            listOf(24, 54, 1018, 1111, 1337, 1808, 7516, 10001, 10003, 30000, 30001, 30005, 30053, 30296, 30297, 30301, 30302, 30817, 31337),
+            // 30100-30104, 31341 and 31985 are drss.io's records, and other apps publish on most
+            // of those numbers too (catalogs, voting rounds, game reviews).
+            listOf(24, 54, 1018, 1111, 1337, 1808, 7516, 10001, 10003, 30000, 30001, 30005, 30053, 30100, 30101, 30102, 30104, 30296, 30297, 30301, 30302, 30817, 31337, 31341, 31985),
             RenderableKinds.ALL.filter { KindRegistry.nameFor(it) == null }.sorted(),
         )
     }

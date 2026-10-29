@@ -286,6 +286,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCvmToolsList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeleteGroup
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeletionRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssEventList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssFeedList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListenProgress
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssReadWriteLists
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
@@ -604,6 +612,19 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -940,6 +961,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
@@ -2169,7 +2191,27 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            -> {}
+            // drss.io's reader: listening progress, generated shows, list folders, lists and
+            // provenance notes, drawn the way drss draws them (types/Drss.kt).
+            is DrssListenProgressEvent,
+            -> RenderDrssListenProgress(baseNote, accountViewModel, nav)
+            is DrssShowEvent -> RenderDrssShow(baseNote, accountViewModel, nav)
+            is DrssListFolderEvent -> RenderDrssListFolder(baseNote, accountViewModel, nav)
+            is DrssFeedListEvent -> RenderDrssFeedList(baseNote, accountViewModel, nav)
+            is DrssEventListEvent -> RenderDrssEventList(baseNote, accountViewModel, nav)
+            is DrssProvenanceEvent -> RenderDrssProvenance(baseNote, backgroundColor, accountViewModel, nav)
+            is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
+            is DrssReadWriteListsEvent -> RenderDrssReadWriteLists(baseNote, accountViewModel, nav)
+
+            // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
+            // were typed.
+            is UnrecognizedKind30054Event,
+            is UnrecognizedKind30100Event,
+            is UnrecognizedKind30101Event,
+            is UnrecognizedKind30102Event,
+            is UnrecognizedKind30104Event,
+            is UnrecognizedKind31985Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {
                 RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
