@@ -64,13 +64,18 @@ import java.awt.BorderLayout
 import java.awt.Rectangle
 import java.awt.Robot
 import java.io.File
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.Inet4Address
 import java.net.InetSocketAddress
+import java.net.NetworkInterface
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.imageio.ImageIO
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
+import kotlin.concurrent.thread
 import kotlin.io.path.createTempDirectory
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -384,5 +389,44 @@ class DesktopNappletSessionTest {
 
             delay(2_000)
             assertFalse("/escaped" in requested, "the page could not navigate itself away")
+        }
+
+    @Test
+    fun aNappletsWebRtcCannotGoAroundTheRouter() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // A STUN server on this machine's own network address: loopback alone would not show a leak,
+            // since Chromium gathers no candidates on it.
+            val address =
+                NetworkInterface
+                    .getNetworkInterfaces()
+                    .asSequence()
+                    .filter { it.isUp && !it.isLoopback }
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { it is Inet4Address }
+            assumeTrue("No non-loopback IPv4 address to stand a STUN server on", address != null)
+            val stun = DatagramSocket(InetSocketAddress(address, 0))
+            val packets = AtomicInteger()
+            thread(isDaemon = true) {
+                val buffer = ByteArray(2048)
+                while (!stun.isClosed) runCatching { stun.receive(DatagramPacket(buffer, buffer.size)).also { packets.incrementAndGet() } }
+            }
+            try {
+                val probe =
+                    """
+                    <!doctype html><html><body><script>
+                    (async function () {
+                      var pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:${address!!.hostAddress}:${stun.localPort}' }] });
+                      pc.createDataChannel('x');
+                      await pc.setLocalDescription(await pc.createOffer());
+                    })();
+                    </script></body></html>
+                    """.trimIndent().encodeToByteArray()
+                show(session(probe, RecordingStorage(), runtime))
+                delay(8_000)
+                assertEquals(0, packets.get(), "no UDP left the machine around the router")
+            } finally {
+                stun.close()
+            }
         }
 }

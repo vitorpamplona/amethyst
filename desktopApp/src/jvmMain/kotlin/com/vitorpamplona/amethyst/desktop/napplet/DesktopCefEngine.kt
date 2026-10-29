@@ -33,7 +33,10 @@ import me.friwi.jcefmaven.EnumProgress
 import me.friwi.jcefmaven.MavenCefAppHandlerAdapter
 import org.cef.CefApp
 import org.cef.CefSettings
+import org.cef.browser.CefRequestContext
 import java.io.File
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * The one Chromium (JCEF) the desktop runs napplets in, started the first time a napplet opens.
@@ -104,12 +107,48 @@ class DesktopCefEngine(
             builder.cefSettings.persist_session_cookies = false
             builder.cefSettings.log_severity = CefSettings.LogSeverity.LOGSEVERITY_WARNING
             builder.addJcefArgs(*CHROMIUM_ARGS, "--proxy-server=socks5://127.0.0.1:${router.port}", "--proxy-bypass-list=<-loopback>")
-            builder.setAppHandler(object : MavenCefAppHandlerAdapter() {})
-            builder.build().also { mutableState.value = State.Ready(it) }
+            val context = ContextSetup()
+            builder.setAppHandler(
+                object : MavenCefAppHandlerAdapter() {
+                    // CEF's UI thread, the only one that may set a preference.
+                    override fun onContextInitialized() = context.apply()
+                },
+            )
+            val app = builder.build()
+            // JCEF initializes Chromium with the first client, and the context comes up after that. No
+            // window may load before the policies are in, so a throwaway client starts it and the
+            // engine waits for the context here.
+            app.createClient().dispose()
+            check(context.ready.await(CONTEXT_WAIT_SECONDS, TimeUnit.SECONDS)) { "Chromium's context did not start" }
+            check(context.problems.isEmpty()) { "Chromium refused ${context.problems}" }
+            app.also { mutableState.value = State.Ready(it) }
         } catch (e: Throwable) {
             Log.w(TAG, "Chromium did not start", e)
             mutableState.value = State.Failed(e.message ?: e::class.simpleName.orEmpty())
             throw e
+        }
+    }
+
+    /**
+     * Sets [CHROMIUM_PREFERENCES] on the global context. Chromium's process-wide switches can't do
+     * this: the WebRTC switch is ignored by CEF, and a refused preference means a policy we rely on
+     * is missing, so the engine then fails to start rather than run without it.
+     */
+    private class ContextSetup {
+        val ready = CountDownLatch(1)
+
+        @Volatile
+        var problems: List<String> = emptyList()
+            private set
+
+        fun apply() {
+            try {
+                val context = CefRequestContext.getGlobalContext()
+                problems = CHROMIUM_PREFERENCES.mapNotNull { (name, value) -> context.setPreference(name, value)?.let { "$name: $it" } }
+                problems.forEach { Log.w(TAG) { "Chromium refused a preference: $it" } }
+            } finally {
+                ready.countDown()
+            }
         }
     }
 
@@ -132,6 +171,21 @@ class DesktopCefEngine(
     companion object {
         private const val TAG = "DesktopCefEngine"
         private const val SHUTDOWN_WAIT_MS = 3_000L
+        private const val CONTEXT_WAIT_SECONDS = 60L
+
+        /**
+         * Profile preferences every page runs under, applied before any window loads:
+         * - WebRTC sends UDP only through the proxy, which a SOCKS proxy can't carry, so a page's peer
+         *   connections can't go around [router] (CSP `connect-src` doesn't cover them).
+         * - Third-party cookies are blocked, as Android's WebView does by default: one profile serves
+         *   every account and both routes here, so a cookie an embed or API sets must not follow the
+         *   user from one account, or from the open web, to another.
+         */
+        val CHROMIUM_PREFERENCES: Map<String, Any> =
+            mapOf(
+                "webrtc.ip_handling_policy" to "disable_non_proxied_udp",
+                "profile.cookie_controls_mode" to 1,
+            )
 
         private val CHROMIUM_ARGS =
             arrayOf(
