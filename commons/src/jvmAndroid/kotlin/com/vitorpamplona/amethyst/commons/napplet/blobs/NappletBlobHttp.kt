@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplethost
+package com.vitorpamplona.amethyst.commons.napplet.blobs
 
 import com.vitorpamplona.quartz.utils.Log
 import okhttp3.OkHttpClient
@@ -28,8 +28,8 @@ import java.net.Proxy
 import java.util.concurrent.TimeUnit
 
 /**
- * Shared Blossom-blob HTTP fetcher, used by both the sandbox content server and the main-process
- * prefetcher so blobs always travel the same Tor-routed path. No OkHttp disk cache here — durability
+ * Shared Blossom-blob HTTP fetcher, used by the hosts' blob stores and the prefetcher on Android and
+ * desktop, so blobs always travel the same path with the same limits. No OkHttp disk cache here — durability
  * is the content-addressed [NappletBlobCache], which (unlike OkHttp's journaled cache) is multi-process
  * safe.
  */
@@ -70,7 +70,12 @@ object NappletBlobHttp {
                     if (!r.isSuccessful || declared > MAX_BLOB_BYTES) {
                         null
                     } else {
-                        r.body.bytes().takeIf { it.size <= MAX_BLOB_BYTES }
+                        // A server that sends no length is still held to the cap: read one byte past it
+                        // and refuse anything that fills it.
+                        r.body
+                            .byteStream()
+                            .use { it.readNBytes(MAX_BLOB_BYTES.toInt() + 1) }
+                            .takeIf { it.size <= MAX_BLOB_BYTES }
                     }
                 }
         } catch (e: Exception) {

@@ -27,6 +27,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
@@ -43,6 +45,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
 import org.cef.CefSettings
@@ -157,6 +160,11 @@ class DesktopNappletSession(
 
     private val blobsUseTor: Boolean get() = if (isWebsite) launch.useTor else runtime.nappletBlobsUseTor()
 
+    // Built once the route is known: the app's shared client, so never closed here.
+    private lateinit var blobs: NappletBlobStore
+
+    private suspend fun resolve(requestPath: String) = withContext(Dispatchers.IO) { blobs.resolve(requestPath, launch.paths, launch.servers) }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
     private var browser: CefBrowser? = null
@@ -186,10 +194,11 @@ class DesktopNappletSession(
                     return@launch
                 }
                 mutableState.value = State.Loading
+                blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor))
                 shim = NappletWebContract.shimJs().decodeToString()
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
-                val entry = runtime.blobs.resolve(launch, if (isWebsite) "/" else DesktopNappletBlobs.INDEX_PATH, blobsUseTor) as? StaticSiteResolution.Resolved
+                val entry = resolve(if (isWebsite) "/" else INDEX_PATH) as? StaticSiteResolution.Resolved
                 if (entry == null) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
@@ -410,9 +419,9 @@ class DesktopNappletSession(
                     .substringBefore('?')
                     .substringBefore('#')
                     .ifEmpty { "/" }
-            var resolution = runtime.blobs.resolve(launch, requestPath, blobsUseTor)
+            var resolution = resolve(requestPath)
             if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
-                resolution = runtime.blobs.resolve(launch, "/", blobsUseTor)
+                resolution = resolve("/")
             }
             if (resolution !is StaticSiteResolution.Resolved) return BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
             val contentType = resolution.contentType
@@ -526,6 +535,11 @@ class DesktopNappletSession(
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
         scope.cancel()
+        // Best effort, off the caller's thread: the cache is shared, so it is trimmed as windows close.
+        Thread({ runtime.blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES) }, "napplet-blob-trim").apply {
+            isDaemon = true
+            start()
+        }
         val client = client
         val browser = browser
         val router = router
@@ -590,6 +604,7 @@ class DesktopNappletSession(
         private const val QUERY_FUNCTION = "__amethystNappletQuery"
         private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
         private const val MIME_HTML = "text/html"
+        private const val INDEX_PATH = "/index.html"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300
 

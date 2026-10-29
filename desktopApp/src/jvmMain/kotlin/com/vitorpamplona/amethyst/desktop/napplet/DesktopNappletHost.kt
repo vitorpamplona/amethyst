@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
@@ -77,7 +78,8 @@ class DesktopNappletHost(
     val runtime =
         DesktopNappletRuntime(
             engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache")),
-            blobs = DesktopNappletBlobs(File(modules.filesDir, "napplet-blobs")) { useTor -> modules.okHttpClients.getHttpClient(useTor) },
+            blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
+            httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
             nappletBlobsUseTor = { torEnabled() },

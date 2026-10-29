@@ -24,13 +24,10 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.BlobFetcher
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.GENERIC_CONTENT_TYPE
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.guessStaticContentType
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.resolvePath
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayInputStream
@@ -69,30 +66,10 @@ class NappletContentServer(
     // host has a native keyboard and leaves this false.
     private val imeProxy: Boolean = false,
 ) {
-    private val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
-    private val http = NappletBlobHttp.client(proxyPort)
+    // Cache-first: a hit (verified when written) serves without re-hashing; a miss downloads and verifies.
+    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)), NappletBlobHttp.client(proxyPort))
 
-    private val fetch: BlobFetcher = { url ->
-        val hash = url.substringAfterLast('/').lowercase()
-        cache.get(hash) ?: NappletBlobHttp.download(http, url)?.also { cache.put(hash, it) }
-    }
-
-    /**
-     * Fast path for a cache hit: the blob is already on disk under its sha256 (the cache verified it on
-     * write and addresses it by hash), so we serve it without re-hashing — skipping the resolver's
-     * per-serve sha256 over the whole blob, which is the dominant CPU cost for large JS bundles. Returns
-     * null on a miss, so the caller falls back to the verifying network resolve.
-     */
-    private fun cacheHit(requestPath: String): StaticSiteResolution.Resolved? {
-        val match = paths.resolvePath(requestPath) ?: return null
-        val bytes = cache.get(match.hash.lowercase()) ?: return null
-        val byExtension = guessStaticContentType(match.path)
-        val contentType = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(bytes) ?: byExtension else byExtension
-        return StaticSiteResolution.Resolved(match.path, match.hash, contentType, bytes, server = CACHE_SERVER)
-    }
-
-    /** Cache-first resolution: serve a verified-on-write CAS hit directly, else fall back to the resolver. */
-    private fun resolveCacheFirst(requestPath: String): StaticSiteResolution = cacheHit(requestPath) ?: runBlocking { StaticSiteResolver.resolve(requestPath, paths, servers, fetch) }
+    private fun resolveCacheFirst(requestPath: String): StaticSiteResolution = runBlocking { blobs.resolve(requestPath, paths, servers) }
 
     /**
      * Resolves [requestPath] to a verified blob (or PathNotInManifest / Unresolvable). Used by the host
@@ -106,13 +83,7 @@ class NappletContentServer(
      * any in-flight blob fetch. A new content server is built per embedded tab, so without this each
      * opened-then-closed napplet/nSite tab would leak OkHttp threads and keep-alive connections.
      */
-    fun close() {
-        runCatching {
-            http.dispatcher.cancelAll()
-            http.dispatcher.executorService.shutdown()
-            http.connectionPool.evictAll()
-        }
-    }
+    fun close() = blobs.closeClient()
 
     /**
      * Serves the trusted shell (on the shell origin) or a verified app blob (on the per-applet
@@ -217,8 +188,6 @@ class NappletContentServer(
     }
 
     companion object {
-        // Marker "server" for a Resolved served from the local content-addressed cache.
-        private const val CACHE_SERVER = "cache"
         private const val MIME_HTML = "text/html"
     }
 }

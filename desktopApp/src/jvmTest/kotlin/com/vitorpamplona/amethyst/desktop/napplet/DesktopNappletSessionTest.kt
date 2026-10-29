@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
@@ -168,7 +169,7 @@ class DesktopNappletSessionTest {
     private fun runtime(
         engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "jcef-cache")),
         torPort: StateFlow<Int?> = MutableStateFlow(null),
-    ) = DesktopNappletRuntime(engine, DesktopNappletBlobs(File(tmp, "blobs")) { OkHttpClient() }, scope, torPort, torWaitMs = 500)
+    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs")), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
 
     private fun session(
         html: ByteArray,
@@ -191,7 +192,7 @@ class DesktopNappletSessionTest {
                 identity = NappletIdentity(author.pubKey.toHexKey(), "probe", hash),
                 declared = setOf(NappletCapability.STORAGE),
                 title = "Probe",
-                paths = listOf(PathTag(DesktopNappletBlobs.INDEX_PATH, hash)),
+                paths = listOf(PathTag("/index.html", hash)),
                 servers = listOf(serverUrl),
                 accountPubKey = "tester",
             )

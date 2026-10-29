@@ -22,20 +22,24 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import okhttp3.OkHttpClient
 
 /**
- * What every napplet and nSite window shares: the browser engine, the blob store, the network
- * route, and the live relay subscriptions.
+ * What every napplet and nSite window shares: the browser engine, the blob cache, the network route,
+ * and the live relay subscriptions.
  *
- * [torPort] is the Tor SOCKS port while Tor runs (null otherwise); [nappletBlobsUseTor] is whether a
- * napplet's own blob downloads go through Tor, which follows the app's Tor setting as on Android.
+ * [httpClient] fetches blobs, through Tor or not; [torPort] is the Tor SOCKS port while Tor runs
+ * (null otherwise); [nappletBlobsUseTor] is whether a napplet's own blob downloads go through Tor,
+ * which follows the app's Tor setting as on Android.
  */
 class DesktopNappletRuntime(
     val engine: DesktopCefEngine,
-    val blobs: DesktopNappletBlobs,
+    val blobCache: NappletBlobCache,
+    val httpClient: (useTor: Boolean) -> OkHttpClient,
     scope: CoroutineScope,
     torPort: StateFlow<Int?> = MutableStateFlow(null),
     val nappletBlobsUseTor: () -> Boolean = { false },
