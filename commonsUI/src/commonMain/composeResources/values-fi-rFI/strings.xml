@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Yhdistä lompakko</string>
     <string name="see_relay_feed">Näytä relay-syöte</string>
     <string name="pledge_amount_in_sats">Luvattu määrä satseissa</string>
-    <string name="poll_option_description">Vaihtoehdon kuvaus</string>
     <string name="poll_zap_value_min">Vähimmäiszap</string>
     <string name="poll_zap_value_max">Enimmäiszap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Äänestyksen päättymispäivä ja -aika</string>
-    <string name="poll_closing_in">Äänestys päättyy %1$s kuluttua</string>
     <string name="looking_for_event">Etsitään tapahtumaa %1$s</string>
     <string name="send_zap">Lähetä zap</string>
     <string name="custom_zaps_add_a_message">Lisää julkinen viesti</string>
@@ -917,7 +914,6 @@
     <string name="guidelines">Ohjeet</string>
     <string name="moderators">Moderaattorit</string>
     <string name="status_update">Päivitä tilaasi</string>
-    <string name="poll_zap_value_min_max_explainer">Äänet painotetaan zappin määrän perusteella. Voit asettaa minimimäärän roskapostin välttämiseksi ja maksimimäärän suurten zappereiden estämiseksi. Käytä samaa määrää molemmissa kentissä, jotta jokainen ääni arvostetaan samalla määrällä. Jätä se tyhjäksi hyväksyäksesi minkä tahansa määrän.</string>
     <string name="error_dialog_talk_to_user">Viesti käyttäjälle</string>
     <string name="error_dialog_talk_to_user_name">Viesti %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
@@ -1435,7 +1431,6 @@
     <string name="closing_time">Sulkemisaika</string>
     <string name="confirm">Vahvista</string>
     <string name="next">Seuraava</string>
-    <string name="add_poll_option_button">Lisää äänestysvaihtoehto-painike</string>
     <string name="go_back">Palaa takaisin</string>
     <string name="approve">Hyväksy</string>
     <string name="connected">Yhdistetty</string>
@@ -2617,7 +2612,6 @@
     <string name="poll_author_no_vote">Äänestyksen luojat eivät voi äänestää omissa äänestyksissään.</string>
     <string name="poll_is_closed_explainer">Äänestys on suljettu uusilta ääniltä</string>
     <string name="poll_multiple_choice">Useita valintoja</string>
-    <string name="poll_option_index">Vaihtoehto %1$s</string>
     <string name="poll_single_choice">Yksi valinta</string>
     <string name="poll_unable_to_vote">Ei voi äänestää</string>
     <string name="polls">Äänestykset</string>

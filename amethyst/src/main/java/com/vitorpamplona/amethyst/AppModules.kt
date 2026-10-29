@@ -56,6 +56,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_LO
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
+import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
@@ -1031,6 +1032,8 @@ class AppModules(
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
                 // Whether this account shares what it listens to as its music status, and from which apps.
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+                // The playback speed picked for each drss feed, local as drss.io keeps it.
+                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
             },
         )
 

@@ -56,6 +56,7 @@ fun MessageField(
     viewModel: IMessageField,
     requestFocus: Boolean = true,
     onContentReceived: ((MediaUri, String?) -> Unit)? = null,
+    onFocused: (() -> Unit)? = null,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -85,6 +86,7 @@ fun MessageField(
                 .onFocusChanged {
                     if (it.isFocused) {
                         keyboardController?.show()
+                        onFocused?.invoke()
                     }
                 },
         placeholder = {

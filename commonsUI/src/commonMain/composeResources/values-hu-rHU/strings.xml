@@ -1560,12 +1560,9 @@
     <string name="wallet_connect_connect_app">Pénztárca társítása</string>
     <string name="see_relay_feed">Átjátszó hírfolyamának megtekintése</string>
     <string name="pledge_amount_in_sats">Hozzájárulás összege satoshiban</string>
-    <string name="poll_option_description">Válaszlehetőség leírása</string>
     <string name="poll_zap_value_min">Minimum Zap</string>
     <string name="poll_zap_value_max">Maximum Zap</string>
     <string name="poll_consensus_threshold">Együttműködés</string>
-    <string name="poll_closing_date_time">Szavazás lezárásának dátuma és ideje</string>
-    <string name="poll_closing_in">A szavazás lezárul %1$s múlva</string>
     <string name="looking_for_event">%1$s esemény keresése</string>
     <string name="looking_for_event_title">Betöltés</string>
     <string name="looking_for_private_event">Várakozás a privát üzenetek betöltésére…</string>
@@ -2056,7 +2053,6 @@
     <string name="guidelines">Útmutatók</string>
     <string name="moderators">Moderátorok</string>
     <string name="status_update">Állapot frissítése</string>
-    <string name="poll_zap_value_min_max_explainer">A szavazatok egy zapösszeggel vannak súlyozva. Beállíthat egy minimális összeget, hogy elkerülje a spamelőket, és egy maximális összeget, hogy elkerülje, hogy a nagy zapelők átvegyék a szavazást. Használja ugyanazt az összeget mindkét mezőben, hogy minden szavazatot ugyanannyira értékeljen. Hagyja üresen, hogy bármilyen összeget elfogadjon.</string>
     <string name="error_dialog_talk_to_user">Üzenet a felhasználónak</string>
     <string name="error_dialog_talk_to_user_name">Üzenet: %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2922,7 +2918,6 @@
     <string name="closing_time">Befejezés időpontja</string>
     <string name="confirm">Megerősítés</string>
     <string name="next">Következő</string>
-    <string name="add_poll_option_button">Szavazati lehetőség hozzáadása</string>
     <string name="go_back">Vissza</string>
     <string name="approve">Elfogadás</string>
     <string name="connected">Kapcsolódva</string>
@@ -5286,7 +5281,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">A szavazásra már nem lehet új szavazato(ka)t leadni</string>
     <string name="poll_multiple_choice">Több lehetőség</string>
-    <string name="poll_option_index">%1$s. válaszlehetőség</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d szavazat a szavazás közzététele előtti dátummal rendelkezik, így ki lett zárva.</item>
         <item quantity="other">%1$d szavazat a szavazás közzététele előtti dátummal rendelkezik, így ki lettek zárva.</item>

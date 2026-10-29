@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
@@ -148,6 +149,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.observeEdits
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayStarterPack
+import com.vitorpamplona.amethyst.commons.ui.note.types.DrssEpisodeAudio
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormPublishedAndReadingTime
 import com.vitorpamplona.amethyst.commons.ui.note.types.LongFormTopicChips
@@ -1233,6 +1235,12 @@ private fun RenderLongFormHeaderForThread(
 
         Spacer(modifier = StdVertSpacer)
         LongFormPublishedAndReadingTime(publishedAt, readingMinutes)
+
+        // A podcast episode plays here from where the user left it, and keeps their place.
+        if (note is AddressableNote) {
+            Spacer(modifier = StdVertSpacer)
+            DrssEpisodeAudio(note, noteEvent, accountViewModel)
+        }
 
         if (topics.isNotEmpty()) {
             Spacer(modifier = StdVertSpacer)

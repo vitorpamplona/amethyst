@@ -647,11 +647,8 @@
     <string name="wallet_connect_connect_app">Poveži novčanik</string>
     <string name="see_relay_feed">Pogledaj Relay feed</string>
     <string name="pledge_amount_in_sats">Iznos pledža u Sats</string>
-    <string name="poll_option_description">Opis opcije ankete</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
     <string name="poll_consensus_threshold">Konsenzus</string>
-    <string name="poll_closing_date_time">Datum &amp; vreme zatvaranja ankete</string>
-    <string name="poll_closing_in">Anketa se zatvara za %1$s</string>
     <string name="looking_for_event">Traženje događaja %1$s</string>
     <string name="send_zap">Pošalji Zap</string>
     <string name="custom_zaps_add_a_message">Dodaj javnu poruku</string>
@@ -917,7 +914,6 @@
     <string name="guidelines">Smernice</string>
     <string name="moderators">Moderatori</string>
     <string name="status_update">Ažuriraj status</string>
-    <string name="poll_zap_value_min_max_explainer">Glasovi su ponderisani iznosom Zap-a. Možete postaviti minimalni iznos kako biste izbegli spamere i maksimalni iznos kako biste sprečili velike zapatere da preuzmu anketu. Koristite isti iznos u oba polja kako bi svaki glas imao istu vrednost. Ostavite prazno da biste prihvatili bilo koji iznos.</string>
     <string name="error_dialog_talk_to_user">Pošalji poruku korisniku</string>
     <string name="error_dialog_talk_to_user_name">Pošalji poruku korisniku %1$s</string>
     <string name="error_dialog_button_ok">U redu</string>
@@ -1431,7 +1427,6 @@
     <string name="closing_time">Vreme zatvaranja</string>
     <string name="confirm">Potvrdi</string>
     <string name="next">Sledeće</string>
-    <string name="add_poll_option_button">Dugme za dodavanje opcije ankete</string>
     <string name="go_back">Nazad</string>
     <string name="approve">Odobri</string>
     <string name="connected">Povezan</string>
@@ -2641,7 +2636,6 @@
     <string name="poll_author_no_vote">Autori ankete ne mogu glasati u sopstvenim anketama.</string>
     <string name="poll_is_closed_explainer">Anketa je zatvorena za nove glasove</string>
     <string name="poll_multiple_choice">Višestruki izbor</string>
-    <string name="poll_option_index">Opcija %1$s</string>
     <string name="poll_single_choice">Jedan izbor</string>
     <string name="poll_unable_to_vote">Nije moguće glasati</string>
     <string name="polls">Ankete</string>

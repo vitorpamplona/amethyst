@@ -39,9 +39,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
@@ -109,9 +112,12 @@ import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutter
 import com.vitorpamplona.amethyst.commons.ui.components.ExpandedTextGutterState
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.LocalExpandedTextGutter
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.RobohashFallbackAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.layouts.GenericRepostLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.NoteComposeLayout
+import com.vitorpamplona.amethyst.commons.ui.layouts.NoteHorizontalPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.HeaderPill
@@ -280,6 +286,14 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCvmToolsList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeleteGroup
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeletionRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssEventList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssFeedList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListenProgress
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssReadWriteLists
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
@@ -489,7 +503,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
-import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -597,6 +612,19 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -680,6 +708,7 @@ import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationReques
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenListEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRemovalEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -932,6 +961,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.metadata.Podcasting20PodcastMetadata
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.nipXXPrivateNoteStorage.PnsEvent
@@ -965,37 +995,42 @@ fun NoteCompose(
     onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
-    WatchNoteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav,
-        modifier,
-    ) {
-        CheckHiddenFeedWatchBlockAndReport(
-            note = baseNote,
-            modifier = modifier,
-            ignoreAllBlocksAndReports = isHiddenFeed,
-            showHiddenWarning = isQuotedNote || isBoostedNote,
+    // A note never draws with its parent's bleed: a quote or boost that renders as a card (a
+    // community, a channel, a hidden-note warning) keeps its media inside. A boosted note's own
+    // body gets its bleed from LocalBoostedNoteFrame instead.
+    ProvideMediaBleed(0.dp) {
+        WatchNoteEvent(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
-        ) { canPreview ->
-            AcceptableNote(
-                baseNote = baseNote,
+            nav,
+            modifier,
+        ) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
                 modifier = modifier,
-                routeForLastRead = routeForLastRead,
-                isBoostedNote = isBoostedNote,
-                isQuotedNote = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                isPinned = isPinned,
-                quotesLeft = quotesLeft,
-                parentBackgroundColor = parentBackgroundColor,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = isQuotedNote || isBoostedNote,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onClick = onClick,
-                moreOptions = moreOptions,
-            )
+            ) { canPreview ->
+                AcceptableNote(
+                    baseNote = baseNote,
+                    modifier = modifier,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    isPinned = isPinned,
+                    quotesLeft = quotesLeft,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onClick = onClick,
+                    moreOptions = moreOptions,
+                )
+            }
         }
     }
 }
@@ -1294,6 +1329,75 @@ fun ClickableNote(
     }
 }
 
+/**
+ * What a repost hands the note it boosts: the bleed for that note's body, and whether the repost's
+ * header already shows that note's author row ([FullWidthRepostHeader]).
+ */
+@Immutable
+private data class BoostedNoteFrame(
+    val mediaBleed: Dp = 0.dp,
+    val headerShown: Boolean = false,
+)
+
+private val NoBoostedNoteFrame = BoostedNoteFrame()
+
+/**
+ * The [BoostedNoteFrame] a reposted note takes from its repost. Only that note's
+ * [InnerNoteWithReactions] reads it, so the rest of what a boosted note draws (its hidden-note and
+ * community cards, reactions) never sees one.
+ */
+private val LocalBoostedNoteFrame = compositionLocalOf { NoBoostedNoteFrame }
+
+/** Provides [LocalMediaBleed] and [LocalBoostedNoteFrame], skipping whichever already holds its value. */
+@Composable
+private fun ProvideNoteBleeds(
+    media: Dp,
+    boostedNote: BoostedNoteFrame,
+    content: @Composable () -> Unit,
+) {
+    if (LocalBoostedNoteFrame.current == boostedNote) {
+        ProvideMediaBleed(media, content)
+    } else {
+        CompositionLocalProvider(LocalBoostedNoteFrame provides boostedNote) {
+            ProvideMediaBleed(media, content)
+        }
+    }
+}
+
+/**
+ * Hands [frame] to a repost's boosted note. Always through a provider, unlike [ProvideNoteBleeds]:
+ * the frame changes when the reposted note loads or is found hidden, and a branch between providing
+ * and not would rebuild the boosted note, restarting its images and players.
+ */
+@Composable
+private fun ProvideRepostFrame(
+    frame: BoostedNoteFrame,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(LocalBoostedNoteFrame provides frame) {
+        ProvideMediaBleed(0.dp, content)
+    }
+}
+
+/** The note a repost boosts, as [RenderRepost] draws it. */
+private fun Note.repostedNote(): Note? = replyTo?.lastOrNull { !it.isCommunityDefinition() }
+
+/**
+ * The reposted note whose author row a full-width repost's header can show: one that has loaded and
+ * is not hidden. A note still loading, or hidden by a block, mute or report, keeps the one-row
+ * header, and the body shows its placeholder or warning without naming the hidden author.
+ */
+@Composable
+private fun headedRepostedNote(
+    repost: Note,
+    accountViewModel: AccountViewModel,
+): Note? {
+    val reposted = repost.repostedNote() ?: return null
+    val event by observeNoteEvent<Event>(reposted, accountViewModel)
+    val hidden by remember(reposted) { accountViewModel.createIsHiddenFlow(reposted) }.collectAsStateWithLifecycle()
+    return if (event != null && !hidden.isPostHidden && hidden.isAcceptable) reposted else null
+}
+
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
@@ -1315,10 +1419,26 @@ fun InnerNoteWithReactions(
     val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
     val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
+    // The full-width style heads the note with the author and lets the content use the whole width.
+    val fullWidth = notBoostedNorQuote && LocalDisplaySettings.current.fullWidthNotes
+
     // A note with an author column takes "Show Less" for its expanded text there. A boosted note
-    // has none and uses its booster's; a quote is its own box, so its text keeps the button inline.
-    val gutter = if (notBoostedNorQuote) remember { ExpandedTextGutterState() } else null
-    val providedGutter = if (isQuotedNote) null else gutter ?: LocalExpandedTextGutter.current
+    // has none and uses its booster's; a quote is its own box, and a full-width note has no column,
+    // so their text keeps the button inline.
+    val gutter = if (notBoostedNorQuote && !fullWidth) remember { ExpandedTextGutterState() } else null
+    val providedGutter = if (isQuotedNote || fullWidth) null else gutter ?: LocalExpandedTextGutter.current
+
+    // An edge-to-edge note's media runs out to the screen edges, over its side padding. A boosted
+    // note sits in its booster's column and follows it; a quote is a box its media must stay in.
+    val boostedFrame = if (isBoostedNote && !isQuotedNote) LocalBoostedNoteFrame.current else NoBoostedNoteFrame
+    val mediaBleed =
+        when {
+            fullWidth -> if (LocalDisplaySettings.current.edgeToEdgeMedia) NoteHorizontalPadding else 0.dp
+            else -> boostedFrame.mediaBleed
+        }
+
+    // A full-width repost heads itself with both authors' rows, so the note it boosts skips its own.
+    val repostedNote = if (fullWidth && !isNotRepost) headedRepostedNote(baseNote, accountViewModel) else null
 
     CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
         NoteComposeLayout(
@@ -1328,25 +1448,37 @@ fun InnerNoteWithReactions(
                     .fillMaxWidth(),
             addPadding = !isBoostedNote,
             showAuthorColumn = notBoostedNorQuote,
+            fullWidth = fullWidth,
             showSecondRow = showSecondRow,
-            showContentSpacer = isNotRepost,
+            // Under a repost's header the boosted body takes the header's spacer, not one of its own.
+            showContentSpacer = (isNotRepost && !boostedFrame.headerShown) || repostedNote != null,
             authorPicture = {
-                if (notBoostedNorQuote) {
+                if (repostedNote != null) {
+                    // FullWidthRepostHeader draws both authors' pictures beside their rows.
+                } else if (fullWidth) {
+                    Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomEnd) {
+                        RenderAuthorImages(baseNote, nav, accountViewModel, Size35dp)
+                    }
+                } else if (notBoostedNorQuote) {
                     Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
                         RenderAuthorImages(baseNote, nav, accountViewModel)
                     }
                 }
             },
             firstRow = {
-                FirstUserInfoRow(
-                    baseNote = baseNote,
-                    showAuthorPicture = isQuotedNote,
-                    isPinned = isPinned,
-                    editState = editState,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    moreOptions = moreOptions,
-                )
+                if (repostedNote != null) {
+                    FullWidthRepostHeader(baseNote, repostedNote, isPinned, editState, accountViewModel, nav, moreOptions)
+                } else if (!boostedFrame.headerShown) {
+                    FirstUserInfoRow(
+                        baseNote = baseNote,
+                        showAuthorPicture = isQuotedNote,
+                        isPinned = isPinned,
+                        editState = editState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        moreOptions = moreOptions,
+                    )
+                }
             },
             secondRow = {
                 if (showSecondRow) {
@@ -1358,18 +1490,23 @@ fun InnerNoteWithReactions(
                 }
             },
             noteContent = {
-                RenderNoteRow(
-                    baseNote = baseNote,
-                    backgroundColor = backgroundColor,
-                    makeItShort = makeItShort,
-                    canPreview = canPreview,
-                    editState = editState,
-                    quotesLeft = quotesLeft,
-                    unPackReply = unPackReply,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    isBoostedNote = isBoostedNote,
-                )
+                // Only the kinds RenderNoteRow hands mediaBleed to let their media run past the column.
+                ProvideNoteBleeds(0.dp, NoBoostedNoteFrame) {
+                    RenderNoteRow(
+                        baseNote = baseNote,
+                        backgroundColor = backgroundColor,
+                        makeItShort = makeItShort,
+                        canPreview = canPreview,
+                        editState = editState,
+                        quotesLeft = quotesLeft,
+                        unPackReply = unPackReply,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        isBoostedNote = isBoostedNote,
+                        mediaBleed = mediaBleed,
+                        boostedHeaderShown = repostedNote != null,
+                    )
+                }
 
                 if (!makeItShort) {
                     val noteEvent = baseNote.event
@@ -1394,6 +1531,7 @@ fun InnerNoteWithReactions(
                             editState = editState,
                             accountViewModel = accountViewModel,
                             nav = nav,
+                            alignToText = fullWidth,
                         )
                     }
                 } else if (baseNote.event is DraftWrapEvent) {
@@ -1514,6 +1652,11 @@ fun NoteBody(
  * it. The feed cards call it, and so does the thread view's master note (ThreadFeedView) for every
  * kind that has no thread-specific header, so a kind added here renders in both without a second
  * branch to keep in sync.
+ *
+ * [mediaBleed] reaches only the kinds whose body is the note's own text or media (text notes,
+ * pictures, videos, files, reposts); every other kind draws cards and must keep its media inside
+ * them, so callers render this with no bleed of their own in effect. [boostedHeaderShown] tells a
+ * repost's boosted note that the repost's header already shows its author row.
  */
 @Composable
 internal fun RenderNoteRow(
@@ -1527,6 +1670,8 @@ internal fun RenderNoteRow(
     accountViewModel: AccountViewModel,
     nav: INav,
     isBoostedNote: Boolean = false,
+    mediaBleed: Dp = 0.dp,
+    boostedHeaderShown: Boolean = false,
 ) {
     // The kind cards below read the row's quote budget and preview permission from here, so a card
     // quoted inside another (or inside itself) never quotes deeper than the row allows.
@@ -1643,11 +1788,15 @@ internal fun RenderNoteRow(
             }
 
             is RepostEvent -> {
-                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                ProvideRepostFrame(BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
+                    RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is GenericRepostEvent -> {
-                RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                ProvideRepostFrame(BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
+                    RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                }
             }
 
             is ReportEvent -> {
@@ -2042,7 +2191,27 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            -> {}
+            // drss.io's reader: listening progress, generated shows, list folders, lists and
+            // provenance notes, drawn the way drss draws them (types/Drss.kt).
+            is DrssListenProgressEvent,
+            -> RenderDrssListenProgress(baseNote, accountViewModel, nav)
+            is DrssShowEvent -> RenderDrssShow(baseNote, accountViewModel, nav)
+            is DrssListFolderEvent -> RenderDrssListFolder(baseNote, accountViewModel, nav)
+            is DrssFeedListEvent -> RenderDrssFeedList(baseNote, accountViewModel, nav)
+            is DrssEventListEvent -> RenderDrssEventList(baseNote, accountViewModel, nav)
+            is DrssProvenanceEvent -> RenderDrssProvenance(baseNote, backgroundColor, accountViewModel, nav)
+            is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
+            is DrssReadWriteListsEvent -> RenderDrssReadWriteLists(baseNote, accountViewModel, nav)
+
+            // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
+            // were typed.
+            is UnrecognizedKind30054Event,
+            is UnrecognizedKind30100Event,
+            is UnrecognizedKind30101Event,
+            is UnrecognizedKind30102Event,
+            is UnrecognizedKind30104Event,
+            is UnrecognizedKind31985Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is PredictionMarketEvent -> {
                 RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
@@ -2267,13 +2436,17 @@ internal fun RenderNoteRow(
             }
 
             is FileMetadataEvent -> {
-                FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                ProvideMediaBleed(mediaBleed) {
+                    FileMetadataDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                }
             }
 
             // Covers every NIP-71 video kind (21, 22, 34235, 34236) via the shared interface,
             // so new video subtypes render automatically instead of falling through to text.
             is VideoEvent -> {
-                VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                }
             }
 
             is VideoCollaborationEvent -> {
@@ -2285,7 +2458,9 @@ internal fun RenderNoteRow(
             }
 
             is PictureEvent -> {
-                PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+                ProvideMediaBleed(mediaBleed) {
+                    PictureDisplay(baseNote, true, ContentScale.FillWidth, PaddingValues(vertical = 5.dp), backgroundColor, accountViewModel, nav)
+                }
             }
 
             is WorkoutRecordEvent -> {
@@ -2301,7 +2476,9 @@ internal fun RenderNoteRow(
             }
 
             is FileStorageHeaderEvent -> {
-                FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                ProvideMediaBleed(mediaBleed) {
+                    FileStorageHeaderDisplay(baseNote, true, ContentScale.FillWidth, accountViewModel)
+                }
             }
 
             is CommunityPostApprovalEvent -> {
@@ -2872,18 +3049,20 @@ internal fun RenderNoteRow(
                     // tags carry what it is about, so it gets the fallback card, not the text path.
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
-                    RenderTextEvent(
-                        baseNote,
-                        makeItShort,
-                        canPreview,
-                        quotesLeft,
-                        unPackReply,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                        isBoostedNote = isBoostedNote,
-                    )
+                    ProvideMediaBleed(mediaBleed) {
+                        RenderTextEvent(
+                            baseNote,
+                            makeItShort,
+                            canPreview,
+                            quotesLeft,
+                            unPackReply,
+                            backgroundColor,
+                            editState,
+                            accountViewModel,
+                            nav,
+                            isBoostedNote = isBoostedNote,
+                        )
+                    }
                 }
             }
         }
@@ -2947,7 +3126,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    note.replyTo?.lastOrNull { !it.isCommunityDefinition() }?.let {
+    note.repostedNote()?.let {
         NoteCompose(
             it,
             modifier = Modifier,
@@ -3331,14 +3510,15 @@ fun RenderAuthorImages(
     baseNote: Note,
     nav: INav,
     accountViewModel: AccountViewModel,
+    size: Dp = Size55dp,
 ) {
     val noteEvent = baseNote.event
     if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
-            RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
+            RepostNoteAuthorPicture(baseNote, baseRepost, size, accountViewModel, nav)
         } else {
-            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
         }
     } else if (noteEvent is ZapReceiptEvent) {
         // Zap receipts are signed by the recipient's lightning provider; show the
@@ -3346,12 +3526,12 @@ fun RenderAuthorImages(
         // how the thread's master note resolves the author.
         val zapSender = observeZapSender(baseNote, accountViewModel).value
         if (zapSender != null) {
-            UserPicture(zapSender, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            UserPicture(zapSender, size, accountViewModel = accountViewModel, nav = nav)
         } else {
-            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
         }
     } else {
-        NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
     }
 
     if (noteEvent is ChannelMessageEvent) {
@@ -3360,6 +3540,8 @@ fun RenderAuthorImages(
             LoadPublicChatChannel(baseChannelHex) { channel ->
                 ChannelNotePicture(
                     channel,
+                    // The badge is 20dp on the 55dp picture; it keeps that share on a smaller one.
+                    if (size == Size55dp) Modifier else Modifier.size(size * 20 / 55),
                     accountViewModel,
                 )
             }
@@ -3370,6 +3552,7 @@ fun RenderAuthorImages(
 @Composable
 private fun ChannelNotePicture(
     baseChannel: PublicChatChannel,
+    sizeModifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     val model by observeChannelPicture(baseChannel, accountViewModel)
@@ -3378,7 +3561,7 @@ private fun ChannelNotePicture(
         robot = baseChannel.idHex,
         model = model,
         contentDescription = stringRes(Res.string.group_picture),
-        modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
+        modifier = sizeModifier.then(MaterialTheme.colorScheme.channelNotePictureModifier),
         loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
         loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
@@ -3389,17 +3572,20 @@ private fun ChannelNotePicture(
 }
 
 @Composable
-private fun RepostNoteAuthorPicture(
+internal fun RepostNoteAuthorPicture(
     baseNote: Note,
     baseRepost: Note,
+    size: Dp,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Each picture fills its 35/55 corner of the layout, less a 1dp sliver: 34dp at 55dp.
+    val pictureSize = size * 35 / 55 - 1.dp
     GenericRepostLayout(
         baseAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseNote,
-                size = Size34dp,
+                size = pictureSize,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -3407,10 +3593,11 @@ private fun RepostNoteAuthorPicture(
         repostAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseRepost,
-                size = Size34dp,
+                size = pictureSize,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         },
+        size = size,
     )
 }

@@ -20,6 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.search
 
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutRecordEvent
@@ -198,6 +204,13 @@ object RenderableKinds {
             MusicPlaylistEvent.KIND,
             PodcastEpisodeEvent.KIND,
             PodcastMetadataEvent.KIND,
+            // drss.io's generated shows, and the lists, folders and provenance notes of its reader
+            DrssShowEvent.KIND,
+            DrssListFolderEvent.KIND,
+            DrssFeedListEvent.KIND,
+            DrssEventListEvent.KIND,
+            DrssProvenanceFolderEvent.KIND,
+            DrssProvenanceEvent.KIND,
             // interactive stories
             InteractiveStoryPrologueEvent.KIND,
             InteractiveStorySceneEvent.KIND,

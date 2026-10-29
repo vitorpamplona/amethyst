@@ -143,10 +143,11 @@ dependencies {
 }
 
 // Previews another OS's look on this machine: `./gradlew :desktopApp:run -Damethyst.platform=MACOS
-// -Damethyst.appearance=light`. Only the dev `run` gets them, never a packaged app.
+// -Damethyst.appearance=light`; `-Damethyst.login=npub1...` opens logged in with that key and
+// `-Damethyst.signup=Name` signs up a new account. Only the dev `run` gets them, never a packaged app.
 // Added at execution: the Compose plugin sets the task's jvmArgs after this script configures it.
 tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
-    val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent")
+    val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent", "amethyst.login", "amethyst.signup")
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }

@@ -41,6 +41,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -227,6 +228,19 @@ class AccountSessionManagerTest {
             saved.forEach { assertSame(counters, it.cashuCounters) }
             assertSame(counters, withCounters.createNewAccount().cashuCounters)
         }
+
+    @Test
+    fun aTransientSignUpKeepsTheSignUpDefaults() {
+        val kept = manager.createNewAccount("Test")
+        val transient = manager.createNewAccount("Test", transientAccount = true)
+
+        assertTrue(!kept.transientAccount)
+        assertTrue(transient.transientAccount)
+        assertTrue(transient.isWriteable())
+        assertNotNull(transient.backupUserMetadata)
+        assertNotNull(transient.backupContactList)
+        assertNotNull(transient.backupNIP65RelayList)
+    }
 
     @Test
     fun anEmailShapedKeyIsANip05Address() {

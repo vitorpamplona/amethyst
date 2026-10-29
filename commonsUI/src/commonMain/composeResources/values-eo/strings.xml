@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">Konekti monujon</string>
     <string name="see_relay_feed">Vidi relay-fluon</string>
     <string name="pledge_amount_in_sats">Promesi Kvanton en Satoj</string>
-    <string name="poll_option_description">Priskribo de elekto de enketo</string>
     <string name="poll_zap_value_min">Minimumo de Zapoj</string>
     <string name="poll_zap_value_max">Maksimumo de Zapoj</string>
     <string name="poll_consensus_threshold">Interkonsento</string>
-    <string name="poll_closing_date_time">Dato &amp; Horo de fermo de balotenketo</string>
-    <string name="poll_closing_in">Balotenketo fermiĝas en %1$s</string>
     <string name="looking_for_event">Serĉanta Eventon %1$s</string>
     <string name="send_zap">Sendi Zap</string>
     <string name="custom_zaps_add_a_message">Aldoni publikan mesaĝon</string>
@@ -918,7 +915,6 @@
     <string name="guidelines">Gvidlinioj</string>
     <string name="moderators">Moderigistoj</string>
     <string name="status_update">Ĝistadigi vian staton</string>
-    <string name="poll_zap_value_min_max_explainer">Voĉdonoj pezas laŭ la zap-kvanto. Vi povas difini minimuman kvanton por eviti spamistojn kaj maksimuman kvanton por eviti ke grandaj zapistoj ekregu la enketon. Uzu la saman kvanton en ambaŭ kampoj por certigi ke ĉiuj voĉdonoj pezus same. Malplenigu ĝin por akcepti ajnan kvanton.</string>
     <string name="error_dialog_talk_to_user">Mesaĝi la Uzanto</string>
     <string name="error_dialog_talk_to_user_name">Mesaĝi %1$s</string>
     <string name="error_dialog_button_ok">Okej</string>
@@ -1448,7 +1444,6 @@
     <string name="closing_time">Ferma Horo</string>
     <string name="confirm">Konfirmi</string>
     <string name="next">Sekva</string>
-    <string name="add_poll_option_button">Aldoni balotopcion-butonon</string>
     <string name="go_back">Iri Reen</string>
     <string name="approve">Aprobi</string>
     <string name="connected">Konektita</string>
@@ -2690,7 +2685,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Balotenketo estas fermita al novaj voĉoj</string>
     <string name="poll_multiple_choice">Multobla elekto</string>
-    <string name="poll_option_index">Elekto %1$s</string>
     <string name="poll_single_choice">Ununura elekto</string>
     <string name="poll_unable_to_vote">Ne eblas voĉdoni</string>
     <string name="polls">Balotadoj</string>

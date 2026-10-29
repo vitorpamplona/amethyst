@@ -661,12 +661,9 @@
     <string name="wallet_connect_connect_app">连接钱包</string>
     <string name="see_relay_feed">查看中继源</string>
     <string name="pledge_amount_in_sats">承诺聪金额</string>
-    <string name="poll_option_description">投票选项说明</string>
     <string name="poll_zap_value_min">打闪最低金额</string>
     <string name="poll_zap_value_max">打闪最高金额</string>
     <string name="poll_consensus_threshold">共识</string>
-    <string name="poll_closing_date_time">投票结束日期 &amp; 时间</string>
-    <string name="poll_closing_in">投票结束于 %1$s</string>
     <string name="looking_for_event">正在查找事件 %1$s</string>
     <string name="send_zap">发送打闪</string>
     <string name="custom_zaps_add_a_message">添加公开消息</string>
@@ -934,7 +931,6 @@
     <string name="guidelines">指南</string>
     <string name="moderators">审核者</string>
     <string name="status_update">更新你的状态</string>
-    <string name="poll_zap_value_min_max_explainer">投票按照打闪金额进行加权。 你可以设置最小金额以避免垃圾邮件，也可以设置最大金额以避免大型攻击者攻击民意调查。在两个字段中使用相同的金额以确保每张投票的价值相同。 留空即可接受任何金额。</string>
     <string name="error_dialog_talk_to_user">向用户发送消息</string>
     <string name="error_dialog_talk_to_user_name">向 %1$s 发消息</string>
     <string name="error_dialog_button_ok">好</string>
@@ -1455,7 +1451,6 @@
     <string name="closing_time">结束时间</string>
     <string name="confirm">确认</string>
     <string name="next">下一个</string>
-    <string name="add_poll_option_button">添加投票选项按钮</string>
     <string name="go_back">返回</string>
     <string name="approve">批准</string>
     <string name="connected">已连接</string>
@@ -2640,7 +2635,6 @@
     <string name="poll_author_no_vote">投票作者不能在自己的投票中投票。</string>
     <string name="poll_is_closed_explainer">该投票已结束</string>
     <string name="poll_multiple_choice">多选</string>
-    <string name="poll_option_index">选项 %1$s</string>
     <string name="poll_single_choice">单选</string>
     <string name="poll_unable_to_vote">无法投票</string>
     <string name="polls">投票</string>

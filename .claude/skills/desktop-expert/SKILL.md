@@ -90,6 +90,10 @@ Read the screenshots with the image-reading tool. Details: `tools/desktop-run/RE
 
 - Log in with a public `npub` for a read-only session. A throwaway Sign Up account is only for flows
   that must sign, and only when asked, because it publishes to real relays.
+- `run-headless.sh start --login <npub>` (or `--login-file <nsec file>`) opens already logged in
+  (transient: no key prompt, nothing saved), so the first shot is the feed
+  (`DesktopAppModules.startupLogin`). `--signup "Name"` signs up as the Sign Up button does,
+  publishing (`startupSignUp`); its nsec lands in `profile/signup.nsec` for a later `--login-file`.
 - The screen size picks the shell: `AMETHYST_SCREEN=480x900x24` gives the phone layout (bottom bar),
   the default 1600x1000 gives the permanent drawer + docked notifications. Use a new
   `AMETHYST_DISPLAY` per size.

@@ -49,6 +49,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.richtext.Base64Segment
@@ -83,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
+import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
 
 /**
@@ -109,19 +112,26 @@ fun RichTextViewer(
     val paragraphStyle = remember(baseStyle) { baseStyle.copy(lineHeight = 1.3.em) }
     val paragraphs = remember(state, canPreview) { dropBlankLineAfterBlocks(state.paragraphs, canPreview) }
 
+    // Only this text's own media may run past its column; cards and quotes it embeds keep theirs in.
+    val mediaBleed = LocalMediaBleed.current
+
     // One group for the note's media, so the viewer closes into whichever one it ends on.
     ProvideZoomSourceGroup {
-        Column(modifier) {
-            paragraphs.forEach { paragraph ->
-                val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
-                if (paragraph is ImageGalleryParagraph) {
-                    renderer.Gallery(paragraph, state, Modifier.align(align))
-                } else {
-                    CompositionLocalProvider(
-                        LocalLayoutDirection provides if (paragraph.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
-                        LocalTextStyle provides paragraphStyle,
-                    ) {
-                        RenderParagraph(paragraph, state, canPreview, quotesLeft, Modifier.align(align))
+        ProvideMediaBleed(0.dp) {
+            Column(modifier) {
+                paragraphs.forEach { paragraph ->
+                    val align = if (paragraph.isRTL) Alignment.End else Alignment.Start
+                    if (paragraph is ImageGalleryParagraph) {
+                        ProvideMediaBleed(mediaBleed) {
+                            renderer.Gallery(paragraph, state, Modifier.align(align))
+                        }
+                    } else {
+                        CompositionLocalProvider(
+                            LocalLayoutDirection provides if (paragraph.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
+                            LocalTextStyle provides paragraphStyle,
+                        ) {
+                            RenderParagraph(paragraph, state, canPreview, quotesLeft, mediaBleed, Modifier.align(align))
+                        }
                     }
                 }
             }
@@ -136,6 +146,7 @@ private fun RenderParagraph(
     state: RichTextViewerState,
     canPreview: Boolean,
     quotesLeft: Int,
+    mediaBleed: Dp,
     modifier: Modifier,
 ) {
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
@@ -145,7 +156,7 @@ private fun RenderParagraph(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         paragraph.words.forEach { word ->
-            RenderWord(word, state, canPreview, quotesLeft)
+            RenderWord(word, state, canPreview, quotesLeft, mediaBleed)
         }
     }
 }
@@ -156,6 +167,7 @@ private fun RenderWord(
     state: RichTextViewerState,
     canPreview: Boolean,
     quotesLeft: Int,
+    mediaBleed: Dp,
 ) {
     val renderer = LocalRichTextSegmentRenderer.current
     val actions = LocalRichTextInteractions.current
@@ -172,13 +184,14 @@ private fun RenderWord(
 
         // Divergent media — presentation and CTA are platform-owned.
         is ImageSegment, is VideoSegment, is PdfSegment, is Base64Segment, is BlossomUriSegment ->
-            renderer.Media(word, state, Modifier)
+            ProvideMediaBleed(mediaBleed) { renderer.Media(word, state, Modifier) }
 
         is MathSegment -> renderer.Equation(word, Modifier)
 
         is LinkSegment ->
             if (canPreview) {
-                renderer.LinkPreview(word.segmentText, Modifier)
+                // A link that previews as media or a card runs edge to edge with the post's media.
+                ProvideMediaBleed(mediaBleed) { renderer.LinkPreview(word.segmentText, Modifier) }
             } else {
                 renderer.Url(word.segmentText, word.segmentText, Modifier)
             }
