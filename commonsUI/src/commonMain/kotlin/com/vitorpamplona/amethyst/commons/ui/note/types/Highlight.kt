@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindName
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import com.vitorpamplona.quartz.drss.clips.clipRangeMillis
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.firstTagValueFor
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -112,6 +113,7 @@ fun RenderHighlight(
         textFragmentSuffix = selector?.suffix,
         postAddress = noteEvent.inPostAddress(),
         postVersion = noteEvent.inPostVersion(),
+        clipRange = remember(noteEvent) { noteEvent.clipRangeMillis() },
         makeItShort = makeItShort,
         canPreview = canPreview,
         quotesLeft = quotesLeft,
@@ -183,6 +185,7 @@ fun DisplayHighlight(
     postAddress: Address?,
     postVersion: ETag?,
     makeItShort: Boolean,
+    clipRange: LongRange? = null,
     externalId: ExternalId? = null,
     externalIdText: String? = null,
     canPreview: Boolean,
@@ -207,39 +210,11 @@ fun DisplayHighlight(
         Spacer(Modifier.height(HighlightQuoteSpacing))
     }
 
-    val quote =
-        remember(highlight, context, textFragmentPrefix) {
-            HighlightQuote.of(highlight, context, textFragmentPrefix)
-        }
-
-    TranslatableRichTextViewer(
-        content = quote.text,
-        id = quote.text,
-        // Indented like the attribution, so the "Auto-translated from …" line sits under the
-        // quote text rather than under the bar.
-        translationMessageModifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 5.dp, start = HighlightQuoteIndent),
-        accountViewModel = accountViewModel,
-    ) { shown ->
-        // A translation rewrites the passage, so the original offsets stop locating anything.
-        // Translate the quote too and re-find it inside the translated context — ML Kit works
-        // sentence by sentence, so a quote that is one or more whole sentences comes back the
-        // same either way. HighlightQuote.of degrades to the quote alone when the two
-        // translations don't line up, which beats marking a span the reader never highlighted.
-        val translatedQuote = rememberTranslation(highlight, accountViewModel)
-
-        val display =
-            remember(shown, translatedQuote, quote) {
-                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
-            }
-
-        HighlightedQuote(
-            text = display.text,
-            highlight = display.marked,
-            modifier = Modifier.fillMaxWidth(),
-        )
+    if (clipRange != null && highlight.isBlank()) {
+        // A drss.io audio clip without its transcript: the range stands in for the quote.
+        DrssClipLabel(clipRange, Modifier.padding(start = HighlightQuoteIndent))
+    } else {
+        DisplayHighlightQuote(highlight, context, textFragmentPrefix, accountViewModel)
     }
 
     Spacer(Modifier.height(HighlightQuoteSpacing))
@@ -475,5 +450,48 @@ fun DisplayEntryForAUrl(
             Text("-", maxLines = 1)
         }
         ClickableUrlOrBlossom(urlText = host, url = url)
+    }
+}
+
+@Composable
+private fun DisplayHighlightQuote(
+    highlight: String,
+    context: String?,
+    textFragmentPrefix: String?,
+    accountViewModel: AccountViewModel,
+) {
+    val quote =
+        remember(highlight, context, textFragmentPrefix) {
+            HighlightQuote.of(highlight, context, textFragmentPrefix)
+        }
+
+    TranslatableRichTextViewer(
+        content = quote.text,
+        id = quote.text,
+        // Indented like the attribution, so the "Auto-translated from …" line sits under the
+        // quote text rather than under the bar.
+        translationMessageModifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(top = 5.dp, start = HighlightQuoteIndent),
+        accountViewModel = accountViewModel,
+    ) { shown ->
+        // A translation rewrites the passage, so the original offsets stop locating anything.
+        // Translate the quote too and re-find it inside the translated context — ML Kit works
+        // sentence by sentence, so a quote that is one or more whole sentences comes back the
+        // same either way. HighlightQuote.of degrades to the quote alone when the two
+        // translations don't line up, which beats marking a span the reader never highlighted.
+        val translatedQuote = rememberTranslation(highlight, accountViewModel)
+
+        val display =
+            remember(shown, translatedQuote, quote) {
+                if (shown == quote.text) quote else HighlightQuote.of(translatedQuote, shown)
+            }
+
+        HighlightedQuote(
+            text = display.text,
+            highlight = display.marked,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }

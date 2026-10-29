@@ -81,11 +81,14 @@ class StoreAccountSessionStoreTest {
 
     private val vault = MemoryVault()
 
-    private fun newStore(keyPrompts: KeyStoragePrompts? = null): StoreAccountSessionStore {
+    private fun newStore(
+        keyPrompts: KeyStoragePrompts? = null,
+        appStores: AppPreferenceStores = AppPreferenceStores(rootFilesDir = { folder.root.toOkioPath() }),
+    ): StoreAccountSessionStore {
         val root = folder.root
         return StoreAccountSessionStore(
             rootFilesDir = { root.toOkioPath() },
-            appStores = AppPreferenceStores(rootFilesDir = { root.toOkioPath() }),
+            appStores = appStores,
             keyVault = vault,
             scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
             encryption = SecretEncryption(File(root, "secret.key")),
@@ -191,6 +194,22 @@ class StoreAccountSessionStoreTest {
 
             assertNull(store.loadAccountConfigFromEncryptedStorage(keyPair.pubKey.toNpub()))
             assertTrue(vault.keys.isEmpty())
+        }
+
+    @Test
+    fun aTransientLoginOfASavedAccountKeepsItSaved() =
+        runTest {
+            // One set of files, as across runs; each store starts with nothing in memory.
+            val appStores = AppPreferenceStores(rootFilesDir = { folder.root.toOkioPath() })
+            val keyPair = KeyPair()
+            val npub = keyPair.pubKey.toNpub()
+            newStore(appStores = appStores).setDefaultAccount(AccountSettings(keyPair = keyPair))
+
+            newStore(appStores = appStores).setDefaultAccount(AccountSettings(keyPair = keyPair, transientAccount = true))
+
+            val restarted = newStore(appStores = appStores)
+            assertEquals(listOf(AccountInfo(npub, hasPrivKey = true)), restarted.allSavedAccounts())
+            assertEquals(npub, restarted.currentAccount())
         }
 
     @Test

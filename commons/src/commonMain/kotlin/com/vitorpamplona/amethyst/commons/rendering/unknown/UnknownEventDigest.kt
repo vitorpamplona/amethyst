@@ -25,6 +25,7 @@ import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.UnrecognizedShape
 import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.utils.Hex
 import kotlinx.serialization.json.Json
@@ -270,7 +271,7 @@ class UnknownEventDigest(
 
             return UnknownEventDigest(
                 kind = event.kind,
-                kindName = KindNames.nameFor(event.kind),
+                kindName = if (event.isNotTheKindsNamedShape()) null else KindNames.nameFor(event.kind),
                 alt = alt,
                 title = title ?: name ?: subject,
                 summary = summary ?: description,
@@ -329,6 +330,13 @@ class UnknownEventDigest(
         private fun String.isWebUrl() = startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
     }
 }
+
+/**
+ * True when the kind's name in `KindNames` belongs to another shape of the kind: another app's event
+ * on a shared kind ([UnrecognizedShape], such as a voting round on drss.io's 30101, "DRSS List
+ * Folder"). The card names those by number instead.
+ */
+private fun Event.isNotTheKindsNamedShape(): Boolean = this is UnrecognizedShape
 
 /** True when [event] is of a kind quartz has no class for: EventFactory's plain [Event]. */
 fun isUnknownKind(event: Event): Boolean = event::class == Event::class

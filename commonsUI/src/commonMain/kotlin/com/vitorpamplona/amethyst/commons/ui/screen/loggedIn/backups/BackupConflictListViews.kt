@@ -284,8 +284,8 @@ private fun framingOf(type: BackupEventType): RelayFraming =
 
 private fun savedRelaysOf(event: Event): List<NormalizedRelayUrl> =
     when (event) {
-        is DmRelayListEvent -> event.relays()
-        is KeyPackageRelayListEvent -> event.relays()
+        is DmRelayListEvent -> event.allRelays()
+        is KeyPackageRelayListEvent -> event.allRelays()
         is SearchRelayListEvent -> event.publicRelays()
         is IndexerRelayListEvent -> event.publicRelays()
         is FavoriteRelayListEvent -> event.publicRelays()

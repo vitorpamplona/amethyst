@@ -60,7 +60,7 @@ genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.11.0"
-lightcompressor-enhanced = "2.2.3"
+lightcompressor-enhanced = "2.3.0"
 jlatexmath = "1.5"
 markdown = "4d3b3dd173"
 # What richtext-commonmark parses with, and the URL finder its autolink extension uses.
@@ -79,7 +79,8 @@ media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
-quartzKmp = "2.6.0"
+# 2.7.3 brings isDialableFromOthers and the unfiltered relay-list accessors the app reads its own lists with.
+quartzKmp = "2.7.3"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Both are built against the quartz version above.
 marmotKmp = "2.2.0"

@@ -76,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoCompressionNeedsFfmpegHint
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoHdrHint
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -266,6 +267,7 @@ fun ImageVideoPost(
             checked = postViewModel.useH265Codec,
             onCheckedChange = { postViewModel.useH265Codec = it },
         )
+        VideoHdrHint(postViewModel.multiOrchestrator, accountViewModel.host.mediaUploader, postViewModel.useH265Codec)
     }
 
     SettingSwitchItem(

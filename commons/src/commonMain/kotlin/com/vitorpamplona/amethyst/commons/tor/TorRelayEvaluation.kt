@@ -57,12 +57,23 @@ class TorRelayEvaluation(
     val torSettings: TorRelaySettings,
     val classification: RelayClassification = RelayClassification(),
 ) {
+    /** A relay the user configured: in one of their lists, their DM inbox, a wallet or a signer. */
+    private fun isUsersOwn(relay: NormalizedRelayUrl) =
+        relay in classification.trusted ||
+            relay in classification.dm ||
+            relay in classification.moneyOp ||
+            relay in classification.signer
+
     fun useTor(relay: NormalizedRelayUrl): Boolean =
         if (torSettings.torType == TorType.OFF) {
             false
         } else {
             if (relay.isLocalHost()) {
-                false
+                // Tor cannot reach a local relay, so the user's own go direct. Anyone else's
+                // (a stream's relay tag, a link's hint) names THEIR machine: it gets the policy
+                // of an unknown relay, so with Tor on it fails inside Tor instead of being dialed
+                // on our own network, off Tor.
+                if (isUsersOwn(relay)) false else torSettings.newRelaysViaTor
             } else if (relay.isOverlayNetwork()) {
                 // An overlay-mesh relay (0200::/7, e.g. Yggdrasil) is reachable only through the
                 // local mesh interface: Tor cannot route the range at all, so proxying it would

@@ -75,6 +75,7 @@ import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.richtext.CreateClickableTextWithEmoji
@@ -118,6 +119,7 @@ fun RichTextViewer(
 
     Column(modifier = modifier) {
         if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
+            // Markdown hands the bleed only to the media on its top-level lines, not to lists or quotes.
             platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
             return@Column
         }

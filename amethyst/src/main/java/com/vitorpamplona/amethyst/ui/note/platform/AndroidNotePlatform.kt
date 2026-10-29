@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
@@ -65,6 +67,7 @@ import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomab
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog as AppPdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
+import com.vitorpamplona.amethyst.ui.note.types.EpisodeAudioPlayer as AppEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
 import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
@@ -315,6 +318,20 @@ object AndroidNotePlatform : NotePlatform {
         borderModifier = borderModifier,
         accountViewModel = accountViewModel,
     )
+
+    @Composable
+    override fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
+        note: Note,
+        startAtSeconds: Long?,
+        speed: Float,
+        control: EpisodeControl,
+        onPlayhead: (EpisodePlayhead) -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = AppEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, speed, control, onPlayhead, accountViewModel)
 
     @Composable
     override fun RenderAudioPlayer(

@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.marmot.appComponents.EncryptedMediaPolicyV2
@@ -496,7 +497,7 @@ class AccountMarmotActions(
                         com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
                             .createAddress(memberPubKey),
                     )?.event as? com.vitorpamplona.quartz.marmot.mip00KeyPackages.KeyPackageRelayListEvent
-            )?.relays()?.toSet().orEmpty()
+            )?.dialableRelays()?.toSet().orEmpty()
         val memberOutbox =
             account.cache
                 .getOrCreateUser(memberPubKey)

@@ -27,17 +27,21 @@ import android.os.Handler
 import android.os.Looper
 import android.text.format.Formatter.formatFileSize
 import android.widget.Toast
+import androidx.core.net.toUri
 import com.davotoula.lightcompressor.CompressionListener
 import com.davotoula.lightcompressor.VideoCodec
 import com.davotoula.lightcompressor.VideoCompressor
 import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
+import com.davotoula.lightcompressor.hdr.HdrInput
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
+import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogLevel
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -49,6 +53,28 @@ import kotlin.coroutines.resume
 // TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
 object VideoCompressionHelper {
     private const val LOG_TAG = "VideoCompressionHelper"
+
+    /** The size and frame rate [compressVideo] would judge [uri] by, for the slider label; null when unreadable. */
+    fun probe(
+        context: Context,
+        uri: Uri,
+    ): VideoInfo? = getVideoInfo(uri, context, videoPixelAspectRatio(context, uri))
+
+    /**
+     * Whether [uri] is HDR and whether [compressVideo] with H.265 keeps it so on this device; null
+     * when unreadable, like [probe]. The library answers from the same policy compression uses, so
+     * the two cannot drift.
+     */
+    fun probeHdr(
+        context: Context,
+        uri: Uri,
+    ): VideoHdrInfo? =
+        try {
+            VideoCompressor.probeHdr(context, uri).let { VideoHdrInfo(isHdr = it.input != HdrInput.SDR, canKeepHdr = it.canKeepHdr) }
+        } catch (e: Exception) {
+            Log.w(LOG_TAG, "HDR probe failed", e)
+            null
+        }
 
     suspend fun compressVideo(
         uri: Uri,
@@ -92,113 +118,118 @@ object VideoCompressionHelper {
         val result =
             withTimeoutOrNull(timeoutMs) {
                 suspendCancellableCoroutine { continuation ->
-                    VideoCompressor.start(
-                        context = applicationContext,
-                        uris = listOf(uri),
-                        isStreamable = true,
-                        storageConfiguration = AppSpecificStorageConfiguration(),
-                        configureWith =
-                            Configuration(
-                                videoBitrateInBps = videoBitrateInBps.toLong(),
-                                resizer = resizer,
-                                videoNames = listOf(UUID.randomUUID().toString()),
-                                isMinBitrateCheckEnabled = false,
-                                videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
-                            ),
-                        listener =
-                            object : CompressionListener {
-                                override fun onStart(index: Int) {
-                                    // No action needed on compression start
-                                }
-
-                                override fun onProgress(
-                                    index: Int,
-                                    percent: Float,
-                                ) {
-                                    // Progress tracking not needed for this use case
-                                }
-
-                                override fun onSuccess(
-                                    index: Int,
-                                    size: Long,
-                                    path: String?,
-                                ) {
-                                    if (path == null) {
-                                        applicationContext.notifyUser(
-                                            "Video compression succeeded, but path was null",
-                                            LogLevel.WARN,
-                                        )
-                                        if (continuation.isActive) continuation.resume(null)
-                                        return
+                    val handle =
+                        VideoCompressor.start(
+                            context = applicationContext,
+                            uris = listOf(uri),
+                            isStreamable = true,
+                            storageConfiguration = AppSpecificStorageConfiguration(),
+                            configureWith =
+                                Configuration(
+                                    videoBitrateInBps = videoBitrateInBps.toLong(),
+                                    resizer = resizer,
+                                    videoNames = listOf(UUID.randomUUID().toString()),
+                                    isMinBitrateCheckEnabled = false,
+                                    videoCodec = if (useH265) VideoCodec.H265 else VideoCodec.H264,
+                                ),
+                            listener =
+                                object : CompressionListener {
+                                    override fun onStart(index: Int) {
+                                        // No action needed on compression start
                                     }
 
-                                    val reductionPercent =
-                                        if (originalSize > 0) {
-                                            ((originalSize - size) * 100.0 / originalSize).toInt()
-                                        } else {
-                                            0
+                                    override fun onProgress(
+                                        index: Int,
+                                        percent: Float,
+                                    ) {
+                                        // Progress tracking not needed for this use case
+                                    }
+
+                                    override fun onSuccess(
+                                        index: Int,
+                                        size: Long,
+                                        path: String?,
+                                    ) {
+                                        if (path == null) {
+                                            applicationContext.notifyUser(
+                                                "Video compression succeeded, but path was null",
+                                                LogLevel.WARN,
+                                            )
+                                            continuation.resume(null)
+                                            return
                                         }
 
-                                    // Sanity check: compression not smaller than original
-                                    if (originalSize in 1..size) {
-                                        if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
+                                        val reductionPercent =
+                                            if (originalSize > 0) {
+                                                ((originalSize - size) * 100.0 / originalSize).toInt()
+                                            } else {
+                                                0
+                                            }
+
+                                        // Sanity check: compression not smaller than original
+                                        if (originalSize in 1..size) {
+                                            deleteOutput(path)
+                                            if (continuation.isActive) {
+                                                applicationContext.notifyUser(
+                                                    "Compressed file larger than original. Using original.",
+                                                    LogLevel.WARN,
+                                                )
+                                            }
+                                            continuation.resume(MediaCompressorResult(uri, contentType, null))
+                                            return
                                         }
-                                        applicationContext.notifyUser(
-                                            "Compressed file larger than original. Using original.",
-                                            LogLevel.WARN,
-                                        )
-                                        if (continuation.isActive) {
-                                            continuation.resume(
-                                                MediaCompressorResult(uri, contentType, null),
+
+                                        // No toast for a post that was cancelled or timed out while the encode finished.
+                                        if (continuation.isActive && originalSize > 0 && size > 0) {
+                                            val sizeLabel = formatFileSize(applicationContext, size)
+                                            val percentLabel =
+                                                if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+                                            applicationContext.notifyUser(
+                                                "Video compressed: $sizeLabel ($percentLabel)",
                                             )
                                         }
-                                        return
+
+                                        Log.d(LOG_TAG) {
+                                            "Compression success: Original [$originalSize] -> " +
+                                                "Compressed [$size] ($reductionPercent% reduction)"
+                                        }
+
+                                        // A continuation cancelled before or during this resume drops the value and
+                                        // runs the handler instead, so the finished file goes with it.
+                                        continuation.resume(MediaCompressorResult(File(path).toUri(), contentType, size)) { _, _, _ -> deleteOutput(path) }
                                     }
 
-                                    // Show compression result
-                                    if (originalSize > 0 && size > 0) {
-                                        val sizeLabel = formatFileSize(applicationContext, size)
-                                        val percentLabel =
-                                            if (reductionPercent >= 0) "-$reductionPercent%" else "+${-reductionPercent}%"
+                                    override fun onFailure(
+                                        index: Int,
+                                        failureMessage: String,
+                                    ) {
                                         applicationContext.notifyUser(
-                                            "Video compressed: $sizeLabel ($percentLabel)",
+                                            "Video compression failed: $failureMessage",
+                                            LogLevel.ERROR,
                                         )
+                                        continuation.resume(null)
                                     }
 
-                                    Log.d(LOG_TAG) {
-                                        "Compression success: Original [$originalSize] -> " +
-                                            "Compressed [$size] ($reductionPercent% reduction)"
+                                    override fun onCancelled(index: Int) {
+                                        Log.w(LOG_TAG, "Video compression cancelled")
+                                        continuation.resume(null)
                                     }
-
-                                    if (continuation.isActive) {
-                                        continuation.resume(
-                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
-                                        )
-                                    }
-                                }
-
-                                override fun onFailure(
-                                    index: Int,
-                                    failureMessage: String,
-                                ) {
-                                    applicationContext.notifyUser(
-                                        "Video compression failed: $failureMessage",
-                                        LogLevel.ERROR,
-                                    )
-                                    if (continuation.isActive) continuation.resume(null)
-                                }
-
-                                override fun onCancelled(index: Int) {
-                                    Log.w(LOG_TAG, "Video compression cancelled")
-                                    if (continuation.isActive) continuation.resume(null)
-                                }
-                            },
-                    )
+                                },
+                        )
+                    // The timeout or a cancelled post stops this encode (and only this one: the
+                    // handle covers one start() call, so sibling uploads keep compressing). Runs at
+                    // once if the continuation is already cancelled; a no-op once the batch finished.
+                    // The library sends exactly one terminal callback per video, and a resume on a
+                    // cancelled continuation is a no-op, so no callback above needs an isActive guard.
+                    continuation.invokeOnCancellation { handle.cancel() }
                 }
             }
 
         return result ?: MediaCompressorResult(uri, contentType, null)
+    }
+
+    private fun deleteOutput(path: String) {
+        File(path).deleteOrWarn(LOG_TAG, "compressed output")
     }
 
     private fun Context.getFileSize(uri: Uri): Long =

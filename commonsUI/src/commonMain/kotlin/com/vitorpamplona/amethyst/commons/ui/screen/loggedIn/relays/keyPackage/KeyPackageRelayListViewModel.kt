@@ -31,7 +31,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 @Stable
 class KeyPackageRelayListViewModel : BasicRelaySetupInfoModel() {
-    override fun getRelayList(): List<NormalizedRelayUrl>? = account.keyPackageRelayList.getKeyPackageRelayList()?.relays()
+    override fun getRelayList(): List<NormalizedRelayUrl>? = account.keyPackageRelayList.getKeyPackageRelayList()?.allRelays()
 
     override suspend fun saveRelayList(urlList: List<NormalizedRelayUrl>) {
         account.saveKeyPackageRelayList(urlList)

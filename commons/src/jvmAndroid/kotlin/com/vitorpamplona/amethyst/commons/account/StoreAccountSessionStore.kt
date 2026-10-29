@@ -111,6 +111,11 @@ class StoreAccountSessionStore(
     // a refusing keyring ask for its password again.
     private val keysFailed = ConcurrentHashMap<String, String>()
 
+    // Saved accounts this run opened transiently too (a temporary login, a desktop test run's
+    // startup key): the transient entry replaces the saved one in memory, and the saved one is what
+    // the roster keeps on disk for the next run.
+    private val shadowedAccounts = ConcurrentHashMap<String, AccountInfo>()
+
     @Volatile
     private var currentAccount: String? = null
 
@@ -137,7 +142,7 @@ class StoreAccountSessionStore(
     private suspend fun updateSavedAccounts(accounts: List<AccountInfo>) {
         if (savedAccounts.value == accounts) return
         savedAccounts.value = accounts
-        roster.setAllAccountInfoJson(JsonMapper.toJson(accounts.filter { !it.isTransient }))
+        roster.setAllAccountInfoJson(JsonMapper.toJson(accounts.mapNotNull { if (it.isTransient) shadowedAccounts[it.npub] else it }))
     }
 
     private suspend fun updateCurrentAccount(info: AccountInfo?) {
@@ -184,7 +189,13 @@ class StoreAccountSessionStore(
                 keyRemembered = settings.rememberKey && settings.keyPair.pubKey.toNpub() !in keysNotKept,
             )
         updateCurrentAccount(info)
-        updateSavedAccounts(allSavedAccounts().filter { it.npub != info.npub } + info)
+        val saved = allSavedAccounts()
+        if (info.isTransient) {
+            saved.firstOrNull { it.npub == info.npub && !it.isTransient }?.let { shadowedAccounts[info.npub] = it }
+        } else {
+            shadowedAccounts.remove(info.npub)
+        }
+        updateSavedAccounts(saved.filter { it.npub != info.npub } + info)
     }
 
     /** Persists [settings]: the account's records, its secrets and its key. Transient logins keep nothing. */
@@ -375,6 +386,7 @@ class StoreAccountSessionStore(
         keysLockedOut.remove(npub)
         keysFailed.remove(npub)
         savedSecrets.remove(npub)
+        shadowedAccounts.remove(npub)
         keyVault.delete(npub)
         secretsStores.removeAccount(npub)
         accountStores.removeAccount(npub)

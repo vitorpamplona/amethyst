@@ -653,12 +653,9 @@
     <string name="wallet_connect_connect_app">Cüzdan Bağla</string>
     <string name="see_relay_feed">Relay Akışını Gör</string>
     <string name="pledge_amount_in_sats">Taahhüt Miktarı (Sat cinsinden)</string>
-    <string name="poll_option_description">Anket seçeneği açıklaması</string>
     <string name="poll_zap_value_min">Minimum zap</string>
     <string name="poll_zap_value_max">Maksimum zap</string>
     <string name="poll_consensus_threshold">Uzlaşı</string>
-    <string name="poll_closing_date_time">Anket Kapanış Tarihi ve Saati</string>
-    <string name="poll_closing_in">Anket %1$s içinde kapanıyor</string>
     <string name="looking_for_event">%1$s Etkinliği Aranıyor</string>
     <string name="send_zap">Zap Gönder</string>
     <string name="custom_zaps_add_a_message">Herkese açık mesaj ekle</string>
@@ -924,7 +921,6 @@
     <string name="guidelines">Kurallar</string>
     <string name="moderators">Moderatörler</string>
     <string name="status_update">Durumunuzu güncelleyin</string>
-    <string name="poll_zap_value_min_max_explainer">Oylar, zap miktarına göre ağırlıklandırılır. Spam gönderenleri önlemek için minimum miktar, büyük zap gönderenlerin ankete hâkim olmasını önlemek için maksimum miktar belirleyebilirsiniz. Her oyun eşit değerde olmasını sağlamak için her iki alana aynı miktarı girin. Herhangi bir miktarı kabul etmek için boş bırakın.</string>
     <string name="error_dialog_talk_to_user">Kullanıcıya Mesaj Gönder</string>
     <string name="error_dialog_talk_to_user_name">%1$s'e Mesaj Gönder</string>
     <string name="error_dialog_button_ok">Tamam</string>
@@ -1441,7 +1437,6 @@
     <string name="closing_time">Kapanış Saati</string>
     <string name="confirm">Onayla</string>
     <string name="next">İleri</string>
-    <string name="add_poll_option_button">Anket seçeneği ekle düğmesi</string>
     <string name="go_back">Geri Git</string>
     <string name="approve">Onayla</string>
     <string name="connected">Bağlandı</string>
@@ -2616,7 +2611,6 @@
     <string name="poll_author_no_vote">Anket yazarları kendi anketlerinde oy kullanamaz.</string>
     <string name="poll_is_closed_explainer">Anket yeni oylar için kapatıldı</string>
     <string name="poll_multiple_choice">Çoklu seçim</string>
-    <string name="poll_option_index">Seçenek %1$s</string>
     <string name="poll_single_choice">Tek seçim</string>
     <string name="poll_unable_to_vote">Oy kullanılamıyor</string>
     <string name="polls">Anketler</string>

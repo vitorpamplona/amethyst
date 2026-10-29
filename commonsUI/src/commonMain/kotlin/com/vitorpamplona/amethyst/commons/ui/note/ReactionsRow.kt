@@ -205,9 +205,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.HalfDoubleVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ModifierWidth3dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowExpandButton
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowExpandButtonAtEnd
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeight
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightAlignedToText
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowHeightWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiser
+import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiserAlignedToText
 import com.vitorpamplona.amethyst.commons.ui.theme.ReactionRowZapraiserWithPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.RowColSpacing
 import com.vitorpamplona.amethyst.commons.ui.theme.Size14Modifier
@@ -271,12 +274,13 @@ fun ReactionsRow(
     editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
     nav: INav,
+    alignToText: Boolean = false,
 ) {
     val wantsToSeeReactions = rememberSaveable(baseNote) { mutableStateOf(false) }
 
-    InnerReactionRow(baseNote, showReactionDetail, addPadding, wantsToSeeReactions, editState, accountViewModel, nav)
+    InnerReactionRow(baseNote, showReactionDetail, addPadding, alignToText, wantsToSeeReactions, editState, accountViewModel, nav)
 
-    LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel)
+    LoadAndDisplayZapraiser(baseNote, showReactionDetail, wantsToSeeReactions, accountViewModel, alignToText)
 
     if (showReactionDetail && wantsToSeeReactions.value) {
         ReactionDetailGallery(baseNote, nav, accountViewModel)
@@ -289,6 +293,7 @@ private fun InnerReactionRow(
     baseNote: Note,
     showReactionDetail: Boolean,
     addPadding: Boolean,
+    alignToText: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
     editState: State<GenericLoadable<EditState>>?,
     accountViewModel: AccountViewModel,
@@ -313,6 +318,7 @@ private fun InnerReactionRow(
     GenericInnerReactionRow(
         showReactionDetail = showReactionDetail,
         addPadding = addPadding,
+        alignToText = alignToText,
         weightTwo = if (voiceRecordingState.value) 2f else 1f,
         one = {
             WatchReactionsZapsBoostsAndDisplayIfExists(baseNote, accountViewModel) {
@@ -455,6 +461,7 @@ fun PayReaction(
 private fun GenericInnerReactionRow(
     showReactionDetail: Boolean,
     addPadding: Boolean,
+    alignToText: Boolean,
     weightTwo: Float = 1f,
     one: @Composable () -> Unit,
     reactions: ImmutableList<ReactionRowItem>,
@@ -466,9 +473,15 @@ private fun GenericInnerReactionRow(
     Row(
         verticalAlignment = CenterVertically,
         horizontalArrangement = RowColSpacing,
-        modifier = if (addPadding) ReactionRowHeightWithPadding else ReactionRowHeight,
+        modifier =
+            when {
+                !addPadding -> ReactionRowHeight
+                alignToText -> ReactionRowHeightAlignedToText
+                else -> ReactionRowHeightWithPadding
+            },
     ) {
-        if (showReactionDetail) {
+        // With no author column to sit under, the expand button moves to the end of the row.
+        if (showReactionDetail && !alignToText) {
             Row(
                 verticalAlignment = CenterVertically,
                 modifier = ReactionRowExpandButton,
@@ -494,6 +507,16 @@ private fun GenericInnerReactionRow(
                 renderReaction(item)
             }
         }
+
+        if (showReactionDetail && alignToText) {
+            Row(
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.End,
+                modifier = ReactionRowExpandButtonAtEnd,
+            ) {
+                one()
+            }
+        }
     }
 }
 
@@ -503,12 +526,18 @@ fun LoadAndDisplayZapraiser(
     showReactionDetail: Boolean,
     wantsToSeeReactions: MutableState<Boolean>,
     accountViewModel: AccountViewModel,
+    alignToText: Boolean = false,
 ) {
     val event = baseNote.event
     val zapraiserAmount = remember(event) { event?.zapraiserAmount() ?: 0 }
     if (zapraiserAmount > 0) {
         Box(
-            modifier = if (showReactionDetail) ReactionRowZapraiserWithPadding else ReactionRowZapraiser,
+            modifier =
+                when {
+                    !showReactionDetail -> ReactionRowZapraiser
+                    alignToText -> ReactionRowZapraiserAlignedToText
+                    else -> ReactionRowZapraiserWithPadding
+                },
             contentAlignment = CenterStart,
         ) {
             RenderZapRaiser(baseNote, zapraiserAmount, wantsToSeeReactions.value, accountViewModel)

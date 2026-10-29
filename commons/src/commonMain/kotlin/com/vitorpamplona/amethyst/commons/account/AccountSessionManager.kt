@@ -481,10 +481,22 @@ class AccountSessionManager(
     }
 
     fun newKey(name: String? = null) {
-        scope.launch(Dispatchers.IO) {
+        scope.launch(Dispatchers.IO) { signUp(name) }
+    }
+
+    /**
+     * The sign-up screen's new account: a fresh key with the default relays and lists, opened on the
+     * follow import and published to the relays. [transientAccount] keeps its key and settings off
+     * this device (a desktop test run that must not stop at a key prompt).
+     */
+    suspend fun signUp(
+        name: String? = null,
+        transientAccount: Boolean = false,
+    ): AccountSettings =
+        withContext(Dispatchers.IO) {
             _accountContent.update { AccountState.Loading }
 
-            val accountSettings = createNewAccount(name)
+            val accountSettings = createNewAccount(name, transientAccount)
 
             localPreferences.setDefaultAccount(accountSettings)
 
@@ -499,7 +511,7 @@ class AccountSessionManager(
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
 
-                val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
+                val toPost = accountSettings.backupNIP65RelayList?.allWriteRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
 
                 val client = clientBuilder()
 
@@ -515,10 +527,14 @@ class AccountSessionManager(
                 accountSettings.backupCashuWallet?.let { client.publish(it, toPost) }
                 accountSettings.backupNutzapInfo?.let { client.publish(it, toPost) }
             }
-        }
-    }
 
-    fun createNewAccount(name: String? = null): AccountSettings {
+            accountSettings
+        }
+
+    fun createNewAccount(
+        name: String? = null,
+        transientAccount: Boolean = false,
+    ): AccountSettings {
         val keyPair = KeyPair()
         val bootstrap =
             bootstrapAccountEvents(
@@ -527,7 +543,7 @@ class AccountSessionManager(
             )
         return AccountSettings(
             keyPair = keyPair,
-            transientAccount = false,
+            transientAccount = transientAccount,
             cashuCounters = cashuCountersFor(keyPair.pubKey),
             backupUserMetadata = bootstrap.userMetadata,
             backupContactList = bootstrap.contactList,

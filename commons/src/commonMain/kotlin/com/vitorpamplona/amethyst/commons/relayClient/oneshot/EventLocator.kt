@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.oneshot
 
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -119,6 +120,6 @@ object EventLocator {
                 access.fetch(access.bootstrapRelays(), filter, timeoutMs)
                 access.relayListOf(author)
             }
-        return list?.writeRelaysNorm()?.toSet() ?: emptySet()
+        return list?.dialableWriteRelays()?.toSet() ?: emptySet()
     }
 }

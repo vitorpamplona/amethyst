@@ -63,6 +63,12 @@ class MultiOrchestrator(
     /** The video the slider label describes. */
     fun firstVideo(): SelectedMedia? = list.firstOrNull { it.isVideo() }?.media
 
+    /**
+     * Every picked video, in order, for the HDR hint. A new list each call, of the same
+     * [SelectedMedia] instances, so a caller can key on it and only a real add or removal counts.
+     */
+    fun videos(): List<SelectedMedia> = list.filter { it.isVideo() }.map { it.media }
+
     private fun SelectedMediaProcessing.isVideo() = media.mimeType?.startsWith("video", ignoreCase = true) == true
 
     fun hasNonMedia() = list.any { it.media.isNotMedia() }

@@ -643,12 +643,9 @@
     <string name="wallet_connect_connect_app">Hubungkan Dompet</string>
     <string name="see_relay_feed">Lihat Feed Relay</string>
     <string name="pledge_amount_in_sats">Jumlah Dijanjikan dalam Sats</string>
-    <string name="poll_option_description">Deskripsi pilihan pemungutan suara</string>
     <string name="poll_zap_value_min">Zap terendah</string>
     <string name="poll_zap_value_max">Zap tertinggi</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Tanggal &amp; Waktu Penutupan Polling</string>
-    <string name="poll_closing_in">Polling ditutup dalam %1$s</string>
     <string name="looking_for_event">Mencari data event %1$s</string>
     <string name="send_zap">Kirim Zap</string>
     <string name="custom_zaps_add_a_message">Tambah pesan publik</string>
@@ -916,7 +913,6 @@
     <string name="guidelines">Panduan</string>
     <string name="moderators">Moderator</string>
     <string name="status_update">Perbaharui statusmu</string>
-    <string name="poll_zap_value_min_max_explainer">Suara ditimbang berdasarkan jumlah zap. Anda dapat menetapkan jumlah minimum untuk menghindari pembuat spam dan jumlah maksimum untuk menghindari pengirim zap besar mengambil alih pemungutan suara. Gunakan jumlah yang sama di kedua kolom untuk memastikan setiap suara bernilai sama. Biarkan kosong untuk menerima jumlah berapa pun.</string>
     <string name="error_dialog_talk_to_user">Kirim Pesan ke Pengguna</string>
     <string name="error_dialog_talk_to_user_name">Pesan %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
@@ -1446,7 +1442,6 @@
     <string name="closing_time">Waktu Penutupan</string>
     <string name="confirm">Konfirmasi</string>
     <string name="next">Berikutnya</string>
-    <string name="add_poll_option_button">Tambah tombol pilihan polling</string>
     <string name="go_back">Kembali</string>
     <string name="approve">Setujui</string>
     <string name="connected">Terhubung</string>
@@ -2660,7 +2655,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Jajak pendapat ditutup untuk suara baru</string>
     <string name="poll_multiple_choice">Pilihan ganda</string>
-    <string name="poll_option_index">Pilihan %1$s</string>
     <string name="poll_single_choice">Pilihan tunggal</string>
     <string name="poll_unable_to_vote">Tidak dapat mengajukan pilihan</string>
     <string name="polls">Polling</string>

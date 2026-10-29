@@ -1592,12 +1592,9 @@
     <string name="wallet_connect_connect_app">Poveži denarnico</string>
     <string name="see_relay_feed">Pogled rele vira vsebin</string>
     <string name="pledge_amount_in_sats">Prispevaj vsoto v sat</string>
-    <string name="poll_option_description">Opis izbire v anketi</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maksimum</string>
     <string name="poll_consensus_threshold">Soglasje</string>
-    <string name="poll_closing_date_time">Datum in čas konca glasovanja</string>
-    <string name="poll_closing_in">Anketa se zaključi  %1$s</string>
     <string name="looking_for_event">Iskanje dogodka %1$s</string>
     <string name="looking_for_event_title">Nalaganje</string>
     <string name="looking_for_private_event">Čakanje na nalaganje tvojih ZS…</string>
@@ -2092,7 +2089,6 @@
     <string name="guidelines">Smernice</string>
     <string name="moderators">Moderatorji</string>
     <string name="status_update">Posodobi svoj status</string>
-    <string name="poll_zap_value_min_max_explainer">Glasovi so ovrednoteni glede na količino zapov. Lahko nastavite minimalni znesek, da se izognete nezaželjenim glasovom, in največji znesek, da preprečite, da bi bogatejši volilci prevzeli glasovanje. V obeh poljih uporabite enak znesek, da zagotovite, da je vsak glas enako ovrednoten. Pustite prazno, če želite sprejeti poljubno količino.</string>
     <string name="error_dialog_talk_to_user">Pošlji sporočilo uporabniku</string>
     <string name="error_dialog_talk_to_user_name">Sporočilo %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2964,7 +2960,6 @@
     <string name="closing_time">Končni čas</string>
     <string name="confirm">Potrdi</string>
     <string name="next">Naprej</string>
-    <string name="add_poll_option_button">Dodaj gumb za anketo</string>
     <string name="go_back">Nazaj</string>
     <string name="approve">Dovoli</string>
     <string name="connected">Povezano</string>
@@ -5502,7 +5497,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Anketa je zaprta za nove glasove</string>
     <string name="poll_multiple_choice">Več izbire</string>
-    <string name="poll_option_index">Izbira %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d glas je zabeležen pred objavo glasovanja in je zato izključen.</item>
         <item quantity="two">%1$d glasova sta zabeležena pred objavo glasovanja in sta zato izključena.</item>

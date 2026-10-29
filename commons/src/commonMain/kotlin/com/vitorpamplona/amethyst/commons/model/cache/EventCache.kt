@@ -159,6 +159,19 @@ import com.vitorpamplona.quartz.cyberspace.CyberspaceBagEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoAvatarEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoObjectEvent
 import com.vitorpamplona.quartz.cyberspace.deck0003Sno.SnoShardEvent
+import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.UnrecognizedKind30102Event
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
+import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
+import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -251,11 +264,13 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.GenericETag
 import com.vitorpamplona.quartz.nip01Core.tags.events.taggedEvents
+import com.vitorpamplona.quartz.nip01Core.tags.kinds.kinds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip03Timestamp.OtsEvent
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
@@ -345,6 +360,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
@@ -495,6 +511,7 @@ import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.favorites.FavoritePodcastsListEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
+import com.vitorpamplona.quartz.nipXXPodcasting20.episode.UnrecognizedKind30054Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.trailer.Podcasting20TrailerEvent
 import com.vitorpamplona.quartz.openagents.nipCapCapabilities.discovery.CapabilityDiscoveryEvent
 import com.vitorpamplona.quartz.openagents.nipExtExtensions.listing.ExtensionListingEvent
@@ -593,7 +610,9 @@ open class EventCache :
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    override val relayHints = HintIndexer()
+    // Hints come from other people's events and feed the relays we dial for them, so a stranger's
+    // `ws://192.168.1.10` hint is never indexed.
+    override val relayHints = HintIndexer { it.isDialableFromOthers() }
 
     /**
      * Cashu mint URL directory, populated passively as
@@ -1887,6 +1906,8 @@ open class EventCache :
                         }
                     }
 
+                deleteCurrentVersionsWhoseNoteWasCollected(event, event.deleteEventIds())
+
                 val addressList = event.deleteAddressIds()
                 val addressSet = addressList.toSet()
 
@@ -1925,6 +1946,34 @@ open class EventCache :
             true
         } else {
             false
+        }
+    }
+
+    /**
+     * An `e` deletion of the version an address currently shows, when that version's note is gone.
+     * [notes] holds a version only weakly; the addressable note keeps the event, so after a GC the
+     * id lookup above finds nothing and the version stayed on screen. The deletion's `k` tags name
+     * the kinds (NIP-09 asks for them), so look for that version at the author's addresses of each
+     * replaceable or addressable one. Same rules as above: the deleter's own, and no newer than the
+     * deletion.
+     */
+    private fun deleteCurrentVersionsWhoseNoteWasCollected(
+        deletion: DeletionRequestEvent,
+        deletedIds: List<HexKey>,
+    ) {
+        val collected = deletedIds.filterTo(HashSet()) { getNoteIfExists(it)?.event == null }
+        if (collected.isEmpty()) return
+
+        deletion.kinds().forEach { kind ->
+            if (!kind.isAddressable() && !kind.isReplaceable()) return@forEach
+            addressables
+                .filterIntoSet(kind, deletion.pubKey) { _, note -> note.event?.id in collected }
+                .forEach { current ->
+                    if ((current.event?.createdAt ?: Long.MAX_VALUE) <= deletion.createdAt) {
+                        deleteNote(current)
+                        addressables.remove(current.address)
+                    }
+                }
         }
     }
 
@@ -4044,6 +4093,7 @@ open class EventCache :
                 is AppDefinitionEvent,
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,
+                is DrssReadWriteListsEvent,
                 is AttestationEvent,
                 is AttestationRequestEvent,
                 is AttestorRecommendationEvent,
@@ -4152,6 +4202,11 @@ open class EventCache :
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
                 is Podcasting20EpisodeEvent,
+                // drss.io's listening progress and other shapes on 30054: stored at their address,
+                // so a newer non-episode version still supersedes an older episode there and a quote
+                // finds them. The episode feeds pick `is PodcastEpisode`, so no feed draws them.
+                is DrssListenProgressEvent,
+                is UnrecognizedKind30054Event,
                 is Podcasting20TrailerEvent,
                 is MuteListEvent,
                 is NNSEvent,
@@ -4222,6 +4277,22 @@ open class EventCache :
                 is PredictionMarketEvent,
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
+                // drss.io's lists, show settings and provenance records, and the other apps' events
+                // on those kinds. No feed asks for these kinds; the account loads its own, and
+                // quotes and links load the rest. NIP-51 article curation sets are where drss saves
+                // articles, so its folders hold them too.
+                is ArticleCurationSetEvent,
+                is DrssFeedListEvent,
+                is DrssListFolderEvent,
+                is DrssEventListEvent,
+                is DrssProvenanceFolderEvent,
+                is DrssProvenanceEvent,
+                is DrssShowEvent,
+                is UnrecognizedKind30100Event,
+                is UnrecognizedKind30101Event,
+                is UnrecognizedKind30102Event,
+                is UnrecognizedKind30104Event,
+                is UnrecognizedKind31985Event,
                 // The shapes of the shared kinds 30301, 30302 and 38385 that have cards: Kanban
                 // boards and cards, WalletScrutiny verdicts and Mostro instance terms. Their
                 // UnrecognizedKind…Event siblings (other apps' formats) stay unconsumed, so

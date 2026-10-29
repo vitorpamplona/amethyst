@@ -76,8 +76,10 @@ class Nip65WithRelayTest {
         assertEquals(listOf(damus.url to AdvertisedRelayType.BOTH, nos.url to AdvertisedRelayType.BOTH), result.summary())
     }
 
+    // Open question for the maintainer: may the user's own NIP-65 outbox/inbox hold a local relay?
+    // Until decided, the one-tap add keeps refusing one; entries already there are kept (below).
     @Test
-    fun neverAddsALocalRelay() {
+    fun oneTapAddRefusesALocalRelayForTheNip65OutboxAndInbox() {
         assertNull(nip65WithRelay(listOf(AdvertisedRelayInfo(damus, AdvertisedRelayType.BOTH)), local, AdvertisedRelayType.WRITE))
         assertFalse(MyRelayList.OUTBOX.accepts(local))
         assertFalse(MyRelayList.INBOX.accepts(local))
@@ -85,9 +87,24 @@ class Nip65WithRelayTest {
     }
 
     @Test
-    fun dropsLocalRelaysAlreadyInTheList() {
+    fun keepsLocalRelaysAlreadyInTheUsersOwnList() {
+        // Republishing the user's own list must never silently lose an entry they configured.
         val result = nip65WithRelay(listOf(AdvertisedRelayInfo(local, AdvertisedRelayType.BOTH)), nos, AdvertisedRelayType.READ)
 
-        assertEquals(listOf(nos.url to AdvertisedRelayType.READ), result.summary())
+        assertEquals(listOf(local.url to AdvertisedRelayType.BOTH, nos.url to AdvertisedRelayType.READ), result.summary())
+    }
+
+    @Test
+    fun theSettingsSaveRebuildsTheListItLoaded() {
+        val loaded =
+            listOf(
+                AdvertisedRelayInfo(damus, AdvertisedRelayType.BOTH),
+                AdvertisedRelayInfo(local, AdvertisedRelayType.WRITE),
+                AdvertisedRelayInfo(nos, AdvertisedRelayType.READ),
+            )
+        val writes = loaded.filter { it.type.isWrite() }.map { it.relayUrl }.toSet()
+        val reads = loaded.filter { it.type.isRead() }.map { it.relayUrl }.toSet()
+
+        assertEquals(loaded.summary()?.toSet(), nip65ListOf(writes, reads).summary()?.toSet())
     }
 }

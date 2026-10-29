@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.WeakReference
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isLocalHost
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlin.concurrent.Volatile
 
@@ -86,5 +86,18 @@ class UserRelaysCache {
 
     fun mostUsed(): List<NormalizedRelayUrl> = data.entries.sortedWith(DefaultOrder).map { it.key }
 
-    fun mostUsedNonLocalRelay() = data.filter { !it.key.isLocalHost() }.maxByOrNull { it.value.counter }?.key
+    /**
+     * [mostUsed] without the relays others may not dial: the relays where we saw this user, as
+     * hints we hand to someone else.
+     */
+    fun mostUsedDialable(): List<NormalizedRelayUrl> = mostUsed().filter { it.isDialableFromOthers() }
+
+    /** The first of [mostUsedDialable], in one pass instead of a sort. */
+    fun mostUsedDialableRelay(): NormalizedRelayUrl? {
+        var best: Map.Entry<NormalizedRelayUrl, RelayInfo>? = null
+        for (entry in data.entries) {
+            if (entry.key.isDialableFromOthers() && (best == null || DefaultOrder.compare(entry, best) < 0)) best = entry
+        }
+        return best?.key
+    }
 }

@@ -50,7 +50,8 @@ class YggdrasilTorRoutingTest {
                 ),
             classification =
                 RelayClassification(
-                    trusted = emptySet(),
+                    // The LAN relays are the user's own: someone else's follows newRelaysViaTor.
+                    trusted = setOf(lanRelay, ulaRelay),
                     dm = emptySet(),
                 ),
         )

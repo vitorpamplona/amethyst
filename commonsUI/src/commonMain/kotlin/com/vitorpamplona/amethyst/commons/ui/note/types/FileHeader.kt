@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.FileAttachmentCard
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
@@ -55,12 +56,14 @@ fun FileMetadataDisplay(
         if (content == null) {
             FileMetadataAttachmentCard(event, fullUrl, mimeType)
         } else {
-            ZoomableContentView(
-                content = content,
-                roundedCorner = roundedCorner,
-                contentScale = contentScale,
-                accountViewModel = accountViewModel,
-            )
+            BleedingMedia(roundedCorner = roundedCorner, enabled = content !is MediaUrlPdf) { rounded ->
+                ZoomableContentView(
+                    content = content,
+                    roundedCorner = rounded,
+                    contentScale = contentScale,
+                    accountViewModel = accountViewModel,
+                )
+            }
         }
     }
 }

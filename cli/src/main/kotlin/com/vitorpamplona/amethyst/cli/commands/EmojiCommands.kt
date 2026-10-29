@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.DataDir
 import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions
 import com.vitorpamplona.amethyst.commons.actions.EmojiPackActions.OnConflict
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -444,7 +445,7 @@ object EmojiCommands {
         if (author == ctx.identity.pubKeyHex) {
             ctx.outboxRelays()
         } else {
-            ctx.outboxRelays() + ctx.relaysOf(author)?.writeRelaysNorm().orEmpty() + ctx.indexRelays()
+            ctx.outboxRelays() + ctx.relaysOf(author)?.dialableWriteRelays().orEmpty() + ctx.indexRelays()
         }
 
     /**

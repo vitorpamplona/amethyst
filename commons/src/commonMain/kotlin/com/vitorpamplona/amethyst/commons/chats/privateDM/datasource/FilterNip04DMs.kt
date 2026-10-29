@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
@@ -84,13 +86,13 @@ fun nip04DmRelayRouting(
         val authorHomeRelayEvent = (LocalCache.getAddressableNoteIfExists(authorHomeRelayEventAddress)?.event as? AdvertisedRelayListEvent)
 
         val outbox =
-            authorHomeRelayEvent?.writeRelaysNorm()
+            authorHomeRelayEvent?.dialableWriteRelays()
                 ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
                 ?: emptyList()
 
         val inbox =
-            authorHomeRelayEvent?.readRelaysNorm()?.ifEmpty { null }
+            authorHomeRelayEvent?.dialableReadRelays()
                 ?: LocalCache.getUserIfExists(it)?.allUsedRelaysOrNull()
                 ?: LocalCache.relayHints.hintsForKey(it).ifEmpty { null }
                 ?: emptyList()

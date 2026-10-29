@@ -24,9 +24,12 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.drss.DrssTree
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.nip51Lists.interestSets.InterestSet
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.displayUrl
@@ -129,6 +132,7 @@ class TopNavFilterState(
         peopleLists: List<AddressableNote>,
         followLists: List<AddressableNote>,
         favoriteFollowSets: List<AddressableNote> = emptyList(),
+        drssLists: List<AddressableNote> = emptyList(),
     ): List<FeedDefinition> {
         val peopleListsDefs =
             peopleLists.map {
@@ -161,7 +165,16 @@ class TopNavFilterState(
                 }
             }
 
-        return (peopleListsDefs + followListsDefs + favoriteDefs).sortedBy { it.name.name() }
+        // drss.io's folders and feed lists: a river of everyone in them.
+        val drssDefs =
+            drssLists.map {
+                FeedDefinition(
+                    TopFilter.PeopleList(it.address),
+                    PeopleListName(it),
+                )
+            }
+
+        return (peopleListsDefs + followListsDefs + favoriteDefs + drssDefs).sortedBy { it.name.name() }
     }
 
     val livePeopleListsFlow: Flow<List<FeedDefinition>> =
@@ -169,6 +182,7 @@ class TopNavFilterState(
             account.followSets.peopleListNotes,
             account.starterPacks.starterPackNotes,
             account.favoriteFollowSetsList.flowNotes,
+            account.drss.folderAndFeedListNotes,
             ::mergePeopleLists,
         ).onStart {
             emit(
@@ -176,6 +190,7 @@ class TopNavFilterState(
                     account.followSets.peopleListNotes.value,
                     account.starterPacks.starterPackNotes.value,
                     account.favoriteFollowSetsList.flowNotes.value,
+                    account.drss.folderAndFeedListNotes.value,
                 ),
             )
         }
@@ -618,6 +633,8 @@ class PeopleListName(
             noteEvent.titleOrName() ?: note.dTag()
         } else if (noteEvent is StarterPackEvent) {
             noteEvent.title() ?: note.dTag()
+        } else if (noteEvent is DrssListFolderEvent || noteEvent is DrssFeedListEvent) {
+            DrssTree.titleOf(noteEvent) ?: note.dTag().substringAfterLast('/')
         } else {
             note.dTag()
         }

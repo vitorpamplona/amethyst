@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.commons.model.drss.DrssState
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -983,6 +984,7 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val bookmarkSets = BookmarkSetsState(signer, cache, scope)
+    val drss = DrssState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
     val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
@@ -1350,6 +1352,18 @@ class Account(
 
     val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
+
+    /**
+     * The drss river, the folder [drss] reads ([DrssState.readList]), as a feed: the listening
+     * queue loads its episodes through it. Built on first use; until a river is picked it points
+     * at nothing the queue asks for.
+     */
+    val drssRiverList: MutableStateFlow<TopFilter> by lazy {
+        MutableStateFlow<TopFilter>(drss.readList.value?.let { TopFilter.PeopleList(it) } ?: TopFilter.Mine).also { list ->
+            scope.launch { drss.readList.collect { river -> if (river != null) list.value = TopFilter.PeopleList(river) } }
+        }
+    }
+    val liveDrssRiverPerRelay by lazy { OutboxLoaderState(topNavFilterFlow(drssRiverList), cache, scope).flow }
 
     val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicTracksFollowList)
     val liveMusicTracksFollowListsPerRelay = OutboxLoaderState(liveMusicTracksFollowLists, cache, scope).flow
@@ -4472,6 +4486,7 @@ class Account(
                     bookmarkSets.newNotes(newNotes)
                     interestSets.newNotes(newNotes)
                     ownedEmojiPacks.newNotes(newNotes)
+                    drss.newNotes(newNotes)
                 }
             }
         }
@@ -4485,6 +4500,7 @@ class Account(
                     bookmarkSets.deletedNotes(deletedNotes)
                     interestSets.deletedNotes(deletedNotes)
                     ownedEmojiPacks.deletedNotes(deletedNotes)
+                    drss.deletedNotes(deletedNotes)
                 }
             }
         }

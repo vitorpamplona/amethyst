@@ -665,12 +665,9 @@
     <string name="wallet_connect_connect_app">ربط المحفظة</string>
     <string name="see_relay_feed">عرض موجز relay</string>
     <string name="pledge_amount_in_sats">مبلغ التعهد بالـ Sats</string>
-    <string name="poll_option_description">وصف خيار الاستطلاع</string>
     <string name="poll_zap_value_min">الحد الأدنى</string>
     <string name="poll_zap_value_max">الحد الاقصى</string>
     <string name="poll_consensus_threshold">توافق الآراء</string>
-    <string name="poll_closing_date_time">تاريخ ووقت إغلاق الاستطلاع</string>
-    <string name="poll_closing_in">يُغلَق الاستطلاع في %1$s</string>
     <string name="looking_for_event">البحث عن الحدث %1$s</string>
     <string name="send_zap">إرسال Zap</string>
     <string name="custom_zaps_add_a_message">أضف رسالة عامة</string>
@@ -937,7 +934,6 @@
     <string name="guidelines">الإرشادات</string>
     <string name="moderators">المشرفون</string>
     <string name="status_update">تحديث الحالة</string>
-    <string name="poll_zap_value_min_max_explainer">تُحسب الاصوات بكمية الزاب، يمكنك وضع حد أعلى لتجنب انحياز التصويت وحد ادنى لتجنب المزعجين. يمكنك استخدام نفس الكمية للحدين للتأكد من ان جميع الاصوات متساوية. لا تضع أي حدود لإستقبال أي كمية.</string>
     <string name="error_dialog_talk_to_user">رسالة إلى المستخدم</string>
     <string name="error_dialog_talk_to_user_name">مراسلة %1$s</string>
     <string name="error_dialog_button_ok">موافق</string>
@@ -1447,7 +1443,6 @@
     <string name="closing_time">وقت الإغلاق</string>
     <string name="confirm">تأكيد</string>
     <string name="next">التالي</string>
-    <string name="add_poll_option_button">زر إضافة خيار استطلاع</string>
     <string name="go_back">رجوع</string>
     <string name="approve">موافقة</string>
     <string name="connected">متصل</string>
@@ -2740,7 +2735,6 @@
     <string name="poll_author_no_vote">لا يستطيع مؤلف الاستطلاع التصويت في استطلاعه.</string>
     <string name="poll_is_closed_explainer">تم إغلاق الاستطلاع لأي تصويت جديد</string>
     <string name="poll_multiple_choice">اختيار متعدد</string>
-    <string name="poll_option_index">الخيار %1$s</string>
     <string name="poll_single_choice">اختيار واحد</string>
     <string name="poll_unable_to_vote">تعذر التصويت</string>
     <string name="polls">استطلاعات</string>

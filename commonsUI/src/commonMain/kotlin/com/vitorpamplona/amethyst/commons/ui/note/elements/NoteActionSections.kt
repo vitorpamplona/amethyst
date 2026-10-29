@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.elements
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
@@ -52,6 +53,10 @@ import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
 import com.vitorpamplona.amethyst.commons.resources.devtools_inspect_event
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_collect_to
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_follow_into
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_record_provenance
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_save_to
 import com.vitorpamplona.amethyst.commons.resources.edit_article
 import com.vitorpamplona.amethyst.commons.resources.edit_draft
 import com.vitorpamplona.amethyst.commons.resources.edit_post
@@ -171,6 +176,15 @@ fun noteActionSections(
     // OTS timestamp, pin, label, public bookmark).
     val isPrivateRumor = note.isPrivateRumor()
 
+    // drss.io readers keep a read-and-write preference; the drss actions are theirs.
+    val hasDrssLists = accountViewModel.account.drss.preference.value != null
+    val hasDrssEventLists =
+        remember {
+            accountViewModel.account.drss
+                .eventLists()
+                .isNotEmpty()
+        }
+
     val author =
         buildList {
             if (!state.isLoggedUser) {
@@ -197,6 +211,16 @@ fun noteActionSections(
                         handlers.onDismiss()
                     },
                 )
+
+                // A drss.io reader follows feeds into the follow sets under their write folder.
+                if (hasDrssLists) {
+                    add(
+                        NoteAction(MaterialSymbols.AutoMirrored.Feed, stringRes(Res.string.drss_menu_follow_into)) {
+                            note.author?.pubkeyHex?.let { nav.nav(Route.DrssFollowInto(it)) }
+                            handlers.onDismiss()
+                        },
+                    )
+                }
             }
         }
 
@@ -351,6 +375,30 @@ fun noteActionSections(
             }
             if (!isPrivateRumor) {
                 add(NoteAction(MaterialSymbols.Tag, stringRes(Res.string.add_hashtag_label), onClick = handlers.onAddLabel))
+            }
+
+            // drss.io saves articles into collections and records the feeds found through them.
+            if (hasDrssLists && !isPrivateRumor && note.event is LongFormContentEvent && note is AddressableNote) {
+                add(
+                    NoteAction(MaterialSymbols.CollectionsBookmark, stringRes(Res.string.drss_menu_save_to)) {
+                        nav.nav(Route.DrssSaveTo(note.address.toValue()))
+                        handlers.onDismiss()
+                    },
+                )
+                add(
+                    NoteAction(MaterialSymbols.TravelExplore, stringRes(Res.string.drss_menu_record_provenance)) {
+                        nav.nav(Route.DrssRecordProvenance(note.address.toValue()))
+                        handlers.onDismiss()
+                    },
+                )
+            } else if (hasDrssEventLists && !isPrivateRumor && note.event != null) {
+                // Anything else goes in the collections drss kept by event id (kind 30102).
+                add(
+                    NoteAction(MaterialSymbols.CollectionsBookmark, stringRes(Res.string.drss_menu_collect_to)) {
+                        nav.nav(Route.DrssCollectTo(note.event?.id ?: note.idHex))
+                        handlers.onDismiss()
+                    },
+                )
             }
 
             // Pick exactly one curation flow per kind: music tracks go to playlists,

@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
+import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
@@ -101,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
 import com.vitorpamplona.amethyst.desktop.service.calendar.DesktopCalendarReminders
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
@@ -125,6 +127,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.OkHttpNip05Fetcher
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
+import com.vitorpamplona.quartz.nip19Bech32.toNsec
 import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
@@ -158,6 +161,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import okio.Path
 import okio.Path.Companion.toOkioPath
 import java.io.File
+import java.io.IOException
 
 /**
  * Everything the shared app needs from a desktop process, built once: the preference files, the
@@ -170,6 +174,13 @@ class DesktopAppModules(
     val filesDir: File,
     val appVersion: String,
     val isDebug: Boolean = false,
+    /**
+     * A key to log in with at start instead of the saved account (`AMETHYST_LOGIN`), for test runs
+     * that should open on the feed without going through the login screen. See [startupLogin].
+     */
+    private val startupKey: String? = null,
+    /** A display name to sign up a new account with at start (`AMETHYST_SIGNUP`). See [startupSignUp]. */
+    private val startupSignUpName: String? = null,
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
 
@@ -551,6 +562,8 @@ class DesktopAppModules(
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+                // The playback speed picked for each drss feed, local as drss.io keeps it.
+                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
                 // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
                 legacyCustomFeedImport.importInto(account.settings)
                 legacyDeckImport.importInto(account.settings, account.signer.pubKey)
@@ -609,6 +622,55 @@ class DesktopAppModules(
                         .toNpub(),
                 )?.let { sessionManager.startUI(it) { returnTo } }
         }
+    }
+
+    /**
+     * Logs in with [key] (an nsec, npub, hex key, nprofile or `name@domain`) as a transient account:
+     * nothing reaches the keyring, the password file or the account list, so a test run never stops
+     * at a key prompt and the profile is left as it was. An unusable key falls back to the saved
+     * account, or to the login screen.
+     */
+    private fun startupLogin(key: String) {
+        sessionManager.login(
+            key = key,
+            password = "",
+            transientAccount = true,
+            rememberKey = false,
+            // A domain's NIP-46 signer would wait on a remote approval; the address stays read-only.
+            allowRemoteSigner = false,
+        ) { error ->
+            Log.e("DesktopAppModules") { "Could not log in with the startup key: ${error ?: "invalid key"}" }
+            applicationIOScope.launch { openKeysAndLogIn() }
+        }
+    }
+
+    /**
+     * Signs up as the sign-up screen does with [name]: a new key, Amethyst's default relays and lists
+     * published to the relays, and the follow import to start on. Transient like [startupLogin], so
+     * no key prompt; the nsec goes to [SIGNUP_KEY_FILE] (owner-only) for a later run's
+     * `AMETHYST_LOGIN` to open the same account.
+     */
+    private suspend fun startupSignUp(name: String) {
+        val account =
+            try {
+                sessionManager.signUp(name, transientAccount = true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                // signUp set the loading screen; without this it would stay there.
+                Log.e("DesktopAppModules", "Could not sign up at start", e)
+                openKeysAndLogIn()
+                return
+            }
+        val keyFile = File(filesDir, SIGNUP_KEY_FILE)
+        try {
+            // Restricted while still empty, so the key is never readable by others.
+            keyFile.writeText("")
+            keyFile.restrictToOwner("DesktopAppModules")
+            keyFile.writeText(account.keyPair.privKey!!.toNsec() + "\n")
+        } catch (e: IOException) {
+            Log.w("DesktopAppModules", "Could not save the signed-up account's key to $keyFile", e)
+        }
+        Log.i("DesktopAppModules") { "Signed up ${account.keyPair.pubKey.toNpub()} as \"$name\"; its nsec is in $keyFile" }
     }
 
     /**
@@ -712,7 +774,13 @@ class DesktopAppModules(
             }
         }
 
-        applicationIOScope.launch { openKeysAndLogIn() }
+        applicationIOScope.launch {
+            when {
+                startupKey != null -> startupLogin(startupKey)
+                startupSignUpName != null -> startupSignUp(startupSignUpName)
+                else -> openKeysAndLogIn()
+            }
+        }
 
         calendarReminders.start()
 
@@ -757,6 +825,9 @@ class DesktopAppModules(
         private const val MIN_RECLAIM_INTERVAL_MS = 120_000L
         private const val FLUSH_TIMEOUT_MS = 3_000L
         private const val TRUST_NETWORK_CHECK_INTERVAL_MS = 60 * 60 * 1000L
+
+        /** Where [startupSignUp] leaves the new account's nsec, in the profile folder. */
+        const val SIGNUP_KEY_FILE = "signup.nsec"
 
         /** What a NIP-46 remote signer shows when this app asks to connect. */
         val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst Desktop", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")
