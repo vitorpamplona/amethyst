@@ -20,9 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.drss
 
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class DrssShowSettingsTest {
@@ -64,5 +67,15 @@ class DrssShowSettingsTest {
             assertTrue(settings.tags.isEmpty(), it)
             assertTrue(settings.schedule.isEmpty(), it)
         }
+    }
+
+    @Test
+    fun readsEachShowEventOnce() {
+        fun show(id: Char) = DrssShowEvent(id.toString().repeat(64), "b".repeat(64), 1L, emptyArray(), """{"name":"drift"}""", "c".repeat(128))
+
+        val first = DrssShowSettings.of(show('1'))
+        assertEquals("drift", first.name)
+        assertSame(first, DrssShowSettings.of(show('1')), "the same event is not parsed again")
+        assertNotSame(first, DrssShowSettings.of(show('2')), "a new version is")
     }
 }

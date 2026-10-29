@@ -20,7 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.drss
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.quartz.drss.show.DrssShowEvent
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -46,6 +49,16 @@ data class DrssShowSettings(
 ) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+
+        /**
+         * Settings already read, by event id. A show's content runs to 25 KB (most of it the
+         * generator's prompts), and a card loses what it remembered whenever it scrolls out of a
+         * feed, so each return to the screen would parse it again.
+         */
+        private val cache = LruCache<HexKey, DrssShowSettings>(64)
+
+        /** The settings in [show]'s content, parsed once per event. */
+        fun of(show: DrssShowEvent): DrssShowSettings = cache[show.id] ?: parse(show.content).also { cache.put(show.id, it) }
 
         /** The settings in [content], or empty settings when it is not a JSON object. */
         fun parse(content: String): DrssShowSettings {

@@ -8924,6 +8924,7 @@
     <string name="drss_listen_time_of">%1$s of %2$s</string>
     <string name="drss_listen_time_left">%1$s left</string>
     <string name="drss_listen_loading_episode">Loading the episode…</string>
+    <string name="drss_loading">Loading…</string>
     <plurals name="drss_listen_plays">
         <item quantity="one">Played once</item>
         <item quantity="other">Played %1$d times</item>

@@ -81,6 +81,7 @@ import com.vitorpamplona.amethyst.commons.resources.drss_listen_plays
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_left
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_of
 import com.vitorpamplona.amethyst.commons.resources.drss_listening
+import com.vitorpamplona.amethyst.commons.resources.drss_loading
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_count
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_folder
@@ -119,12 +120,14 @@ import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
 /*
  * Cards for drss.io's reader (RSS and podcasts bridged to Nostr): what a listener has heard, the
@@ -137,6 +140,9 @@ private val DrssShape = RoundedCornerShape(16.dp)
 private val DrssInnerShape = RoundedCornerShape(12.dp)
 private const val MAX_ROWS = 5
 private const val MAX_AVATARS = 8
+
+/** A folder's chips: each one loads and observes its list, so a folder of hundreds stops here. */
+private const val MAX_CHIPS = 12
 
 /** The frame every drss card shares; the whole card opens [onClick] when given. */
 @Composable
@@ -381,9 +387,12 @@ private fun DrssEpisodeRow(
     feedPubKey: String,
     accountViewModel: AccountViewModel,
 ) {
-    val article by observeNoteEvent<LongFormContentEvent>(episodeNote, accountViewModel)
+    // drss points progress at its 30023 articles, but the address may name any kind: read the
+    // title from whatever loads rather than waiting for an article that will never come.
+    val episode by observeNoteEvent<Event>(episodeNote, accountViewModel)
+    val title = remember(episode) { episode?.let(::itemLabel) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        DrssCover(article?.image(), 64.dp, MaterialSymbols.Podcasts, accountViewModel)
+        DrssCover((episode as? LongFormContentEvent)?.image(), 64.dp, MaterialSymbols.Podcasts, accountViewModel)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             LoadUser(feedPubKey) { user ->
                 if (user != null) {
@@ -391,7 +400,7 @@ private fun DrssEpisodeRow(
                 }
             }
             Text(
-                text = article?.title() ?: stringRes(Res.string.drss_listen_loading_episode),
+                text = title ?: stringRes(if (episode == null) Res.string.drss_listen_loading_episode else Res.string.drss_untitled),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
@@ -474,7 +483,7 @@ fun RenderDrssShow(
 ) {
     val event by observeNoteEvent<DrssShowEvent>(note, accountViewModel)
     val show = event ?: return
-    val settings = remember(show) { DrssShowSettings.parse(show.content) }
+    val settings = remember(show) { DrssShowSettings.of(show) }
     val name = settings.name ?: show.showName() ?: show.dTag()
 
     Column(
@@ -629,12 +638,13 @@ fun RenderDrssListFolder(
         DrssTitle(folder.title() ?: folder.dTag(), pluralStringRes(Res.plurals.drss_list_count, children.size, children.size))
         if (children.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                children.forEach { child ->
+                children.take(MAX_CHIPS).forEach { child ->
                     LoadAddressableNote(child.address()) { childNote ->
                         DrssListChip(child, childNote, accountViewModel, nav)
                     }
                 }
             }
+            DrssMoreRows(children.size - MAX_CHIPS)
         }
     }
 }
@@ -647,8 +657,9 @@ private fun DrssListChip(
     nav: INav,
 ) {
     val event = childNote?.let { observeNoteEvent<Event>(it, accountViewModel).value }
+    val title = remember(event) { event?.let(::listTitle) }
     DrssChip(
-        label = event?.let(::listTitle) ?: child.dTag.ifBlank { stringRes(Res.string.drss_untitled) },
+        label = title ?: child.dTag.ifBlank { stringRes(Res.string.drss_untitled) },
         icon = listIcon(child.kind),
         onClick = childNote?.let { { routeFor(it, accountViewModel.account)?.let(nav::nav) } },
     )
@@ -689,11 +700,12 @@ fun RenderDrssFeedList(
     val event by observeNoteEvent<DrssFeedListEvent>(note, accountViewModel)
     val list = event ?: return
     val feeds = remember(list) { list.feeds() }
+    val feedKeys = remember(feeds) { feeds.map { it.pubKey } }
 
     DrssSurface {
         DrssOverline(MaterialSymbols.AutoMirrored.Feed, stringRes(Res.string.drss_feed_list))
         DrssTitle(list.title() ?: list.dTag().substringAfterLast('/'), pluralStringRes(Res.plurals.drss_feed_count, feeds.size, feeds.size))
-        DrssAvatarStack(feeds.map { it.pubKey }, accountViewModel, nav)
+        DrssAvatarStack(feedKeys, accountViewModel, nav)
         feeds.take(MAX_ROWS).forEach { feed: FeedTag ->
             DrssUserRow(feed.pubKey, feed.title, null, 32.dp, accountViewModel, nav)
         }
@@ -755,6 +767,7 @@ private fun DrssItemRow(
     nav: INav,
 ) {
     val event = itemNote?.let { observeNoteEvent<Event>(it, accountViewModel).value }
+    val label = remember(event) { event?.let(::itemLabel) }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -767,7 +780,7 @@ private fun DrssItemRow(
         Icon(symbol = MaterialSymbols.Description, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                text = event?.let(::itemLabel) ?: stringRes(Res.string.drss_listen_loading_episode),
+                text = label ?: stringRes(if (event == null) Res.string.drss_loading else Res.string.drss_untitled),
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -783,7 +796,7 @@ private fun DrssItemRow(
 private fun itemLabel(event: Event): String? =
     (
         (event as? LongFormContentEvent)?.title()
-            ?: event.tags.firstOrNull { it.size > 1 && it[0] == "title" }?.get(1)
+            ?: event.tags.fastFirstNotNullOfOrNull(TitleTag::parse)
             ?: event.alt()
             ?: event.content.lineSequence().firstOrNull { it.isNotBlank() }
     )?.trim()?.take(120)
@@ -914,10 +927,11 @@ fun RenderDrssProvenanceFolder(
         DrssMoreRows(records.size - MAX_ROWS)
         if (subFolders.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                subFolders.forEach { child ->
+                subFolders.take(MAX_CHIPS).forEach { child ->
                     LoadAddressableNote(child.address()) { childNote -> DrssListChip(child, childNote, accountViewModel, nav) }
                 }
             }
+            DrssMoreRows(subFolders.size - MAX_CHIPS)
         }
     }
 }
