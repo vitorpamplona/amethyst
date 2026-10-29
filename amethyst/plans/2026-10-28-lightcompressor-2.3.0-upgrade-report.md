@@ -159,11 +159,11 @@ The clips were deleted from `Movies/hdrcheck` and MediaStore afterwards; `files/
   dropped, `CompressionBatches` reports `onCancelled`, and `attempt`'s `finally` deletes only the
   `transcode_*` muxer file, not the destination. `onCancelled(index)` carries no path, so Amethyst
   cannot clean up from the callback. The window is the fast-start copy (hundreds of ms for a 20 MB
-  output). Two possible fixes, decision pending (asked 2026-10-29): in the library, delete the
-  destination when the video's coroutine ends cancelled (`doVideoCompression` knows `desFile`), or
-  deliver `onSuccess` for an output that was finalized; or in Amethyst, delete
-  `File(filesDir, "$uuid.mp4")` in `onCancelled`, which duplicates the library's
-  `AppSpecificStorageConfiguration` path rule.
+  output). Decided 2026-10-29: fixed in the library, not here (an Amethyst-side delete of
+  `File(filesDir, "$uuid.mp4")` in `onCancelled` would duplicate the library's
+  `AppSpecificStorageConfiguration` path rule). Brief for the library session:
+  `LightCompressor/docs/briefs/2026-10-29-cancel-after-last-frame-leftover.md` (delete `desFile`
+  when the video coroutine ends cancelled, keep `onCancelled`, JVM test on a `File` helper).
 - **The dialog's X does not cancel a running upload.** `NewMediaView`'s cancel button calls
   `cancelModel()`, which only nulls the orchestrator; the upload coroutine is in the
   `viewModelScope` of a model scoped to the feed screen, so compression and upload continue until
@@ -226,9 +226,9 @@ success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 - Plan status: the brief's status line points here; `amethyst/plans/README.md` keeps it under
   Queued until it ships.
 - Next steps, in order:
-  1. Decide where the cancel-after-last-frame leftover gets fixed (Findings); if in the library,
-     republish the snapshot and rerun device cancel run 1 with a clip whose encode ends right at
-     the cancel, or add a library unit test around `CompressionBatches` instead.
+  1. Library session implements the cancel-after-last-frame brief (Findings) and republishes
+     `2.3.0-SNAPSHOT`; then rerun the cancel device check here (40 s 4K clip, back out at 20 to
+     22 s, a few tries) and confirm `files/` stays empty.
   2. Optional: open the two HLG uploads in a desktop browser (see the device table).
   3. Tag LightCompressor-enhanced 2.3.0; when
      `https://jitpack.io/com/github/davotoula/LightCompressor-enhanced/2.3.0/LightCompressor-enhanced-2.3.0.pom`
