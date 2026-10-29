@@ -27,7 +27,6 @@ import androidx.compose.ui.platform.LocalContext
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.NappletCardInfo
@@ -132,17 +131,7 @@ fun RenderRootSiteEvent(
         onOpen =
             if (event.paths().isNotEmpty()) {
                 {
-                    NappletLauncher.launch(
-                        context = context,
-                        paths = event.paths(),
-                        servers = event.servers(),
-                        authorPubKey = event.pubKey,
-                        identifier = "",
-                        aggregateHash = null,
-                        title = event.title() ?: "nsite",
-                        requires = emptyList(),
-                        profile = HostProfile.WEBSITE,
-                    )
+                    NappletLauncher.launchSite(context, event)
                 }
             } else {
                 null
@@ -173,17 +162,7 @@ fun RenderNamedSiteEvent(
         onOpen =
             if (event.paths().isNotEmpty()) {
                 {
-                    NappletLauncher.launch(
-                        context = context,
-                        paths = event.paths(),
-                        servers = event.servers(),
-                        authorPubKey = event.pubKey,
-                        identifier = event.identifier(),
-                        aggregateHash = null,
-                        title = event.title() ?: event.identifier(),
-                        requires = emptyList(),
-                        profile = HostProfile.WEBSITE,
-                    )
+                    NappletLauncher.launchSite(context, event)
                 }
             } else {
                 null

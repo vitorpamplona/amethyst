@@ -24,15 +24,19 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
+import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
@@ -96,7 +100,14 @@ import kotlin.math.ln
  * - Every request is decided by [NappletRequestRouter] and the broker, as on Android.
  */
 class DesktopNappletSession(
-    val launch: DesktopNappletLaunch,
+    val launch: NappletLaunch,
+    /** The account that opened it: the window keeps signing as this account, whoever is active later. */
+    val accountPubKey: HexKey,
+    /**
+     * Whether a site's traffic and blobs go through Tor, from the user's choice for this site. A
+     * napplet has no network of its own; its blobs follow the app's Tor setting.
+     */
+    val useTor: Boolean,
     /** The launching account, for live relay subscriptions; null leaves them unopened. */
     private val account: Account?,
     private val broker: NappletBroker,
@@ -154,23 +165,19 @@ class DesktopNappletSession(
             NappletWebContract.appId(
                 author = launch.identity.authorPubKey,
                 identifier = launch.identity.identifier,
-                partition = if (isWebsite) launch.accountPubKey else null,
+                partition = if (isWebsite) accountPubKey else null,
             ),
         )
 
-    private val blobsUseTor: Boolean get() = if (isWebsite) launch.useTor else runtime.nappletBlobsUseTor()
+    private val blobsUseTor: Boolean get() = if (isWebsite) useTor else runtime.nappletBlobsUseTor()
 
-    // Built once the route is known: the app's shared client, so never closed here.
-    private lateinit var blobs: NappletBlobStore
-
-    private suspend fun resolve(requestPath: String) = withContext(Dispatchers.IO) { blobs.resolve(requestPath, launch.paths, launch.servers) }
+    // Built once the route is known. Its client is the app's shared one, so it is never closed here.
+    private lateinit var server: NappletSiteServer
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
     private var browser: CefBrowser? = null
     private var router: CefMessageRouter? = null
-    private var shell = NappletWebContract.ShellPage(ByteArray(0), "")
-    private var shim: String = ""
 
     @Volatile
     private var closed = false
@@ -184,7 +191,7 @@ class DesktopNappletSession(
                 if (needsTor && !runtime.routes.torRunning) mutableState.value = State.WaitingForTor
                 val routed =
                     if (isWebsite) {
-                        runtime.routes.claim(this@DesktopNappletSession, launch.useTor, runtime.torWaitMs)
+                        runtime.routes.claim(this@DesktopNappletSession, useTor, runtime.torWaitMs)
                     } else {
                         !needsTor || runtime.routes.awaitTor(runtime.torWaitMs)
                     }
@@ -194,26 +201,26 @@ class DesktopNappletSession(
                     return@launch
                 }
                 mutableState.value = State.Loading
-                blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor))
-                shim = NappletWebContract.shimJs().decodeToString()
+                server =
+                    NappletSiteServer(
+                        paths = launch.paths,
+                        servers = launch.servers,
+                        blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor)),
+                        shellHtml = NappletWebResources.shellHtml(),
+                        shimJs = NappletWebResources.shimJs().decodeToString(),
+                        appOrigin = appOrigin,
+                        profile = launch.profile,
+                        declaredDomains = launch.declaredDomains,
+                        shellHead = BRIDGE_SCRIPT,
+                    )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
-                val entry = resolve(if (isWebsite) "/" else INDEX_PATH) as? StaticSiteResolution.Resolved
-                if (entry == null) {
+                val entry = withContext(Dispatchers.IO) { server.resolve(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH) }
+                if (entry !is StaticSiteResolution.Resolved) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
                     return@launch
                 }
-                val artifact = if (isWebsite) null else NappletWebContract.injectPrelude(entry.bytes, shim, launch.declaredDomains, locked = true)
-                val page = NappletWebContract.shell(NappletWebContract.shellHtml(), launch.profile, appOrigin, artifact)
-                shell =
-                    NappletWebContract.ShellPage(
-                        page.html
-                            .decodeToString()
-                            .replaceFirst("<head>", "<head>$BRIDGE_SCRIPT")
-                            .encodeToByteArray(),
-                        page.csp,
-                    )
                 val app = runtime.engine.app()
                 if (closed) return@launch
                 val client = app.createClient()
@@ -359,7 +366,7 @@ class DesktopNappletSession(
             ): Boolean = true
         }
 
-    /** Serves the shell and, for a website, its verified files; everything else internal is a 404. */
+    /** Serves the shell and the launch's verified files from [server]; anything else internal is a 404. */
     private val internalHandler =
         object : CefResourceRequestHandlerAdapter() {
             override fun getResourceHandler(
@@ -367,41 +374,34 @@ class DesktopNappletSession(
                 frame: CefFrame,
                 request: CefRequest,
             ): CefResourceHandler {
-                val url = request.url
-                if (!request.method.equals("GET", ignoreCase = true)) return notFound()
-                if (url == NappletWebContract.SHELL_URL) {
-                    return BytesResourceHandler(200, shell.html, "text/html", mapOf("Content-Security-Policy" to shell.csp, "Cache-Control" to "no-store"))
-                }
-                if (isWebsite && (url == appOrigin || url.startsWith("$appOrigin/"))) {
-                    // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
-                    val acceptsHtml =
-                        request.resourceType == CefRequest.ResourceType.RT_MAIN_FRAME ||
-                            request.resourceType == CefRequest.ResourceType.RT_SUB_FRAME ||
-                            request.getHeaderByName("Accept")?.contains(MIME_HTML, ignoreCase = true) == true
-                    return SiteResourceHandler(url, acceptsHtml)
-                }
-                return notFound()
+                // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
+                val acceptsHtml =
+                    request.resourceType == CefRequest.ResourceType.RT_MAIN_FRAME ||
+                        request.resourceType == CefRequest.ResourceType.RT_SUB_FRAME ||
+                        request.getHeaderByName("Accept")?.contains(NappletSiteServer.MIME_HTML, ignoreCase = true) == true
+                return ServerResourceHandler(request.method, request.url, acceptsHtml)
             }
         }
 
     /**
-     * One file of a website, fetched and verified off the IO thread CEF asks on. A client-routed
-     * page (a document navigation to a path the event doesn't list) falls back to the verified `/`,
-     * so deep links and reloads work; a missing script or image is still a 404, never the page.
+     * One response from [server], produced off the IO thread CEF asks on (a miss downloads). A
+     * request the server leaves to the browser can't go anywhere from an internal origin, so it is
+     * a 404 here.
      */
-    private inner class SiteResourceHandler(
+    private inner class ServerResourceHandler(
+        private val method: String,
         private val url: String,
         private val acceptsHtml: Boolean,
     ) : CefResourceHandlerAdapter() {
-        private var response = BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
+        private var response = BytesResourceHandler(NappletSiteServer.notFound())
 
         override fun processRequest(
             request: CefRequest,
             callback: CefCallback,
         ): Boolean {
-            scope.launch {
+            scope.launch(Dispatchers.IO) {
                 try {
-                    response = serve()
+                    server.serve(method, url, acceptsHtml)?.let { response = BytesResourceHandler(it) }
                 } catch (e: Throwable) {
                     if (e is CancellationException) throw e
                     Log.w(TAG, "Could not serve $url", e)
@@ -410,34 +410,6 @@ class DesktopNappletSession(
                 }
             }
             return true
-        }
-
-        private suspend fun serve(): BytesResourceHandler {
-            val requestPath =
-                url
-                    .removePrefix(appOrigin)
-                    .substringBefore('?')
-                    .substringBefore('#')
-                    .ifEmpty { "/" }
-            var resolution = resolve(requestPath)
-            if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
-                resolution = resolve("/")
-            }
-            if (resolution !is StaticSiteResolution.Resolved) return BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
-            val contentType = resolution.contentType
-            val mime = contentType.substringBefore(';').trim().ifEmpty { "application/octet-stream" }
-            val isHtml = mime.equals(MIME_HTML, ignoreCase = true)
-            val bytes =
-                if (isHtml) {
-                    NappletWebContract.injectPrelude(resolution.bytes, shim, launch.declaredDomains, locked = false, injectNip07 = true)
-                } else {
-                    resolution.bytes
-                }
-            val charset =
-                contentType.substringAfter("charset=", "").trim().ifEmpty { null }
-                    ?: if (mime.startsWith("text/") || mime.endsWith("javascript") || mime.endsWith("json")) "utf-8" else null
-            val header = if (charset != null) "$mime; charset=$charset" else mime
-            return BytesResourceHandler(200, bytes, mime, mapOf("Content-Type" to header, "Cache-Control" to "no-store"))
         }
 
         override fun getResponseHeaders(
@@ -554,12 +526,11 @@ class DesktopNappletSession(
         }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
     }
 
+    /** A [NappletSiteServer.Response], to Chromium. */
     private class BytesResourceHandler(
-        private val status: Int,
-        private val body: ByteArray,
-        private val mimeType: String,
-        private val headers: Map<String, String>,
+        private val served: NappletSiteServer.Response,
     ) : CefResourceHandlerAdapter() {
+        private val body = served.body
         private var offset = 0
 
         override fun processRequest(
@@ -575,9 +546,12 @@ class DesktopNappletSession(
             responseLength: IntRef,
             redirectUrl: StringRef,
         ) {
-            response.status = status
-            response.mimeType = mimeType
-            headers.forEach { (name, value) -> response.setHeaderByName(name, value, true) }
+            response.status = served.status
+            response.statusText = served.reason
+            response.mimeType = served.mime
+            // JCEF's response has no charset of its own.
+            response.setHeaderByName("Content-Type", served.contentType, true)
+            served.headers.forEach { (name, value) -> response.setHeaderByName(name, value, true) }
             responseLength.set(body.size)
         }
 
@@ -603,8 +577,6 @@ class DesktopNappletSession(
         private const val TAG = "DesktopNappletSession"
         private const val QUERY_FUNCTION = "__amethystNappletQuery"
         private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
-        private const val MIME_HTML = "text/html"
-        private const val INDEX_PATH = "/index.html"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300
 
@@ -617,8 +589,6 @@ class DesktopNappletSession(
             "<script>(function(){var q=window.$QUERY_FUNCTION;try{delete window.$QUERY_FUNCTION;}catch(_){}" +
                 "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +
                 "q({request:String(s),persistent:false,onSuccess:function(){},onFailure:function(){}});}};})();</script>"
-
-        private fun notFound(): CefResourceHandler = BytesResourceHandler(404, ByteArray(0), "text/plain", emptyMap())
 
         private fun isInternal(url: String): Boolean = runCatching { NappletWebContract.isInternalHost(URI(url).host) && url.startsWith("https://") }.getOrDefault(false)
 

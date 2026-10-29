@@ -71,6 +71,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -291,9 +292,9 @@ class NappletHostActivity : ComponentActivity() {
         // This isolated `:napplet` process skips app init (to stay key-free), so the compose-resources
         // Android context is never set here and `Res.readBytes` would crash — read the contract bytes
         // straight from the APK assets, where compose-resources packages them.
-        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
-        val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
-        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
+        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+        val shellHtml = readContractAsset(NappletWebResources.SHELL_HTML_PATH)
+        val shim = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
         val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier))
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.

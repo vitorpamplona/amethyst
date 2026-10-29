@@ -26,74 +26,39 @@ import android.content.res.Configuration
 import android.os.Bundle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.napplet.HostProfile
-import com.vitorpamplona.amethyst.commons.napplet.NappletArtifactPolicy
-import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
-import com.vitorpamplona.amethyst.commons.napplet.exposedDomains
-import com.vitorpamplona.amethyst.commons.napplet.unsupportedRequired
+import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.stringRes
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Opens a napplet/nsite in the sandboxed [NappletHostActivity] (the `:napplet` process). Only
- * the verified manifest data the host needs to render and broker for the applet is passed —
- * the declared `path → hash` map, the Blossom servers, the applet's identity coordinate, the
- * declared capabilities, and a display title. No account state crosses into the sandbox process.
+ * Opens a napplet or nSite in the sandboxed [NappletHostActivity] (the `:napplet` process). The
+ * checks are the shared [NappletLaunch]'s; this adds what only the main process can: the launch
+ * token, the Tor route, capability labels and the theme. Only the verified data the host needs to
+ * render and broker for the app crosses into the sandbox process; no account state does.
  */
 object NappletLauncher {
-    /** Opens a NIP-5D napplet, forwarding its declared capabilities to the broker. */
+    /** Opens a NIP-5D napplet, refused unless [manifest] is signed by [authorPubKey] and named [identifier]. */
     fun launch(
         context: Context,
         manifest: NappletManifest,
         authorPubKey: HexKey,
         identifier: String,
     ) {
-        val event = manifest as? Event
-        if (event?.verify() != true || event.pubKey != authorPubKey) {
-            Log.w(TAG) { "Refusing NIP-5D manifest that failed signature/author verification" }
-            return
-        }
         buildLaunchParams(context, manifest, authorPubKey, identifier)?.let { openHost(context, it) }
     }
 
-    /**
-     * Opens a NIP-5A website from its already-resolved path data. NIP-5D napplets use the verified
-     * manifest overload so raw callers cannot bypass signature/author validation.
-     */
-    fun launch(
+    /** Opens a NIP-5A nSite ([com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent] or `NamedSiteEvent`). */
+    fun launchSite(
         context: Context,
-        paths: List<PathTag>,
-        servers: List<String>,
-        authorPubKey: HexKey,
-        identifier: String,
-        aggregateHash: HexKey?,
-        title: String,
-        requires: List<String>,
-        // Raw path data is accepted only for the legacy NIP-5A website profile. NIP-5D callers must
-        // use the signature-checking manifest overload above.
-        profile: HostProfile,
+        event: Event,
     ) {
-        if (profile != HostProfile.WEBSITE) {
-            Log.w(TAG) { "Refusing raw NIP-5D launch without a verified manifest" }
-            return
-        }
-        val params =
-            runCatching { buildLaunchParams(context, paths, servers, authorPubKey, identifier, aggregateHash, title, requires, profile) }
-                .onFailure { Log.w(TAG, "Refusing invalid ${profile.name.lowercase()} launch", it) }
-                .getOrNull()
-                ?: return
-        openHost(context, params)
+        buildSiteLaunchParams(context, event)?.let { openHost(context, it) }
     }
 
     private fun openHost(
@@ -109,63 +74,45 @@ object NappletLauncher {
     }
 
     /**
-     * Builds the verified launch parameters — minting the launch token, augmenting the Blossom server
-     * set, resolving the per-site Tor choice and capability labels — as a [Bundle] keyed by the
-     * [NappletHostContract] EXTRA_* names. Used both for the activity intent (above) and for the
-     * embedded [com.vitorpamplona.amethyst.napplethost.NappletHostService] session (carried over
+     * The launch parameters for a NIP-5D napplet, as a [Bundle] keyed by the [NappletHostContract]
+     * EXTRA_* names, or null when the manifest is refused. Used both for the activity intent and for
+     * the embedded [com.vitorpamplona.amethyst.napplethost.NappletHostService] session (carried over
      * Messenger), so the two host paths launch from identical, main-process-minted parameters.
      */
     fun buildLaunchParams(
         context: Context,
-        paths: List<PathTag>,
-        servers: List<String>,
+        manifest: NappletManifest,
         authorPubKey: HexKey,
         identifier: String,
-        aggregateHash: HexKey?,
-        title: String,
-        requires: List<String>,
-        profile: HostProfile,
-    ): Bundle {
-        require(profile == HostProfile.WEBSITE) { "NIP-5D launch parameters require a verified manifest." }
-        return buildLaunchParamsTrusted(context, paths, servers, authorPubKey, identifier, aggregateHash, title, requires, profile)
-    }
+    ): Bundle? =
+        NappletLaunch
+            .fromManifest(manifest, authorPubKey, identifier)
+            .onFailure { Log.w(TAG, "Refusing NIP-5D launch", it) }
+            .getOrNull()
+            ?.let { buildLaunchParams(context, it) }
 
-    private fun buildLaunchParamsTrusted(
+    /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
+    fun buildSiteLaunchParams(
         context: Context,
-        paths: List<PathTag>,
-        servers: List<String>,
-        authorPubKey: HexKey,
-        identifier: String,
-        aggregateHash: HexKey?,
-        title: String,
-        requires: List<String>,
-        profile: HostProfile,
-        manifestKind: Int? = null,
-        manifestEventId: String? = null,
-    ): Bundle {
-        val effectiveAggregateHash =
-            if (profile == HostProfile.NAPPLET) {
-                requireNotNull(NappletArtifactPolicy.verifiedArtifactHash(paths, aggregateHash)) {
-                    "NIP-5D requires one self-contained /index.html with a valid artifact hash matching its x tag."
-                }
-            } else {
-                aggregateHash
-            }
-        val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
+        event: Event,
+    ): Bundle? =
+        NappletLaunch
+            .fromSite(event)
+            .onFailure { Log.w(TAG, "Refusing nSite launch", it) }
+            .getOrNull()
+            ?.let { buildLaunchParams(context, it) }
 
-        // Augment the manifest's servers with the author's published Blossom list (kind:10063), if
-        // we already hold it, so a blob the manifest's servers dropped can still be fetched. The
-        // host re-verifies every blob's sha256, so a wrong/extra server can never inject content.
-        val authorBlossomServers =
-            runCatching {
-                (LocalCache.getAddressableNoteIfExists(BlossomServersEvent.createAddressTag(authorPubKey))?.event as? BlossomServersEvent)?.servers()
-            }.getOrNull().orEmpty()
-        val allServers = (servers + authorBlossomServers).distinct()
+    private fun buildLaunchParams(
+        context: Context,
+        launch: NappletLaunch,
+    ): Bundle {
+        val proxyPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
 
         // Mint the launch token in the (trusted) main process: the broker resolves the sandbox's
         // requests back to THIS identity + declared set, regardless of anything the sandbox sends.
-        val identity = NappletIdentity(authorPubKey = authorPubKey, identifier = identifier, aggregateHash = effectiveAggregateHash, manifestKind = manifestKind, manifestEventId = manifestEventId)
-        val declared = profile.declaredCapabilities(requires)
+        val identity = launch.identity
+        val declared = launch.declared
+        val profile = launch.profile
         // Bound to the account launching it, so the surface keeps signing as that account even if the
         // user switches while it is open (an embedded surface is rebuilt on a switch and re-mints).
         // An empty key can never match a loaded account, so a launch with nobody signed in fails
@@ -200,14 +147,14 @@ object NappletLauncher {
             }
 
         return Bundle().apply {
-            putStringArrayList(NappletHostContract.EXTRA_PATHS, ArrayList(paths.map { it.path }))
-            putStringArrayList(NappletHostContract.EXTRA_HASHES, ArrayList(paths.map { it.hash }))
-            putStringArrayList(NappletHostContract.EXTRA_SERVERS, ArrayList(allServers))
-            putString(NappletHostContract.EXTRA_AUTHOR, authorPubKey)
-            putString(NappletHostContract.EXTRA_IDENTIFIER, identifier)
-            putString(NappletHostContract.EXTRA_AGGREGATE_HASH, effectiveAggregateHash)
-            putString(NappletHostContract.EXTRA_TITLE, title)
-            putStringArrayList(NappletHostContract.EXTRA_REQUIRES, ArrayList(requires))
+            putStringArrayList(NappletHostContract.EXTRA_PATHS, ArrayList(launch.paths.map { it.path }))
+            putStringArrayList(NappletHostContract.EXTRA_HASHES, ArrayList(launch.paths.map { it.hash }))
+            putStringArrayList(NappletHostContract.EXTRA_SERVERS, ArrayList(launch.servers))
+            putString(NappletHostContract.EXTRA_AUTHOR, identity.authorPubKey)
+            putString(NappletHostContract.EXTRA_IDENTIFIER, identity.identifier)
+            putString(NappletHostContract.EXTRA_AGGREGATE_HASH, identity.aggregateHash)
+            putString(NappletHostContract.EXTRA_TITLE, launch.title)
+            putStringArrayList(NappletHostContract.EXTRA_REQUIRES, ArrayList(launch.requires))
             putStringArrayList(NappletHostContract.EXTRA_CAP_LABELS, ArrayList(capLabels))
             putString(NappletHostContract.EXTRA_LAUNCH_TOKEN, launchToken)
             putInt(NappletHostContract.EXTRA_PROXY_PORT, proxyPort)
@@ -218,40 +165,6 @@ object NappletLauncher {
             // and localStorage into another. Derived here (the sandbox never sees the pubkey).
             putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
         }
-    }
-
-    /** Signature-checking entry point for embedded NIP-5D surfaces. */
-    fun buildLaunchParams(
-        context: Context,
-        manifest: NappletManifest,
-        authorPubKey: HexKey,
-        identifier: String,
-    ): Bundle? {
-        val event = manifest as? Event
-        if (event?.verify() != true || event.pubKey != authorPubKey) {
-            Log.w(TAG) { "Refusing embedded NIP-5D manifest that failed signature/author verification" }
-            return null
-        }
-        return runCatching {
-            require(manifest.isValid()) { "Invalid NIP-5D manifest" }
-            require(identifier == ((manifest as? NamedNappletEvent)?.identifier() ?: "")) { "Manifest identifier mismatch" }
-            val unsupported = manifest.unsupportedRequired()
-            require(unsupported.isEmpty()) { "Unavailable required NAP domains: $unsupported" }
-            buildLaunchParamsTrusted(
-                context = context,
-                paths = listOfNotNull(manifest.artifactFile()),
-                servers = manifest.servers(),
-                authorPubKey = authorPubKey,
-                identifier = identifier,
-                aggregateHash = manifest.artifact(),
-                title = manifest.title() ?: identifier.ifBlank { "Napplet" },
-                requires = manifest.exposedDomains(),
-                profile = HostProfile.NAPPLET,
-                manifestKind = event.kind,
-                manifestEventId = event.id,
-            )
-        }.onFailure { Log.w(TAG, "Refusing invalid embedded NIP-5D launch", it) }
-            .getOrNull()
     }
 
     private const val TAG = "NappletLauncher"

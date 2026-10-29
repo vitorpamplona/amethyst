@@ -252,7 +252,7 @@ private fun SandboxToolbar(
 
             // Only an nSite has a route of its own to choose, and only while Tor is on.
             if (isWebsite && host.torEnabled) {
-                val useTor = session.launch.useTor
+                val useTor = session.useTor
                 Row(
                     Modifier.padding(horizontal = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -378,7 +378,7 @@ private fun AccessWindow(
                 title = session.launch.title,
                 isWebsite = isWebsite,
                 capabilities = capabilities,
-                torOn = if (isWebsite && host.torEnabled) session.launch.useTor else null,
+                torOn = if (isWebsite && host.torEnabled) session.useTor else null,
                 // The per-app permission screen is Android's for now.
                 onManagePermissions = null,
                 onDone = onDone,

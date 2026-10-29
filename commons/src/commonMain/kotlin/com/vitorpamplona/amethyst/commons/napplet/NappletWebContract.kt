@@ -20,10 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import org.jetbrains.compose.resources.ExperimentalResourceApi
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -33,8 +31,8 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * the applet boxed in. Every host (the Android `:napplet` WebView today, a desktop CEF host
  * tomorrow) serves these exact bytes and headers, so an applet's sandbox can't differ by platform.
  *
- * The HTML/JS live in `commonMain/composeResources/files/napplet/` and are read via the generated
- * [Res] accessor; the constants below are duplicated nowhere else.
+ * The HTML/JS themselves are compose resources in commonsUI, read through [NappletWebResources]
+ * there; everything here is headless, so any host builds its pages from the same rules.
  */
 object NappletWebContract {
     /** Internal host the trusted **shell** is served from (never the user's keys). */
@@ -120,7 +118,7 @@ object NappletWebContract {
     /** True for the shell host and any per-applet subdomain — i.e. everything we serve internally. */
     fun isInternalHost(host: String?): Boolean = host == HOST || (host != null && host.endsWith(".$HOST"))
 
-    /** Placeholders in [SHELL_HTML_PATH] replaced by the host before serving the trusted shell. */
+    /** Placeholders in the shell page (`files/napplet/shell.html`) replaced by [shell]. */
     const val APP_ORIGIN_PLACEHOLDER = "__APP_ORIGIN__"
     const val APP_SANDBOX_PLACEHOLDER = "__APP_SANDBOX__"
     const val APP_BOOTSTRAP_PLACEHOLDER = "__APP_BOOTSTRAP__"
@@ -187,26 +185,6 @@ object NappletWebContract {
         val injected = "<!doctype html><html><head>$prelude$text"
         return injected.encodeToByteArray()
     }
-
-    const val SHELL_HTML_PATH = "files/napplet/shell.html"
-    const val SHIM_JS_PATH = "files/napplet/shim.js"
-
-    /**
-     * Asset directory the compose-resources of `:commons` are packaged under on Android (mirrors the
-     * prefix the generated [Res] accessor prepends). Hosts that run in a process without an
-     * initialized compose-resources context — e.g. the isolated `:napplet` process, which skips app
-     * init to stay key-free — read [SHELL_HTML_PATH]/[SHIM_JS_PATH] straight from `assets` under this
-     * root instead of going through [shellHtml]/[shimJs].
-     */
-    const val RESOURCE_ASSET_ROOT = "composeResources/com.vitorpamplona.amethyst.commons.resources/"
-
-    /** The trusted shell page's HTML, read from the shared bundle. */
-    @OptIn(ExperimentalResourceApi::class)
-    suspend fun shellHtml(): ByteArray = Res.readBytes(SHELL_HTML_PATH)
-
-    /** The `window.napplet` client shim a host injects into the applet document. */
-    @OptIn(ExperimentalResourceApi::class)
-    suspend fun shimJs(): ByteArray = Res.readBytes(SHIM_JS_PATH)
 
     private val NAP_DOMAIN = Regex("^[a-z][a-z0-9-]*$")
 }

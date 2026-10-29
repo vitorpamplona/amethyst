@@ -32,7 +32,7 @@ import kotlin.test.assertNotEquals
 
 class NappletWebContractShellTest {
     private val author = "a".repeat(64)
-    private val shellHtml = runBlocking { NappletWebContract.shellHtml() }
+    private val shellHtml = runBlocking { NappletWebResources.shellHtml() }
 
     @Test
     fun theAppIdKeepsTheOriginAndroidAlwaysDerived() {

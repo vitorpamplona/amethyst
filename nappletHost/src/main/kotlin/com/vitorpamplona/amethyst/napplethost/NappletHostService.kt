@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -163,8 +164,8 @@ class NappletHostService : Service() {
     private val tabs = mutableMapOf<String, NappletTab>()
 
     // The shell HTML and shim never change; read+decode them once instead of per tab on the main thread.
-    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebContract.SHELL_HTML_PATH) }
-    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
+    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebResources.SHELL_HTML_PATH) }
+    private val shimJs: String by lazy { readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -922,7 +923,7 @@ class NappletHostService : Service() {
         tab.toClient(message)
     }
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     private companion object {
         private const val TAG = "NappletHostService"

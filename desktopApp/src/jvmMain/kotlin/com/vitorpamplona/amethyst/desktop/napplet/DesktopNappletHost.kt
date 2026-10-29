@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
@@ -112,7 +113,7 @@ class DesktopNappletHost(
             modules.sessionManager.accountContent
                 .map { (it as? AccountState.LoggedIn)?.account?.pubKey }
                 .distinctUntilChanged()
-                .collect { pubKey -> sessions.value.filter { it.launch.accountPubKey != pubKey }.forEach(::close) }
+                .collect { pubKey -> sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close) }
         }
     }
 
@@ -124,7 +125,7 @@ class DesktopNappletHost(
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
     fun open(manifest: NappletManifest): Result<DesktopNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open napplets"))
-        return DesktopNappletLaunch.from(manifest, account.pubKey).map { open(it, account) }
+        return NappletLaunch.fromManifest(manifest).map { open(it, account, useTor = false) }
     }
 
     /**
@@ -134,13 +135,9 @@ class DesktopNappletHost(
      */
     fun openSite(event: Event): Result<DesktopNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open sites"))
-        val coordinate =
-            DesktopNappletLaunch
-                .fromSite(event, account.pubKey, useTor = false)
-                .getOrElse { return Result.failure(it) }
-                .identity.coordinate
-        val useTor = torEnabled() && networkChoices.useTor(coordinate)
-        return DesktopNappletLaunch.fromSite(event, account.pubKey, useTor).map { open(it, account) }
+        return NappletLaunch.fromSite(event).map { launch ->
+            open(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate))
+        }
     }
 
     /**
@@ -154,21 +151,22 @@ class DesktopNappletHost(
         val account = modules.sessionManager.loggedInAccount() ?: return
         networkChoices.set(session.launch.identity.coordinate, useTor)
         close(session)
-        open(session.launch.withUseTor(useTor && torEnabled()), account)
+        open(session.launch, account, useTor && torEnabled())
     }
 
     /** Opens [session]'s app again in a fresh window, after a failure the user wants to retry. */
     fun reopen(session: DesktopNappletSession) {
         val account = modules.sessionManager.loggedInAccount() ?: return
         close(session)
-        open(session.launch, account)
+        open(session.launch, account, session.useTor)
     }
 
     private fun open(
-        launch: DesktopNappletLaunch,
+        launch: NappletLaunch,
         account: Account,
+        useTor: Boolean,
     ): DesktopNappletSession =
-        DesktopNappletSession(launch, account, brokerFor(account), runtime).also { session ->
+        DesktopNappletSession(launch, account.pubKey, useTor, account, brokerFor(account), runtime).also { session ->
             mutableSessions.update { it + session }
             session.start()
         }

@@ -28,10 +28,12 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectProm
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
@@ -188,15 +190,16 @@ class DesktopNappletSessionTest {
                 storage = storage,
             )
         val launch =
-            DesktopNappletLaunch(
+            NappletLaunch(
                 identity = NappletIdentity(author.pubKey.toHexKey(), "probe", hash),
+                profile = HostProfile.NAPPLET,
                 declared = setOf(NappletCapability.STORAGE),
+                requires = listOf("storage"),
                 title = "Probe",
                 paths = listOf(PathTag("/index.html", hash)),
                 servers = listOf(serverUrl),
-                accountPubKey = "tester",
             )
-        return DesktopNappletSession(launch, null, broker, runtime).also { sessions += it }
+        return DesktopNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime).also { sessions += it }
     }
 
     @Test
@@ -316,8 +319,8 @@ class DesktopNappletSessionTest {
                         SignerOpGrant.AllowOnce
                     },
             )
-        val launch = DesktopNappletLaunch.fromSite(event, user.pubKey, useTor).getOrThrow()
-        return DesktopNappletSession(launch, null, broker, runtime).also { sessions += it }
+        val launch = NappletLaunch.fromSite(event).getOrThrow()
+        return DesktopNappletSession(launch, user.pubKey, useTor, account = null, broker = broker, runtime = runtime).also { sessions += it }
     }
 
     @Test
