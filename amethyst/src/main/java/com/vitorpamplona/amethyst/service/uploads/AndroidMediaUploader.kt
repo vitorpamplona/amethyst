@@ -49,6 +49,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState.UploadingFinalState
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoCompressionSupport
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.amethyst.service.uploads.nip96.upload
 import com.vitorpamplona.crypto.SymmetricCipher
@@ -705,6 +707,10 @@ class AndroidMediaUploader(
             val blob = ImageDownloader().fetch(url, httpClients.okHttpClientForImage(url)) ?: return@withContext null
             FileHeader.prepare(blob.bytes, blob.imageMimeType() ?: mimeType ?: blob.mimeType(), null).getOrNull()
         }
+
+    override suspend fun probeVideo(uri: MediaUri): VideoInfo? = withContext(Dispatchers.IO) { VideoCompressionHelper.probe(appContext, uri) }
+
+    override suspend fun probeHdr(uri: MediaUri): VideoHdrInfo? = withContext(Dispatchers.IO) { VideoCompressionHelper.probeHdr(appContext, uri) }
 
     override fun displayName(uri: MediaUri): String? =
         appContext.contentResolver.query(uri, null, null, null, null)?.use {

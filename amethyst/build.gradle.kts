@@ -283,10 +283,8 @@ android {
         }
     }
 
-    // TODO: remove this when lightcompressor uses one MP4 parser only
     packaging {
         resources {
-            pickFirsts.add("builddef.lst")
             pickFirsts.add("META-INF/LICENSE.md")
             pickFirsts.add("META-INF/LICENSE-notice.md")
         }

@@ -420,6 +420,7 @@ fun ImageVideoDescription(
                     checked = useH265Codec,
                     onCheckedChange = { useH265Codec = it },
                 )
+                VideoHdrHint(uris, accountViewModel.host.mediaUploader, useH265Codec)
             }
 
             if (controls.showsGifSwitch) {
