@@ -1,7 +1,7 @@
 # Desktop napplet / nsite host — implementation plan
 
-> **Status:** in-progress — the three shared extractions are DONE (`NappletRequestRouter`, `NappletWebContract`, `StaticWebsiteCard` in commons), but the desktop edge (KCEF/JCEF engine, scheme handler, transport, gateways, host UI) has no code in `desktopApp/`.
-> _Audited 2026-06-30._
+> **Status:** napplets (NIP-5D) implemented 2026-10-29 in `desktopApp/.../desktop/napplet/`; nSites
+> (NIP-5A) not yet. See "Built" below for what exists and what is still open.
 
 **Date:** 2026-06-21. Goal: a desktop NIP-5A (nsite) + NIP-5D (napplet) host that **reuses the
 shared core** the Android host already runs on, so the two stay wire- and policy-identical. This
@@ -82,6 +82,54 @@ These reduce desktop reimplementation and prevent drift:
 - Capability **declaration gate** + consent + signer-aware deferral (all already in `NappletBroker`).
 - Foreground-only execution (pause the engine when the pane is hidden) — mirror Android's `onPause`.
 - Route external links to the system browser only on a user gesture; never navigate the sandbox away.
+
+## Built (2026-10-29)
+
+Napplets open from the feed card's Open button (`DesktopNotePlatform` → `DesktopNappletCard`) and
+from favorites and the browser home (`DesktopAppPlatform`'s launcher), each in its own window.
+
+- **Engine:** raw JCEF through jcefmaven (`me.friwi:jcefmaven`, Apache-2.0; JCEF and CEF BSD-3;
+  Chromium's `libcef.so` includes FFmpeg, LGPL-2.1). KCEF was dropped: no release since 2025-03.
+  `DesktopCefEngine` downloads the native bundle into the data dir on first use, with progress in
+  the window, and runs Chromium with background networking off (its startup otherwise waits on
+  Google services, forever behind a TLS-breaking proxy) and no disk cache. Chromium's own
+  services (account `ListAccounts`, search prefetch, network time, DNS over HTTPS) ignore that
+  flag, so all of its traffic goes to a proxy that does not exist (`127.0.0.1:9`, loopback
+  included); a net log of the test run shows no other connection.
+- **Isolation:** renderer sandbox + the shared CSPs + opaque-origin srcdoc, in process. No child
+  JVM: the trust boundary is the bridge check below.
+- **Serving:** `DesktopNappletSession` serves only `SHELL_URL` from memory (shell CSP header) and
+  cancels every other request before it leaves (data:, blob: and about:srcdoc stay local).
+  `DesktopNappletBlobs` fetches the artifact from the manifest's servers plus the author's
+  kind:10063 list into a content-addressed cache, writing only bytes that hash to their name;
+  quartz's `StaticSiteResolver` hashes again on every launch.
+- **Transport:** CEF's message router. Chromium injects its query function into every frame,
+  so only a query from the main frame at `SHELL_URL` is accepted; the shell captures the function
+  and deletes it from its window. Replies go back through `executeJavaScript` into the shell's
+  `__nappletBridge.onmessage`, with the request id added as on Android.
+- **Broker:** `DesktopNappletHost` builds one per account with the gateways now shared in
+  commons (`AccountNappletRelayGateway`, `AccountNappletWalletGateway`, `NappletResourceFetcher`,
+  `AccountIdentityReader`, `DataStoreNappletStorage`) and the persisted
+  `DataStoreNappletPermissionStore` ledger. Live subscriptions use the now-generic
+  `NappletLiveSubscriptions`. Windows close when their launching account is no longer logged in.
+- **Consent:** `NappletConsentCard` (commonsUI, now also Android's dialog body) in a separate
+  `DialogWindow`, so Chromium's heavyweight view can't cover it; text from the shared
+  `NappletConsentSummary`.
+- **Theme:** `theme.get` and `theme.changed` follow the app's Material colors.
+- **Tests:** `DesktopNappletSessionTest`: a tampered blob never loads; with `AMETHYST_CEF_TEST=1`
+  under a display, a probe napplet's direct call to the bridge from its iframe is refused while
+  the shim's storage round trip works and its `fetch` never reaches the server, and the Doom
+  napplet boots and asks for its saves.
+
+Open:
+
+- nSites (NIP-5A website posture: real origin, NIP-07) are not hosted on desktop yet.
+- Not offered: upload, notify, keys.onAction, the inc bus (not in Amethyst's supported domains).
+- No foreground hold (`NappletHeldRequests`) or `identity.changed` push yet; acting requests are
+  still consent-gated.
+- Native Wayland (JBR's `WaylandWindow`) is unverified: CEF's windowed mode is X11.
+- macOS: the CEF bundle downloads unsigned into the data dir; notarized builds may need it signed
+  or shipped inside the app. Windows is untested.
 
 ## Status
 

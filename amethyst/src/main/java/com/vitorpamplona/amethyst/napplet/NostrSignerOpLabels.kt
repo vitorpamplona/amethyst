@@ -32,6 +32,15 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.counterpartyPubKey
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
+import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
+import com.vitorpamplona.amethyst.commons.napplet.ui.counterpartyLabel
+import com.vitorpamplona.amethyst.commons.napplet.ui.deletionChange
+import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
+import com.vitorpamplona.amethyst.commons.napplet.ui.listChange
+import com.vitorpamplona.amethyst.commons.napplet.ui.profileChange
+import com.vitorpamplona.amethyst.commons.napplet.ui.reportChange
+import com.vitorpamplona.amethyst.commons.napplet.ui.sealContents
+import com.vitorpamplona.amethyst.commons.napplet.ui.signRequestSummary
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
@@ -50,11 +59,9 @@ import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentInfoBuilder
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.quartz.nip01Core.core.Event
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
 import com.vitorpamplona.quartz.nip01Core.kite.KiteWriter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
@@ -84,21 +91,6 @@ suspend fun NostrSignerOp.label(context: Context): String =
         NostrSignerOp.Decrypt -> loadStringRes(Res.string.napplet_op_decrypt)
         is NostrSignerOp.DecryptFrom -> loadStringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
     }
-
-/**
- * A person's display name for a consent prompt: their profile name when we have it cached, otherwise
- * a shortened npub. Never empty — "read your private messages with <nothing>" would be worse than the
- * broad wording it replaces.
- */
-fun counterpartyLabel(pubKeyHex: HexKey): String {
-    LocalCache
-        .getUserIfExists(pubKeyHex)
-        ?.toBestDisplayName()
-        ?.ifBlank { null }
-        ?.let { return it }
-    val npub = runCatching { NPub.create(pubKeyHex) }.getOrNull()
-    return if (npub != null) npub.take(12) + "…" else pubKeyHex.take(12) + "…"
-}
 
 /** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 suspend fun buildSignerConsentInfo(

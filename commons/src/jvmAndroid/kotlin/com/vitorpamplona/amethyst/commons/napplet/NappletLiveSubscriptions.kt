@@ -18,12 +18,9 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet
 
-import android.os.Messenger
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
-import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
@@ -41,8 +38,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * The registry of live relay subscriptions applets have open, keyed by the requesting surface's reply
- * [Messenger] plus the applet's own `subId`. One broker serves every surface, and each page numbers its
+ * The registry of live relay subscriptions applets have open, keyed by the requesting surface's owner
+ * key [K] (Android's reply `Messenger`, a desktop window) plus the applet's own `subId`. One broker serves every surface, and each page numbers its
  * subs from scratch (`s0`, `s1`, …), so the `subId` alone would let one tab's REQ replace — or its
  * `relay.close` kill — another tab's feed. Each entry
  * holds the exact [INostrClient] that opened it, so teardown unsubscribes from the right account
@@ -56,16 +53,16 @@ import java.util.concurrent.atomic.AtomicInteger
  * signatures still came from the old one. [open] is reached only after the broker authorized the
  * subscription (RELAY consent).
  */
-class NappletLiveSubscriptions(
+class NappletLiveSubscriptions<K : Any>(
     private val scope: CoroutineScope,
-    private val attendance: NappletAttendance<Messenger>,
+    private val attendance: NappletAttendance<K>,
 ) {
-    private data class Key(
-        val owner: Messenger,
+    private data class Key<K>(
+        val owner: K,
         val subId: String,
     )
 
-    private val liveSubs = ConcurrentHashMap<Key, LiveSub>()
+    private val liveSubs = ConcurrentHashMap<Key<K>, LiveSub>()
     private val liveSeq = AtomicInteger(0)
 
     private class LiveSub(
@@ -102,7 +99,7 @@ class NappletLiveSubscriptions(
      * under the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
      */
     fun open(
-        owner: Messenger,
+        owner: K,
         nappletSubId: String,
         filters: List<Filter>,
         account: Account?,
@@ -187,20 +184,20 @@ class NappletLiveSubscriptions(
     }
 
     /** [owner] is being looked at again: its subscriptions deliver the encrypted events they held. */
-    fun onAttended(owner: Messenger) {
+    fun onAttended(owner: K) {
         liveSubs.forEach { (key, sub) -> if (key.owner == owner) sub.deliveries.trySend(Delivery.Attended) }
     }
 
     /** Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it. */
     fun close(
-        owner: Messenger,
+        owner: K,
         nappletSubId: String,
     ) {
         liveSubs.remove(Key(owner, nappletSubId))?.let(::stop)
     }
 
     /** Stops every subscription [owner] still has open (its surface went away without closing them). */
-    fun closeAllFor(owner: Messenger) {
+    fun closeAllFor(owner: K) {
         liveSubs.keys
             .filter { it.owner == owner }
             .forEach { key -> liveSubs.remove(key)?.let(::stop) }

@@ -18,15 +18,17 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet.ui
 
-import android.content.Context
-import com.vitorpamplona.amethyst.Amethyst
+import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.ConsentSubject
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
+import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_follow_added
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_follow_one
@@ -70,6 +72,7 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
+import com.vitorpamplona.quartz.utils.toLongValue
 import org.jetbrains.compose.resources.PluralStringResource
 import org.jetbrains.compose.resources.StringResource
 
@@ -83,7 +86,7 @@ import org.jetbrains.compose.resources.StringResource
  * mutates, or exposes account state — the values it reads are the user's own public lists.
  */
 class NappletConsentSummary(
-    private val context: Context,
+    private val browserIcons: BrowserIconRegistry,
     private val account: Account,
 ) {
     suspend fun info(
@@ -95,7 +98,7 @@ class NappletConsentSummary(
         val (title, iconUrl) =
             if (identity.authorPubKey == "browser") {
                 val host = OmniboxInput.hostOf(identity.identifier) ?: identity.identifier
-                host to Amethyst.instance.browserIcons.iconModelFor(host)
+                host to browserIcons.iconModelFor(host)
             } else {
                 resolveNappletMeta(identity.authorPubKey, identity.identifier, untitled)
             }
@@ -330,7 +333,7 @@ class NappletConsentSummary(
                 // getAmountInSats returns ZERO (not null, not a throw) for an amountless BOLT11, so a
                 // naive read renders "pay 0 sats" — telling the user a payment is free when the amount
                 // is in fact unspecified and decided by the payee. Treat non-positive as "no amount".
-                val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLong() }.getOrNull()
+                val sats = runCatching { LnInvoiceUtil.getAmountInSats(request.invoice).toLongValue() }.getOrNull()
                 if (sats != null && sats > 0) {
                     loadPluralStringRes(Res.plurals.napplet_consent_pay_amount, sats.toInt(), sats)
                 } else {

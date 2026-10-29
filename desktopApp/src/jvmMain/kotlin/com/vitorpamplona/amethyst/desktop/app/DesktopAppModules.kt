@@ -61,7 +61,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
-import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
+import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
@@ -432,10 +432,10 @@ class DesktopAppModules(
 
     val browserIcons by lazy { BrowserIconRegistry({ filesPath / BrowserIconRegistry.DIR }, applicationIOScope) }
 
-    // Napplets need a sandboxed web view, which the desktop does not host yet: nothing is granted,
-    // and nothing is kept.
+    // What the user granted each napplet, per account, kept across launches (the same store as Android's).
     val nappletPermissionLedger by lazy {
-        NappletPermissionLedger(InMemoryNappletPermissionStore()) { sessionManager.loggedInAccount()?.pubKey ?: "" }
+        val accountScope = { sessionManager.loggedInAccount()?.pubKey ?: "" }
+        NappletPermissionLedger(DataStoreNappletPermissionStore(appStores.getDataStore("napplet_permissions"), accountScope), accountScope)
     }
 
     // The legacy app's store (~/.amethyst/scheduled): posts scheduled there still go out, and the

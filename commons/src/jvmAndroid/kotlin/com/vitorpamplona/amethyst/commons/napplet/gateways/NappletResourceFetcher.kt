@@ -18,15 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet.gateways
+package com.vitorpamplona.amethyst.commons.napplet.gateways
 
-import android.util.Base64
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceResult
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
-import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
@@ -63,6 +61,7 @@ import java.io.InterruptedIOException
 import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.charset.CodingErrorAction
+import java.util.Base64
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -76,15 +75,16 @@ import kotlin.coroutines.cancellation.CancellationException
  * [com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager]). Reusing it — rather than
  * standing up a private client — means napplet blob fetches inherit the same passive
  * `Onion-Location` discovery + `.onion` rewriting, local Blossom cache redirect, connection pool
- * and DNS as every other HTTP role. Tor-or-clearnet is chosen per request from the calling
- * applet's [NappletNetworkRegistry] mode (locked napplets are pinned to Tor; nSites follow the
- * user's per-site toggle), so a brokered fetch routes exactly like that applet's own page loads.
+ * and DNS as every other HTTP role. Tor-or-clearnet is chosen per request by [useTor] for the calling
+ * applet (on Android its network mode: locked napplets are pinned to Tor; nSites follow the user's
+ * per-site toggle), so a brokered fetch routes exactly like that applet's own page loads.
  * Built per account (so it reads the right Blossom server list); consent is enforced by the
  * broker before [fetch] ever runs.
  */
 class NappletResourceFetcher(
     private val account: Account,
     private val httpClient: (useProxy: Boolean) -> OkHttpClient,
+    private val useTor: suspend (coordinate: String) -> Boolean,
 ) {
     /** Fetches an https/data/blossom/nostr resource and preserves the NAP-RESOURCE error category. */
     suspend fun fetch(
@@ -99,8 +99,7 @@ class NappletResourceFetcher(
                 url.startsWith("https://") || url.startsWith("blossom:") -> {
                     // Route like the applet's own page: locked napplets stay on Tor. The derived
                     // client removes ambient cookies/auth and validates DNS before every hop.
-                    NappletNetworkRegistry.awaitReady()
-                    val client = hardenedClient(httpClient(NappletNetworkRegistry.useTor(coordinate)))
+                    val client = hardenedClient(httpClient(useTor(coordinate)))
                     if (url.startsWith("https://")) fetchHttps(url, client) else fetchBlossom(url, client)
                 }
                 else -> failure(ERROR_UNSUPPORTED_SCHEME, "Unsupported resource URL scheme.")
@@ -324,7 +323,9 @@ class NappletResourceFetcher(
                 .lowercase()
         val bytes =
             if (isBase64) {
-                runCatching { Base64.decode(data, Base64.DEFAULT) }.getOrNull()
+                // Whitespace is skipped and padding is optional, as Android's Base64.DEFAULT did; any
+                // other character outside the alphabet still fails.
+                runCatching { Base64.getDecoder().decode(data.filterNot { it.isWhitespace() }) }.getOrNull()
                     ?: return failure(ERROR_DECODE_FAILED, "Invalid base64 data URL.")
             } else {
                 runCatching { decodeDataPayload(data) }.getOrNull()

@@ -96,6 +96,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletCard
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
@@ -106,6 +107,8 @@ import com.vitorpamplona.amethyst.desktop.ui.media.LightboxOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.PodcastEpisodePlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.SaveMediaAction
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
@@ -126,6 +129,28 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent
  */
 object DesktopNotePlatform : NotePlatform {
     private val MaxInlineMediaHeight = 600.dp
+
+    // Napplets open in the desktop's sandboxed Chromium window; nSites keep the shared card until
+    // the desktop hosts them too.
+    @Composable
+    override fun RenderRootNappletEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {
+        val event = baseNote.event as? RootNappletEvent ?: return
+        DesktopNappletCard(event, identifier = null)
+    }
+
+    @Composable
+    override fun RenderNamedNappletEvent(
+        baseNote: Note,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) {
+        val event = baseNote.event as? NamedNappletEvent ?: return
+        DesktopNappletCard(event, identifier = event.identifier())
+    }
 
     private fun BaseMediaContent.mediaUrl(): String? =
         when (this) {

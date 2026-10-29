@@ -1141,6 +1141,13 @@
     <string name="napplet_consent_hide_event">Hide Event</string>
     <string name="napplet_consent_more_options">More options</string>
     <string name="napplet_consent_fewer_options">Fewer options</string>
+    <string name="napplet_desktop_engine_downloading">Downloading the browser engine napplets run in (%1$s). This happens once.</string>
+    <string name="napplet_desktop_engine_starting">Starting the browser engine…</string>
+    <string name="napplet_desktop_fetching">Fetching %1$s…</string>
+    <string name="napplet_desktop_failed_fetch">Could not fetch %1$s from its Blossom servers.</string>
+    <string name="napplet_desktop_failed_engine">The browser engine napplets run in did not start.</string>
+    <string name="napplet_desktop_permission_title">%1$s asks for permission</string>
+    <string name="napplet_desktop_open_failed">This napplet can’t be opened here.</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_session">Allow for this session</string>
     <string name="napplet_signer_allow_24h">Allow for 24 hours</string>

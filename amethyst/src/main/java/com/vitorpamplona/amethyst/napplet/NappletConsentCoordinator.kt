@@ -22,41 +22,11 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import kotlinx.coroutines.CompletableDeferred
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-
-/** Everything the consent dialog needs to describe what an applet is asking permission to do. */
-data class NappletConsentInfo(
-    val appletTitle: String,
-    val coordinate: String,
-    val capabilityLabel: String,
-    val operationSummary: String,
-    /** Whether a persistent "Always allow" choice may be offered (false for per-use caps like payments). */
-    val allowAlways: Boolean,
-    val iconUrl: String? = null,
-    /**
-     * The full unsigned event the applet asked us to sign, pretty-printed, shown behind a
-     * "Show Event" toggle. Blank for requests that sign nothing. [operationSummary] is a lossy
-     * rendering — it truncates content and cannot spell out every tag — so this is the only place
-     * the user can see exactly what a signature would cover.
-     */
-    val rawData: String = "",
-    /**
-     * The one account a follow/mute change is about, when the change names exactly one. Rendered as
-     * an avatar + name so the user can recognize *who* at a glance instead of reading a bare count.
-     * Null for multi-account edits and every other request.
-     */
-    val subject: ConsentSubject? = null,
-)
-
-/** A single account a consent dialog is about: enough to draw an avatar and a name. */
-data class ConsentSubject(
-    val pubKey: String,
-    val name: String,
-    val pictureUrl: String?,
-)
 
 /**
  * Bridges the main-process broker to the consent UI. The broker suspends in

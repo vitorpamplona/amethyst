@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet.gateways
+package com.vitorpamplona.amethyst.commons.napplet.gateways
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -26,6 +26,10 @@ import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip58Badges.award.BadgeAwardEvent
 import com.vitorpamplona.quartz.nip58Badges.definition.BadgeDefinitionEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
+import com.vitorpamplona.quartz.utils.toDoubleValue
+import com.vitorpamplona.quartz.utils.toLongValue
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
 import kotlinx.serialization.json.buildJsonArray
@@ -143,7 +147,7 @@ class AccountIdentityReader(
                 addJsonObject {
                     put("eventId", zap.zappedPost().firstOrNull() ?: "")
                     put("sender", zap.zappedRequestAuthor() ?: "")
-                    put("amount", zap.amount() ?: 0L)
+                    put("amount", zap.amount()?.let(::amountJson) ?: JsonPrimitive(0L))
                     zap.zapRequest
                         ?.content
                         ?.takeIf { it.isNotBlank() }
@@ -193,4 +197,11 @@ class AccountIdentityReader(
         /** Tag names whose value is a list entry (vs metadata like d/title/description). */
         private val ENTRY_TAGS = setOf("e", "a", "p", "t", "word", "r", "emoji")
     }
+}
+
+/** A zap amount as a JSON number: whole sats as an integer, a millisat fraction as a decimal. */
+private fun amountJson(sats: BigDecimal): JsonPrimitive {
+    val whole = sats.toLongValue()
+    val exact = sats.toDoubleValue()
+    return if (exact == whole.toDouble()) JsonPrimitive(whole) else JsonPrimitive(exact)
 }

@@ -18,15 +18,13 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet.permissions
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
-import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
-import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionStore
 import kotlinx.coroutines.flow.first
 
 /**

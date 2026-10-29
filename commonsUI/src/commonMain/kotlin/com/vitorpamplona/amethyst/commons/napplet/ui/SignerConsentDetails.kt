@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet.ui
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -72,6 +72,7 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
+import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
@@ -365,4 +366,19 @@ suspend fun profileChange(
     if (changes.removed.isNotEmpty()) parts += loadStringRes(Res.string.consent_profile_removes, changes.removed.map { loadStringRes(it.label()) }.joinToString(", "))
     if (parts.isEmpty()) parts += loadStringRes(Res.string.consent_profile_removes_other)
     return ListChange(parts.joinToString(" · "), warning = changes.removesData)
+}
+
+/**
+ * A person's display name for a consent prompt: their profile name when we have it cached, otherwise
+ * a shortened npub. Never empty — "read your private messages with <nothing>" would be worse than the
+ * broad wording it replaces.
+ */
+fun counterpartyLabel(pubKeyHex: HexKey): String {
+    LocalCache
+        .getUserIfExists(pubKeyHex)
+        ?.toBestDisplayName()
+        ?.ifBlank { null }
+        ?.let { return it }
+    val npub = runCatching { NPub.create(pubKeyHex) }.getOrNull()
+    return if (npub != null) npub.take(12) + "…" else pubKeyHex.take(12) + "…"
 }

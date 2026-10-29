@@ -13,6 +13,9 @@
     <title>Napplet</title>
     <style>
       html, body, iframe { margin: 0; padding: 0; border: 0; width: 100%; height: 100%; background: #fff; }
+      /* Block, so the iframe sits flush: inline, its baseline gap overflowed the page into a scrollbar. */
+      html, body { overflow: hidden; }
+      iframe { display: block; }
     </style>
   </head>
   <body>
