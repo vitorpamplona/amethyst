@@ -1,8 +1,9 @@
 # Brief: upgrade LightCompressor-enhanced from 2.2.3 to 2.3.0, and tell the user what happens to HDR video
 
-Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr` against `2.3.0-SNAPSHOT`;
+Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr`, first against the local
+`2.3.0-SNAPSHOT`, then pinned to the released `2.3.0` from JitPack the same evening (step 6 done);
 see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Device check (steps 4
-and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) before it can merge.
+and 5) passed on the Pixel 9a the same day; ready for the PR.
 The `CompressionHandle` from LightCompressor PR #53 is adopted (section C, step 2; commit
 `28023020fa`) and the step 4 cancel case passed on the Pixel 9a the same day; it also surfaced a
 library gap (a cancel landing after the last frame leaves the finished output; see the report's

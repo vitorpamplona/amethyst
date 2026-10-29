@@ -5,7 +5,9 @@ on branch `feat/lightcompressor-2.3.0-hdr`, created from `main` at `72fbcdb6ad`.
 
 ## Outcome
 
-- Amethyst builds against LightCompressor-enhanced `2.3.0-SNAPSHOT` from the local Maven repo.
+- Amethyst builds against LightCompressor-enhanced `2.3.0` from JitPack (tag `2.3.0`, release
+  commit `8b05065`, which includes PR #53 and the bead 075 fix). The branch was developed against
+  the local `2.3.0-SNAPSHOT` and pinned to the release on 2026-10-29 once JitPack served the tag.
   Compressing an HLG or PQ video with H.265 on a device whose HEVC encoder can keep HDR now
   produces 10-bit HDR; every other case tone maps to BT.709 SDR (library default `hdrMode`).
 - The post composer and the media post show a line under the H.265 switch when at least one
@@ -29,9 +31,11 @@ Commits (oldest first):
 | `e805fec7a2` | docs(plans): LightCompressor 2.3.0 implementation report |
 | `93b9cb72b4` | docs(plans): record the Pixel 9a device check for LightCompressor 2.3.0 |
 | `28023020fa` | feat(upload): stop the encode when a post is cancelled |
+| `07b8cc35eb` | build(deps): pin LightCompressor-enhanced 2.3.0 |
 
-Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step 6), and the
-"plays in a desktop browser" check could not be observed (see "Tests").
+Docs-only commits between those (`b95d01ae7f`, `b920346a02`, `1c8290d58e`) record the device
+checks and the library brief. Not done, and why: the "plays in a desktop browser" check could not
+be observed (see "Tests").
 
 ## Decisions
 
@@ -48,7 +52,7 @@ Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step
 
 | File | Change |
 |---|---|
-| `gradle/libs.versions.toml` | `lightcompressor-enhanced = "2.3.0-SNAPSHOT"`. |
+| `gradle/libs.versions.toml` | `lightcompressor-enhanced = "2.3.0"` (`2.3.0-SNAPSHOT` from the local Maven repo until the tag; pinned in `07b8cc35eb`). |
 | `amethyst/build.gradle.kts` | Drops `pickFirsts.add("builddef.lst")` and the TODO above the packaging block. |
 | `commons/.../service/uploads/video/VideoHdrInfo.kt` | New `data class VideoHdrInfo(isHdr, canKeepHdr)`. |
 | `commons/.../service/uploads/HdrUploadOutcome.kt` | New `enum HdrUploadOutcome { KEPT, CONVERTED_BY_CODEC, CONVERTED_BY_DEVICE }` and `hdrUploadOutcome(probes, useH265)`. |
@@ -97,6 +101,15 @@ The skipped `MediaCompressorTest` case and the ten skipped Android tests are pre
 not touched here. `:amethyst:assemblePlayDebug` builds; `spotlessCheck` is clean. The first
 step-1 build raced my edits (the interface gained `probeHdr` after `commons` had compiled) and
 failed with `'probeHdr' overrides nothing`; the rerun on the final tree passed.
+
+### Against the released 2.3.0 (2026-10-29, after `07b8cc35eb`)
+
+JitPack returned 200 for the 2.3.0 POM and AAR; `dependencyInsight` on `playDebugRuntimeClasspath`
+selects `com.github.davotoula:LightCompressor-enhanced:2.3.0` (the local Maven repo holds no 2.3.0
+release, only the snapshot, so nothing shadows JitPack). The cached AAR's `classes.jar` contains
+`CancelledOutputKt`, `CompressionHandle` and `hdr/HdrInput`. `:amethyst:assemblePlayDebug` builds
+and `:amethyst:testPlayDebugUnitTest` passes: 1550 tests, 0 failures, 10 skipped (the same
+pre-existing skips).
 
 ### Device (brief steps 4 and 5): run 2026-10-29 on the Pixel 9a
 
@@ -237,8 +250,8 @@ Simplify pass (four reviewers; fixed: the `onSuccess` restructure and shared `de
 Kotlin review (WARNING: 0 critical, 0 high, 4 medium, 3 low; fixed: M1 `onCancellation` on the
 success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 
-- *M3, `2.3.0-SNAPSHOT` in the catalog.* Known; brief step 6 pins `2.3.0` once JitPack serves the
-  tag. Must happen before merge.
+- *M3, `2.3.0-SNAPSHOT` in the catalog.* Done later the same day in `07b8cc35eb`, once JitPack
+  served the 2.3.0 tag.
 - *M4, a stale hint for the moment between a pick change and the new probes.* `produceState`
   keeps the old value until the restarted producer finishes; tens of milliseconds, and resetting
   the value first would flicker the line when a video is added.
@@ -254,9 +267,7 @@ success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
   Queued until it ships.
 - Next steps, in order:
   1. Optional: open the two HLG uploads in a desktop browser (see the device table).
-  2. Library side: land the 075 fix (fold into PR #53 or a PR after it), then tag
-     LightCompressor-enhanced 2.3.0; when
-     `https://jitpack.io/com/github/davotoula/LightCompressor-enhanced/2.3.0/LightCompressor-enhanced-2.3.0.pom`
-     returns 200, set `lightcompressor-enhanced = "2.3.0"` and rebuild.
-  3. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand, push the branch to the fork,
-     open the PR against `vitorpamplona:main` when you ask for it.
+  2. Push the branch to the fork and open the PR against `vitorpamplona:main` when you ask for
+     it. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` was run by hand after `07b8cc35eb`:
+     exit 0, "All test passed", the shared-code metadata compile and `:amethyst:lintPlayDebug`
+     clean (only pre-existing warnings, e.g. the iOS `LocalClock` redundant conversion).
