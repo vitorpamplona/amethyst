@@ -474,7 +474,7 @@ private fun NewPostScreenBody(
                         MessageField(
                             if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) Res.string.marmot_poll_question else Res.string.what_s_on_your_mind,
                             postViewModel,
-                            onFocused = { postViewModel.activePollOption = null },
+                            onFocused = postViewModel::onMessageFocused,
                             onContentReceived = { uri, mimeType ->
                                 postViewModel.selectImage(
                                     persistentListOf(
@@ -490,7 +490,9 @@ private fun NewPostScreenBody(
                     // Lined up with the text above and the tools below: the post's text is the poll's question.
                     PollComposer(
                         postViewModel,
-                        Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, top = Size5dp, bottom = Size10dp),
+                        showImages = accountViewModel.settings.showImages(),
+                        modifier =
+                            Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, top = Size5dp, bottom = Size10dp),
                     )
                 }
 
@@ -861,8 +863,7 @@ private fun BottomRowActions(
                     AddPollButton(vm.wantsPoll || vm.wantsZapPoll) {
                         val isActive = vm.wantsPoll || vm.wantsZapPoll
                         if (isActive) {
-                            vm.wantsPoll = false
-                            vm.wantsZapPoll = false
+                            vm.disablePoll()
                         } else {
                             vm.wantsPoll = true
                         }

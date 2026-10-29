@@ -1406,12 +1406,12 @@ open class ShortNotePostViewModel :
             val options = taggedPollOptions()
             if (options.isEmpty()) return null
 
-            val quotes = findNostrUris(tagger.message)
+            val quotes = pollQuotes(tagger, options)
             val relays =
                 accountViewModel.account.nip65RelayList.outboxFlow.value
                     .toList()
 
-            PollEvent.build(tagger.message, options.map { OptionTag(it.code, it.tagger.message) }, pollDeadline.closesAt(TimeUtils.now()), relays, pollType) {
+            PollEvent.build(tagger.message, options.map { OptionTag(it.code, it.tagger.message) }, pollClosesAt(), relays, pollType) {
                 pTags(pollMentions(tagger, options).map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
@@ -1430,13 +1430,13 @@ open class ShortNotePostViewModel :
             if (options.isEmpty()) return null
 
             ZapPollEvent.build(tagger.message, options.mapIndexed { index, option -> PollOptionTag(index, option.tagger.message) }) {
-                pollDeadline.closesAt(TimeUtils.now())?.let { closedAt(it) }
+                pollClosesAt()?.let { closedAt(it) }
                 zapPollValueMinimum?.let { minAmount(it) }
                 zapPollValueMaximum?.let { maxAmount(it) }
                 zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
 
                 pTags(pollMentions(tagger, options).map { it.toPTag() })
-                quotes(findNostrUris(tagger.message))
+                quotes(pollQuotes(tagger, options))
                 hashtags(findHashtags(tagger.message))
 
                 geoHash?.let { geohash(it) }
@@ -1980,10 +1980,18 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    /** An option's text or cursor moved: keeps the row to type the next one into, and offers `@` and `:` completions. */
-    fun onPollOptionChanged(option: PollOptionDraft) {
+    /**
+     * The cursor in [option] moved, or (when [textChanged]) its text did: offers `@` and `:`
+     * completions and keeps the row to type the next option into. Only a text change is a
+     * new draft version: a draft save signs an event, which on a remote or external signer is a
+     * round trip, so tapping between fields must not cause one.
+     */
+    fun onPollOptionChanged(
+        option: PollOptionDraft,
+        textChanged: Boolean,
+    ) {
         activePollOption = option
-        keepTrailingPollOption()
+        if (textChanged) keepTrailingPollOption()
 
         if (option.state.selection.collapsed) {
             val lastWord = option.state.currentWord()
@@ -1997,7 +2005,30 @@ open class ShortNotePostViewModel :
             emojiSuggestions?.processCurrentWord(lastWord)
         }
 
-        draftTag.newVersion()
+        if (textChanged) draftTag.newVersion()
+    }
+
+    /** The message field took focus: the suggestions open for an option would complete into the wrong field. */
+    fun onMessageFocused() {
+        if (activePollOption == null) return
+        activePollOption = null
+        closePollOptionSuggestions()
+    }
+
+    /** Takes the poll off the post. Its options stay, so turning it back on finds them. */
+    fun disablePoll() {
+        wantsPoll = false
+        wantsZapPoll = false
+        activePollOption = null
+        closePollOptionSuggestions()
+    }
+
+    private fun closePollOptionSuggestions() {
+        if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
+            userSuggestionsMainMessage = null
+            userSuggestions?.reset()
+        }
+        emojiSuggestions?.reset()
     }
 
     /** There is always one empty option at the end to type the next one into, so adding one is just typing. */
@@ -2010,11 +2041,24 @@ open class ShortNotePostViewModel :
 
     fun canRemovePollOption(option: PollOptionDraft) = pollOptions.size > MIN_POLL_OPTIONS && !isTrailingPollOption(option)
 
-    /** Two options voters cannot tell apart split the vote for nothing. */
-    fun isDuplicatePollOption(option: PollOptionDraft): Boolean {
-        val label = option.label
-        if (label.isEmpty()) return false
-        return pollOptions.count { it.label.equals(label, ignoreCase = true) } > 1
+    /** The options that say the same thing as another, ignoring case: they split the vote for nothing. */
+    fun duplicatePollOptions(): Set<PollOptionDraft> =
+        filledPollOptions()
+            .groupBy { it.label.lowercase() }
+            .values
+            .filter { it.size > 1 }
+            .flatMapTo(mutableSetOf()) { it }
+
+    /**
+     * When the poll closes. A length counts from when the poll goes out: the scheduled time for
+     * a scheduled post, which is re-stamped to that moment and published then.
+     */
+    private fun pollClosesAt(): Long? = pollDeadline.closesAt(scheduledForSec ?: TimeUtils.now())
+
+    /** A deadline the poll would reach before or as it goes out: voting would be closed from the start. */
+    fun isPollDeadlinePassed(): Boolean {
+        val closesAt = pollClosesAt() ?: return false
+        return closesAt < (scheduledForSec ?: TimeUtils.now()) + TimeUtils.ONE_MINUTE
     }
 
     /** The options as they are sent: in order, trimmed, without the empty ones. */
@@ -2043,19 +2087,22 @@ open class ShortNotePostViewModel :
         options: List<TaggedPollOption>,
     ): Set<User> = tagger.directMentionsUsers + options.flatMap { it.tagger.directMentionsUsers }
 
+    /** The notes the question or an option cites, so readers can fetch and show them. */
+    private fun pollQuotes(
+        tagger: NewMessageTagger,
+        options: List<TaggedPollOption>,
+    ) = (findNostrUris(tagger.message) + options.flatMap { findNostrUris(it.tagger.message) }).distinct()
+
     /** The custom emojis of the question and of every option: the card draws an option's `:code:` from these tags. */
     private fun pollEmojis(
         messageEmojis: List<EmojiUrlTag>,
         options: List<TaggedPollOption>,
     ): List<EmojiUrlTag> = (messageEmojis + options.flatMap { accountViewModel.account.emoji.findEmojiTags(it.tagger.message) }).distinctBy { it.code }
 
-    private fun isPollReady(): Boolean {
-        val filled = filledPollOptions()
-        val closesAt = pollDeadline.closesAt(TimeUtils.now())
-        return filled.size >= MIN_POLL_OPTIONS &&
-            filled.distinctBy { it.label.lowercase() }.size == filled.size &&
-            (closesAt == null || closesAt > TimeUtils.oneMinuteFromNow())
-    }
+    private fun isPollReady(): Boolean =
+        filledPollOptions().size >= MIN_POLL_OPTIONS &&
+            duplicatePollOptions().isEmpty() &&
+            !isPollDeadlinePassed()
 
     // ---
     // Zap Polls

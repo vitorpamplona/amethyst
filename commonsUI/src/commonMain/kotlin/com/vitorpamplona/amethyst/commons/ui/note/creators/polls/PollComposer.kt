@@ -153,19 +153,23 @@ private val DEADLINES = listOf(null, TimeUtils.ONE_HOUR.toLong(), TimeUtils.ONE_
 @Composable
 fun PollComposer(
     postViewModel: ShortNotePostViewModel,
+    showImages: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        PollOptionsSection(postViewModel)
+        PollOptionsSection(postViewModel, showImages)
         PollSettings(postViewModel)
     }
 }
 
 @Composable
-private fun PollOptionsSection(postViewModel: ShortNotePostViewModel) {
+private fun PollOptionsSection(
+    postViewModel: ShortNotePostViewModel,
+    showImages: Boolean,
+) {
     val focusManager = LocalFocusManager.current
     val options = postViewModel.pollOptions
     val multiple = postViewModel.pollType == PollType.MULTI_CHOICE
@@ -182,10 +186,7 @@ private fun PollOptionsSection(postViewModel: ShortNotePostViewModel) {
                 modifier = Modifier.weight(1f),
             )
             IconButton(
-                onClick = {
-                    postViewModel.wantsPoll = false
-                    postViewModel.wantsZapPoll = false
-                },
+                onClick = postViewModel::disablePoll,
                 modifier = Modifier.size(32.dp),
             ) {
                 Icon(
@@ -196,6 +197,9 @@ private fun PollOptionsSection(postViewModel: ShortNotePostViewModel) {
                 )
             }
         }
+
+        // One pass over the options per edit, rather than one per row.
+        val duplicates by remember(options) { derivedStateOf { postViewModel.duplicatePollOptions() } }
 
         val initialCount = remember { options.size }
         options.forEachIndexed { index, option ->
@@ -213,9 +217,10 @@ private fun PollOptionsSection(postViewModel: ShortNotePostViewModel) {
                                 stringRes(Res.string.marmot_poll_option, index + 1)
                             },
                         trailing = trailing,
-                        error = postViewModel.isDuplicatePollOption(option),
+                        error = option in duplicates,
+                        showImages = showImages,
                         onRemove = if (postViewModel.canRemovePollOption(option)) ({ postViewModel.removePollOption(option) }) else null,
-                        onEdited = { postViewModel.onPollOptionChanged(option) },
+                        onEdited = { textChanged -> postViewModel.onPollOptionChanged(option, textChanged) },
                         onNext = { focusManager.moveFocus(FocusDirection.Down) },
                         leading = {
                             if (zaps) {
@@ -234,8 +239,7 @@ private fun PollOptionsSection(postViewModel: ShortNotePostViewModel) {
             }
         }
 
-        val duplicates = options.any { postViewModel.isDuplicatePollOption(it) }
-        AnimatedVisibility(visible = duplicates, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+        AnimatedVisibility(visible = duplicates.isNotEmpty(), enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
             Text(stringRes(Res.string.marmot_poll_duplicate_option), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         }
     }
@@ -253,8 +257,9 @@ private fun PollOptionRow(
     placeholder: String,
     trailing: Boolean,
     error: Boolean,
+    showImages: Boolean,
     onRemove: (() -> Unit)?,
-    onEdited: () -> Unit,
+    onEdited: (textChanged: Boolean) -> Unit,
     onNext: () -> Unit,
     leading: @Composable () -> Unit,
 ) {
@@ -263,9 +268,13 @@ private fun PollOptionRow(
     val state = option.state
 
     LaunchedEffect(state) {
+        var lastText = state.text.toString()
         snapshotFlow { state.text.toString() to state.selection }
             .drop(1)
-            .collect { onEdited() }
+            .collect { (text, _) ->
+                onEdited(text != lastText)
+                lastText = text
+            }
     }
 
     PollOptionFrame(
@@ -291,7 +300,7 @@ private fun PollOptionRow(
                         // The field focus moves to (Enter, Tab, a tap) is the one the suggestions complete into.
                         .onFocusChanged {
                             focused = it.isFocused
-                            if (it.isFocused) onEdited()
+                            if (it.isFocused) onEdited(false)
                         }.onPreviewKeyEvent { event ->
                             if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
                                 onNext()
@@ -308,7 +317,8 @@ private fun PollOptionRow(
                 },
             )
 
-            OptionImagePreview(option)
+            // The data-saver setting that keeps feed images from loading keeps this one too.
+            if (showImages) OptionImagePreview(option)
         }
     }
 }
@@ -477,10 +487,12 @@ private fun SatsField(
 @Composable
 private fun DeadlineSetting(postViewModel: ShortNotePostViewModel) {
     val deadline = postViewModel.pollDeadline
+    val scheduledFor = postViewModel.scheduledForSec
     var picking by remember { mutableStateOf(false) }
 
-    val closesAt = remember(deadline) { deadline.closesAt(TimeUtils.now()) }
-    val passed = closesAt != null && closesAt < TimeUtils.oneMinuteFromNow()
+    // A length counts from when the poll goes out, so a scheduled post moves its closing time.
+    val closesAt = remember(deadline, scheduledFor) { deadline.closesAt(scheduledFor ?: TimeUtils.now()) }
+    val passed = remember(deadline, scheduledFor) { postViewModel.isPollDeadlinePassed() }
     PollSettingRow(
         symbol = if (deadline == PollDeadline.Never) MaterialSymbols.TimerOff else MaterialSymbols.Timer,
         title = stringRes(Res.string.marmot_poll_has_deadline),
@@ -536,7 +548,9 @@ private fun PollDeadlineDialogs(
 
     val datePickerState =
         rememberDatePickerState(
-            initialSelectedDateMillis = initial * 1000,
+            // The picker works in UTC days: hand it the local date, or late in the evening west of
+            // UTC (early morning east of it) it would preselect the wrong day.
+            initialSelectedDateMillis = localSeconds * 1000,
             yearRange = currentYear..2050,
             selectableDates =
                 object : SelectableDates {
@@ -574,8 +588,10 @@ private fun PollDeadlineDialogs(
                                     (timePickerState.minute * TimeUtils.ONE_MINUTE)
                             } ?: TimeUtils.oneDayAhead()
 
-                        // Subtract this zone's current offset from UTC
-                        onPicked(datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(TimeUtils.now()))
+                        // Back to UTC with the offset in force on that date, not today's: they
+                        // differ across a daylight-saving change.
+                        val approximate = datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(TimeUtils.now())
+                        onPicked(datetimeLocalTimeZone - LocalClock.utcOffsetSeconds(approximate))
                     },
                 ) { Text(stringRes(Res.string.confirm)) }
             },
@@ -590,5 +606,5 @@ private fun PollDeadlineDialogs(
 @Preview
 @Composable
 fun PollComposerPreview() {
-    PollComposer(ShortNotePostViewModel())
+    PollComposer(ShortNotePostViewModel(), showImages = true)
 }
