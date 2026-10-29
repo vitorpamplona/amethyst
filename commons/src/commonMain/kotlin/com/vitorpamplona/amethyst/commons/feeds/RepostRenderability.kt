@@ -23,10 +23,8 @@ package com.vitorpamplona.amethyst.commons.feeds
 import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
-import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.request.EncryptionKeyRequestEvent
 import com.vitorpamplona.quartz.experimental.decoupling.transfer.response.EncryptionKeyTransferEvent
 import com.vitorpamplona.quartz.experimental.fitness.workout.WorkoutTemplateEvent
@@ -123,12 +121,19 @@ val KINDS_WITH_A_CARD_BY_CLASS: Set<Int> =
         MostroInfoEvent.KIND,
         ProductCollectionEvent.KIND,
         ShippingOptionEvent.KIND,
+        // drss.io's lists, folders and provenance notes; other apps' events on these numbers
+        // (room listings, votes, Ditto ratings) have no card.
+        DrssFeedListEvent.KIND,
+        DrssListFolderEvent.KIND,
+        DrssEventListEvent.KIND,
+        DrssProvenanceFolderEvent.KIND,
+        DrssProvenanceEvent.KIND,
     )
 
 /**
  * Shared kinds where the carded shape is the one a repost almost always carries: 30054 is a
- * Podcasting-2.0 episode far more often than drss.io's listening progress. A repost that embeds
- * nothing is shown, as it was before the kind was split; one that embeds progress is not.
+ * Podcasting-2.0 episode or drss.io's listening progress, both with cards. A repost that embeds
+ * nothing is shown, as it was before the kind was split; one that embeds another app's shape is not.
  */
 val KINDS_USUALLY_WITH_A_CARD: Set<Int> =
     setOf(
@@ -137,10 +142,9 @@ val KINDS_USUALLY_WITH_A_CARD: Set<Int> =
 
 /**
  * False for the shapes of a shared kind that Amethyst draws no card for: the `UnrecognizedKind…Event`
- * classes `EventFactory` builds for other apps' formats ([UnrecognizedShape]), and drss.io's
- * listening progress; true otherwise.
+ * classes `EventFactory` builds for other apps' formats ([UnrecognizedShape]); true otherwise.
  */
-fun Event.hasACardOfItsShape(): Boolean = this !is UnrecognizedShape && this !is DrssListenProgressEvent
+fun Event.hasACardOfItsShape(): Boolean = this !is UnrecognizedShape
 
 /**
  * The event a repost carries in its `content` (NIP-18 asks for the stringified event). Parsed only
@@ -202,12 +206,4 @@ val TYPED_WITHOUT_A_CARD: Set<Int> =
         ThemeDefinitionEvent.KIND,
         PostingStreakEvent.KIND,
         TopEightEvent.KIND,
-        // drss.io's lists, show settings and provenance records (and the other apps on those kinds):
-        // only quotes and links draw them, with the unknown-kind card.
-        DrssFeedListEvent.KIND,
-        DrssListFolderEvent.KIND,
-        DrssEventListEvent.KIND,
-        DrssProvenanceFolderEvent.KIND,
-        DrssProvenanceEvent.KIND,
-        DrssShowEvent.KIND,
     )

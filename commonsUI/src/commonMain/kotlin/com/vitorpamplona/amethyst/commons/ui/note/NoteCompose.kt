@@ -280,6 +280,13 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCvmToolsList
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderCyberspaceBag
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeleteGroup
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDeletionRequest
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssEventList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssFeedList
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListenProgress
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
@@ -2055,17 +2062,20 @@ internal fun RenderNoteRow(
             // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
-            // drss.io's lists, show settings, provenance records and listening progress, and the
-            // other apps' events on those kinds. Before Quartz typed them they drew the unknown-kind
-            // card; they still do. No feed asks for them, so this is what a quote or a link shows.
+            // drss.io's reader: listening progress, generated shows, list folders, lists and
+            // provenance notes, drawn the way drss draws them (types/Drss.kt).
             is DrssListenProgressEvent,
+            -> RenderDrssListenProgress(baseNote, accountViewModel, nav)
+            is DrssShowEvent -> RenderDrssShow(baseNote, accountViewModel, nav)
+            is DrssListFolderEvent -> RenderDrssListFolder(baseNote, accountViewModel, nav)
+            is DrssFeedListEvent -> RenderDrssFeedList(baseNote, accountViewModel, nav)
+            is DrssEventListEvent -> RenderDrssEventList(baseNote, accountViewModel, nav)
+            is DrssProvenanceEvent -> RenderDrssProvenance(baseNote, backgroundColor, accountViewModel, nav)
+            is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
+
+            // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
+            // were typed.
             is UnrecognizedKind30054Event,
-            is DrssFeedListEvent,
-            is DrssListFolderEvent,
-            is DrssEventListEvent,
-            is DrssProvenanceFolderEvent,
-            is DrssProvenanceEvent,
-            is DrssShowEvent,
             is UnrecognizedKind30100Event,
             is UnrecognizedKind30101Event,
             is UnrecognizedKind30102Event,

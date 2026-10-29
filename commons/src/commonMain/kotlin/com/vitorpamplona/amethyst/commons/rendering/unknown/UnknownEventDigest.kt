@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.rendering.unknown
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.kinds.KindNames
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -335,10 +334,9 @@ class UnknownEventDigest(
 /**
  * True when the kind's name in `KindNames` belongs to another shape of the kind: another app's event
  * on a shared kind ([UnrecognizedShape], such as a voting round on drss.io's 30101, "DRSS List
- * Folder"), or drss.io's listening progress on the podcast-episode kind. The card names those by
- * number instead.
+ * Folder"). The card names those by number instead.
  */
-private fun Event.isNotTheKindsNamedShape(): Boolean = this is UnrecognizedShape || this is DrssListenProgressEvent
+private fun Event.isNotTheKindsNamedShape(): Boolean = this is UnrecognizedShape
 
 /** True when [event] is of a kind quartz has no class for: EventFactory's plain [Event]. */
 fun isUnknownKind(event: Event): Boolean = event::class == Event::class

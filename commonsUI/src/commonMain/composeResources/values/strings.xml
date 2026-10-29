@@ -8917,4 +8917,52 @@
     <string name="nest_error_pick_future_start">Pick a future start time.</string>
     <string name="upload_no_image_url_returned">Upload succeeded but no image URL was returned by the server.</string>
     <string name="image_upload_video_thumbnail_description">Video thumbnail</string>
+    <string name="drss_brand">drss</string>
+    <string name="drss_untitled">Untitled</string>
+    <string name="drss_listening">Listening</string>
+    <string name="drss_listen_finished">Finished</string>
+    <string name="drss_listen_time_of">%1$s of %2$s</string>
+    <string name="drss_listen_time_left">%1$s left</string>
+    <string name="drss_listen_loading_episode">Loading the episode…</string>
+    <plurals name="drss_listen_plays">
+        <item quantity="one">Played once</item>
+        <item quantity="other">Played %1$d times</item>
+    </plurals>
+    <string name="drss_show">Podcast show</string>
+    <string name="drss_show_on_air">On air</string>
+    <string name="drss_show_off_air">Off air</string>
+    <string name="drss_show_publishes_as">Publishes the episodes</string>
+    <string name="drss_show_voice">Voice %1$s</string>
+    <string name="drss_show_makes">Each episode</string>
+    <plurals name="drss_show_keeps_days">
+        <item quantity="one">Keeps episodes %1$d day</item>
+        <item quantity="other">Keeps episodes %1$d days</item>
+    </plurals>
+    <plurals name="drss_show_keeps_hours">
+        <item quantity="one">Keeps episodes %1$d hour</item>
+        <item quantity="other">Keeps episodes %1$d hours</item>
+    </plurals>
+    <string name="drss_list_folder">List folder</string>
+    <plurals name="drss_list_count">
+        <item quantity="one">%1$d list</item>
+        <item quantity="other">%1$d lists</item>
+    </plurals>
+    <string name="drss_feed_list">Feed list</string>
+    <plurals name="drss_feed_count">
+        <item quantity="one">%1$d feed</item>
+        <item quantity="other">%1$d feeds</item>
+    </plurals>
+    <string name="drss_event_list">Collection</string>
+    <plurals name="drss_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="drss_provenance">Found a feed</string>
+    <string name="drss_provenance_via">via %1$s</string>
+    <string name="drss_provenance_through">Found through</string>
+    <string name="drss_provenance_folder">Provenance</string>
+    <plurals name="drss_provenance_count">
+        <item quantity="one">%1$d feed found</item>
+        <item quantity="other">%1$d feeds found</item>
+    </plurals>
 </resources>
