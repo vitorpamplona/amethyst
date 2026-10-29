@@ -3,8 +3,10 @@
 Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr` against `2.3.0-SNAPSHOT`;
 see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Device check (steps 4
 and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) before it can merge.
-One follow-up open since 2026-10-29: adopt the `CompressionHandle` from LightCompressor PR #53
-(section C, step 2, one device-check case in step 4). (Written 2026-10-28 from the
+The `CompressionHandle` from LightCompressor PR #53 is adopted (section C, step 2; commit
+`28023020fa`) and the step 4 cancel case passed on the Pixel 9a the same day; it also surfaced a
+library gap (a cancel landing after the last frame leaves the finished output; see the report's
+Findings) whose fix is still to be decided. (Written 2026-10-28 from the
 LightCompressor session, HDR hint added 2026-10-29.)
 
 Amethyst depends on `com.github.davotoula:LightCompressor-enhanced:2.2.3`

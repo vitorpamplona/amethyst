@@ -13,8 +13,10 @@ on branch `feat/lightcompressor-2.3.0-hdr`, created from `main` at `72fbcdb6ad`.
   which always compresses as H.264, shows a codec-less "converted" line.
 - On Android the quality slider labels the stop with the picked video's own standard ("4K video →
   2160p, 8 Mbps") instead of the 1080p example.
-- A compression that finishes after the 60 s timeout, or after the caller was cancelled, now
-  deletes its output instead of leaving it in `filesDir`.
+- The 60 s timeout and a cancelled post stop the encode: `compressVideo` registers
+  `invokeOnCancellation { handle.cancel() }` on the `CompressionHandle` that 2.3.0's `start()`
+  returns (library PR #53). A compression that still finishes after the cancel deletes its output
+  instead of leaving it in `filesDir`.
 - `builddef.lst` is gone from the APK packaging block: no mp4parser or isoparser in the tree.
 
 Commits (oldest first):
@@ -24,6 +26,9 @@ Commits (oldest first):
 | `f4ce410df9` | feat(upload): LightCompressor-enhanced 2.3.0, HDR hint and real slider labels on Android |
 | `23797a2a7f` | refactor(upload): share the orchestrator's video list and the dialogs' hint line |
 | `bc5915f0f5` | fix(upload): close the cancel race on the compressed file and guard the HDR probe |
+| `e805fec7a2` | docs(plans): LightCompressor 2.3.0 implementation report |
+| `93b9cb72b4` | docs(plans): record the Pixel 9a device check for LightCompressor 2.3.0 |
+| `28023020fa` | feat(upload): stop the encode when a post is cancelled |
 
 Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step 6), and the
 "plays in a desktop browser" check could not be observed (see "Tests").
@@ -33,7 +38,7 @@ Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step
 | Decision | Taken as | Notes |
 |---|---|---|
 | A. `hdrMode` | **Option 1, keep the default** (recommended) | No code; the hint tells the user which outcome they get. The Pixel 9a bitrate overshoot on keep-HDR encodes (library bead 6k1) is accepted for now. |
-| C. `cancel()` on timeout | **Not adopted** | `MultiOrchestrator.upload` and `uploadEncrypted` `launch` one job per attachment, so two videos compress at the same time and `cancel()` would stop the sibling. The orphaned output is deleted in `onSuccess` instead, and the library request (a per-`start()` handle) is recorded in the brief's section C. |
+| C. `cancel()` on timeout | **Global `cancel()` not adopted; the per-`start()` handle adopted the same day** | `MultiOrchestrator.upload` and `uploadEncrypted` `launch` one job per attachment, so two videos compress at the same time and the global `cancel()` would stop the sibling. The library request went out as LightCompressor PR #53 (`start()` returns a `CompressionHandle`, bead 7og); the brief's "Library request done" addition is implemented in `28023020fa` against the republished `2.3.0-SNAPSHOT` (AAR of 2026-10-29 13:29). The `!isActive` deletion in `onSuccess` stays for the encode that finishes as the cancel lands. |
 | F. Chat dialog | **Shows the line, without "Turn on H.265"** | Fourth string `video_hdr_converted`. The chat uploaders pass no `useH265`, so `MultiOrchestrator.upload`'s default `false` applies; the hint is called with `useH265 = false, offersH265 = false`. |
 | F. Where the probe runs | In the composable, not at each call site | `VideoHdrHint(media, uploader, useH265)` probes inside, the way `MediaQualitySlider(media, uploader)` already does, instead of copying the `produceState` block into three dialogs (divergence 1). |
 | Step 7 cleanup | Done | `./gradlew :amethyst:dependencies` has no `mp4parser`/`isoparser` line; the `builddef.lst` pick-first and its TODO are removed, the two `META-INF/LICENSE*` pick-firsts stay. |
@@ -55,7 +60,8 @@ Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step
 | `commonsUI/.../ui/actions/NewMediaView.kt` | Hint under the H.265 switch, state from `postViewModel.useH265Codec`. |
 | `commonsUI/.../chats/utils/ChatFileUploadDialog.kt` | Codec-less hint when `controls.videoWillBeCompressed`. |
 | `commonsUI/.../composeResources/values/strings.xml` | `video_hdr_kept`, `video_hdr_converted_codec`, `video_hdr_converted`, `video_hdr_converted_device` (English only; Crowdin translates). |
-| `amethyst/.../service/uploads/VideoCompressionHelper.kt` | `probe(context, uri): VideoInfo?` and `probeHdr(context, uri): VideoHdrInfo`; `onSuccess` deletes the output when the continuation is no longer active, resumes the success value with an `onCancellation` that deletes the file, and shares one `deleteOutput()`. |
+| `amethyst/.../service/uploads/VideoCompressionHelper.kt` | `probe(context, uri): VideoInfo?` and `probeHdr(context, uri): VideoHdrInfo`; `start()`'s `CompressionHandle` is cancelled from `continuation.invokeOnCancellation`; `onSuccess` deletes the output when the continuation is no longer active, resumes the success value with an `onCancellation` that deletes the file, and shares one `deleteOutput()`. |
+| `amethyst/src/test/.../ui/components/MediaCompressorTest.kt` | The (ignored) video test's `start()` stub returns a relaxed `CompressionHandle` mock so the test source compiles against the new signature. |
 | `amethyst/.../service/uploads/AndroidMediaUploader.kt` | Overrides `probeVideo` and `probeHdr` on `Dispatchers.IO`; `probeHdr` returns null if the library probe throws. |
 | `docs/changelog/v1.21.00.md`, `docs/changelog/README.md` | Release notes for the next version. |
 | `amethyst/plans/2026-10-28-lightcompressor-2.3.0-upgrade.md`, `amethyst/plans/README.md` | Status line, decision C record, queued-table entry. |
@@ -123,11 +129,45 @@ Both HLG encodes sat at or under the 2 Mbps Medium target; the 1.9× keep-HDR ov
 bead 6k1) did not show on this clip. Test 2 went out without a caption: the shell quoting of my
 `adb shell input text` dropped the text, the upload itself was unaffected.
 
+### Device, cancel case (brief step 4, added 2026-10-29): run after `28023020fa` on the Pixel 9a
+
+Same build setup, reinstalled with the handle commit. Generated 3840×2160 `testsrc2` clips at
+Medium (4K → 1080p, 4 Mbps). "Cancel" here means leaving the Videos feed: the dialog's own X only
+clears the model (`cancelModel()`), the upload job lives in the feed screen's `viewModelScope`
+(`rememberViewModel` in `NewVideoFeedButton`), so the encode is cancelled when that screen leaves
+the back stack.
+
+| Run | Clip | Action | Result |
+|---|---|---|---|
+| 1 | 40 s, 20 Mb/s (101 MB) | Post, X at +10 s, back at +21 s | **Edge case.** Encode ran at ~2× real time and had just finished: `transcode_…mp4` was renamed to `e6fa7d5a-….mp4` (20,021,467 bytes, 40.0 s, `ftyp moov free mdat`) the same second the cancel landed. Log: "Video compression cancelled" at +22.7 s, 1.5 s after back. The finished file stayed in `files/` (see Findings); deleted by hand. |
+| 2 | 240 s, 6 Mb/s (182 MB) | Post, X at +10 s, back at +11.7 s | **Pass.** `transcode_2390505448720619506.mp4` (9.1 MB) present at +10 s; "Video compression cancelled" 0.6 s after back; `files/` empty 4 s later. |
+| 3 | 240 s clip | Post, no cancel | **Pass.** "Video compression cancelled" 60.1 s after the library's bitrate log (the `withTimeoutOrNull(60_000)` path); `files/` empty at +64 s. Backed out 6 s later to stop the fallback upload of the 182 MB original; `nak req` on the tester key shows nothing published. |
+
+The clips were deleted from `Movies/hdrcheck` and MediaStore afterwards; `files/` holds no `.mp4`,
+`_temp` or `transcode_*` entry.
+
 ## Findings
 
 - **Uploads compress concurrently.** `MultiOrchestrator` launches every attachment at once, which
-  is what rules out `VideoCompressor.cancel()`; a per-`start()` handle in the library would let
-  Amethyst cancel the encode instead of deleting its output afterwards.
+  is what ruled out the global `VideoCompressor.cancel()`; the per-`start()` `CompressionHandle`
+  (library PR #53) is what the branch now cancels.
+- **Library gap: a cancel that lands after the last frame leaves the finished file.** Device run 1
+  above. `Compressor.compressVideo` runs the transcode inside `withContext(Dispatchers.Default)`
+  and the `Transcoder` polls `isCancelled` once per decoded frame. After the last frame,
+  `finalizeOutput` writes `files/<uuid>.mp4` and the attempt returns success, but a `withContext`
+  whose job was cancelled meanwhile throws `CancellationException` on the way out: the `Result` is
+  dropped, `CompressionBatches` reports `onCancelled`, and `attempt`'s `finally` deletes only the
+  `transcode_*` muxer file, not the destination. `onCancelled(index)` carries no path, so Amethyst
+  cannot clean up from the callback. The window is the fast-start copy (hundreds of ms for a 20 MB
+  output). Two possible fixes, decision pending (asked 2026-10-29): in the library, delete the
+  destination when the video's coroutine ends cancelled (`doVideoCompression` knows `desFile`), or
+  deliver `onSuccess` for an output that was finalized; or in Amethyst, delete
+  `File(filesDir, "$uuid.mp4")` in `onCancelled`, which duplicates the library's
+  `AppSpecificStorageConfiguration` path rule.
+- **The dialog's X does not cancel a running upload.** `NewMediaView`'s cancel button calls
+  `cancelModel()`, which only nulls the orchestrator; the upload coroutine is in the
+  `viewModelScope` of a model scoped to the feed screen, so compression and upload continue until
+  that screen leaves the back stack. Pre-existing, outside the brief; worth its own bead.
 - **`SelectedMedia` has identity equality.** `produceState(…, videos)` only re-probes when the
   orchestrator's list really changes because the orchestrator keeps the same instances; `videos()`
   says so in its KDoc.
@@ -186,9 +226,12 @@ success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 - Plan status: the brief's status line points here; `amethyst/plans/README.md` keeps it under
   Queued until it ships.
 - Next steps, in order:
-  1. Optional: open the two HLG uploads in a desktop browser (see the device table).
-  2. Tag LightCompressor-enhanced 2.3.0; when
+  1. Decide where the cancel-after-last-frame leftover gets fixed (Findings); if in the library,
+     republish the snapshot and rerun device cancel run 1 with a clip whose encode ends right at
+     the cancel, or add a library unit test around `CompressionBatches` instead.
+  2. Optional: open the two HLG uploads in a desktop browser (see the device table).
+  3. Tag LightCompressor-enhanced 2.3.0; when
      `https://jitpack.io/com/github/davotoula/LightCompressor-enhanced/2.3.0/LightCompressor-enhanced-2.3.0.pom`
      returns 200, set `lightcompressor-enhanced = "2.3.0"` and rebuild.
-  3. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand, push the branch to the fork,
+  4. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand, push the branch to the fork,
      open the PR against `vitorpamplona:main` when you ask for it.
