@@ -646,12 +646,9 @@
     <string name="wallet_connect_connect_app">Kết nối Ví</string>
     <string name="see_relay_feed">Xem nguồn cấp Relay</string>
     <string name="pledge_amount_in_sats">Số tiền cam kết (Sats)</string>
-    <string name="poll_option_description">Mô tả tùy chọn bình chọn</string>
     <string name="poll_zap_value_min">Zap tối thiểu</string>
     <string name="poll_zap_value_max">Zap tối đa</string>
     <string name="poll_consensus_threshold">Đồng thuận</string>
-    <string name="poll_closing_date_time">Ngày &amp; Giờ Đóng Bình chọn</string>
-    <string name="poll_closing_in">Bình chọn đóng trong %1$s</string>
     <string name="looking_for_event">Đang tìm kiếm Sự kiện %1$s</string>
     <string name="send_zap">Gửi Zap</string>
     <string name="custom_zaps_add_a_message">Thêm tin nhắn công khai</string>
@@ -913,7 +910,6 @@
     <string name="guidelines">Hướng dẫn</string>
     <string name="moderators">Người kiểm duyệt</string>
     <string name="status_update">Cập nhật trạng thái của bạn</string>
-    <string name="poll_zap_value_min_max_explainer">Các phiếu bầu được tính theo số lượng zap. Bạn có thể đặt số lượng tối thiểu để tránh spam và số lượng tối đa để tránh một người zap lớn chiếm lĩnh cuộc bình chọn. Sử dụng cùng một số lượng ở cả hai trường để đảm bảo mỗi phiếu bầu có giá trị như nhau. Để trống để chấp nhận bất kỳ số lượng nào.</string>
     <string name="error_dialog_talk_to_user">Nhắn tin cho Người dùng</string>
     <string name="error_dialog_talk_to_user_name">Nhắn tin cho %1$s</string>
     <string name="zap_split_title">Chia và Chuyển tiếp Zap</string>
@@ -1423,7 +1419,6 @@
     <string name="closing_time">Thời gian đóng</string>
     <string name="confirm">Xác nhận</string>
     <string name="next">Tiếp theo</string>
-    <string name="add_poll_option_button">Nút thêm tùy chọn bình chọn</string>
     <string name="go_back">Quay lại</string>
     <string name="approve">Chấp thuận</string>
     <string name="connected">Đã kết nối</string>
@@ -2582,7 +2577,6 @@
     <string name="poll_author_no_vote">Tác giả bình chọn không thể bình chọn trong chính bình chọn của họ.</string>
     <string name="poll_is_closed_explainer">Bình chọn đã đóng cho các phiếu mới</string>
     <string name="poll_multiple_choice">Nhiều lựa chọn</string>
-    <string name="poll_option_index">Tùy chọn %1$s</string>
     <string name="poll_single_choice">Một lựa chọn</string>
     <string name="poll_unable_to_vote">Không thể bình chọn</string>
     <string name="polls">Cuộc thăm dò</string>

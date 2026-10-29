@@ -649,12 +649,9 @@
     <string name="wallet_connect_connect_app">Підключити гаманець</string>
     <string name="see_relay_feed">Переглянути стрічку relay</string>
     <string name="pledge_amount_in_sats">Сума внеску в sat</string>
-    <string name="poll_option_description">Опис варіанту</string>
     <string name="poll_zap_value_min">Мінімальний зап</string>
     <string name="poll_zap_value_max">Максимальний зап</string>
     <string name="poll_consensus_threshold">Консенсус</string>
-    <string name="poll_closing_date_time">Дата &amp; час закінчення опитування</string>
-    <string name="poll_closing_in">Опитування закривається через %1$s</string>
     <string name="looking_for_event">Пошук події %1$s</string>
     <string name="send_zap">Надіслати зап</string>
     <string name="custom_zaps_add_a_message">Додати публічне повідомлення</string>
@@ -922,7 +919,6 @@
     <string name="guidelines">Правила</string>
     <string name="moderators">Модератори</string>
     <string name="status_update">Оновіть свій статус</string>
-    <string name="poll_zap_value_min_max_explainer">Голоси зважуються відповідно до суми зап. Ви можете встановити мінімальну суму, щоб уникнути спамерів, та максимальну, щоб великі заппери не домінували в опитуванні. Введіть однакову суму в обох полях, щоб кожен голос мав однакову вагу. Залиште порожнім, щоб приймати будь-яку суму.</string>
     <string name="error_dialog_talk_to_user">Написати користувачу</string>
     <string name="error_dialog_talk_to_user_name">Повідомити %1$s</string>
     <string name="error_dialog_button_ok">ОК</string>
@@ -1452,7 +1448,6 @@
     <string name="closing_time">Час закриття</string>
     <string name="confirm">Підтвердити</string>
     <string name="next">Далі</string>
-    <string name="add_poll_option_button">Кнопка додавання варіанту опитування</string>
     <string name="go_back">Назад</string>
     <string name="approve">Схвалити</string>
     <string name="connected">Підключено</string>
@@ -2750,7 +2745,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Опитування закрито для нових голосів</string>
     <string name="poll_multiple_choice">Кілька відповідей</string>
-    <string name="poll_option_index">Варіант %1$s</string>
     <string name="poll_single_choice">Одна відповідь</string>
     <string name="poll_unable_to_vote">Неможливо проголосувати</string>
     <string name="polls">Опитування</string>

@@ -646,12 +646,9 @@
     <string name="wallet_connect_connect_app">지갑 연결</string>
     <string name="see_relay_feed">relay 피드 보기</string>
     <string name="pledge_amount_in_sats">Sats 단위 서약 금액</string>
-    <string name="poll_option_description">투표 옵션 설명</string>
     <string name="poll_zap_value_min">최소 zap</string>
     <string name="poll_zap_value_max">최대 zap</string>
     <string name="poll_consensus_threshold">합의</string>
-    <string name="poll_closing_date_time">투표 종료 날짜 &amp; 시간</string>
-    <string name="poll_closing_in">투표가 %1$s 후 종료됩니다</string>
     <string name="looking_for_event">이벤트 %1$s 검색 중</string>
     <string name="send_zap">Zap 전송</string>
     <string name="custom_zaps_add_a_message">공개 메시지 추가</string>
@@ -916,7 +913,6 @@
     <string name="guidelines">가이드라인</string>
     <string name="moderators">관리자</string>
     <string name="status_update">상태 업데이트</string>
-    <string name="poll_zap_value_min_max_explainer">투표는 zap 금액에 따라 가중치가 부여됩니다. 스팸 방지를 위해 최소 금액을, 대규모 zap이 투표를 독점하지 않도록 최대 금액을 설정할 수 있습니다. 두 필드에 같은 금액을 입력하면 모든 투표의 가치를 동일하게 유지할 수 있습니다. 아무 금액이나 허용하려면 비워두세요.</string>
     <string name="error_dialog_talk_to_user">사용자에게 메시지 보내기</string>
     <string name="error_dialog_talk_to_user_name">%1$s에게 메시지 보내기</string>
     <string name="error_dialog_button_ok">확인</string>
@@ -1425,7 +1421,6 @@
     <string name="closing_time">종료 시간</string>
     <string name="confirm">확인</string>
     <string name="next">다음</string>
-    <string name="add_poll_option_button">투표 옵션 추가 버튼</string>
     <string name="go_back">뒤로 가기</string>
     <string name="approve">승인</string>
     <string name="connected">연결됨</string>
@@ -2593,7 +2588,6 @@
     <string name="poll_author_no_vote">투표 작성자는 자신의 투표에 참여할 수 없습니다.</string>
     <string name="poll_is_closed_explainer">투표가 새로운 투표를 받지 않습니다</string>
     <string name="poll_multiple_choice">복수 선택</string>
-    <string name="poll_option_index">%1$s번 옵션</string>
     <string name="poll_single_choice">단일 선택</string>
     <string name="poll_unable_to_vote">투표할 수 없습니다</string>
     <string name="polls">투표</string>

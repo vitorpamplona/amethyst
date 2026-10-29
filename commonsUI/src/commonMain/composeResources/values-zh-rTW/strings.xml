@@ -653,12 +653,9 @@
     <string name="wallet_connect_connect_app">連接錢包</string>
     <string name="see_relay_feed">查看 relay 動態</string>
     <string name="pledge_amount_in_sats">承諾聰金額</string>
-    <string name="poll_option_description">投票選擇說明</string>
     <string name="poll_zap_value_min">打閃最低金額</string>
     <string name="poll_zap_value_max">打閃最高金額</string>
     <string name="poll_consensus_threshold">共識</string>
-    <string name="poll_closing_date_time">投票截止日期和時間</string>
-    <string name="poll_closing_in">投票將在 %1$s 後截止</string>
     <string name="looking_for_event">正在查找事件 %1$s</string>
     <string name="send_zap">傳送 Zap</string>
     <string name="custom_zaps_add_a_message">添加公開消息</string>
@@ -926,7 +923,6 @@
     <string name="guidelines">準則</string>
     <string name="moderators">版主</string>
     <string name="status_update">更新你的狀態</string>
-    <string name="poll_zap_value_min_max_explainer">投票按照打閃金額進行加權。你可以設置最小金額以避免垃圾郵件，也可以設置最大金額以避免大型攻擊者攻擊民意調查。在兩個字段中使用相同的金額則確保每張投票的價值相同。留空即可接受任何金額。</string>
     <string name="error_dialog_talk_to_user">向用戶發送消息</string>
     <string name="error_dialog_talk_to_user_name">訊息 %1$s</string>
     <string name="error_dialog_button_ok">確定</string>
@@ -1440,7 +1436,6 @@
     <string name="closing_time">關閉時間</string>
     <string name="confirm">確認</string>
     <string name="next">下一步</string>
-    <string name="add_poll_option_button">新增投票選項按鈕</string>
     <string name="go_back">返回</string>
     <string name="approve">批准</string>
     <string name="connected">已連線</string>
@@ -2612,7 +2607,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">該投票已結束</string>
     <string name="poll_multiple_choice">多選</string>
-    <string name="poll_option_index">選項 %1$s</string>
     <string name="poll_single_choice">單選</string>
     <string name="poll_unable_to_vote">無法投票</string>
     <string name="polls">投票</string>

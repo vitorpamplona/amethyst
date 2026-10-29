@@ -21,16 +21,12 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.send
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,7 +34,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,8 +53,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -100,7 +93,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState
@@ -111,15 +103,12 @@ import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_add_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_closes_at
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_create
-import com.vitorpamplona.amethyst.commons.resources.marmot_poll_deadline_days
-import com.vitorpamplona.amethyst.commons.resources.marmot_poll_deadline_hours
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_duplicate_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_has_deadline
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_invalid
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_invalid_text
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_multiple_answers
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_new
-import com.vitorpamplona.amethyst.commons.resources.marmot_poll_no_deadline
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_not_anonymous
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_option_count
@@ -127,16 +116,22 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_poll_options
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_pick_many
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_pick_one
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
-import com.vitorpamplona.amethyst.commons.resources.marmot_poll_remove_option
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_stays_open
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollChoiceGlyph
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollDeadlineChip
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollDeadlineChips
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollOptionFrame
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollSettingRow
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollSettingsCard
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollSettingsDivider
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.pollDeadlineLabel
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.UserSuggestionState
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.text.MentionPreservingInputTransformation
 import com.vitorpamplona.amethyst.commons.ui.text.currentWord
@@ -335,7 +330,7 @@ fun CreateMarmotPollSheet(
 
             OptionsSection(draft, suggestions, accountViewModel)
 
-            PollSettingsCard(draft)
+            SettingsCard(draft)
 
             AnimatedVisibility(visible = refused, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
                 Text(stringRes(Res.string.marmot_poll_invalid), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -624,33 +619,15 @@ private fun OptionRow(
     onRemove: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(16.dp)
-    val borderColor by animateColorAsState(
-        when {
-            error -> MaterialTheme.colorScheme.error
-            focused -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.outlineVariant
-        },
-    )
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
 
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .heightIn(min = 52.dp)
-                .clip(shape)
-                .background(if (trailing) CardSurfaces.color else CardSurfaces.well)
-                .border(1.dp, borderColor, shape)
-                .padding(start = 16.dp, end = 4.dp),
+    PollOptionFrame(
+        focused = focused,
+        error = error,
+        trailing = trailing,
+        onRemove = if (canRemove) onRemove else null,
+        leading = { PollChoiceGlyph(multiple = multiple, active = option.label.isNotEmpty()) },
     ) {
-        if (trailing) {
-            Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.placeholderText)
-        } else {
-            ChoiceGlyph(multiple = multiple, active = option.label.isNotEmpty())
-        }
-        Spacer(Modifier.width(12.dp))
         PollTextField(
             state = option.state,
             placeholder = placeholder,
@@ -665,44 +642,13 @@ private fun OptionRow(
                     .focusRequester(focusRequester)
                     .onFocusChanged { focused = it.isFocused },
         )
-        if (canRemove) {
-            IconButton(onClick = onRemove, modifier = Modifier.size(40.dp)) {
-                Icon(
-                    MaterialSymbols.Close,
-                    contentDescription = stringRes(Res.string.marmot_poll_remove_option),
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            Spacer(Modifier.width(12.dp))
-        }
     }
 }
 
-/** The mark a voter taps: round for one answer, square for several. It morphs as the mode changes. */
 @Composable
-private fun ChoiceGlyph(
-    multiple: Boolean,
-    active: Boolean,
-) {
-    val corner by animateDpAsState(if (multiple) 5.dp else 10.dp)
-    val color by animateColorAsState(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
-    Box(Modifier.size(20.dp).border(2.dp, color, RoundedCornerShape(corner)))
-}
-
-@Composable
-private fun PollSettingsCard(draft: PollDraft) {
-    val shape = RoundedCornerShape(20.dp)
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .clip(shape)
-                .background(CardSurfaces.well)
-                .border(CardSurfaces.border, shape),
-    ) {
-        SettingRow(
+private fun SettingsCard(draft: PollDraft) {
+    PollSettingsCard {
+        PollSettingRow(
             symbol = if (draft.multiple) MaterialSymbols.DoneAll else MaterialSymbols.RadioButtonChecked,
             title = stringRes(Res.string.marmot_poll_multiple_answers),
             subtitle = stringRes(if (draft.multiple) Res.string.marmot_poll_pick_many else Res.string.marmot_poll_pick_one),
@@ -711,62 +657,24 @@ private fun PollSettingsCard(draft: PollDraft) {
             Switch(checked = draft.multiple, onCheckedChange = null)
         }
 
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+        PollSettingsDivider()
 
         val closesAt = remember(draft.deadline) { draft.deadline?.let { (TimeUtils.now() + it) * 1000 } }
-        SettingRow(
+        PollSettingRow(
             symbol = if (draft.deadline == null) MaterialSymbols.TimerOff else MaterialSymbols.Timer,
             title = stringRes(Res.string.marmot_poll_has_deadline),
             subtitle =
                 closesAt?.let { stringRes(Res.string.marmot_poll_closes_at, formatDateTime(it, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)) }
                     ?: stringRes(Res.string.marmot_poll_stays_open),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-                    .padding(start = 16.dp, end = 16.dp, bottom = 14.dp),
-        ) {
+        PollDeadlineChips {
             DEADLINES.forEach { seconds ->
-                FilterChip(
+                PollDeadlineChip(
                     selected = draft.deadline == seconds,
+                    label = pollDeadlineLabel(seconds),
                     onClick = { draft.deadline = seconds },
-                    shape = RoundedCornerShape(12.dp),
-                    label = { Text(deadlineLabel(seconds)) },
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun deadlineLabel(seconds: Long?): String =
-    when {
-        seconds == null -> stringRes(Res.string.marmot_poll_no_deadline)
-        seconds < 24 * 3_600L -> (seconds / 3_600L).toInt().let { pluralStringRes(Res.plurals.marmot_poll_deadline_hours, it, it) }
-        else -> (seconds / (24 * 3_600L)).toInt().let { pluralStringRes(Res.plurals.marmot_poll_deadline_days, it, it) }
-    }
-
-@Composable
-private fun SettingRow(
-    symbol: MaterialSymbol,
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier,
-    trailing: @Composable (() -> Unit)? = null,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-    ) {
-        Icon(symbol, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        trailing?.invoke()
     }
 }

@@ -26,10 +26,10 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ReplyActions
@@ -98,7 +98,6 @@ import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
 import com.vitorpamplona.amethyst.commons.ui.uploads.uploadDrawingIntoText
 import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.closedAt
 import com.vitorpamplona.quartz.experimental.zapPolls.consensusThreshold
@@ -133,6 +132,7 @@ import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip29RelayGroups.hTag
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarning
 import com.vitorpamplona.quartz.nip36SensitiveContent.contentWarningReason
@@ -192,6 +192,7 @@ import kotlin.uuid.Uuid
 enum class UserSuggestionAnchor {
     MAIN_MESSAGE,
     FORWARD_ZAPS,
+    POLL_OPTION,
     TO_USERS,
     NOTIFY,
 }
@@ -204,6 +205,12 @@ private const val AI_DEBOUNCE_MS = 1000L
 
 /** Model status crosses a process boundary, so it is only re-read this often. */
 private const val AI_STATUS_RECHECK_SECONDS = 30
+
+/** A poll needs two answers to choose between. */
+private const val MIN_POLL_OPTIONS = 2
+
+/** A new poll stays open for a day after it is sent. */
+private val DEFAULT_POLL_DEADLINE = PollDeadline.After(TimeUtils.ONE_DAY.toLong())
 
 @Stable
 open class ShortNotePostViewModel :
@@ -324,9 +331,15 @@ open class ShortNotePostViewModel :
     // between the two poll types never hides or discards the text the user already typed.
     var canUsePoll by mutableStateOf(false)
     var wantsPoll by mutableStateOf(false)
-    var pollOptions: SnapshotStateMap<Int, OptionTag> = newStateMapPollOptions()
+    var pollOptions: SnapshotStateList<PollOptionDraft> = newPollOptions()
+
+    // The option last typed in or focused: the `@` and `:` suggestions and the emoji button write
+    // into it. Null once the message field takes focus back.
+    var activePollOption by mutableStateOf<PollOptionDraft?>(null)
     var pollType by mutableStateOf(PollType.SINGLE_CHOICE)
-    var closedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
+
+    // When voting closes, for both kinds of poll.
+    var pollDeadline by mutableStateOf<PollDeadline>(DEFAULT_POLL_DEADLINE)
 
     // ZapPolls
     var canUseZapPoll by mutableStateOf(false)
@@ -334,7 +347,6 @@ open class ShortNotePostViewModel :
     var zapPollValueMaximum by mutableStateOf<Long?>(null)
     var zapPollValueMinimum by mutableStateOf<Long?>(null)
     var zapPollConsensusThreshold: Int? = null
-    var zapPollClosedAt by mutableLongStateOf(TimeUtils.oneDayAhead())
 
     var isValidValueMaximum = mutableStateOf(true)
     var isValidValueMinimum = mutableStateOf(true)
@@ -1010,12 +1022,13 @@ open class ShortNotePostViewModel :
         val polls = draftEvent.options()
         wantsPoll = polls.isNotEmpty()
 
-        polls.forEachIndexed { index, tag ->
-            pollOptions[index] = tag
-        }
+        pollOptions.clear()
+        polls.mapTo(pollOptions) { PollOptionDraft(it.code, it.label) }
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
 
         pollType = draftEvent.pollType()
-        closedAt = draftEvent.endsAt() ?: TimeUtils.oneDayAhead()
+        pollDeadline = draftEvent.endsAt()?.let { PollDeadline.At(it) } ?: PollDeadline.Never
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
@@ -1085,15 +1098,15 @@ open class ShortNotePostViewModel :
         val polls = draftEvent.pollOptionsArray()
         wantsZapPoll = polls.isNotEmpty()
 
-        polls.forEach { tag ->
-            val current = pollOptions[tag.index]
-            pollOptions[tag.index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), tag.descriptor)
-        }
+        pollOptions.clear()
+        polls.sortedBy { it.index }.mapTo(pollOptions) { PollOptionDraft(text = it.descriptor) }
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
 
         zapPollValueMinimum = draftEvent.minAmount()
         zapPollValueMaximum = draftEvent.maxAmount()
         zapPollConsensusThreshold = draftEvent.consensusThreshold()?.let { (it * 100).toInt() }
-        zapPollClosedAt = draftEvent.closedAt() ?: TimeUtils.oneDayAhead()
+        pollDeadline = draftEvent.closedAt()?.let { PollDeadline.At(it) } ?: PollDeadline.Never
 
         message.setTextAndPlaceCursorAtEnd(draftEvent.content)
 
@@ -1390,17 +1403,16 @@ open class ShortNotePostViewModel :
                 imetas(usedAttachments)
             }
         } else if (wantsPoll) {
-            val options = pollOptions.map { it.value }
-
+            val options = taggedPollOptions()
             if (options.isEmpty()) return null
 
-            val quotes = findNostrUris(tagger.message)
+            val quotes = pollQuotes(tagger, options)
             val relays =
                 accountViewModel.account.nip65RelayList.outboxFlow.value
                     .toList()
 
-            PollEvent.build(tagger.message, options, closedAt, relays, pollType) {
-                pTags(tagger.directMentionsUsers.map { it.toPTag() })
+            PollEvent.build(tagger.message, options.map { OptionTag(it.code, it.tagger.message) }, pollClosesAt(), relays, pollType) {
+                pTags(pollMentions(tagger, options).map { it.toPTag() })
                 quotes(quotes)
                 hashtags(findHashtags(tagger.message))
 
@@ -1410,21 +1422,21 @@ open class ShortNotePostViewModel :
                 contentWarningReason?.let { contentWarning(it) }
                 localExpirationDate?.let { expiration(it) }
 
-                emojis(emojis)
+                emojis(pollEmojis(emojis, options))
                 imetas(usedAttachments)
             }
         } else if (wantsZapPoll) {
-            val options = pollOptions.map { PollOptionTag(it.key, it.value.label) }
+            val options = taggedPollOptions()
             if (options.isEmpty()) return null
 
-            ZapPollEvent.build(tagger.message, options) {
-                closedAt(zapPollClosedAt)
+            ZapPollEvent.build(tagger.message, options.mapIndexed { index, option -> PollOptionTag(index, option.tagger.message) }) {
+                pollClosesAt()?.let { closedAt(it) }
                 zapPollValueMinimum?.let { minAmount(it) }
                 zapPollValueMaximum?.let { maxAmount(it) }
                 zapPollConsensusThreshold?.let { consensusThreshold(it / 100.0) }
 
-                pTags(tagger.directMentionsUsers.map { it.toPTag() })
-                quotes(findNostrUris(tagger.message))
+                pTags(pollMentions(tagger, options).map { it.toPTag() })
+                quotes(pollQuotes(tagger, options))
                 hashtags(findHashtags(tagger.message))
 
                 geoHash?.let { geohash(it) }
@@ -1433,7 +1445,7 @@ open class ShortNotePostViewModel :
                 contentWarningReason?.let { contentWarning(it) }
                 localExpirationDate?.let { expiration(it) }
 
-                emojis(emojis)
+                emojis(pollEmojis(emojis, options))
                 imetas(usedAttachments)
             }
         } else if (shouldReplyAsComment()) {
@@ -1646,15 +1658,15 @@ open class ShortNotePostViewModel :
         notifyProvenance = emptyMap()
 
         wantsPoll = false
-        pollOptions = newStateMapPollOptions()
+        pollOptions = newPollOptions()
+        activePollOption = null
         pollType = PollType.SINGLE_CHOICE
-        closedAt = TimeUtils.oneDayAhead()
+        pollDeadline = DEFAULT_POLL_DEADLINE
 
         wantsZapPoll = false
         zapPollValueMaximum = null
         zapPollValueMinimum = null
         zapPollConsensusThreshold = null
-        zapPollClosedAt = TimeUtils.oneDayAhead()
 
         wantsInvoice = false
         wantsZapRaiser = false
@@ -1700,6 +1712,7 @@ open class ShortNotePostViewModel :
     }
 
     override fun onMessageChanged() {
+        activePollOption = null
         urlPreviews.update(message.text.toString())
 
         if (message.selection.collapsed) {
@@ -1733,6 +1746,8 @@ open class ShortNotePostViewModel :
                 val lastWord = message.currentWord()
                 userSuggestions.replaceCurrentWord(message, lastWord, item)
                 urlPreviews.update(message.text.toString())
+            } else if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
+                activePollOption?.let { userSuggestions.replaceCurrentWord(it.state, it.state.currentWord(), item) }
             } else if (userSuggestionsMainMessage == UserSuggestionAnchor.FORWARD_ZAPS) {
                 forwardZapTo.value.addItem(item)
                 forwardZapToEditting.clearText()
@@ -1749,7 +1764,7 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        emojiSuggestions?.autocompleteInto(message, item)
+        emojiSuggestions?.autocompleteInto(emojiTarget, item)
         urlPreviews.update(message.text.toString())
 
         draftTag.newVersion()
@@ -1762,7 +1777,7 @@ open class ShortNotePostViewModel :
             iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
-        message.replaceCurrentWord(wordToInsert)
+        emojiTarget.replaceCurrentWord(wordToInsert)
         urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
@@ -1770,11 +1785,11 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    private fun newStateMapPollOptions(): SnapshotStateMap<Int, OptionTag> =
-        mutableStateMapOf(
-            0 to OptionTag(RandomInstance.randomChars(6), ""),
-            1 to OptionTag(RandomInstance.randomChars(6), ""),
-        )
+    /** The field an emoji goes into: the poll option being written, else the message. */
+    val emojiTarget: TextFieldState
+        get() = activePollOption?.takeIf { wantsPoll || wantsZapPoll }?.state ?: message
+
+    private fun newPollOptions(): SnapshotStateList<PollOptionDraft> = mutableStateListOf(PollOptionDraft(), PollOptionDraft())
 
     fun canPost(): Boolean {
         // Voice messages can be posted without text (with either uploaded or pending recording)
@@ -1791,23 +1806,8 @@ open class ShortNotePostViewModel :
             !isUploadingVoice &&
             !wantsInvoice &&
             (!wantsZapRaiser || zapRaiserAmount.value != null) &&
-            (
-                !wantsPoll ||
-                    (
-                        pollOptions.isNotEmpty() &&
-                            pollOptions.all { it.value.label.isNotEmpty() } &&
-                            closedAt > TimeUtils.oneMinuteFromNow()
-                    )
-            ) &&
-            (
-                !wantsZapPoll ||
-                    (
-                        pollOptions.isNotEmpty() &&
-                            pollOptions.all { it.value.label.isNotEmpty() } &&
-                            isValidValueMinimum.value &&
-                            isValidValueMaximum.value
-                    )
-            ) &&
+            (!(wantsPoll || wantsZapPoll) || isPollReady()) &&
+            (!wantsZapPoll || (isValidValueMinimum.value && isValidValueMaximum.value)) &&
             multiOrchestrator == null
     }
 
@@ -1972,35 +1972,137 @@ open class ShortNotePostViewModel :
         draftTag.newVersion()
     }
 
-    fun removePollOption(index: Int) {
-        pollOptions.removeOrdered(index)
+    fun removePollOption(option: PollOptionDraft) {
+        pollOptions.remove(option)
+        if (activePollOption === option) activePollOption = null
+        while (pollOptions.size < MIN_POLL_OPTIONS) pollOptions.add(PollOptionDraft())
+        keepTrailingPollOption()
         draftTag.newVersion()
     }
 
-    fun updatePollOption(
-        index: Int,
-        label: String,
+    /**
+     * The cursor in [option] moved, or (when [textChanged]) its text did: offers `@` and `:`
+     * completions and keeps the row to type the next option into. Only a text change is a
+     * new draft version: a draft save signs an event, which on a remote or external signer is a
+     * round trip, so tapping between fields must not cause one.
+     */
+    fun onPollOptionChanged(
+        option: PollOptionDraft,
+        textChanged: Boolean,
     ) {
-        val current = pollOptions[index]
-        pollOptions[index] = OptionTag(current?.code ?: RandomInstance.randomChars(6), label)
-        draftTag.newVersion()
+        activePollOption = option
+        if (textChanged) keepTrailingPollOption()
+
+        if (option.state.selection.collapsed) {
+            val lastWord = option.state.currentWord()
+            if (lastWord.startsWith("@")) {
+                userSuggestionsMainMessage = UserSuggestionAnchor.POLL_OPTION
+                userSuggestions?.processCurrentWord(lastWord)
+            } else {
+                userSuggestionsMainMessage = null
+                userSuggestions?.reset()
+            }
+            emojiSuggestions?.processCurrentWord(lastWord)
+        }
+
+        if (textChanged) draftTag.newVersion()
     }
 
-    private fun MutableMap<Int, OptionTag>.removeOrdered(index: Int) {
-        val keyList = keys
-        val elementList = values.toMutableList()
-        run stop@{
-            for (i in index until elementList.size) {
-                val nextIndex = i + 1
-                if (nextIndex == elementList.size) return@stop
-                elementList[i] = elementList[nextIndex].also { elementList[nextIndex] = OptionTag(RandomInstance.randomChars(6), "") }
-            }
-        }
-        elementList.removeAt(elementList.size - 1)
-        val newEntries = keyList.zip(elementList) { key, content -> Pair(key, content) }
-        this.clear()
-        this.putAll(newEntries)
+    /** The message field took focus: the suggestions open for an option would complete into the wrong field. */
+    fun onMessageFocused() {
+        if (activePollOption == null) return
+        activePollOption = null
+        closePollOptionSuggestions()
     }
+
+    /** Takes the poll off the post. Its options stay, so turning it back on finds them. */
+    fun disablePoll() {
+        wantsPoll = false
+        wantsZapPoll = false
+        activePollOption = null
+        closePollOptionSuggestions()
+    }
+
+    private fun closePollOptionSuggestions() {
+        if (userSuggestionsMainMessage == UserSuggestionAnchor.POLL_OPTION) {
+            userSuggestionsMainMessage = null
+            userSuggestions?.reset()
+        }
+        emojiSuggestions?.reset()
+    }
+
+    /** There is always one empty option at the end to type the next one into, so adding one is just typing. */
+    private fun keepTrailingPollOption() {
+        if (pollOptions.lastOrNull()?.isEmpty != true) pollOptions.add(PollOptionDraft())
+    }
+
+    /** The empty row at the end is where the next option goes, not an option to remove; one emptied mid-list is. */
+    fun isTrailingPollOption(option: PollOptionDraft) = option === pollOptions.lastOrNull() && option.isEmpty && pollOptions.size > MIN_POLL_OPTIONS
+
+    fun canRemovePollOption(option: PollOptionDraft) = pollOptions.size > MIN_POLL_OPTIONS && !isTrailingPollOption(option)
+
+    /** The options that say the same thing as another, ignoring case: they split the vote for nothing. */
+    fun duplicatePollOptions(): Set<PollOptionDraft> =
+        filledPollOptions()
+            .groupBy { it.label.lowercase() }
+            .values
+            .filter { it.size > 1 }
+            .flatMapTo(mutableSetOf()) { it }
+
+    /**
+     * When the poll closes. A length counts from when the poll goes out: the scheduled time for
+     * a scheduled post, which is re-stamped to that moment and published then.
+     */
+    private fun pollClosesAt(): Long? = pollDeadline.closesAt(scheduledForSec ?: TimeUtils.now())
+
+    /** A deadline the poll would reach before or as it goes out: voting would be closed from the start. */
+    fun isPollDeadlinePassed(): Boolean {
+        val closesAt = pollClosesAt() ?: return false
+        return closesAt < (scheduledForSec ?: TimeUtils.now()) + TimeUtils.ONE_MINUTE
+    }
+
+    /** The options as they are sent: in order, trimmed, without the empty ones. */
+    private fun filledPollOptions(): List<PollOptionDraft> = pollOptions.filter { it.label.isNotEmpty() }
+
+    /**
+     * A draft keeps the poll even before any option is written, so it reopens as one; a post
+     * only goes out once [isPollReady].
+     */
+    private fun pollOptionsToSend(): List<PollOptionDraft> = filledPollOptions().ifEmpty { pollOptions }
+
+    /** An option and its text run through the same tagger as the message: `@` mentions become `nostr:` references. */
+    private class TaggedPollOption(
+        val code: String,
+        val tagger: NewMessageTagger,
+    )
+
+    private suspend fun taggedPollOptions(): List<TaggedPollOption> =
+        pollOptionsToSend().map { option ->
+            TaggedPollOption(option.code, NewMessageTagger(option.label, dao = accountViewModel).also { it.run() })
+        }
+
+    /** Everyone the question or an option mentions, so the poll notifies them and renders their names. */
+    private fun pollMentions(
+        tagger: NewMessageTagger,
+        options: List<TaggedPollOption>,
+    ): Set<User> = tagger.directMentionsUsers + options.flatMap { it.tagger.directMentionsUsers }
+
+    /** The notes the question or an option cites, so readers can fetch and show them. */
+    private fun pollQuotes(
+        tagger: NewMessageTagger,
+        options: List<TaggedPollOption>,
+    ) = (findNostrUris(tagger.message) + options.flatMap { findNostrUris(it.tagger.message) }).distinct()
+
+    /** The custom emojis of the question and of every option: the card draws an option's `:code:` from these tags. */
+    private fun pollEmojis(
+        messageEmojis: List<EmojiUrlTag>,
+        options: List<TaggedPollOption>,
+    ): List<EmojiUrlTag> = (messageEmojis + options.flatMap { accountViewModel.account.emoji.findEmojiTags(it.tagger.message) }).distinctBy { it.code }
+
+    private fun isPollReady(): Boolean =
+        filledPollOptions().size >= MIN_POLL_OPTIONS &&
+            duplicatePollOptions().isEmpty() &&
+            !isPollDeadlinePassed()
 
     // ---
     // Zap Polls

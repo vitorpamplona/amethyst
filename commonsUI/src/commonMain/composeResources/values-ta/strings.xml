@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">பணப்பை இணை</string>
     <string name="see_relay_feed">Relay ஊட்டத்தை காண்க</string>
     <string name="pledge_amount_in_sats">உறுதிமொழி தொகை (ஸாட்களில்)</string>
-    <string name="poll_option_description">(வாக்குத்) தெரிவின் விளக்கம்</string>
     <string name="poll_zap_value_min">குறைந்தளவு ஜாப்</string>
     <string name="poll_zap_value_max">அதிகளவு ஜாப்</string>
     <string name="poll_consensus_threshold">ஒருமித்த கருத்து</string>
-    <string name="poll_closing_date_time">வாக்கெடுப்பு முடிவு தேதி &amp; நேரம்</string>
-    <string name="poll_closing_in">வாக்கெடுப்பு %1$s இல் முடிகிறது</string>
     <string name="looking_for_event">நிகழ்வு %1$s ஐத் தேடி</string>
     <string name="send_zap">Zap அனுப்பு</string>
     <string name="custom_zaps_add_a_message">ஒரு பொது செய்தியைச் சேர்க்கவும்</string>
@@ -918,7 +915,6 @@
     <string name="guidelines">வழிகாட்டுதல்கள்</string>
     <string name="moderators">மதிப்பாளர்கள்</string>
     <string name="status_update">உங்கள் நிலையை புதுப்பி</string>
-    <string name="poll_zap_value_min_max_explainer">வாக்குகள் Zap தொகையால் எடை கொடுக்கப்படுகின்றன. ஸ்பாமர்களை தவிர்க்க குறைந்தபட்ச தொகையை மற்றும் பெரிய Zap செய்பவர்கள் வாக்கெடுப்பை கைப்பற்றுவதை தடுக்க அதிகபட்ச தொகையை அமைக்கலாம். ஒவ்வொரு வாக்கும் சம மதிப்புடையதாக இருக்க இரண்டு புலங்களிலும் ஒரே தொகையை உள்ளிடவும். எந்த தொகையையும் ஏற்க காலியாக விடவும்.</string>
     <string name="error_dialog_talk_to_user">பயனரிடம் செய்தி அனுப்பு</string>
     <string name="error_dialog_talk_to_user_name">%1$s க்கு செய்தி அனுப்பு</string>
     <string name="error_dialog_button_ok">சரி</string>
@@ -1448,7 +1444,6 @@
     <string name="closing_time">மூடும் நேரம்</string>
     <string name="confirm">உறுதிப்படுத்து</string>
     <string name="next">அடுத்து</string>
-    <string name="add_poll_option_button">வாக்கெடுப்பு விருப்பம் சேர் பொத்தான்</string>
     <string name="go_back">திரும்பு</string>
     <string name="approve">அனுமதி</string>
     <string name="connected">இணைக்கப்பட்டது</string>
@@ -2690,7 +2685,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">வாக்கெடுப்பு புதிய வாக்குகளுக்கு மூடப்பட்டது</string>
     <string name="poll_multiple_choice">பல தேர்வுகள்</string>
-    <string name="poll_option_index">விருப்பம் %1$s</string>
     <string name="poll_single_choice">ஒற்றை தேர்வு</string>
     <string name="poll_unable_to_vote">வாக்களிக்க முடியவில்லை</string>
     <string name="polls">வாக்கெடுப்புகள்</string>

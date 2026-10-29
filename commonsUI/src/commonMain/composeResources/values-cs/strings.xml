@@ -1589,12 +1589,9 @@
     <string name="wallet_connect_connect_app">Připojit peněženku</string>
     <string name="see_relay_feed">Zobrazit kanál relé</string>
     <string name="pledge_amount_in_sats">Částka záruky v sats</string>
-    <string name="poll_option_description">Popis možnosti hlasování</string>
     <string name="poll_zap_value_min">Minimální zaps</string>
     <string name="poll_zap_value_max">Maximální zaps</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Datum a čas ukončení ankety</string>
-    <string name="poll_closing_in">Anketa končí za %1$s</string>
     <string name="looking_for_event">Hledá se událost %1$s</string>
     <string name="looking_for_event_title">Načítání</string>
     <string name="looking_for_private_event">Čekám na načtení vašich soukromých zpráv…</string>
@@ -2089,7 +2086,6 @@
     <string name="guidelines">Pokyny</string>
     <string name="moderators">Moderátoři</string>
     <string name="status_update">Aktualizovat svůj stav</string>
-    <string name="poll_zap_value_min_max_explainer">Hlasy jsou váženy podle hodnoty zapu. Můžete nastavit minimální částku, abyste se vyhnuli spammerům, a maximální částku, abyste zabránili velkým zapperům, kteří by mohli ovládnout hlasování. Použijte stejnou částku v obou polích, aby byla hodnota každého hlasu stejná. Nechte prázdné pro přijetí libovolné částky.</string>
     <string name="error_dialog_talk_to_user">Poslat zprávu uživateli</string>
     <string name="error_dialog_talk_to_user_name">Zpráva %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2961,7 +2957,6 @@
     <string name="closing_time">Čas ukončení</string>
     <string name="confirm">Potvrdit</string>
     <string name="next">Další</string>
-    <string name="add_poll_option_button">Přidat možnost ankety</string>
     <string name="go_back">Jít zpět</string>
     <string name="approve">Schválit</string>
     <string name="connected">Připojeno</string>
@@ -5469,7 +5464,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Hlasování je uzavřeno pro nové hlasy</string>
     <string name="poll_multiple_choice">Více možností</string>
-    <string name="poll_option_index">Možnost %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d hlas má datum před zveřejněním ankety a je vyloučen.</item>
         <item quantity="few">%1$d hlasy mají datum před zveřejněním ankety a jsou vyloučeny.</item>

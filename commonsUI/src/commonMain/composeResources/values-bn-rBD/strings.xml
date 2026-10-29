@@ -650,12 +650,9 @@
     <string name="wallet_connect_connect_app">ওয়ালেট সংযুক্ত করুন</string>
     <string name="see_relay_feed">Relay ফিড দেখুন</string>
     <string name="pledge_amount_in_sats">প্রতিশ্রুত পরিমাণ স্যাট দ্বারা জানান</string>
-    <string name="poll_option_description">পোলের বিবিধ বিকল্পের বিবরণ</string>
     <string name="poll_zap_value_min">ন্যূনতম জ্যাপ</string>
     <string name="poll_zap_value_max">সর্বোচ্চ জ্যাপ</string>
     <string name="poll_consensus_threshold">ঐক্যমত</string>
-    <string name="poll_closing_date_time">পোলের সমাপ্তির তারিখ &amp; সময়</string>
-    <string name="poll_closing_in">পোল %1$s-এ বন্ধ হবে</string>
     <string name="looking_for_event">ইভেন্ট খোঁজা হচ্ছে %1$s</string>
     <string name="send_zap">Zap পাঠান</string>
     <string name="custom_zaps_add_a_message">একটি সর্বজনীন বার্তা পাঠান</string>
@@ -921,7 +918,6 @@
     <string name="guidelines">নির্দেশিকা</string>
     <string name="moderators">মডারেটর</string>
     <string name="status_update">আপনার স্ট্যাটাস আপডেট করুন</string>
-    <string name="poll_zap_value_min_max_explainer">জ্যাপের পরিমাণ দ্বারা ভোটসংখ্যা গোণা হয়। আপনি স্প্যামার এড়াতে একটি সর্বনিম্ন পরিমাণ এবং একটি বড়ো জ্যাপার দ্বারা পোল দখল এড়াতে সর্বোচ্চ পরিমাণ স্যাট নির্ধারণ করতে পারেন। প্রতিটি ভোটের মূল্য একই পরিমাণে রয়েছে তা নিশ্চিত করতে উভয় ক্ষেত্রেই একই পরিমাণ ব্যবহার করুন। যেকোনো পরিমাণ গ্রহণ করতে এটি খালি ছেড়ে দিন।</string>
     <string name="error_dialog_talk_to_user">ব্যবহারকারীকে বার্তা দিন</string>
     <string name="error_dialog_talk_to_user_name">%1$s কে বার্তা করুন</string>
     <string name="error_dialog_button_ok">ঠিক আছে</string>
@@ -1433,7 +1429,6 @@
     <string name="closing_time">সমাপ্তির সময়</string>
     <string name="confirm">নিশ্চিত করুন</string>
     <string name="next">পরবর্তী</string>
-    <string name="add_poll_option_button">পোল বিকল্প বোতাম যোগ করুন</string>
     <string name="go_back">পিছনে যান</string>
     <string name="approve">অনুমোদন করুন</string>
     <string name="connected">সংযুক্ত</string>
@@ -2638,7 +2633,6 @@
     <string name="poll_consensus_threshold_percent">(০–১০০)%</string>
     <string name="poll_is_closed_explainer">পোল নতুন ভোটের জন্য বন্ধ</string>
     <string name="poll_multiple_choice">একাধিক পছন্দ</string>
-    <string name="poll_option_index">বিকল্প %1$s</string>
     <string name="poll_single_choice">একক পছন্দ</string>
     <string name="poll_unable_to_vote">ভোট দিতে অক্ষম</string>
     <string name="polls">পোল</string>
