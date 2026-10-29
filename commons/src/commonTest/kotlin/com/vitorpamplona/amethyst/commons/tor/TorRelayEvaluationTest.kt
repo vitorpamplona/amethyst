@@ -172,6 +172,16 @@ class TorRelayEvaluationTest {
         assertFalse(eval.useTor(localNetworkRelay))
     }
 
+    @Test
+    fun ownTailnetAndLanNamedRelays_alwaysFalse() {
+        // The user's own relays on a tailnet or behind a LAN-only name: Tor cannot reach them.
+        // Someone else's never reach useTor, the dial boundary drops them first.
+        val eval = buildEvaluation()
+        assertFalse(eval.useTor(NormalizedRelayUrl("ws://100.100.10.10:4848/")))
+        assertFalse(eval.useTor(NormalizedRelayUrl("ws://nas.lan:7777/")))
+        assertFalse(eval.useTor(NormalizedRelayUrl("ws://beelink:7777/")))
+    }
+
     // --- .onion ---
     @Test
     fun onion_enabled_returnsTrue() {

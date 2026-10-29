@@ -42,6 +42,10 @@ enum class MyRelayList {
     /**
      * False for the NIP-65 outbox and inbox when [relay] is on the local network: those lists are
      * where other people go to read and reach this user, and nobody else can open a local relay.
+     *
+     * This only gates the one-tap "add to my list" action. A local relay the user already has in
+     * their own list (typed into the settings screen, or published by another client) is theirs:
+     * it is read, shown and republished like any other entry.
      */
     fun accepts(relay: NormalizedRelayUrl): Boolean = !(isNip65() && relay.isLocalHost())
 
@@ -54,9 +58,9 @@ enum class MyRelayList {
  */
 fun Account.relaysIn(list: MyRelayList): List<NormalizedRelayUrl> =
     when (list) {
-        MyRelayList.OUTBOX -> nip65RelayList.getNIP65RelayList()?.writeRelaysNorm() ?: emptyList()
-        MyRelayList.INBOX -> nip65RelayList.getNIP65RelayList()?.readRelaysNorm() ?: emptyList()
-        MyRelayList.DM_INBOX -> dmRelayList.getDMRelayList()?.relays() ?: emptyList()
+        MyRelayList.OUTBOX -> nip65RelayList.ownWriteRelays()
+        MyRelayList.INBOX -> nip65RelayList.ownReadRelays()
+        MyRelayList.DM_INBOX -> dmRelayList.getDMRelayList()?.allRelays() ?: emptyList()
         MyRelayList.SEARCH -> searchRelayList.flowNoDefaults.value.toList()
         MyRelayList.RELAY_FEEDS -> favoriteRelayList.flow.value.toList()
         MyRelayList.INDEXER -> indexerRelayList.flowNoDefaults.value.toList()
@@ -122,11 +126,32 @@ private suspend fun Account.addToNip65(
 }
 
 /**
- * [current] with [relay] advertised for [type], or null when it already is or is a local relay.
+ * The NIP-65 entries for a [writes] and a [reads] set, as the settings screen saves them: one tag
+ * per relay, BOTH when it is in both sets. Fed the sets the screen loaded, it rebuilds the list it
+ * loaded, local relays included.
+ */
+fun nip65ListOf(
+    writes: Set<NormalizedRelayUrl>,
+    reads: Set<NormalizedRelayUrl>,
+): List<AdvertisedRelayInfo> =
+    writes.union(reads).map {
+        val type =
+            if (it in writes && it in reads) {
+                AdvertisedRelayType.BOTH
+            } else if (it in writes) {
+                AdvertisedRelayType.WRITE
+            } else {
+                AdvertisedRelayType.READ
+            }
+        AdvertisedRelayInfo(it, type)
+    }
+
+/**
+ * [all] with [relay] advertised for [type], or null when it already is or is a local relay.
  * NIP-65 keeps one `r` tag per relay with a read/write marker, so a relay already advertised for
  * the other direction becomes BOTH (and any duplicate tags for it collapse into that one) instead
- * of gaining a tag. Local relays are dropped from the result: the list is for other people to
- * reach this user, and the settings screen drops them on save the same way.
+ * of gaining a tag. A local relay is never ADDED this way (see [MyRelayList.accepts]), but one
+ * already in the user's own list stays: republishing must never silently lose an entry.
  */
 fun nip65WithRelay(
     all: List<AdvertisedRelayInfo>,
@@ -135,16 +160,15 @@ fun nip65WithRelay(
 ): List<AdvertisedRelayInfo>? {
     if (relay.isLocalHost()) return null
 
-    val current = all.filterNot { it.relayUrl.isLocalHost() }
-    val existing = current.filter { it.relayUrl == relay }
+    val existing = all.filter { it.relayUrl == relay }
 
     val alreadyThere = existing.any { if (type == AdvertisedRelayType.WRITE) it.type.isWrite() else it.type.isRead() }
     if (alreadyThere) return null
 
-    if (existing.isEmpty()) return current + AdvertisedRelayInfo(relay, type)
+    if (existing.isEmpty()) return all + AdvertisedRelayInfo(relay, type)
 
     val first = existing.first()
-    return current.mapNotNull {
+    return all.mapNotNull {
         when {
             it.relayUrl != relay -> it
             it === first -> AdvertisedRelayInfo(relay, AdvertisedRelayType.BOTH)

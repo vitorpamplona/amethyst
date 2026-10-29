@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model
 
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.hints.AddressHintProvider
@@ -158,7 +159,7 @@ class BroadcastRelayPlanner(
                     cache
                         .getOrCreateUser(receiver)
                         .dmInboxRelayList()
-                        ?.relays()
+                        ?.dialableRelays()
                         ?.ifEmpty { null }
                 relayList?.toSet() ?: computeRelayListForLinkedUser(receiver)
             } else {

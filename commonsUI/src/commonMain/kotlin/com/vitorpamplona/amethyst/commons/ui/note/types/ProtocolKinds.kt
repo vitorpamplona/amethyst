@@ -240,7 +240,8 @@ fun RenderMarmotKeyPackage(baseNote: Note) {
     val event = baseNote.event as? PublishedKeyPackage ?: return
     val ciphersuite = remember(event) { event.mlsCiphersuite()?.let(::ciphersuiteShortName) }
     val version = remember(event) { event.mlsProtocolVersion() }
-    val relays = remember(event) { event.relays()?.map { it.displayUrl() } ?: emptyList() }
+    // Text only, nothing is dialed: shown as published.
+    val relays = remember(event) { event.allRelays()?.map { it.displayUrl() } ?: emptyList() }
     val client = remember(event) { event.clientName() }
     val isLegacy = event is LegacyKeyPackageEvent
 

@@ -29,6 +29,9 @@ import com.vitorpamplona.amethyst.commons.feeds.InvalidatableContent
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.nip01Core.RelayInfo
 import com.vitorpamplona.amethyst.commons.model.nip01Core.Wrapper
+import com.vitorpamplona.amethyst.commons.relays.dialableReadRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
+import com.vitorpamplona.amethyst.commons.relays.dialableWriteRelays
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip17Dm.settings.DmRelayListEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
@@ -64,6 +67,8 @@ class RelayFeedViewModel :
             .thenByDescending { it.lastEvent }
             .thenBy { it.url.url }
 
+    // The rows below render, and fetch NIP-11 for, any user's relays, so they read the lists as
+    // someone else's: a stranger's local relay is never shown or contacted.
     var currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
 
     fun convert(
@@ -96,7 +101,7 @@ class RelayFeedViewModel :
                         combine(
                             flow =
                                 user.nip65RelayListNote.flow().metadata.stateFlow.map { nip65 ->
-                                    (nip65.note.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet() ?: emptySet()
+                                    (nip65.note.event as? AdvertisedRelayListEvent)?.dialableWriteRelays()?.toSet() ?: emptySet()
                                 },
                             flow2 = user.relayState().flow(),
                             transform = ::convert,
@@ -106,7 +111,7 @@ class RelayFeedViewModel :
                     emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.writeRelaysNorm()?.toSet(), currentUser.value?.relayState()?.data))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.dialableWriteRelays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -119,7 +124,7 @@ class RelayFeedViewModel :
                         combine(
                             flow =
                                 user.nip65RelayListNote.flow().metadata.stateFlow.map { nip65 ->
-                                    (nip65.note.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet() ?: emptySet()
+                                    (nip65.note.event as? AdvertisedRelayListEvent)?.dialableReadRelays()?.toSet() ?: emptySet()
                                 },
                             flow2 = user.relayState().flow(),
                             transform = ::convert,
@@ -129,7 +134,7 @@ class RelayFeedViewModel :
                     emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.readRelaysNorm()?.toSet(), currentUser.value?.relayState()?.data))
+                emit(convert((currentUser.value?.nip65RelayListNote?.event as? AdvertisedRelayListEvent)?.dialableReadRelays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -145,7 +150,7 @@ class RelayFeedViewModel :
                                     .flow()
                                     .metadata.stateFlow
                                     .map { dmNote ->
-                                        (dmNote.note.event as? DmRelayListEvent)?.relays()?.toSet() ?: emptySet()
+                                        (dmNote.note.event as? DmRelayListEvent)?.dialableRelays()?.toSet() ?: emptySet()
                                     },
                             flow2 = user.relayState().flow(),
                             transform = ::convert,
@@ -155,7 +160,7 @@ class RelayFeedViewModel :
                     emit(emptyList())
                 }
             }.onStart {
-                emit(convert((currentUser.value?.dmRelayListNote?.event as? DmRelayListEvent)?.relays()?.toSet(), currentUser.value?.relayState()?.data))
+                emit(convert((currentUser.value?.dmRelayListNote?.event as? DmRelayListEvent)?.dialableRelays()?.toSet(), currentUser.value?.relayState()?.data))
             }.flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

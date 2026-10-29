@@ -408,7 +408,7 @@ open class Note(
 
             relays.firstOrNull()
         } else {
-            currentOutbox?.firstOrNull() ?: author?.mostUsedNonLocalRelay()
+            currentOutbox?.firstOrNull() ?: author?.mostUsedDialableRelay()
         }
     }
 

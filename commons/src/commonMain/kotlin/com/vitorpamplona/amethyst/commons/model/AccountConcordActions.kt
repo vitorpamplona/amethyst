@@ -50,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.DirectInviteAcceptPlan
 import com.vitorpamplona.amethyst.commons.model.concordChannelLastReadRoute
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
+import com.vitorpamplona.amethyst.commons.relays.dialableRelays
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.viewmodels.ReplyMode
 import com.vitorpamplona.crypto.random.RandomInstance
@@ -1122,7 +1123,7 @@ class AccountConcordActions(
      */
     private suspend fun concordDirectInviteDeliveryRelays(recipient: HexKey): Set<NormalizedRelayUrl> {
         val user = account.cache.getOrCreateUser(recipient)
-        val dmInbox = user.dmInboxRelayList()?.relays().orEmpty()
+        val dmInbox = user.dmInboxRelayList()?.dialableRelays().orEmpty()
         val cached =
             if (dmInbox.isNotEmpty() || user.authorRelayList() != null) {
                 RecipientRelayFetcher.Lists(dmInbox = dmInbox, keyPackage = emptyList(), nip65 = user.authorRelayList())

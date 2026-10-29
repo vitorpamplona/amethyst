@@ -251,6 +251,7 @@ import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.FilterIndex
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.isDialableFromOthers
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.taggedAddresses
 import com.vitorpamplona.quartz.nip01Core.tags.events.ETag
@@ -593,7 +594,9 @@ open class EventCache :
     @Volatile
     var lnurlEndpointResolver: LnurlEndpointResolver? = null
 
-    override val relayHints = HintIndexer()
+    // Hints come from other people's events and feed the relays we dial for them, so a stranger's
+    // `ws://192.168.1.10` hint is never indexed.
+    override val relayHints = HintIndexer { it.isDialableFromOthers() }
 
     /**
      * Cashu mint URL directory, populated passively as

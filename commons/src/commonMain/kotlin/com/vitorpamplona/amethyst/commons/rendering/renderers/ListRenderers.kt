@@ -106,7 +106,8 @@ object DmRelayListRenderer : EventRenderer {
         ctx: RenderContext,
     ): RenderedEvent {
         val list = event as? DmRelayListEvent ?: return RenderSupport.build(event, ctx, text = "")
-        val relays = list.relays().map { RelayEntry(url = it.url, read = true, write = false) }
+        // Shows the list as published, like the kind:10002 renderer above: rendering dials nothing.
+        val relays = list.allRelays().map { RelayEntry(url = it.url, read = true, write = false) }
         return RenderSupport.build(event, ctx, text = "", details = RenderedDetails.RelayList(relays))
     }
 }

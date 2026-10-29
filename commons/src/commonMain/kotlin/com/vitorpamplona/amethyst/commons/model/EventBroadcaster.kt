@@ -174,8 +174,8 @@ class EventBroadcaster(
     fun sendRestoredVersion(event: Event) {
         when (event) {
             is AdvertisedRelayListEvent -> sendEverywhereAnd(event, event.relays().mapTo(mutableSetOf()) { it.relayUrl })
-            is DmRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
-            is KeyPackageRelayListEvent -> sendEverywhereAnd(event, event.relays().toSet())
+            is DmRelayListEvent -> sendEverywhereAnd(event, event.allRelays().toSet())
+            is KeyPackageRelayListEvent -> sendEverywhereAnd(event, event.allRelays().toSet())
             is CashuWalletEvent -> sendLiterallyEverywhere(event)
             // Profiles and nutzap info are normally saved everywhere so others can find them;
             // the restore must reach the same relays or they keep serving the lossy version.

@@ -499,7 +499,7 @@ class AccountSessionManager(
             scope.launch(Dispatchers.IO) {
                 delay(2000) // waits for the new user to connect to the new relays.
 
-                val toPost = accountSettings.backupNIP65RelayList?.writeRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
+                val toPost = accountSettings.backupNIP65RelayList?.allWriteRelaysNorm()?.toSet() ?: DefaultNIP65RelaySet
 
                 val client = clientBuilder()
 
