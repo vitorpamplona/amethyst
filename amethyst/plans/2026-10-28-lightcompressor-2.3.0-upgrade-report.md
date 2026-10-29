@@ -32,6 +32,7 @@ Commits (oldest first):
 | `93b9cb72b4` | docs(plans): record the Pixel 9a device check for LightCompressor 2.3.0 |
 | `28023020fa` | feat(upload): stop the encode when a post is cancelled |
 | `07b8cc35eb` | build(deps): pin LightCompressor-enhanced 2.3.0 |
+| `29b7d9d017` | refactor(upload): one cleanup path for a compressed file after cancel; cheaper probes |
 
 Docs-only commits between those (`b95d01ae7f`, `b920346a02`, `1c8290d58e`) record the device
 checks and the library brief. Not done, and why: the "plays in a desktop browser" check could not
@@ -175,6 +176,13 @@ only ever imported `VideoCompressor`. Same 40 s, 20 Mb/s 4K `testsrc2` clip at M
 | 3 | +22.7 s | +22.7 s: only `0c66a797-….mp4` (finalize done); +23.7 s: empty | **Pass.** Same success-path cleanup as run 2. |
 | 4 | +12.5 s | +12.5 s: `transcode_…mp4` at 10.9 MB; +13.4 s: empty | **Pass, mid-encode regression check.** `onCancelled` 1.1 s after back. |
 
+| 5 | +22.8 s | +22.1 s: finalized output only; +23.8 s: empty | **Pass**, on the refactored build (`29b7d9d017`, installed 19:07): the success path with the early `isActive` guard gone. |
+
+Run 5 landed after the encode had completed, so the upload pipeline's own cleanup removed the
+file; the ms-wide window where `onSuccess` arrives after the continuation is already cancelled
+(now handled only by the `resume` `onCancellation` handler) cannot be hit by hand, and rests on the
+documented contract that a resume on a cancelled continuation runs that handler.
+
 Runs 1 to 3 bracket the finalize window from both sides, so both owners of the file are covered:
 the library when the cancel lands during the encode or the copy, Amethyst when it lands after
 `onSuccess` was already on its way. `nak req` on the tester key over nostr.download, damus, nos.lol
@@ -246,6 +254,38 @@ Simplify pass (four reviewers; fixed: the `onSuccess` restructure and shared `de
 - *Parallel probes, a `derivedStateOf` for the video list, reusing the dialog's probe at
   compression time.* The efficiency reviewer judged each negligible for one-shot IO in an upload
   dialog; agreed.
+
+Second `/simplify` pass (2026-10-29, after the 2.3.0 pin; four agents: reuse, simplification,
+efficiency, altitude). Applied in `29b7d9d017`:
+
+- *One delete path after a cancel.* The early `!continuation.isActive` guard in `onSuccess` and
+  the `resume(…) { deleteOutput }` handler both deleted the file. A resume on a cancelled
+  continuation is a no-op that runs the `onCancellation` handler (the documented contract, and
+  what the earlier M1 fix already relied on), so the handler is now the only delete and
+  `isActive` only mutes the "Video compressed" toast. The `isActive` guards in `onFailure` and
+  `onCancelled` went for the same reason; the comment at `invokeOnCancellation` says why.
+- *Reuse.* `deleteOutput` calls `File.deleteOrWarn` (commons `util/FileDeletion.kt`), which does
+  not warn for a file already gone; `Uri.fromFile(File(path))` became `File(path).toUri()`.
+- *Probe contract.* `VideoCompressionHelper.probeHdr` catches and returns null like `probe`, so
+  the Android port is a one-liner like `probeVideo` and any other caller gets the same contract.
+- *Efficiency.* The HDR hint probes a multi-video post concurrently (`async`/`awaitAll`);
+  `firstVideo()` is back to `firstOrNull { isVideo() }` instead of filtering and mapping two lists
+  per recomposition.
+- *A comment* in `ChatFileUploadDialog` that restated `useH265 = false, offersH265 = false`.
+
+Not applied:
+
+- *One probe per video* (altitude, efficiency): fold the HDR answer into `VideoInfo`, keep a
+  single `MediaUploader.probeVideo` and one `produceState`, so the first video is not opened three
+  times (`MediaExtractor` for the aspect ratio, `MediaMetadataRetriever` for the info, the
+  library's extractor for the colour tags). A real saving, but it reshapes the brief's API across
+  commons, commonsUI, amethyst, desktop and the tests, and removing the duplicate open fully needs
+  a library overload taking a `MediaFormat`. Worth its own bead.
+- *`useH265: Boolean?` instead of two flags on `VideoHdrHint`*, read from a `ChatFileUploadState`
+  property that `MarmotFileUploader` would also pass (altitude). Right idea, but it adds state to
+  the chat dialog for a switch it does not have; a bead if chat ever gets the codec switch.
+- *Remembering per-video HDR probes across list edits* (efficiency): multi-video posts are rare
+  and the probe is cheap.
 
 Kotlin review (WARNING: 0 critical, 0 high, 4 medium, 3 low; fixed: M1 `onCancellation` on the
 success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
