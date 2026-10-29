@@ -1,8 +1,8 @@
 # Brief: upgrade LightCompressor-enhanced from 2.2.3 to 2.3.0, and tell the user what happens to HDR video
 
 Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr` against `2.3.0-SNAPSHOT`;
-see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Waits for the 2.3.0 tag
-(step 6) and the device check (step 4) before it can merge. (Written 2026-10-28 from the
+see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Device check (steps 4
+and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) before it can merge. (Written 2026-10-28 from the
 LightCompressor session, HDR hint added 2026-10-29.)
 
 Amethyst depends on `com.github.davotoula:LightCompressor-enhanced:2.2.3`

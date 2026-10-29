@@ -25,9 +25,8 @@ Commits (oldest first):
 | `23797a2a7f` | refactor(upload): share the orchestrator's video list and the dialogs' hint line |
 | `bc5915f0f5` | fix(upload): close the cancel race on the compressed file and guard the HDR probe |
 
-Not done, and why: the device check (brief step 4 and 5) needs the debug build signed in to
-your account and uploads to a Blossom server, so it waits for you (see "Tests"). The version
-stays `2.3.0-SNAPSHOT` until the tag exists (step 6).
+Not done, and why: the version stays `2.3.0-SNAPSHOT` until the tag exists (step 6), and the
+"plays in a desktop browser" check could not be observed (see "Tests").
 
 ## Decisions
 
@@ -93,21 +92,36 @@ not touched here. `:amethyst:assemblePlayDebug` builds; `spotlessCheck` is clean
 step-1 build raced my edits (the interface gained `probeHdr` after `commons` had compiled) and
 failed with `'probeHdr' overrides nothing`; the rerun on the final tree passed.
 
-### Device (brief steps 4 and 5): **not run yet**
+### Device (brief steps 4 and 5): run 2026-10-29 on the Pixel 9a
 
-The Pixel 9a is reachable over adb Wi-Fi (`10.0.0.201:45439`). The checks need the debug build
-(`com.vitorpamplona.amethyst.debug`) signed in to an account with a Blossom server, the two test
-clips (`orig2.mp4` HLG, `jf_sdr_hevc10_1080p_3M.mp4` 10-bit SDR) on the phone, and uploads under
-that account, so they wait for you. The list to run:
+Play-debug build (`com.vitorpamplona.amethyst.debug`, installed over adb Wi-Fi), signed in to the
+Amethyst tester account, compression at Medium, uploads to `nostr.download` (plain Blossom, no
+re-encoding). Clips copied into `Movies/hdrcheck` so the photo picker could offer them, and removed
+again afterwards. Every dialog check was done in the video feed's composer (`NewMediaView`).
 
-- slider label names the clip's own standard (a 4K or portrait phone recording is the clearest);
-- SDR clip: no HDR line; output `filesDir/<uuid>.mp4`; uploads and plays;
-- HLG clip, H.265 off: "converted … Turn on H.265"; on: "stays HDR"; line disappears when the
-  HLG clip is removed from a mixed pick;
-- HLG + H.265 upload: `ffprobe -show_streams` shows `hevc`, `Main 10`, `yuv420p10le`,
-  `color_transfer=arib-std-b67`; HLG + H.264: `h264`, `yuv420p`, `bt709`, no cyan;
-- posts play in Amethyst and a desktop browser;
-- `run-as com.vitorpamplona.amethyst.debug ls files/` shows no `_temp` or `transcode_*` leftovers.
+| Check | Result |
+|---|---|
+| Slider names the picked clip's own standard | **Pass.** A generated 3 s 3840×2160 clip labels the Medium stop "4K video → 1080p, 4 Mbps" (`media_compression_video_target`); the example string would have read "1080p video → 720p, 2 Mbps". |
+| SDR clip, no HDR line | **Pass.** `jf_sdr_hevc10_1080p_3M.mp4` (10-bit SDR HEVC) shows no line, alone or beside the HLG clip. |
+| HLG clip, H.265 off | **Pass.** "Your HDR video is converted to standard (SDR) video. Turn on H.265 to keep HDR." |
+| HLG clip, H.265 on | **Pass.** "Your HDR video stays HDR. Some apps and browsers show HDR video washed out or too dark." |
+| Mixed pick, HLG clip removed | **Pass.** The line disappears, the SDR clip stays. |
+| Compressed file name | **Pass.** `files/<uuid>.mp4` during the upload (`65ea35f0-….mp4`, 926,783 bytes for test 1); no `_temp`. |
+| `files/` after each upload | **Pass.** No `.mp4`, `_temp` or `transcode_*` entry after any of the three uploads. |
+| Posts play in Amethyst | **Pass.** All three play in the video feed; the kept-HDR one renders with correct colours. |
+| Posts play in a desktop browser | **Not verified.** The Chrome extension was not connected and `screencapture` had no screen-recording permission; the two HLG uploads were opened in Chrome on the Mac (tabs left open) but not observed. |
+
+Uploads, probed with `ffprobe -show_streams` on the downloaded blobs:
+
+| Test | Source | Codec switch | Upload | Result |
+|---|---|---|---|---|
+| 1 | `jf_sdr_hevc10_1080p_3M.mp4`, HEVC Main 10, 1920×1080, BT.709 | H.265 | kind 21, `05c98dd8…mp4` | `hevc` **Main** 8-bit, 1280×720, `yuv420p`, bt709/bt709/bt709, 1,477,681 b/s, 60 fps; 0.93 MB, -52 % |
+| 2 | `orig2.mp4`, HEVC Main 10, 1920×1080 (portrait), BT.2020 HLG, 20.5 Mb/s | H.265 | kind 22, `9cb8d088…mp4` | `hevc` **Main 10**, 720×1280, `yuv420p10le`, `bt2020nc`, `color_transfer=arib-std-b67`, `bt2020`, tv range, 1,492,157 b/s |
+| 3 | `orig2.mp4` | H.264 | kind 22, `d1b90b01…mp4` | `h264` High, 720×1280, `yuv420p`, bt709/bt709/bt709, tv range, 2,009,137 b/s; a frame at 2 s shows the lamp's highlights and the wall without any cyan |
+
+Both HLG encodes sat at or under the 2 Mbps Medium target; the 1.9× keep-HDR overshoot (library
+bead 6k1) did not show on this clip. Test 2 went out without a caption: the shell quoting of my
+`adb shell input text` dropped the text, the upload itself was unaffected.
 
 ## Findings
 
@@ -127,6 +141,13 @@ that account, so they wait for you. The list to run:
   colour info) and again at compression time. All on `Dispatchers.IO`, once per picked set; not
   worth merging.
 - **`desktopApp` is a plain JVM module**: its test task is `test`, not `jvmTest`.
+- **An `am start … --grant-read-uri-permission` share from adb does not give the app a readable
+  content URI**: the composer opened with the clip, but `contentResolver.getType` came back null,
+  so no video controls appeared and the preview said "Can't play this video
+  (ERROR_CODE_FAILED_RUNTIME_CHECK)". The photo picker path is the one to drive; the same shell
+  cannot pass several URIs either (`--eual` is unknown to this `am`). Not an app bug.
+- **A portrait 1080×1920 clip posts as kind 22** (short video) from the video feed's composer; the
+  landscape one posted as kind 21. Pre-existing routing, noted for the event table above.
 
 ## Review findings not acted on
 
@@ -165,7 +186,7 @@ success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 - Plan status: the brief's status line points here; `amethyst/plans/README.md` keeps it under
   Queued until it ships.
 - Next steps, in order:
-  1. Run the device check above on the Pixel 9a and record the ffprobe output here.
+  1. Optional: open the two HLG uploads in a desktop browser (see the device table).
   2. Tag LightCompressor-enhanced 2.3.0; when
      `https://jitpack.io/com/github/davotoula/LightCompressor-enhanced/2.3.0/LightCompressor-enhanced-2.3.0.pom`
      returns 200, set `lightcompressor-enhanced = "2.3.0"` and rebuild.
