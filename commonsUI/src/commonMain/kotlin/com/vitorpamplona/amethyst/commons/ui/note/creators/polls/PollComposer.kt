@@ -266,6 +266,10 @@ private fun PollOptionRow(
     var focused by remember { mutableStateOf(false) }
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
     val state = option.state
+    val imageUrl by remember(option, showImages) {
+        // The data-saver setting that keeps feed images from loading keeps this one too.
+        derivedStateOf { if (showImages) findURLs(state.text.toString()).firstOrNull { RichTextParser.isImageUrl(it) } else null }
+    }
 
     LaunchedEffect(state) {
         var lastText = state.text.toString()
@@ -283,53 +287,46 @@ private fun PollOptionRow(
         trailing = trailing,
         onRemove = onRemove,
         leading = leading,
+        below = imageUrl?.let { url -> { OptionImagePreview(url) } },
     ) {
-        Column(Modifier.weight(1f).padding(vertical = 14.dp)) {
-            BasicTextField(
-                state = state,
-                textStyle = style,
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
-                onKeyboardAction = { onNext() },
-                lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
-                inputTransformation = OptionInputTransformation,
-                outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        // The field focus moves to (Enter, Tab, a tap) is the one the suggestions complete into.
-                        .onFocusChanged {
-                            focused = it.isFocused
-                            if (it.isFocused) onEdited(false)
-                        }.onPreviewKeyEvent { event ->
-                            if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
-                                onNext()
-                                true
-                            } else {
-                                false
-                            }
-                        },
-                decorator = { inner ->
-                    Box {
-                        if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
-                        inner()
-                    }
-                },
-            )
-
-            // The data-saver setting that keeps feed images from loading keeps this one too.
-            if (showImages) OptionImagePreview(option)
-        }
+        BasicTextField(
+            state = state,
+            textStyle = style,
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
+            onKeyboardAction = { onNext() },
+            lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
+            inputTransformation = OptionInputTransformation,
+            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(vertical = 14.dp)
+                    // The field focus moves to (Enter, Tab, a tap) is the one the suggestions complete into.
+                    .onFocusChanged {
+                        focused = it.isFocused
+                        if (it.isFocused) onEdited(false)
+                    }.onPreviewKeyEvent { event ->
+                        if ((event.key == Key.Enter || event.key == Key.Tab) && event.type == KeyEventType.KeyDown && !event.isShiftPressed) {
+                            onNext()
+                            true
+                        } else {
+                            false
+                        }
+                    },
+            decorator = { inner ->
+                Box {
+                    if (state.text.isEmpty()) Text(placeholder, style = style, color = MaterialTheme.colorScheme.placeholderText)
+                    inner()
+                }
+            },
+        )
     }
 }
 
 /** The first image link in the option, drawn as the poll card will draw it. */
 @Composable
-private fun OptionImagePreview(option: PollOptionDraft) {
-    val imageUrl by remember(option) {
-        derivedStateOf { findURLs(option.state.text.toString()).firstOrNull { RichTextParser.isImageUrl(it) } }
-    }
-    val url = imageUrl ?: return
+private fun OptionImagePreview(url: String) {
     // Its own shape, at most this tall: a crop could hide the part of the picture the option is about.
     AsyncImage(
         model = url,
@@ -337,7 +334,6 @@ private fun OptionImagePreview(option: PollOptionDraft) {
         contentScale = ContentScale.Fit,
         modifier =
             Modifier
-                .padding(top = 10.dp)
                 .heightIn(max = 160.dp)
                 .clip(RoundedCornerShape(12.dp)),
     )

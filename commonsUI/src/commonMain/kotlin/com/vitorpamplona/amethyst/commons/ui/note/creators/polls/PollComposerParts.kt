@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -86,8 +85,9 @@ fun PollChoiceGlyph(
 
 /**
  * The frame of one option being written: [leading] (the glyph), the field in [content], and a
- * remove button when [onRemove] is set. A [trailing] row is the empty one at the end that the
- * next option is typed into: it shows a + and sits on the page instead of the well.
+ * remove button when [onRemove] is set, centred on each other. [below] goes under that row,
+ * lined up with the text (a picture the option links to). A [trailing] row is the empty one at
+ * the end that the next option is typed into: it shows a + and sits on the page instead of the well.
  */
 @Composable
 fun PollOptionFrame(
@@ -96,6 +96,7 @@ fun PollOptionFrame(
     trailing: Boolean,
     onRemove: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    below: (@Composable () -> Unit)? = null,
     leading: @Composable () -> Unit,
     content: @Composable RowScope.() -> Unit,
 ) {
@@ -107,30 +108,27 @@ fun PollOptionFrame(
         },
     )
 
-    // Top-aligned, with the glyph and the remove button centred on the first line, so a long
-    // option or one with a picture keeps them beside its first words.
-    Row(
-        verticalAlignment = Alignment.Top,
+    Column(
         modifier =
             modifier
                 .fillMaxWidth()
-                .heightIn(min = 52.dp)
                 .clip(OptionShape)
                 .background(if (trailing) CardSurfaces.color else CardSurfaces.well)
                 .border(1.dp, borderColor, OptionShape)
                 .padding(start = 16.dp, end = 4.dp),
     ) {
-        Box(Modifier.height(52.dp), contentAlignment = Alignment.Center) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+        ) {
             if (trailing) {
                 Icon(MaterialSymbols.Add, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.placeholderText)
             } else {
                 leading()
             }
-        }
-        Spacer(Modifier.width(12.dp))
-        content()
-        if (onRemove != null) {
-            Box(Modifier.height(52.dp), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.width(12.dp))
+            content()
+            if (onRemove != null) {
                 IconButton(onClick = onRemove, modifier = Modifier.size(40.dp)) {
                     Icon(
                         MaterialSymbols.Close,
@@ -139,9 +137,13 @@ fun PollOptionFrame(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            } else {
+                Spacer(Modifier.width(12.dp))
             }
-        } else {
-            Spacer(Modifier.width(12.dp))
+        }
+        if (below != null) {
+            // Past the glyph (20) and its gap (12), and clear of the remove button on the right.
+            Box(Modifier.padding(start = 32.dp, end = 12.dp, bottom = 14.dp)) { below() }
         }
     }
 }
