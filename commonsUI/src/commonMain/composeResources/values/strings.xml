@@ -1578,12 +1578,9 @@
     <string name="wallet_connect_connect_app">Connect Wallet</string>
     <string name="see_relay_feed">See Relay Feed</string>
     <string name="pledge_amount_in_sats">Pledge Amount in Sats</string>
-    <string name="poll_option_description">Poll option description</string>
     <string name="poll_zap_value_min">Zap minimum</string>
     <string name="poll_zap_value_max">Zap maximum</string>
     <string name="poll_consensus_threshold">Consensus</string>
-    <string name="poll_closing_date_time">Poll Closing Date &amp; Time</string>
-    <string name="poll_closing_in">Poll closes in %1$s</string>
     <string name="looking_for_event">Looking for Event %1$s</string>
     <string name="looking_for_event_title">Loading</string>
     <string name="looking_for_private_event">Waiting for your private messages to load…</string>
@@ -2075,7 +2072,6 @@
     <string name="guidelines">Guidelines</string>
     <string name="moderators">Moderators</string>
     <string name="status_update">Update your status</string>
-    <string name="poll_zap_value_min_max_explainer">Votes are weighted by the zap amount. You can set a minimum amount to avoid spammers and a maximum amount to avoid a large zappers taking over the poll. Use the same amount in both fields to make sure every vote is valued the same amount. Leave it empty to accept any amount.</string>
     <string name="error_dialog_talk_to_user">Message the User</string>
     <string name="error_dialog_talk_to_user_name">Message %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2942,7 +2938,6 @@
     <string name="closing_time">Closing Time</string>
     <string name="confirm">Confirm</string>
     <string name="next">Next</string>
-    <string name="add_poll_option_button">Add poll option button</string>
     <string name="go_back">Go Back</string>
     <string name="approve">Approve</string>
     <string name="connected">Connected</string>
@@ -5343,7 +5338,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Poll is closed to new votes</string>
     <string name="poll_multiple_choice">Multiple choice</string>
-    <string name="poll_option_index">Option %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d vote is dated before the poll was published and is excluded.</item>
         <item quantity="other">%1$d votes are dated before the poll was published and are excluded.</item>
@@ -5376,6 +5370,18 @@
     </plurals>
     <string name="poll_single_choice">Single choice</string>
     <string name="poll_unable_to_vote">Unable to vote</string>
+    <string name="poll_remove">Remove poll</string>
+    <string name="poll_zap_votes">Vote with zaps</string>
+    <string name="poll_zap_votes_on">Each vote is a zap, weighted by the sats sent</string>
+    <string name="poll_zap_votes_off">Free votes, one per person</string>
+    <string name="poll_pick_one">Each voter picks one answer</string>
+    <string name="poll_pick_many">Each voter can pick several</string>
+    <string name="poll_zap_value_range">Vote amount</string>
+    <string name="poll_zap_value_range_explainer">Limits keep spam out and stop one big zapper from taking over. Leave empty to accept any amount.</string>
+    <string name="poll_zap_value_range_invalid">The minimum is higher than the maximum.</string>
+    <string name="poll_zap_value_any">Any</string>
+    <string name="poll_deadline_custom">Custom</string>
+    <string name="poll_deadline_passed">That time has already passed. Pick a later one.</string>
     <string name="polls">Polls</string>
     <string name="post">Post</string>
     <plurals name="post_was_hidden_due_to_too_many_hashtags">

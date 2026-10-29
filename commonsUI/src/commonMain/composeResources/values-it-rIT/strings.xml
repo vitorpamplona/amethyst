@@ -640,12 +640,9 @@
     <string name="wallet_connect_connect_app">Collega portafoglio</string>
     <string name="see_relay_feed">Visualizza feed relay</string>
     <string name="pledge_amount_in_sats">Importo in pegno in sats</string>
-    <string name="poll_option_description">Descrizione opzione sondaggio</string>
     <string name="poll_zap_value_min">Zap minimo</string>
     <string name="poll_zap_value_max">Zap massimo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_closing_date_time">Data e ora di chiusura del sondaggio</string>
-    <string name="poll_closing_in">Il sondaggio si chiude tra %1$s</string>
     <string name="looking_for_event">Cercando l'evento %1$s</string>
     <string name="send_zap">Invia zap</string>
     <string name="custom_zaps_add_a_message">Aggiungi un messaggio pubblico</string>
@@ -907,7 +904,6 @@
     <string name="guidelines">Linee guida</string>
     <string name="moderators">Moderatori</string>
     <string name="status_update">Aggiorna il tuo stato</string>
-    <string name="poll_zap_value_min_max_explainer">I voti sono ponderati con l'importo dello zap. È possibile impostare una quantità minima per evitare gli spammer e una quantità massima per evitare che un grande zapper predomini il sondaggio. Usa lo stesso importo in entrambi i campi per assicurarti che ogni voto valga lo stesso importo. Lascialo vuoto per accettare qualsiasi importo.</string>
     <string name="error_dialog_talk_to_user">Invia un messaggio all'utente</string>
     <string name="error_dialog_talk_to_user_name">Messaggio %1$s</string>
     <string name="zap_split_title">Dividi e inoltra Zaps</string>
@@ -1414,7 +1410,6 @@
     <string name="closing_time">Orario di chiusura</string>
     <string name="confirm">Conferma</string>
     <string name="next">Avanti</string>
-    <string name="add_poll_option_button">Aggiungi opzione sondaggio</string>
     <string name="go_back">Torna indietro</string>
     <string name="approve">Approva</string>
     <string name="connected">Connesso</string>
@@ -2585,7 +2580,6 @@
     <string name="poll_author_no_vote">Gli autori del sondaggio non possono votare nei propri sondaggi.</string>
     <string name="poll_is_closed_explainer">Il sondaggio è chiuso a nuovi voti</string>
     <string name="poll_multiple_choice">Scelta multipla</string>
-    <string name="poll_option_index">Opzione %1$s</string>
     <string name="poll_single_choice">Scelta singola</string>
     <string name="poll_unable_to_vote">Impossibile votare</string>
     <string name="polls">Sondaggi</string>

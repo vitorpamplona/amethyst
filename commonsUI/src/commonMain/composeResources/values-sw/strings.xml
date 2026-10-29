@@ -647,12 +647,9 @@
     <string name="wallet_connect_connect_app">Unganisha Pochi</string>
     <string name="see_relay_feed">Angalia Mtiririko wa Relay</string>
     <string name="pledge_amount_in_sats">Kiasi cha Ahadi katika Sats</string>
-    <string name="poll_option_description">Maelezo ya chaguo cha kura</string>
     <string name="poll_zap_value_min">Kima cha Chini cha Zaps</string>
     <string name="poll_zap_value_max">Kima cha Juu cha Zaps</string>
     <string name="poll_consensus_threshold">Uamuzi</string>
-    <string name="poll_closing_date_time">Tarehe &amp; Wakati wa Kufunga Kura</string>
-    <string name="poll_closing_in">Kura inafungwa ndani ya %1$s</string>
     <string name="looking_for_event">Inatafuta Tukio %1$s</string>
     <string name="send_zap">Tuma Zap</string>
     <string name="custom_zaps_add_a_message">Ongeza ujumbe wa umma</string>
@@ -919,7 +916,6 @@
     <string name="guidelines">Miongozo</string>
     <string name="moderators">Wasimamizi</string>
     <string name="status_update">Sasisha hali yako</string>
-    <string name="poll_zap_value_min_max_explainer">Kura zina uzito kulingana na kiasi cha zap. Unaweza kuweka kiasi cha chini ili kuepuka wahasibu na kiasi cha juu ili kuepuka wahasibu wakubwa kuchukua kura ya maoni. Tumia kiasi sawa katika sehemu zote mbili ili kuhakikisha kila kura inathaminiwa kwa kiasi sawa. Acha tupu ili kukubali kiasi chochote.</string>
     <string name="error_dialog_talk_to_user">Tuma ujumbe kwa mtumiaji</string>
     <string name="error_dialog_talk_to_user_name">Ujumbe %1$s</string>
     <string name="error_dialog_button_ok">Sawa</string>
@@ -1431,7 +1427,6 @@
     <string name="closing_time">Wakati wa Kufunga</string>
     <string name="confirm">Thibitisha</string>
     <string name="next">Ijayo</string>
-    <string name="add_poll_option_button">Ongeza kitufe cha chaguo la kura</string>
     <string name="go_back">Rudi Nyuma</string>
     <string name="approve">Idhini</string>
     <string name="connected">Imeunganishwa</string>
@@ -2625,7 +2620,6 @@
     <string name="poll_author_no_vote">Waandishi wa kura hawawezi kupiga kura kwenye kura zao wenyewe.</string>
     <string name="poll_is_closed_explainer">Kura imefungwa kwa kura mpya</string>
     <string name="poll_multiple_choice">Chaguzi nyingi</string>
-    <string name="poll_option_index">Chaguo %1$s</string>
     <string name="poll_single_choice">Chaguo moja</string>
     <string name="poll_unable_to_vote">Haiwezekani kupiga kura</string>
     <string name="polls">Kura</string>

@@ -645,12 +645,9 @@
     <string name="wallet_connect_connect_app">اتصال کیف پول</string>
     <string name="see_relay_feed">مشاهده فید relay</string>
     <string name="pledge_amount_in_sats">مبلغ وثیقه به ساتوشی</string>
-    <string name="poll_option_description">توضیح گزینه های نظرسنجی</string>
     <string name="poll_zap_value_min">حداقل زپ</string>
     <string name="poll_zap_value_max">حداکثر زپ</string>
     <string name="poll_consensus_threshold">توافق نظر</string>
-    <string name="poll_closing_date_time">تاریخ و زمان پایان نظرسنجی</string>
-    <string name="poll_closing_in">نظرسنجی در %1$s بسته می‌شود</string>
     <string name="looking_for_event">جستجوی رویداد %1$s</string>
     <string name="send_zap">ارسال Zap</string>
     <string name="custom_zaps_add_a_message">افزودن پیام عمومی</string>
@@ -918,7 +915,6 @@
     <string name="guidelines">دستورالعمل‌ها</string>
     <string name="moderators">مدیران</string>
     <string name="status_update">بارگذاری وضعیت</string>
-    <string name="poll_zap_value_min_max_explainer">آراء با مبلغ زپ سنجیده می شوند. می توانید برای جلوگیری از اسپم یک مبلغ حداقل تعیین کنید و برای جلوگیری از دستکاری نتیجه با زپ های بزرگ یک مبلغ حداکثر تعیین کنید. برای اینکه همه آراء ارزش یکسان داشته باشند در هر دو قسمت یک مبلغ را بزنید. یا این قسمت را خالی بگذارید تا هر مبلغ زپی را بپذیرد.</string>
     <string name="error_dialog_talk_to_user">پیام به کاربر</string>
     <string name="error_dialog_talk_to_user_name">پیغام %1$s</string>
     <string name="error_dialog_button_ok">قبول</string>
@@ -1448,7 +1444,6 @@
     <string name="closing_time">زمان پایان</string>
     <string name="confirm">تأیید</string>
     <string name="next">بعدی</string>
-    <string name="add_poll_option_button">افزودن دکمه گزینه نظرسنجی</string>
     <string name="go_back">بازگشت</string>
     <string name="approve">تأیید</string>
     <string name="connected">متصل</string>
@@ -2690,7 +2685,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">این نظرسنجی برای رای جدید بسته شده است</string>
     <string name="poll_multiple_choice">چندانتخابی</string>
-    <string name="poll_option_index">گزینه ها %1$s</string>
     <string name="poll_single_choice">تک‌انتخابی</string>
     <string name="poll_unable_to_vote">نمی توان رای داد</string>
     <string name="polls">نظرسنجی‌ها</string>

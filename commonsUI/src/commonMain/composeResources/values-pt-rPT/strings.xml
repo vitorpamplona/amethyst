@@ -648,12 +648,9 @@
     <string name="wallet_connect_connect_app">Conectar Carteira</string>
     <string name="see_relay_feed">Ver feed do Relay</string>
     <string name="pledge_amount_in_sats">Valor em Sats</string>
-    <string name="poll_option_description">Descrição da opção de enquete</string>
     <string name="poll_zap_value_min">Zap mínimo</string>
     <string name="poll_zap_value_max">Zap máximo</string>
     <string name="poll_consensus_threshold">Consenso</string>
-    <string name="poll_closing_date_time">Data e hora de encerramento da enquete</string>
-    <string name="poll_closing_in">Enquete encerra em %1$s</string>
     <string name="looking_for_event">Procurando o evento %1$s</string>
     <string name="send_zap">Enviar Zap</string>
     <string name="custom_zaps_add_a_message">Adicionar uma mensagem pública</string>
@@ -919,7 +916,6 @@
     <string name="guidelines">Diretrizes</string>
     <string name="moderators">Moderadores</string>
     <string name="status_update">O que você está fazendo?</string>
-    <string name="poll_zap_value_min_max_explainer">Os votos são ponderados pelo valor do zap. Você pode definir um valor mínimo para evitar spammers e um valor máximo para evitar que grandes zappers assumam o controle da enquete. Use o mesmo valor em ambos os campos para garantir que cada voto tenha o mesmo valor. Deixe em branco para aceitar qualquer valor.</string>
     <string name="error_dialog_talk_to_user">Mensagem ao usuário</string>
     <string name="error_dialog_talk_to_user_name">Mensagem %1$s</string>
     <string name="zap_split_title">Dividir e encaminhar Zaps</string>
@@ -1429,7 +1425,6 @@
     <string name="closing_time">Hora de encerramento</string>
     <string name="confirm">Confirmar</string>
     <string name="next">Próximo</string>
-    <string name="add_poll_option_button">Adicionar opção à enquete</string>
     <string name="go_back">Voltar</string>
     <string name="approve">Aprovar</string>
     <string name="connected">Conectado</string>
@@ -2604,7 +2599,6 @@
     <string name="poll_author_no_vote">Os autores de enquetes não podem votar em suas próprias enquetes.</string>
     <string name="poll_is_closed_explainer">A enquete está fechada para novos votos</string>
     <string name="poll_multiple_choice">Múltipla escolha</string>
-    <string name="poll_option_index">Opção %1$s</string>
     <string name="poll_single_choice">Escolha única</string>
     <string name="poll_unable_to_vote">Impossibilitado de votar</string>
     <string name="polls">Enquetes</string>

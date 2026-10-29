@@ -1560,12 +1560,9 @@
     <string name="wallet_connect_connect_app">संयोजन धनकोष</string>
     <string name="see_relay_feed">पुनःप्रसारक सूचनावली देखें</string>
     <string name="pledge_amount_in_sats">प्रतिज्ञा मात्रा साट्स में</string>
-    <string name="poll_option_description">मतदान विकल्प विवरण</string>
     <string name="poll_zap_value_min">ज्साप न्यूनतम</string>
     <string name="poll_zap_value_max">ज्साप अधिकतम</string>
     <string name="poll_consensus_threshold">सर्वसम्मति</string>
-    <string name="poll_closing_date_time">मतदान समापन दिनांक तथा समय</string>
-    <string name="poll_closing_in">मतदान %1$s में समाप्त होगा</string>
     <string name="looking_for_event">घटना %1$s के लिए खोज चल रहा है</string>
     <string name="looking_for_event_title">आवहन चालू</string>
     <string name="looking_for_private_event">आपके निजी सन्देशों का आवहन की प्रतीक्षा…</string>
@@ -2056,7 +2053,6 @@
     <string name="guidelines">दिशा निर्देश</string>
     <string name="moderators">नियामक</string>
     <string name="status_update">आपकी स्थिति का नवीकरण करें</string>
-    <string name="poll_zap_value_min_max_explainer">निर्वाचन का भार ज्साप मात्रा के अनुसार माना जाता है। आप एक न्यूनतम मात्रा स्थापित कर सकते हैं कचरालेख भेजनेवालों से बचने के लिए तथा एक अधिकतम मात्रा बडे ज्सापकर्ताओं के द्वारा मतदान का अधिग्रहण होने से बचने के लिए। दोनों प्रपत्रस्थानों में एक ही मात्रा का प्रयोग करें प्रत्येक निर्वाचन का मूल्य समान मानने को सुनिश्चित करने के लिए। रिक्त रख दें कुछ भी मात्रा स्वीकार करने के लिए।</string>
     <string name="error_dialog_talk_to_user">उपयोगकर्ता को संदेश भेजें</string>
     <string name="error_dialog_talk_to_user_name">सूचना %1$s</string>
     <string name="error_dialog_button_ok">ठीक है</string>
@@ -2922,7 +2918,6 @@
     <string name="closing_time">समापन समय</string>
     <string name="confirm">पुष्टि करें</string>
     <string name="next">अगला</string>
-    <string name="add_poll_option_button">मतदान विकल्प घुण्डी जोडें</string>
     <string name="go_back">पीछे जाएँ</string>
     <string name="approve">स्वीकार करें</string>
     <string name="connected">संयोजित</string>
@@ -5284,7 +5279,6 @@
     <string name="poll_consensus_threshold_percent">(० से १००) प्रतिशत</string>
     <string name="poll_is_closed_explainer">मतदान आवृत है नये निर्वाचनों के लिए</string>
     <string name="poll_multiple_choice">अनेक विकल्प</string>
-    <string name="poll_option_index">विकल्प %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d मत समयांकित है मतदान प्रकाशन के पूर्व तथा बहिष्कृत है।</item>
         <item quantity="other">%1$d मत समयांकित हैं मतदान प्रकाशन के पूर्व तथा बहिष्कृत हैं।</item>

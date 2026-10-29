@@ -24,7 +24,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -42,7 +41,6 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -85,10 +83,9 @@ import com.vitorpamplona.amethyst.commons.resources.disable_poll
 import com.vitorpamplona.amethyst.commons.resources.disable_private_note
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive
 import com.vitorpamplona.amethyst.commons.resources.geohash_exclusive_explainer
-import com.vitorpamplona.amethyst.commons.resources.kind_poll
-import com.vitorpamplona.amethyst.commons.resources.kind_zap_poll
 import com.vitorpamplona.amethyst.commons.resources.lightning_create_and_add_invoice
 import com.vitorpamplona.amethyst.commons.resources.lightning_invoice
+import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject
 import com.vitorpamplona.amethyst.commons.resources.messages_new_message_subject_caption
 import com.vitorpamplona.amethyst.commons.resources.poll
@@ -139,7 +136,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.MessageF
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceFlap
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.AudienceSheet
 import com.vitorpamplona.amethyst.commons.ui.note.creators.notify.rememberAudienceLists
-import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollOptionsField
+import com.vitorpamplona.amethyst.commons.ui.note.creators.polls.PollComposer
 import com.vitorpamplona.amethyst.commons.ui.note.creators.pow.PowOverrideButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.previews.DisplayPreviews
 import com.vitorpamplona.amethyst.commons.ui.note.creators.scheduling.ScheduleAtButton
@@ -149,7 +146,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.AddSecret
 import com.vitorpamplona.amethyst.commons.ui.note.creators.secretEmoji.SecretEmojiRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.ImageVideoDescription
 import com.vitorpamplona.amethyst.commons.ui.note.creators.userSuggestions.ShowUserSuggestionList
-import com.vitorpamplona.amethyst.commons.ui.note.creators.zappolls.ZapPollField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.AddZapraiserButton
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapraiser.ZapRaiserRequest
 import com.vitorpamplona.amethyst.commons.ui.note.creators.zapsplits.ForwardZapTo
@@ -169,6 +165,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
@@ -475,7 +472,7 @@ private fun NewPostScreenBody(
                             }
                         }
                         MessageField(
-                            Res.string.what_s_on_your_mind,
+                            if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) Res.string.marmot_poll_question else Res.string.what_s_on_your_mind,
                             postViewModel,
                             onContentReceived = { uri, mimeType ->
                                 postViewModel.selectImage(
@@ -489,39 +486,11 @@ private fun NewPostScreenBody(
                 }
 
                 if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) {
-                    Column(
-                        modifier = Modifier.padding(vertical = Size10dp, horizontal = Size10dp),
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            FilterChip(
-                                selected = postViewModel.wantsPoll,
-                                onClick = {
-                                    postViewModel.wantsPoll = true
-                                    postViewModel.wantsZapPoll = false
-                                },
-                                label = { Text(stringRes(Res.string.kind_poll)) },
-                            )
-                            FilterChip(
-                                selected = postViewModel.wantsZapPoll,
-                                onClick = {
-                                    postViewModel.wantsZapPoll = true
-                                    postViewModel.wantsPoll = false
-                                },
-                                label = { Text(stringRes(Res.string.kind_zap_poll)) },
-                            )
-                        }
-                        if (postViewModel.wantsPoll) {
-                            Row(verticalAlignment = CenterVertically) {
-                                PollOptionsField(postViewModel)
-                            }
-                        } else {
-                            Row(verticalAlignment = CenterVertically) {
-                                ZapPollField(postViewModel)
-                            }
-                        }
-                    }
+                    // Lined up with the text above and the tools below: the post's text is the poll's question.
+                    PollComposer(
+                        postViewModel,
+                        Modifier.padding(start = ComposerToolsStartPadding, end = Size10dp, top = Size5dp, bottom = Size10dp),
+                    )
                 }
 
                 DisplayPreviews(postViewModel.urlPreviews, postViewModel.iMetaAttachments, accountViewModel, nav)
