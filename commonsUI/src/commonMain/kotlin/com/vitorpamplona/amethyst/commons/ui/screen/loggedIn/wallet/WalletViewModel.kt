@@ -24,10 +24,27 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.clink.ClinkDebitWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupPayload
+import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.send_payment_failed
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_all_already_added
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_cannot_sign
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_deleted
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_deleting
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_failed
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_failed_generic
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_no_relays
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_nothing_yet
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_partially_deleted
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_published
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_rejected
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_republished
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_restored_toast
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_turned_off
+import com.vitorpamplona.amethyst.commons.resources.wallet_backup_working
 import com.vitorpamplona.amethyst.commons.resources.wallet_balance_request_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_decrypt_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
@@ -72,12 +89,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.compose.resources.StringResource
 import kotlin.uuid.ExperimentalUuidApi
@@ -128,6 +148,8 @@ data class WalletInfo(
     val error: String? = null,
     // CLINK debits are spend-only: no balance/transactions to fetch or show.
     val canShowBalance: Boolean = true,
+    /** Stays true, even with auto-backup off, until every relay confirms the delete. */
+    val isBackedUp: Boolean = false,
 )
 
 private const val NWC_TIMEOUT_MS = 30_000L
@@ -159,8 +181,34 @@ class WalletViewModel : ViewModel() {
     private val _defaultWalletId = MutableStateFlow<String?>(null)
     val defaultWalletId = _defaultWalletId.asStateFlow()
 
+    private val _backupEnabled = MutableStateFlow(false)
+    val backupEnabled = _backupEnabled.asStateFlow()
+
+    private val _backupCardDismissed = MutableStateFlow(false)
+    val backupCardDismissed = _backupCardDismissed.asStateFlow()
+
+    private val _backupRelays = MutableStateFlow<List<String>>(emptyList())
+    val backupRelays = _backupRelays.asStateFlow()
+
+    private val backedUpWalletIds = MutableStateFlow<Set<String>>(emptySet())
+
+    private val _backupBusy = MutableStateFlow(false)
+    val backupBusy = _backupBusy.asStateFlow()
+
+    private val backupPublishing = MutableStateFlow(false)
+
+    val backupWorking =
+        combine(_backupBusy, backupPublishing) { busy, publishing -> busy || publishing }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private val _backupMessage = MutableStateFlow<String?>(null)
+    val backupMessage = _backupMessage.asStateFlow()
+
+    private var backupObserver: Job? = null
+    private var observedAccount: Account? = null
+
     val walletInfoList =
-        combine(_wallets, _debitWallets, _defaultWalletId, walletInfoMap) { wallets, debits, defaultId, infoMap ->
+        combine(_wallets, _debitWallets, _defaultWalletId, walletInfoMap, backedUpWalletIds) { wallets, debits, defaultId, infoMap, backedUpIds ->
             // The unified default falls back to the first source overall (NWC before debits).
             val effectiveDefault = defaultId ?: wallets.firstOrNull()?.id ?: debits.firstOrNull()?.id
 
@@ -176,6 +224,7 @@ class WalletViewModel : ViewModel() {
                         isLoading = info?.isLoading == true,
                         error = info?.error,
                         canShowBalance = true,
+                        isBackedUp = wallet.id in backedUpIds,
                     )
                 }
 
@@ -274,6 +323,22 @@ class WalletViewModel : ViewModel() {
         this.accountViewModel = accountViewModel
         this.account = accountViewModel.account
         refreshWalletList()
+        observeBackupSettings(accountViewModel.account)
+    }
+
+    // init() runs on every recomposition, so only a new account restarts the observers.
+    private fun observeBackupSettings(acc: Account) {
+        if (observedAccount === acc) return
+        observedAccount = acc
+        backupObserver?.cancel()
+        backupObserver =
+            viewModelScope.launch {
+                launch { acc.settings.backupNwcWallets.collect { _backupEnabled.value = it } }
+                launch { acc.settings.backupNwcCardDismissed.collect { _backupCardDismissed.value = it } }
+                launch { acc.settings.nwcBackupRelays.collect { _backupRelays.value = it } }
+                launch { acc.settings.backedUpNwcWalletIds.collect { backedUpWalletIds.value = it } }
+                launch { acc.nwcBackup.status.collect { backupPublishing.value = it is NwcBackupState.Status.Publishing } }
+            }
     }
 
     fun refreshWalletList() {
@@ -282,6 +347,145 @@ class WalletViewModel : ViewModel() {
         _debitWallets.value = acc.settings.clinkDebitWallets.value
         _defaultWalletId.value = acc.settings.defaultPaymentSourceId.value
         _hasWalletSetup.value = _wallets.value.isNotEmpty() || _debitWallets.value.isNotEmpty()
+    }
+
+    fun setBackupEnabled(
+        enabled: Boolean,
+        onDone: () -> Unit = {},
+    ) {
+        val accountVm = accountViewModel ?: return
+        _backupBusy.value = true
+        accountVm.launchSigner {
+            try {
+                if (enabled) _backupMessage.value = text(Res.string.wallet_backup_working)
+                val acc = account ?: return@launchSigner
+                _backupMessage.value =
+                    if (enabled) {
+                        when {
+                            !acc.enableNwcBackup() -> backupFailureText(acc)
+                            acc.nwcBackup.status.value is NwcBackupState.Status.NothingToBackUp -> text(Res.string.wallet_backup_nothing_yet)
+                            else -> text(Res.string.wallet_backup_published)
+                        }
+                    } else {
+                        acc.disableNwcBackup()
+                        text(Res.string.wallet_backup_turned_off)
+                    }
+            } finally {
+                _backupBusy.value = false
+                onDone()
+            }
+        }
+    }
+
+    fun republishBackup(onDone: () -> Unit = {}) {
+        val accountVm = accountViewModel ?: return
+        _backupBusy.value = true
+        accountVm.launchSigner {
+            try {
+                _backupMessage.value = text(Res.string.wallet_backup_working)
+                val acc = account ?: return@launchSigner
+                _backupMessage.value =
+                    if (acc.nwcBackup.republishNow()) {
+                        text(Res.string.wallet_backup_republished)
+                    } else {
+                        backupFailureText(acc)
+                    }
+            } finally {
+                _backupBusy.value = false
+                onDone()
+            }
+        }
+    }
+
+    fun deleteBackup(onDone: () -> Unit = {}) {
+        val accountVm = accountViewModel ?: return
+        _backupBusy.value = true
+        accountVm.launchSigner {
+            try {
+                _backupMessage.value = text(Res.string.wallet_backup_deleting)
+                val acc = account ?: return@launchSigner
+                _backupMessage.value =
+                    when (val outcome = acc.deleteNwcBackup()) {
+                        is NwcBackupState.DeleteOutcome.Deleted -> text(Res.string.wallet_backup_deleted)
+                        is NwcBackupState.DeleteOutcome.PartiallyDeleted ->
+                            loadStringRes(Res.string.wallet_backup_partially_deleted, outcome.remaining.joinToString())
+                        is NwcBackupState.DeleteOutcome.Failed -> backupFailureText(outcome.failure)
+                    }
+            } finally {
+                _backupBusy.value = false
+                onDone()
+            }
+        }
+    }
+
+    private suspend fun backupFailureText(acc: Account): String = backupFailureText((acc.nwcBackup.status.value as? NwcBackupState.Status.Failed)?.failure)
+
+    private suspend fun backupFailureText(failure: NwcBackupState.Failure?): String =
+        when (failure) {
+            NwcBackupState.Failure.CannotSign -> text(Res.string.wallet_backup_cannot_sign)
+            NwcBackupState.Failure.NoRelays -> text(Res.string.wallet_backup_no_relays)
+            is NwcBackupState.Failure.Rejected -> failure.reason?.let { text(Res.string.wallet_backup_rejected, it) } ?: text(Res.string.wallet_backup_failed_generic)
+            is NwcBackupState.Failure.Error -> failure.message?.let { text(Res.string.wallet_backup_failed, it) } ?: text(Res.string.wallet_backup_failed_generic)
+            null -> text(Res.string.wallet_backup_failed_generic)
+        }
+
+    fun fetchBackupForRestore(onResult: (NwcBackupState.FoundNwcBackup?) -> Unit) {
+        val accountVm = accountViewModel ?: return
+        _backupBusy.value = true
+        accountVm.launchSigner {
+            val payload =
+                try {
+                    account?.nwcBackup?.fetchBackup()
+                } finally {
+                    _backupBusy.value = false
+                }
+            withContext(Dispatchers.Main) { onResult(payload) }
+        }
+    }
+
+    // Held here: the empty state a restore starts from can be swapped out before the result lands.
+    private val _restoreCandidate = MutableStateFlow<NwcBackupState.FoundNwcBackup?>(null)
+    val restoreCandidate = _restoreCandidate.asStateFlow()
+
+    private val _restoreNoneFound = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val restoreNoneFound = _restoreNoneFound.asSharedFlow()
+
+    fun lookForBackupToRestore() {
+        fetchBackupForRestore { backup ->
+            if (backup == null) {
+                _restoreNoneFound.tryEmit(Unit)
+            } else {
+                _restoreCandidate.value = backup
+            }
+        }
+    }
+
+    fun clearRestoreCandidate() {
+        _restoreCandidate.value = null
+    }
+
+    /** Merges a confirmed restore into the wallet list; returns how many were new. */
+    fun applyRestoredBackup(payload: NwcBackupPayload): Int {
+        val acc = account ?: return 0
+        val added = acc.settings.mergeRestoredNwcWallets(payload)
+        refreshWalletList()
+        viewModelScope.launch {
+            _backupMessage.value =
+                if (added > 0) {
+                    loadPluralStringRes(Res.plurals.wallet_backup_restored_toast, added, added)
+                } else {
+                    text(Res.string.wallet_backup_all_already_added)
+                }
+        }
+        return added
+    }
+
+    fun clearBackupMessage() {
+        _backupMessage.value = null
+    }
+
+    fun dismissBackupCard() {
+        account?.settings?.dismissBackupNwcCard()
     }
 
     fun refreshWalletSetup() {
@@ -400,26 +604,16 @@ class WalletViewModel : ViewModel() {
             NwcWalletEntryNorm(
                 id =
                     Uuid.random().toString(),
-                name = name.ifBlank { "Wallet" },
+                name = name.ifBlank { "Lightning Wallet" },
                 uri = uri,
             )
-        acc.settings.addNwcWallet(entry)
+        if (!acc.settings.addNwcWallet(entry)) return false
         refreshWalletList()
         return true
     }
 
-    fun renameWallet(
-        walletId: String,
-        newName: String,
-    ) {
-        val acc = account ?: return
-        if (_debitWallets.value.any { it.id == walletId }) {
-            acc.settings.renameClinkDebitWallet(walletId, newName)
-        } else {
-            acc.settings.renameNwcWallet(walletId, newName)
-        }
-        refreshWalletList()
-    }
+    // Some wallet services (e.g. Blitz) report "N/A" as their name.
+    private fun sanitizeWalletAlias(alias: String?): String? = alias?.trim()?.takeIf { it.isNotEmpty() && !it.equals("n/a", ignoreCase = true) }
 
     fun selectWallet(walletId: String) {
         _selectedWalletId.value = walletId
@@ -436,6 +630,12 @@ class WalletViewModel : ViewModel() {
         _wallets.value.forEach { wallet ->
             fetchBalanceForWallet(wallet.id)
         }
+    }
+
+    fun nwcWalletIdsPendingBalance(): List<String> = _wallets.value.filter { walletInfoMap.value[it.id]?.balanceSats == null }.map { it.id }
+
+    suspend fun refreshBalancesFor(walletIds: List<String>) {
+        walletIds.forEach { fetchBalanceForWallet(it) }
     }
 
     private suspend fun fetchBalanceForWallet(walletId: String) {
@@ -482,7 +682,7 @@ class WalletViewModel : ViewModel() {
                     viewModelScope.launch {
                         when (response) {
                             is GetInfoSuccessResponse -> {
-                                updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
+                                updateWalletInfo(walletId) { it.copy(alias = sanitizeWalletAlias(response.result?.alias)) }
                             }
 
                             else -> {}
@@ -502,10 +702,11 @@ class WalletViewModel : ViewModel() {
         walletInfoMap.value =
             walletInfoMap.value.toMutableMap().apply {
                 val current =
-                    get(walletId) ?: WalletInfo(
-                        walletId = walletId,
-                        name = _wallets.value.firstOrNull { it.id == walletId }?.name ?: "Wallet",
-                    )
+                    get(walletId)
+                        ?: WalletInfo(
+                            walletId = walletId,
+                            name = _wallets.value.firstOrNull { it.id == walletId }?.name ?: "Lightning Wallet",
+                        )
                 put(walletId, transform(current))
             }
     }
@@ -563,8 +764,8 @@ class WalletViewModel : ViewModel() {
                     viewModelScope.launch {
                         when (response) {
                             is GetInfoSuccessResponse -> {
-                                _walletAlias.value = response.result?.alias
-                                updateWalletInfo(walletId) { it.copy(alias = response.result?.alias) }
+                                _walletAlias.value = sanitizeWalletAlias(response.result?.alias)
+                                updateWalletInfo(walletId) { it.copy(alias = sanitizeWalletAlias(response.result?.alias)) }
                             }
 
                             else -> {}

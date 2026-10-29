@@ -94,6 +94,7 @@ class AccountStoreRecords(
     val relayAuth: RelayAuth,
     val feedVisibility: FeedVisibility,
     val notificationPrefs: NotificationPrefs,
+    val nwcBackupPrefs: NwcBackupPrefs = NwcBackupPrefs(),
 )
 
 /** The per-account stores [AccountSettings] is saved to and rebuilt from, all in the account's DataStore. */
@@ -116,6 +117,8 @@ class AccountSettingsStores(
 
     fun notificationPrefs(npub: String) = NotificationPrefsStore(stores.getDataStore(npub))
 
+    fun nwcBackupPrefs(npub: String) = NwcBackupPrefsStore(stores.getDataStore(npub))
+
     /** Every store [npub] has, with no fallback: an empty store reads as its defaults. */
     suspend fun load(npub: String) =
         AccountStoreRecords(
@@ -127,6 +130,7 @@ class AccountSettingsStores(
             relayAuth = relayAuth(npub).load(),
             feedVisibility = feedVisibility(npub).load(),
             notificationPrefs = notificationPrefs(npub).load(),
+            nwcBackupPrefs = nwcBackupPrefs(npub).load(),
         )
 
     /** Writes every store-backed part of [settings]. Keys and secrets have stores of their own. */
@@ -194,6 +198,14 @@ class AccountSettingsStores(
                 alwaysOnService = settings.alwaysOnNotificationService.value,
                 showMessagesInNotifications = settings.showMessagesInNotifications.value,
                 splitNotificationsEnabled = settings.splitNotificationsEnabled.value,
+            ),
+        )
+        nwcBackupPrefs(npub).save(
+            NwcBackupPrefs(
+                autoBackup = settings.backupNwcWallets.value,
+                cardDismissed = settings.backupNwcCardDismissed.value,
+                relays = settings.nwcBackupRelays.value.toSet(),
+                walletIds = settings.backedUpNwcWalletIds.value,
             ),
         )
         latestEvents(npub).saveAll(
@@ -619,8 +631,19 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             backupCashuWallet = latestCashuWalletResolved,
             backupNutzapInfo = latestNutzapInfoResolved,
             callsEnabled = MutableStateFlow(callsEnabled),
-        ).also { it.restoreBackupConflicts(BackupConflictStorage.decode(openBackupConflictsStr)) }
+        ).also {
+            it.restoreBackupConflicts(BackupConflictStorage.decode(openBackupConflictsStr))
+            it.restoreNwcBackupPrefs(stores.nwcBackupPrefs)
+        }
     }
+
+/** Applied after construction, which keeps the rebuild lambda clear of the JVM's per-method bytecode limit. */
+private fun AccountSettings.restoreNwcBackupPrefs(prefs: NwcBackupPrefs) {
+    backupNwcWallets.value = prefs.autoBackup
+    backupNwcCardDismissed.value = prefs.cardDismissed
+    nwcBackupRelays.value = prefs.relays.sorted()
+    backedUpNwcWalletIds.value = prefs.walletIds
+}
 
 private data class FollowListPrefs(
     val home: TopFilter,

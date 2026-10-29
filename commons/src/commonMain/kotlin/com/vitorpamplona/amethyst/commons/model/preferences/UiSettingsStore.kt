@@ -137,6 +137,7 @@ class UiSettingsStore(
         val UI_SPELL_CHECK = stringPreferencesKey("ui.spell_check")
         val UI_NOTE_LAYOUT = stringPreferencesKey("ui.note_layout")
         val UI_DOWNLOAD_TRANSLATION_MODELS = stringPreferencesKey("ui.download_translation_models")
+        val UI_HIDE_WALLET_BALANCES = booleanPreferencesKey("ui.hide_wallet_balances")
 
         /**
          * Every setting's default matches what the old `getBoolean(key, default)`
@@ -192,6 +193,7 @@ class UiSettingsStore(
                 automaticallyDownloadTranslationModels =
                     preferences[UI_DOWNLOAD_TRANSLATION_MODELS]?.let { name -> ConnectivityType.entries.firstOrNull { it.name == name } }
                         ?: ConnectivityType.WIFI_ONLY,
+                hideWalletBalances = preferences[UI_HIDE_WALLET_BALANCES] ?: false,
             )
         }
 
@@ -239,6 +241,7 @@ class UiSettingsStore(
             preferences[UI_SPELL_CHECK] = sharedSettings.spellCheck.name
             preferences[UI_NOTE_LAYOUT] = sharedSettings.noteLayout.name
             preferences[UI_DOWNLOAD_TRANSLATION_MODELS] = sharedSettings.automaticallyDownloadTranslationModels.name
+            preferences[UI_HIDE_WALLET_BALANCES] = sharedSettings.hideWalletBalances
         }
 
         /**
