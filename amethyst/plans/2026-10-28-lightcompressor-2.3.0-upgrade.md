@@ -2,7 +2,9 @@
 
 Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr` against `2.3.0-SNAPSHOT`;
 see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Device check (steps 4
-and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) before it can merge. (Written 2026-10-28 from the
+and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) before it can merge.
+One follow-up open since 2026-10-29: adopt the `CompressionHandle` from LightCompressor PR #53
+(section C, step 2, one device-check case in step 4). (Written 2026-10-28 from the
 LightCompressor session, HDR hint added 2026-10-29.)
 
 Amethyst depends on `com.github.davotoula:LightCompressor-enhanced:2.2.3`
@@ -128,8 +130,34 @@ deleting the file in `onSuccess` when `continuation.isActive` is false.
 **Decided 2026-10-29: not adopted.** `MultiOrchestrator.upload` launches one job per attachment,
 so two videos do compress at the same time and `cancel()` would stop the sibling upload. The
 orphan is deleted in `onSuccess` instead. **Library request** (LightCompressor-enhanced): a
-per-`start()` handle (`start(...)` returning something with `cancel()`, or `cancel(batchId)`), after
-which `invokeOnCancellation { handle.cancel() }` replaces the deletion block.
+per-`start()` handle (`start(...)` returning something with `cancel()`, or `cancel(batchId)`).
+
+**Library request done (2026-10-29, LightCompressor PR #53, bead 7og).** `VideoCompressor.start()`
+now returns a `CompressionHandle`; its `cancel()` cancels that one `start()` call's videos and
+leaves other batches running, and calling it after the batch finished does nothing. The local
+Maven `2.3.0-SNAPSHOT` has been republished from that branch (AAR of 2026-10-29 13:29 contains
+`CompressionHandle`), so this branch can adopt it before the tag. Change in
+`VideoCompressionHelper.compressVideo`, inside the existing `suspendCancellableCoroutine` block:
+
+```kotlin
+suspendCancellableCoroutine { continuation ->
+    val handle = VideoCompressor.start(/* unchanged arguments */)
+    continuation.invokeOnCancellation { handle.cancel() }
+}
+```
+
+Registering after `start()` returns is fine: if the continuation was already cancelled when
+`invokeOnCancellation` is called, the handler runs at once. The timeout and a cancelled post then
+stop the encode within a frame (or within 1 s through the library's watchdog) instead of letting
+it run to the end. The library sends `onCancelled` for the cancelled video, which the existing
+`onCancelled` override handles (`resume(null)` guarded by `isActive`, already false).
+
+Keep the `!continuation.isActive` deletion branch in `onSuccess`: a video that had already
+returned its result when the cancel landed still reports `onSuccess`, and that file still needs
+deleting. The handle saves the wasted encode, not that code. No new test is possible on the JVM
+(needs the real library); the device check in step 4 gains one case: cancel the post (or let a
+long clip hit the 60 s timeout) and confirm `logcat` shows the compression ending with
+"Video compression cancelled" rather than running on, and that `files/` is empty afterwards.
 
 ### D. Inputs without a MediaStore path are no longer copied
 
@@ -298,7 +326,9 @@ test; the device check in step 4 covers it.
    `:amethyst:assembleDebug`, run `:amethyst:testDebugUnitTest` for `MediaCompressorTest`,
    `SquarePixelsResizerTest`, `HlsVideoEventBuilderTest`, `HlsPublishOrchestratorTest`, then the
    whole module's unit tests. `spotlessApply` runs from the Stop hook.
-2. Decide A and C; implement C if adopted.
+2. Decide A and C; implement C if adopted. **Added 2026-10-29:** C's library request is done
+   (section C, "Library request done"); add the `invokeOnCancellation { handle.cancel() }` line
+   against the republished snapshot.
 3. Section F: `VideoHdrInfo` + `hdrUploadOutcome` + test (`commons`), `MediaUploader.probeHdr`
    + Android override, `VideoHdrHint` + wiring in the two dialogs (+ chat, if chosen), strings.
    Run `:commons:jvmTest`, `:commonsUI:jvmTest`, `:amethyst:testDebugUnitTest` and the desktop
@@ -317,7 +347,10 @@ test; the device check in step 4 covers it.
    - the HLG clip with H.265: `ffprobe -show_streams` on the downloaded upload shows `hevc`,
      `Main 10`, `yuv420p10le`, `color_transfer=arib-std-b67`;
    - the same clip with H.264: `h264`, `yuv420p`, `bt709`, no cyan on skin or highlights;
-   - a post containing each plays in Amethyst and in a desktop browser.
+   - a post containing each plays in Amethyst and in a desktop browser;
+   - (added 2026-10-29, after the handle) cancel a post while its video compresses: `logcat`
+     shows "Video compression cancelled" within a second or two, not a compression that runs
+     to the end, and `files/` is empty afterwards.
 5. After each run, `run-as com.vitorpamplona.amethyst.debug ls files/` shows no `_temp` or
    `transcode_*` leftovers (adjust the package id to the debug flavour in use).
 6. Do not merge with `-SNAPSHOT`: JitPack has no snapshot builds. Once 2.3.0 is tagged and
