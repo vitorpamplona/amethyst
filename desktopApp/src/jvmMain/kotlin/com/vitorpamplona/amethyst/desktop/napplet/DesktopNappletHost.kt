@@ -98,7 +98,9 @@ class DesktopNappletHost(
 
     private val signerLedger by lazy { NostrSignerPermissionLedger(modules.signerPermissionStore) }
 
-    private val brokers = HashMap<String, NappletBroker>()
+    // Each broker is tied to the Account it was built on: logging out and back in makes a new Account
+    // (the old one's scope and signer are closed), so a broker for the old one must not be reused.
+    private val brokers = HashMap<String, Pair<Account, NappletBroker>>()
 
     private val mutableSessions = MutableStateFlow<List<DesktopNappletSession>>(emptyList())
     val sessions: StateFlow<List<DesktopNappletSession>> = mutableSessions.asStateFlow()
@@ -113,7 +115,10 @@ class DesktopNappletHost(
             modules.sessionManager.accountContent
                 .map { (it as? AccountState.LoggedIn)?.account?.pubKey }
                 .distinctUntilChanged()
-                .collect { pubKey -> sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close) }
+                .collect { pubKey ->
+                    sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
+                }
         }
     }
 
@@ -194,7 +199,11 @@ class DesktopNappletHost(
 
     @Synchronized
     private fun brokerFor(account: Account): NappletBroker =
-        brokers.getOrPut(account.pubKey) {
+        brokers[account.pubKey]?.takeIf { it.first === account }?.second
+            ?: buildBroker(account).also { brokers[account.pubKey] = account to it }
+
+    private fun buildBroker(account: Account): NappletBroker =
+        run {
             val summary = NappletConsentSummary(modules.browserIcons, account)
             val resources =
                 NappletResourceFetcher(account, { useProxy -> modules.okHttpClients.getHttpClient(useProxy) }) { coordinate ->
