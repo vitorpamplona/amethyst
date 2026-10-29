@@ -37,6 +37,7 @@ import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
@@ -44,9 +45,15 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -57,12 +64,15 @@ import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
@@ -91,9 +101,9 @@ enum class HomeFeedType(
     HIGHLIGHTS("highlights", listOf(HighlightEvent.KIND)),
     POLLS("polls", listOf(PollEvent.KIND, ZapPollEvent.KIND, PollResponseEvent.KIND)),
     CLASSIFIEDS("classifieds", listOf(ClassifiedsEvent.KIND)),
-    TORRENTS("torrents", listOf(TorrentEvent.KIND)),
+    TORRENTS("torrents", listOf(TorrentEvent.KIND, TorrentCommentEvent.KIND)),
     VOICE("voice", listOf(VoiceEvent.KIND, VoiceReplyEvent.KIND)),
-    LIVE_ACTIVITIES("live_activities", listOf(LiveActivitiesEvent.KIND, LiveActivitiesChatMessageEvent.KIND)),
+    LIVE_ACTIVITIES("live_activities", listOf(LiveActivitiesEvent.KIND, LiveActivitiesChatMessageEvent.KIND, LiveActivitiesClipEvent.KIND)),
     EPHEMERAL_CHAT("ephemeral_chat", listOf(EphemeralChatEvent.KIND)),
     INTERACTIVE_STORIES("interactive_stories", listOf(InteractiveStoryPrologueEvent.KIND)),
     CHESS("chess", listOf(ChessGameEvent.KIND, LiveChessGameChallengeEvent.KIND, LiveChessGameEndEvent.KIND)),
@@ -110,11 +120,18 @@ enum class HomeFeedType(
     NIPS("nips", listOf(NipTextEvent.KIND)),
     MUSIC("music", listOf(AudioTrackEvent.KIND, MusicTrackEvent.KIND, MusicPlaylistEvent.KIND, AudioHeaderEvent.KIND)),
     PODCASTS("podcasts", listOf(PodcastEpisodeEvent.KIND, PodcastMetadataEvent.KIND)),
-    FUNDRAISERS("fundraisers", listOf(FundraiserEvent.KIND)),
-    EBOOKS("ebooks", listOf(EbookEvent.KIND)),
+    FUNDRAISERS("fundraisers", listOf(FundraiserEvent.KIND, ZapGoalEvent.KIND)),
+    EBOOKS("ebooks", listOf(EbookEvent.KIND, PublicationIndexEvent.KIND)),
     MAGAZINES("magazines", listOf(MagazineEvent.KIND, MagazineIssueEvent.KIND)),
     RATINGS("ratings", listOf(EntityRatingEvent.KIND)),
     CALENDAR_RSVPS("calendar_rsvps", listOf(CalendarRSVPEvent.KIND)),
+    THREADS("threads", listOf(ThreadEvent.KIND)),
+    CALENDAR_EVENTS("calendar_events", listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND)),
+    CODE_SNIPPETS("code_snippets", listOf(CodeSnippetEvent.KIND)),
+
+    // Repository announcements (30617) stay off Home: they are long-lived, replaceable listings
+    // without a published_at, so a back catalogue fills the feed and every edit resurfaces one.
+    GIT("git", listOf(GitIssueEvent.KIND, GitPullRequestEvent.KIND)),
     ;
 
     companion object {

@@ -42,13 +42,16 @@ import com.vitorpamplona.amethyst.commons.resources.conversations
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_articles
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_attestations
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_birds
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_calendar_events
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_calendar_rsvps
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_chess
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_classifieds
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_code_snippets
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_comments
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_ebooks
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_ephemeral_chat
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_fundraisers
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_git
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_highlights
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_interactive_stories
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_live_activities
@@ -62,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.resources.home_content_type_ratings
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_reposts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_shorts
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_text_notes
+import com.vitorpamplona.amethyst.commons.resources.home_content_type_threads
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_torrents
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_videos
 import com.vitorpamplona.amethyst.commons.resources.home_content_type_voice
@@ -189,6 +193,10 @@ private val HOME_FEED_TYPES =
         HomeFeedTypeUi(HomeFeedType.MAGAZINES, Res.string.home_content_type_magazines, MaterialSymbols.AutoMirrored.Article),
         HomeFeedTypeUi(HomeFeedType.RATINGS, Res.string.home_content_type_ratings, MaterialSymbols.Star),
         HomeFeedTypeUi(HomeFeedType.CALENDAR_RSVPS, Res.string.home_content_type_calendar_rsvps, MaterialSymbols.CalendarMonth),
+        HomeFeedTypeUi(HomeFeedType.THREADS, Res.string.home_content_type_threads, MaterialSymbols.Topic),
+        HomeFeedTypeUi(HomeFeedType.CALENDAR_EVENTS, Res.string.home_content_type_calendar_events, MaterialSymbols.EventAvailable),
+        HomeFeedTypeUi(HomeFeedType.CODE_SNIPPETS, Res.string.home_content_type_code_snippets, MaterialSymbols.Code),
+        HomeFeedTypeUi(HomeFeedType.GIT, Res.string.home_content_type_git, MaterialSymbols.ForkRight),
     )
 
 /**
