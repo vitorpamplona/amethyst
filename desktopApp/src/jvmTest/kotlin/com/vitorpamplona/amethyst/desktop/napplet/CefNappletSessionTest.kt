@@ -83,18 +83,18 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * [DesktopNappletSession] end to end: blobs from a local "Blossom" server, the shared shell and shim,
+ * [CefNappletSession] end to end: blobs from a local "Blossom" server, the shared shell and shim,
  * the broker, and (opt-in) real Chromium.
  *
  * The Chromium tests need a display and download the CEF bundle on first run, so they run only with
  * AMETHYST_CEF_TEST=1, for example:
  *
- *   AMETHYST_CEF_TEST=1 xvfb-run -a ./gradlew :desktopApp:test --tests '*DesktopNappletSessionTest*'
+ *   AMETHYST_CEF_TEST=1 xvfb-run -a ./gradlew :desktopApp:test --tests '*CefNappletSessionTest*'
  *
  * AMETHYST_CEF_DIR reuses an unpacked bundle; AMETHYST_DOOM_HTML adds the Doom napplet
  * (tools/napplet-doom/build/index.html).
  */
-class DesktopNappletSessionTest {
+class CefNappletSessionTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val tmp = createTempDirectory("napplet-session-test").toFile()
     private val blobs = ConcurrentHashMap<String, ByteArray>()
@@ -121,7 +121,7 @@ class DesktopNappletSessionTest {
             start()
         }
     private val serverUrl = "http://127.0.0.1:${server.address.port}"
-    private val sessions = mutableListOf<DesktopNappletSession>()
+    private val sessions = mutableListOf<CefNappletSession>()
     private var frame: JFrame? = null
 
     companion object {
@@ -185,7 +185,7 @@ class DesktopNappletSessionTest {
         storage: NappletStorage,
         runtime: DesktopNappletRuntime,
         servedBytes: ByteArray = html,
-    ): DesktopNappletSession {
+    ): CefNappletSession {
         val hash = sha256(html).toHexKey()
         blobs[hash] = servedBytes
         val author = KeyPair()
@@ -206,7 +206,7 @@ class DesktopNappletSessionTest {
                 paths = listOf(PathTag("/index.html", hash)),
                 servers = listOf(serverUrl),
             )
-        return DesktopNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime).also { sessions += it }
+        return CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime).also { sessions += it }
     }
 
     @Test
@@ -214,9 +214,9 @@ class DesktopNappletSessionTest {
         runBlocking {
             val session = session("<p>signed</p>".encodeToByteArray(), RecordingStorage(), runtime(), servedBytes = "<p>swapped</p>".encodeToByteArray())
             session.start()
-            val state = withTimeout(30_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
-            assertIs<DesktopNappletSession.State.Failed>(state)
-            assertEquals(DesktopNappletSession.Failure.UNREACHABLE, state.reason)
+            val state = withTimeout(30_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+            assertIs<CefNappletSession.State.Failed>(state)
+            assertEquals(CefNappletSession.Failure.UNREACHABLE, state.reason)
         }
 
     private fun cefRuntime(): DesktopNappletRuntime {
@@ -224,10 +224,10 @@ class DesktopNappletSessionTest {
         return runtime(sharedEngine)
     }
 
-    private suspend fun show(session: DesktopNappletSession) {
+    private suspend fun show(session: CefNappletSession) {
         session.start()
-        val state = withTimeout(600_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
-        assertIs<DesktopNappletSession.State.Showing>(state, "the napplet did not open: $state")
+        val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+        assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
         // A windowed CEF browser is created when its component is first shown.
         SwingUtilities.invokeAndWait {
             frame =
@@ -329,7 +329,7 @@ class DesktopNappletSessionTest {
         author: NostrSignerInternal,
         prompts: SitePrompts = SitePrompts(),
         useTor: Boolean = false,
-    ): DesktopNappletSession {
+    ): CefNappletSession {
         files.values.forEach { blobs[sha256(it).toHexKey()] = it }
         val paths = files.map { (path, bytes) -> PathTag(path, sha256(bytes).toHexKey()) }
         val event: NamedSiteEvent = author.sign(NamedSiteEvent.build("blog", paths, servers = listOf(serverUrl), title = "Blog"))
@@ -352,7 +352,7 @@ class DesktopNappletSessionTest {
                     },
             )
         val launch = NappletLaunch.fromSite(event).getOrThrow()
-        return DesktopNappletSession(launch, user.pubKey, useTor, account = null, broker = broker, runtime = runtime).also { sessions += it }
+        return CefNappletSession(launch, user.pubKey, useTor, account = null, broker = broker, runtime = runtime).also { sessions += it }
     }
 
     @Test
@@ -361,9 +361,9 @@ class DesktopNappletSessionTest {
             val user = NostrSignerInternal(KeyPair())
             val session = site(mapOf("/index.html" to "<p>hi</p>".encodeToByteArray()), runtime(), user, NostrSignerInternal(KeyPair()), useTor = true)
             session.start()
-            val state = withTimeout(30_000) { session.state.first { it is DesktopNappletSession.State.Showing || it is DesktopNappletSession.State.Failed } }
-            assertIs<DesktopNappletSession.State.Failed>(state)
-            assertEquals(DesktopNappletSession.Failure.ROUTE_BLOCKED, state.reason)
+            val state = withTimeout(30_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+            assertIs<CefNappletSession.State.Failed>(state)
+            assertEquals(CefNappletSession.Failure.ROUTE_BLOCKED, state.reason)
             assertTrue(requested.isEmpty(), "not even its files were fetched: $requested")
         }
 

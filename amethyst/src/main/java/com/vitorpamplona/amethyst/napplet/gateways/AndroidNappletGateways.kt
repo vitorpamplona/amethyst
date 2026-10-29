@@ -49,7 +49,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
-import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.NsiteNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.currentNappletThemeColors
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.crypto.sha2.sha256
@@ -64,7 +64,7 @@ import java.io.ByteArrayInputStream
  * Activity, through its coordinator), the system notifications behind NAP `notify`, and Blossom
  * uploads. The broker itself owns the trust boundary. Built once per account and cached by the caller.
  */
-class AccountNappletGateways(
+class AndroidNappletGateways(
     private val account: Account,
     private val context: Context,
     private val ledger: NappletPermissionLedger,
@@ -125,8 +125,8 @@ class AccountNappletGateways(
             // rest of the app, instead of a private client that has to re-wire all of it.
             httpClient = httpClient,
             useTor = { coordinate ->
-                NappletNetworkRegistry.awaitReady()
-                NappletNetworkRegistry.useTor(coordinate)
+                NsiteNetworkRegistry.awaitReady()
+                NsiteNetworkRegistry.useTor(coordinate)
             },
             prompts = prompts,
             theme = NappletThemeGateway { currentNappletThemeColors(context) },

@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet.ui
 
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.ConsentSubject
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability

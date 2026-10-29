@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.ui
 
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.ProfileField
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.profileFieldChanges
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.consent_delete_about
 import com.vitorpamplona.amethyst.commons.resources.consent_delete_count
@@ -64,75 +66,16 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_op_update_profile
 import com.vitorpamplona.amethyst.commons.ui.loadPluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
-import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.people.taggedUserIds
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
-import com.vitorpamplona.quartz.nip19Bech32.entities.NPub
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.longOrNull
-
-/**
- * A kind-22242 that names no relay is a web app proving to its own server who you are (Brainstorm
- * signs `t=brainstorm_login`), not a NIP-42 relay login, and the prompt should say so.
- */
-fun isAppLogin(
-    kind: Int,
-    tags: Array<Array<String>>,
-): Boolean = kind == RelayAuthEvent.KIND && tags.none { it.size > 1 && it[0] == "relay" && it[1].isNotBlank() }
-
-/** What a kind-13 seal carries, recovered from the encryption that produced its content. */
-class SealContents(
-    val recipient: HexKey,
-    /** The rumor as an unsigned template, so the prompt can render the message itself. */
-    val rumor: EventTemplate<Event>?,
-    val rumorJson: String,
-)
-
-/**
- * The message inside a seal, when this broker encrypted it moments ago (see
- * [NappletRecentEncryptions]); null when it can't know, in which case the prompt says so instead of
- * showing ciphertext.
- */
-fun sealContents(
-    kind: Int,
-    content: String,
-    recent: NappletRecentEncryptions?,
-): SealContents? {
-    if (kind != SealEvent.KIND) return null
-    val entry = recent?.lookup(content) ?: return null
-    val rumor =
-        runCatching {
-            val node = Json.parseToJsonElement(entry.plaintext).jsonObject
-            val tags =
-                node["tags"]
-                    ?.jsonArray
-                    ?.map { tag -> tag.jsonArray.map { it.jsonPrimitive.content }.toTypedArray() }
-                    ?.toTypedArray() ?: emptyArray()
-            EventTemplate<Event>(
-                createdAt = node["created_at"]?.jsonPrimitive?.longOrNull ?: 0L,
-                kind = node["kind"]?.jsonPrimitive?.intOrNull ?: return@runCatching null,
-                tags = tags,
-                content = node["content"]?.jsonPrimitive?.content ?: "",
-            )
-        }.getOrNull()
-    val pretty = runCatching { KitePretty.format(entry.plaintext) }.getOrDefault(entry.plaintext)
-    return SealContents(entry.recipient, rumor, pretty)
-}
 
 /** One line telling the user what a people-list update changes, and whether it is alarming. */
 class ListChange(
@@ -289,46 +232,6 @@ suspend fun signRequestSummary(
         else -> null
     }
 
-/** A profile field the consent prompt can name. */
-enum class ProfileField { NAME, DISPLAY_NAME, PICTURE, BANNER, ABOUT, WEBSITE, NIP05, LIGHTNING }
-
-/** Which named fields a profile update changes or removes, and whether it drops any data at all. */
-class ProfileFieldChanges(
-    val changed: List<ProfileField>,
-    val removed: List<ProfileField>,
-    val removesData: Boolean,
-)
-
-/**
- * Compares a proposed kind 0 ([tags] + [content], unsigned) with [current]. Reads the content JSON,
- * as every Amethyst screen does, so the line matches what the profile will show once published.
- */
-fun profileFieldChanges(
-    current: MetadataEvent,
-    tags: Array<Array<String>>,
-    content: String,
-): ProfileFieldChanges? {
-    val proposed = MetadataEvent("0".repeat(64), current.pubKey, current.createdAt + 1, tags, content, "0".repeat(128))
-    val diff = proposed.diffFrom(current) ?: return null
-    val fields =
-        listOfNotNull(
-            diff.name?.let { ProfileField.NAME to it.isRemoval() },
-            diff.displayName?.let { ProfileField.DISPLAY_NAME to it.isRemoval() },
-            diff.picture?.let { ProfileField.PICTURE to it.isRemoval() },
-            diff.banner?.let { ProfileField.BANNER to it.isRemoval() },
-            diff.about?.let { ProfileField.ABOUT to it.isRemoval() },
-            diff.website?.let { ProfileField.WEBSITE to it.isRemoval() },
-            diff.nip05?.let { ProfileField.NIP05 to it.isRemoval() },
-            diff.lud16?.let { ProfileField.LIGHTNING to it.isRemoval() },
-            diff.lud06?.let { ProfileField.LIGHTNING to it.isRemoval() },
-        ).distinctBy { it.first }
-    return ProfileFieldChanges(
-        changed = fields.filterNot { it.second }.map { it.first },
-        removed = fields.filter { it.second }.map { it.first },
-        removesData = diff.removesData(),
-    )
-}
-
 private fun ProfileField.label() =
     when (this) {
         ProfileField.NAME -> Res.string.consent_profile_field_name
@@ -366,19 +269,4 @@ suspend fun profileChange(
     if (changes.removed.isNotEmpty()) parts += loadStringRes(Res.string.consent_profile_removes, changes.removed.map { loadStringRes(it.label()) }.joinToString(", "))
     if (parts.isEmpty()) parts += loadStringRes(Res.string.consent_profile_removes_other)
     return ListChange(parts.joinToString(" · "), warning = changes.removesData)
-}
-
-/**
- * A person's display name for a consent prompt: their profile name when we have it cached, otherwise
- * a shortened npub. Never empty — "read your private messages with <nothing>" would be worse than the
- * broad wording it replaces.
- */
-fun counterpartyLabel(pubKeyHex: HexKey): String {
-    LocalCache
-        .getUserIfExists(pubKeyHex)
-        ?.toBestDisplayName()
-        ?.ifBlank { null }
-        ?.let { return it }
-    val npub = runCatching { NPub.create(pubKeyHex) }.getOrNull()
-    return if (npub != null) npub.take(12) + "…" else pubKeyHex.take(12) + "…"
 }

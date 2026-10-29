@@ -73,7 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
-import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.NsiteNetworkRegistry
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabChrome
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabFactory
@@ -203,7 +203,7 @@ private fun EmbeddedNostrAppTab(
                         BrowserChrome.Action.ACCESS_INFO -> showAccess = true
                         BrowserChrome.Action.TOR -> {
                             // Persist the new route, then rebuild the session so it loads that way.
-                            NappletNetworkRegistry.set(permissionCoordinate, !useTor)
+                            NsiteNetworkRegistry.set(permissionCoordinate, !useTor)
                             EmbeddedTabHost.rebuild(id)
                             networkEpoch++
                         }

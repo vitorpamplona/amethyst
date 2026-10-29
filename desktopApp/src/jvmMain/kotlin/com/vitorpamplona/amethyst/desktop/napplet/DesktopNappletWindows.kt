@@ -144,7 +144,7 @@ fun DesktopNappletWindows(host: DesktopNappletHost) {
 
 @Composable
 private fun NappletWindow(
-    session: DesktopNappletSession,
+    session: CefNappletSession,
     host: DesktopNappletHost,
 ) {
     val windowState = rememberWindowState(size = DpSize(1024.dp, 760.dp), position = WindowPosition.Aligned(Alignment.Center))
@@ -164,15 +164,15 @@ private fun NappletWindow(
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
-                        is DesktopNappletSession.State.Showing -> SwingPanel(factory = { current.component }, modifier = Modifier.fillMaxSize())
-                        is DesktopNappletSession.State.Loading -> LoadingPane(host, session.launch.title)
-                        is DesktopNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
-                        is DesktopNappletSession.State.Failed ->
+                        is CefNappletSession.State.Showing -> SwingPanel(factory = { current.component }, modifier = Modifier.fillMaxSize())
+                        is CefNappletSession.State.Loading -> LoadingPane(host, session.launch.title)
+                        is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
+                        is CefNappletSession.State.Failed ->
                             MessagePane(
                                 when (current.reason) {
-                                    DesktopNappletSession.Failure.UNREACHABLE -> stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title)
-                                    DesktopNappletSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
-                                    DesktopNappletSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, session.launch.title)
+                                    CefNappletSession.Failure.UNREACHABLE -> stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title)
+                                    CefNappletSession.Failure.ENGINE -> stringRes(Res.string.napplet_desktop_failed_engine)
+                                    CefNappletSession.Failure.ROUTE_BLOCKED -> stringRes(Res.string.napplet_desktop_failed_route, session.launch.title)
                                 },
                                 onRetry = { host.reopen(session) },
                             )
@@ -195,7 +195,7 @@ private fun NappletWindow(
  */
 @Composable
 private fun SandboxToolbar(
-    session: DesktopNappletSession,
+    session: CefNappletSession,
     host: DesktopNappletHost,
     onAccessInfo: () -> Unit,
 ) {
@@ -213,7 +213,7 @@ private fun SandboxToolbar(
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.browser_pill_back), enabled = page.canGoBack) { session.goBack() }
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
             val state by session.state.collectAsState()
-            val showing = state is DesktopNappletSession.State.Showing
+            val showing = state is CefNappletSession.State.Showing
             if (page.isLoading) {
                 ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_stop), enabled = showing) { session.stop() }
             } else {
@@ -241,7 +241,7 @@ private fun SandboxToolbar(
                 finding = !finding
                 if (!finding) session.stopFinding()
             }
-            ToolbarButton(MaterialSymbols.Remove, stringRes(Res.string.browser_pill_text_smaller), enabled = page.zoomPercent > DesktopNappletSession.MIN_ZOOM) {
+            ToolbarButton(MaterialSymbols.Remove, stringRes(Res.string.browser_pill_text_smaller), enabled = page.zoomPercent > CefNappletSession.MIN_ZOOM) {
                 session.setZoom(page.zoomPercent - ZOOM_STEP)
             }
             Text(
@@ -250,7 +250,7 @@ private fun SandboxToolbar(
                 modifier = Modifier.widthIn(min = 40.dp),
                 textAlign = TextAlign.Center,
             )
-            ToolbarButton(MaterialSymbols.Add, stringRes(Res.string.browser_pill_text_larger), enabled = page.zoomPercent < DesktopNappletSession.MAX_ZOOM) {
+            ToolbarButton(MaterialSymbols.Add, stringRes(Res.string.browser_pill_text_larger), enabled = page.zoomPercent < CefNappletSession.MAX_ZOOM) {
                 session.setZoom(page.zoomPercent + ZOOM_STEP)
             }
 
@@ -301,7 +301,7 @@ private fun SandboxToolbar(
 
 @Composable
 private fun FindBar(
-    session: DesktopNappletSession,
+    session: CefNappletSession,
     onClose: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
@@ -362,7 +362,7 @@ private fun ToolbarButton(
 /** What this napplet or site may ask for, in plain language, as Android's pill shows it. */
 @Composable
 private fun AccessWindow(
-    session: DesktopNappletSession,
+    session: CefNappletSession,
     host: DesktopNappletHost,
     onDone: () -> Unit,
 ) {
@@ -398,7 +398,7 @@ private fun AccessWindow(
  */
 @Composable
 private fun ConsentWindows(
-    session: DesktopNappletSession,
+    session: CefNappletSession,
     host: DesktopNappletHost,
 ) {
     val coordinate = session.launch.identity.coordinate

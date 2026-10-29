@@ -44,7 +44,7 @@ import kotlinx.coroutines.launch
  * write-through persistence. Absent means Tor (the safe default), so a site never silently starts on
  * the open web before the on-disk preference has loaded.
  */
-class NappletNetworkChoices(
+class NsiteNetworkChoices(
     private val dataStore: DataStore<Preferences>,
     private val scope: CoroutineScope,
 ) {

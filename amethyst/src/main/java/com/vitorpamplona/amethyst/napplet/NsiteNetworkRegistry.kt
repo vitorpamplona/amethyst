@@ -20,29 +20,27 @@
  */
 package com.vitorpamplona.amethyst.napplet
 
-import android.content.Context
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.napplet.NappletNetworkChoices
+import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 
 /**
- * The app-wide [NappletNetworkChoices]: whether each nSite routes through Tor (the default) or over
+ * The app-wide [NsiteNetworkChoices]: whether each nSite routes through Tor (the default) or over
  * the open web, on the same `napplet_network` file as before, so nothing migrates.
  *
  * Lives only in the **main process**: the launcher reads it, and [NappletBrokerService] writes it
  * when the key-free `:napplet` sandbox relays a toggle over IPC. The sandbox never touches it, and
  * [Amethyst.instance] is deliberately unset there.
  */
-object NappletNetworkRegistry {
+object NsiteNetworkRegistry {
     private val choices by lazy {
-        NappletNetworkChoices(Amethyst.instance.appStores.getDataStore("napplet_network"), CoroutineScope(SupervisorJob() + Dispatchers.IO))
+        NsiteNetworkChoices(Amethyst.instance.appStores.getDataStore("napplet_network"), CoroutineScope(SupervisorJob() + Dispatchers.IO))
     }
 
-    /** Starts loading the on-disk choices. Idempotent. */
-    @Suppress("UNUSED_PARAMETER")
-    fun init(context: Context) {
+    /** Starts loading the on-disk choices ahead of the first read. Idempotent. */
+    fun preload() {
         choices
     }
 

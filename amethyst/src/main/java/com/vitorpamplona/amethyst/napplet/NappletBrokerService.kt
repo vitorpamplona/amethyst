@@ -50,7 +50,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
-import com.vitorpamplona.amethyst.napplet.gateways.AccountNappletGateways
+import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -70,7 +70,7 @@ import java.util.concurrent.ConcurrentHashMap
  * The trust boundary's main-process endpoint. The untrusted `:napplet` process binds this
  * service and sends requests as JSON over a [Messenger]; this is the only side that holds the
  * signer, the relays, and the permission ledger. It runs each request through the shared
- * [NappletBroker] (built per account by [AccountNappletGateways]) via the host-agnostic
+ * [NappletBroker] (built per account by [AndroidNappletGateways]) via the host-agnostic
  * [NappletRequestRouter], which gates everything on consent and never returns key material.
  *
  * This class is intentionally thin: it owns the Messenger transport, the per-account broker cache,
@@ -375,8 +375,8 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_SET_NETWORK_MODE) {
             val data = msg.data ?: return true
             val session = NappletLaunchRegistry.resolve(data.getString(NappletIpc.KEY_LAUNCH_TOKEN)) ?: return true
-            NappletNetworkRegistry.init(applicationContext)
-            NappletNetworkRegistry.set(session.identity.coordinate, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
+            NsiteNetworkRegistry.preload()
+            NsiteNetworkRegistry.set(session.identity.coordinate, data.getBoolean(NappletIpc.KEY_NETWORK_USE_TOR, true))
             return true
         }
 
@@ -566,7 +566,7 @@ class NappletBrokerService : Service() {
         synchronized(brokerLock) {
             cachedBroker?.let { (acc, broker) -> if (acc === account) return broker }
             val broker =
-                AccountNappletGateways(
+                AndroidNappletGateways(
                     account = account,
                     context = applicationContext,
                     ledger = ledger,

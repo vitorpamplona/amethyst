@@ -98,7 +98,7 @@ import kotlin.math.ln
  *   system browser. Embeds inside a website (a video player) may load their own pages.
  * - Every request is decided by [NappletRequestRouter] and the broker, as on Android.
  */
-class DesktopNappletSession(
+class CefNappletSession(
     val launch: NappletLaunch,
     /** The account that opened it: the window keeps signing as this account, whoever is active later. */
     val accountPubKey: HexKey,
@@ -197,13 +197,13 @@ class DesktopNappletSession(
                 if (needsTor && !runtime.routes.torRunning) mutableState.value = State.WaitingForTor
                 val routed =
                     if (isWebsite) {
-                        runtime.routes.claim(this@DesktopNappletSession, useTor, runtime.torWaitMs)
+                        runtime.routes.claim(this@CefNappletSession, useTor, runtime.torWaitMs)
                     } else {
                         !needsTor || runtime.routes.awaitTor(runtime.torWaitMs)
                     }
                 // Closed while it waited: its claim was filed after close() released it.
                 if (closed) {
-                    if (isWebsite) runtime.routes.release(this@DesktopNappletSession)
+                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
                     return@launch
                 }
                 if (!routed) {
@@ -236,11 +236,11 @@ class DesktopNappletSession(
                     synchronized(lifecycle) {
                         if (closed) return@launch
                         val client = app.createClient()
-                        this@DesktopNappletSession.client = client
+                        this@CefNappletSession.client = client
                         installHandlers(client)
                         client.createBrowser(NappletWebContract.SHELL_URL, false, false).also {
-                            this@DesktopNappletSession.browser = it
-                            runtime.attendance.set(this@DesktopNappletSession, true)
+                            this@CefNappletSession.browser = it
+                            runtime.attendance.set(this@CefNappletSession, true)
                         }
                     }
                 mutableState.value = State.Showing(browser.uiComponent)
@@ -451,8 +451,8 @@ class DesktopNappletSession(
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
-                    runtime.liveSubscriptions.open(this@DesktopNappletSession, outcome.subId, outcome.filters, account, ::send)
-                is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@DesktopNappletSession, outcome.subId)
+                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, ::send)
+                is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId)
                 // The inc bus is not offered on desktop (INC is not a supported NAP domain).
                 else -> {}
             }
@@ -621,7 +621,7 @@ class DesktopNappletSession(
     }
 
     companion object {
-        private const val TAG = "DesktopNappletSession"
+        private const val TAG = "CefNappletSession"
         private const val QUERY_FUNCTION = "__amethystNappletQuery"
         private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
         const val MIN_ZOOM = 50

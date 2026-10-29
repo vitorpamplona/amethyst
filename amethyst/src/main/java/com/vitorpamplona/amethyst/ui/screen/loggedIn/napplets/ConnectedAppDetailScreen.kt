@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -83,7 +84,6 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
-import com.vitorpamplona.amethyst.commons.napplet.ui.counterpartyLabel
 import com.vitorpamplona.amethyst.commons.napplet.ui.descriptionRes
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
 import com.vitorpamplona.amethyst.commons.napplet.ui.symbol

@@ -49,7 +49,7 @@ class DesktopNappletRuntime(
     /** How long a site that asked for Tor waits for it before failing closed. */
     val torWaitMs: Long = 30_000L,
 ) {
-    val attendance = NappletAttendance<DesktopNappletSession>()
+    val attendance = NappletAttendance<CefNappletSession>()
 
     val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
 

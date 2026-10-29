@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.Nip46ConsentInfoBuilder
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.sealContents
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -38,24 +40,16 @@ import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_seal_unknown
 import com.vitorpamplona.amethyst.commons.resources.napplet_fallback_title
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_blossom
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_decrypt_from
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_encrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message
 import com.vitorpamplona.amethyst.commons.resources.napplet_op_seal_message_to
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_in
-import com.vitorpamplona.amethyst.commons.resources.napplet_op_sign_kind_named
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_allow_always_for
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.label
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.relays.kindNameFor
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.kite.KitePretty
 import com.vitorpamplona.quartz.nip01Core.kite.KiteWriter
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
-import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.add
@@ -63,25 +57,6 @@ import kotlinx.serialization.json.addJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
-
-/** Human-readable label for a [NostrSignerOp]. */
-suspend fun NostrSignerOp.label(): String =
-    when (this) {
-        is NostrSignerOp.SignKind ->
-            if (kind == RelayAuthEvent.KIND) {
-                // A login (to a relay or an app server; the stored grant covers both) is not "signing" anything the
-                // user would recognise; say what it does.
-                loadStringRes(Res.string.napplet_op_sign_in)
-            } else if (kind == BlossomAuthorizationEvent.KIND) {
-                // One grant covers every media-server verb (upload, delete, list), so name the server use.
-                loadStringRes(Res.string.napplet_op_blossom)
-            } else {
-                loadStringRes(Res.string.napplet_op_sign_kind_named, kindNameFor(kind), kind)
-            }
-        NostrSignerOp.Encrypt -> loadStringRes(Res.string.napplet_op_encrypt)
-        NostrSignerOp.Decrypt -> loadStringRes(Res.string.napplet_op_decrypt)
-        is NostrSignerOp.DecryptFrom -> loadStringRes(Res.string.napplet_op_decrypt_from, counterpartyLabel(counterparty))
-    }
 
 /** Builds the [SignerConsentInfo] needed by the per-op consent dialog. */
 suspend fun buildSignerConsentInfo(

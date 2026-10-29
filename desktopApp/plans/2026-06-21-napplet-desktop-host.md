@@ -85,9 +85,10 @@ These reduce desktop reimplementation and prevent drift:
 
 ## Built (2026-10-29)
 
-Napplets and nSites open from the feed card's Open button (`DesktopNotePlatform` →
-`DesktopNappletCard`, `DesktopSiteCard`; the shared nSites and nApplets screens render through it)
-and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each in its own window.
+Napplets and nSites open from the feed card's Open button and from favorites and the browser home,
+each in its own window. The card is the shared one every platform renders (`StaticWebsiteManifestCard`,
+with the favorite star and a prefetch of its files while on screen); Open goes through the shared
+`AppLauncher`, which `DesktopAppPlatform` implements with the host.
 
 - **Engine:** raw JCEF through jcefmaven (`me.friwi:jcefmaven`, Apache-2.0; JCEF and CEF BSD-3;
   Chromium's `libcef.so` includes FFmpeg, LGPL-2.1). KCEF was dropped: no release since 2025-03.
@@ -122,14 +123,14 @@ and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each 
   and deletes it from its window. Replies go back through `executeJavaScript` into the shell's
   `__nappletBridge.onmessage`, with the request id added as on Android; replies queued together go
   in one script, in order.
-- **Broker:** `DesktopNappletHost` builds one per account with the gateways now shared in
-  commons (`AccountNappletRelayGateway`, `AccountNappletWalletGateway`, `NappletResourceFetcher`,
-  `AccountIdentityReader`, `DataStoreNappletStorage`) and the persisted
-  `DataStoreNappletPermissionStore` ledger. Live subscriptions use the now-generic
+- **Broker:** one per account from `buildAccountNappletBroker` (commonsUI), the factory Android
+  uses too: the account's relays, wallet, resource fetches and identity reads, its signer without
+  Amethyst's client tag, and the persisted `DataStoreNappletPermissionStore` ledger. Live subscriptions use the now-generic
   `NappletLiveSubscriptions`. Windows close when their launching account is no longer logged in.
-- **Consent:** `NappletConsentCard` (commonsUI, now also Android's dialog body) in a separate
-  `DialogWindow`, so Chromium's heavyweight view can't cover it; text from the shared
-  `NappletConsentSummary`.
+- **Consent:** questions wait in `NappletPromptQueues` (commons, on the `ConsentQueue` Android's
+  coordinators also use) under their app; each window shows its app's oldest in a separate
+  `DialogWindow`, so Chromium's heavyweight view can't cover it, with the shared cards
+  (`NappletConsentCard`, `SignerConnectCard`, `SignerConsentCard`, `BatchedConsentCard`).
 - **Theme:** `theme.get` and `theme.changed` follow the app's Material colors.
 - **nSites** (`HostProfile.WEBSITE`, now in commonsUI and shared with Android): the shell from the
   shared `NappletWebContract.shell`, the site at its own `napplet.local` origin with
@@ -139,7 +140,7 @@ and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each 
   `partition`), because CEF keeps one storage jar where Android picks a WebView profile per
   account. Requests to other hosts go out on the site's route. The shell and the site's own frame
   never navigate away (a clicked link opens the system browser); embeds inside the site may.
-- **Network:** `NappletNetworkChoices` (commons, Android's `NappletNetworkRegistry` now delegates
+- **Network:** `NsiteNetworkChoices` (commons, Android's `NsiteNetworkRegistry` now delegates
   to it) keeps each site's Tor or open-web choice, Tor by default while Tor is on.
   `DesktopNappletRoutes` arbitrates the router's one route like Android's process-wide WebView
   proxy: any site on Tor takes everything through Tor (an open-web site then says so), otherwise
@@ -154,7 +155,7 @@ and from favorites and the browser home (`DesktopAppPlatform`'s launcher), each 
   reload/stop, the title and posture (opens Android's `AccessInfoSheet`), find, zoom, the onion
   switch for a site while Tor is on, and Close. Loading, waiting for Tor and each failure have
   their own pane with Try again.
-- **Tests:** `DesktopNappletSessionTest`: a tampered blob never loads; a Tor site doesn't open
+- **Tests:** `CefNappletSessionTest`: a tampered blob never loads; a Tor site doesn't open
   while Tor is down and fetches nothing; with `AMETHYST_CEF_TEST=1` under a display, a probe
   napplet's direct call to the bridge from its iframe is refused while the shim's storage round
   trip works and its `fetch` never reaches the server, the Doom napplet boots and asks for its
@@ -191,3 +192,8 @@ fixed: blob downloads read with an API-33 call on Android (minSdk 26), WebRTC le
 router, refused SOCKS connections left open, names resolving to loopback, a broker kept for a
 logged-out account, races between a window's start and close and between route claims, and the
 performance items folded into Serving and Transport above.
+
+Then the structural review's remaining steps: the broker factory and the consent queue are shared
+(above), the card is the shared renderer's, and names say what each class is: `CefNappletSession`
+(the JCEF session), `NsiteNetworkChoices`, the string-free consent helpers in commons
+(`SignerConsentFacts.kt`).

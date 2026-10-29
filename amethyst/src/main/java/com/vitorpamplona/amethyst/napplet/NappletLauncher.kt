@@ -145,11 +145,11 @@ object NappletLauncher {
 
         // Resolve the per-site network choice (Tor default; a site can be opted out to the open web).
         // Locked napplets always keep Tor for their blob fetches — only nSites expose the toggle.
-        NappletNetworkRegistry.init(context.applicationContext)
+        NsiteNetworkRegistry.preload()
         // Whether Tor is ON, not whether its port is known yet: with Tor on and no port the host refuses to
         // fetch anything (fails closed) instead of going out directly while Tor is still starting.
         val torEnabled = Amethyst.instance.torPrefs.torType.value != TorType.OFF
-        val useTor = torEnabled && (!profile.exposesNetwork || NappletNetworkRegistry.useTor(identity.coordinate))
+        val useTor = torEnabled && (!profile.exposesNetwork || NsiteNetworkRegistry.useTor(identity.coordinate))
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { stringRes(context, it.labelResId()) }

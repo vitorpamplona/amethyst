@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.napplet.ui
+package com.vitorpamplona.amethyst.commons.connectedApps.consent
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
@@ -28,7 +28,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SignerConsentDetailsTest {
+class SignerConsentFactsTest {
     private val vitor = "46".repeat(32)
 
     @Test

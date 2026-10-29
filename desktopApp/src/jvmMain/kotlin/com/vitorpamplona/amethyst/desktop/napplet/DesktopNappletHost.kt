@@ -26,10 +26,10 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
-import com.vitorpamplona.amethyst.commons.napplet.NappletNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
+import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
@@ -76,7 +76,7 @@ class DesktopNappletHost(
 
     val consent = NappletPromptQueues()
 
-    val networkChoices = NappletNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope)
+    val networkChoices = NsiteNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope)
 
     private val accountScope: () -> String = { modules.sessionManager.loggedInAccount()?.pubKey ?: "" }
 
@@ -88,8 +88,8 @@ class DesktopNappletHost(
     // (the old one's scope and signer are closed), so a broker for the old one must not be reused.
     private val brokers = HashMap<String, Pair<Account, NappletBroker>>()
 
-    private val mutableSessions = MutableStateFlow<List<DesktopNappletSession>>(emptyList())
-    val sessions: StateFlow<List<DesktopNappletSession>> = mutableSessions.asStateFlow()
+    private val mutableSessions = MutableStateFlow<List<CefNappletSession>>(emptyList())
+    val sessions: StateFlow<List<CefNappletSession>> = mutableSessions.asStateFlow()
 
     @Volatile
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
@@ -114,7 +114,7 @@ class DesktopNappletHost(
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
 
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
-    fun open(manifest: NappletManifest): Result<DesktopNappletSession> {
+    fun open(manifest: NappletManifest): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open napplets"))
         return NappletLaunch.fromManifest(manifest).map { open(it, account, useTor = false) }
     }
@@ -124,7 +124,7 @@ class DesktopNappletHost(
      * [com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent]) in a new window. It goes
      * through Tor when Tor is on, unless the user moved this site to the open web.
      */
-    fun openSite(event: Event): Result<DesktopNappletSession> {
+    fun openSite(event: Event): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open sites"))
         return NappletLaunch.fromSite(event).map { launch ->
             open(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate))
@@ -136,7 +136,7 @@ class DesktopNappletHost(
      * the new route, as Android relaunches its activity.
      */
     fun setNetworkMode(
-        session: DesktopNappletSession,
+        session: CefNappletSession,
         useTor: Boolean,
     ) {
         val account = modules.sessionManager.loggedInAccount() ?: return
@@ -146,7 +146,7 @@ class DesktopNappletHost(
     }
 
     /** Opens [session]'s app again in a fresh window, after a failure the user wants to retry. */
-    fun reopen(session: DesktopNappletSession) {
+    fun reopen(session: CefNappletSession) {
         val account = modules.sessionManager.loggedInAccount() ?: return
         close(session)
         open(session.launch, account, session.useTor)
@@ -156,13 +156,13 @@ class DesktopNappletHost(
         launch: NappletLaunch,
         account: Account,
         useTor: Boolean,
-    ): DesktopNappletSession =
-        DesktopNappletSession(launch, account.pubKey, useTor, account, brokerFor(account), runtime).also { session ->
+    ): CefNappletSession =
+        CefNappletSession(launch, account.pubKey, useTor, account, brokerFor(account), runtime).also { session ->
             mutableSessions.update { it + session }
             session.start()
         }
 
-    fun close(session: DesktopNappletSession) {
+    fun close(session: CefNappletSession) {
         mutableSessions.update { it - session }
         session.close()
         if (sessions.value.none { it.launch.identity.coordinate == session.launch.identity.coordinate }) {

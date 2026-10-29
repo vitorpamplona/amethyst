@@ -98,7 +98,7 @@ The engine imports 14 WASI calls (files, `proc_exit`) and 10 page functions (`dr
   with a 14 MB artifact that the host base64-encodes into the shell (about 19 MB) and decodes again,
   hardware keyboards through `NappletKeyActions`, and whether the Gamepad API reaches the iframe.
 - **Desktop runs it in Chromium** (JCEF), with the same shell, shim and CSP:
-  `DesktopNappletSessionTest` boots it when `AMETHYST_DOOM_HTML` points at the build
+  `CefNappletSessionTest` boots it when `AMETHYST_DOOM_HTML` points at the build
   (`desktopApp/plans/2026-06-21-napplet-desktop-host.md`).
 - **Size is the real constraint.** A bigger IWAD (Phase 2 is the same size, a PWAD on top is more)
   would not fit in one artifact. Splitting the WAD into a Blossom blob fetched through
