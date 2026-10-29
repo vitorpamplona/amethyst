@@ -33,9 +33,11 @@ import com.davotoula.lightcompressor.VideoCompressor
 import com.davotoula.lightcompressor.config.AppSpecificStorageConfiguration
 import com.davotoula.lightcompressor.config.Configuration
 import com.davotoula.lightcompressor.config.VideoResizer
+import com.davotoula.lightcompressor.hdr.HdrInput
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoResolution
 import com.vitorpamplona.quartz.utils.Log
@@ -49,6 +51,21 @@ import kotlin.coroutines.resume
 // TODO: add Auto setting. Focus on small fast streams. 4->1080p, 1080p->720p, 720p and below stay the same resolution. Use existing matrix to determine bitrate.
 object VideoCompressionHelper {
     private const val LOG_TAG = "VideoCompressionHelper"
+
+    /** The size and frame rate [compressVideo] would judge [uri] by, for the slider label; null when unreadable. */
+    fun probe(
+        context: Context,
+        uri: Uri,
+    ): VideoInfo? = getVideoInfo(uri, context, videoPixelAspectRatio(context, uri))
+
+    /**
+     * Whether [uri] is HDR and whether [compressVideo] with H.265 keeps it so on this device. The
+     * library answers from the same policy compression uses, so the two cannot drift.
+     */
+    fun probeHdr(
+        context: Context,
+        uri: Uri,
+    ): VideoHdrInfo = VideoCompressor.probeHdr(context, uri).let { VideoHdrInfo(isHdr = it.input != HdrInput.SDR, canKeepHdr = it.canKeepHdr) }
 
     suspend fun compressVideo(
         uri: Uri,
@@ -129,6 +146,16 @@ object VideoCompressionHelper {
                                             LogLevel.WARN,
                                         )
                                         if (continuation.isActive) continuation.resume(null)
+                                        return
+                                    }
+
+                                    // The timeout fired or the caller was cancelled: the library kept encoding
+                                    // (cancel() would also stop the other uploads compressing alongside), and
+                                    // nobody holds this path any more.
+                                    if (!continuation.isActive) {
+                                        if (!File(path).delete()) {
+                                            Log.w(LOG_TAG) { "Failed to delete the output of a compression nobody waits for: $path" }
+                                        }
                                         return
                                     }
 

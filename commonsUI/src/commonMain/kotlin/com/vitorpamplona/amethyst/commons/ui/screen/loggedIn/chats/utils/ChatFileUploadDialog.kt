@@ -78,6 +78,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.creators.contentWarning.SettingSwitchItem
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.MediaQualitySlider
 import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoCompressionNeedsFfmpegHint
+import com.vitorpamplona.amethyst.commons.ui.note.creators.uploads.VideoHdrHint
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsRow
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -266,6 +267,10 @@ private fun ImageVideoPostChat(
     }
 
     VideoCompressionNeedsFfmpegHint(controls)
+    // Chat uploads have no codec switch and always compress as H.264, so an HDR clip is always converted.
+    if (controls.videoWillBeCompressed) {
+        VideoHdrHint(fileUploadState.multiOrchestrator, accountViewModel.host.mediaUploader, useH265 = false, offersH265 = false)
+    }
 
     SettingSwitchItem(
         title = Res.string.strip_metadata_label,

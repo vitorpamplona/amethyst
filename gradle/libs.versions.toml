@@ -57,7 +57,7 @@ genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
 lifecycleRuntimeKtx = "2.11.0"
-lightcompressor-enhanced = "2.2.3"
+lightcompressor-enhanced = "2.3.0-SNAPSHOT"
 jlatexmath = "1.5"
 markdown = "4d3b3dd173"
 # What richtext-commonmark parses with, and the URL finder its autolink extension uses.

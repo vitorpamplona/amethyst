@@ -5984,6 +5984,10 @@
     <string name="vanish_request_sent">Vanish request sent</string>
     <string name="video_codec_h265_description">Better quality at smaller file sizes but not all devices support H.265 playback.</string>
     <string name="video_codec_h265_label">Use H.265/HEVC Codec</string>
+    <string name="video_hdr_kept">Your HDR video stays HDR. Some apps and browsers show HDR video washed out or too dark.</string>
+    <string name="video_hdr_converted_codec">Your HDR video is converted to standard (SDR) video. Turn on H.265 to keep HDR.</string>
+    <string name="video_hdr_converted">Your HDR video is converted to standard (SDR) video.</string>
+    <string name="video_hdr_converted_device">Your HDR video is converted to standard (SDR) video; this device can't keep HDR when compressing.</string>
     <string name="video_collaboration_accepted_on">Accepted a collaboration credit</string>
     <string name="video_collaboration_declined_on">Declined a collaboration credit</string>
     <string name="video_credit_accepted">Credit accepted</string>

@@ -85,7 +85,12 @@ import com.vitorpamplona.amethyst.commons.resources.media_compression_quality_ve
 import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target
 import com.vitorpamplona.amethyst.commons.resources.media_compression_video_target_example
 import com.vitorpamplona.amethyst.commons.resources.video_compression_needs_ffmpeg
+import com.vitorpamplona.amethyst.commons.resources.video_hdr_converted
+import com.vitorpamplona.amethyst.commons.resources.video_hdr_converted_codec
+import com.vitorpamplona.amethyst.commons.resources.video_hdr_converted_device
+import com.vitorpamplona.amethyst.commons.resources.video_hdr_kept
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
+import com.vitorpamplona.amethyst.commons.service.uploads.HdrUploadOutcome
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageCompressionPreview
 import com.vitorpamplona.amethyst.commons.service.uploads.ImageFileStats
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
@@ -93,7 +98,9 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MultiOrchestrator
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoAwareSliderSteps
 import com.vitorpamplona.amethyst.commons.service.uploads.VideoUploadControls
+import com.vitorpamplona.amethyst.commons.service.uploads.hdrUploadOutcome
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoCompressionRules
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoStandard
 import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
@@ -218,8 +225,46 @@ fun VideoCompressionNeedsFfmpegHint(
     )
 }
 
+/**
+ * The line under the H.265 switch saying what compression does to a picked HDR video; nothing when
+ * no picked video is HDR, or the platform cannot tell. Every picked video is probed, so a post
+ * with an SDR clip first and an HDR clip second still gets the line. [offersH265] is false where
+ * the dialog has no codec switch, so the line doesn't tell the user to turn one on.
+ */
+@Composable
+fun VideoHdrHint(
+    media: MultiOrchestrator?,
+    uploader: MediaUploader,
+    useH265: Boolean,
+    offersH265: Boolean = true,
+    modifier: Modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+) {
+    // Read each time, like the slider's image: removing a video changes the same orchestrator.
+    val videos = media?.let { pickedVideos(it) }.orEmpty()
+    val probes by produceState(emptyList<VideoHdrInfo>(), videos) { value = videos.mapNotNull { uploader.probeHdr(it.uri) } }
+    val outcome = hdrUploadOutcome(probes, useH265) ?: return
+    Text(
+        text =
+            stringRes(
+                when (outcome) {
+                    HdrUploadOutcome.KEPT -> Res.string.video_hdr_kept
+                    HdrUploadOutcome.CONVERTED_BY_CODEC -> if (offersH265) Res.string.video_hdr_converted_codec else Res.string.video_hdr_converted
+                    HdrUploadOutcome.CONVERTED_BY_DEVICE -> Res.string.video_hdr_converted_device
+                },
+            ),
+        style = MaterialTheme.typography.bodySmall,
+        color = Color.Gray,
+        modifier = modifier,
+    )
+}
+
 /** `2`, `0.75`, `8`: no trailing `.0`. */
 private fun mbps(value: Float): String = value.toString().removeSuffix(".0")
+
+private fun pickedVideos(media: MultiOrchestrator): List<SelectedMedia> =
+    (0 until media.size())
+        .map { media.get(it).media }
+        .filter { it.isVideo() == true }
 
 private fun firstStillImage(media: MultiOrchestrator): SelectedMedia? =
     (0 until media.size())

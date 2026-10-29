@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.upload.FileHeader
+import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoHdrInfo
 import com.vitorpamplona.amethyst.commons.service.uploads.video.VideoInfo
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -110,6 +111,12 @@ interface MediaUploader {
 
     /** The dimensions and frame rate of the video at [uri], for the slider label; null when unknown. */
     suspend fun probeVideo(uri: MediaUri): VideoInfo? = null
+
+    /**
+     * Whether the video at [uri] is HDR and whether compressing it as H.265 here keeps that HDR,
+     * for the line under the codec switch; null when this platform cannot tell.
+     */
+    suspend fun probeHdr(uri: MediaUri): VideoHdrInfo? = null
 
     /** The file name the picker reported for [uri] (Android's `DISPLAY_NAME`), if any. */
     fun displayName(uri: MediaUri): String? = uri.lastPathSegmentOrNull()
