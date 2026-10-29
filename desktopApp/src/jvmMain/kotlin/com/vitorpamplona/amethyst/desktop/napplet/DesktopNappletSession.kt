@@ -74,7 +74,6 @@ import org.cef.misc.StringRef
 import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
-import java.net.URI
 import kotlin.math.ln
 
 /**
@@ -182,6 +181,9 @@ class DesktopNappletSession(
     @Volatile
     private var closed = false
 
+    // Guards closed against the browser's creation, so close() and start() can't interleave.
+    private val lifecycle = Any()
+
     fun start() {
         scope.launch {
             try {
@@ -195,6 +197,11 @@ class DesktopNappletSession(
                     } else {
                         !needsTor || runtime.routes.awaitTor(runtime.torWaitMs)
                     }
+                // Closed while it waited: its claim was filed after close() released it.
+                if (closed) {
+                    if (isWebsite) runtime.routes.release(this@DesktopNappletSession)
+                    return@launch
+                }
                 if (!routed) {
                     Log.w(TAG) { "Tor is not running; not opening ${launch.identity.coordinate}" }
                     mutableState.value = State.Failed(Failure.ROUTE_BLOCKED)
@@ -222,13 +229,19 @@ class DesktopNappletSession(
                     return@launch
                 }
                 val app = runtime.engine.app()
-                if (closed) return@launch
-                val client = app.createClient()
-                this@DesktopNappletSession.client = client
-                installHandlers(client)
-                val browser = client.createBrowser(NappletWebContract.SHELL_URL, false, false)
-                this@DesktopNappletSession.browser = browser
-                runtime.attendance.set(this@DesktopNappletSession, true)
+                // Created and published under the lock close() takes, so a window closed meanwhile
+                // never leaves a browser behind.
+                val browser =
+                    synchronized(lifecycle) {
+                        if (closed) return@launch
+                        val client = app.createClient()
+                        this@DesktopNappletSession.client = client
+                        installHandlers(client)
+                        client.createBrowser(NappletWebContract.SHELL_URL, false, false).also {
+                            this@DesktopNappletSession.browser = it
+                            runtime.attendance.set(this@DesktopNappletSession, true)
+                        }
+                    }
                 mutableState.value = State.Showing(browser.uiComponent)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
@@ -501,8 +514,19 @@ class DesktopNappletSession(
     }
 
     fun close() {
-        if (closed) return
-        closed = true
+        val client: CefClient?
+        val browser: CefBrowser?
+        val router: CefMessageRouter?
+        synchronized(lifecycle) {
+            if (closed) return
+            closed = true
+            client = this.client
+            browser = this.browser
+            router = this.router
+            this.client = null
+            this.browser = null
+            this.router = null
+        }
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
@@ -512,12 +536,6 @@ class DesktopNappletSession(
             isDaemon = true
             start()
         }
-        val client = client
-        val browser = browser
-        val router = router
-        this.client = null
-        this.browser = null
-        this.router = null
         runCatching {
             browser?.close(true)
             if (client != null && router != null) client.removeMessageRouter(router)
@@ -590,7 +608,22 @@ class DesktopNappletSession(
                 "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +
                 "q({request:String(s),persistent:false,onSuccess:function(){},onFailure:function(){}});}};})();</script>"
 
-        private fun isInternal(url: String): Boolean = runCatching { NappletWebContract.isInternalHost(URI(url).host) && url.startsWith("https://") }.getOrDefault(false)
+        /**
+         * Whether [url] is ours: https on the shell host or a napplet.local subdomain. Read from the
+         * text, not `java.net.URI`, which refuses URLs Chromium sends as they are (`{`, `|` in a
+         * query) and would send such a request for the site's own origin out to the network.
+         */
+        fun isInternal(url: String): Boolean {
+            if (!url.startsWith("https://")) return false
+            val authority =
+                url
+                    .substring(8)
+                    .substringBefore('/')
+                    .substringBefore('?')
+                    .substringBefore('#')
+            if ('@' in authority) return false
+            return NappletWebContract.isInternalHost(authority.substringBefore(':').lowercase())
+        }
 
         private fun isWebLink(url: String): Boolean = url.startsWith("https://") || url.startsWith("http://")
 

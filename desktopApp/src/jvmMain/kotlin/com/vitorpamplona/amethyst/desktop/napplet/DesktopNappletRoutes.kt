@@ -93,19 +93,21 @@ class DesktopNappletRoutes(
         apply()
     }
 
+    // Computed and applied under one lock, so two updates (a claim, a release, Tor's port changing)
+    // can't apply their routes out of order.
     private fun apply() {
-        val route =
-            synchronized(wantsTor) {
-                val port = torPort.value ?: NappletProxyClaims.TOR_NOT_READY
-                wantsTor.forEach { (owner, tor) -> claims.claim(owner, if (tor) port else NappletProxyClaims.NO_PROXY) }
-                val shared = claims.route()
+        synchronized(wantsTor) {
+            val port = torPort.value ?: NappletProxyClaims.TOR_NOT_READY
+            wantsTor.forEach { (owner, tor) -> claims.claim(owner, if (tor) port else NappletProxyClaims.NO_PROXY) }
+            val shared = claims.route()
+            val route =
                 when {
                     claims.isEmpty() || shared.blocked -> DesktopSocksRouter.Route.Blocked
                     shared.usesTor -> DesktopSocksRouter.Route.Tor(shared.torPort)
                     else -> DesktopSocksRouter.Route.Direct
                 }
-            }
-        router.route = route
-        mutableRoutedOverTor.value = route is DesktopSocksRouter.Route.Tor
+            router.route = route
+            mutableRoutedOverTor.value = route is DesktopSocksRouter.Route.Tor
+        }
     }
 }
