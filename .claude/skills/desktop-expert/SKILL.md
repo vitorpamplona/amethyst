@@ -92,6 +92,8 @@ Read the screenshots with the image-reading tool. Details: `tools/desktop-run/RE
   that must sign, and only when asked, because it publishes to real relays.
 - `AMETHYST_LOGIN=<npub|nsec> run-headless.sh start` opens already logged in (transient: no key
   prompt, nothing saved), so the first shot is the feed (`DesktopAppModules.startupLogin`).
+  `AMETHYST_SIGNUP="Name"` signs up as the Sign Up button does, publishing (`startupSignUp`); its
+  nsec lands in `profile/signup.nsec` for a later `AMETHYST_LOGIN`.
 - The screen size picks the shell: `AMETHYST_SCREEN=480x900x24` gives the phone layout (bottom bar),
   the default 1600x1000 gives the permanent drawer + docked notifications. Use a new
   `AMETHYST_DISPLAY` per size.

@@ -25,8 +25,9 @@ export DISPLAY=:99
 $D click 800 422 ";" type npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m   # see below
 $D click 800 595 ";" sleep 8000 ";" shot /tmp/amethyst-desktop-run/feed.png
 
-# or skip the login screen: open already logged in with a key (see Accounts)
+# or skip the login screen: open already logged in with a key, or sign up a new account (see Accounts)
 AMETHYST_LOGIN=npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m tools/desktop-run/run-headless.sh start
+AMETHYST_SIGNUP="Test Run" tools/desktop-run/run-headless.sh start
 
 tools/desktop-run/run-headless.sh logs   # running?, exceptions first, then the tail
 tools/desktop-run/run-headless.sh stop   # ALWAYS before rebuilding (see Traps)
@@ -78,6 +79,13 @@ environment, not as `-Damethyst.login=...`, which any `ps` shows; the property i
 - **Flows that sign** (posting, reacting, settings that publish lists): use a throwaway account from
   the app's Sign Up, never a real key. They publish to real public relays, so do it only when the
   human asked for that flow to be tested.
+- **Sign up without the screen:** `AMETHYST_SIGNUP="<display name>"` does what the Sign Up button
+  does with that name: a new key, Amethyst's default relays and lists published to public relays,
+  and the Import Follow List screen to start on. Like `AMETHYST_LOGIN` the account is transient (no
+  password prompt), so its nsec is written to `profile/signup.nsec` (owner-only) and the log names
+  the npub; reopen the same account later with
+  `AMETHYST_LOGIN=$(cat /tmp/amethyst-desktop-run/profile/signup.nsec) run-headless.sh start`.
+  `AMETHYST_LOGIN` wins when both are set. It publishes, so the rule above applies.
 - The container has no OS keyring, so a key that is remembered goes to the NIP-49 password file.
   The login screen says so, and that is expected here.
 
