@@ -324,8 +324,11 @@ the success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
   Queued until it ships.
 - Next steps, in order:
   1. Optional: open the two HLG uploads in a desktop browser (see the device table).
-  2. Push the branch to the fork and open the PR against `vitorpamplona:main` when you ask for
-     it. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` was run by hand after `07b8cc35eb`:
+  2. Pushed to the fork and opened as draft PR
+     [vitorpamplona/amethyst#4684](https://github.com/vitorpamplona/amethyst/pull/4684) on
+     2026-10-29 (upstream `main` was 45 commits ahead; `merge-tree` reports a clean merge).
+     Mark it ready and merge once its CI is green.
+     `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` was run by hand after `07b8cc35eb`:
      exit 0, "All test passed", the shared-code metadata compile and `:amethyst:lintPlayDebug`
      clean (only pre-existing warnings, e.g. the iOS `LocalClock` redundant conversion). Rerun
      after the second simplify pass (`29b7d9d017`) with the same result.

@@ -3,7 +3,8 @@
 Status: implemented 2026-10-29 on branch `feat/lightcompressor-2.3.0-hdr`, first against the local
 `2.3.0-SNAPSHOT`, then pinned to the released `2.3.0` from JitPack the same evening (step 6 done);
 see [the report](2026-10-28-lightcompressor-2.3.0-upgrade-report.md). Device check (steps 4
-and 5) passed on the Pixel 9a the same day; ready for the PR.
+and 5) passed on the Pixel 9a the same day; draft PR
+[#4684](https://github.com/vitorpamplona/amethyst/pull/4684).
 The `CompressionHandle` from LightCompressor PR #53 is adopted (section C, step 2; commit
 `28023020fa`) and the step 4 cancel case passed on the Pixel 9a the same day; it also surfaced a
 library gap (a cancel landing after the last frame leaves the finished output; see the report's
