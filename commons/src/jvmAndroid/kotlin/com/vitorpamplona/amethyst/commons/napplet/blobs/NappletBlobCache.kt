@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
 
 /**
@@ -42,16 +43,42 @@ class NappletBlobCache(
 ) {
     fun has(sha256: String): Boolean = fileFor(sha256)?.isFile == true
 
-    fun get(sha256: String): ByteArray? = fileFor(sha256)?.takeIf { it.isFile }?.let { runCatching { it.readBytes() }.getOrNull() }
+    fun get(sha256: String): ByteArray? = file(sha256)?.let { runCatching { it.readBytes() }.getOrNull() }
+
+    /**
+     * The cached blob's file, to stream instead of loading, or null when it isn't cached. A hit
+     * marks the blob as used, so [trimToSize] evicts what was used longest ago, not what was
+     * downloaded first: a napplet opened every day stays cached.
+     */
+    fun file(sha256: String): File? {
+        val file = fileFor(sha256)?.takeIf { it.isFile } ?: return null
+        val now = System.currentTimeMillis()
+        // At most once an hour per blob: a page's requests shouldn't each cost a metadata write.
+        if (now - file.lastModified() > TOUCH_INTERVAL_MS && !file.setLastModified(now)) {
+            Log.d("NappletBlobCache") { "Could not mark $sha256 as used" }
+        }
+        return file
+    }
 
     /** Stores [bytes] under [sha256] iff they actually hash to it. No-op if already present or mismatched. */
     fun put(
         sha256: String,
         bytes: ByteArray,
     ) {
+        if (sha256(bytes).toHexKey() != sha256.lowercase()) return // verify-on-write: never cache wrong content
+        putVerified(sha256, bytes)
+    }
+
+    /**
+     * Stores [bytes] under [sha256], which the caller has just checked they hash to (quartz's
+     * resolver does), so a multi-megabyte blob isn't hashed twice.
+     */
+    fun putVerified(
+        sha256: String,
+        bytes: ByteArray,
+    ) {
         val target = fileFor(sha256) ?: return
         if (target.isFile) return
-        if (sha256(bytes).toHexKey() != sha256.lowercase()) return // verify-on-write: never cache wrong content
         runCatching {
             dir.mkdirs()
             val tmp = File(dir, "$sha256.tmp.${System.nanoTime()}")
@@ -89,6 +116,7 @@ class NappletBlobCache(
 
     companion object {
         const val DEFAULT_MAX_BYTES = 256L * 1024 * 1024
+        private const val TOUCH_INTERVAL_MS = 60L * 60 * 1000
 
         /** The shared cache directory, identical across processes since they share the app's cacheDir. */
         fun dirFor(cacheDir: File) = File(cacheDir, "napplet-blobs")

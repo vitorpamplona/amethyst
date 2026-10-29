@@ -25,6 +25,10 @@ import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.io.File
@@ -38,6 +42,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -65,7 +70,8 @@ class NappletBlobStoreTest {
     private val serverUrl = "http://127.0.0.1:${server.address.port}"
     private val dir = createTempDirectory("blob-store-test").toFile()
     private val cache = NappletBlobCache(dir)
-    private val store = NappletBlobStore(cache, OkHttpClient())
+
+    private fun store(paths: List<PathTag>) = NappletBlobStore(cache, OkHttpClient(), paths, listOf(serverUrl))
 
     @AfterTest
     fun tearDown() {
@@ -82,13 +88,14 @@ class NappletBlobStoreTest {
             served[hashOf(page)] = page
             val paths = listOf(PathTag("/index.html", hashOf(page)))
 
-            val first = store.resolve("/", paths, listOf(serverUrl))
+            val store = store(paths)
+            val first = store.resolve("/")
             assertIs<StaticSiteResolution.Resolved>(first)
             assertContentEquals(page, first.bytes)
             assertEquals(1, requests.get())
 
             // The second time comes from the cache, without the network.
-            val second = store.resolve("/index.html", paths, listOf(serverUrl))
+            val second = store.resolve("/index.html")
             assertIs<StaticSiteResolution.Resolved>(second)
             assertEquals(NappletBlobStore.CACHE_SERVER, second.server)
             assertEquals(1, requests.get())
@@ -101,7 +108,7 @@ class NappletBlobStoreTest {
             served[hashOf(signed)] = "<p>swapped</p>".encodeToByteArray()
             val paths = listOf(PathTag("/index.html", hashOf(signed)))
 
-            assertIs<StaticSiteResolution.Unresolvable>(store.resolve("/", paths, listOf(serverUrl)))
+            assertIs<StaticSiteResolution.Unresolvable>(store(paths).resolve("/"))
             assertNull(cache.get(hashOf(signed)))
         }
 
@@ -134,5 +141,41 @@ class NappletBlobStoreTest {
         val hash = "a".repeat(64)
         assertEquals(hash, NappletBlobStore.blobHashOf("https://blossom.example/$hash"))
         assertEquals(hash, NappletBlobStore.blobHashOf("https://blossom.example/${hash.uppercase()}.wad"))
+    }
+
+    @Test
+    fun concurrentMissesShareOneDownload() =
+        runBlocking {
+            val page = "<p>once</p>".encodeToByteArray()
+            served[hashOf(page)] = page
+            val store = store(listOf(PathTag("/index.html", hashOf(page))))
+            coroutineScope { List(8) { async(Dispatchers.IO) { store.find("/") } }.awaitAll() }.forEach { assertContentEquals(page, it?.readBytes()) }
+            assertEquals(1, requests.get(), "eight requests, one download")
+        }
+
+    @Test
+    fun aCachedBlobStreamsFromItsFile() =
+        runBlocking {
+            val script = "console.log(1)".encodeToByteArray()
+            cache.put(hashOf(script), script)
+            val blob = assertNotNull(store(listOf(PathTag("/app.js", hashOf(script)))).find("/app.js"))
+            assertEquals(script.size.toLong(), blob.length)
+            assertContentEquals(script, blob.open().use { it.readBytes() })
+            assertEquals(0, requests.get())
+        }
+
+    @Test
+    fun usingABlobKeepsItThroughATrim() {
+        val old = ByteArray(1000) { 1 }
+        val used = ByteArray(1000) { 2 }
+        cache.put(hashOf(old), old)
+        cache.put(hashOf(used), used)
+        assertTrue(File(dir, hashOf(old)).setLastModified(2_000))
+        assertTrue(File(dir, hashOf(used)).setLastModified(1_000))
+        // Written first, but used just now: the other one goes.
+        assertNotNull(cache.file(hashOf(used)))
+        cache.trimToSize(1500)
+        assertNull(cache.get(hashOf(old)))
+        assertContentEquals(used, cache.get(hashOf(used)))
     }
 }

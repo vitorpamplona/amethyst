@@ -27,10 +27,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
-import java.io.ByteArrayInputStream
 import java.io.File
 
 /**
@@ -64,16 +62,16 @@ class NappletContentServer(
     // host has a native keyboard and leaves this false.
     imeProxy: Boolean = false,
 ) {
-    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)), NappletBlobHttp.client(proxyPort))
+    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)), NappletBlobHttp.client(proxyPort), paths, servers)
 
-    private val server = NappletSiteServer(paths, servers, blobs, shellHtmlBytes, shimJs, appOrigin, profile, declaredDomains, imeProxy)
+    private val server = NappletSiteServer(blobs, shellHtmlBytes, shimJs, appOrigin, profile, declaredDomains, imeProxy)
 
     /**
-     * Resolves [requestPath] to a verified blob (or PathNotInManifest / Unresolvable). Used by the host
-     * to probe availability for the loading screen before showing the WebView. Warms the cache as a
-     * side effect, so the subsequent WebView request serves from disk.
+     * Whether [requestPath] is cached or can be fetched now. Used by the host to probe availability for
+     * the loading screen before showing the WebView. A fetch warms the cache as a side effect, so the
+     * subsequent WebView request serves from disk.
      */
-    fun resolve(requestPath: String): StaticSiteResolution = runBlocking { server.resolve(requestPath) }
+    fun isAvailable(requestPath: String): Boolean = runBlocking { server.isAvailable(requestPath) }
 
     /**
      * Releases the per-instance OkHttp client (its dispatcher thread pool + connection pool) and cancels
@@ -93,7 +91,7 @@ class NappletContentServer(
             response.status,
             response.reason,
             response.headers,
-            ByteArrayInputStream(response.body),
+            response.open(),
         )
     }
 }

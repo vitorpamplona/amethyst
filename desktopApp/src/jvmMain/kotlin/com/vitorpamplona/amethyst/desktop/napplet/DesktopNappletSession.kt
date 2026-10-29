@@ -37,7 +37,6 @@ import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -49,7 +48,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
 import org.cef.CefSettings
@@ -74,6 +72,7 @@ import org.cef.misc.StringRef
 import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
+import java.io.InputStream
 import kotlin.math.ln
 
 /**
@@ -210,9 +209,7 @@ class DesktopNappletSession(
                 mutableState.value = State.Loading
                 server =
                     NappletSiteServer(
-                        paths = launch.paths,
-                        servers = launch.servers,
-                        blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor)),
+                        blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor), launch.paths, launch.servers),
                         shellHtml = NappletWebResources.shellHtml(),
                         shimJs = NappletWebResources.shimJs().decodeToString(),
                         appOrigin = appOrigin,
@@ -222,8 +219,7 @@ class DesktopNappletSession(
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
-                val entry = withContext(Dispatchers.IO) { server.resolve(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH) }
-                if (entry !is StaticSiteResolution.Resolved) {
+                if (!server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
                     return@launch
@@ -437,6 +433,9 @@ class DesktopNappletSession(
             bytesRead: IntRef,
             callback: CefCallback,
         ): Boolean = response.readResponse(dataOut, bytesToRead, bytesRead, callback)
+
+        // Chromium gave up on the request (the page navigated away): close the file being streamed.
+        override fun cancel() = response.cancel()
     }
 
     private fun handle(payload: String) {
@@ -544,12 +543,11 @@ class DesktopNappletSession(
         }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
     }
 
-    /** A [NappletSiteServer.Response], to Chromium. */
+    /** A [NappletSiteServer.Response], to Chromium, streamed: a large script or wasm file isn't loaded whole. */
     private class BytesResourceHandler(
         private val served: NappletSiteServer.Response,
     ) : CefResourceHandlerAdapter() {
-        private val body = served.body
-        private var offset = 0
+        private var body: InputStream? = null
 
         override fun processRequest(
             request: CefRequest,
@@ -570,7 +568,7 @@ class DesktopNappletSession(
             // JCEF's response has no charset of its own.
             response.setHeaderByName("Content-Type", served.contentType, true)
             served.headers.forEach { (name, value) -> response.setHeaderByName(name, value, true) }
-            responseLength.set(body.size)
+            responseLength.set(served.length.toInt())
         }
 
         override fun readResponse(
@@ -579,15 +577,20 @@ class DesktopNappletSession(
             bytesRead: IntRef,
             callback: CefCallback,
         ): Boolean {
-            if (offset >= body.size) {
+            val input = body ?: runCatching { served.open() }.getOrNull()?.also { body = it }
+            val n = input?.let { runCatching { it.read(dataOut, 0, bytesToRead) }.getOrDefault(-1) } ?: -1
+            if (n <= 0) {
+                cancel()
                 bytesRead.set(0)
                 return false
             }
-            val n = minOf(bytesToRead, body.size - offset)
-            System.arraycopy(body, offset, dataOut, 0, n)
-            offset += n
             bytesRead.set(n)
             return true
+        }
+
+        override fun cancel() {
+            runCatching { body?.close() }
+            body = null
         }
     }
 

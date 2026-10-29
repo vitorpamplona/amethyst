@@ -77,42 +77,94 @@ object NappletWebContract {
      * The trusted shell for one launch: [shellHtml] with its placeholders filled for [profile].
      *
      * A NIP-5D napplet's identity is bound to the exact verified bytes that execute, so the host
-     * resolves its sole `/index.html`, injects the prelude outside the aggregate hash, and passes the
-     * result here as [injectedArtifact]; it reaches the opaque-origin child through `srcdoc`, never a
-     * navigated `src`. A NIP-5A website keeps a dedicated real origin ([appOrigin]) with normal
-     * storage and network, and NIP-07 behind the consent broker.
+     * resolves its sole `/index.html` and passes the prelude and those bytes as [artifactParts];
+     * they reach the opaque-origin child through `srcdoc`, never a navigated `src`, base64-encoded
+     * straight into the page with no copy in between. A NIP-5A website (null parts) keeps a
+     * dedicated real origin ([appOrigin]) with normal storage and network, and NIP-07 behind the
+     * consent broker. [head] goes first in the shell's head, before anything there runs (the
+     * desktop's bridge).
      */
     @OptIn(ExperimentalEncodingApi::class)
     fun shell(
         shellHtml: ByteArray,
         profile: HostProfile,
         appOrigin: String,
-        injectedArtifact: ByteArray?,
+        artifactParts: List<ByteArray>?,
+        head: String = "",
     ): ShellPage {
-        val sandbox: String
-        val frameSource: String
-        val bootstrap: String
-        if (profile == HostProfile.NAPPLET) {
-            val encoded = Base64.encode(requireNotNull(injectedArtifact) { "A napplet's shell needs its verified artifact" })
-            sandbox = "allow-scripts"
-            frameSource = "'self'"
-            bootstrap =
-                "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
-                "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
-                "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
-        } else {
-            sandbox = "allow-scripts allow-same-origin"
-            frameSource = appOrigin
-            bootstrap = "iframe.src = '$appOrigin/';"
-        }
-        val html =
+        val napplet = profile == HostProfile.NAPPLET
+        val sandbox = if (napplet) "allow-scripts" else "allow-scripts allow-same-origin"
+        val frameSource = if (napplet) "'self'" else appOrigin
+        val template =
             shellHtml
                 .decodeToString()
                 .replace(APP_ORIGIN_PLACEHOLDER, appOrigin)
                 .replace(APP_SANDBOX_PLACEHOLDER, sandbox)
-                .replace(APP_BOOTSTRAP_PLACEHOLDER, bootstrap)
-                .encodeToByteArray()
-        return ShellPage(html, shellCsp(frameSource))
+                .let { if (head.isEmpty()) it else it.replaceFirst("<head>", "<head>$head") }
+        val before = template.substringBefore(APP_BOOTSTRAP_PLACEHOLDER).encodeToByteArray()
+        val after = template.substringAfter(APP_BOOTSTRAP_PLACEHOLDER, "").encodeToByteArray()
+
+        if (!napplet) {
+            return ShellPage(before + "iframe.src = '$appOrigin/';".encodeToByteArray() + after, shellCsp(frameSource))
+        }
+
+        // NIP-5D identity is bound to the exact verified bytes that execute: they reach the
+        // opaque-origin child as a srcdoc, never a navigated src.
+        val parts = requireNotNull(artifactParts) { "A napplet's shell needs its verified artifact" }
+        val open = "var b=atob('".encodeToByteArray()
+        val close =
+            (
+                "'),u=new Uint8Array(b.length);" +
+                    "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
+                    "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
+            ).encodeToByteArray()
+        val length = parts.sumOf { it.size }
+        val encodedLength = (length + 2) / 3 * 4
+        val page = ByteArray(before.size + open.size + encodedLength + close.size + after.size)
+        var at = 0
+        before.copyInto(page, at)
+        at += before.size
+        open.copyInto(page, at)
+        at += open.size
+        at += base64Into(parts, page, at)
+        close.copyInto(page, at)
+        at += close.size
+        after.copyInto(page, at)
+        return ShellPage(page, shellCsp(frameSource))
+    }
+
+    /**
+     * Base64-encodes the concatenation of [parts] into [destination] at [offset] without
+     * concatenating them first: each part is encoded in whole three-byte groups, and the 1-2 bytes
+     * left over at a part's end are carried into the next one. Returns the bytes written.
+     */
+    @OptIn(ExperimentalEncodingApi::class)
+    private fun base64Into(
+        parts: List<ByteArray>,
+        destination: ByteArray,
+        offset: Int,
+    ): Int {
+        var at = offset
+        val carry = ByteArray(3)
+        var carried = 0
+        for (part in parts) {
+            var from = 0
+            if (carried > 0) {
+                val take = minOf(3 - carried, part.size)
+                part.copyInto(carry, carried, 0, take)
+                carried += take
+                from = take
+                if (carried < 3) continue
+                at += Base64.encodeIntoByteArray(carry, destination, at)
+                carried = 0
+            }
+            val whole = from + (part.size - from) / 3 * 3
+            if (whole > from) at += Base64.encodeIntoByteArray(part, destination, at, from, whole)
+            part.copyInto(carry, 0, whole, part.size)
+            carried = part.size - whole
+        }
+        if (carried > 0) at += Base64.encodeIntoByteArray(carry, destination, at, 0, carried)
+        return at - offset
     }
 
     /** True for the shell host and any per-applet subdomain — i.e. everything we serve internally. */
@@ -158,8 +210,19 @@ object NappletWebContract {
         locked: Boolean,
         injectNip07: Boolean = false,
         imeProxy: Boolean = false,
+    ): ByteArray = preludePrefix(shimJs, declaredDomains, locked, injectNip07, imeProxy) + html
+
+    /**
+     * The bytes [injectPrelude] puts before the page. It is a pure prefix, so a host that serves
+     * many pages for one launch builds it once and prepends it, never decoding the page itself.
+     */
+    fun preludePrefix(
+        shimJs: String,
+        declaredDomains: List<String>,
+        locked: Boolean,
+        injectNip07: Boolean = false,
+        imeProxy: Boolean = false,
     ): ByteArray {
-        val text = html.decodeToString()
         val policy =
             if (locked) {
                 "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\">"
@@ -182,8 +245,7 @@ object NappletWebContract {
         // parser merges a subsequent html element's attributes and ignores a second head start tag;
         // the authored head end/body start still closes this head normally. A repeated doctype is
         // ignored. The original artifact bytes used for verification remain untouched by this step.
-        val injected = "<!doctype html><html><head>$prelude$text"
-        return injected.encodeToByteArray()
+        return "<!doctype html><html><head>$prelude".encodeToByteArray()
     }
 
     private val NAP_DOMAIN = Regex("^[a-z][a-z0-9-]*$")

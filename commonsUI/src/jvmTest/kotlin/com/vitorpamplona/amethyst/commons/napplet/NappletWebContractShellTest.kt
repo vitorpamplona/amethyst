@@ -53,7 +53,7 @@ class NappletWebContractShellTest {
     @Test
     fun aNappletRunsItsVerifiedBytesAsAnOpaqueSrcdoc() {
         val origin = NappletWebContract.appOrigin("n1")
-        val shell = NappletWebContract.shell(shellHtml, HostProfile.NAPPLET, origin, "<p>game</p>".encodeToByteArray())
+        val shell = NappletWebContract.shell(shellHtml, HostProfile.NAPPLET, origin, listOf("<p>game</p>".encodeToByteArray()))
         val html = shell.html.decodeToString()
         assertContains(html, "sandbox=\"allow-scripts\"")
         assertContains(html, "iframe.srcdoc=")
@@ -71,5 +71,48 @@ class NappletWebContractShellTest {
         assertContains(html, "iframe.src = '$origin/';")
         assertFalse(html.contains("srcdoc="))
         assertContains(shell.csp, "frame-src $origin;")
+    }
+
+    /** The shell as it was built before it moved to bytes: base64 of the joined artifact, then string replaces. */
+    private fun oldShell(
+        origin: String,
+        artifact: ByteArray,
+        head: String,
+    ): String {
+        val encoded = Base64.getEncoder().encodeToString(artifact)
+        val bootstrap =
+            "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
+                "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
+                "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
+        return shellHtml
+            .decodeToString()
+            .replace(NappletWebContract.APP_ORIGIN_PLACEHOLDER, origin)
+            .replace(NappletWebContract.APP_SANDBOX_PLACEHOLDER, "allow-scripts")
+            .replace(NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER, bootstrap)
+            .replaceFirst("<head>", "<head>$head")
+    }
+
+    @Test
+    fun theByteBuiltShellMatchesTheOldOneForEveryCarry() {
+        val origin = NappletWebContract.appOrigin("n1")
+        val random = java.util.Random(7)
+        // Every split of 0-2 leftover bytes between the prelude and the artifact, and both empty.
+        for (preludeLength in 0..5) {
+            for (artifactLength in 0..7) {
+                val prelude = ByteArray(preludeLength).also(random::nextBytes)
+                val artifact = ByteArray(artifactLength).also(random::nextBytes)
+                val built = NappletWebContract.shell(shellHtml, HostProfile.NAPPLET, origin, listOf(prelude, artifact), "<script>b</script>")
+                assertEquals(oldShell(origin, prelude + artifact, "<script>b</script>"), built.html.decodeToString(), "prelude $preludeLength, artifact $artifactLength")
+            }
+        }
+    }
+
+    @Test
+    fun thePreludeIsAPrefixOfTheInjectedPage() {
+        val page = "<p>ünïcode</p>".encodeToByteArray()
+        val injected = NappletWebContract.injectPrelude(page, "/*shim*/", listOf("storage"), locked = true)
+        val prefix = NappletWebContract.preludePrefix("/*shim*/", listOf("storage"), locked = true)
+        assertEquals((prefix + page).toList(), injected.toList())
+        assertContains(prefix.decodeToString(), NappletWebContract.APP_CSP)
     }
 }

@@ -21,8 +21,8 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 /**
  * What a host serves for one napplet or nSite, whatever its browser: the trusted shell on
@@ -38,8 +38,6 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
  *   prelude with NIP-07. Requests to other hosts are the browser's to send ([serve] returns null).
  */
 class NappletSiteServer(
-    private val paths: List<PathTag>,
-    private val servers: List<String>,
     private val blobs: NappletBlobStore,
     private val shellHtml: ByteArray,
     private val shimJs: String,
@@ -54,7 +52,10 @@ class NappletSiteServer(
     // Markup the host adds to the shell's head, before anything else runs there (the desktop's bridge).
     private val shellHead: String = "",
 ) {
-    /** One HTTP response, for the host to hand its browser. */
+    /**
+     * One HTTP response, for the host to hand its browser. A file the page loads as it is (a script,
+     * wasm, an image) streams from the cache through [open]; nothing else is held for it.
+     */
     class Response(
         val status: Int,
         val reason: String,
@@ -62,17 +63,43 @@ class NappletSiteServer(
         /** Null when the body has no text encoding. */
         val charset: String?,
         val headers: Map<String, String>,
-        val body: ByteArray,
+        val length: Long,
+        private val source: () -> InputStream,
     ) {
+        constructor(
+            status: Int,
+            reason: String,
+            mime: String,
+            charset: String?,
+            headers: Map<String, String>,
+            body: ByteArray,
+        ) : this(status, reason, mime, charset, headers, body.size.toLong(), { ByteArrayInputStream(body) })
+
         /** [mime] with its charset, for a `Content-Type` header. */
         val contentType: String get() = if (charset != null) "$mime; charset=$charset" else mime
+
+        /** The body, from the start. */
+        fun open(): InputStream = source()
+
+        fun readBody(): ByteArray = open().use { it.readBytes() }
+    }
+
+    // The prelude every page of this launch gets: built once, prepended to each page's bytes.
+    private val prelude by lazy {
+        NappletWebContract.preludePrefix(
+            shimJs = shimJs,
+            declaredDomains = declaredDomains,
+            locked = profile == HostProfile.NAPPLET,
+            injectNip07 = profile.injectsNip07,
+            imeProxy = imeProxy,
+        )
     }
 
     /**
-     * Resolves [requestPath] to a verified blob (or why not). The hosts call it to probe the entry
-     * point before showing anything, which also warms the cache for the page's own request.
+     * Whether [requestPath] is cached or can be fetched now. The hosts probe the entry point with it
+     * before showing anything; a fetch also warms the cache for the page's own request.
      */
-    suspend fun resolve(requestPath: String): StaticSiteResolution = blobs.resolve(requestPath, paths, servers)
+    suspend fun isAvailable(requestPath: String): Boolean = blobs.isAvailable(requestPath)
 
     /**
      * The response for a request to [url], or null when the browser should handle it itself (a
@@ -92,24 +119,15 @@ class NappletSiteServer(
     }
 
     private suspend fun shell(): Response {
-        val artifact =
+        val artifactParts =
             if (profile == HostProfile.NAPPLET) {
-                val entry = resolve(INDEX_PATH) as? StaticSiteResolution.Resolved ?: return notFound()
-                injectPrelude(entry.bytes)
+                val entry = blobs.find(INDEX_PATH) ?: return notFound()
+                listOf(prelude, entry.readBytes())
             } else {
                 null
             }
-        val page = NappletWebContract.shell(shellHtml, profile, appOrigin, artifact)
-        val html =
-            if (shellHead.isEmpty()) {
-                page.html
-            } else {
-                page.html
-                    .decodeToString()
-                    .replaceFirst("<head>", "<head>$shellHead")
-                    .encodeToByteArray()
-            }
-        return Response(200, "OK", MIME_HTML, "utf-8", mapOf("Content-Security-Policy" to page.csp) + NO_STORE, html)
+        val page = NappletWebContract.shell(shellHtml, profile, appOrigin, artifactParts, shellHead)
+        return Response(200, "OK", MIME_HTML, "utf-8", mapOf("Content-Security-Policy" to page.csp) + NO_STORE, page.html)
     }
 
     private suspend fun appResource(
@@ -123,29 +141,22 @@ class NappletSiteServer(
                 .substringBefore('#')
                 .ifEmpty { "/" }
 
-        var resolution = resolve(requestPath)
-        if (resolution !is StaticSiteResolution.Resolved && acceptsHtml && requestPath != "/") {
-            resolution = resolve("/")
-        }
-        if (resolution !is StaticSiteResolution.Resolved) return notFound()
+        // A document navigation to a path the event doesn't list falls back to the page itself, so
+        // client-side routes survive deep links and reloads; a missing script or image stays a 404.
+        val blob =
+            blobs.find(requestPath)
+                ?: (if (acceptsHtml && requestPath != "/") blobs.find("/") else null)
+                ?: return notFound()
 
-        val (mime, charset) = splitContentType(resolution.contentType)
-        val body = if (mime.equals(MIME_HTML, ignoreCase = true)) injectPrelude(resolution.bytes) else resolution.bytes
+        val (mime, charset) = splitContentType(blob.contentType)
         // A locked napplet gets the strict app CSP; a site sets its own.
-        val csp = profile.appCsp?.let { mapOf("Content-Security-Policy" to it) } ?: emptyMap()
-        return Response(200, "OK", mime, charset, csp + NO_STORE, body)
+        val headers = (profile.appCsp?.let { mapOf("Content-Security-Policy" to it) } ?: emptyMap()) + NO_STORE
+        return if (mime.equals(MIME_HTML, ignoreCase = true)) {
+            Response(200, "OK", mime, charset, headers, prelude + blob.readBytes())
+        } else {
+            Response(200, "OK", mime, charset, headers, blob.length, blob::open)
+        }
     }
-
-    /** Inserts host policy and the explicit-domain `window.napplet` prelude before authored code. */
-    private fun injectPrelude(html: ByteArray): ByteArray =
-        NappletWebContract.injectPrelude(
-            html = html,
-            shimJs = shimJs,
-            declaredDomains = declaredDomains,
-            locked = profile == HostProfile.NAPPLET,
-            injectNip07 = profile.injectsNip07,
-            imeProxy = imeProxy,
-        )
 
     companion object {
         const val INDEX_PATH = "/index.html"

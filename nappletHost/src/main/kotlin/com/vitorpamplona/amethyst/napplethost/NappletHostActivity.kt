@@ -77,7 +77,6 @@ import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -368,7 +367,7 @@ class NappletHostActivity : ComponentActivity() {
         contentFrame.removeAllViews()
         loadingView = buildLoadingView().also { contentFrame.addView(it) }
         uiScope.launch {
-            val available = withContext(Dispatchers.IO) { contentServer.resolve("/") is StaticSiteResolution.Resolved }
+            val available = withContext(Dispatchers.IO) { contentServer.isAvailable("/") }
             if (available) {
                 mountWebView()
             } else {

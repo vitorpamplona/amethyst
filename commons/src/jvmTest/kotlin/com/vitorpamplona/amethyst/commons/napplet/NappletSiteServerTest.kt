@@ -63,9 +63,7 @@ class NappletSiteServerTest {
         profile: HostProfile,
         paths: List<PathTag>,
     ) = NappletSiteServer(
-        paths = paths,
-        servers = emptyList(),
-        blobs = NappletBlobStore(cache, OkHttpClient()),
+        blobs = NappletBlobStore(cache, OkHttpClient(), paths, emptyList()),
         shellHtml = shellHtml,
         shimJs = "/*shim*/",
         appOrigin = origin,
@@ -85,7 +83,7 @@ class NappletSiteServerTest {
     fun aSiteShellFramesItsOwnOrigin() =
         runBlocking {
             val shell = assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true))
-            val html = shell.body.decodeToString()
+            val html = shell.readBody().decodeToString()
             assertContains(html, "<head><script>/*bridge*/</script>")
             assertContains(html, "iframe.src = '$origin/';")
             assertEquals(
@@ -104,20 +102,20 @@ class NappletSiteServerTest {
             val page = assertNotNull(site.serve("GET", "$origin/", acceptsHtml = true))
             assertEquals(200, page.status)
             assertEquals("text/html; charset=utf-8", page.contentType)
-            val html = page.body.decodeToString()
+            val html = page.readBody().decodeToString()
             assertContains(html, "window.__nappletNip07=true")
             assertContains(html, "<p>HOME</p>")
             assertFalse(page.headers.containsKey("Content-Security-Policy"), "a site sets its own CSP")
 
             val script = assertNotNull(site.serve("GET", "$origin/app.js?v=1", acceptsHtml = false))
-            assertEquals("console.log(1)", script.body.decodeToString(), "scripts are served as they are")
+            assertEquals("console.log(1)", script.readBody().decodeToString(), "scripts are served as they are")
         }
 
     @Test
     fun aClientRouteFallsBackToThePageButAMissingFileIsA404() =
         runBlocking {
             val route = assertNotNull(site.serve("GET", "$origin/posts/42", acceptsHtml = true))
-            assertContains(route.body.decodeToString(), "<p>HOME</p>")
+            assertContains(route.readBody().decodeToString(), "<p>HOME</p>")
 
             assertEquals(404, assertNotNull(site.serve("GET", "$origin/missing.js", acceptsHtml = false)).status)
         }
@@ -134,7 +132,7 @@ class NappletSiteServerTest {
         runBlocking {
             val napplet = server(HostProfile.NAPPLET, listOf(file("/index.html", "<p>GAME</p>")))
             val shell = assertNotNull(napplet.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true))
-            val html = shell.body.decodeToString()
+            val html = shell.readBody().decodeToString()
             assertContains(html, "iframe.srcdoc=")
             assertContains(html, "allow-scripts")
             assertFalse(html.contains("allow-same-origin"))
