@@ -22,87 +22,75 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.PendingConsent
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_sign_title
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Bridges the broker to the per-operation signer consent UI. The signer services requests
  * concurrently (so their prompts can batch), so several requests can await consent at once: they all
  * land in [pending], one [SignerConsentActivity] observes that list and shows a single-request dialog
- * or a batched list, and each resolved token completes its own deferred. A dismissed/ignored request
+ * or a batched list, and each resolved token completes its own request. A dismissed/ignored request
  * resolves to [SignerOpGrant.DenyOnce] — fails closed.
  */
 object SignerConsentCoordinator {
-    private val deferreds = ConcurrentHashMap<String, CompletableDeferred<SignerOpGrant>>()
-    private val _pending = MutableStateFlow<List<PendingConsent>>(emptyList())
+    private val queue = ConsentQueue<SignerConsentInfo, SignerOpGrant>(unanswered = SignerOpGrant.DenyOnce)
 
     /** The live set of requests awaiting the user's decision; the Activity renders this. */
-    val pending: StateFlow<List<PendingConsent>> = _pending
+    val pending: StateFlow<List<PendingConsent>> = queue.pending
 
     // A stable notification id (one prompt notification for the whole batch, updated as requests
     // arrive) so concurrent requests don't each post their own.
     private val batchNotificationId = "nip46-signer-consent".hashCode()
 
-    // Guards the surface (post/cancel of the one shared notification) against the pending set so a
-    // concurrent arrival's post can't be clobbered by another request's teardown cancel. Without it,
-    // request A could read "pending now empty" and then cancel AFTER request B posted a fresh
-    // notification under the same id, leaving B with no UI while backgrounded (silent deny at timeout).
+    // Guards the surface (post/cancel of the one shared notification) so a concurrent arrival's post
+    // can't be clobbered by another request's teardown cancel. A request joins [pending] before it
+    // posts and leaves before it checks, so under this lock a request that finds [pending] empty
+    // cancels before any later arrival posts. Without it, request A could read "pending now empty" and
+    // then cancel AFTER request B posted a fresh notification under the same id, leaving B with no UI
+    // while backgrounded (silent deny at timeout).
     private val surfaceLock = Mutex()
 
     suspend fun requestConsent(
         context: Context,
         info: SignerConsentInfo,
-    ): SignerOpGrant {
-        val token = UUID.randomUUID().toString()
-        val deferred = CompletableDeferred<SignerOpGrant>()
-        deferreds[token] = deferred
-
-        surfaceLock.withLock {
-            _pending.update { it + PendingConsent(token, info) }
-            // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
-            // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
-            // notification is what surfaces the prompt. Both are idempotent — the Activity is singleTop and
-            // observes [pending], and the notification uses a stable id, so concurrent requests just
-            // refresh the one prompt. Wrapped because a BAL-blocked launch can throw rather than no-op.
-            runCatching {
-                context.startActivity(
-                    Intent(context, SignerConsentActivity::class.java)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
-                )
-            }
-            SignerConsentNotifier.show(
-                context = context,
-                activityClass = SignerConsentActivity::class.java,
-                extraKey = EXTRA_TOKEN,
-                token = "nip46-signer-consent",
-                titleRes = Res.string.nip46_signer_notif_sign_title,
-            )
-        }
-
-        return try {
-            deferred.await()
-        } finally {
-            deferreds.remove(token)
-            surfaceLock.withLock {
-                // Remove + emptiness check + cancel are one critical section vs. another request's
-                // add + show, so a fresh notification is never cancelled out from under a live request.
-                val stillPending = _pending.updateAndGet { list -> list.filterNot { it.token == token } }
-                if (stillPending.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
-            }
-        }
-    }
+    ): SignerOpGrant =
+        queue.ask(
+            info,
+            onQueued = {
+                surfaceLock.withLock {
+                    // Fast path when Amethyst already owns the foreground: open the dialog directly. When the app
+                    // is backgrounded this is silently dropped by Android 12+ BAL, so the full-screen-intent
+                    // notification is what surfaces the prompt. Both are idempotent — the Activity is singleTop and
+                    // observes [pending], and the notification uses a stable id, so concurrent requests just
+                    // refresh the one prompt. Wrapped because a BAL-blocked launch can throw rather than no-op.
+                    runCatching {
+                        context.startActivity(
+                            Intent(context, SignerConsentActivity::class.java)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+                        )
+                    }
+                    SignerConsentNotifier.show(
+                        context = context,
+                        activityClass = SignerConsentActivity::class.java,
+                        extraKey = EXTRA_TOKEN,
+                        token = "nip46-signer-consent",
+                        titleRes = Res.string.nip46_signer_notif_sign_title,
+                    )
+                }
+            },
+            onSettled = {
+                surfaceLock.withLock {
+                    if (queue.pending.value.isEmpty()) SignerConsentNotifier.cancel(context, batchNotificationId)
+                }
+            },
+        )
 
     /**
      * Brings the consent dialog back to the front when requests are still waiting on it. Called when
@@ -110,7 +98,7 @@ object SignerConsentCoordinator {
      * to the launcher nothing else would show it again.
      */
     fun resurfacePending(context: Context) {
-        if (_pending.value.isEmpty()) return
+        if (queue.pending.value.isEmpty()) return
         runCatching {
             context.startActivity(
                 Intent(context, SignerConsentActivity::class.java)
@@ -122,9 +110,7 @@ object SignerConsentCoordinator {
     fun complete(
         token: String,
         grant: SignerOpGrant,
-    ) {
-        deferreds[token]?.complete(grant)
-    }
+    ) = queue.answer(token, grant)
 
     fun completeAll(
         tokens: Collection<String>,

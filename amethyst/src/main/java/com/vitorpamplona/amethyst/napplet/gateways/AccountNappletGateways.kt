@@ -26,31 +26,23 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.R
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
-import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
-import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotificationStore
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
-import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
-import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletPrompts
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
-import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
+import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
-import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentSummary
-import com.vitorpamplona.amethyst.commons.napplet.ui.buildConnectInfo
-import com.vitorpamplona.amethyst.commons.napplet.ui.buildSignerConsentInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -62,18 +54,15 @@ import com.vitorpamplona.amethyst.napplet.currentNappletThemeColors
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
-import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
-import kotlin.time.Duration.Companion.seconds
 
 /**
- * The account adapter: turns a signed-in [Account] into a configured [NappletBroker] by wiring the
- * platform gateway implementations (relay publish/query, consent, wallet/NWC, resource fetch,
- * identity reads, blob upload). The broker itself owns the trust boundary; this class only supplies
- * the Android/account-backed plumbing. Built once per account and cached by the caller.
+ * The account adapter: turns a signed-in [Account] into a configured [NappletBroker] through the
+ * shared [buildAccountNappletBroker], adding what is Android's: the consent dialogs (each an
+ * Activity, through its coordinator), the system notifications behind NAP `notify`, and Blossom
+ * uploads. The broker itself owns the trust boundary. Built once per account and cached by the caller.
  */
 class AccountNappletGateways(
     private val account: Account,
@@ -83,88 +72,67 @@ class AccountNappletGateways(
     private val httpClient: (useProxy: Boolean) -> OkHttpClient,
     private val signerLedger: NostrSignerPermissionLedger? = null,
 ) {
-    // Takes the account so the consent dialog can diff a proposed replaceable list (follows, relays,
-    // mutes) against the copy already cached here, and say what actually changes.
-    private val consentSummary = NappletConsentSummary(Amethyst.instance.browserIcons, account)
+    private val prompts =
+        object : NappletPrompts {
+            override suspend fun capability(
+                app: NappletIdentity,
+                info: NappletConsentInfo,
+            ) = NappletConsentCoordinator.requestConsent(context, info)
 
-    // Reuse the app-wide HTTP client so napplet blob fetches inherit the same Tor
-    // routing, Onion-Location discovery/rewriting, Blossom cache and pool as the
-    // rest of the app, instead of a private client that has to re-wire all of it.
-    private val resourceFetcher =
-        NappletResourceFetcher(account, httpClient) { coordinate ->
-            NappletNetworkRegistry.awaitReady()
-            NappletNetworkRegistry.useTor(coordinate)
+            override suspend fun connect(
+                app: NappletIdentity,
+                info: SignerConnectInfo,
+            ) = SignerConnectCoordinator.requestConnect(context, info)
+
+            override suspend fun signerOp(
+                app: NappletIdentity,
+                info: SignerConsentInfo,
+            ) = SignerConsentCoordinator.requestConsent(context, info)
         }
-    private val identityReader = AccountIdentityReader(account)
 
-    fun broker(): NappletBroker {
-        val relay = AccountNappletRelayGateway(account)
-
-        val consent =
-            NappletConsentPrompt { identity, capability, request ->
-                NappletConsentCoordinator.requestConsent(
-                    context = context,
-                    info = consentSummary.info(identity, capability, request),
-                )
+    private val notify =
+        object : NappletNotifyGateway {
+            override suspend fun create(
+                coordinate: String,
+                title: String,
+                body: String,
+            ): String {
+                val id = NappletNotificationStore.create(coordinate, title, body)
+                runCatching { postSystemNotification(id, title, body) }
+                return id
             }
 
-        val wallet = AccountNappletWalletGateway(account)
-        val resource = NappletResourceGateway { url, coordinate -> resourceFetcher.fetch(url, coordinate) }
-        val identityReads = NappletIdentityGateway { method, argument -> identityReader.read(method, argument) }
-        val upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) }
-        val theme = NappletThemeGateway { currentNappletThemeColors(context) }
-        val notify =
-            object : NappletNotifyGateway {
-                override suspend fun create(
-                    coordinate: String,
-                    title: String,
-                    body: String,
-                ): String {
-                    val id = NappletNotificationStore.create(coordinate, title, body)
-                    runCatching { postSystemNotification(id, title, body) }
-                    return id
-                }
+            override suspend fun list(coordinate: String): List<NappletNotification> = NappletNotificationStore.list(coordinate)
 
-                override suspend fun list(coordinate: String): List<NappletNotification> = NappletNotificationStore.list(coordinate)
-
-                override suspend fun dismiss(
-                    coordinate: String,
-                    id: String,
-                ) {
-                    NappletNotificationStore.dismiss(coordinate, id)
-                    runCatching { NotificationManagerCompat.from(context).cancel(id.hashCode()) }
-                }
+            override suspend fun dismiss(
+                coordinate: String,
+                id: String,
+            ) {
+                NappletNotificationStore.dismiss(coordinate, id)
+                runCatching { NotificationManagerCompat.from(context).cancel(id.hashCode()) }
             }
+        }
 
-        val connectPrompt =
-            NostrConnectPrompt { identity, declared ->
-                SignerConnectCoordinator.requestConnect(
-                    context = context,
-                    info = buildConnectInfo(Amethyst.instance.browserIcons, identity, declared),
-                )
-            }
-
-        val recentEncryptions = NappletRecentEncryptions()
-
-        val signerConsent =
-            NostrSignerConsentPrompt { identity, op, request ->
-                // Fail closed if the prompt is never answered. The broker holds its consent lock while
-                // this waits, so an unanswered dialog (left behind when the user went to the launcher,
-                // its task then unreachable) would otherwise block every later signing request from
-                // every web app until the process died. Same bound as the NIP-46 path.
-                withTimeoutOrNull(SIGNER_CONSENT_TIMEOUT) {
-                    SignerConsentCoordinator.requestConsent(
-                        context = context,
-                        info = buildSignerConsentInfo(Amethyst.instance.browserIcons, identity, op, request, account, recentEncryptions),
-                    )
-                } ?: SignerOpGrant.DenyOnce
-            }
-
-        // Everything the broker signs belongs to the guest — a napplet, an nSite, or a web app
-        // calling NIP-07 — never to Amethyst, so our client tag has no business on it. It would also
-        // corrupt the template a NIP-07 caller re-checks the returned event against.
-        return NappletBroker(account.signer.withoutClientTag(), ledger, consent, signerLedger = signerLedger, nostrConnectPrompt = connectPrompt, signerConsentPrompt = signerConsent, recentEncryptions = recentEncryptions, relay = relay, storage = storage, wallet = wallet, resource = resource, upload = upload, identityReads = identityReads, theme = theme, notify = notify)
-    }
+    fun broker(): NappletBroker =
+        buildAccountNappletBroker(
+            account = account,
+            browserIcons = Amethyst.instance.browserIcons,
+            ledger = ledger,
+            signerLedger = signerLedger,
+            storage = storage,
+            // Reuse the app-wide HTTP client so napplet blob fetches inherit the same Tor
+            // routing, Onion-Location discovery/rewriting, Blossom cache and pool as the
+            // rest of the app, instead of a private client that has to re-wire all of it.
+            httpClient = httpClient,
+            useTor = { coordinate ->
+                NappletNetworkRegistry.awaitReady()
+                NappletNetworkRegistry.useTor(coordinate)
+            },
+            prompts = prompts,
+            theme = NappletThemeGateway { currentNappletThemeColors(context) },
+            upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) },
+            notify = notify,
+        )
 
     /**
      * Posts a napplet's notification to the system tray (best-effort: a missing POST_NOTIFICATIONS
@@ -237,8 +205,6 @@ class AccountNappletGateways(
     }
 
     companion object {
-        private val SIGNER_CONSENT_TIMEOUT = 120.seconds
-
         /** Notification channel for napplet-originated notifications (NAP `notify`). */
         private const val NOTIFY_CHANNEL_ID = "napplet_notifications"
     }

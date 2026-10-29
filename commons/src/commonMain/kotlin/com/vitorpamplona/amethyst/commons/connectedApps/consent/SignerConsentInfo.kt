@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.connectedApps.consent
 
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -91,11 +92,17 @@ data class SignerConsentInfo(
     val requestedAtMillis: Long = TimeUtils.nowMillis(),
 )
 
-/** One pending per-operation consent request, as the batched sheet renders it. */
-data class PendingConsent(
-    val token: String,
-    val info: SignerConsentInfo,
-)
+/** One per-operation consent request waiting on the user, as the batched sheet renders it. */
+typealias PendingConsent = ConsentQueue.Request<SignerConsentInfo, SignerOpGrant>
+
+/**
+ * The requests to show together: those for the account of the oldest one. A sheet signs for one
+ * account, so requests for another wait for the next sheet.
+ */
+fun List<PendingConsent>.oldestAccountGroup(): List<PendingConsent> {
+    val account = firstOrNull()?.info?.accountPubKey ?: return emptyList()
+    return filter { it.info.accountPubKey == account }
+}
 
 /** Everything the "Connect to Nostr" dialog needs to render. */
 data class SignerConnectInfo(

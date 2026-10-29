@@ -22,64 +22,44 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
-import kotlinx.coroutines.CompletableDeferred
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Bridges the main-process broker to the consent UI. The broker suspends in
- * [requestConsent]; this launches [NappletConsentActivity], holds the pending decision keyed
- * by a one-time token, and resolves it when the activity reports the user's choice.
+ * Bridges the main-process broker to the consent UI. The broker suspends in [requestConsent], which
+ * queues the question and launches [NappletConsentActivity] with its token; the activity reports the
+ * user's choice back here.
  *
  * A dismissed dialog resolves to [GrantState.ASK] — i.e. "not authorized, ask again next
  * time" — so closing the prompt never silently grants nor permanently blocks.
  */
 object NappletConsentCoordinator {
-    private class Pending(
-        val info: NappletConsentInfo,
-        val deferred: CompletableDeferred<GrantState>,
-    )
-
-    private val pending = ConcurrentHashMap<String, Pending>()
+    private val queue = ConsentQueue<NappletConsentInfo, GrantState>(unanswered = GrantState.ASK)
 
     suspend fun requestConsent(
         context: Context,
         info: NappletConsentInfo,
-    ): GrantState {
-        val token = UUID.randomUUID().toString()
-        val deferred = CompletableDeferred<GrantState>()
-        pending[token] = Pending(info, deferred)
-
-        val intent =
-            Intent(context, NappletConsentActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .putExtra(EXTRA_TOKEN, token)
-        context.startActivity(intent)
-
-        return try {
-            deferred.await()
-        } finally {
-            pending.remove(token)
-        }
-    }
+    ): GrantState =
+        queue.ask(info, onQueued = { request ->
+            context.startActivity(
+                Intent(context, NappletConsentActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .putExtra(EXTRA_TOKEN, request.token),
+            )
+        })
 
     /** Called by [NappletConsentActivity] to render the prompt. */
-    fun infoFor(token: String): NappletConsentInfo? = pending[token]?.info
+    fun infoFor(token: String): NappletConsentInfo? = queue.info(token)
 
     /** Called by [NappletConsentActivity] with the user's decision. */
     fun complete(
         token: String,
         grant: GrantState,
-    ) {
-        pending[token]?.deferred?.complete(grant)
-    }
+    ) = queue.answer(token, grant)
 
     /** Called when the dialog is dismissed without a choice — fails closed (no grant). */
-    fun cancel(token: String) {
-        pending[token]?.deferred?.complete(GrantState.ASK)
-    }
+    fun cancel(token: String) = queue.dismiss(token)
 
     const val EXTRA_TOKEN = "napplet_consent_token"
 }

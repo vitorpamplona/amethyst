@@ -21,34 +21,21 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.account.AccountState
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
-import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
-import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
-import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletNetworkChoices
-import com.vitorpamplona.amethyst.commons.napplet.NappletRecentEncryptions
-import com.vitorpamplona.amethyst.commons.napplet.NappletResourceGateway
+import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
-import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
-import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
-import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentSummary
-import com.vitorpamplona.amethyst.commons.napplet.ui.buildConnectInfo
-import com.vitorpamplona.amethyst.commons.napplet.ui.buildSignerConsentInfo
+import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,16 +43,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * The desktop's napplet and nSite host: opens each NIP-5D napplet or NIP-5A site in its own window
- * on [DesktopCefEngine], and wires the shared [NappletBroker] to the logged-in account the way
- * Android's `AccountNappletGateways` does (relay, storage, resource, identity, wallet, theme, and the
- * NIP-07 signer with its connect and per-operation prompts). Consent is asked in the app's window
- * ([DesktopNappletConsent]); grants persist in the app's napplet and signer ledgers.
+ * on [DesktopCefEngine], with the broker every platform builds ([buildAccountNappletBroker]) for the
+ * logged-in account. Consent questions wait in [consent] under their app, and each app's window
+ * shows its own; grants persist in the app's napplet and signer ledgers.
  *
  * An nSite goes through Tor or the open web, as the user chose for that site ([networkChoices], the
  * same store Android keeps); [DesktopNappletRoutes] applies it to Chromium.
@@ -88,7 +72,7 @@ class DesktopNappletHost(
 
     val engine get() = runtime.engine
 
-    val consent = DesktopNappletConsent()
+    val consent = NappletPromptQueues()
 
     val networkChoices = NappletNetworkChoices(modules.appStores.getDataStore("napplet_network"), modules.applicationIOScope)
 
@@ -180,7 +164,7 @@ class DesktopNappletHost(
         mutableSessions.update { it - session }
         session.close()
         if (sessions.value.none { it.launch.identity.coordinate == session.launch.identity.coordinate }) {
-            consent.dismissAll(session.launch.identity.coordinate)
+            consent.dismissApp(session.launch.identity.coordinate)
         }
         if (sessions.value.isEmpty()) modules.nappletPermissionLedger.endSession()
     }
@@ -203,49 +187,18 @@ class DesktopNappletHost(
             ?: buildBroker(account).also { brokers[account.pubKey] = account to it }
 
     private fun buildBroker(account: Account): NappletBroker =
-        run {
-            val summary = NappletConsentSummary(modules.browserIcons, account)
-            val resources =
-                NappletResourceFetcher(account, { useProxy -> modules.okHttpClients.getHttpClient(useProxy) }) { coordinate ->
-                    networkChoices.awaitReady()
-                    torEnabled() && networkChoices.useTor(coordinate)
-                }
-            val identity = AccountIdentityReader(account)
-            val recentEncryptions = NappletRecentEncryptions()
-            NappletBroker(
-                // Everything a napplet or site signs is its own, not Amethyst's: no client tag. It
-                // would also corrupt the template a NIP-07 caller re-checks the returned event against.
-                signer = account.signer.withoutClientTag(),
-                ledger = modules.nappletPermissionLedger,
-                consentPrompt =
-                    NappletConsentPrompt { appIdentity, capability, request ->
-                        consent.request(appIdentity.coordinate, summary.info(appIdentity, capability, request))
-                    },
-                relay = AccountNappletRelayGateway(account),
-                storage = storage,
-                wallet = AccountNappletWalletGateway(account),
-                resource = NappletResourceGateway { url, coordinate -> resources.fetch(url, coordinate) },
-                identityReads = NappletIdentityGateway { method, argument -> identity.read(method, argument) },
-                theme = NappletThemeGateway { themeColors },
-                signerLedger = signerLedger,
-                nostrConnectPrompt =
-                    NostrConnectPrompt { appIdentity, declared ->
-                        consent.connect(appIdentity.coordinate, buildConnectInfo(modules.browserIcons, appIdentity, declared))
-                    },
-                signerConsentPrompt =
-                    NostrSignerConsentPrompt { appIdentity, op, request ->
-                        // Fail closed if the prompt is never answered: the broker holds its consent lock
-                        // while this waits, and an abandoned dialog would block every later request.
-                        withTimeoutOrNull(SIGNER_CONSENT_TIMEOUT) {
-                            consent.signerOp(appIdentity.coordinate, buildSignerConsentInfo(modules.browserIcons, appIdentity, op, request, account, recentEncryptions))
-                        } ?: SignerOpGrant.DenyOnce
-                    },
-                recentEncryptions = recentEncryptions,
-            )
-        }
-
-    private companion object {
-        // The same bound as Android's.
-        val SIGNER_CONSENT_TIMEOUT = 120.seconds
-    }
+        buildAccountNappletBroker(
+            account = account,
+            browserIcons = modules.browserIcons,
+            ledger = modules.nappletPermissionLedger,
+            signerLedger = signerLedger,
+            storage = storage,
+            httpClient = { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
+            useTor = { coordinate ->
+                networkChoices.awaitReady()
+                torEnabled() && networkChoices.useTor(coordinate)
+            },
+            prompts = consent,
+            theme = NappletThemeGateway { themeColors },
+        )
 }

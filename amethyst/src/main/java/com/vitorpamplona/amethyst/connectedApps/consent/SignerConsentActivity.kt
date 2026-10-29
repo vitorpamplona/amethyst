@@ -40,6 +40,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.PendingConsent
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.oldestAccountGroup
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.BatchedConsentCard
@@ -56,8 +57,8 @@ class SignerConsentActivity : ComponentActivity() {
             // per-account sheet). One request → the rich dialog; several → a batched list. When the
             // whole queue empties, close.
             val pending by SignerConsentCoordinator.pending.collectAsStateWithLifecycle()
-            val groupAccount = pending.firstOrNull()?.info?.accountPubKey
-            val group = pending.filter { it.info.accountPubKey == groupAccount }
+            val group = pending.oldestAccountGroup()
+            val groupAccount = group.firstOrNull()?.info?.accountPubKey
 
             // The sheet wears the color of the account it signs for, which need not be the logged-in one.
             AmethystTheme(accountPubKey = groupAccount) {
