@@ -68,7 +68,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletWindows
-import com.vitorpamplona.amethyst.desktop.napplet.LocalDesktopNappletHost
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -327,7 +326,6 @@ fun main(args: Array<String>) {
                                 // Throws when no app can open a link, as on Android, so a wallet
                                 // handoff that goes nowhere can say so.
                                 LocalUriHandler provides DesktopUriHandler,
-                                LocalDesktopNappletHost provides nappletHost,
                             ) {
                                 // A click on the window in the background only brings it forward.
                                 Box(Modifier.fillMaxSize().clickToActivate(window, LocalWindowInfo.current).trackWheelScrolling(wheelScrolling)) {

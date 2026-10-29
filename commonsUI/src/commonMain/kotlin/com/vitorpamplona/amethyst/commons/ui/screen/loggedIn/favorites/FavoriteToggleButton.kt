@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.favorites
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites
 
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -27,19 +27,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_add
 import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
  * A star toggle that pins/unpins an nsite or napplet (a [FavoriteApp.NostrApp]) by its addressable
- * [coordinate]. Drops into the shared static-site card's header-actions slot; the favorite store and
- * its strings stay here in the app layer, never in the shared card.
+ * [coordinate], in the platform's favorite apps.
  */
 @Composable
 fun FavoriteToggleButton(
@@ -47,17 +47,17 @@ fun FavoriteToggleButton(
     label: String,
     iconUrl: String? = null,
 ) {
-    val apps by Amethyst.instance.favoriteApps.favorites
-        .collectAsStateWithLifecycle()
+    val favoriteApps = LocalAppServices.current.favoriteApps
+    val apps by favoriteApps.favorites.collectAsStateWithLifecycle()
     val id = "nostr:$coordinate"
     val isFavorite = remember(apps, id) { apps.any { it.id == id } }
 
     IconButton(
         onClick = {
             if (isFavorite) {
-                Amethyst.instance.favoriteApps.remove(id)
+                favoriteApps.remove(id)
             } else {
-                Amethyst.instance.favoriteApps.add(FavoriteApp.NostrApp(coordinate, label, System.currentTimeMillis(), iconUrl))
+                favoriteApps.add(FavoriteApp.NostrApp(coordinate, label, TimeUtils.nowMillis(), iconUrl))
             }
         },
     ) {

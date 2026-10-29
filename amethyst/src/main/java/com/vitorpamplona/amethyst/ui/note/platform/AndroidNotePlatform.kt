@@ -72,10 +72,6 @@ import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusi
 import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
 import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
 import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
-import com.vitorpamplona.amethyst.ui.note.types.RenderNamedNappletEvent as AppRenderNamedNappletEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderNamedSiteEvent as AppRenderNamedSiteEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderRootNappletEvent as AppRenderRootNappletEvent
-import com.vitorpamplona.amethyst.ui.note.types.RenderRootSiteEvent as AppRenderRootSiteEvent
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -452,50 +448,6 @@ object AndroidNotePlatform : NotePlatform {
         canPreview = canPreview,
         quotesLeft = quotesLeft,
         backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderRootNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderRootNappletEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderNamedNappletEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderNamedNappletEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderRootSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderRootSiteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
-
-    @Composable
-    override fun RenderNamedSiteEvent(
-        baseNote: Note,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = AppRenderNamedSiteEvent(
-        baseNote = baseNote,
         accountViewModel = accountViewModel,
         nav = nav,
     )

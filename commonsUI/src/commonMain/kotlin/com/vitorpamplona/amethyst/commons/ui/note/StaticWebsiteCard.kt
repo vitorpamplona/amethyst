@@ -69,7 +69,11 @@ import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
 import com.vitorpamplona.amethyst.commons.resources.nsite_servers
 import com.vitorpamplona.amethyst.commons.resources.nsite_source
 import com.vitorpamplona.amethyst.commons.resources.nsite_website_kind
+import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.PrefetchNappletFiles
+import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteToggleButton
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -103,25 +107,40 @@ class NappletCardInfo(
     val launchable: Boolean = event.isLaunchable()
 }
 
+/** What a site card shows, read off a [RootSiteEvent] or [NamedSiteEvent] once per event. */
+@Immutable
+class SiteCardInfo private constructor(
+    val title: String?,
+    val description: String?,
+    val source: String?,
+    val servers: List<String>,
+    val identifier: String?,
+    val icon: String?,
+    val paths: List<PathTag>,
+) {
+    companion object {
+        fun of(event: Event): SiteCardInfo? =
+            when (event) {
+                is RootSiteEvent -> SiteCardInfo(event.title(), event.description(), event.source(), event.servers(), null, event.icon(), event.paths())
+                is NamedSiteEvent -> SiteCardInfo(event.title(), event.description(), event.source(), event.servers(), event.identifier(), event.icon(), event.paths())
+                else -> null
+            }
+    }
+}
+
 /**
- * [StaticWebsiteCard] for a NIP-5A site or NIP-5D napplet on a platform with no sandbox host to run
- * it in (desktop, for now): what it is and what it would access, without an Open button. Renders
- * nothing for any other event; NoteCompose sends invalid napplet manifests to the fallback card.
+ * The feed card for a NIP-5A site or NIP-5D napplet, on every platform: what it is and what it would
+ * access, a star that pins it to the favorite apps, and Open where the platform can run it
+ * ([AppLauncher.opensNapplets]). Its files download while it is on screen, so Open starts at once.
+ * Renders nothing for any other event; NoteCompose sends invalid napplet manifests to the fallback
+ * card.
  */
 @Composable
 fun StaticWebsiteManifestCard(event: Event?) {
     when (event) {
         is RootNappletEvent -> NappletManifestCard(event, identifier = null)
         is NamedNappletEvent -> NappletManifestCard(event, identifier = event.identifier())
-
-        is RootSiteEvent -> {
-            StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), null, isNapplet = false, icon = event.icon())
-        }
-
-        is NamedSiteEvent -> {
-            StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), event.identifier(), isNapplet = false, icon = event.icon())
-        }
-
+        is RootSiteEvent, is NamedSiteEvent -> SiteCard(event)
         else -> {}
     }
 }
@@ -133,6 +152,10 @@ private fun NappletManifestCard(
 ) {
     val info = remember(event) { NappletCardInfo(event) }
     val coordinate = remember(event) { favoriteCoordinateOf(event as Event) }
+    val launcher = rememberAppLauncher()
+    val icon = rememberNappletIconModel(coordinate)
+    PrefetchNappletFiles(info.artifactFiles, info.servers)
+
     StaticWebsiteCard(
         title = info.title,
         description = info.description,
@@ -141,9 +164,36 @@ private fun NappletManifestCard(
         identifier = identifier,
         isNapplet = true,
         requires = info.required,
-        icon = rememberNappletIconModel(coordinate),
+        icon = icon,
+        // The card itself never executes code: Open hands the napplet to the platform's sandbox.
+        onOpen = if (info.launchable && launcher.opensNapplets) ({ launcher.openNapplet(event) }) else null,
+        headerActions = { FavoriteToggleButton(coordinate, info.title ?: identifier ?: NAPPLET_LABEL, icon) },
     )
 }
+
+@Composable
+private fun SiteCard(event: Event) {
+    val info = remember(event) { SiteCardInfo.of(event) } ?: return
+    val coordinate = remember(event) { favoriteCoordinateOf(event) }
+    val launcher = rememberAppLauncher()
+    PrefetchNappletFiles(info.paths, info.servers)
+
+    StaticWebsiteCard(
+        title = info.title,
+        description = info.description,
+        source = info.source,
+        servers = info.servers,
+        identifier = info.identifier,
+        isNapplet = false,
+        icon = info.icon,
+        onOpen = if (info.paths.isNotEmpty() && launcher.opensNapplets) ({ launcher.openSite(event) }) else null,
+        headerActions = { FavoriteToggleButton(coordinate, info.title ?: info.identifier ?: NSITE_LABEL, info.icon) },
+    )
+}
+
+// A favorite's label when the event has no title or identifier (a root napplet or site without one).
+private const val NAPPLET_LABEL = "Napplet"
+private const val NSITE_LABEL = "nsite"
 
 /**
  * The inert, host-agnostic preview card for a NIP-5A static site or NIP-5D napplet event, styled like
@@ -154,7 +204,8 @@ private fun NappletManifestCard(
  * one. It never executes applet code; launching runs in the platform host's sandbox via [onOpen]
  * (a null [onOpen] — no paths — hides the button).
  *
- * Both the Android feed and a future desktop feed render this identical card so the two can't drift.
+ * Every platform's feed renders this identical card, through [StaticWebsiteManifestCard], so they
+ * can't drift.
  */
 @Composable
 fun StaticWebsiteCard(
@@ -167,8 +218,7 @@ fun StaticWebsiteCard(
     requires: List<String> = emptyList(),
     icon: String? = null,
     onOpen: (() -> Unit)? = null,
-    // Optional trailing slot in the header row (e.g. a favorite star). Kept as a slot so the
-    // favorite store + its strings stay in the app layer and never leak into this shared card.
+    // Optional trailing slot in the header row (the favorite star).
     headerActions: @Composable (() -> Unit)? = null,
 ) {
     val displayTitle = title?.ifBlank { null } ?: identifier?.ifBlank { null } ?: stringResource(Res.string.nsite_root_site)

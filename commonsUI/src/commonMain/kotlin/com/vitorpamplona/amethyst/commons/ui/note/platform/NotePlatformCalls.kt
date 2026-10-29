@@ -372,50 +372,6 @@ fun RenderGitPullRequestUpdateEvent(
     nav = nav,
 )
 
-@Composable
-fun RenderRootNappletEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderRootNappletEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderNamedNappletEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderNamedNappletEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderRootSiteEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderRootSiteEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
-@Composable
-fun RenderNamedSiteEvent(
-    baseNote: Note,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) = LocalNotePlatform.current.RenderNamedSiteEvent(
-    baseNote = baseNote,
-    accountViewModel = accountViewModel,
-    nav = nav,
-)
-
 /** The longest voice message the recorder allows, in seconds. */
 const val MAX_VOICE_RECORD_SECONDS = 600
 

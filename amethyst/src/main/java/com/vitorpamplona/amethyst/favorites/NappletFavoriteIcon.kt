@@ -92,10 +92,6 @@ fun rememberNappletIconModel(coordinate: String): String? {
     return rememberVerifiedIconModel(icon)
 }
 
-/** Used by feed cards as well as favorite/connected-app surfaces. Never returns a remote icon URL. */
-@Composable
-fun rememberNappletEventIconModel(event: Event): String? = rememberVerifiedIconModel(remember(event) { resolveIconBlob(event) })
-
 @Composable
 private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
     val context = LocalContext.current

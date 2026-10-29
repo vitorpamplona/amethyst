@@ -31,10 +31,12 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -167,6 +169,19 @@ class DesktopNappletHost(
             consent.dismissApp(session.launch.identity.coordinate)
         }
         if (sessions.value.isEmpty()) modules.nappletPermissionLedger.endSession()
+    }
+
+    /**
+     * Downloads a card's files into the blob cache while it is on screen, so Open starts at once.
+     * Never in the clear while Tor is on and not running yet: the launch waits for it instead.
+     */
+    suspend fun prefetch(
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {
+        val torPort = modules.torManager.activePortOrNull.value
+        if (torPort == null && torEnabled()) return
+        NappletBlobPrefetcher.prefetch(paths, servers, modules.filesDir, torPort ?: -1)
     }
 
     /** The app's colors, for `theme.get` and the `theme.changed` push. */

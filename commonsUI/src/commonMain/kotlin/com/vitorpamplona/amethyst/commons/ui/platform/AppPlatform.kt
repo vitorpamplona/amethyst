@@ -38,7 +38,12 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
@@ -209,7 +214,7 @@ interface AppPlatform {
         onScan: (String) -> ScanOutcome,
     ) {}
 
-    /** Opens favorite apps and web links in the platform's app surface. */
+    /** Opens favorite apps, web links, napplets and nSites in the platform's app surface. */
     @Composable
     fun rememberAppLauncher(): AppLauncher = AppLauncher.None
 
@@ -257,6 +262,17 @@ interface AppPlatform {
     /** The cached icon of the napplet or nsite at [coordinate], if one was fetched. */
     @Composable
     fun rememberNappletIconModel(coordinate: String): String? = null
+
+    /**
+     * Downloads a napplet's or nSite's files into the platform's blob cache while its card is on
+     * screen, so Open starts at once. Never on the open web while the user wants Tor and Tor isn't
+     * running yet: the launch fetches them then, on the right route.
+     */
+    @Composable
+    fun PrefetchNappletFiles(
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {}
 
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
@@ -339,6 +355,12 @@ fun rememberConcordImageModel(
 fun rememberNappletIconModel(coordinate: String): String? = LocalAppPlatform.current.rememberNappletIconModel(coordinate)
 
 @Composable
+fun PrefetchNappletFiles(
+    paths: List<PathTag>,
+    servers: List<String>,
+) = LocalAppPlatform.current.PrefetchNappletFiles(paths, servers)
+
+@Composable
 fun rememberManifestIconModel(
     author: String,
     identifier: String,
@@ -348,8 +370,8 @@ fun rememberManifestIconModel(
 fun rememberWebAppIconModel(url: String): String? = LocalAppPlatform.current.rememberWebAppIconModel(url)
 
 /**
- * Opens a favorite app or a web link in the platform's app surface (on Android, the sandboxed
- * full-screen WebView in its own task).
+ * Opens a favorite app, a web link, a napplet or an nSite in the platform's app surface (on Android,
+ * the sandboxed full-screen WebView in its own task; on the desktop, a Chromium window).
  */
 interface AppLauncher {
     /** [stillLoading] is shown when a Nostr app's defining event has not arrived yet. */
@@ -363,6 +385,15 @@ interface AppLauncher {
         url: String,
         preferTor: Boolean = false,
     )
+
+    /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
+    val opensNapplets: Boolean get() = false
+
+    /** Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. */
+    fun openNapplet(manifest: NappletManifest) {}
+
+    /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
+    fun openSite(site: Event) {}
 
     /** Launches nothing: front ends without an app surface yet. */
     object None : AppLauncher {
