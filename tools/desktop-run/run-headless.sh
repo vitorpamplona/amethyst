@@ -3,15 +3,24 @@
 # Runs the desktop app (the same shared UI Android renders) on a virtual X display, so an agent in a
 # headless container can launch it, look at it and click through it. See README.md next to this file.
 #
-#   tools/desktop-run/run-headless.sh start [--fresh]   # build + launch, wait for the first paint
+#   tools/desktop-run/run-headless.sh start [options]   # build + launch, wait for the first paint
 #   tools/desktop-run/run-headless.sh shot [file.png]   # screenshot (default: $RUN_DIR/shot.png)
 #   tools/desktop-run/run-headless.sh logs              # tail of the app log, errors first
 #   tools/desktop-run/run-headless.sh stop              # stop the app (Xvfb keeps running)
 #
+# start options (the login is transient: no key prompt, nothing saved; one of the three at most):
+#   --fresh             start from an empty profile
+#   --login <npub>      open logged in with a public key (npub, nprofile, name@domain)
+#   --login-file <path> open logged in with the key in that file (an nsec stays out of `ps`), e.g.
+#                       $RUN_DIR/profile/signup.nsec, read before --fresh clears the profile
+#   --signup "<name>"   sign up a new account as the Sign Up button does; it publishes to public
+#                       relays, and its nsec goes to $RUN_DIR/profile/signup.nsec
+#
 # Env: AMETHYST_DISPLAY (default :99), AMETHYST_SCREEN (default 1600x1000x24),
 #      AMETHYST_RUN_DIR (default /tmp/amethyst-desktop-run: log, profile, screenshots),
 #      AMETHYST_START_TIMEOUT seconds (default 900: a cold Gradle build is slow),
-#      AMETHYST_RUN_ARGS extra Gradle arguments, e.g. "-Damethyst.update.devCheck=true".
+#      AMETHYST_RUN_ARGS extra Gradle arguments, e.g. "-Damethyst.update.devCheck=true",
+#      AMETHYST_LOGIN / AMETHYST_SIGNUP, which the app reads itself: what --login and --signup set.
 
 set -uo pipefail
 
@@ -63,7 +72,54 @@ print_errors() {
 
 case "${1:-}" in
   start)
-    [ "${2:-}" = "--fresh" ] && rm -rf "$DATA_DIR"
+    shift
+    fresh=false
+    account_options=0
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --fresh) fresh=true ;;
+        --login)
+          [ $# -ge 2 ] || { echo "--login needs a key" >&2; exit 2; }
+          # On the command line the key shows in `ps` and in the shell history: public keys only.
+          # Any case, as the app reads keys; a bare 64-char hex key or a seed phrase is a private key.
+          login_lower="$(printf '%s' "$2" | tr '[:upper:]' '[:lower:]')"
+          if [[ "$login_lower" == nsec1* || "$login_lower" == ncryptsec1* || "$login_lower" =~ ^[0-9a-f]{64}$ || "$2" =~ [[:space:]] ]]; then
+            echo "--login takes public keys only: a private key on the command line shows in ps. Use --login-file." >&2
+            exit 2
+          fi
+          export AMETHYST_LOGIN="$2"
+          unset AMETHYST_SIGNUP
+          account_options=$((account_options + 1))
+          shift
+          ;;
+        --login-file)
+          [ $# -ge 2 ] || { echo "--login-file needs a path" >&2; exit 2; }
+          [ -r "$2" ] || { echo "Cannot read the key file $2" >&2; exit 2; }
+          AMETHYST_LOGIN="$(tr -d '[:space:]' < "$2")"
+          [ -n "$AMETHYST_LOGIN" ] || { echo "The key file $2 is empty" >&2; exit 2; }
+          export AMETHYST_LOGIN
+          unset AMETHYST_SIGNUP
+          account_options=$((account_options + 1))
+          shift
+          ;;
+        --signup)
+          [ $# -ge 2 ] && [ -n "$2" ] || { echo "--signup needs a display name" >&2; exit 2; }
+          export AMETHYST_SIGNUP="$2"
+          unset AMETHYST_LOGIN
+          account_options=$((account_options + 1))
+          shift
+          ;;
+        *)
+          echo "Unknown start option: $1" >&2
+          sed -n '3,22p' "$0" >&2
+          exit 2
+          ;;
+      esac
+      shift
+    done
+    [ "$account_options" -le 1 ] || { echo "Pass only one of --login, --login-file and --signup" >&2; exit 2; }
+    # After the options: --login-file may name the signup.nsec this deletes.
+    $fresh && rm -rf "$DATA_DIR"
     # The window sizes itself to the screen only when no bounds were saved; keep it reproducible.
     rm -f "$DATA_DIR/window-bounds.properties"
     stop_app
@@ -113,7 +169,7 @@ case "${1:-}" in
     echo "stopped"
     ;;
   *)
-    sed -n '3,14p' "$0"
+    sed -n '3,22p' "$0"
     exit 2
     ;;
 esac
