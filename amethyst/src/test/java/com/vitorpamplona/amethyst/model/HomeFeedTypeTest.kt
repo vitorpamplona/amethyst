@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.model
 
 import com.vitorpamplona.amethyst.commons.model.HomeFeedType
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
@@ -78,7 +79,8 @@ class HomeFeedTypeTest {
         // Long-form videos are the horizontal/normal kinds; vertical/short kinds belong to Shorts.
         assertEquals(listOf(VideoNormalEvent.KIND, AddressableNormalVideoEvent.KIND), HomeFeedType.VIDEOS.kinds)
         assertEquals(listOf(VideoShortEvent.KIND, AddressableShortVideoEvent.KIND), HomeFeedType.SHORTS.kinds)
-        assertEquals(listOf(TorrentEvent.KIND), HomeFeedType.TORRENTS.kinds)
+        // Torrent comments ride the Torrents toggle, so turning it off hides the whole conversation.
+        assertEquals(listOf(TorrentEvent.KIND, TorrentCommentEvent.KIND), HomeFeedType.TORRENTS.kinds)
     }
 
     @Test
