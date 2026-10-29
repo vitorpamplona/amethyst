@@ -169,10 +169,12 @@ object VideoCompressionHelper {
                                         // Sanity check: compression not smaller than original
                                         if (originalSize in 1..size) {
                                             deleteOutput(path)
-                                            applicationContext.notifyUser(
-                                                "Compressed file larger than original. Using original.",
-                                                LogLevel.WARN,
-                                            )
+                                            if (continuation.isActive) {
+                                                applicationContext.notifyUser(
+                                                    "Compressed file larger than original. Using original.",
+                                                    LogLevel.WARN,
+                                                )
+                                            }
                                             continuation.resume(MediaCompressorResult(uri, contentType, null))
                                             return
                                         }
