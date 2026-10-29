@@ -6,7 +6,8 @@ and 5) passed on the Pixel 9a the same day; waits for the 2.3.0 tag (step 6) bef
 The `CompressionHandle` from LightCompressor PR #53 is adopted (section C, step 2; commit
 `28023020fa`) and the step 4 cancel case passed on the Pixel 9a the same day; it also surfaced a
 library gap (a cancel landing after the last frame leaves the finished output; see the report's
-Findings) whose fix is still to be decided. (Written 2026-10-28 from the
+Findings), fixed in the library as bead 075 and re-verified here against the 16:47 snapshot: four
+runs, `files/` empty every time. (Written 2026-10-28 from the
 LightCompressor session, HDR hint added 2026-10-29.)
 
 Amethyst depends on `com.github.davotoula:LightCompressor-enhanced:2.2.3`

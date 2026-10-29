@@ -146,6 +146,28 @@ the back stack.
 The clips were deleted from `Movies/hdrcheck` and MediaStore afterwards; `files/` holds no `.mp4`,
 `_temp` or `transcode_*` entry.
 
+### Device, cancel case rerun against the fixed library (2026-10-29, Pixel 9a)
+
+The library session fixed the leftover (LightCompressor bead 075, commits `45ce24a`..`95c2d3b` on
+its `fix/cancel-finalized-output` branch) and republished `2.3.0-SNAPSHOT` at 16:47; its
+`classes.jar` and the rebuilt APK both contain `CancelledOutputKt`. Amethyst was reinstalled
+(16:51) with no app change: the last library commit makes `Compressor` `internal`, and Amethyst
+only ever imported `VideoCompressor`. Same 40 s, 20 Mb/s 4K `testsrc2` clip at Medium, same
+"X then back out of the Videos feed" cancel, `files/` polled every 0.8 s from the Post tap.
+
+| Run | Back at | What `files/` showed | Result |
+|---|---|---|---|
+| 1 | +21.5 s | +22.4 s: `transcode_…mp4` **and** `81e66997-….mp4`, both 19,656,382 bytes (the fast-start copy in progress); +23.2 s: empty | **Pass, the exact race.** "Video compression cancelled" (`onCancelled`) at +22.9 s. The library deleted the finished output; Amethyst's success path never ran. |
+| 2 | +22.5 s | +22.5 s: both files; +23.4 s: empty | **Pass.** No `onCancelled` line: the encode completed first, `onSuccess` found the continuation cancelled and Amethyst's own guard deleted the file. |
+| 3 | +22.7 s | +22.7 s: only `0c66a797-….mp4` (finalize done); +23.7 s: empty | **Pass.** Same success-path cleanup as run 2. |
+| 4 | +12.5 s | +12.5 s: `transcode_…mp4` at 10.9 MB; +13.4 s: empty | **Pass, mid-encode regression check.** `onCancelled` 1.1 s after back. |
+
+Runs 1 to 3 bracket the finalize window from both sides, so both owners of the file are covered:
+the library when the cancel lands during the encode or the copy, Amethyst when it lands after
+`onSuccess` was already on its way. `nak req` on the tester key over nostr.download, damus, nos.lol
+and primal shows nothing published during the runs. The clip was removed from `Movies/hdrcheck`
+and MediaStore; `files/` and `cache/` hold no `.mp4`, `_temp` or `transcode_*` entry.
+
 ## Findings
 
 - **Uploads compress concurrently.** `MultiOrchestrator` launches every attachment at once, which
@@ -162,8 +184,13 @@ The clips were deleted from `Movies/hdrcheck` and MediaStore afterwards; `files/
   output). Decided 2026-10-29: fixed in the library, not here (an Amethyst-side delete of
   `File(filesDir, "$uuid.mp4")` in `onCancelled` would duplicate the library's
   `AppSpecificStorageConfiguration` path rule). Brief for the library session:
-  `LightCompressor/docs/briefs/2026-10-29-cancel-after-last-frame-leftover.md` (delete `desFile`
+  `LightCompressor/docs/briefs/2026-10-29-075-cancel-after-last-frame-leftover.md` (delete `desFile`
   when the video coroutine ends cancelled, keep `onCancelled`, JVM test on a `File` helper).
+  **Fixed in the library the same day** (bead LightCompressor-075, `VideoCompressor` wraps the
+  encode in `File.deletedIfCancelled`, snapshot republished 16:47) and verified here: see "Device,
+  cancel case rerun". The library session also found and fixed the second symptom (a mid-encode
+  cancel of a non-streamable encode left its partial destination) and filed LightCompressor-lrm for
+  the failure path.
 - **The dialog's X does not cancel a running upload.** `NewMediaView`'s cancel button calls
   `cancelModel()`, which only nulls the orchestrator; the upload coroutine is in the
   `viewModelScope` of a model scoped to the feed screen, so compression and upload continue until
@@ -226,12 +253,10 @@ success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 - Plan status: the brief's status line points here; `amethyst/plans/README.md` keeps it under
   Queued until it ships.
 - Next steps, in order:
-  1. Library session implements the cancel-after-last-frame brief (Findings) and republishes
-     `2.3.0-SNAPSHOT`; then rerun the cancel device check here (40 s 4K clip, back out at 20 to
-     22 s, a few tries) and confirm `files/` stays empty.
-  2. Optional: open the two HLG uploads in a desktop browser (see the device table).
-  3. Tag LightCompressor-enhanced 2.3.0; when
+  1. Optional: open the two HLG uploads in a desktop browser (see the device table).
+  2. Library side: land the 075 fix (fold into PR #53 or a PR after it), then tag
+     LightCompressor-enhanced 2.3.0; when
      `https://jitpack.io/com/github/davotoula/LightCompressor-enhanced/2.3.0/LightCompressor-enhanced-2.3.0.pom`
      returns 200, set `lightcompressor-enhanced = "2.3.0"` and rebuild.
-  4. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand, push the branch to the fork,
+  3. `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` by hand, push the branch to the fork,
      open the PR against `vitorpamplona:main` when you ask for it.
