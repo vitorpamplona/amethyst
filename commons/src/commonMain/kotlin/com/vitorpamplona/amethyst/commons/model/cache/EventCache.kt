@@ -170,6 +170,7 @@ import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
 import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
 import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -358,6 +359,7 @@ import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcResponseEvent
 import com.vitorpamplona.quartz.nip50Search.SearchRelayListEvent
 import com.vitorpamplona.quartz.nip51Lists.PinListEvent
 import com.vitorpamplona.quartz.nip51Lists.appCurationSet.AppCurationSetEvent
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.BookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.OldBookmarkListEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
@@ -4088,6 +4090,7 @@ open class EventCache :
                 is AppDefinitionEvent,
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,
+                is DrssReadWriteListsEvent,
                 is AttestationEvent,
                 is AttestationRequestEvent,
                 is AttestorRecommendationEvent,
@@ -4272,8 +4275,10 @@ open class EventCache :
                 // Unread junk on 38000 still supersedes an older version at its address.
                 is UnrecognizedKind38000Event,
                 // drss.io's lists, show settings and provenance records, and the other apps' events
-                // on those kinds: stored as they were while untyped, so a quote or a link draws the
-                // unknown-kind card. No feed asks for these kinds.
+                // on those kinds. No feed asks for these kinds; the account loads its own, and
+                // quotes and links load the rest. NIP-51 article curation sets are where drss saves
+                // articles, so its folders hold them too.
+                is ArticleCurationSetEvent,
                 is DrssFeedListEvent,
                 is DrssListFolderEvent,
                 is DrssEventListEvent,

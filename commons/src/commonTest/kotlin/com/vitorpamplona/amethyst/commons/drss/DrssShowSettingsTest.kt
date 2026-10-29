@@ -78,4 +78,31 @@ class DrssShowSettingsTest {
         assertSame(first, DrssShowSettings.of(show('1')), "the same event is not parsed again")
         assertNotSame(first, DrssShowSettings.of(show('2')), "a new version is")
     }
+
+    @Test
+    fun editingKeepsTheKeysAmethystDoesNotKnow() {
+        val content =
+            """{"name":"drift","slug":"drift","prompts":{"compose":"# Contract"},"schedule":[{"part":"morning","time":"05:00","zone":"America/Chicago","days":["mon"]}],"episode_retention":"336h"}"""
+        val edited =
+            DrssShowSettings.edit(
+                content = content,
+                name = "Drift",
+                language = "en-us",
+                voice = " ",
+                tags = listOf("music", " "),
+                products = listOf("audio"),
+                schedule = listOf(DrssShowSlot("06:00", "America/Chicago", "morning"), DrssShowSlot("18:00", null, null)),
+                retentionHours = 120,
+            )
+        val settings = DrssShowSettings.parse(edited)
+        assertEquals("Drift", settings.name)
+        assertEquals("en-us", settings.language)
+        assertNull(settings.voice)
+        assertEquals(listOf("music"), settings.tags)
+        assertEquals(listOf(DrssShowSlot("06:00", "America/Chicago", "morning"), DrssShowSlot("18:00", null, null)), settings.schedule)
+        assertEquals(120, settings.retentionHours)
+        assertTrue(edited.contains("\"prompts\":{\"compose\":\"# Contract\"}"), edited)
+        assertTrue(edited.contains("\"days\":[\"mon\"]"), "a slot keeps its other keys")
+        assertTrue(edited.contains("\"slug\":\"drift\""))
+    }
 }

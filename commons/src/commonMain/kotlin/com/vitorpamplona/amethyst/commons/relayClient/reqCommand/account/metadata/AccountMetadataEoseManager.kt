@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.defaults.Constants
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBasicAccountInfoFromKeys
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterBookmarksAndReportsFromKey
+import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterDrssFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterFollowsAndMutesFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.account.metadata.filterLastPostsFromKey
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.MergedAuthorTracker
@@ -139,6 +140,7 @@ class AccountMetadataEoseManager(
                 filterAccountInfoAndListsFromKey(relay, pubkeys, relaySince),
                 filterFollowsAndMutesFromKey(relay, pubkeys, relaySince),
                 filterBookmarksAndReportsFromKey(relay, pubkeys, relaySince),
+                filterDrssFromKey(relay, pubkeys, relaySince),
                 filterLastPostsFromKey(relay, pubkeys, relaySince ?: TimeUtils.oneMonthAgo()),
                 filterBasicAccountInfoFromKeys(relay, otherAccounts.toList(), relaySince, pubkeys),
             ).flatten()

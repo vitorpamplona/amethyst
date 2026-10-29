@@ -57,18 +57,31 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.drss.DrssShowSettings
 import com.vitorpamplona.amethyst.commons.drss.DrssShowSlot
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.User
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeForUser
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
+import com.vitorpamplona.amethyst.commons.relayClient.drss.DrssShowEpisodesQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
+import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.drss_add_to_my_lists
+import com.vitorpamplona.amethyst.commons.resources.drss_badge_read
+import com.vitorpamplona.amethyst.commons.resources.drss_badge_write
 import com.vitorpamplona.amethyst.commons.resources.drss_brand
+import com.vitorpamplona.amethyst.commons.resources.drss_copy_feeds
+import com.vitorpamplona.amethyst.commons.resources.drss_edit
 import com.vitorpamplona.amethyst.commons.resources.drss_event_list
 import com.vitorpamplona.amethyst.commons.resources.drss_feed_count
 import com.vitorpamplona.amethyst.commons.resources.drss_feed_list
@@ -81,21 +94,27 @@ import com.vitorpamplona.amethyst.commons.resources.drss_listen_plays
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_left
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_of
 import com.vitorpamplona.amethyst.commons.resources.drss_listening
+import com.vitorpamplona.amethyst.commons.resources.drss_lists_title
 import com.vitorpamplona.amethyst.commons.resources.drss_loading
+import com.vitorpamplona.amethyst.commons.resources.drss_organize
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_count
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_folder
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_through
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_via
+import com.vitorpamplona.amethyst.commons.resources.drss_read_as_feed
+import com.vitorpamplona.amethyst.commons.resources.drss_read_list
 import com.vitorpamplona.amethyst.commons.resources.drss_show
 import com.vitorpamplona.amethyst.commons.resources.drss_show_keeps_days
 import com.vitorpamplona.amethyst.commons.resources.drss_show_keeps_hours
+import com.vitorpamplona.amethyst.commons.resources.drss_show_latest
 import com.vitorpamplona.amethyst.commons.resources.drss_show_makes
 import com.vitorpamplona.amethyst.commons.resources.drss_show_off_air
 import com.vitorpamplona.amethyst.commons.resources.drss_show_on_air
 import com.vitorpamplona.amethyst.commons.resources.drss_show_publishes_as
 import com.vitorpamplona.amethyst.commons.resources.drss_show_voice
 import com.vitorpamplona.amethyst.commons.resources.drss_untitled
+import com.vitorpamplona.amethyst.commons.resources.drss_write_list
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
@@ -117,16 +136,21 @@ import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
 import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
+import com.vitorpamplona.quartz.nip01Core.core.BaseAddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.fastFirstNotNullOfOrNull
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
+import com.vitorpamplona.quartz.nip51Lists.muteList.tags.UserTag
 import com.vitorpamplona.quartz.nip51Lists.tags.TitleTag
 
 /*
@@ -534,6 +558,151 @@ fun RenderDrssShow(
                     color = MaterialTheme.colorScheme.grayText,
                 )
             }
+            show.showBotKey()?.let { DrssShowEpisodes(it, accountViewModel, nav) }
+            if (show.pubKey == accountViewModel.account.signer.pubKey) {
+                DrssChip(stringRes(Res.string.drss_edit), MaterialSymbols.Edit) { nav.nav(Route.DrssShowEdit(show.address().toValue())) }
+            }
+        }
+    }
+}
+
+/** The show's latest episodes, newest first, each opening the episode; nothing until one loads. */
+@Composable
+private fun DrssShowEpisodes(
+    bot: HexKey,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    LoadUser(bot) { user -> user?.let { DrssShowEpisodesSubscription(it, accountViewModel) } }
+    val episodes by remember(bot) {
+        LocalCache.observeNotes(Filter(kinds = listOf(LongFormContentEvent.KIND), authors = listOf(bot), limit = MAX_EPISODES))
+    }.collectAsStateWithLifecycle(emptyList())
+    if (episodes.isEmpty()) return
+
+    Text(stringRes(Res.string.drss_show_latest), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)
+    Column(Modifier.clip(DrssInnerShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f))) {
+        episodes.take(MAX_EPISODES).forEach { DrssShowEpisodeRow(it, accountViewModel, nav) }
+    }
+}
+
+@Composable
+private fun DrssShowEpisodesSubscription(
+    bot: User,
+    accountViewModel: AccountViewModel,
+) {
+    val state = remember(bot) { DrssShowEpisodesQueryState(bot) }
+    LifecycleAwareKeyDataSourceSubscription(state, accountViewModel.dataSources().drssShowEpisodes)
+}
+
+@Composable
+private fun DrssShowEpisodeRow(
+    episodeNote: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val episode by observeNoteEvent<LongFormContentEvent>(episodeNote, accountViewModel)
+    val article = episode ?: return
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable { routeFor(episodeNote, accountViewModel.account)?.let(nav::nav) }
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+    ) {
+        DrssCover(article.image(), 40.dp, MaterialSymbols.Podcasts, accountViewModel)
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(
+                text = article.title() ?: stringRes(Res.string.drss_untitled),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            (episodeNote as? AddressableNote)?.let { DrssHeardBadge(it, article, accountViewModel) }
+        }
+    }
+}
+
+private const val MAX_EPISODES = 3
+
+// ---- 30078 read-and-write lists ----
+
+/** A drss.io reader's read and write lists: the folder their river reads, and where follows and saves go. */
+@Composable
+fun RenderDrssReadWriteLists(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event by observeNoteEvent<DrssReadWriteListsEvent>(note, accountViewModel)
+    val preference = event ?: return
+    val read = preference.readList()
+    val write = preference.writeList()
+
+    DrssSurface {
+        DrssOverline(MaterialSymbols.Folder, stringRes(Res.string.drss_lists_title))
+        read?.let { DrssRoleLine(stringRes(Res.string.drss_read_list), it, accountViewModel, nav) }
+        write?.takeIf { it.toTag() != read?.toTag() }?.let { DrssRoleLine(stringRes(Res.string.drss_write_list), it, accountViewModel, nav) }
+    }
+}
+
+@Composable
+private fun DrssRoleLine(
+    label: String,
+    list: ATag,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.grayText)
+        LoadAddressableNote(list.address()) { listNote ->
+            DrssListChip(list, listNote, accountViewModel, nav)
+        }
+    }
+}
+
+/**
+ * What the reader can do with a folder or feed list: read it as the home feed; for their own,
+ * see where it is their river or write list and open the organizer; for someone else's, put it in
+ * their lists or, for a feed list, copy its feeds into a follow set of their own.
+ */
+@Composable
+private fun DrssListActions(
+    list: BaseAddressableEvent,
+    feedsToCopy: List<FeedTag>?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val account = accountViewModel.account
+    val drss = account.drss
+    val read by drss.readList.collectAsStateWithLifecycle()
+    val write by drss.writeList.collectAsStateWithLifecycle()
+    val address = remember(list) { list.address() }
+    val isMine = list.pubKey == account.signer.pubKey
+
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        DrssChip(stringRes(Res.string.drss_read_as_feed), MaterialSymbols.AutoMirrored.Feed) {
+            account.settings.changeDefaultHomeFollowList(TopFilter.PeopleList(address))
+            nav.newStack(Route.Home)
+        }
+        if (isMine) {
+            if (address == read) DrssChip(stringRes(Res.string.drss_badge_read), MaterialSymbols.CheckCircle)
+            if (address == write) DrssChip(stringRes(Res.string.drss_badge_write), MaterialSymbols.CheckCircle)
+            if (drss.preference.value != null || list is DrssListFolderEvent) {
+                DrssChip(stringRes(Res.string.drss_organize), MaterialSymbols.Folder) { nav.nav(Route.DrssLists) }
+            }
+        } else if (write != null && account.isWriteable()) {
+            DrssChip(stringRes(Res.string.drss_add_to_my_lists), MaterialSymbols.Add) {
+                accountViewModel.launchSigner { drss.followList(address, account) }
+            }
+            if (!feedsToCopy.isNullOrEmpty()) {
+                val title = (list as? DrssFeedListEvent)?.title() ?: address.dTag.substringAfterLast('/')
+                DrssChip(stringRes(Res.string.drss_copy_feeds), MaterialSymbols.ContentCopy) {
+                    accountViewModel.launchSigner { drss.newFollowSet(title, feedsToCopy.map { UserTag(it.pubKey, it.relayHint) }, account) }
+                }
+            }
         }
     }
 }
@@ -646,6 +815,7 @@ fun RenderDrssListFolder(
             }
             DrssMoreRows(children.size - MAX_CHIPS)
         }
+        DrssListActions(folder, null, accountViewModel, nav)
     }
 }
 
@@ -710,6 +880,7 @@ fun RenderDrssFeedList(
             DrssUserRow(feed.pubKey, feed.title, null, 32.dp, accountViewModel, nav)
         }
         DrssMoreRows(feeds.size - MAX_ROWS)
+        DrssListActions(list, feeds, accountViewModel, nav)
     }
 }
 

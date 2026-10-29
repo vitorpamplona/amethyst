@@ -99,6 +99,58 @@ data class DrssShowSettings(
                         ?.ifBlank { null }
                 }.orEmpty()
 
+        /**
+         * [content] with the fields Amethyst edits replaced and every other key kept as it was (the
+         * prompts and sources drss's generator reads). A slot keeps the keys it had beyond
+         * part, time and zone; a blank text removes its key.
+         */
+        fun edit(
+            content: String,
+            name: String,
+            language: String?,
+            voice: String?,
+            tags: List<String>,
+            products: List<String>,
+            schedule: List<DrssShowSlot>,
+            retentionHours: Int?,
+        ): String {
+            val root = runCatching { json.parseToJsonElement(content) }.getOrNull() as? JsonObject ?: JsonObject(emptyMap())
+            val oldSlots = (root["schedule"] as? JsonArray).orEmpty()
+            val fields = root.toMutableMap()
+
+            fun put(
+                key: String,
+                value: String?,
+            ) {
+                val text = value?.trim()
+                if (text.isNullOrEmpty()) fields.remove(key) else fields[key] = JsonPrimitive(text)
+            }
+
+            put("name", name)
+            put("language", language)
+            put("voice", voice)
+            fields["tags"] = JsonArray(tags.map { it.trim() }.filter { it.isNotEmpty() }.map { JsonPrimitive(it) })
+            fields["products"] = JsonArray(products.map { it.trim() }.filter { it.isNotEmpty() }.map { JsonPrimitive(it) })
+            fields["schedule"] =
+                JsonArray(
+                    schedule.mapIndexed { index, slot ->
+                        val slotFields = ((oldSlots.getOrNull(index) as? JsonObject) ?: JsonObject(emptyMap())).toMutableMap()
+                        slotFields["time"] = JsonPrimitive(slot.time.trim())
+                        slot.zone
+                            ?.trim()
+                            ?.ifEmpty { null }
+                            ?.let { slotFields["zone"] = JsonPrimitive(it) } ?: slotFields.remove("zone")
+                        slot.part
+                            ?.trim()
+                            ?.ifEmpty { null }
+                            ?.let { slotFields["part"] = JsonPrimitive(it) } ?: slotFields.remove("part")
+                        JsonObject(slotFields)
+                    },
+                )
+            if (retentionHours != null && retentionHours > 0) fields["episode_retention"] = JsonPrimitive("${retentionHours}h") else fields.remove("episode_retention")
+            return JsonObject(fields).toString()
+        }
+
         /** `336h` as 336; anything else as null. */
         private fun hours(value: String): Int? = value.removeSuffix("h").toIntOrNull()?.takeIf { value.endsWith("h") && it > 0 }
     }

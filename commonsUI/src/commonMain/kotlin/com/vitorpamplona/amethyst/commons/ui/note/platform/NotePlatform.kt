@@ -288,6 +288,23 @@ interface NotePlatform {
         accountViewModel: AccountViewModel,
     ) {}
 
+    /**
+     * An episode's audio that remembers where the listener is: [audioUrl] plays from
+     * [startAtSeconds] when given, and the player reports its playhead to [onPlayhead] about once
+     * a second while it is shown. The player links back to [note], the episode.
+     */
+    @Composable
+    fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
+        note: Note,
+        startAtSeconds: Long?,
+        onPlayhead: (EpisodePlayhead) -> Unit,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     @Composable
     fun RenderAudioWithWaveform(
         mediaUrl: String,

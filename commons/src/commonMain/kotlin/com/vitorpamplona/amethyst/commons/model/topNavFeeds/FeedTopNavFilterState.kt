@@ -42,8 +42,10 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.global.GlobalFeedFlo
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.HashtagFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.hashtag.MultiHashtagFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.mine.MineFeedFlow
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.DrssFolderFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.NoteFeedFlow
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayFeedFlow
+import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrl
@@ -105,6 +107,11 @@ class FeedTopNavFilterState(
 
             TopFilter.Mine -> {
                 MineFeedFlow(signer.pubKey, mineRelays)
+            }
+
+            // A drss.io folder is a tree of lists: its river follows everyone in them.
+            is TopFilter.PeopleList if listName.address.kind == DrssListFolderEvent.KIND -> {
+                DrssFolderFeedFlow(listName.address, followsRelays, blockedRelays, proxyRelays)
             }
 
             is TopFilter.Community, is TopFilter.PeopleList, is TopFilter.MuteList -> {

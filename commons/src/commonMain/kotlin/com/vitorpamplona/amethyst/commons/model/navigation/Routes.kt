@@ -368,6 +368,33 @@ sealed class Route {
         val trackAddress: String,
     ) : Route()
 
+    /** The user's drss.io folders and lists: the river's read list, the write list, and their tree. */
+    @Serializable object DrssLists : Route()
+
+    /** Follow [pubKeyHex], usually a feed's bot, into one of the follow sets drss writes to. */
+    @Serializable
+    data class DrssFollowInto(
+        val pubKeyHex: HexKey,
+    ) : Route()
+
+    /** Save the article at [articleAddress] into one of the collections drss writes to. */
+    @Serializable
+    data class DrssSaveTo(
+        val articleAddress: String,
+    ) : Route()
+
+    /** Record which feed the user found through the article at [articleAddress], drss.io's provenance. */
+    @Serializable
+    data class DrssRecordProvenance(
+        val articleAddress: String,
+    ) : Route()
+
+    /** Edit the user's drss.io show at [showAddress]. */
+    @Serializable
+    data class DrssShowEdit(
+        val showAddress: String,
+    ) : Route()
+
     @Serializable object Chess : Route()
 
     @Serializable object Wallet : Route()

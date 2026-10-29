@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.communities.list.Communiti
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.nip90DVMs.DvmHeartbeatSources
 import com.vitorpamplona.amethyst.commons.relayClient.dlists.DListItemsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.drss.DrssShowEpisodesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.emojipacks.BrowseEmojiSetsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.followPacks.FollowPacksFilterAssembler
@@ -220,6 +221,7 @@ class RelaySubscriptionsCoordinator(
     val podcastEpisodes = PodcastEpisodesFilterAssembler(client)
     val podcasts = PodcastsFilterAssembler(client)
     val onePodcast = OnePodcastFilterAssembler(cache, client)
+    val drssShowEpisodes = DrssShowEpisodesFilterAssembler(cache, client)
     val myPodcast = MyPodcastFilterAssembler(cache, client)
     val softwareApps = SoftwareAppsFilterAssembler(client)
     val softwareReleases = SoftwareReleasesFilterAssembler(cache, client) // the open app page's releases
@@ -285,6 +287,7 @@ class RelaySubscriptionsCoordinator(
             podcastEpisodes,
             podcasts,
             onePodcast,
+            drssShowEpisodes,
             myPodcast,
             softwareApps,
             softwareReleases,

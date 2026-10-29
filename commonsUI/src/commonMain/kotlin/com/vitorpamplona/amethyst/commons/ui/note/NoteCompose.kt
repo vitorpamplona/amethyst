@@ -286,6 +286,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListFolder
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssListenProgress
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssReadWriteLists
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
@@ -615,6 +616,7 @@ import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind30104Event
 import com.vitorpamplona.quartz.drss.provenance.UnrecognizedKind31985Event
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
 import com.vitorpamplona.quartz.drss.show.DrssShowEvent
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
@@ -2072,6 +2074,7 @@ internal fun RenderNoteRow(
             is DrssEventListEvent -> RenderDrssEventList(baseNote, accountViewModel, nav)
             is DrssProvenanceEvent -> RenderDrssProvenance(baseNote, backgroundColor, accountViewModel, nav)
             is DrssProvenanceFolderEvent -> RenderDrssProvenanceFolder(baseNote, accountViewModel, nav)
+            is DrssReadWriteListsEvent -> RenderDrssReadWriteLists(baseNote, accountViewModel, nav)
 
             // Other apps' events on the kinds drss.io shares: the unknown-kind card, as before they
             // were typed.

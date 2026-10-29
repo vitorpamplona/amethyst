@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.commons.model.cache
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.UnrecognizedKind30301Event
 import com.vitorpamplona.quartz.experimental.kanban.card.KanbanCardEvent
 import com.vitorpamplona.quartz.experimental.walletScrutiny.verification.BuildVerificationEvent
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.MostroInfoEvent
 import com.vitorpamplona.quartz.nip69P2pOrderEvents.mostroInfo.UnrecognizedKind38385Event
 import com.vitorpamplona.quartz.nipXXPodcasting20.episode.Podcasting20EpisodeEvent
@@ -60,6 +62,22 @@ class SharedKindCardsConsumeTest {
     ): Event = EventFactory.create(idByte.repeat(32), owner, createdAt, kind, arrayOf(*tags), content, sig)
 
     private fun EventCache.stored(event: Event) = getAddressableNoteIfExists((event as AddressableEvent).address())?.event
+
+    @Test
+    fun storesDrssDataTheReaderWritesToo() {
+        val cache = EventCache()
+        // drss saves articles into NIP-51 curation sets, and keeps its read and write folder in a
+        // NIP-78 preference.
+        val saved = event("0a", 30004, 1_700_000_000L, arrayOf("d", "drss-podcasts"), arrayOf("title", "podcasts"), arrayOf("a", "30023:${"bb".repeat(32)}:episode-1"))
+        val preference = event("0b", 30078, 1_700_000_000L, arrayOf("d", "read-write-lists"), arrayOf("a", "30101:$owner:drss"))
+
+        assertIs<ArticleCurationSetEvent>(saved)
+        assertIs<DrssReadWriteListsEvent>(preference)
+        listOf(saved, preference).forEach {
+            assertTrue(cache.justConsume(it, null, true), it.toJson())
+            assertSame(it, cache.stored(it))
+        }
+    }
 
     @Test
     fun consumesBoardsVerificationsAndMostroTerms() {

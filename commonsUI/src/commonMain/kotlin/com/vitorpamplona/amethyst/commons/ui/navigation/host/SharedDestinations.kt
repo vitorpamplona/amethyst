@@ -138,6 +138,11 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.DiscoverSc
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip23LongForm.LongFormPostScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip99Classifieds.NewProductScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drafts.DraftListScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drss.DrssFollowIntoScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drss.DrssListsScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drss.DrssRecordProvenanceScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drss.DrssSaveToScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.drss.DrssShowEditScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.DvmContentDiscoveryScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.favorites.FavoriteAlgoFeedsListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.browse.BrowseEmojiSetsScreen
@@ -315,6 +320,11 @@ fun NavDestinations.sharedDestinations(
     composableFromEnd<Route.AccountBackup> { AccountBackupScreen(accountViewModel, nav) }
     composableFromEnd<Route.CordnBackup> { CordnBackupScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.AddToMusicPlaylist> { AddToMusicPlaylistSheet(trackAddress = it.trackAddress, accountViewModel = accountViewModel, nav = nav) }
+    composableFromEnd<Route.DrssLists> { DrssListsScreen(accountViewModel, nav) }
+    composableFromEndArgs<Route.DrssFollowInto> { DrssFollowIntoScreen(it.pubKeyHex, accountViewModel, nav) }
+    composableFromEndArgs<Route.DrssSaveTo> { DrssSaveToScreen(it.articleAddress, accountViewModel, nav) }
+    composableFromEndArgs<Route.DrssRecordProvenance> { DrssRecordProvenanceScreen(it.articleAddress, accountViewModel, nav) }
+    composableFromEndArgs<Route.DrssShowEdit> { DrssShowEditScreen(it.showAddress, accountViewModel, nav) }
     composableFromEnd<Route.Badges> { BadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileBadges> { ProfileBadgesScreen(accountViewModel, nav) }
     composableFromEnd<Route.ProfileAppRecommendations> { ProfileAppRecommendationsScreen(accountViewModel, nav) }

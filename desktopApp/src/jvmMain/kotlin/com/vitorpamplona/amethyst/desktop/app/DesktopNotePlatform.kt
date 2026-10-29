@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -117,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as S
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as SharedRenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as SharedRenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as SharedRenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.desktop.ui.media.EpisodeAudioPlayer as DesktopEpisodeAudioPlayer
 
 /**
  * The desktop halves of the shared note renderer: images and GIFs through Coil, video and audio
@@ -644,6 +646,18 @@ object DesktopNotePlatform : NotePlatform {
         borderModifier = borderModifier,
         accountViewModel = accountViewModel,
     )
+
+    @Composable
+    override fun EpisodeAudioPlayer(
+        audioUrl: String,
+        mimeType: String?,
+        title: String?,
+        image: String?,
+        note: Note,
+        startAtSeconds: Long?,
+        onPlayhead: (EpisodePlayhead) -> Unit,
+        accountViewModel: AccountViewModel,
+    ) = DesktopEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, onPlayhead)
 
     // Git events: the same renderers Android uses (shared, JVM-only for the repository browser).
 

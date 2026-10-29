@@ -47,7 +47,8 @@ import kotlinx.coroutines.flow.map
  *
  * [waveform] is the file's own amplitude envelope; without one the card draws the synthetic bars
  * seeded by [seed] (the URL by default), the same ones Android draws for that file. [shape] is the
- * card's outline; a caller that clips the card itself passes `RectangleShape`.
+ * card's outline; a caller that clips the card itself passes `RectangleShape`. Play starts the
+ * file where [startMillis] says when it is not loaded yet, such as an episode's resume point.
  */
 @Composable
 fun AudioPlayer(
@@ -60,6 +61,7 @@ fun AudioPlayer(
     artworkUrl: String? = null,
     seed: String = url,
     shape: Shape = RoundedCornerShape(16.dp),
+    startMillis: () -> Long? = { null },
 ) {
     // Only this file's playback: every other audio card on screen would otherwise recompose on each
     // clock tick of whichever track is playing.
@@ -87,7 +89,7 @@ fun AudioPlayer(
         info = info,
         playback = playback,
         onPlayPause = {
-            if (GlobalMediaPlayer.audioState.value.url == url) GlobalMediaPlayer.toggleAudioPlayPause() else GlobalMediaPlayer.playAudio(url)
+            if (GlobalMediaPlayer.audioState.value.url == url) GlobalMediaPlayer.toggleAudioPlayPause() else GlobalMediaPlayer.playAudio(url, startMillis())
         },
         // The card only offers seeking once it knows the duration, which only the loaded file has.
         onSeek = { if (GlobalMediaPlayer.audioState.value.url == url) GlobalMediaPlayer.seekAudio(it) },

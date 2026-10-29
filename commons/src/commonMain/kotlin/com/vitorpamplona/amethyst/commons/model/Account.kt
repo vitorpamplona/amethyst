@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannel
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordChannelListState
 import com.vitorpamplona.amethyst.commons.model.concord.ConcordSessionManager
 import com.vitorpamplona.amethyst.commons.model.cordn.CordnRuntime
+import com.vitorpamplona.amethyst.commons.model.drss.DrssState
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListDecryptionCache
 import com.vitorpamplona.amethyst.commons.model.edits.PrivateStorageRelayListState
 import com.vitorpamplona.amethyst.commons.model.emphChat.EphemeralChatChannel
@@ -983,6 +984,7 @@ class Account(
     val hiddenUsers = HiddenUsersState(muteList.flow, blockPeopleList.flow, scope, settings)
 
     val bookmarkSets = BookmarkSetsState(signer, cache, scope)
+    val drss = DrssState(signer, cache, scope)
     val interestSets = InterestSetsState(signer, cache, scope)
     val appRecommendations = AppRecommendationsState(signer, cache, scope)
     val oldBookmarkState = OldBookmarkListState(signer, cache, scope)
@@ -4472,6 +4474,7 @@ class Account(
                     bookmarkSets.newNotes(newNotes)
                     interestSets.newNotes(newNotes)
                     ownedEmojiPacks.newNotes(newNotes)
+                    drss.newNotes(newNotes)
                 }
             }
         }
@@ -4485,6 +4488,7 @@ class Account(
                     bookmarkSets.deletedNotes(deletedNotes)
                     interestSets.deletedNotes(deletedNotes)
                     ownedEmojiPacks.deletedNotes(deletedNotes)
+                    drss.deletedNotes(deletedNotes)
                 }
             }
         }
