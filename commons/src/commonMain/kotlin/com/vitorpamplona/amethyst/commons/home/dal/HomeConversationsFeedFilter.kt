@@ -35,6 +35,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip28PublicChat.message.ChannelMessageEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
@@ -93,7 +94,8 @@ class HomeConversationsFeedFilter(
                     event is CommentEvent ||
                     event is VoiceReplyEvent ||
                     event is PublicMessageEvent ||
-                    event is LiveActivitiesChatMessageEvent
+                    event is LiveActivitiesChatMessageEvent ||
+                    event is TorrentCommentEvent
             ) &&
             filterParams.match(event, relays)
 

@@ -49,6 +49,7 @@ import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -59,11 +60,15 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
@@ -72,10 +77,13 @@ import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 
@@ -100,10 +108,17 @@ class HomeNewThreadFeedFilter(
                 LongFormContentEvent.KIND,
                 LiveChessGameEndEvent.KIND,
                 AttestationEvent.KIND,
+                AttestationRequestEvent.KIND,
+                AttestorRecommendationEvent.KIND,
+                AttestorProficiencyEvent.KIND,
                 AddressableNormalVideoEvent.KIND,
                 AddressableShortVideoEvent.KIND,
                 EntityRatingEvent.KIND,
                 CalendarRSVPEvent.KIND,
+                CalendarTimeSlotEvent.KIND,
+                CalendarDateSlotEvent.KIND,
+                GitRepositoryEvent.KIND,
+                PublicationIndexEvent.KIND,
             )
     }
 
@@ -213,6 +228,16 @@ class HomeNewThreadFeedFilter(
                 noteEvent is AttestorProficiencyEvent ||
                 // A rating with nothing to point at cannot be rendered.
                 (noteEvent is EntityRatingEvent && noteEvent.hasTarget()) ||
+                noteEvent is ThreadEvent ||
+                noteEvent is CalendarTimeSlotEvent ||
+                noteEvent is CalendarDateSlotEvent ||
+                noteEvent is ZapGoalEvent ||
+                noteEvent is CodeSnippetEvent ||
+                noteEvent is LiveActivitiesClipEvent ||
+                noteEvent is GitRepositoryEvent ||
+                noteEvent is GitIssueEvent ||
+                noteEvent is GitPullRequestEvent ||
+                noteEvent is PublicationIndexEvent ||
                 noteEvent.isGoingRsvp(latestRsvps)
         ) &&
             filterParams.match(noteEvent, it.relays) &&

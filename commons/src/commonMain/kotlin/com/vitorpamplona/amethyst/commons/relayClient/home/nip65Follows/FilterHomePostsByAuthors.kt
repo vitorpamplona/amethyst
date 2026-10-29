@@ -25,15 +25,24 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.noteBased.muted.Mute
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
+import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
+import com.vitorpamplona.quartz.experimental.attestations.recommendation.AttestorRecommendationEvent
+import com.vitorpamplona.quartz.experimental.attestations.request.AttestationRequestEvent
+import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
+import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdDetectionEvent
 import com.vitorpamplona.quartz.experimental.birdstar.BirdexEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
 import com.vitorpamplona.quartz.experimental.interactiveStories.InteractiveStoryPrologueEvent
+import com.vitorpamplona.quartz.experimental.music.playlist.MusicPlaylistEvent
+import com.vitorpamplona.quartz.experimental.music.track.MusicTrackEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
+import com.vitorpamplona.quartz.experimental.publications.PublicationIndexEvent
 import com.vitorpamplona.quartz.experimental.ratings.EntityRatingEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -44,9 +53,16 @@ import com.vitorpamplona.quartz.nip18Reposts.GenericRepostEvent
 import com.vitorpamplona.quartz.nip18Reposts.RepostEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
+import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
+import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
+import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
+import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.chat.LiveActivitiesChatMessageEvent
+import com.vitorpamplona.quartz.nip53LiveActivities.clip.LiveActivitiesClipEvent
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
@@ -57,12 +73,17 @@ import com.vitorpamplona.quartz.nip71Video.AddressableNormalVideoEvent
 import com.vitorpamplona.quartz.nip71Video.AddressableShortVideoEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
+import com.vitorpamplona.quartz.nip75ZapGoals.ZapGoalEvent
+import com.vitorpamplona.quartz.nip7DThreads.ThreadEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip88Polls.response.PollResponseEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceReplyEvent
+import com.vitorpamplona.quartz.nipC0CodeSnippets.CodeSnippetEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
+import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
 import kotlin.math.min
 
 val HomePostsNewThreadKinds1 =
@@ -86,11 +107,18 @@ val HomePostsNewThreadKinds1 =
         // "Going to <event>" from people you follow. Low-volume per author, so it rides the main
         // leg instead of the 5-item rare-kinds leg below, where it would be starved by the others.
         CalendarRSVPEvent.KIND,
-        // PressStr ebooks, magazines and issues. Low-volume per author but bursty — a publisher
-        // uploads a back catalogue at once — which would fill the 5-item leg below and starve it.
-        EbookEvent.KIND,
-        MagazineEvent.KIND,
-        MagazineIssueEvent.KIND,
+        // The other low-volume root posts a follow writes by hand: forum-style threads, the
+        // calendar events they organize, fundraising goals, code snippets, stream clips and the
+        // issues and pull requests they open on git repositories.
+        ThreadEvent.KIND,
+        CalendarTimeSlotEvent.KIND,
+        CalendarDateSlotEvent.KIND,
+        ZapGoalEvent.KIND,
+        FundraiserEvent.KIND,
+        CodeSnippetEvent.KIND,
+        LiveActivitiesClipEvent.KIND,
+        GitIssueEvent.KIND,
+        GitPullRequestEvent.KIND,
     )
 
 val HomePostsNewThreadKinds2 =
@@ -103,6 +131,29 @@ val HomePostsNewThreadKinds2 =
         BirdexEvent.KIND,
         TorrentEvent.KIND,
         EntityRatingEvent.KIND,
+        AttestationRequestEvent.KIND,
+        AttestorRecommendationEvent.KIND,
+        AttestorProficiencyEvent.KIND,
+    )
+
+/**
+ * Catalog kinds: low-volume per author but bursty, since a publisher uploads a whole back
+ * catalogue (an album, a podcast's episodes, a magazine's issues) at once. They get their own
+ * leg so a burst can neither crowd text notes out of the main leg nor fill the rare-kinds leg.
+ */
+val HomePostsNewThreadKinds3 =
+    listOf(
+        EbookEvent.KIND,
+        MagazineEvent.KIND,
+        MagazineIssueEvent.KIND,
+        PublicationIndexEvent.KIND,
+        AudioTrackEvent.KIND,
+        AudioHeaderEvent.KIND,
+        MusicTrackEvent.KIND,
+        MusicPlaylistEvent.KIND,
+        PodcastEpisodeEvent.KIND,
+        PodcastMetadataEvent.KIND,
+        GitRepositoryEvent.KIND,
     )
 
 val HomePostsConversationKinds =
@@ -114,6 +165,7 @@ val HomePostsConversationKinds =
         VoiceEvent.KIND,
         VoiceReplyEvent.KIND,
         PollResponseEvent.KIND,
+        TorrentCommentEvent.KIND,
     )
 
 fun filterNewHomePostsByAuthors(
@@ -143,6 +195,17 @@ fun filterNewHomePostsByAuthors(
                     kinds = HomePostsNewThreadKinds2,
                     authors = authorList,
                     limit = min(authorList.size * 10, 5),
+                    since = since,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relay,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
+                    kinds = HomePostsNewThreadKinds3,
+                    authors = authorList,
+                    limit = min(authorList.size * 10, 100),
                     since = since,
                 ),
         ),
