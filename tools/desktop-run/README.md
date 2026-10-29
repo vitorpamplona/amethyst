@@ -25,9 +25,9 @@ export DISPLAY=:99
 $D click 800 422 ";" type npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m   # see below
 $D click 800 595 ";" sleep 8000 ";" shot /tmp/amethyst-desktop-run/feed.png
 
-# or skip the login screen: open already logged in with a key, or sign up a new account (see Accounts)
-AMETHYST_LOGIN=npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m tools/desktop-run/run-headless.sh start
-AMETHYST_SIGNUP="Test Run" tools/desktop-run/run-headless.sh start
+# or skip the login screen: open already logged in, or sign up a new account (see Accounts)
+tools/desktop-run/run-headless.sh start --login npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m
+tools/desktop-run/run-headless.sh start --signup "Test Run"
 
 tools/desktop-run/run-headless.sh logs   # running?, exceptions first, then the tail
 tools/desktop-run/run-headless.sh stop   # ALWAYS before rebuilding (see Traps)
@@ -64,28 +64,40 @@ AMETHYST_DISPLAY=:98 AMETHYST_SCREEN=480x900x24 tools/desktop-run/run-headless.s
 
 ## Accounts
 
-`AMETHYST_LOGIN=<key>` in the environment of `start` (or of `./gradlew :desktopApp:run`) opens the
-app already logged in with that key, so the first screenshot is the feed, not the login screen. It
-takes an `npub`, `nsec`, hex key, `nprofile` or `name@domain` (read-only, never its NIP-46 signer).
+`start` can skip the login screen, so the first screenshot is already the logged-in app:
+
+| Option | Opens |
+|---|---|
+| `--login <key>` | Logged in with a public key: `npub`, `nprofile` or `name@domain` (read-only, never its NIP-46 signer) |
+| `--login-file <path>` | Logged in with the key in that file, an `nsec` included |
+| `--signup "<name>"` | A new account, signed up as the Sign Up button does (below) |
+
+Pass at most one. `--login` refuses an `nsec`, `ncryptsec` or 64-character hex key (the app reads
+that as a private key): arguments show in `ps` and in the shell history, so a private key goes in a
+file. `--login-file` is read before `--fresh` clears the profile, so
+`start --fresh --login-file /tmp/amethyst-desktop-run/profile/signup.nsec` works.
+
 The login is transient: the key goes to no keyring, password file or account list, so no key prompt
-appears and the profile's saved accounts are left as they were; the next `start` without it opens
-the saved account, or the login screen. A key that does not parse logs
-`Could not log in with the startup key` and falls back the same way. Pass an `nsec` through the
-environment, not as `-Damethyst.login=...`, which any `ps` shows; the property is there for an
-`npub` on a Gradle command line.
+appears and the profile's saved accounts are left as they were; the next `start` without an option
+opens the saved account, or the login screen. A key that does not parse logs
+`Could not log in with the startup key` and falls back the same way.
+
+The options only set `AMETHYST_LOGIN` / `AMETHYST_SIGNUP`, which the app reads itself, so the same
+variables work on a plain `./gradlew :desktopApp:run` (from the environment: `-Damethyst.login=`
+also works there, but shows in `ps`, so keep it to public keys).
 
 - **Read-only, preferred:** log in with any public `npub` (the one above is jack's). That loads real
   feeds, profiles and notifications and cannot sign or publish anything.
 - **Flows that sign** (posting, reacting, settings that publish lists): use a throwaway account from
   the app's Sign Up, never a real key. They publish to real public relays, so do it only when the
   human asked for that flow to be tested.
-- **Sign up without the screen:** `AMETHYST_SIGNUP="<display name>"` does what the Sign Up button
+- **Sign up without the screen:** `start --signup "<display name>"` does what the Sign Up button
   does with that name: a new key, Amethyst's default relays and lists published to public relays,
-  and the Import Follow List screen to start on. Like `AMETHYST_LOGIN` the account is transient (no
+  and the Import Follow List screen to start on. The account is transient like `--login` (no
   password prompt), so its nsec is written to `profile/signup.nsec` (owner-only) and the log names
   the npub; reopen the same account later with
-  `AMETHYST_LOGIN=$(cat /tmp/amethyst-desktop-run/profile/signup.nsec) run-headless.sh start`.
-  `AMETHYST_LOGIN` wins when both are set. It publishes, so the rule above applies.
+  `start --login-file /tmp/amethyst-desktop-run/profile/signup.nsec`. It publishes, so the rule
+  above applies.
 - The container has no OS keyring, so a key that is remembered goes to the NIP-49 password file.
   The login screen says so, and that is expected here.
 
