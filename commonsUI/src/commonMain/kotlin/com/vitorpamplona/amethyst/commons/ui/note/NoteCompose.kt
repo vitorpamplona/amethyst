@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
@@ -1301,27 +1302,42 @@ fun ClickableNote(
 }
 
 /**
- * The bleed a reposted note's body takes from its repost. Only that note's [InnerNoteWithReactions]
- * reads it, so the rest of what a boosted note draws (its header, hidden-note and community cards,
- * reactions) never sees one.
+ * What a repost hands the note it boosts: the bleed for that note's body, and whether the repost's
+ * header already shows that note's author row ([FullWidthRepostHeader]).
  */
-private val LocalBoostedNoteBleed = compositionLocalOf { 0.dp }
+@Immutable
+private data class BoostedNoteFrame(
+    val mediaBleed: Dp = 0.dp,
+    val headerShown: Boolean = false,
+)
 
-/** Provides [LocalMediaBleed] and [LocalBoostedNoteBleed], skipping whichever already holds its value. */
+private val NoBoostedNoteFrame = BoostedNoteFrame()
+
+/**
+ * The [BoostedNoteFrame] a reposted note takes from its repost. Only that note's
+ * [InnerNoteWithReactions] reads it, so the rest of what a boosted note draws (its hidden-note and
+ * community cards, reactions) never sees one.
+ */
+private val LocalBoostedNoteFrame = compositionLocalOf { NoBoostedNoteFrame }
+
+/** Provides [LocalMediaBleed] and [LocalBoostedNoteFrame], skipping whichever already holds its value. */
 @Composable
 private fun ProvideNoteBleeds(
     media: Dp,
-    boostedNote: Dp,
+    boostedNote: BoostedNoteFrame,
     content: @Composable () -> Unit,
 ) {
-    if (LocalBoostedNoteBleed.current == boostedNote) {
+    if (LocalBoostedNoteFrame.current == boostedNote) {
         ProvideMediaBleed(media, content)
     } else {
-        CompositionLocalProvider(LocalBoostedNoteBleed provides boostedNote) {
+        CompositionLocalProvider(LocalBoostedNoteFrame provides boostedNote) {
             ProvideMediaBleed(media, content)
         }
     }
 }
+
+/** The note a repost boosts, as [RenderRepost] draws it. */
+private fun Note.repostedNote(): Note? = replyTo?.lastOrNull { !it.isCommunityDefinition() }
 
 @Composable
 fun InnerNoteWithReactions(
@@ -1355,12 +1371,15 @@ fun InnerNoteWithReactions(
 
     // An edge-to-edge note's media runs out to the screen edges, over its side padding. A boosted
     // note sits in its booster's column and follows it; a quote is a box its media must stay in.
+    val boostedFrame = if (isBoostedNote && !isQuotedNote) LocalBoostedNoteFrame.current else NoBoostedNoteFrame
     val mediaBleed =
         when {
             fullWidth -> if (LocalDisplaySettings.current.edgeToEdgeMedia) NoteHorizontalPadding else 0.dp
-            isBoostedNote && !isQuotedNote -> LocalBoostedNoteBleed.current
-            else -> 0.dp
+            else -> boostedFrame.mediaBleed
         }
+
+    // A full-width repost heads itself with both authors' rows, so the note it boosts skips its own.
+    val repostedNote = if (fullWidth && !isNotRepost) baseNote.repostedNote() else null
 
     CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
         NoteComposeLayout(
@@ -1372,9 +1391,12 @@ fun InnerNoteWithReactions(
             showAuthorColumn = notBoostedNorQuote,
             fullWidth = fullWidth,
             showSecondRow = showSecondRow,
-            showContentSpacer = isNotRepost,
+            // Under a repost's header the boosted body takes the header's spacer, not one of its own.
+            showContentSpacer = (isNotRepost && !boostedFrame.headerShown) || repostedNote != null,
             authorPicture = {
-                if (fullWidth) {
+                if (repostedNote != null) {
+                    // FullWidthRepostHeader draws both authors' pictures beside their rows.
+                } else if (fullWidth) {
                     Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomEnd) {
                         RenderAuthorImages(baseNote, nav, accountViewModel, Size35dp)
                     }
@@ -1385,15 +1407,19 @@ fun InnerNoteWithReactions(
                 }
             },
             firstRow = {
-                FirstUserInfoRow(
-                    baseNote = baseNote,
-                    showAuthorPicture = isQuotedNote,
-                    isPinned = isPinned,
-                    editState = editState,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                    moreOptions = moreOptions,
-                )
+                if (repostedNote != null) {
+                    FullWidthRepostHeader(baseNote, repostedNote, isPinned, editState, accountViewModel, nav, moreOptions)
+                } else if (!boostedFrame.headerShown) {
+                    FirstUserInfoRow(
+                        baseNote = baseNote,
+                        showAuthorPicture = isQuotedNote,
+                        isPinned = isPinned,
+                        editState = editState,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        moreOptions = moreOptions,
+                    )
+                }
             },
             secondRow = {
                 if (showSecondRow) {
@@ -1406,7 +1432,7 @@ fun InnerNoteWithReactions(
             },
             noteContent = {
                 // Only the kinds RenderNoteRow hands mediaBleed to let their media run past the column.
-                ProvideNoteBleeds(0.dp, 0.dp) {
+                ProvideNoteBleeds(0.dp, NoBoostedNoteFrame) {
                     RenderNoteRow(
                         baseNote = baseNote,
                         backgroundColor = backgroundColor,
@@ -1419,6 +1445,7 @@ fun InnerNoteWithReactions(
                         nav = nav,
                         isBoostedNote = isBoostedNote,
                         mediaBleed = mediaBleed,
+                        boostedHeaderShown = repostedNote != null,
                     )
                 }
 
@@ -1569,7 +1596,8 @@ fun NoteBody(
  *
  * [mediaBleed] reaches only the kinds whose body is the note's own text or media (text notes,
  * pictures, videos, files, reposts); every other kind draws cards and must keep its media inside
- * them, so callers render this with no bleed of their own in effect.
+ * them, so callers render this with no bleed of their own in effect. [boostedHeaderShown] tells a
+ * repost's boosted note that the repost's header already shows its author row.
  */
 @Composable
 internal fun RenderNoteRow(
@@ -1584,6 +1612,7 @@ internal fun RenderNoteRow(
     nav: INav,
     isBoostedNote: Boolean = false,
     mediaBleed: Dp = 0.dp,
+    boostedHeaderShown: Boolean = false,
 ) {
     // The kind cards below read the row's quote budget and preview permission from here, so a card
     // quoted inside another (or inside itself) never quotes deeper than the row allows.
@@ -1700,13 +1729,13 @@ internal fun RenderNoteRow(
             }
 
             is RepostEvent -> {
-                ProvideNoteBleeds(0.dp, mediaBleed) {
+                ProvideNoteBleeds(0.dp, BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is GenericRepostEvent -> {
-                ProvideNoteBleeds(0.dp, mediaBleed) {
+                ProvideNoteBleeds(0.dp, BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
@@ -3018,7 +3047,7 @@ fun RenderRepost(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    note.replyTo?.lastOrNull { !it.isCommunityDefinition() }?.let {
+    note.repostedNote()?.let {
         NoteCompose(
             it,
             modifier = Modifier,
