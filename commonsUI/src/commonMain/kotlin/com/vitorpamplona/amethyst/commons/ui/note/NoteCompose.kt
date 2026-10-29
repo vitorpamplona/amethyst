@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.audio.hasPlayableAudio
@@ -490,6 +491,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size25dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size30dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size34dp
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35Modifier
+import com.vitorpamplona.amethyst.commons.ui.theme.Size35dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size55dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -1315,10 +1318,14 @@ fun InnerNoteWithReactions(
     val isNotRepost = baseNote.event !is RepostEvent && baseNote.event !is GenericRepostEvent
     val showSecondRow = isNotRepost && notBoostedNorQuote && accountViewModel.settings.isCompleteUIMode()
 
+    // The full-width style heads the note with the author and lets the content use the whole width.
+    val fullWidth = notBoostedNorQuote && LocalDisplaySettings.current.fullWidthNotes
+
     // A note with an author column takes "Show Less" for its expanded text there. A boosted note
-    // has none and uses its booster's; a quote is its own box, so its text keeps the button inline.
-    val gutter = if (notBoostedNorQuote) remember { ExpandedTextGutterState() } else null
-    val providedGutter = if (isQuotedNote) null else gutter ?: LocalExpandedTextGutter.current
+    // has none and uses its booster's; a quote is its own box, and a full-width note has no column,
+    // so their text keeps the button inline.
+    val gutter = if (notBoostedNorQuote && !fullWidth) remember { ExpandedTextGutterState() } else null
+    val providedGutter = if (isQuotedNote || fullWidth) null else gutter ?: LocalExpandedTextGutter.current
 
     CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
         NoteComposeLayout(
@@ -1328,10 +1335,15 @@ fun InnerNoteWithReactions(
                     .fillMaxWidth(),
             addPadding = !isBoostedNote,
             showAuthorColumn = notBoostedNorQuote,
+            fullWidth = fullWidth,
             showSecondRow = showSecondRow,
             showContentSpacer = isNotRepost,
             authorPicture = {
-                if (notBoostedNorQuote) {
+                if (fullWidth) {
+                    Box(modifier = Size35Modifier, contentAlignment = Alignment.BottomEnd) {
+                        RenderAuthorImages(baseNote, nav, accountViewModel, Size35dp)
+                    }
+                } else if (notBoostedNorQuote) {
                     Box(modifier = Size55Modifier, contentAlignment = Alignment.BottomEnd) {
                         RenderAuthorImages(baseNote, nav, accountViewModel)
                     }
@@ -3331,14 +3343,15 @@ fun RenderAuthorImages(
     baseNote: Note,
     nav: INav,
     accountViewModel: AccountViewModel,
+    size: Dp = Size55dp,
 ) {
     val noteEvent = baseNote.event
     if (noteEvent is RepostEvent || noteEvent is GenericRepostEvent) {
         val baseRepost = baseNote.replyTo?.lastOrNull()
         if (baseRepost != null) {
-            RepostNoteAuthorPicture(baseNote, baseRepost, accountViewModel, nav)
+            RepostNoteAuthorPicture(baseNote, baseRepost, size, accountViewModel, nav)
         } else {
-            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
         }
     } else if (noteEvent is ZapReceiptEvent) {
         // Zap receipts are signed by the recipient's lightning provider; show the
@@ -3346,12 +3359,12 @@ fun RenderAuthorImages(
         // how the thread's master note resolves the author.
         val zapSender = observeZapSender(baseNote, accountViewModel).value
         if (zapSender != null) {
-            UserPicture(zapSender, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            UserPicture(zapSender, size, accountViewModel = accountViewModel, nav = nav)
         } else {
-            NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+            NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
         }
     } else {
-        NoteAuthorPicture(baseNote, Size55dp, accountViewModel = accountViewModel, nav = nav)
+        NoteAuthorPicture(baseNote, size, accountViewModel = accountViewModel, nav = nav)
     }
 
     if (noteEvent is ChannelMessageEvent) {
@@ -3392,14 +3405,17 @@ private fun ChannelNotePicture(
 private fun RepostNoteAuthorPicture(
     baseNote: Note,
     baseRepost: Note,
+    size: Dp,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
+    // Each picture fills its 35/55 corner of the layout, less a 1dp sliver.
+    val pictureSize = if (size == Size55dp) Size34dp else size * 35 / 55 - 1.dp
     GenericRepostLayout(
         baseAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseNote,
-                size = Size34dp,
+                size = pictureSize,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
@@ -3407,10 +3423,11 @@ private fun RepostNoteAuthorPicture(
         repostAuthorPicture = {
             NoteAuthorPicture(
                 baseNote = baseRepost,
-                size = Size34dp,
+                size = pictureSize,
                 accountViewModel = accountViewModel,
                 nav = nav,
             )
         },
+        size = size,
     )
 }

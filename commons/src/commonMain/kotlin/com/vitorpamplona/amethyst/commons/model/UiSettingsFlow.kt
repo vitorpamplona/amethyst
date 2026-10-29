@@ -61,6 +61,7 @@ class UiSettingsFlow(
     val searchEngine: MutableStateFlow<String> = MutableStateFlow(SearchEngines.DEFAULT.id),
     val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val spellCheck: MutableStateFlow<SpellCheckType> = MutableStateFlow(SpellCheckType.AUTOMATIC),
+    val noteLayout: MutableStateFlow<NoteLayoutType> = MutableStateFlow(NoteLayoutType.AUTHOR_COLUMN),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -97,6 +98,7 @@ class UiSettingsFlow(
             searchEngine,
             deckMode,
             spellCheck,
+            noteLayout,
         )
 
     // emits at every change in any of the propertyes.
@@ -137,6 +139,7 @@ class UiSettingsFlow(
                 flows[30] as String,
                 flows[31] as Boolean,
                 flows[32] as SpellCheckType,
+                flows[33] as NoteLayoutType,
             )
         }
 
@@ -175,6 +178,7 @@ class UiSettingsFlow(
             searchEngine.value,
             deckMode.value,
             spellCheck.value,
+            noteLayout.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -312,6 +316,10 @@ class UiSettingsFlow(
             spellCheck.tryEmit(torSettings.spellCheck)
             any = true
         }
+        if (noteLayout.value != torSettings.noteLayout) {
+            noteLayout.tryEmit(torSettings.noteLayout)
+            any = true
+        }
 
         return any
     }
@@ -370,6 +378,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.searchEngine),
                 MutableStateFlow(uiSettings.deckMode),
                 MutableStateFlow(uiSettings.spellCheck),
+                MutableStateFlow(uiSettings.noteLayout),
             )
     }
 }

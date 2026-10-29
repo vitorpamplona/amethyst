@@ -59,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.model.ConnectivityType
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
 import com.vitorpamplona.amethyst.commons.model.FontFamilyType
 import com.vitorpamplona.amethyst.commons.model.FontSizeType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.resourceId
@@ -91,6 +92,8 @@ import com.vitorpamplona.amethyst.commons.resources.font_size
 import com.vitorpamplona.amethyst.commons.resources.font_size_description
 import com.vitorpamplona.amethyst.commons.resources.language
 import com.vitorpamplona.amethyst.commons.resources.language_description
+import com.vitorpamplona.amethyst.commons.resources.note_layout
+import com.vitorpamplona.amethyst.commons.resources.note_layout_description
 import com.vitorpamplona.amethyst.commons.resources.settings_section_appearance
 import com.vitorpamplona.amethyst.commons.resources.settings_section_general
 import com.vitorpamplona.amethyst.commons.resources.settings_section_media
@@ -190,6 +193,8 @@ fun SettingsScreen(
             LanguageTile(sharedPrefs)
             SettingsDivider()
             UiModeTile(sharedPrefs)
+            SettingsDivider()
+            NoteLayoutTile(sharedPrefs)
             SettingsDivider()
             ImmersiveScrollingTile(sharedPrefs)
             SettingsDivider()
@@ -319,6 +324,20 @@ private fun UiModeTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.shortLabelRes() },
         selected = featureSet,
         onSelect = { sharedPrefs.featureSet.tryEmit(it) },
+    )
+}
+
+@Composable
+private fun NoteLayoutTile(sharedPrefs: UiSettingsFlow) {
+    val noteLayout by sharedPrefs.noteLayout.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.AutoMirrored.Feed,
+        title = Res.string.note_layout,
+        description = Res.string.note_layout_description,
+        options = NoteLayoutType.entries,
+        labelRes = { it.resourceId },
+        selected = noteLayout,
+        onSelect = { sharedPrefs.noteLayout.tryEmit(it) },
     )
 }
 

@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.FeatureSetType
+import com.vitorpamplona.amethyst.commons.model.NoteLayoutType
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 
 /**
@@ -45,6 +46,8 @@ data class DisplaySettings(
     val performanceMode: Boolean = false,
     /** Play videos and animated images (GIF/AVIF avatars) without a tap. */
     val autoPlayVideos: Boolean = true,
+    /** Notes put the author above a full-width body instead of in a picture column beside it. */
+    val fullWidthNotes: Boolean = false,
 ) {
     /** Robohash fallbacks are skipped in performance mode (a plain face icon instead). */
     val loadRobohash: Boolean get() = !performanceMode
@@ -60,12 +63,14 @@ fun collectDisplaySettings(settings: UiSettingsState): DisplaySettings {
     val showProfilePictures by settings.showProfilePictures.collectAsStateWithLifecycle()
     val featureSet by settings.uiSettingsFlow.featureSet.collectAsStateWithLifecycle()
     val autoPlayVideos by settings.autoPlayVideosFlow.collectAsStateWithLifecycle()
+    val noteLayout by settings.uiSettingsFlow.noteLayout.collectAsStateWithLifecycle()
 
-    return remember(showProfilePictures, featureSet, autoPlayVideos) {
+    return remember(showProfilePictures, featureSet, autoPlayVideos, noteLayout) {
         DisplaySettings(
             showProfilePictures = showProfilePictures,
             performanceMode = featureSet == FeatureSetType.PERFORMANCE,
             autoPlayVideos = autoPlayVideos,
+            fullWidthNotes = noteLayout == NoteLayoutType.FULL_WIDTH,
         )
     }
 }

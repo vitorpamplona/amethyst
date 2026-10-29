@@ -73,14 +73,23 @@ private fun NoteComposeLayoutPreview() {
 }
 
 @Composable
-private fun NoteComposeLayoutPreviewCard() {
+@Preview
+private fun NoteComposeLayoutFullWidthPreview() {
+    ThemeComparisonColumn {
+        NoteComposeLayoutPreviewCard(fullWidth = true)
+    }
+}
+
+@Composable
+private fun NoteComposeLayoutPreviewCard(fullWidth: Boolean = false) {
     NoteComposeLayout(
         modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+        fullWidth = fullWidth,
         showSecondRow = true,
         authorPicture = {
             Box(
                 Modifier
-                    .size(55.dp)
+                    .size(if (fullWidth) 35.dp else 55.dp)
                     .clip(CircleShape)
                     .background(Color(0xFF9575CD)),
             )
@@ -158,6 +167,24 @@ private fun NoteComposeLayoutBoostedPreview() {
  * └───────────────────────────────────────────────┘
  * ```
  *
+ * When [showAuthorColumn] and [fullWidth] are true (the full-width note style, like the
+ * Picture feed cards):
+ * ```
+ * ┌───────────────────────────────────────────────┐
+ * │ padding (start=12, end=12, top=10)            │
+ * │ ┌──────┐ 10dp ┌─────────────────────────────┐ │
+ * │ │author│  gap  │ firstRow                    │ │
+ * │ │      │       │ secondRow (optional)        │ │
+ * │ └──────┘       └─────────────────────────────┘ │
+ * │ 4dp spacer (optional)                         │
+ * │ noteContent (full inner width)                │
+ * ├───────────────────────────────────────────────┤
+ * │ reactionsRow (full width, no side padding)    │
+ * └───────────────────────────────────────────────┘
+ * ```
+ * The author picture and the header rows are centered on each other, and [authorGutter]
+ * is not used: there is no column under the picture to hold it.
+ *
  * When [showAuthorColumn] is false (boosted/quoted notes):
  * ```
  * ┌───────────────────────────────────────────────┐
@@ -217,6 +244,9 @@ private fun NoteComposeLayoutBoostedPreview() {
  *   to the author + content area. False for boosted notes.
  * @param showAuthorColumn Whether to reserve 55dp for the author picture column
  *   with a 10dp gap. False for boosted/quoted notes.
+ * @param fullWidth Whether the author picture heads the note beside the header rows and the
+ *   content takes the full width below them, instead of keeping a column for the picture.
+ *   Only matters when [showAuthorColumn] is true.
  * @param showSecondRow Whether to measure and place the second header row
  *   (NIP-05 status, location, PoW). Requires complete UI mode.
  * @param showContentSpacer Whether to add a 4dp spacer between header rows and
@@ -240,6 +270,7 @@ fun NoteComposeLayout(
     modifier: Modifier = Modifier,
     addPadding: Boolean = true,
     showAuthorColumn: Boolean = true,
+    fullWidth: Boolean = false,
     showSecondRow: Boolean = false,
     showContentSpacer: Boolean = true,
     authorPicture: @Composable () -> Unit,
@@ -287,9 +318,10 @@ fun NoteComposeLayout(
 
         // Column widths are computed from known fixed dimensions, eliminating
         // the Row's two-pass measurement (measure author → compute remaining → measure content).
-        val innerWidth = maxWidth - padStart - padEnd
-        val authorW = if (showAuthorColumn) px.authorWidth else 0
-        val gap = if (showAuthorColumn) px.authorContentGap else 0
+        val innerWidth = (maxWidth - padStart - padEnd).coerceAtLeast(0)
+        val authorOnTop = showAuthorColumn && fullWidth
+        val authorW = if (showAuthorColumn && !authorOnTop) px.authorWidth else 0
+        val gap = if (showAuthorColumn && !authorOnTop) px.authorContentGap else 0
         val contentWidth = (innerWidth - authorW - gap).coerceAtLeast(0)
 
         // Constraints is a value class (inline Long) so these don't allocate.
@@ -301,9 +333,14 @@ fun NoteComposeLayout(
         // skipping measurement entirely.
         val authorPlaceable = allMeasurables[0].firstOrNull()?.measure(authorConstraints)
 
-        val firstRowPlaceable = allMeasurables[1].firstOrNull()?.measure(contentConstraints)
+        // With the author on top, the header rows sit beside the picture and the content below both.
+        val headerX = if (authorOnTop && authorPlaceable != null) authorPlaceable.width + px.authorContentGap else 0
+        val headerConstraints =
+            if (authorOnTop) Constraints(maxWidth = (innerWidth - headerX).coerceAtLeast(0)) else contentConstraints
+
+        val firstRowPlaceable = allMeasurables[1].firstOrNull()?.measure(headerConstraints)
         val secondRowPlaceable =
-            if (showSecondRow) allMeasurables[2].firstOrNull()?.measure(contentConstraints) else null
+            if (showSecondRow) allMeasurables[2].firstOrNull()?.measure(headerConstraints) else null
 
         // Multi-child slots: measured into pre-sized arrays to avoid List allocation.
         val contentMeasurables = allMeasurables[3]
@@ -327,18 +364,17 @@ fun NoteComposeLayout(
         // Height calculation
         val spacer = if (showContentSpacer) px.contentSpacer else 0
 
-        val contentColumnHeight =
-            (firstRowPlaceable?.height ?: 0) +
-                (secondRowPlaceable?.height ?: 0) +
-                spacer +
-                contentStackHeight
+        val headerRowsHeight = (firstRowPlaceable?.height ?: 0) + (secondRowPlaceable?.height ?: 0)
+        val headerHeight = if (authorOnTop) maxOf(authorPlaceable?.height ?: 0, headerRowsHeight) else headerRowsHeight
+
+        val contentColumnHeight = headerHeight + spacer + contentStackHeight
 
         val gutterMeasurable =
-            if (showAuthorColumn && authorPlaceable != null) allMeasurables[5].firstOrNull() else null
+            if (showAuthorColumn && !authorOnTop && authorPlaceable != null) allMeasurables[5].firstOrNull() else null
         val gutterTop = (authorPlaceable?.height ?: 0) + px.authorContentGap
 
         val authorColumnHeight =
-            if (showAuthorColumn && authorPlaceable != null) {
+            if (showAuthorColumn && !authorOnTop && authorPlaceable != null) {
                 if (gutterMeasurable != null) {
                     gutterTop + gutterMeasurable.minIntrinsicHeight(px.authorWidth)
                 } else {
@@ -360,22 +396,37 @@ fun NoteComposeLayout(
 
         // placeRelative handles RTL by mirroring x coordinates automatically.
         layout(maxWidth, totalHeight.coerceAtLeast(constraints.minHeight)) {
-            // Author column (inside padding area)
-            if (showAuthorColumn) {
-                authorPlaceable?.placeRelative(padStart, padTop)
-                gutterPlaceable?.placeRelative(padStart, padTop + gutterTop)
-            }
-
             // Content column (to the right of author, inside padding area)
             val contentX = padStart + authorW + gap
             var y = padTop
 
-            firstRowPlaceable?.placeRelative(contentX, y)
-            y += firstRowPlaceable?.height ?: 0
+            if (authorOnTop) {
+                // Author picture and header rows centered on each other, content below both.
+                authorPlaceable?.let { it.placeRelative(padStart, padTop + (headerHeight - it.height) / 2) }
+                y += (headerHeight - headerRowsHeight) / 2
 
-            if (showSecondRow) {
-                secondRowPlaceable?.placeRelative(contentX, y)
-                y += secondRowPlaceable?.height ?: 0
+                firstRowPlaceable?.placeRelative(padStart + headerX, y)
+                y += firstRowPlaceable?.height ?: 0
+
+                if (showSecondRow) {
+                    secondRowPlaceable?.placeRelative(padStart + headerX, y)
+                }
+
+                y = padTop + headerHeight
+            } else {
+                // Author column (inside padding area)
+                if (showAuthorColumn) {
+                    authorPlaceable?.placeRelative(padStart, padTop)
+                    gutterPlaceable?.placeRelative(padStart, padTop + gutterTop)
+                }
+
+                firstRowPlaceable?.placeRelative(contentX, y)
+                y += firstRowPlaceable?.height ?: 0
+
+                if (showSecondRow) {
+                    secondRowPlaceable?.placeRelative(contentX, y)
+                    y += secondRowPlaceable?.height ?: 0
+                }
             }
 
             y += spacer
