@@ -27,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeCommand
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 
@@ -35,8 +37,9 @@ private const val ENDED_FRACTION = 0.99
 
 /**
  * The desktop's player for an episode that keeps the listener's place: the audio card, started at
- * [startAtSeconds], reporting [GlobalMediaPlayer]'s playhead for this file to [onPlayhead]. When
- * another file takes over the engine, this one reports itself paused once.
+ * [startAtSeconds] and played at [speed], obeying [control], reporting [GlobalMediaPlayer]'s
+ * playhead for this file to [onPlayhead]. When another file takes over the engine, this one
+ * reports itself paused once.
  */
 @Composable
 fun EpisodeAudioPlayer(
@@ -46,10 +49,41 @@ fun EpisodeAudioPlayer(
     image: String?,
     note: Note,
     startAtSeconds: Long?,
+    speed: Float,
+    control: EpisodeControl,
     onPlayhead: (EpisodePlayhead) -> Unit,
 ) {
     val start by rememberUpdatedState(startAtSeconds)
     val report by rememberUpdatedState(onPlayhead)
+    val rate by rememberUpdatedState(speed)
+
+    LaunchedEffect(audioUrl, control) {
+        control.commands.collect { command ->
+            val playing = GlobalMediaPlayer.audioState.value
+            val isThis = playing.url == audioUrl
+            when (command) {
+                is EpisodeCommand.Seek -> {
+                    if (isThis && !command.play && !playing.isPlaying) {
+                        GlobalMediaPlayer.seekAudioMillis(command.millis)
+                    } else {
+                        GlobalMediaPlayer.playAudio(audioUrl, command.millis)
+                    }
+                }
+                EpisodeCommand.Play -> if (!isThis || !playing.isPlaying) GlobalMediaPlayer.playAudio(audioUrl, if (isThis) null else start?.times(1000))
+                EpisodeCommand.Pause -> if (isThis) GlobalMediaPlayer.pauseAudio()
+            }
+        }
+    }
+
+    // The engine starts each file at 1x: the speed is set again whenever this file plays at another.
+    LaunchedEffect(audioUrl) {
+        GlobalMediaPlayer.audioState.collect { state ->
+            if (state.url == audioUrl && state.isPlaying && state.speed != rate) GlobalMediaPlayer.setAudioSpeed(rate)
+        }
+    }
+    LaunchedEffect(speed) {
+        if (GlobalMediaPlayer.audioState.value.url == audioUrl) GlobalMediaPlayer.setAudioSpeed(speed)
+    }
 
     LaunchedEffect(audioUrl) {
         var last: EpisodePlayhead? = null

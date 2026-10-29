@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
 import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
+import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NotificationPanelCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
@@ -551,6 +552,8 @@ class DesktopAppModules(
                 BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
                 ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
                 NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
+                // The playback speed picked for each drss feed, local as drss.io keeps it.
+                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
                 // Not Buzz, but this is where each account starts: the legacy app's feeds go to the first.
                 legacyCustomFeedImport.importInto(account.settings)
                 legacyDeckImport.importInto(account.settings, account.signer.pubKey)

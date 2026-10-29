@@ -1353,6 +1353,18 @@ class Account(
     val liveArticlesFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultArticlesFollowList)
     val liveArticlesFollowListsPerRelay = OutboxLoaderState(liveArticlesFollowLists, cache, scope).flow
 
+    /**
+     * The drss river, the folder [drss] reads ([DrssState.readList]), as a feed: the listening
+     * queue loads its episodes through it. Built on first use; until a river is picked it points
+     * at nothing the queue asks for.
+     */
+    val drssRiverList: MutableStateFlow<TopFilter> by lazy {
+        MutableStateFlow<TopFilter>(drss.readList.value?.let { TopFilter.PeopleList(it) } ?: TopFilter.Mine).also { list ->
+            scope.launch { drss.readList.collect { river -> if (river != null) list.value = TopFilter.PeopleList(river) } }
+        }
+    }
+    val liveDrssRiverPerRelay by lazy { OutboxLoaderState(topNavFilterFlow(drssRiverList), cache, scope).flow }
+
     val liveMusicTracksFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultMusicTracksFollowList)
     val liveMusicTracksFollowListsPerRelay = OutboxLoaderState(liveMusicTracksFollowLists, cache, scope).flow
 

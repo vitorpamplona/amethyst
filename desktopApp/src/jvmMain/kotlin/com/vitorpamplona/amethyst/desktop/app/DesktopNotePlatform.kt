@@ -89,6 +89,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
@@ -655,9 +656,11 @@ object DesktopNotePlatform : NotePlatform {
         image: String?,
         note: Note,
         startAtSeconds: Long?,
+        speed: Float,
+        control: EpisodeControl,
         onPlayhead: (EpisodePlayhead) -> Unit,
         accountViewModel: AccountViewModel,
-    ) = DesktopEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, onPlayhead)
+    ) = DesktopEpisodeAudioPlayer(audioUrl, mimeType, title, image, note, startAtSeconds, speed, control, onPlayhead)
 
     // Git events: the same renderers Android uses (shared, JVM-only for the repository browser).
 

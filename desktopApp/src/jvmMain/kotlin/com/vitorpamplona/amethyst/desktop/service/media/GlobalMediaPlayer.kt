@@ -949,6 +949,25 @@ object GlobalMediaPlayer {
         _audioState.update { it.copy(position = target, currentTime = targetMillis) }
     }
 
+    /** Seeks the loaded audio to [millis], playing or not. */
+    fun seekAudioMillis(millis: Long) {
+        val player = audioPlayer ?: return
+        val durationMillis = player.currentDuration() ?: _audioState.value.duration
+        if (durationMillis <= 0L) return
+        seekAudio((millis.toDouble() / durationMillis).toFloat())
+    }
+
+    fun pauseAudio() {
+        audioPlayer?.pause()
+    }
+
+    /** Plays the loaded audio at [speed], 1 = normal. */
+    fun setAudioSpeed(speed: Float) {
+        val player = audioPlayer ?: return
+        player.setRate(speed)
+        _audioState.update { it.copy(speed = speed) }
+    }
+
     /** UI passes volume in 0..100. kdroidFilter wants 0..1. */
     fun setVideoVolume(volume: Int) {
         videoPlayer?.volume = volume.coerceIn(0, 100) / 100f

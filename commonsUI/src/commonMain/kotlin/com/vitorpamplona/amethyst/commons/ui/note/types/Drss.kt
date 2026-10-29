@@ -93,9 +93,11 @@ import com.vitorpamplona.amethyst.commons.resources.drss_listen_loading_episode
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_plays
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_left
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_of
+import com.vitorpamplona.amethyst.commons.resources.drss_listen_title
 import com.vitorpamplona.amethyst.commons.resources.drss_listening
 import com.vitorpamplona.amethyst.commons.resources.drss_lists_title
 import com.vitorpamplona.amethyst.commons.resources.drss_loading
+import com.vitorpamplona.amethyst.commons.resources.drss_open_history
 import com.vitorpamplona.amethyst.commons.resources.drss_organize
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance
 import com.vitorpamplona.amethyst.commons.resources.drss_provenance_count
@@ -247,9 +249,27 @@ private fun DrssTitle(
     }
 }
 
+/** A list's [title] beside its [picture], when it has one. */
+@Composable
+private fun DrssTitleWithPicture(
+    picture: String?,
+    fallback: MaterialSymbol,
+    accountViewModel: AccountViewModel,
+    title: @Composable () -> Unit,
+) {
+    if (picture == null) {
+        title()
+    } else {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            DrssCover(picture, 56.dp, fallback, accountViewModel)
+            Box(Modifier.weight(1f)) { title() }
+        }
+    }
+}
+
 /** drss's outlined pill: a sub-list, a tag, a schedule slot. */
 @Composable
-private fun DrssChip(
+internal fun DrssChip(
     label: String,
     icon: MaterialSymbol? = null,
     onClick: (() -> Unit)? = null,
@@ -271,7 +291,7 @@ private fun DrssChip(
 
 /** A square cover, or the [fallback] glyph on an accent wash while there is none. */
 @Composable
-private fun DrssCover(
+internal fun DrssCover(
     url: String?,
     size: Dp,
     fallback: MaterialSymbol,
@@ -401,7 +421,17 @@ fun RenderDrssListenProgress(
                 Text(stringRes(Res.string.drss_listen_loading_episode), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.grayText)
             }
             DrssListenBar(progress)
+            if (progress.pubKey == accountViewModel.account.pubKey) DrssListenLinks(nav)
         }
+    }
+}
+
+/** Ways from one of the user's listening records to the queue and the history. */
+@Composable
+private fun DrssListenLinks(nav: INav) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        DrssChip(stringRes(Res.string.drss_listen_title), MaterialSymbols.Headphones) { nav.nav(Route.DrssListen) }
+        DrssChip(stringRes(Res.string.drss_open_history), MaterialSymbols.History) { nav.nav(Route.DrssHistory) }
     }
 }
 
@@ -688,7 +718,10 @@ private fun DrssListActions(
             nav.newStack(Route.Home)
         }
         if (isMine) {
-            if (address == read) DrssChip(stringRes(Res.string.drss_badge_read), MaterialSymbols.CheckCircle)
+            if (address == read) {
+                DrssChip(stringRes(Res.string.drss_badge_read), MaterialSymbols.CheckCircle)
+                DrssChip(stringRes(Res.string.drss_listen_title), MaterialSymbols.Headphones) { nav.nav(Route.DrssListen) }
+            }
             if (address == write) DrssChip(stringRes(Res.string.drss_badge_write), MaterialSymbols.CheckCircle)
             if (drss.preference.value != null || list is DrssListFolderEvent) {
                 DrssChip(stringRes(Res.string.drss_organize), MaterialSymbols.Folder) { nav.nav(Route.DrssLists) }
@@ -804,7 +837,9 @@ fun RenderDrssListFolder(
 
     DrssSurface {
         DrssOverline(MaterialSymbols.Folder, stringRes(Res.string.drss_list_folder))
-        DrssTitle(folder.title() ?: folder.dTag(), pluralStringRes(Res.plurals.drss_list_count, children.size, children.size))
+        DrssTitleWithPicture(folder.thumb()?.imageUrl ?: folder.image(), MaterialSymbols.Folder, accountViewModel) {
+            DrssTitle(folder.title() ?: folder.dTag(), pluralStringRes(Res.plurals.drss_list_count, children.size, children.size))
+        }
         if (children.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 children.take(MAX_CHIPS).forEach { child ->

@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.ui.note.types
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,19 +32,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.commons.drss.DrssListenSession
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -54,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.resources.drss_heard_played
 import com.vitorpamplona.amethyst.commons.resources.drss_heard_resume_at
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_plays
 import com.vitorpamplona.amethyst.commons.resources.drss_listen_time_left
-import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
@@ -64,7 +59,6 @@ import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.map
 
 /** An episode's audio file: where it is and, when the event says, its type. */
@@ -110,62 +104,6 @@ fun observeMyListening(
                 .map { drss.progressOf(episode.address) }
         }
     return flow.collectAsStateWithLifecycle(drss.progressOf(episode.address))
-}
-
-/**
- * A long-form episode's audio, resumed where the user left it and saving where they are as they
- * listen, in drss.io's listening-progress records (kind 30054). Draws nothing for an article
- * without audio.
- */
-@Composable
-fun DrssEpisodeAudio(
-    note: AddressableNote,
-    event: LongFormContentEvent,
-    accountViewModel: AccountViewModel,
-) {
-    val audio = remember(event) { event.episodeAudio() } ?: return
-    val progress by observeMyListening(note, accountViewModel)
-    val session = remember(note.address) { DrssListenSession() }
-    val account = accountViewModel.account
-
-    val save: (DrssListenSession.Save) -> Unit =
-        remember(note.address) {
-            { save ->
-                if (account.isWriteable()) {
-                    accountViewModel.launchSigner {
-                        account.drss.saveProgress(note.address, save.position, save.durationInSeconds, save.countsAPlay, save.ended, account)
-                    }
-                }
-            }
-        }
-    val currentSave by rememberUpdatedState(save)
-
-    DisposableEffect(note.address) {
-        onDispose { session.onLeave()?.let(currentSave) }
-    }
-
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        progress?.let { DrssHeardBadge(it) }
-        LocalNotePlatform.current.EpisodeAudioPlayer(
-            audioUrl = audio.url,
-            mimeType = audio.mimeType,
-            title = event.title(),
-            image = event.image(),
-            note = note,
-            startAtSeconds = progress?.position()?.takeIf { it > 0 },
-            onPlayhead = { playhead ->
-                session
-                    .onSample(
-                        positionInSeconds = playhead.positionMillis / 1000.0,
-                        durationInSeconds = playhead.durationMillis?.let { it / 1000.0 },
-                        isPlaying = playhead.isPlaying,
-                        hasEnded = playhead.hasEnded,
-                        nowMillis = TimeUtils.nowMillis(),
-                    )?.let(currentSave)
-            },
-            accountViewModel = accountViewModel,
-        )
-    }
 }
 
 /**

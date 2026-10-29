@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.note.elements
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboard
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.copy_raw_json
 import com.vitorpamplona.amethyst.commons.resources.copy_text
 import com.vitorpamplona.amethyst.commons.resources.copy_user_pubkey
 import com.vitorpamplona.amethyst.commons.resources.devtools_inspect_event
+import com.vitorpamplona.amethyst.commons.resources.drss_menu_collect_to
 import com.vitorpamplona.amethyst.commons.resources.drss_menu_follow_into
 import com.vitorpamplona.amethyst.commons.resources.drss_menu_record_provenance
 import com.vitorpamplona.amethyst.commons.resources.drss_menu_save_to
@@ -176,6 +178,12 @@ fun noteActionSections(
 
     // drss.io readers keep a read-and-write preference; the drss actions are theirs.
     val hasDrssLists = accountViewModel.account.drss.preference.value != null
+    val hasDrssEventLists =
+        remember {
+            accountViewModel.account.drss
+                .eventLists()
+                .isNotEmpty()
+        }
 
     val author =
         buildList {
@@ -380,6 +388,14 @@ fun noteActionSections(
                 add(
                     NoteAction(MaterialSymbols.TravelExplore, stringRes(Res.string.drss_menu_record_provenance)) {
                         nav.nav(Route.DrssRecordProvenance(note.address.toValue()))
+                        handlers.onDismiss()
+                    },
+                )
+            } else if (hasDrssEventLists && !isPrivateRumor && note.event != null) {
+                // Anything else goes in the collections drss kept by event id (kind 30102).
+                add(
+                    NoteAction(MaterialSymbols.CollectionsBookmark, stringRes(Res.string.drss_menu_collect_to)) {
+                        nav.nav(Route.DrssCollectTo(note.event?.id ?: note.idHex))
                         handlers.onDismiss()
                     },
                 )

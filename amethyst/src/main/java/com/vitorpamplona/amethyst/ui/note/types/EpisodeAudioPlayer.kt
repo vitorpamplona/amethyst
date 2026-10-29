@@ -38,6 +38,8 @@ import androidx.media3.common.Player
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.syntheticWaveformFor
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeCommand
+import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.types.getAudioMetaWithWaveform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -52,7 +54,8 @@ private const val RESUME_WINDOW_MS = 2_000L
 
 /**
  * An episode's audio through the shared media-controller stack, moved to [startAtSeconds] when it
- * loads at the start, reporting its playhead to [onPlayhead] every second while shown.
+ * loads at the start and played at [speed], obeying [control], reporting its playhead to
+ * [onPlayhead] every second while shown.
  */
 @Composable
 fun EpisodeAudioPlayer(
@@ -62,6 +65,8 @@ fun EpisodeAudioPlayer(
     image: String?,
     note: Note,
     startAtSeconds: Long?,
+    speed: Float,
+    control: EpisodeControl,
     onPlayhead: (EpisodePlayhead) -> Unit,
     accountViewModel: AccountViewModel,
 ) {
@@ -97,6 +102,25 @@ fun EpisodeAudioPlayer(
             LaunchedEffect(controller, startAtSeconds) {
                 val start = startAtSeconds ?: return@LaunchedEffect
                 if (controller.controller.currentPosition < RESUME_WINDOW_MS) controller.controller.seekTo(start * 1000)
+            }
+
+            LaunchedEffect(controller, speed) {
+                controller.controller.setPlaybackSpeed(speed)
+            }
+
+            LaunchedEffect(controller, control) {
+                control.commands.collect { command ->
+                    val player = controller.controller
+                    when (command) {
+                        is EpisodeCommand.Seek -> {
+                            player.seekTo(command.millis)
+                            if (command.play) player.play()
+                        }
+                        EpisodeCommand.Play -> player.play()
+                        EpisodeCommand.Pause -> player.pause()
+                    }
+                    report(player.playhead())
+                }
             }
 
             LaunchedEffect(controller) {

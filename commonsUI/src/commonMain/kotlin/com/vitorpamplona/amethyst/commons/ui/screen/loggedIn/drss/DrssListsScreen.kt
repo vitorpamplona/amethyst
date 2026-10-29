@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -48,6 +49,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.resources.drss_cancel
 import com.vitorpamplona.amethyst.commons.resources.drss_delete
 import com.vitorpamplona.amethyst.commons.resources.drss_delete_confirm
 import com.vitorpamplona.amethyst.commons.resources.drss_folder_name
+import com.vitorpamplona.amethyst.commons.resources.drss_listen_title
 import com.vitorpamplona.amethyst.commons.resources.drss_lists_empty
 import com.vitorpamplona.amethyst.commons.resources.drss_lists_title
 import com.vitorpamplona.amethyst.commons.resources.drss_make_read
@@ -80,19 +83,29 @@ import com.vitorpamplona.amethyst.commons.resources.drss_merge_into
 import com.vitorpamplona.amethyst.commons.resources.drss_move_to
 import com.vitorpamplona.amethyst.commons.resources.drss_move_to_new_folder
 import com.vitorpamplona.amethyst.commons.resources.drss_none
+import com.vitorpamplona.amethyst.commons.resources.drss_open_history
 import com.vitorpamplona.amethyst.commons.resources.drss_pick_folder
+import com.vitorpamplona.amethyst.commons.resources.drss_picture_title
+import com.vitorpamplona.amethyst.commons.resources.drss_picture_url
 import com.vitorpamplona.amethyst.commons.resources.drss_read_as_feed
 import com.vitorpamplona.amethyst.commons.resources.drss_read_list
 import com.vitorpamplona.amethyst.commons.resources.drss_remove_from_folder
+import com.vitorpamplona.amethyst.commons.resources.drss_remove_picture
 import com.vitorpamplona.amethyst.commons.resources.drss_rename
 import com.vitorpamplona.amethyst.commons.resources.drss_save
+import com.vitorpamplona.amethyst.commons.resources.drss_set_picture
 import com.vitorpamplona.amethyst.commons.resources.drss_untitled
 import com.vitorpamplona.amethyst.commons.resources.drss_write_list
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectSingleFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.SpellCheckedOutlinedTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.types.DrssChip
+import com.vitorpamplona.amethyst.commons.ui.note.types.DrssCover
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.ui.uploads.uploadToDefaultServer
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.drss.DrssListPicture
 import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
@@ -102,6 +115,9 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip51Lists.articleCurationSet.ArticleCurationSetEvent
 import com.vitorpamplona.quartz.nip51Lists.bookmarkSet.BookmarkSetEvent
 import com.vitorpamplona.quartz.nip51Lists.followSet.FollowSetEvent
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.launch
 
 /** What the organizer is asking the user, if anything. */
 private sealed class DrssListsDialog {
@@ -117,6 +133,11 @@ private sealed class DrssListsDialog {
 
     class ConfirmDelete(
         val onConfirm: () -> Unit,
+    ) : DrssListsDialog()
+
+    class Picture(
+        val initial: String,
+        val onDone: (String?) -> Unit,
     ) : DrssListsDialog()
 }
 
@@ -155,6 +176,14 @@ fun DrssListsScreen(
     DrssScreenFrame(stringRes(Res.string.drss_lists_title), nav) {
         LazyColumn(Modifier.fillMaxWidth()) {
             item {
+                FlowRow(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    DrssChip(stringRes(Res.string.drss_listen_title), MaterialSymbols.Headphones) { nav.nav(Route.DrssListen) }
+                    DrssChip(stringRes(Res.string.drss_open_history), MaterialSymbols.History) { nav.nav(Route.DrssHistory) }
+                }
                 DrssRoleRow(stringRes(Res.string.drss_read_list), read, accountViewModel) {
                     pickFolder { picked -> accountViewModel.launchSigner { drss.setReadWriteLists(picked, write ?: picked, account) } }
                 }
@@ -226,6 +255,14 @@ fun DrssListsScreen(
                                 }
                                 add(stringRes(Res.string.drss_remove_from_folder) to { accountViewModel.launchSigner { drss.removeFromFolder(parent, entry.address, account, parentOf(parent)) } })
                             }
+                            if (isMine && drss.canHavePicture(entry.address.kind)) {
+                                add(
+                                    stringRes(Res.string.drss_set_picture) to {
+                                        val current = DrssTree.eventOf(entry.address)?.let { DrssListPicture.image(it.tags) } ?: ""
+                                        dialog = DrssListsDialog.Picture(current) { image -> accountViewModel.launchSigner { drss.setPicture(entry.address, image, account) } }
+                                    },
+                                )
+                            }
                             if (isMine) {
                                 add(
                                     stringRes(Res.string.drss_delete) to {
@@ -269,6 +306,12 @@ fun DrssListsScreen(
                 },
                 dismissButton = { TextButton(onClick = { dialog = null }) { Text(stringRes(Res.string.drss_cancel)) } },
             )
+        }
+        is DrssListsDialog.Picture -> {
+            DrssPictureDialog(current.initial, accountViewModel, onDone = {
+                dialog = null
+                current.onDone(it)
+            }, onDismiss = { dialog = null })
         }
         null -> {}
     }
@@ -332,7 +375,12 @@ private fun DrssTreeRow(
         Modifier.fillMaxWidth().padding(start = 16.dp + (entry.depth * 18).dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(symbol = iconFor(entry.address.kind), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        val picture = event?.let { DrssListPicture.preview(it.tags) }
+        if (picture != null) {
+            DrssCover(picture, 28.dp, iconFor(entry.address.kind), accountViewModel)
+        } else {
+            Icon(symbol = iconFor(entry.address.kind), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        }
         Spacer(Modifier.width(10.dp))
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -422,6 +470,61 @@ private fun DrssFolderPicker(
         },
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringRes(Res.string.drss_cancel)) } },
+    )
+}
+
+/**
+ * A list's picture: a link, or a file uploaded to the user's media server. Saving an empty link,
+ * or Remove, takes the picture away.
+ */
+@Composable
+private fun DrssPictureDialog(
+    initial: String,
+    accountViewModel: AccountViewModel,
+    onDone: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var url by remember { mutableStateOf(initial) }
+    var isUploading by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringRes(Res.string.drss_picture_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (url.isNotBlank()) DrssCover(url.trim(), 96.dp, MaterialSymbols.Image, accountViewModel)
+                SpellCheckedOutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    singleLine = true,
+                    placeholder = { Text(stringRes(Res.string.drss_picture_url)) },
+                    leadingIcon = {
+                        SelectSingleFromGallery(
+                            isUploading = isUploading,
+                            tint = MaterialTheme.colorScheme.grayText,
+                            modifier = Modifier.padding(start = 2.dp),
+                        ) { media ->
+                            scope.launch(Dispatchers.IO) {
+                                isUploading = true
+                                val uploaded = uploadToDefaultServer(media, accountViewModel.account, accountViewModel.host.mediaUploader, accountViewModel.toastManager::toast)
+                                isUploading = false
+                                if (uploaded != null) url = uploaded
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onDone(url.trim().ifBlank { null }) }, enabled = !isUploading) { Text(stringRes(Res.string.drss_save)) }
+        },
+        dismissButton = {
+            Row {
+                if (initial.isNotBlank()) TextButton(onClick = { onDone(null) }) { Text(stringRes(Res.string.drss_remove_picture)) }
+                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.drss_cancel)) }
+            }
+        },
     )
 }
 

@@ -23,6 +23,7 @@
 package com.vitorpamplona.amethyst.commons.model.drss
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.drss.DrssListenRates
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -32,7 +33,10 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.cache.filter
 import com.vitorpamplona.amethyst.commons.model.events
 import com.vitorpamplona.amethyst.commons.model.updateFlow
+import com.vitorpamplona.quartz.drss.DrssListPicture
+import com.vitorpamplona.quartz.drss.clips.DrssClip
 import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
+import com.vitorpamplona.quartz.drss.eventList.tags.ListItemTag
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
@@ -170,6 +174,7 @@ class DrssState(
             DrssProvenanceFolderEvent.KIND,
             FollowSetEvent.KIND,
             ArticleCurationSetEvent.KIND,
+            DrssEventListEvent.KIND,
         )
 
     private fun hasItemInNoteList(notes: Set<Note>): Boolean =
@@ -193,7 +198,22 @@ class DrssState(
     fun newNotes(newNotes: Set<Note>) {
         pin(newNotes)
         if (hasItemInNoteList(newNotes)) versions.update { it + 1 }
+        if (newNotes.anyNotNullEvent { it.pubKey == me && it.kind == DrssListenProgressEvent.KIND }) progressVersions.update { it + 1 }
     }
+
+    private val progressVersions = MutableStateFlow(0)
+
+    /** Ticks whenever one of the user's listening records arrives or changes. */
+    val progressVersion: StateFlow<Int> = progressVersions
+
+    /** The user's listening records (kind 30054) the cache holds, last saved first. */
+    fun myProgress(): List<DrssListenProgressEvent> =
+        pinned.value
+            .mapNotNull { if (it.address.kind == DrssListenProgressEvent.KIND) it.event as? DrssListenProgressEvent else null }
+            .sortedByDescending { it.createdAt }
+
+    /** The playback speed of each feed, kept on this device as drss.io keeps it in the browser. */
+    val rates = DrssListenRates()
 
     fun deletedNotes(deletedNotes: Set<Note>) {
         if (hasItemInNoteList(deletedNotes)) versions.update { it + 1 }
@@ -231,6 +251,28 @@ class DrssState(
                 createdAt = nextCreatedAt(note.event),
             )
         publish(signer.sign(template), note, account)
+    }
+
+    /**
+     * Clips [startMillis]..[endMillis] of [episode] as a highlight of it with [note] as the
+     * comment, sent where the episode was seen so drss finds it next to the episode.
+     */
+    suspend fun saveClip(
+        episode: AddressableNote,
+        startMillis: Long,
+        endMillis: Long,
+        note: String?,
+        account: Account,
+    ) {
+        val template =
+            DrssClip.build(
+                episode = ATag(episode.address, episode.relayHintUrl()),
+                episodeAuthor = episode.address.pubKeyHex,
+                startMillis = startMillis,
+                endMillis = endMillis,
+                note = note?.ifBlank { null },
+            )
+        publish(signer.sign(template), episode, account)
     }
 
     // ---- writing ----
@@ -469,6 +511,60 @@ class DrssState(
         writeList.value?.let { addToFolder(it, set.address(), account) }
         return set.address()
     }
+
+    // ---- older collections (kind 30102) ----
+
+    /** The user's collections of the kind drss wrote before curation sets, which it still edits. */
+    fun eventLists(): List<AddressableNote> = existing(DrssEventListEvent.KIND).filter { it.event is DrssEventListEvent }
+
+    fun eventListHolds(
+        list: AddressableNote,
+        eventId: HexKey,
+    ): Boolean = (list.event as? DrssEventListEvent)?.itemIds()?.contains(eventId) == true
+
+    /**
+     * Adds [item] to the collection [list], or takes it out. A collection keeps its last item:
+     * without one it would no longer read as a collection, so it is deleted instead, by the user.
+     * Returns false when nothing was sent for that reason.
+     */
+    suspend fun toggleInEventList(
+        list: AddressableNote,
+        item: Note,
+        account: Account,
+    ): Boolean {
+        val event = list.event as? DrssEventListEvent ?: return false
+        val eventId = item.event?.id ?: item.idHex
+        val next =
+            if (eventListHolds(list, eventId)) {
+                if (event.items().size <= 1) return false
+                DrssEventListEvent.removeItem(event, eventId, nextCreatedAt(event))
+            } else {
+                DrssEventListEvent.addItem(event, ListItemTag(eventId, item.relayHintUrl(), TimeUtils.now()), nextCreatedAt(event))
+            }
+        signAndPublish(next, list, account)
+        return true
+    }
+
+    // ---- pictures ----
+
+    /**
+     * Gives the user's list at [address] the picture [image], or none when null, as drss's list
+     * picture form does, without the small copy drss also makes: readers fall back to the picture.
+     * drss's feed lists (30100) and older collections (30102) carry none: their shapes allow no
+     * other tags.
+     */
+    suspend fun setPicture(
+        address: Address,
+        image: String?,
+        account: Account,
+    ) {
+        val note = cache.getAddressableNoteIfExists(address) ?: return
+        val event = note.event ?: return
+        if (event.pubKey != me || !canHavePicture(event.kind)) return
+        signAndPublish(DrssListPicture.set(event, image, null, nextCreatedAt(event)), note, account)
+    }
+
+    fun canHavePicture(kind: Int) = kind != DrssFeedListEvent.KIND && kind != DrssEventListEvent.KIND
 
     // ---- provenance ----
 

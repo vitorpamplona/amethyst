@@ -67,6 +67,7 @@ fun DrssSaveToScreen(
     val sets = remember(version, write) { drss.writableSets(ArticleCurationSetEvent.KIND) }
     val articleNote = remember(article) { LocalCache.getOrCreateAddressableNote(article) }
     val articleEvent by observeNoteEvent<LongFormContentEvent>(articleNote, accountViewModel)
+    val olderLists = remember(version) { drss.eventLists() }
 
     DrssScreenFrame(stringRes(Res.string.drss_save_to_title), nav) {
         articleEvent?.title()?.let {
@@ -85,9 +86,8 @@ fun DrssSaveToScreen(
         }
         if (write == null) DrssHint(stringRes(Res.string.drss_no_write_list))
         HorizontalDivider()
-        if (sets.isEmpty()) {
-            DrssHint(stringRes(Res.string.drss_lists_empty_sets))
-        } else {
+        if (sets.isEmpty()) DrssHint(stringRes(Res.string.drss_lists_empty_sets))
+        if (sets.isNotEmpty() || olderLists.isNotEmpty()) {
             LazyColumn(Modifier.fillMaxWidth()) {
                 items(sets, key = { it.note.address.toValue() }) { set ->
                     DrssToggleRow(
@@ -98,6 +98,8 @@ fun DrssSaveToScreen(
                         accountViewModel = accountViewModel,
                     )
                 }
+                // drss's older collections hold this version of the article, by its event id.
+                if (articleEvent != null) drssEventListRows(olderLists, articleNote, accountViewModel, withHeading = true)
             }
         }
     }
