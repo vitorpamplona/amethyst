@@ -125,6 +125,12 @@ record a library request for a per-`start()` handle instead and leave the behavi
 Either way, an orphaned output on timeout is pre-existing. If cancel is not adopted, consider
 deleting the file in `onSuccess` when `continuation.isActive` is false.
 
+**Decided 2026-10-29: not adopted.** `MultiOrchestrator.upload` launches one job per attachment,
+so two videos do compress at the same time and `cancel()` would stop the sibling upload. The
+orphan is deleted in `onSuccess` instead. **Library request** (LightCompressor-enhanced): a
+per-`start()` handle (`start(...)` returning something with `cancel()`, or `cancel(batchId)`), after
+which `invokeOnCancellation { handle.cancel() }` replaces the deletion block.
+
 ### D. Inputs without a MediaStore path are no longer copied
 
 2.2.3 copied `file://` and document Uris into `dataDir/<millis>` before compressing and never

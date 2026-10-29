@@ -140,22 +140,20 @@ object VideoCompressionHelper {
                                     size: Long,
                                     path: String?,
                                 ) {
+                                    // The timeout fired or the caller was cancelled: the library kept encoding
+                                    // (cancel() would also stop the other uploads compressing alongside), and
+                                    // nobody holds this path any more.
+                                    if (!continuation.isActive) {
+                                        path?.let { deleteOutput(it) }
+                                        return
+                                    }
+
                                     if (path == null) {
                                         applicationContext.notifyUser(
                                             "Video compression succeeded, but path was null",
                                             LogLevel.WARN,
                                         )
-                                        if (continuation.isActive) continuation.resume(null)
-                                        return
-                                    }
-
-                                    // The timeout fired or the caller was cancelled: the library kept encoding
-                                    // (cancel() would also stop the other uploads compressing alongside), and
-                                    // nobody holds this path any more.
-                                    if (!continuation.isActive) {
-                                        if (!File(path).delete()) {
-                                            Log.w(LOG_TAG) { "Failed to delete the output of a compression nobody waits for: $path" }
-                                        }
+                                        continuation.resume(null)
                                         return
                                     }
 
@@ -168,18 +166,12 @@ object VideoCompressionHelper {
 
                                     // Sanity check: compression not smaller than original
                                     if (originalSize in 1..size) {
-                                        if (!File(path).delete()) {
-                                            Log.w("VideoCompressionHelper") { "Failed to delete compressed file: $path" }
-                                        }
+                                        deleteOutput(path)
                                         applicationContext.notifyUser(
                                             "Compressed file larger than original. Using original.",
                                             LogLevel.WARN,
                                         )
-                                        if (continuation.isActive) {
-                                            continuation.resume(
-                                                MediaCompressorResult(uri, contentType, null),
-                                            )
-                                        }
+                                        continuation.resume(MediaCompressorResult(uri, contentType, null))
                                         return
                                     }
 
@@ -198,11 +190,7 @@ object VideoCompressionHelper {
                                             "Compressed [$size] ($reductionPercent% reduction)"
                                     }
 
-                                    if (continuation.isActive) {
-                                        continuation.resume(
-                                            MediaCompressorResult(Uri.fromFile(File(path)), contentType, size),
-                                        )
-                                    }
+                                    continuation.resume(MediaCompressorResult(Uri.fromFile(File(path)), contentType, size))
                                 }
 
                                 override fun onFailure(
@@ -226,6 +214,10 @@ object VideoCompressionHelper {
             }
 
         return result ?: MediaCompressorResult(uri, contentType, null)
+    }
+
+    private fun deleteOutput(path: String) {
+        if (!File(path).delete()) Log.w(LOG_TAG) { "Failed to delete compressed file: $path" }
     }
 
     private fun Context.getFileSize(uri: Uri): Long =

@@ -61,7 +61,10 @@ class MultiOrchestrator(
     fun hasCompressibleImage() = list.any { it.media.isImage() == true && it.media.isCompressible() }
 
     /** The video the slider label describes. */
-    fun firstVideo(): SelectedMedia? = list.firstOrNull { it.isVideo() }?.media
+    fun firstVideo(): SelectedMedia? = videos().firstOrNull()
+
+    /** Every picked video, in order, for the HDR hint. */
+    fun videos(): List<SelectedMedia> = list.filter { it.isVideo() }.map { it.media }
 
     private fun SelectedMediaProcessing.isVideo() = media.mimeType?.startsWith("video", ignoreCase = true) == true
 

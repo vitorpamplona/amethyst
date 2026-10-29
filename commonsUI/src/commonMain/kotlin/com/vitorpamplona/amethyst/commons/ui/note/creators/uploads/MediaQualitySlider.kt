@@ -217,12 +217,7 @@ fun VideoCompressionNeedsFfmpegHint(
     modifier: Modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
 ) {
     if (!controls.needsFfmpeg) return
-    Text(
-        text = stringRes(Res.string.video_compression_needs_ffmpeg),
-        style = MaterialTheme.typography.bodySmall,
-        color = Color.Gray,
-        modifier = modifier,
-    )
+    UploadHintLine(stringRes(Res.string.video_compression_needs_ffmpeg), modifier)
 }
 
 /**
@@ -240,18 +235,26 @@ fun VideoHdrHint(
     modifier: Modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
 ) {
     // Read each time, like the slider's image: removing a video changes the same orchestrator.
-    val videos = media?.let { pickedVideos(it) }.orEmpty()
+    val videos = media?.videos().orEmpty()
     val probes by produceState(emptyList<VideoHdrInfo>(), videos) { value = videos.mapNotNull { uploader.probeHdr(it.uri) } }
     val outcome = hdrUploadOutcome(probes, useH265) ?: return
+    val text =
+        when (outcome) {
+            HdrUploadOutcome.KEPT -> Res.string.video_hdr_kept
+            HdrUploadOutcome.CONVERTED_BY_CODEC -> if (offersH265) Res.string.video_hdr_converted_codec else Res.string.video_hdr_converted
+            HdrUploadOutcome.CONVERTED_BY_DEVICE -> Res.string.video_hdr_converted_device
+        }
+    UploadHintLine(stringRes(text), modifier)
+}
+
+/** The small grey line the upload dialogs use for a note about the picked video. */
+@Composable
+private fun UploadHintLine(
+    text: String,
+    modifier: Modifier,
+) {
     Text(
-        text =
-            stringRes(
-                when (outcome) {
-                    HdrUploadOutcome.KEPT -> Res.string.video_hdr_kept
-                    HdrUploadOutcome.CONVERTED_BY_CODEC -> if (offersH265) Res.string.video_hdr_converted_codec else Res.string.video_hdr_converted
-                    HdrUploadOutcome.CONVERTED_BY_DEVICE -> Res.string.video_hdr_converted_device
-                },
-            ),
+        text = text,
         style = MaterialTheme.typography.bodySmall,
         color = Color.Gray,
         modifier = modifier,
@@ -260,11 +263,6 @@ fun VideoHdrHint(
 
 /** `2`, `0.75`, `8`: no trailing `.0`. */
 private fun mbps(value: Float): String = value.toString().removeSuffix(".0")
-
-private fun pickedVideos(media: MultiOrchestrator): List<SelectedMedia> =
-    (0 until media.size())
-        .map { media.get(it).media }
-        .filter { it.isVideo() == true }
 
 private fun firstStillImage(media: MultiOrchestrator): SelectedMedia? =
     (0 until media.size())
