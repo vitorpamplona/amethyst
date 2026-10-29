@@ -1445,6 +1445,7 @@ fun InnerNoteWithReactions(
                             editState = editState,
                             accountViewModel = accountViewModel,
                             nav = nav,
+                            alignToText = fullWidth,
                         )
                     }
                 } else if (baseNote.event is DraftWrapEvent) {

@@ -190,7 +190,8 @@ private fun RenderWord(
 
         is LinkSegment ->
             if (canPreview) {
-                renderer.LinkPreview(word.segmentText, Modifier)
+                // A link that previews as media or a card runs edge to edge with the post's media.
+                ProvideMediaBleed(mediaBleed) { renderer.LinkPreview(word.segmentText, Modifier) }
             } else {
                 renderer.Url(word.segmentText, word.segmentText, Modifier)
             }

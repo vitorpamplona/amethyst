@@ -220,6 +220,12 @@ val ReactionRowZapraiser = Modifier.defaultMinSize(minHeight = 4.dp).fillMaxWidt
 
 val ReactionRowExpandButton = Modifier.width(65.dp).padding(start = 31.dp)
 
+// The reactions row of a note whose author sits above a full-width body: the actions start at the
+// body's 12dp edge and the expand button takes a fixed slot at the end instead of the author column.
+val ReactionRowExpandButtonAtEnd = Modifier.width(28.dp)
+val ReactionRowHeightAlignedToText = Modifier.padding(vertical = 6.dp).heightIn(min = 24.dp).padding(horizontal = 12.dp)
+val ReactionRowZapraiserAlignedToText = Modifier.defaultMinSize(minHeight = 4.dp).padding(horizontal = 12.dp).fillMaxWidth()
+
 val WidthAuthorPictureModifier = Modifier.width(55.dp)
 val WidthAuthorPictureModifierWithPadding = Modifier.width(65.dp)
 

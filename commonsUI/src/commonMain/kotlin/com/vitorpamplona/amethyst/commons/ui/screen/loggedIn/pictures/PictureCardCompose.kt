@@ -86,6 +86,7 @@ fun PictureCardCompose(
             editState = null,
             accountViewModel = accountViewModel,
             nav = nav,
+            alignToText = true,
         )
     }
 }

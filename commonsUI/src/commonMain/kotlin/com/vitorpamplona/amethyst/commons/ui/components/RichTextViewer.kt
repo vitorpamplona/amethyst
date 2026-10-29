@@ -54,7 +54,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -120,10 +119,8 @@ fun RichTextViewer(
 
     Column(modifier = modifier) {
         if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
-            // Markdown nests media in lists and quotes, so none of it runs past the text column.
-            ProvideMediaBleed(0.dp) {
-                platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
-            }
+            // Markdown hands the bleed only to the media on its top-level lines, not to lists or quotes.
+            platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
             return@Column
         }
 

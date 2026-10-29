@@ -114,10 +114,10 @@ fun RenderLoaded(
 
     when {
         state.previewInfo.mimeType.startsWith("image") -> {
-            Box(modifier = HalfVertPadding) {
+            BleedingMedia(HalfVertPadding) { roundedCorner ->
                 ZoomableContentView(
                     content = MediaUrlImage(url, uri = callbackUri),
-                    roundedCorner = true,
+                    roundedCorner = roundedCorner,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
@@ -129,10 +129,10 @@ fun RenderLoaded(
         // playlist served as `audio/x-mpegurl` off `/stream?id=1` is otherwise handed to the
         // progressive source and fails.
         state.previewInfo.mimeType.startsWith("video") || state.previewInfo.mimeType.startsWith("audio") -> {
-            Box(modifier = HalfVertPadding) {
+            BleedingMedia(HalfVertPadding) { roundedCorner ->
                 ZoomableContentView(
                     content = MediaUrlVideo(url, uri = callbackUri, mimeType = state.previewInfo.mimeType),
-                    roundedCorner = true,
+                    roundedCorner = roundedCorner,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
@@ -156,7 +156,7 @@ fun RenderLoaded(
         // out. `playableMediaUrl` is null unless the page's declared type held up, so a page whose
         // `og:video` is really an embed (YouTube's, say) still falls through to the card below.
         playableMedia != null -> {
-            Box(modifier = HalfVertPadding) {
+            BleedingMedia(HalfVertPadding) { roundedCorner ->
                 ZoomableContentView(
                     content =
                         MediaUrlVideo(
@@ -166,7 +166,7 @@ fun RenderLoaded(
                             artworkUri = state.previewInfo.imageUrlFullPath.ifBlank { null },
                             mimeType = state.previewInfo.playableMediaType,
                         ),
-                    roundedCorner = true,
+                    roundedCorner = roundedCorner,
                     contentScale = ContentScale.FillWidth,
                     accountViewModel = accountViewModel,
                 )
