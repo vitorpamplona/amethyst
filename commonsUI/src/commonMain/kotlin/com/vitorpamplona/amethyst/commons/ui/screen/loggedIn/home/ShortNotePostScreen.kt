@@ -474,6 +474,7 @@ private fun NewPostScreenBody(
                         MessageField(
                             if (postViewModel.wantsPoll || postViewModel.wantsZapPoll) Res.string.marmot_poll_question else Res.string.what_s_on_your_mind,
                             postViewModel,
+                            onFocused = { postViewModel.activePollOption = null },
                             onContentReceived = { uri, mimeType ->
                                 postViewModel.selectImage(
                                     persistentListOf(
@@ -831,7 +832,7 @@ private fun BottomRowActions(
                     )
                 }
 
-                EmojiPickerButton(vm.emojiSuggestions?.emojiPacks, vm.message)
+                EmojiPickerButton(vm.emojiSuggestions?.emojiPacks, vm.emojiTarget)
 
                 // Polls publish kinds that can't travel inside a private wrap, so the
                 // two toggles are mutually exclusive. Neither a private wrap nor a poll makes sense for a

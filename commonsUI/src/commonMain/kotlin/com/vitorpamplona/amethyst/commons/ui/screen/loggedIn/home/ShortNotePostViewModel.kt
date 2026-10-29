@@ -333,8 +333,9 @@ open class ShortNotePostViewModel :
     var wantsPoll by mutableStateOf(false)
     var pollOptions: SnapshotStateList<PollOptionDraft> = newPollOptions()
 
-    // The option being typed in, which the `@` and `:` suggestions complete into; null while the message is.
-    var activePollOption: PollOptionDraft? = null
+    // The option last typed in or focused: the `@` and `:` suggestions and the emoji button write
+    // into it. Null once the message field takes focus back.
+    var activePollOption by mutableStateOf<PollOptionDraft?>(null)
     var pollType by mutableStateOf(PollType.SINGLE_CHOICE)
 
     // When voting closes, for both kinds of poll.
@@ -1763,7 +1764,7 @@ open class ShortNotePostViewModel :
     }
 
     open fun autocompleteWithEmoji(item: EmojiMedia) {
-        emojiSuggestions?.autocompleteInto(activePollOption?.state ?: message, item)
+        emojiSuggestions?.autocompleteInto(emojiTarget, item)
         urlPreviews.update(message.text.toString())
 
         draftTag.newVersion()
@@ -1776,13 +1777,17 @@ open class ShortNotePostViewModel :
             iMetaAttachments.downloadAndPrepare(item.link, accountViewModel.host.mediaUploader, accountViewModel.httpClientBuilder)
         }
 
-        (activePollOption?.state ?: message).replaceCurrentWord(wordToInsert)
+        emojiTarget.replaceCurrentWord(wordToInsert)
         urlPreviews.update(message.text.toString())
 
         emojiSuggestions?.reset()
 
         draftTag.newVersion()
     }
+
+    /** The field an emoji goes into: the poll option being written, else the message. */
+    val emojiTarget: TextFieldState
+        get() = activePollOption?.takeIf { wantsPoll || wantsZapPoll }?.state ?: message
 
     private fun newPollOptions(): SnapshotStateList<PollOptionDraft> = mutableStateListOf(PollOptionDraft(), PollOptionDraft())
 
