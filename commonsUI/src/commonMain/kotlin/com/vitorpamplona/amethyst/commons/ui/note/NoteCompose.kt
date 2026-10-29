@@ -687,6 +687,7 @@ import com.vitorpamplona.quartz.marmot.mip05PushNotifications.NotificationReques
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenListEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRemovalEvent
 import com.vitorpamplona.quartz.marmot.mip05PushNotifications.TokenRequestEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
 import com.vitorpamplona.quartz.nip01Core.tags.geohash.geoHashOrScope
@@ -1339,6 +1340,22 @@ private fun ProvideNoteBleeds(
 /** The note a repost boosts, as [RenderRepost] draws it. */
 private fun Note.repostedNote(): Note? = replyTo?.lastOrNull { !it.isCommunityDefinition() }
 
+/**
+ * The reposted note whose author row a full-width repost's header can show: one that has loaded and
+ * is not hidden. A note still loading, or hidden by a block, mute or report, keeps the one-row
+ * header, and the body shows its placeholder or warning without naming the hidden author.
+ */
+@Composable
+private fun headedRepostedNote(
+    repost: Note,
+    accountViewModel: AccountViewModel,
+): Note? {
+    val reposted = repost.repostedNote() ?: return null
+    val event by observeNoteEvent<Event>(reposted, accountViewModel)
+    val hidden by remember(reposted) { accountViewModel.createIsHiddenFlow(reposted) }.collectAsStateWithLifecycle()
+    return if (event != null && !hidden.isPostHidden && hidden.isAcceptable) reposted else null
+}
+
 @Composable
 fun InnerNoteWithReactions(
     baseNote: Note,
@@ -1379,7 +1396,7 @@ fun InnerNoteWithReactions(
         }
 
     // A full-width repost heads itself with both authors' rows, so the note it boosts skips its own.
-    val repostedNote = if (fullWidth && !isNotRepost) baseNote.repostedNote() else null
+    val repostedNote = if (fullWidth && !isNotRepost) headedRepostedNote(baseNote, accountViewModel) else null
 
     CompositionLocalProvider(LocalExpandedTextGutter provides providedGutter) {
         NoteComposeLayout(

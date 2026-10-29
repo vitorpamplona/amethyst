@@ -52,6 +52,13 @@ class MarkdownTopLevelUrlsTest {
     fun codeBlocksAreNot() = assertEquals(emptySet(), markdownTopLevelUrls("```\nhttps://example.com/c.jpg\n```"))
 
     @Test
+    fun tablesAndHtmlBlocksAreNot() =
+        assertEquals(
+            emptySet(),
+            markdownTopLevelUrls("| ![](https://example.com/t.png) | caption |\n|---|---|\n<div><img src=\"https://example.com/h.png\"></div>"),
+        )
+
+    @Test
     fun aBlankLineEndsTheList() =
         assertEquals(
             setOf("https://example.com/after.jpg"),

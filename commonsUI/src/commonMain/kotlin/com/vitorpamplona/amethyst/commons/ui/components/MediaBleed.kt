@@ -64,7 +64,12 @@ fun BleedingMedia(
 ) {
     val bleed = if (enabled) LocalMediaBleed.current else 0.dp
     if (bleed == 0.dp) {
-        Box(modifier) { ProvideMediaBleed(0.dp) { content(roundedCorner) } }
+        // The layouts without bleed, most users' feeds, get no extra layout node.
+        if (modifier === Modifier) {
+            ProvideMediaBleed(0.dp) { content(roundedCorner) }
+        } else {
+            Box(modifier) { ProvideMediaBleed(0.dp) { content(roundedCorner) } }
+        }
     } else {
         Box(modifier.bleedHorizontally(bleed)) {
             // Nothing inside bleeds again: a gallery cell or a card in the media stays in place.

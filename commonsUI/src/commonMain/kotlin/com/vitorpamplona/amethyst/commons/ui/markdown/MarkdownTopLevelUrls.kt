@@ -25,7 +25,7 @@ private val MarkdownUrl = Regex("""https?://[^\s()<>\[\]]+""")
 
 /**
  * The URLs written on the top-level lines of [markdown]: lines that are not inside a list, a
- * block quote or a code block. Media at those URLs sits directly in the post's column, so it may
+ * block quote, a code block, a table or an HTML block. Media at those URLs sits directly in the post's column, so it may
  * run edge to edge with the post's own media; anything nested keeps the indent it is drawn in.
  *
  * A line scan, not a parse: a list item or quote holds every line up to the next blank line
@@ -51,7 +51,7 @@ fun markdownTopLevelUrls(markdown: String): Set<String> {
         }
 
         val indented = line.length - trimmed.length >= 2
-        if (trimmed.startsWith(">") || ListMarker.containsMatchIn(trimmed)) {
+        if (trimmed.startsWith(">") || trimmed.startsWith("|") || trimmed.startsWith("<") || ListMarker.containsMatchIn(trimmed)) {
             inNestedBlock = true
             return@forEach
         }

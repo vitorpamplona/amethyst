@@ -22,8 +22,10 @@ package com.vitorpamplona.amethyst.commons.ui.note
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
@@ -34,6 +36,28 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 private val PictureToRowGap = 10.dp
 
 private enum class RepostHeaderSlot { Rows, Pictures }
+
+/**
+ * The repost picture's content for the size the rows give it, kept between measure passes so the
+ * picture only recomposes when that size changes.
+ */
+private class RepostPictureSlot(
+    val repost: Note,
+    val reposted: Note,
+    val accountViewModel: AccountViewModel,
+    val nav: INav,
+) {
+    private var size: Dp = Dp.Unspecified
+    private var content: @Composable () -> Unit = {}
+
+    fun at(size: Dp): @Composable () -> Unit {
+        if (size != this.size) {
+            this.size = size
+            content = { RepostNoteAuthorPicture(repost, reposted, size, accountViewModel, nav) }
+        }
+        return content
+    }
+}
 
 /**
  * The header of a repost in the full-width layouts: two first rows, the booster's and the reposted
@@ -53,29 +77,34 @@ fun FullWidthRepostHeader(
 ) {
     val repostedEditState = observeEdits(baseNote = reposted, accountViewModel = accountViewModel)
 
-    SubcomposeLayout { constraints ->
-        // The rows are one line each, so their height does not depend on the width the picture
-        // leaves them: measure them first and size the picture to them.
-        val rows =
-            subcompose(RepostHeaderSlot.Rows) {
+    // Held across measure passes: a slot whose content lambda changes is recomposed on every pass.
+    val rows: @Composable () -> Unit =
+        remember(repost, reposted, isPinned, editState, repostedEditState, accountViewModel, nav, moreOptions) {
+            {
                 FirstUserInfoRow(repost, false, isPinned, editState, accountViewModel, nav, moreOptions)
                 FirstUserInfoRow(reposted, false, false, repostedEditState, accountViewModel, nav)
             }
-        val rowsHeight = rows.sumOf { it.minIntrinsicHeight(constraints.maxWidth) }
-        val pictureSize = rowsHeight.toDp()
+        }
+    val picture = remember(repost, reposted, accountViewModel, nav) { RepostPictureSlot(repost, reposted, accountViewModel, nav) }
 
-        val picture =
-            subcompose(RepostHeaderSlot.Pictures) {
-                RepostNoteAuthorPicture(repost, reposted, pictureSize, accountViewModel, nav)
-            }.firstOrNull()?.measure(Constraints())
+    SubcomposeLayout { constraints ->
+        // The rows are one line each, so their height does not depend on the width the picture
+        // leaves them: measure them first and size the picture to them.
+        val rowMeasurables = subcompose(RepostHeaderSlot.Rows, rows)
+        val rowsHeight = rowMeasurables.sumOf { it.minIntrinsicHeight(constraints.maxWidth) }
 
-        val rowX = (picture?.width ?: 0) + PictureToRowGap.roundToPx()
+        val picturePlaceable =
+            subcompose(RepostHeaderSlot.Pictures, picture.at(rowsHeight.toDp()))
+                .firstOrNull()
+                ?.measure(Constraints())
+
+        val rowX = (picturePlaceable?.width ?: 0) + PictureToRowGap.roundToPx()
         val rowConstraints = Constraints(maxWidth = (constraints.maxWidth - rowX).coerceAtLeast(0))
-        val placedRows = rows.map { it.measure(rowConstraints) }
-        val height = maxOf(placedRows.sumOf { it.height }, picture?.height ?: 0)
+        val placedRows = rowMeasurables.map { it.measure(rowConstraints) }
+        val height = maxOf(placedRows.sumOf { it.height }, picturePlaceable?.height ?: 0)
 
         layout(constraints.maxWidth, height) {
-            picture?.placeRelative(0, (height - picture.height) / 2)
+            picturePlaceable?.placeRelative(0, (height - picturePlaceable.height) / 2)
             var y = (height - placedRows.sumOf { it.height }) / 2
             placedRows.forEach {
                 it.placeRelative(rowX, y)
