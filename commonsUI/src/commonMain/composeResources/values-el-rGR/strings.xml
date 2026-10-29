@@ -650,12 +650,9 @@
     <string name="wallet_connect_connect_app">Σύνδεση πορτοφολιού</string>
     <string name="see_relay_feed">Προβολή ροής relay</string>
     <string name="pledge_amount_in_sats">Νέο ποσό σε Sats</string>
-    <string name="poll_option_description">Περιγραφή επιλογής δημοσκόπησης</string>
     <string name="poll_zap_value_min">Ελάχιστο Zap</string>
     <string name="poll_zap_value_max">Μέγιστο Zap</string>
     <string name="poll_consensus_threshold">Συναίνεση</string>
-    <string name="poll_closing_date_time">Ημερομηνία &amp; Ώρα λήξης δημοψηφίσματος</string>
-    <string name="poll_closing_in">Το δημοψήφισμα κλείνει σε %1$s</string>
     <string name="looking_for_event">Αναζήτηση γεγονότος %1$s</string>
     <string name="send_zap">Αποστολή Zap</string>
     <string name="custom_zaps_add_a_message">Προσθήκη δημόσιου μηνύματος</string>
@@ -920,7 +917,6 @@
     <string name="guidelines">Οδηγίες</string>
     <string name="moderators">Συντονιστές</string>
     <string name="status_update">Ενημέρωση κατάστασης</string>
-    <string name="poll_zap_value_min_max_explainer">Η ψηφοφορία σε μια δημοσίευση Δημοσκόπησης γίνεται με zaps. Τα zaps είναι μικροπληρωμές σε satoshi (sats). Τα sats είναι υποδιαίρεση του Bitcoin. Κάθε Bitcoin έχει 100.000.000 sats. Η επιλογή με τα περισσότερα zaps (δηλαδή τα περισσότερα sats) είναι η επικρατέστερη. Μπορείτε να ορίσετε ένα ελάχιστο ποσό zap για να αποφύγετε την ψήφο spammers αλλά και ένα μέγιστο ποσό ώστε να αποφύγετε μεγάλους zappers (χρήστες που στέλνουν zaps) που επιθυμούν να χειραγωγήσουν την ψηφοφορία. Χρησιμοποιήστε το ίδιο ποσό και στα δύο πεδία για να βεβαιωθείτε ότι κάθε ψήφος αποτιμάται το ίδιο. Ή αφήστε τα πεδία κενά για να αποδεχτείτε οποιοδήποτε ποσό.</string>
     <string name="error_dialog_talk_to_user">Μήνυμα στον Χρήστη</string>
     <string name="error_dialog_talk_to_user_name">Μήνυμα σε %1$s</string>
     <string name="error_dialog_button_ok">ΟΚ</string>
@@ -1426,7 +1422,6 @@
     <string name="closing_time">Ώρα κλεισίματος</string>
     <string name="confirm">Επιβεβαίωση</string>
     <string name="next">Επόμενο</string>
-    <string name="add_poll_option_button">Κουμπί προσθήκης επιλογής ψηφοφορίας</string>
     <string name="go_back">Επιστροφή</string>
     <string name="approve">Έγκριση</string>
     <string name="connected">Συνδεδεμένο</string>
@@ -2591,7 +2586,6 @@
     <string name="poll_author_no_vote">Οι συντάκτες των δημοσκοπήσεων δεν μπορούν να ψηφίσουν στις δικές τους δημοσκοπήσεις.</string>
     <string name="poll_is_closed_explainer">Η δημοσκόπηση έχει λήξει</string>
     <string name="poll_multiple_choice">Πολλαπλές επιλογές</string>
-    <string name="poll_option_index">Επιλογή %1$s</string>
     <string name="poll_single_choice">Μία επιλογή</string>
     <string name="poll_unable_to_vote">Αδυναμία ψηφοφορίας</string>
     <string name="polls">Δημοσκοπήσεις</string>

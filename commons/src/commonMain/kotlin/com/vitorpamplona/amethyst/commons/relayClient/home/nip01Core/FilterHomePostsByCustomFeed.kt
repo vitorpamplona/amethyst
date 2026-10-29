@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.custom.CustomFeedTop
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsConversationKinds
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds1
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds2
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds3
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -32,7 +33,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtagAlts
 
 /** What a feed with no kinds chosen asks for: everything Home shows for people and for hashtags. */
 private val CustomFeedDefaultKinds: List<Int> =
-    (HomePostsNewThreadKinds1 + HomePostsNewThreadKinds2 + HomePostsConversationKinds + HomePostsBuHashtagsKinds).distinct()
+    (HomePostsNewThreadKinds1 + HomePostsNewThreadKinds2 + HomePostsNewThreadKinds3 + HomePostsConversationKinds + HomePostsBuHashtagsKinds).distinct()
 
 /**
  * One REQ per relay for a custom feed: its kinds (or every kind Home shows), its authors

@@ -1557,12 +1557,9 @@
     <string name="wallet_connect_connect_app">Wallet verbinden</string>
     <string name="see_relay_feed">Relay-Feed anzeigen</string>
     <string name="pledge_amount_in_sats">Spendenbetrag in Sats</string>
-    <string name="poll_option_description">Beschreibung der Umfrageoption</string>
     <string name="poll_zap_value_min">Mindest-Zap-Betrag</string>
     <string name="poll_zap_value_max">Maximaler Zap-Betrag</string>
     <string name="poll_consensus_threshold">Konsens</string>
-    <string name="poll_closing_date_time">Schließdatum und -zeit</string>
-    <string name="poll_closing_in">Umfrage endet in %1$s</string>
     <string name="looking_for_event">Veranstaltung suchen %1$s</string>
     <string name="looking_for_event_title">Wird geladen</string>
     <string name="looking_for_private_event">Warte, bis deine privaten Nachrichten geladen sind…</string>
@@ -2053,7 +2050,6 @@
     <string name="guidelines">Richtlinien</string>
     <string name="moderators">Moderatoren</string>
     <string name="status_update">Status aktualisieren</string>
-    <string name="poll_zap_value_min_max_explainer">Die Abstimmungen werden nach der Höhe des Zaps gewichtet. Du kannst einen Mindestbetrag festlegen, um Spam zu verhindern, und einen Höchstbetrag, um zu verhindern, dass große Zapper die Abstimmung dominieren. Verwende denselben Betrag in beiden Feldern, um sicherzustellen, dass jeder Stimme der gleiche Wert zukommt. Lass die Felder leer, um jeden Betrag zu akzeptieren.</string>
     <string name="error_dialog_talk_to_user">Mit dem Benutzer kommunizieren</string>
     <string name="error_dialog_talk_to_user_name">Nachricht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2919,7 +2915,6 @@
     <string name="closing_time">Schließzeit</string>
     <string name="confirm">Bestätigen</string>
     <string name="next">Weiter</string>
-    <string name="add_poll_option_button">Umfrageoption hinzufügen</string>
     <string name="go_back">Zurückgehen</string>
     <string name="approve">Genehmigen</string>
     <string name="connected">Verbunden</string>
@@ -5257,7 +5252,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Die Umfrage ist für neue Stimmen geschlossen</string>
     <string name="poll_multiple_choice">Mehrfachauswahl</string>
-    <string name="poll_option_index">Wahl %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d Stimme ist auf einen Zeitpunkt vor der Veröffentlichung der Umfrage datiert und wird ausgeschlossen.</item>
         <item quantity="other">%1$d Stimmen sind auf einen Zeitpunkt vor der Veröffentlichung der Umfrage datiert und werden ausgeschlossen.</item>

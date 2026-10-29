@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.relay.RelayTopNavPer
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsConversationKinds
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds1
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds2
+import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds3
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.ExplainedFilter
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
@@ -55,6 +56,16 @@ fun filterHomePostsByRelay(
                 ExplainedFilter(
                     purpose = SubPurpose.HOME_FEED,
                     kinds = HomePostsNewThreadKinds2,
+                    limit = 100,
+                    since = sinceTime ?: newThreadSince,
+                ),
+        ),
+        RelayBasedFilter(
+            relay = relayUrl,
+            filter =
+                ExplainedFilter(
+                    purpose = SubPurpose.HOME_FEED,
+                    kinds = HomePostsNewThreadKinds3,
                     limit = 100,
                     since = sinceTime ?: newThreadSince,
                 ),

@@ -1560,12 +1560,9 @@
     <string name="wallet_connect_connect_app">Wallet verbinden</string>
     <string name="see_relay_feed">Relay-feed bekijken</string>
     <string name="pledge_amount_in_sats">Bedrag in sats</string>
-    <string name="poll_option_description">Poll-optiebeschrijvingen</string>
     <string name="poll_zap_value_min">Minimum zap-bedrag</string>
     <string name="poll_zap_value_max">Maximum zap-bedrag</string>
     <string name="poll_consensus_threshold">Consensusdrempel</string>
-    <string name="poll_closing_date_time">Sluitingsdatum &amp; -tijd</string>
-    <string name="poll_closing_in">Poll sluit over %1$s</string>
     <string name="looking_for_event">Zoeken naar bericht %1$s</string>
     <string name="looking_for_event_title">Laden</string>
     <string name="looking_for_private_event">Wachten tot je privéberichten zijn geladen…</string>
@@ -2056,7 +2053,6 @@
     <string name="guidelines">Richtlijnen</string>
     <string name="moderators">Moderators</string>
     <string name="status_update">Status bijwerken</string>
-    <string name="poll_zap_value_min_max_explainer">Stemmen wegen zwaarder naarmate het zap-bedrag hoger is. Stel een minimum in om spam te voorkomen en een maximum om dominante stemmen te voorkomen.</string>
     <string name="error_dialog_talk_to_user">Bericht de gebruiker</string>
     <string name="error_dialog_talk_to_user_name">Bericht %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2922,7 +2918,6 @@
     <string name="closing_time">Sluitingstijd</string>
     <string name="confirm">Bevestigen</string>
     <string name="next">Volgende</string>
-    <string name="add_poll_option_button">Poll-optie toevoegen</string>
     <string name="go_back">Terug</string>
     <string name="approve">Goedkeuren</string>
     <string name="connected">Verbonden</string>
@@ -5286,7 +5281,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Deze poll is gesloten voor nieuwe stemmen</string>
     <string name="poll_multiple_choice">Meerdere keuzes</string>
-    <string name="poll_option_index">Optie %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d stem is gedateerd vóór de poll werd gepubliceerd en telt niet mee.</item>
         <item quantity="other">%1$d stemmen zijn gedateerd vóór de poll werd gepubliceerd en tellen niet mee.</item>

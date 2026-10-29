@@ -1589,12 +1589,9 @@
     <string name="wallet_connect_connect_app">Podłącz portfel</string>
     <string name="see_relay_feed">Przejrzyj kanał transmitera</string>
     <string name="pledge_amount_in_sats">Kwota zobowiązania w Satoszach</string>
-    <string name="poll_option_description">Opis opcji ankiety</string>
     <string name="poll_zap_value_min">Minimalny Zap</string>
     <string name="poll_zap_value_max">Maksymalny Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Data &amp; godzina zakończenia ankiety</string>
-    <string name="poll_closing_in">Ankieta zostanie zamknięta za %1$s</string>
     <string name="looking_for_event">Szukam wydarzenia %1$s</string>
     <string name="looking_for_event_title">Wczytywanie</string>
     <string name="looking_for_private_event">Czekam na wczytanie Twoich prywatnych wiadomości…</string>
@@ -2089,7 +2086,6 @@
     <string name="guidelines">Wskazówki</string>
     <string name="moderators">Moderatorzy</string>
     <string name="status_update">Zaktualizuj swój status</string>
-    <string name="poll_zap_value_min_max_explainer">Głosy są oceniane na podstawie ilości zapperów. Możesz ustawić minimalną kwotę, aby uniknąć spamerów i maksymalną kwotę, aby uniknąć przejęcia ankiety przez dużych zapperów. Użyj tej samej kwoty w obu polach, aby upewnić się, że każdy głos ma taką samą wartość. Pozostaw to pole puste, aby zaakceptować dowolną kwotę.</string>
     <string name="error_dialog_talk_to_user">Wyślij wiadomość użytkownikowi</string>
     <string name="error_dialog_talk_to_user_name">Wiadomość %1$s</string>
     <string name="error_dialog_button_ok">OK</string>
@@ -2955,7 +2951,6 @@
     <string name="closing_time">Czas zakończenia głosowania</string>
     <string name="confirm">Potwierdź</string>
     <string name="next">Dalej</string>
-    <string name="add_poll_option_button">Przycisk "Dodaj opcję ankiety"</string>
     <string name="go_back">Wstecz</string>
     <string name="approve">Zatwierdź</string>
     <string name="connected">Połączony</string>
@@ -5457,7 +5452,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Ankieta jest zamknięta dla nowych głosów</string>
     <string name="poll_multiple_choice">Wielokrotny wybór</string>
-    <string name="poll_option_index">Opcja %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d głos został oddany przed opublikowaniem ankiety i jest wykluczony.</item>
         <item quantity="few">%1$d głosów zostało oddanych przed opublikowaniem ankiety i zostało wykluczonych.</item>

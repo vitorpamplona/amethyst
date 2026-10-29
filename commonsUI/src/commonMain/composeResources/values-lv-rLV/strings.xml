@@ -657,12 +657,9 @@
     <string name="wallet_connect_connect_app">Pievienot maku</string>
     <string name="see_relay_feed">Skatīt relay plūsmu</string>
     <string name="pledge_amount_in_sats">Solījuma summa sats</string>
-    <string name="poll_option_description">Aptaujas varianta apraksts</string>
     <string name="poll_zap_value_min">Zap minimums</string>
     <string name="poll_zap_value_max">Zap maksimums</string>
     <string name="poll_consensus_threshold">Vienprātība</string>
-    <string name="poll_closing_date_time">Aptaujas slēgšanas datums &amp; laiks</string>
-    <string name="poll_closing_in">Aptauja beidzas pēc %1$s</string>
     <string name="looking_for_event">Meklē notikumu %1$s</string>
     <string name="send_zap">Sūtīt Zap</string>
     <string name="custom_zaps_add_a_message">Pievienot publisku ziņu</string>
@@ -928,7 +925,6 @@
     <string name="guidelines">Vadlīnijas</string>
     <string name="moderators">Moderatori</string>
     <string name="status_update">Atjauniniet savu statusu</string>
-    <string name="poll_zap_value_min_max_explainer">Balsis tiek svērtas pēc zap summas. Varat iestatīt minimālo summu, lai izvairītos no surogātpasta sūtītājiem, un maksimālo summu, lai neļautu lieliem zap sūtītājiem dominēt aptaujā. Izmantojiet vienādu summu abos laukos, lai katrai balsij būtu vienāda vērtība. Atstājiet tukšu, lai pieņemtu jebkādu summu.</string>
     <string name="error_dialog_talk_to_user">Rakstīt lietotājam</string>
     <string name="error_dialog_talk_to_user_name">Rakstīt %1$s</string>
     <string name="error_dialog_button_ok">Labi</string>
@@ -1445,7 +1441,6 @@
     <string name="closing_time">Slēgšanas laiks</string>
     <string name="confirm">Apstiprināt</string>
     <string name="next">Tālāk</string>
-    <string name="add_poll_option_button">Pievienot aptaujas opcijas pogu</string>
     <string name="go_back">Atpakaļ</string>
     <string name="approve">Apstiprināt</string>
     <string name="connected">Savienots</string>
@@ -2662,7 +2657,6 @@
     <string name="poll_author_no_vote">Aptaujas autori nevar balsot savās aptaujās.</string>
     <string name="poll_is_closed_explainer">Aptauja ir slēgta jaunām balsīm</string>
     <string name="poll_multiple_choice">Vairāki varianti</string>
-    <string name="poll_option_index">Variants %1$s</string>
     <string name="poll_single_choice">Viens variants</string>
     <string name="poll_unable_to_vote">Nevar balsot</string>
     <string name="polls">Aptaujas</string>

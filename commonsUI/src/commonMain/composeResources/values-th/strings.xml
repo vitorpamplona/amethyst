@@ -643,12 +643,9 @@
     <string name="wallet_connect_connect_app">เชื่อมต่อกระเป๋าเงิน</string>
     <string name="see_relay_feed">ดูฟีด relay</string>
     <string name="pledge_amount_in_sats">จำนวนเงินที่นำเข้าในหน่วย sat</string>
-    <string name="poll_option_description">คำอธิบายตัวเลือกในโพลล์</string>
     <string name="poll_zap_value_min">Zap ขั้นต่ำ</string>
     <string name="poll_zap_value_max">Zap สูงสุด</string>
     <string name="poll_consensus_threshold">ฉันทามติ</string>
-    <string name="poll_closing_date_time">วันและเวลาปิดโพล</string>
-    <string name="poll_closing_in">โพลปิดใน %1$s</string>
     <string name="looking_for_event">กำลังมองหา Event %1$s</string>
     <string name="send_zap">ส่ง Zap</string>
     <string name="custom_zaps_add_a_message">เพิ่มในข้อความสาธรณะ</string>
@@ -916,7 +913,6 @@
     <string name="guidelines">แนวปฏิบัติ</string>
     <string name="moderators">ผู้ดูแล</string>
     <string name="status_update">คุณกำลังทำอะไรอยู่…</string>
-    <string name="poll_zap_value_min_max_explainer">โหวตถูกให้น้ำหนักโดยจำนวน Zaps. คุณสามารถตั้งจำนวนเงินต่ำสุด และจำนวนครั้งสูงสุดในการโหวตเพื่อหลีกเลี่ยงการแสปมผลโพล. ใช้จำนวนเงินที่เท่ากันในทุกหัวข้อเพื่อให้การโหวตเป็นไปอย่างเท่าเทียม ปล่อยช่องว่าง หากต้องการให้โหวตเท่าใดก็ได้</string>
     <string name="error_dialog_talk_to_user">ส่งข้อความ</string>
     <string name="error_dialog_talk_to_user_name">ส่งข้อความถึง %1$s</string>
     <string name="error_dialog_button_ok">ตกลง</string>
@@ -1446,7 +1442,6 @@
     <string name="closing_time">เวลาปิด</string>
     <string name="confirm">ยืนยัน</string>
     <string name="next">ถัดไป</string>
-    <string name="add_poll_option_button">ปุ่มเพิ่มตัวเลือกโหวต</string>
     <string name="go_back">ย้อนกลับ</string>
     <string name="approve">อนุมัติ</string>
     <string name="connected">เชื่อมต่อแล้ว</string>
@@ -2660,7 +2655,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">โพลปิดรับการลงคะแนนเพิ่มเติม</string>
     <string name="poll_multiple_choice">หลายตัวเลือก</string>
-    <string name="poll_option_index">ตัวเลือก %1$s</string>
     <string name="poll_single_choice">ตัวเลือกเดียว</string>
     <string name="poll_unable_to_vote">ไม่สามารถโหวต</string>
     <string name="polls">โพล</string>

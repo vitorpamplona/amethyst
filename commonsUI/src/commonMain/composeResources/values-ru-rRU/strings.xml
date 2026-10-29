@@ -655,12 +655,9 @@
     <string name="wallet_connect_connect_app">Подключить кошелек</string>
     <string name="see_relay_feed">Смотреть ленту relay</string>
     <string name="pledge_amount_in_sats">Сумма взноса в sat</string>
-    <string name="poll_option_description">Описание варианта</string>
     <string name="poll_zap_value_min">Минимальный зап</string>
     <string name="poll_zap_value_max">Максимальный зап</string>
     <string name="poll_consensus_threshold">Консенсус</string>
-    <string name="poll_closing_date_time">Дата закрытия опроса &amp; Время</string>
-    <string name="poll_closing_in">Опрос закрывается через %1$s</string>
     <string name="looking_for_event">Поиск события %1$s</string>
     <string name="send_zap">Отправить зап</string>
     <string name="custom_zaps_add_a_message">Добавить публичное сообщение</string>
@@ -928,7 +925,6 @@
     <string name="guidelines">Правила</string>
     <string name="moderators">Модераторы</string>
     <string name="status_update">Обновить статус</string>
-    <string name="poll_zap_value_min_max_explainer">Голоса взвешиваются по сумме зап. Можно установить минимальную сумму, чтобы избежать спама, и максимальную, чтобы крупные заперы не захватили голосование. Установите одинаковое значение в обоих полях, чтобы каждый голос имел равный вес. Оставьте пустым, чтобы принимать любую сумму.</string>
     <string name="error_dialog_talk_to_user">Написать пользователю</string>
     <string name="error_dialog_talk_to_user_name">Написать %1$s</string>
     <string name="error_dialog_button_ok">ОК</string>
@@ -1442,7 +1438,6 @@
     <string name="closing_time">Время закрытия</string>
     <string name="confirm">Подтвердить</string>
     <string name="next">Далее</string>
-    <string name="add_poll_option_button">Добавить вариант опроса</string>
     <string name="go_back">Назад</string>
     <string name="approve">Одобрить</string>
     <string name="connected">Подключено</string>
@@ -2676,7 +2671,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Опрос закрыт</string>
     <string name="poll_multiple_choice">Несколько вариантов ответа</string>
-    <string name="poll_option_index">Вариант %1$s</string>
     <string name="poll_single_choice">Один вариант ответа</string>
     <string name="poll_unable_to_vote">Невозможно проголосовать</string>
     <string name="polls">Опросы</string>

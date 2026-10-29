@@ -652,12 +652,9 @@
     <string name="wallet_connect_connect_app">ウォレットを接続</string>
     <string name="see_relay_feed">relayフィードを見る</string>
     <string name="pledge_amount_in_sats">誓約額 (sats)</string>
-    <string name="poll_option_description">投票の選択肢の説明</string>
     <string name="poll_zap_value_min">最小ザップ額</string>
     <string name="poll_zap_value_max">最大ザップ額</string>
     <string name="poll_consensus_threshold">コンセンサス</string>
-    <string name="poll_closing_date_time">投票終了日時</string>
-    <string name="poll_closing_in">投票は%1$s後に終了</string>
     <string name="looking_for_event">イベント %1$s を探しています</string>
     <string name="send_zap">Zapを送信</string>
     <string name="custom_zaps_add_a_message">公開メッセージを追加</string>
@@ -924,7 +921,6 @@
     <string name="guidelines">ガイドライン</string>
     <string name="moderators">モデレーター</string>
     <string name="status_update">ステータスを更新</string>
-    <string name="poll_zap_value_min_max_explainer">投票は zap 金額によって重み付けされます。スパマーを避けるために最低金額を、大口 zapper が投票を独占するのを防ぐために最高金額を設定できます。すべての投票を同じ価値にするには両方のフィールドに同じ金額を入力してください。任意の金額を受け入れるには空白のままにしてください。</string>
     <string name="error_dialog_talk_to_user">ユーザーにメッセージを送る</string>
     <string name="error_dialog_talk_to_user_name">%1$s にメッセージを送る</string>
     <string name="zap_split_title">Zap を分割して転送</string>
@@ -1435,7 +1431,6 @@
     <string name="closing_time">終了時刻</string>
     <string name="confirm">確認</string>
     <string name="next">次へ</string>
-    <string name="add_poll_option_button">投票オプションボタンを追加</string>
     <string name="go_back">戻る</string>
     <string name="approve">承認</string>
     <string name="connected">接続済み</string>
@@ -2607,7 +2602,6 @@
     <string name="poll_consensus_threshold_percent">（0〜100）%</string>
     <string name="poll_is_closed_explainer">この投票は新規票を受け付けていません</string>
     <string name="poll_multiple_choice">複数選択</string>
-    <string name="poll_option_index">選択肢%1$s</string>
     <string name="poll_single_choice">単一選択</string>
     <string name="poll_unable_to_vote">投票できません</string>
     <string name="polls">投票</string>

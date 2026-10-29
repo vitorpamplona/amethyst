@@ -1557,12 +1557,9 @@
     <string name="wallet_connect_connect_app">Anslut plånbok</string>
     <string name="see_relay_feed">Visa relä-flöde</string>
     <string name="pledge_amount_in_sats">Pantbelopp i Sats</string>
-    <string name="poll_option_description">Beskrivning av omröstningsalternativ</string>
     <string name="poll_zap_value_min">Minsta Zap</string>
     <string name="poll_zap_value_max">Maximal Zap</string>
     <string name="poll_consensus_threshold">Konsensus</string>
-    <string name="poll_closing_date_time">Stängningsdatum och tid</string>
-    <string name="poll_closing_in">Omröstningen stänger om %1$s</string>
     <string name="looking_for_event">Letar efter Event %1$s</string>
     <string name="looking_for_event_title">Läser in</string>
     <string name="looking_for_private_event">Väntar på att dina privata meddelanden ska läsas in…</string>
@@ -2053,7 +2050,6 @@
     <string name="guidelines">Riktlinjer</string>
     <string name="moderators">Moderatorer</string>
     <string name="status_update">Uppdatera din status</string>
-    <string name="poll_zap_value_min_max_explainer">Röster viktas av zap-beloppet. Du kan ställa in en minsta mängd för att undvika spammare och en maximal mängd för att undvika att en stor zapper tar över omröstningen. Använd samma belopp i båda fälten för att se till att varje röst värderas till samma belopp. Lämna tomt för att acceptera valfritt belopp.</string>
     <string name="error_dialog_talk_to_user">Meddela användaren</string>
     <string name="error_dialog_talk_to_user_name">Meddelande %1$s</string>
     <string name="error_dialog_button_ok">Ok</string>
@@ -2919,7 +2915,6 @@
     <string name="closing_time">Stängningstid</string>
     <string name="confirm">Bekräfta</string>
     <string name="next">Nästa</string>
-    <string name="add_poll_option_button">Lägg till omröstningsalternativ</string>
     <string name="go_back">Gå tillbaka</string>
     <string name="approve">Godkänn</string>
     <string name="connected">Ansluten</string>
@@ -5257,7 +5252,6 @@
     <string name="poll_consensus_threshold_percent">(0–100)%</string>
     <string name="poll_is_closed_explainer">Omröstningen är stängd för nya röster</string>
     <string name="poll_multiple_choice">Flerval</string>
-    <string name="poll_option_index">Alternativ %1$s</string>
     <plurals name="poll_results_backdated_votes">
         <item quantity="one">%1$d röst är daterad före omröstningen publicerades och utesluts.</item>
         <item quantity="other">%1$d röster är daterade före omröstningen publicerades och utesluts.</item>

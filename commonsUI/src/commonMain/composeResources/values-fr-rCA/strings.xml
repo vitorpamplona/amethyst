@@ -634,9 +634,6 @@
     <string name="wallet_connect_connect_app">Connecter le portefeuille</string>
     <string name="see_relay_feed">Voir le fil du relais</string>
     <string name="pledge_amount_in_sats">Montant engagé en Sats</string>
-    <string name="poll_option_description">Description de l'option du Sondage</string>
-    <string name="poll_closing_date_time">Date &amp; heure de clôture du sondage</string>
-    <string name="poll_closing_in">Le sondage se termine dans %1$s</string>
     <string name="looking_for_event">Recherche de l'Événement %1$s</string>
     <string name="send_zap">Envoyer Zap</string>
     <string name="custom_zaps_add_a_message">Ajouter un message public</string>
@@ -897,7 +894,6 @@
     <string name="guidelines">Lignes directrices</string>
     <string name="moderators">Modérateurs</string>
     <string name="status_update">Mettez à jour votre statut</string>
-    <string name="poll_zap_value_min_max_explainer">Les votes sont pondérés par le montant du zap. Vous pouvez définir un montant minimum pour éviter les spammeurs et un montant maximum pour éviter qu'un grand nombre de zappeurs ne prenne le contrôle du sondage. Utilisez le même montant dans les deux champs pour vous assurer que chaque vote a la même valeur. Laissez le champ vide pour accepter n'importe quel montant.</string>
     <string name="error_dialog_talk_to_user">Contacter l'utilisateur</string>
     <string name="error_dialog_button_ok">Ok</string>
     <string name="zap_split_title">Diviser et Transférer des Zaps</string>
@@ -1402,7 +1398,6 @@
     <string name="closing_time">Heure de fermeture</string>
     <string name="confirm">Confirmer</string>
     <string name="next">Suivant</string>
-    <string name="add_poll_option_button">Ajouter un bouton d'option de sondage</string>
     <string name="go_back">Retour</string>
     <string name="approve">Approuver</string>
     <string name="connected">Connecté</string>
