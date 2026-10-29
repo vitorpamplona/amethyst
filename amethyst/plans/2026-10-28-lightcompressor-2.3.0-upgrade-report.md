@@ -33,6 +33,7 @@ Commits (oldest first):
 | `28023020fa` | feat(upload): stop the encode when a post is cancelled |
 | `07b8cc35eb` | build(deps): pin LightCompressor-enhanced 2.3.0 |
 | `29b7d9d017` | refactor(upload): one cleanup path for a compressed file after cancel; cheaper probes |
+| `5c85fd03c5` | fix(upload): no 'larger than original' toast for a cancelled post |
 
 Docs-only commits between those (`b95d01ae7f`, `b920346a02`, `1c8290d58e`) record the device
 checks and the library brief. Not done, and why: the "plays in a desktop browser" check could not
@@ -287,8 +288,24 @@ Not applied:
 - *Remembering per-video HDR probes across list edits* (efficiency): multi-video posts are rare
   and the probe is cheap.
 
-Kotlin review (WARNING: 0 critical, 0 high, 4 medium, 3 low; fixed: M1 `onCancellation` on the
-success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
+Second Kotlin review (2026-10-29, on the whole branch after the simplify pass; PASS: 0 critical,
+0 high, 1 medium, 3 low). It confirmed the cancellation handling in `compressVideo` (handle
+registered after `start()`, unguarded resumes safe, the `onCancellation` handler as the single
+delete), that nothing swallows `CancellationException`, the IO dispatchers, and the module
+placement. Fixed in `5c85fd03c5`: the "larger than original" warning toast could still show for
+a cancelled post (L3). Not acted on:
+
+- *M, a stale HDR line while a re-probe is in flight.* The same point as M4 below; resetting
+  the value first would flicker the line when a video is added, and probes take tens of
+  milliseconds. The reviewer offered "skip the reset" as the alternative.
+- *L, `probeHdr` catches `Exception`, not `Throwable`.* An `Error` from the codec stack would
+  propagate; catching `Throwable` would also hide genuine JVM errors, and the library only
+  throws exceptions.
+- *L, two probes per video per dialog.* Keyed and parallel; revisit with the one-probe bead
+  above if it ever matters.
+
+First Kotlin review (WARNING: 0 critical, 0 high, 4 medium, 3 low; fixed: M1 `onCancellation` on
+the success resume, M2 catch around the library probe, L1 KDoc on `videos()`):
 
 - *M3, `2.3.0-SNAPSHOT` in the catalog.* Done later the same day in `07b8cc35eb`, once JitPack
   served the 2.3.0 tag.
