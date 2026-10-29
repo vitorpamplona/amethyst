@@ -4381,7 +4381,7 @@
     <string name="home_content_type_calendar_rsvps">Event RSVPs</string>
     <string name="home_content_type_calendar_events">Calendar events</string>
     <string name="home_content_type_code_snippets">Code snippets</string>
-    <string name="home_content_type_git">Git repositories, issues and PRs</string>
+    <string name="home_content_type_git">Git issues and PRs</string>
     <string name="home_content_type_threads">Forum threads</string>
     <string name="home_content_type_reposts">Reposts</string>
     <string name="home_content_type_shorts">Shorts</string>

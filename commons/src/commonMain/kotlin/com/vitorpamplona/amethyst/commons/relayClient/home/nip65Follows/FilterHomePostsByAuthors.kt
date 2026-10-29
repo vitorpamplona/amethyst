@@ -55,7 +55,6 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -153,7 +152,6 @@ val HomePostsNewThreadKinds3 =
         MusicPlaylistEvent.KIND,
         PodcastEpisodeEvent.KIND,
         PodcastMetadataEvent.KIND,
-        GitRepositoryEvent.KIND,
     )
 
 val HomePostsConversationKinds =

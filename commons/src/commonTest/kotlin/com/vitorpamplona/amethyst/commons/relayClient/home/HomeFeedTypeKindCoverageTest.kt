@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePost
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds1
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds2
 import com.vitorpamplona.amethyst.commons.relayClient.home.nip65Follows.HomePostsNewThreadKinds3
+import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -56,6 +57,14 @@ class HomeFeedTypeKindCoverageTest {
     fun noKindIsRequestedByTwoLegs() {
         val all = authorLegs.values.flatten()
         assertEquals(all.distinct().size, all.size, "kinds requested twice: ${all.groupBy { it }.filterValues { it.size > 1 }.keys}")
+    }
+
+    @Test
+    fun gitRepositoryAnnouncementsStayOffHome() {
+        // Long-lived replaceable listings with no published_at: a back catalogue fills a leg and
+        // every edit resurfaces one. Issues and PRs are the news; the repos have their own screen.
+        assertTrue(authorLegs.values.none { GitRepositoryEvent.KIND in it })
+        assertTrue(HomeFeedType.entries.none { GitRepositoryEvent.KIND in it.kinds })
     }
 
     @Test

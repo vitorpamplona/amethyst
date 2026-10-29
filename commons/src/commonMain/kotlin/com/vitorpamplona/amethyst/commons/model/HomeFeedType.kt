@@ -47,7 +47,6 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentCommentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
@@ -129,7 +128,10 @@ enum class HomeFeedType(
     THREADS("threads", listOf(ThreadEvent.KIND)),
     CALENDAR_EVENTS("calendar_events", listOf(CalendarTimeSlotEvent.KIND, CalendarDateSlotEvent.KIND)),
     CODE_SNIPPETS("code_snippets", listOf(CodeSnippetEvent.KIND)),
-    GIT("git", listOf(GitRepositoryEvent.KIND, GitIssueEvent.KIND, GitPullRequestEvent.KIND)),
+
+    // Repository announcements (30617) stay off Home: they are long-lived, replaceable listings
+    // without a published_at, so a back catalogue fills the feed and every edit resurfaces one.
+    GIT("git", listOf(GitIssueEvent.KIND, GitPullRequestEvent.KIND)),
     ;
 
     companion object {

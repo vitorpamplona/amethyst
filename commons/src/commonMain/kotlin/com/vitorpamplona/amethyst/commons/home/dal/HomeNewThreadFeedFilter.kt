@@ -62,7 +62,6 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.pr.GitPullRequestEvent
-import com.vitorpamplona.quartz.nip34Git.repository.GitRepositoryEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.day.CalendarDateSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
@@ -117,7 +116,6 @@ class HomeNewThreadFeedFilter(
                 CalendarRSVPEvent.KIND,
                 CalendarTimeSlotEvent.KIND,
                 CalendarDateSlotEvent.KIND,
-                GitRepositoryEvent.KIND,
                 PublicationIndexEvent.KIND,
             )
     }
@@ -234,7 +232,6 @@ class HomeNewThreadFeedFilter(
                 noteEvent is ZapGoalEvent ||
                 noteEvent is CodeSnippetEvent ||
                 noteEvent is LiveActivitiesClipEvent ||
-                noteEvent is GitRepositoryEvent ||
                 noteEvent is GitIssueEvent ||
                 noteEvent is GitPullRequestEvent ||
                 noteEvent is PublicationIndexEvent ||
