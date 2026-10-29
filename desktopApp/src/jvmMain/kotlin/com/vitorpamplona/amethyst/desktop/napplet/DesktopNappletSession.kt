@@ -30,7 +30,6 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -73,6 +72,8 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
 import java.io.InputStream
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.ln
 
 /**
@@ -182,6 +183,10 @@ class DesktopNappletSession(
 
     // Guards closed against the browser's creation, so close() and start() can't interleave.
     private val lifecycle = Any()
+
+    // Payloads for the page, waiting for the next flush.
+    private val outbox = ConcurrentLinkedQueue<String>()
+    private val flushQueued = AtomicBoolean(false)
 
     fun start() {
         scope.launch {
@@ -508,8 +513,32 @@ class DesktopNappletSession(
 
     private fun send(payload: String) {
         if (closed) return
-        val literal = JsonPrimitive(payload).toString()
-        browser?.executeJavaScript("window.${NappletWebContract.BRIDGE_NAME}.onmessage&&window.${NappletWebContract.BRIDGE_NAME}.onmessage({data:$literal});", NappletWebContract.SHELL_URL, 0)
+        outbox += payload
+        if (flushQueued.compareAndSet(false, true)) scope.launch { flush() }
+    }
+
+    /**
+     * Hands the page everything [send] queued, in order, in one script: a burst (a subscription's
+     * stored events) costs one trip to the renderer instead of one each.
+     */
+    private fun flush() {
+        // Cleared before draining, so a payload queued meanwhile schedules a flush of its own.
+        flushQueued.set(false)
+        // Held through the call, so two flushes can't hand the page their batches out of order.
+        synchronized(outbox) {
+            val batch = StringBuilder()
+            while (true) {
+                val payload = outbox.poll() ?: break
+                if (batch.isNotEmpty()) batch.append(',')
+                batch.append(JsonPrimitive(payload).toString())
+            }
+            if (batch.isEmpty()) return
+            browser?.executeJavaScript(
+                "(function(m){var b=window.${NappletWebContract.BRIDGE_NAME};for(var i=0;i<m.length;i++)b.onmessage&&b.onmessage({data:m[i]});})([$batch]);",
+                NappletWebContract.SHELL_URL,
+                0,
+            )
+        }
     }
 
     fun close() {
@@ -530,11 +559,8 @@ class DesktopNappletSession(
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
         scope.cancel()
-        // Best effort, off the caller's thread: the cache is shared, so it is trimmed as windows close.
-        Thread({ runtime.blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES) }, "napplet-blob-trim").apply {
-            isDaemon = true
-            start()
-        }
+        // The cache is shared, so it is trimmed as windows close.
+        runtime.trimBlobCache()
         runCatching {
             browser?.close(true)
             if (client != null && router != null) client.removeMessageRouter(router)

@@ -264,13 +264,12 @@ class DesktopSocksRouter(
         }
     }
 
+    // Every connection blocks two threads on its sockets, and a page opens dozens: virtual threads
+    // park on that I/O instead of holding a platform thread each. They are always daemons.
     private fun thread(
         name: String,
         block: () -> Unit,
-    ) = Thread(block, name).apply {
-        isDaemon = true
-        start()
-    }
+    ) = Thread.ofVirtual().name(name).start(block)
 
     /** A destination that resolves only to this machine. */
     private class LoopbackRefused : IOException("Refused: a local address")

@@ -89,7 +89,7 @@ class NappletBlobCache(
         }
     }
 
-    /** Best-effort eviction: if the store exceeds [maxBytes], delete oldest blobs until under it. */
+    /** Best-effort eviction: if the store exceeds [maxBytes], delete the least recently used blobs until under it. */
     fun trimToSize(maxBytes: Long) {
         runCatching {
             val files =

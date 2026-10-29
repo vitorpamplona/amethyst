@@ -106,7 +106,9 @@ fun DesktopSiteCard(event: Event) {
     val host = LocalDesktopNappletHost.current
     val toaster = LocalAppPlatform.current.rememberToaster()
     val openFailed = stringRes(Res.string.nsite_open_failed)
-    val launchable = host != null && (event as? RootSiteEvent)?.paths()?.isNotEmpty() ?: (event as? NamedSiteEvent)?.paths()?.isNotEmpty() ?: false
+    // Parsed once per event, not on every recomposition of the feed.
+    val hasFiles = remember(event) { (event as? RootSiteEvent)?.paths()?.isNotEmpty() ?: (event as? NamedSiteEvent)?.paths()?.isNotEmpty() ?: false }
+    val launchable = host != null && hasFiles
     val onOpen = if (launchable) ({ openSite(host, event, toaster, openFailed) }) else null
     when (event) {
         is RootSiteEvent -> StaticWebsiteCard(event.title(), event.description(), event.source(), event.servers(), null, isNapplet = false, icon = event.icon(), onOpen = onOpen)

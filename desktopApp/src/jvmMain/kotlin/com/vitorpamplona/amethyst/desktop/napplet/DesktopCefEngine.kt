@@ -62,9 +62,12 @@ class DesktopCefEngine(
     sealed interface State {
         data object Idle : State
 
-        /** Fetching or unpacking the native bundle; [percent] is 0–100 while it downloads. */
+        /**
+         * Fetching or unpacking the native bundle; [percent] is 0–100 while it downloads. Whole
+         * percents, so the state changes a hundred times per download, not once per chunk.
+         */
         data class Downloading(
-            val percent: Float,
+            val percent: Int,
         ) : State
 
         data object Starting : State
@@ -97,8 +100,8 @@ class DesktopCefEngine(
             builder.setProgressHandler { progress, percent ->
                 mutableState.value =
                     when (progress) {
-                        EnumProgress.DOWNLOADING -> State.Downloading(percent.coerceIn(0f, 100f))
-                        EnumProgress.EXTRACTING -> State.Downloading(100f)
+                        EnumProgress.DOWNLOADING -> State.Downloading(percent.toInt().coerceIn(0, 100))
+                        EnumProgress.EXTRACTING -> State.Downloading(100)
                         else -> State.Starting
                     }
             }

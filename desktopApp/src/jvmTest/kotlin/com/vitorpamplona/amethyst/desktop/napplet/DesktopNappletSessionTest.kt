@@ -125,6 +125,8 @@ class DesktopNappletSessionTest {
     private var frame: JFrame? = null
 
     companion object {
+        private const val BURST = 100
+
         /** Chromium starts once per process, as in the app; every test shares it. */
         private val sharedEngine by lazy {
             val installDir = System.getenv("AMETHYST_CEF_DIR")?.let(::File) ?: File(System.getProperty("java.io.tmpdir"), "amethyst-jcef-test")
@@ -266,6 +268,31 @@ class DesktopNappletSessionTest {
             assertEquals("yes", storage.values["roundtrip"], "a reply carried the value back to the napplet")
             assertFalse(storage.values.containsKey("smuggled"), "the iframe's own call to the bridge was refused")
             assertFalse("/leak" in requested, "the napplet's fetch never reached the network")
+        }
+
+    @Test
+    fun aBurstOfRepliesReachesTheNappletWhole() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            repeat(BURST) { storage.values["k$it"] = "v$it" }
+            // Replies to requests in flight together go to the page in batches: each must still
+            // reach the request it answers.
+            val probe =
+                """
+                <!doctype html><html><body><script>
+                (async function () {
+                  var reads = [];
+                  for (var i = 0; i < $BURST; i++) reads.push(window.napplet.storage.getItem('k' + i));
+                  var values = await Promise.all(reads);
+                  await window.napplet.storage.setItem('burst', values.join(','));
+                })();
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            show(session(probe, storage, runtime))
+
+            withTimeout(60_000) { while (storage.values["burst"] == null) delay(100) }
+            assertEquals((0 until BURST).joinToString(",") { "v$it" }, storage.values["burst"])
         }
 
     @Test

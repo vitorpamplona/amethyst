@@ -466,7 +466,7 @@ private fun LoadingPane(
             when (val current = engine) {
                 is DesktopCefEngine.State.Downloading -> {
                     LinearProgressIndicator(progress = { current.percent / 100f }, modifier = Modifier.fillMaxWidth())
-                    Text(stringRes(Res.string.napplet_desktop_engine_downloading, "${current.percent.toInt()}%"), textAlign = TextAlign.Center)
+                    Text(stringRes(Res.string.napplet_desktop_engine_downloading, "${current.percent}%"), textAlign = TextAlign.Center)
                 }
                 DesktopCefEngine.State.Starting -> {
                     CircularProgressIndicator()

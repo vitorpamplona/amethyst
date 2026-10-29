@@ -24,8 +24,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 
 /**
@@ -51,4 +54,18 @@ class DesktopNappletRuntime(
     val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
 
     val routes = DesktopNappletRoutes(engine.router, torPort, scope)
+
+    // Windows close in bursts (logging out closes them all), and one trim covers them all.
+    private val trims = Channel<Unit>(Channel.CONFLATED)
+
+    init {
+        scope.launch(Dispatchers.IO) {
+            for (ignored in trims) blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
+        }
+    }
+
+    /** Trims the shared blob cache soon, off the caller's thread. */
+    fun trimBlobCache() {
+        trims.trySend(Unit)
+    }
 }
