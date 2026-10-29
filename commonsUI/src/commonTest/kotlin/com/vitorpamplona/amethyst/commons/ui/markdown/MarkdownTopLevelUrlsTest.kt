@@ -59,6 +59,13 @@ class MarkdownTopLevelUrlsTest {
         )
 
     @Test
+    fun tablesWithoutLeadingPipesAreNot() =
+        assertEquals(
+            setOf("https://example.com/after.png"),
+            markdownTopLevelUrls("Photo https://example.com/head.png | Caption\n--- | ---\n![](https://example.com/a.png) | cat\n\nhttps://example.com/after.png"),
+        )
+
+    @Test
     fun aBlankLineEndsTheList() =
         assertEquals(
             setOf("https://example.com/after.jpg"),

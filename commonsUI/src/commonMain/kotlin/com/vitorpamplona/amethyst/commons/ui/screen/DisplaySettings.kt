@@ -46,13 +46,17 @@ data class DisplaySettings(
     val performanceMode: Boolean = false,
     /** Play videos and animated images (GIF/AVIF avatars) without a tap. */
     val autoPlayVideos: Boolean = true,
-    /** Notes put the author above a full-width body instead of in a picture column beside it. */
-    val fullWidthNotes: Boolean = false,
-    /** Full-width notes also run their own images and videos out to the screen edges. */
-    val edgeToEdgeMedia: Boolean = false,
+    /** How notes place their author and media. */
+    val noteLayout: NoteLayoutType = NoteLayoutType.AUTHOR_COLUMN,
 ) {
     /** Robohash fallbacks are skipped in performance mode (a plain face icon instead). */
     val loadRobohash: Boolean get() = !performanceMode
+
+    /** Notes put the author above a full-width body instead of in a picture column beside it. */
+    val fullWidthNotes: Boolean get() = noteLayout != NoteLayoutType.AUTHOR_COLUMN
+
+    /** Full-width notes also run their own images and videos out to the screen edges. */
+    val edgeToEdgeMedia: Boolean get() = noteLayout == NoteLayoutType.EDGE_TO_EDGE
 }
 
 // Not static: showProfilePictures follows the connection type (Wi-Fi only), so this changes when the
@@ -72,8 +76,7 @@ fun collectDisplaySettings(settings: UiSettingsState): DisplaySettings {
             showProfilePictures = showProfilePictures,
             performanceMode = featureSet == FeatureSetType.PERFORMANCE,
             autoPlayVideos = autoPlayVideos,
-            fullWidthNotes = noteLayout != NoteLayoutType.AUTHOR_COLUMN,
-            edgeToEdgeMedia = noteLayout == NoteLayoutType.EDGE_TO_EDGE,
+            noteLayout = noteLayout,
         )
     }
 }

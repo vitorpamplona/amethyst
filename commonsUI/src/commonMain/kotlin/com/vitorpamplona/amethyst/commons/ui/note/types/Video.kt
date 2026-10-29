@@ -139,26 +139,28 @@ fun VideoDisplay(
         ) {
             if (isYouTube) {
                 val uri = LocalUriHandler.current
-                Row(
-                    modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
-                ) {
-                    image?.let {
-                        MyAsyncImage(
-                            imageUrl = it,
-                            contentDescription =
-                                stringRes(
-                                    Res.string.preview_card_image_for,
-                                    it,
-                                ),
-                            contentScale = ContentScale.FillWidth,
-                            mainImageModifier = Modifier,
-                            loadedImageModifier = MaterialTheme.colorScheme.imageModifier,
-                            accountViewModel = accountViewModel,
-                            onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
-                            onError = { DefaultImageHeader(note, accountViewModel) },
-                        )
-                    } ?: run {
-                        DefaultImageHeader(note, accountViewModel)
+                BleedingMedia { roundedCorner ->
+                    Row(
+                        modifier = Modifier.clickable { runCatching { uri.openUri(imeta.url) } },
+                    ) {
+                        image?.let {
+                            MyAsyncImage(
+                                imageUrl = it,
+                                contentDescription =
+                                    stringRes(
+                                        Res.string.preview_card_image_for,
+                                        it,
+                                    ),
+                                contentScale = ContentScale.FillWidth,
+                                mainImageModifier = Modifier,
+                                loadedImageModifier = if (roundedCorner) MaterialTheme.colorScheme.imageModifier else Modifier.fillMaxWidth(),
+                                accountViewModel = accountViewModel,
+                                onLoadingBackground = { DefaultImageHeaderBackground(note, accountViewModel) },
+                                onError = { DefaultImageHeader(note, accountViewModel) },
+                            )
+                        } ?: run {
+                            DefaultImageHeader(note, accountViewModel)
+                        }
                     }
                 }
             } else {

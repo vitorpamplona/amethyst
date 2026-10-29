@@ -44,7 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -132,7 +132,9 @@ fun UrlPreviewCard(
                 .padding(vertical = 4.dp)
                 .bleedHorizontally(bleed)
                 .fillMaxWidth()
-                .drawBehind {
+                .drawWithContent {
+                    drawContent()
+                    // Over the content: the card's image starts at its top edge and would hide the line.
                     val stroke = 1.dp.toPx()
                     drawLine(borderColor, Offset(0f, stroke / 2), Offset(size.width, stroke / 2), stroke)
                     drawLine(borderColor, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)

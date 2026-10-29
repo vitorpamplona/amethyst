@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.markdown
 
 private val ListMarker = Regex("""^([-*+]|\d{1,9}[.)])(\s|$)""")
+private val TableDelimiterRow = Regex("""^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$""")
 private val MarkdownUrl = Regex("""https?://[^\s()<>\[\]]+""")
 
 /**
@@ -35,6 +36,8 @@ fun markdownTopLevelUrls(markdown: String): Set<String> {
     val urls = mutableSetOf<String>()
     var inFence = false
     var inNestedBlock = false
+    // The URLs of the previous line, taken back when the next line turns out to be a table's delimiter row.
+    var previousLineUrls = emptyList<String>()
 
     markdown.lineSequence().forEach { line ->
         val trimmed = line.trimStart()
@@ -47,6 +50,14 @@ fun markdownTopLevelUrls(markdown: String): Set<String> {
 
         if (trimmed.isEmpty()) {
             inNestedBlock = false
+            previousLineUrls = emptyList()
+            return@forEach
+        }
+
+        // A table runs from its header line, just above the delimiter row, to the next blank line.
+        if (TableDelimiterRow.matches(trimmed)) {
+            urls.removeAll(previousLineUrls.toSet())
+            inNestedBlock = true
             return@forEach
         }
 
@@ -55,9 +66,13 @@ fun markdownTopLevelUrls(markdown: String): Set<String> {
             inNestedBlock = true
             return@forEach
         }
-        if (inNestedBlock || indented) return@forEach
+        if (inNestedBlock || indented) {
+            previousLineUrls = emptyList()
+            return@forEach
+        }
 
-        MarkdownUrl.findAll(trimmed).forEach { urls.add(it.value.trimEnd('.', ',', ';', ':', '!', '?')) }
+        previousLineUrls = MarkdownUrl.findAll(trimmed).map { it.value.trimEnd('.', ',', ';', ':', '!', '?') }.toList()
+        urls.addAll(previousLineUrls)
     }
 
     return urls

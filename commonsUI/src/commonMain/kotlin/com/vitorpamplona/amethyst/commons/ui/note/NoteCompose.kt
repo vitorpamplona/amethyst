@@ -973,37 +973,42 @@ fun NoteCompose(
     onClick: (() -> Unit)? = null,
     moreOptions: (@Composable () -> Unit)? = null,
 ) {
-    WatchNoteEvent(
-        baseNote = baseNote,
-        accountViewModel = accountViewModel,
-        nav,
-        modifier,
-    ) {
-        CheckHiddenFeedWatchBlockAndReport(
-            note = baseNote,
-            modifier = modifier,
-            ignoreAllBlocksAndReports = isHiddenFeed,
-            showHiddenWarning = isQuotedNote || isBoostedNote,
+    // A note never draws with its parent's bleed: a quote or boost that renders as a card (a
+    // community, a channel, a hidden-note warning) keeps its media inside. A boosted note's own
+    // body gets its bleed from LocalBoostedNoteFrame instead.
+    ProvideMediaBleed(0.dp) {
+        WatchNoteEvent(
+            baseNote = baseNote,
             accountViewModel = accountViewModel,
-            nav = nav,
-        ) { canPreview ->
-            AcceptableNote(
-                baseNote = baseNote,
+            nav,
+            modifier,
+        ) {
+            CheckHiddenFeedWatchBlockAndReport(
+                note = baseNote,
                 modifier = modifier,
-                routeForLastRead = routeForLastRead,
-                isBoostedNote = isBoostedNote,
-                isQuotedNote = isQuotedNote,
-                unPackReply = unPackReply,
-                makeItShort = makeItShort,
-                canPreview = canPreview,
-                isPinned = isPinned,
-                quotesLeft = quotesLeft,
-                parentBackgroundColor = parentBackgroundColor,
+                ignoreAllBlocksAndReports = isHiddenFeed,
+                showHiddenWarning = isQuotedNote || isBoostedNote,
                 accountViewModel = accountViewModel,
                 nav = nav,
-                onClick = onClick,
-                moreOptions = moreOptions,
-            )
+            ) { canPreview ->
+                AcceptableNote(
+                    baseNote = baseNote,
+                    modifier = modifier,
+                    routeForLastRead = routeForLastRead,
+                    isBoostedNote = isBoostedNote,
+                    isQuotedNote = isQuotedNote,
+                    unPackReply = unPackReply,
+                    makeItShort = makeItShort,
+                    canPreview = canPreview,
+                    isPinned = isPinned,
+                    quotesLeft = quotesLeft,
+                    parentBackgroundColor = parentBackgroundColor,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                    onClick = onClick,
+                    moreOptions = moreOptions,
+                )
+            }
         }
     }
 }
@@ -1334,6 +1339,21 @@ private fun ProvideNoteBleeds(
         CompositionLocalProvider(LocalBoostedNoteFrame provides boostedNote) {
             ProvideMediaBleed(media, content)
         }
+    }
+}
+
+/**
+ * Hands [frame] to a repost's boosted note. Always through a provider, unlike [ProvideNoteBleeds]:
+ * the frame changes when the reposted note loads or is found hidden, and a branch between providing
+ * and not would rebuild the boosted note, restarting its images and players.
+ */
+@Composable
+private fun ProvideRepostFrame(
+    frame: BoostedNoteFrame,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(LocalBoostedNoteFrame provides frame) {
+        ProvideMediaBleed(0.dp, content)
     }
 }
 
@@ -1746,13 +1766,13 @@ internal fun RenderNoteRow(
             }
 
             is RepostEvent -> {
-                ProvideNoteBleeds(0.dp, BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
+                ProvideRepostFrame(BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is GenericRepostEvent -> {
-                ProvideNoteBleeds(0.dp, BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
+                ProvideRepostFrame(BoostedNoteFrame(mediaBleed, boostedHeaderShown)) {
                     RenderRepost(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
@@ -3478,6 +3498,8 @@ fun RenderAuthorImages(
             LoadPublicChatChannel(baseChannelHex) { channel ->
                 ChannelNotePicture(
                     channel,
+                    // The badge is 20dp on the 55dp picture; it keeps that share on a smaller one.
+                    if (size == Size55dp) Modifier else Modifier.size(size * 20 / 55),
                     accountViewModel,
                 )
             }
@@ -3488,6 +3510,7 @@ fun RenderAuthorImages(
 @Composable
 private fun ChannelNotePicture(
     baseChannel: PublicChatChannel,
+    sizeModifier: Modifier,
     accountViewModel: AccountViewModel,
 ) {
     val model by observeChannelPicture(baseChannel, accountViewModel)
@@ -3496,7 +3519,7 @@ private fun ChannelNotePicture(
         robot = baseChannel.idHex,
         model = model,
         contentDescription = stringRes(Res.string.group_picture),
-        modifier = MaterialTheme.colorScheme.channelNotePictureModifier,
+        modifier = sizeModifier.then(MaterialTheme.colorScheme.channelNotePictureModifier),
         loadProfilePicture = LocalDisplaySettings.current.showProfilePictures,
         loadRobohash = LocalDisplaySettings.current.loadRobohash,
         autoPlayGif =
