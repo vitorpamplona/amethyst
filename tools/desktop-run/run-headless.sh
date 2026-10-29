@@ -11,7 +11,8 @@
 # Env: AMETHYST_DISPLAY (default :99), AMETHYST_SCREEN (default 1600x1000x24),
 #      AMETHYST_RUN_DIR (default /tmp/amethyst-desktop-run: log, profile, screenshots),
 #      AMETHYST_START_TIMEOUT seconds (default 900: a cold Gradle build is slow),
-#      AMETHYST_RUN_ARGS extra Gradle arguments, e.g. "-Damethyst.update.devCheck=true".
+#      AMETHYST_RUN_ARGS extra Gradle arguments, e.g. "-Damethyst.update.devCheck=true",
+#      AMETHYST_LOGIN an nsec/npub to open logged in with (transient: nothing saved), skipping login.
 
 set -uo pipefail
 
@@ -113,7 +114,7 @@ case "${1:-}" in
     echo "stopped"
     ;;
   *)
-    sed -n '3,14p' "$0"
+    sed -n '3,15p' "$0"
     exit 2
     ;;
 esac

@@ -25,6 +25,9 @@ export DISPLAY=:99
 $D click 800 422 ";" type npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m   # see below
 $D click 800 595 ";" sleep 8000 ";" shot /tmp/amethyst-desktop-run/feed.png
 
+# or skip the login screen: open already logged in with a key (see Accounts)
+AMETHYST_LOGIN=npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m tools/desktop-run/run-headless.sh start
+
 tools/desktop-run/run-headless.sh logs   # running?, exceptions first, then the tail
 tools/desktop-run/run-headless.sh stop   # ALWAYS before rebuilding (see Traps)
 ```
@@ -59,6 +62,16 @@ AMETHYST_DISPLAY=:98 AMETHYST_SCREEN=480x900x24 tools/desktop-run/run-headless.s
 `start` drops the saved window bounds each time, so the window always fits the current screen.
 
 ## Accounts
+
+`AMETHYST_LOGIN=<key>` in the environment of `start` (or of `./gradlew :desktopApp:run`) opens the
+app already logged in with that key, so the first screenshot is the feed, not the login screen. It
+takes an `npub`, `nsec`, hex key, `nprofile` or `name@domain` (read-only, never its NIP-46 signer).
+The login is transient: the key goes to no keyring, password file or account list, so no key prompt
+appears and the profile's saved accounts are left as they were; the next `start` without it opens
+the saved account, or the login screen. A key that does not parse logs
+`Could not log in with the startup key` and falls back the same way. Pass an `nsec` through the
+environment, not as `-Damethyst.login=...`, which any `ps` shows; the property is there for an
+`npub` on a Gradle command line.
 
 - **Read-only, preferred:** log in with any public `npub` (the one above is jack's). That loads real
   feeds, profiles and notifications and cannot sign or publish anything.

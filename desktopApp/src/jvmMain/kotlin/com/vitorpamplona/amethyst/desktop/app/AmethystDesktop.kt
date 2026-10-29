@@ -178,7 +178,7 @@ fun main(args: Array<String>) {
             ?: "dev"
 
     installDesktopCrashReporter(filesDir, version)
-    val modules = DesktopAppModules(filesDir, version, isDebug)
+    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey())
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a
@@ -343,6 +343,17 @@ fun main(args: Array<String>) {
             }
         }
     }
+}
+
+/**
+ * The key a test run logs in with at start, skipping the login screen: `AMETHYST_LOGIN=nsec1...` in
+ * the environment, or `-Damethyst.login=npub1...` (which `ps` shows, so keep it to public keys).
+ * The property is cleared once read, so nothing later in the process finds it.
+ */
+private fun startupKey(): String? {
+    val property = System.getProperty("amethyst.login")
+    System.clearProperty("amethyst.login")
+    return (System.getenv("AMETHYST_LOGIN") ?: property)?.trim()?.takeIf { it.isNotEmpty() }
 }
 
 /**

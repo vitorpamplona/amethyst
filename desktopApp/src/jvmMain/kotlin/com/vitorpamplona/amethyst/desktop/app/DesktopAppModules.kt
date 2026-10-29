@@ -170,6 +170,11 @@ class DesktopAppModules(
     val filesDir: File,
     val appVersion: String,
     val isDebug: Boolean = false,
+    /**
+     * A key to log in with at start instead of the saved account (`AMETHYST_LOGIN`), for test runs
+     * that should open on the feed without going through the login screen. See [startupLogin].
+     */
+    private val startupKey: String? = null,
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
 
@@ -612,6 +617,26 @@ class DesktopAppModules(
     }
 
     /**
+     * Logs in with [key] (an nsec, npub, hex key, nprofile or `name@domain`) as a transient account:
+     * nothing reaches the keyring, the password file or the account list, so a test run never stops
+     * at a key prompt and the profile is left as it was. An unusable key falls back to the saved
+     * account, or to the login screen.
+     */
+    private fun startupLogin(key: String) {
+        sessionManager.login(
+            key = key,
+            password = "",
+            transientAccount = true,
+            rememberKey = false,
+            // A domain's NIP-46 signer would wait on a remote approval; the address stays read-only.
+            allowRemoteSigner = false,
+        ) { error ->
+            Log.e("DesktopAppModules") { "Could not log in with the startup key: ${error ?: "invalid key"}" }
+            applicationIOScope.launch { openKeysAndLogIn() }
+        }
+    }
+
+    /**
      * Saves every loaded account's settings now, as [flushUiPrefs] does the UI's: a last-read marker
      * or a setting changed in the last second before quitting is still in the account's debounce.
      * Bounded, so a stuck keychain cannot hold up the exit.
@@ -712,7 +737,7 @@ class DesktopAppModules(
             }
         }
 
-        applicationIOScope.launch { openKeysAndLogIn() }
+        applicationIOScope.launch { if (startupKey != null) startupLogin(startupKey) else openKeysAndLogIn() }
 
         calendarReminders.start()
 
