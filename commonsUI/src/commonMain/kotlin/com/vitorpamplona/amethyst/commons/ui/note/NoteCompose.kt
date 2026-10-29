@@ -3490,7 +3490,7 @@ private fun ChannelNotePicture(
 }
 
 @Composable
-private fun RepostNoteAuthorPicture(
+internal fun RepostNoteAuthorPicture(
     baseNote: Note,
     baseRepost: Note,
     size: Dp,
