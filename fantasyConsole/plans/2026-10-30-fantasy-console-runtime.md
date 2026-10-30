@@ -102,8 +102,15 @@ Design points:
   The game runs on its own thread, paced by the clock; it pauses when the dialog closes and
   resumes where it was. `blossom:` URIs are resolved through the BUD-10 finder, and a declared
   sha256 is checked before the cart loads.
-- **Saves** (`CartSaveStore`): `cartdata` lands in the app's `cart_saves` DataStore, written at
-  most once a second and when the player closes. Kept per install, by the game's own save id.
+- **Saves** (`CartSaves` over `CartSaveStore`): `cartdata` lands in the app's `cart_saves`
+  DataStore as soon as the game saves (at most once a second for a game that saves every frame,
+  plus once more when the player stops). Kept per install, by the game's own save id.
+  `CartSaveKillTest` SIGKILLs a JVM right after a save and reads it back in the next one; on
+  Desktop a high score survived `kill -9` and showed on the title after a restart. The game in
+  progress is not saved: the Lua state (coroutines included) lives only in memory, so a killed
+  app restarts the game from its title, like the original console.
+- **Lifecycle**: the game runs only while the app is started. Home, the app switcher or a
+  minimized window pauses it and its sound and writes its saves.
 - **Multi-cart games**: there is no convention yet for a post to name its other carts, and
   fetching them from the original's site would add a third-party server, so `loadCart` returns
   null and the player shows "this game continues in another cartridge".

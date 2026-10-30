@@ -41,7 +41,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
@@ -83,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel.Buttons
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel.Companion.SCREEN_SIZE
@@ -141,9 +141,11 @@ fun CartPlayer(
         rememberViewModel(key = "cart:$url") {
             CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore())
         }
-    DisposableEffect(viewModel) {
+    // Runs only while the app is in front: Home or a minimized window pauses the game and its
+    // sound, and writes its saves before the system may kill the app.
+    LifecycleStartEffect(viewModel) {
         viewModel.resume()
-        onDispose { viewModel.pause() }
+        onStopOrDispose { viewModel.pause() }
     }
     val status by viewModel.status.collectAsState()
     val frame = viewModel.frame.collectAsState()

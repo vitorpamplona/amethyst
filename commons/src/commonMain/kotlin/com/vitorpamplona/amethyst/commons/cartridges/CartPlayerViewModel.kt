@@ -34,18 +34,12 @@ import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.getAndUpdate
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
@@ -59,13 +53,14 @@ import kotlin.time.TimeSource
  * frame rate, publishing each [frame] and playing its sound; the screen sends the held buttons
  * with [setButtons], and the pointer and typed text for games that read them. Input reaches the
  * game on its thread, between frames. [resume]/[pause] follow the player being on screen, so a
- * rotation or a closed dialog keeps the game where it was. What the game saves goes to [saves].
+ * rotation or a closed dialog keeps the game where it was. What the game saves (`cartdata`)
+ * goes to [saveStore] through [CartSaves]; the game in progress lives only in memory.
  */
 class CartPlayerViewModel(
     private val url: String,
     private val expectedSha256: String?,
     private val httpClients: IRoleBasedHttpClientBuilder,
-    private val saves: CartSaveStore?,
+    saveStore: CartSaveStore?,
 ) : ViewModel() {
     sealed interface Status {
         data object Loading : Status
@@ -103,34 +98,18 @@ class CartPlayerViewModel(
     private val dispatcher = lazy { newCartDispatcher() }
     private var loop: Job? = null
 
-    // Saves, read once before the game starts and touched only on the game's thread after that.
-    private var saved: MutableMap<String, IntArray> = HashMap()
-    private var saveJob: Job? = null
-
-    // Written in batches: a game may save every frame. Outlives the ViewModel so the last batch lands.
-    private val unsaved = MutableStateFlow<Map<String, IntArray>>(emptyMap())
-    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val saves = CartSaves(saveStore)
 
     private val host =
         object : ConsoleHost {
             override fun log(message: String) = Log.d(TAG) { message }
 
-            override fun loadCartData(id: String): IntArray? = saved[id]
+            override fun loadCartData(id: String): IntArray? = saves.get(id)
 
             override fun saveCartData(
                 id: String,
                 values: IntArray,
-            ) {
-                saved[id] = values
-                unsaved.update { it + (id to values) }
-                if (saveJob?.isActive != true) {
-                    saveJob =
-                        saveScope.launch {
-                            delay(SAVE_BATCH)
-                            writeSaves()
-                        }
-                }
-            }
+            ) = saves.save(id, values)
 
             override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
 
@@ -185,12 +164,7 @@ class CartPlayerViewModel(
     fun pause() {
         loop?.cancel()
         loop = null
-        saveScope.launch { writeSaves() }
-    }
-
-    private suspend fun writeSaves() {
-        val batch = unsaved.getAndUpdate { emptyMap() }
-        if (batch.isNotEmpty()) saves?.save(batch)
+        saves.flush()
     }
 
     private suspend fun load(): FantasyConsole? {
@@ -206,7 +180,7 @@ class CartPlayerViewModel(
                 _status.value = Status.NotACart
                 return null
             }
-        saves?.let { saved = it.loadAll().toMutableMap() }
+        saves.load()
         return FantasyConsole(cart, host).also { console = it }
     }
 
@@ -275,7 +249,6 @@ class CartPlayerViewModel(
         private const val MAX_CART_BYTES = 1 shl 20
 
         private val MAX_LAG = 250.milliseconds
-        private val SAVE_BATCH = 1.seconds
         private const val TAG = "CartPlayer"
     }
 }
