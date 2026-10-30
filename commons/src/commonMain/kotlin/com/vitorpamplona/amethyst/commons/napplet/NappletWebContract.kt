@@ -232,19 +232,32 @@ object NappletWebContract {
     /**
      * What goes before every page of a webxdc app: WebRTC taken away before any of its scripts run,
      * and nothing of the napplet runtime. The app loads its `webxdc.js` itself.
+     *
+     * A messenger runs a webxdc app as its top document, so apps treat `window.parent` as their own
+     * (Quake III keeps its realtime channel there, across reloads). Here it runs in the shell's
+     * frame, on another origin, and touching that parent throws: the app gets itself instead.
+     * `parent` is replaceable; `top` is not, and stays the shell.
      */
-    fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS</script>".encodeToByteArray()
+    fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS$WEBXDC_PARENT_JS</script>".encodeToByteArray()
+
+    private const val WEBXDC_PARENT_JS: String =
+        "(function(){try{Object.defineProperty(window,'parent',{value:window,writable:true,configurable:true});}catch(e){}})();"
 
     /**
      * Takes WebRTC away from the frame it runs in, before any page script: a napplet has no network,
      * and WebRTC reaches one anyway (its TURN connections go through the browser's proxy, which an
      * open nSite may have routed out; Android's WebView sends its UDP around the proxy, and Tor, too).
-     * The constants become non-writable `undefined`s, so a page can't put them back.
+     *
+     * The constructors that open a connection become `undefined`, gone from the frame for good. A page
+     * may still put its own in their place: webxdc games (Quake III) carry a stand-in that sends their
+     * packets over `webxdc.joinRealtimeChannel`, and a read-only global made assigning it throw. The
+     * description and candidate classes stay: they only hold an SDP or a candidate line, and such a
+     * stand-in builds its offers with them.
      */
     const val WEBRTC_GUARD_JS: String =
-        "(function(){var n=['RTCPeerConnection','webkitRTCPeerConnection','RTCDataChannel','RTCIceCandidate'," +
-            "'RTCSessionDescription','RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
-            "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:false,configurable:false});}catch(e){}}})();"
+        "(function(){var n=['RTCPeerConnection','webkitRTCPeerConnection','RTCDataChannel'," +
+            "'RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
+            "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:true,configurable:true});}catch(e){}}})();"
 
     /**
      * Injects host-owned policy and the runtime prelude before any authored element in `head`.
