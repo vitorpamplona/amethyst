@@ -181,14 +181,19 @@ class WebxdcFiles(
         closed = true
     }
 
-    // Every read is a call: a bar needs a few hundred steps, not one per 64 KB.
+    @Volatile
+    private var lastShownAt = 0L
+
+    // Every 64 KB read is a call, and on Android each update crosses processes: a bar needs about ten
+    // a second, whatever the archive's size or whether the server gave it.
     private fun onProgress(
         bytes: Long,
         total: Long?,
     ) {
         val shown = downloading.value
-        val step = maxOf(MIN_PROGRESS_STEP, (total ?: 0) / PROGRESS_STEPS)
-        if (shown == null || shown.total != total || bytes < shown.bytes || bytes - shown.bytes >= step || bytes == total) {
+        val now = System.nanoTime()
+        if (shown == null || shown.total != total || bytes < shown.bytes || bytes == total || now - lastShownAt >= PROGRESS_INTERVAL_NANOS) {
+            lastShownAt = now
             downloading.value = NappletDownloadProgress(bytes, total)
         }
     }
@@ -220,8 +225,7 @@ class WebxdcFiles(
     companion object {
         const val RUNTIME_PATH = "webxdc.js"
 
-        private const val PROGRESS_STEPS = 200
-        private const val MIN_PROGRESS_STEP = 64L * 1024
+        private const val PROGRESS_INTERVAL_NANOS = 100_000_000L
 
         /**
          * [client], given the time a large archive needs: the blob client gives a call 45 s, and a

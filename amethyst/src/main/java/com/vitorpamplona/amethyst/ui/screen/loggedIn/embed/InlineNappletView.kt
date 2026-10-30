@@ -103,7 +103,6 @@ fun InlineNappletView(
         onDispose {
             controller.onLoadStatusChanged = null
             controller.onDownloadChanged = null
-            NappletInlineDownloads.shared.forget(instanceId)
             controller.teardown()
         }
     }

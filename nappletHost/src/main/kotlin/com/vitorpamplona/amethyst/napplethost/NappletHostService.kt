@@ -478,7 +478,8 @@ class NappletHostService : Service() {
             thread(name = "webxdc-probe", isDaemon = true) {
                 val available =
                     server?.isAvailable(NappletSiteServer.INDEX_PATH) { download ->
-                        probeResults.post { if (tabs[tab.sessionId] === tab) pushDownload(tab, download) }
+                        // This probe's WebView only: a rebuilt tab's newer probe owns the bar now.
+                        probeResults.post { if (tabs[tab.sessionId] === tab && tab.webView === wv) pushDownload(tab, download) }
                     } == true
                 probeResults.post {
                     if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post

@@ -45,13 +45,16 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
 import org.cef.CefSettings
@@ -303,8 +306,12 @@ class CefNappletSession(
                     try {
                         server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)
                     } finally {
-                        watch.cancel()
-                        mutableDownload.value = null
+                        // Joined first: a collector mid-write on another thread would put its value
+                        // back after this null.
+                        withContext(NonCancellable) {
+                            watch.cancelAndJoin()
+                            mutableDownload.value = null
+                        }
                     }
                 if (!available) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }

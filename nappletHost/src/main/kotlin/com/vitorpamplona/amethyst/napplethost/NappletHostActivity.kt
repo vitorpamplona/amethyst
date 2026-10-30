@@ -401,6 +401,9 @@ class NappletHostActivity : ComponentActivity() {
         loadingView = buildLoadingView().also { contentFrame.addView(it) }
         uiScope.launch {
             val available = withContext(Dispatchers.IO) { contentServer.isAvailable("/") { runOnUiThread { showDownload(it) } } }
+            // The watch stops with the probe and may miss the download's end: the spinner returns
+            // while the page loads.
+            showDownload(null)
             if (available) {
                 mountWebView()
             } else {

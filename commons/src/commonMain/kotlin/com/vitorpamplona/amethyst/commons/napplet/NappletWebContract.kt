@@ -235,13 +235,15 @@ object NappletWebContract {
      *
      * A messenger runs a webxdc app as its top document, so apps treat `window.parent` as their own
      * (Quake III keeps its realtime channel there, across reloads). Here it runs in the shell's
-     * frame, on another origin, and touching that parent throws: the app gets itself instead.
-     * `parent` is replaceable; `top` is not, and stays the shell.
+     * frame, on another origin, and touching that parent throws: the app gets itself instead. Only
+     * there: a frame the app makes of its own pages keeps its real, same-origin parent. `parent` is
+     * replaceable; `top` is not, and stays the shell.
      */
     fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS$WEBXDC_PARENT_JS</script>".encodeToByteArray()
 
     private const val WEBXDC_PARENT_JS: String =
-        "(function(){try{Object.defineProperty(window,'parent',{value:window,writable:true,configurable:true});}catch(e){}})();"
+        "(function(){try{void window.parent.document;}catch(e){" +
+            "try{Object.defineProperty(window,'parent',{value:window,writable:true,configurable:true});}catch(_){}}})();"
 
     /**
      * Takes WebRTC away from the frame it runs in, before any page script: a napplet has no network,
