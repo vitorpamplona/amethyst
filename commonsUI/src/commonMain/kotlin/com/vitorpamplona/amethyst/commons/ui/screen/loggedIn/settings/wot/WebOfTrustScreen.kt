@@ -171,6 +171,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_setup_fetching_key
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_on_website
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_requesting_scores
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_saving
+import com.vitorpamplona.amethyst.commons.resources.wot_setup_sharing_graph
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_signing_in
 import com.vitorpamplona.amethyst.commons.resources.wot_sync_now
 import com.vitorpamplona.amethyst.commons.resources.wot_syncing
@@ -425,10 +426,11 @@ private fun WithProviderName(
 
 /** What the guided sign-up is doing, in the user's language. */
 @Composable
-private fun setupStepText(setup: WebOfTrustSetup): String? =
+internal fun setupStepText(setup: WebOfTrustSetup): String? =
     when (setup) {
         is WebOfTrustSetup.Running -> {
             when (setup.step) {
+                TrustProviderOnboardingStep.SHARING_GRAPH -> stringRes(Res.string.wot_setup_sharing_graph)
                 TrustProviderOnboardingStep.SIGNING_IN -> stringRes(Res.string.wot_setup_signing_in)
                 TrustProviderOnboardingStep.REQUESTING_SCORES -> stringRes(Res.string.wot_setup_requesting_scores)
                 TrustProviderOnboardingStep.FETCHING_SERVICE_KEY -> stringRes(Res.string.wot_setup_fetching_key)
@@ -446,7 +448,7 @@ private fun setupStepText(setup: WebOfTrustSetup): String? =
 
 /** Why a sign-up with [providerName] failed, in the user's language. */
 @Composable
-private fun setupErrorText(
+internal fun setupErrorText(
     failed: WebOfTrustSetup.Failed,
     providerName: String,
 ): String =

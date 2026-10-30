@@ -161,6 +161,7 @@ class AccountSettingsStores(
                 dismissedChannelInvites = settings.dismissedChannelInvites.value,
                 mutedPublicChats = settings.mutedPublicChats.value,
                 hasDonatedInVersion = settings.hasDonatedInVersion.value,
+                webOfTrustNudgeHiddenUntil = settings.webOfTrustNudgeHiddenUntil.value,
                 viewedPollResultNoteIdsJson = JsonMapper.toJson(settings.viewedPollResultNoteIds.value),
             ),
         )
@@ -333,6 +334,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
         val splitNotificationsEnabled = stores.notificationPrefs.splitNotificationsEnabled
         val showMessagesInNotifications = stores.notificationPrefs.showMessagesInNotifications
         val hasDonatedInVersion = stores.dialogDismissal.hasDonatedInVersion
+        val webOfTrustNudgeHiddenUntil = stores.dialogDismissal.webOfTrustNudgeHiddenUntil
         val dismissedPollNoteIds = stores.dialogDismissal.dismissedPollNoteIds
         val dismissedChannelInvites = stores.dialogDismissal.dismissedChannelInvites
         val mutedPublicChats = stores.dialogDismissal.mutedPublicChats
@@ -604,6 +606,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             backupFavoriteAlgoFeedsList = latestFavoriteAlgoFeedsListResolved,
             lastReadPerRoute = MutableStateFlow(lastReadPerRouteResolved),
             hasDonatedInVersion = MutableStateFlow(hasDonatedInVersion),
+            webOfTrustNudgeHiddenUntil = MutableStateFlow(webOfTrustNudgeHiddenUntil),
             dismissedPollNoteIds = MutableStateFlow(dismissedPollNoteIds),
             dismissedChannelInvites = MutableStateFlow(dismissedChannelInvites),
             mutedPublicChats = MutableStateFlow(mutedPublicChats),

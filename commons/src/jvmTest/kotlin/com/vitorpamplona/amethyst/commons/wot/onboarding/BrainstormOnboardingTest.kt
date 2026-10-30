@@ -126,7 +126,9 @@ class BrainstormOnboardingTest {
             )
             assertTrue(registration.rows.all { it.key == serviceKey && it.relay.url == "wss://scores.brainstorm.world/" })
             assertEquals("Bearer jwt-token", http.authHeader)
-            assertEquals(TrustProviderOnboardingStep.entries.toList(), steps.toList())
+            // Sharing the graph runs before the sign-up, in the view model.
+            assertEquals(TrustProviderOnboardingStep.entries - TrustProviderOnboardingStep.SHARING_GRAPH, steps.toList())
+            assertEquals(setOf("wss://wot.grapevine.network/", "wss://search.brainstorm.world/"), BrainstormOnboarding(http).graphRelays.map { it.url }.toSet())
 
             // The login is the kind 22242 brainstorm_server checks: author, t tag, challenge tag.
             val event = Json.parseToJsonElement(http.loginEvent!!).jsonObject["signed_event"]!!.jsonObject

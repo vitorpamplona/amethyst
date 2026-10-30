@@ -7117,6 +7117,7 @@
     <string name="wot_set_up_again">Recompute</string>
     <string name="wot_in_use">In use</string>
     <string name="wot_setup_on_website">Use their website</string>
+    <string name="wot_setup_sharing_graph">Sharing your follows and mutes…</string>
     <string name="wot_setup_signing_in">Signing in…</string>
     <string name="wot_setup_requesting_scores">Requesting your scores…</string>
     <string name="wot_setup_fetching_key">Getting your provider key…</string>
@@ -9148,4 +9149,61 @@
     <string name="cart_button_o_description">O button</string>
     <string name="cart_button_x_description">X button</string>
     <string name="cart_pause_menu">Pause menu</string>
+    <string name="wot_nudge_dismiss">Dismiss</string>
+    <string name="wot_nudge_not_now">Not now</string>
+    <string name="wot_nudge_turn_on">Turn on</string>
+    <string name="wot_nudge_first_title">Put your people first</string>
+    <string name="wot_nudge_first_body">Replies, notifications and messages from your follows and the people they trust come first.</string>
+    <string name="wot_nudge_first_action">Show my people first</string>
+    <string name="wot_nudge_thread_label">Replies, your circle first</string>
+    <string name="wot_nudge_you_follow">You follow</string>
+    <string name="wot_nudge_followed_by">Followed by %1$s</string>
+    <plurals name="wot_nudge_thread_others">
+        <item quantity="one">%1$d more from outside your circle</item>
+        <item quantity="other">%1$d more from outside your circle</item>
+    </plurals>
+    <string name="wot_nudge_thread_title">Friends first in every thread</string>
+    <string name="wot_nudge_thread_body">Hear from the people you know before everyone else. The rest stay one tap away.</string>
+    <string name="wot_nudge_friends_title_one">%1$s puts their people first</string>
+    <string name="wot_nudge_friends_title_two">%1$s and %2$s put their people first</string>
+    <plurals name="wot_nudge_friends_title_many">
+        <item quantity="one">%2$s, %3$s and %1$d other put their people first</item>
+        <item quantity="other">%2$s, %3$s and %1$d others put their people first</item>
+    </plurals>
+    <string name="wot_nudge_friends_body">People you follow see replies, notifications and messages from their circle first.</string>
+    <string name="wot_nudge_friends_copy">Use %1$s's setup</string>
+    <string name="wot_nudge_friends_action">Set up mine</string>
+    <string name="wot_nudge_rings_you_follow">you follow</string>
+    <string name="wot_nudge_rings_they_trust">they trust</string>
+    <string name="wot_nudge_rings_title">Your circle is bigger than your follows</string>
+    <string name="wot_nudge_rings_body">Put all of them first in replies, notifications and messages.</string>
+    <string name="wot_nudge_provider">Provider</string>
+    <string name="wot_nudge_activate">Activate</string>
+    <string name="wot_nudge_activated_title">Mapping your circle</string>
+    <string name="wot_nudge_activated_body">%1$s works it out in the background, which can take a while. Once it's ready, your people move to the top on their own.</string>
+    <string name="wot_nudge_activated_status">Running in the background</string>
+    <string name="wot_nudge_got_it">Got it</string>
+    <plurals name="wot_nudge_strip_thread">
+        <item quantity="one">%1$d reply. See people you know first?</item>
+        <item quantity="other">%1$d replies. See people you know first?</item>
+    </plurals>
+    <string name="wot_nudge_strip_thread_action">Friends first</string>
+    <string name="wot_nudge_strip_notifications">See people you know first in notifications</string>
+    <string name="wot_nudge_strip_messages">Keep people you know in your inbox. New faces go to Requests.</string>
+    <string name="wot_nudge_ready_title">Your circle is ready</string>
+    <plurals name="wot_nudge_ready_body">
+        <item quantity="one">%1$s person in your circle. Their replies, notifications and messages now come first.</item>
+        <item quantity="other">%1$s people in your circle. Their replies, notifications and messages now come first.</item>
+    </plurals>
+    <string name="wot_nudge_ready_action">See what changed</string>
+    <string name="wot_sheet_title">Who maps your circle?</string>
+    <string name="wot_sheet_body">A trust provider reads public follows and mutes to find the people close to you. You can switch anytime.</string>
+    <string name="wot_sheet_suggested">Suggested</string>
+    <string name="wot_sheet_copy_title">Use a friend's setup</string>
+    <string name="wot_sheet_copy_body">See your circle the way they do</string>
+    <string name="wot_sheet_key_title">Another provider</string>
+    <string name="wot_sheet_key_body">Enter a NIP-85 provider key</string>
+    <string name="wot_sheet_note">Your signer approves the sign-in. Nothing is posted to your feed.</string>
+    <string name="wot_sheet_continue_with">Continue with %1$s</string>
+    <string name="wot_sheet_continue">Continue</string>
 </resources>

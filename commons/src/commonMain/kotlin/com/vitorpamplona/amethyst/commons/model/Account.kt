@@ -384,6 +384,9 @@ import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -1511,6 +1514,39 @@ class Account(
         trustNetwork.expectNewProvider()
         loadOwnTrustProviderListIfMissing()
         sendMyPublicAndPrivateOutbox(trustProviderList.withProviderRows(rows, isPrivate))
+    }
+
+    /**
+     * Sends the events a trust provider computes the user's scores from (profile, follow list,
+     * mute list, relay list) to [relays], and waits for the relays to answer so a sign-up that
+     * follows starts from the current graph. Best effort: returns how many of the events at
+     * least one relay accepted, and an event this device does not have is skipped.
+     */
+    suspend fun shareTrustGraph(relays: Set<NormalizedRelayUrl>): Int {
+        if (relays.isEmpty()) return 0
+        val events =
+            listOfNotNull(
+                userMetadata.getUserMetadataEvent(),
+                kind3FollowList.getFollowListEvent(),
+                muteList.getMuteList(),
+                nip65RelayList.getNIP65RelayList(),
+            )
+        return coroutineScope {
+            events.map { async { client.publishAndConfirm(it, relays) } }.awaitAll().count { it }
+        }
+    }
+
+    /**
+     * Adopts a trust provider's network [relay]: adds it to the trusted, search, indexer and
+     * favorite relay lists (each only when missing, keeping what the list had) and moves every
+     * feed set to Global onto it.
+     */
+    suspend fun adoptTrustProviderRelay(relay: NormalizedRelayUrl) {
+        trustedRelayList.addRelay(relay)?.let { sendMyPublicAndPrivateOutbox(it) }
+        searchRelayList.withRelay(relay)?.let { saveSearchRelayList(it) }
+        indexerRelayList.withRelay(relay)?.let { saveIndexerRelayList(it) }
+        if (relay !in favoriteRelayList.flowNoDefaults.value) followRelayFeed(relay)
+        settings.moveGlobalFeedsTo(TopFilter.Relay(relay.url))
     }
 
     /**

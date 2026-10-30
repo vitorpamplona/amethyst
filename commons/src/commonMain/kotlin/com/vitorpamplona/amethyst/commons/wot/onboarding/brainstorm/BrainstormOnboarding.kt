@@ -78,7 +78,17 @@ class BrainstormOnboarding(
 
     // brainstorm_server serves its default observer as NIP-05 `_` (nip05_service.py).
     override val houseObserver = "_@brainstorm.world"
+
+    // GrapeRank crawls these two for follows, mutes and reports.
+    override val graphRelays =
+        setOf(
+            RelayUrlNormalizer.normalize("wss://wot.grapevine.network"),
+            RelayUrlNormalizer.normalize("wss://search.brainstorm.world"),
+        )
     override val relay: NormalizedRelayUrl = RelayUrlNormalizer.normalize(SCORES_RELAY)
+
+    // The scores relay also serves the network's notes, ranked: a better Global than the user's own relays.
+    override val networkRelay: NormalizedRelayUrl = relay
 
     // The service key is per user and only known after a sign-up, but Brainstorm's scores relay
     // carries nothing but Brainstorm's keys, so an entry on it is Brainstorm's.

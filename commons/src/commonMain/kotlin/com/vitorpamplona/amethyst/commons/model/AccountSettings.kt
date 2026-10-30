@@ -261,6 +261,8 @@ class AccountSettings(
     val cashuCounters: CashuKeysetCounterStore = UnavailableCashuKeysetCounterStore,
     val lastReadPerRoute: MutableStateFlow<Map<String, MutableStateFlow<Long>>> = MutableStateFlow(mapOf()),
     val hasDonatedInVersion: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
+    /** Until when (unix seconds) the web of trust card stays hidden from Home; 0 when it was never hidden. */
+    val webOfTrustNudgeHiddenUntil: MutableStateFlow<Long> = MutableStateFlow(0L),
     val dismissedPollNoteIds: MutableStateFlow<Set<String>> = MutableStateFlow(setOf()),
     /**
      * Channel ids the viewer chose NOT to show on Messages after somebody added them to the channel
@@ -821,6 +823,23 @@ class AccountSettings(
             val current = flow.value
             if (current is TopFilter.AddressableTopFilter && current.address == address) {
                 flow.tryEmit(default)
+                changed = true
+            }
+        }
+
+        if (changed) saveAndSyncLater()
+    }
+
+    /**
+     * Points every feed set to Global at [filter] instead. Notifications keep their choice: there
+     * Global means every event that mentions the user, not a feed of the network.
+     */
+    fun moveGlobalFeedsTo(filter: TopFilter) {
+        var changed = false
+
+        feedFiltersWithDefaults.forEach { (flow, _) ->
+            if (flow !== defaultNotificationFollowList && flow.value == TopFilter.Global) {
+                flow.tryEmit(filter)
                 changed = true
             }
         }
@@ -1705,6 +1724,17 @@ class AccountSettings(
     fun setHideBlockAlertDialog() {
         if (!hideBlockAlertDialog) {
             hideBlockAlertDialog = true
+            saveAccountSettings()
+        }
+    }
+
+    // ---
+    // web of trust card
+    // ---
+
+    fun hideWebOfTrustNudgeUntil(time: Long) {
+        if (webOfTrustNudgeHiddenUntil.value != time) {
+            webOfTrustNudgeHiddenUntil.value = time
             saveAccountSettings()
         }
     }
