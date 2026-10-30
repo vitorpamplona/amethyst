@@ -86,7 +86,7 @@ class ExoPlayerBuilder(
                 PcmTapRegistry.bind(currentMediaItem?.mediaId, sink)
                 addListener(AspectRatioCacher(MediaAspectRatioCache))
                 addListener(HlsLivenessRecorder(this))
-                addListener(AutoReplayLimiter(pause = ::pause))
+                addListener(AutoReplayLimiter(setPauseAtEndOfMediaItems = ::setPauseAtEndOfMediaItems))
                 addListener(KeepVideosPlaying(this))
                 addListener(CurrentPlayPositionCacher(this, VideoViewedPositionCache))
                 addListener(MediaPlayTimeTracker())

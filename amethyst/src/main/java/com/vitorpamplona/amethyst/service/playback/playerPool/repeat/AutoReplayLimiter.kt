@@ -29,33 +29,45 @@ import androidx.media3.common.Player
  * Feed videos are configured to repeat forever (keepPlaying → REPEAT_MODE_ONE in
  * PlaybackService), which keeps decoders, network and the screen busy long after the
  * user stopped watching. This listener lets a video play [maxAutoPlays] full times and
- * then pauses it, so continuing requires an explicit press of the play button.
+ * then stops it at the end of the last one, so continuing requires an explicit press of
+ * the play button.
  *
  * Each loop under REPEAT_MODE_ONE surfaces as an [onMediaItemTransition] with
- * [Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT], marking one completed play. The
- * transition has already seeked back to the start, so pausing there leaves the video
- * on its first frame with the play button showing. Any resume — the user pressing
- * play, or the feed mutex auto-playing when the video scrolls back to the center —
- * grants a fresh allowance, and switching to a different media item resets it too.
+ * [Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT]. When the last allowed play starts, this arms
+ * ExoPlayer's pause-at-end-of-media-item, so the playback thread itself stops on the last
+ * frame with the position at the end, before the next loop begins.
+ *
+ * Don't pause() from the transition instead: by the time a listener hears of it, the next
+ * loop has already started on the playback thread, and the pause races it, so the frame on
+ * screen and the progress bar can disagree with where the player really stopped. Stopping
+ * at the end leaves nothing to race, so the frame, the position and the play button agree.
+ *
+ * Any resume — the user pressing play, or the feed mutex auto-playing when the video
+ * scrolls back to the center — disarms the pause and grants a fresh allowance. A resume
+ * from the stop at the end goes straight into the next loop, which is the first play of
+ * that allowance. Switching to a different media item resets it too.
  */
 class AutoReplayLimiter(
     val maxAutoPlays: Int = DEFAULT_MAX_AUTO_PLAYS,
-    val pause: () -> Unit,
+    val setPauseAtEndOfMediaItems: (Boolean) -> Unit,
 ) : Player.Listener {
-    private var playsCompleted = 0
+    // Plays begun since the last resume, the one in progress included.
+    private var playsStarted = 1
+
+    // Mirrors what was last pushed to the player, so a call only goes out on a change: arming
+    // while the player is already reading the next loop makes ExoPlayer flush its renderers.
+    private var armed = false
+
+    // Paused by the armed stop, on the last frame: a resume from here starts the next play.
+    private var stoppedAtEnd = false
 
     override fun onMediaItemTransition(
         mediaItem: MediaItem?,
         reason: Int,
     ) {
-        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
-            playsCompleted++
-            if (playsCompleted >= maxAutoPlays) {
-                pause()
-            }
-        } else {
-            playsCompleted = 0
-        }
+        playsStarted = if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) playsStarted + 1 else 1
+        stoppedAtEnd = false
+        updatePauseAtEnd()
     }
 
     override fun onPlayWhenReadyChanged(
@@ -63,7 +75,30 @@ class AutoReplayLimiter(
         reason: Int,
     ) {
         if (playWhenReady) {
-            playsCompleted = 0
+            playsStarted = if (stoppedAtEnd) 0 else 1
+            stoppedAtEnd = false
+            updatePauseAtEnd()
+        } else if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) {
+            stoppedAtEnd = true
+        }
+    }
+
+    override fun onPositionDiscontinuity(
+        oldPosition: Player.PositionInfo,
+        newPosition: Player.PositionInfo,
+        reason: Int,
+    ) {
+        // Seeking away from the stop at the end means the resume continues the current play.
+        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+            stoppedAtEnd = false
+        }
+    }
+
+    private fun updatePauseAtEnd() {
+        val shouldArm = playsStarted >= maxAutoPlays
+        if (shouldArm != armed) {
+            armed = shouldArm
+            setPauseAtEndOfMediaItems(shouldArm)
         }
     }
 

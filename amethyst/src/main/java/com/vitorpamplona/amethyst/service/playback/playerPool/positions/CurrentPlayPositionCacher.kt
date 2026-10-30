@@ -53,7 +53,7 @@ class CurrentPlayPositionCacher(
     override fun onIsPlayingChanged(isPlaying: Boolean) {
         currentUrl?.let { uri ->
             if (!isLiveStreaming) {
-                cache.add(uri, player.currentPosition)
+                save(uri, player.currentPosition)
             }
         }
     }
@@ -78,7 +78,7 @@ class CurrentPlayPositionCacher(
             } else {
                 // STATE_IDLE / STATE_BUFFERING / STATE_ENDED: only saves if it was playing.
                 if (!isLiveStreaming && abs(player.currentPosition) > 1) {
-                    cache.add(uri, player.currentPosition)
+                    save(uri, player.currentPosition)
                 }
             }
         }
@@ -91,8 +91,26 @@ class CurrentPlayPositionCacher(
     ) {
         currentUrl?.let { uri ->
             if (!isLiveStreaming && player.playbackState != Player.STATE_IDLE) {
-                cache.add(uri, newPosition.positionMs)
+                save(uri, newPosition.positionMs)
             }
         }
+    }
+
+    /**
+     * A video left at its end has nothing to resume: restoring there would only play its last
+     * moment before it ends or loops again. AutoReplayLimiter stops feed videos exactly there,
+     * so those are saved as the start.
+     */
+    private fun save(
+        uri: String,
+        positionMs: Long,
+    ) {
+        val durationMs = player.duration
+        val finished = durationMs > 0 && positionMs >= durationMs - FINISHED_MARGIN_MS
+        cache.add(uri, if (finished) 0 else positionMs)
+    }
+
+    companion object {
+        const val FINISHED_MARGIN_MS = 1_000L
     }
 }

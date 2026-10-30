@@ -22,70 +22,131 @@ package com.vitorpamplona.amethyst.service.playback.playerPool.repeat
 
 import androidx.media3.common.Player
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AutoReplayLimiterTest {
-    private var pauseCalls = 0
-    private val limiter = AutoReplayLimiter(maxAutoPlays = 5) { pauseCalls++ }
+    // Every value pushed to the player's pause-at-end-of-media-item flag, in order.
+    private val pushes = mutableListOf<Boolean>()
+    private val limiter = AutoReplayLimiter(maxAutoPlays = 5) { pushes += it }
+
+    private val armed get() = pushes.lastOrNull() ?: false
 
     private fun startPlaying() = limiter.onPlayWhenReadyChanged(true, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
 
-    private fun completeOnePlay() = limiter.onMediaItemTransition(null, Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)
+    private fun userPauses() = limiter.onPlayWhenReadyChanged(false, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+
+    // What ExoPlayer reports when the armed flag stops it at the end of the item.
+    private fun stopsAtTheEnd() = limiter.onPlayWhenReadyChanged(false, Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM)
+
+    private fun loopsOnce() = limiter.onMediaItemTransition(null, Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)
 
     private fun newMediaItem() = limiter.onMediaItemTransition(null, Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED)
 
-    @Test
-    fun pausesWhenTheFifthPlayCompletes() {
-        startPlaying()
-
-        // plays 1..4 complete: repeat transitions 1..4 start plays 2..5
-        repeat(4) { completeOnePlay() }
-        assertEquals(0, pauseCalls)
-
-        // play 5 completes: the 5th repeat transition would start play 6
-        completeOnePlay()
-        assertEquals(1, pauseCalls)
+    private fun seeks() {
+        val position = Player.PositionInfo(null, 0, null, null, 0, 1_000, 1_000, -1, -1)
+        limiter.onPositionDiscontinuity(position, position, Player.DISCONTINUITY_REASON_SEEK)
     }
 
     @Test
-    fun pressingPlayGrantsAFreshAllowance() {
+    fun stopsAtTheEndOfTheFifthPlay() {
         startPlaying()
-        repeat(5) { completeOnePlay() }
-        assertEquals(1, pauseCalls)
 
-        // user presses play again
+        // repeat transitions 1..3 start plays 2..4
+        repeat(3) { loopsOnce() }
+        assertFalse(armed)
+
+        // the 4th starts play 5, the last one: the player must stop when it ends, not loop into a 6th
+        loopsOnce()
+        assertTrue(armed)
+    }
+
+    @Test
+    fun resumingFromTheStopAtTheEndGrantsFiveMorePlays() {
         startPlaying()
-        repeat(4) { completeOnePlay() }
-        assertEquals(1, pauseCalls)
+        repeat(4) { loopsOnce() }
+        stopsAtTheEnd()
 
-        completeOnePlay()
-        assertEquals(2, pauseCalls)
+        // user presses play on the last frame: the stop is lifted and the player loops into play 1
+        startPlaying()
+        assertFalse(armed)
+        loopsOnce()
+
+        repeat(3) { loopsOnce() }
+        assertFalse(armed)
+
+        loopsOnce()
+        assertTrue(armed)
+    }
+
+    @Test
+    fun resumingMidPlayCountsThatPlayAsTheFirst() {
+        startPlaying()
+        repeat(2) { loopsOnce() }
+        userPauses()
+
+        startPlaying()
+        repeat(3) { loopsOnce() }
+        assertFalse(armed)
+
+        loopsOnce()
+        assertTrue(armed)
+    }
+
+    @Test
+    fun seekingAwayFromTheStopAtTheEndContinuesThatPlay() {
+        startPlaying()
+        repeat(4) { loopsOnce() }
+        stopsAtTheEnd()
+
+        // the user drags the progress bar back, then plays the rest of that loop as play 1
+        seeks()
+        startPlaying()
+        repeat(3) { loopsOnce() }
+        assertFalse(armed)
+
+        loopsOnce()
+        assertTrue(armed)
     }
 
     @Test
     fun switchingMediaItemsResetsTheCount() {
         startPlaying()
-        repeat(4) { completeOnePlay() }
+        repeat(4) { loopsOnce() }
+        assertTrue(armed)
 
         // the pooled player is handed a different video
         newMediaItem()
+        assertFalse(armed)
 
-        repeat(4) { completeOnePlay() }
-        assertEquals(0, pauseCalls)
+        repeat(3) { loopsOnce() }
+        assertFalse(armed)
 
-        completeOnePlay()
-        assertEquals(1, pauseCalls)
+        loopsOnce()
+        assertTrue(armed)
     }
 
     @Test
     fun pausingMidPlayDoesNotResetTheCount() {
         startPlaying()
-        repeat(3) { completeOnePlay() }
+        repeat(3) { loopsOnce() }
 
         // a pause alone (e.g. scrolled off screen) does not reset; only a resume does
-        limiter.onPlayWhenReadyChanged(false, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+        userPauses()
 
-        repeat(2) { completeOnePlay() }
-        assertEquals(1, pauseCalls)
+        loopsOnce()
+        assertTrue(armed)
+    }
+
+    @Test
+    fun onlyPushesChanges() {
+        startPlaying()
+        repeat(10) { loopsOnce() }
+        startPlaying()
+        startPlaying()
+
+        // armed once at the 5th play, disarmed once by the first resume
+        assertEquals(listOf(true, false), pushes)
     }
 }
