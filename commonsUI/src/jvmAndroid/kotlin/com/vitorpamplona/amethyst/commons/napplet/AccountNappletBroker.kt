@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
+import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentSummary
 import com.vitorpamplona.amethyst.commons.napplet.ui.buildConnectInfo
@@ -40,11 +42,11 @@ import okhttp3.OkHttpClient
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * How long a signature waits on the user before it is refused. The broker holds its consent lock
- * while a prompt waits, so an abandoned one would otherwise block every later signing request from
- * every app. The NIP-46 path uses the same bound.
+ * How long any question waits on the user before it is refused. The broker holds a consent lock while
+ * a prompt waits, so an abandoned one (a dialog left behind when the user went elsewhere) would
+ * otherwise block every later request of its kind from every app. The NIP-46 path uses the same bound.
  */
-private val SIGNER_CONSENT_TIMEOUT = 120.seconds
+private val CONSENT_TIMEOUT = 120.seconds
 
 /**
  * The [NappletBroker] for a logged-in [account], wired the same way on every platform: the
@@ -84,7 +86,7 @@ fun buildAccountNappletBroker(
         ledger = ledger,
         consentPrompt =
             NappletConsentPrompt { app, capability, request ->
-                prompts.capability(app, summary.info(app, capability, request))
+                withTimeoutOrNull(CONSENT_TIMEOUT) { prompts.capability(app, summary.info(app, capability, request)) } ?: GrantState.ASK
             },
         relay = AccountNappletRelayGateway(account),
         storage = storage,
@@ -97,11 +99,11 @@ fun buildAccountNappletBroker(
         signerLedger = signerLedger,
         nostrConnectPrompt =
             NostrConnectPrompt { app, declared ->
-                prompts.connect(app, buildConnectInfo(browserIcons, app, declared, account))
+                withTimeoutOrNull(CONSENT_TIMEOUT) { prompts.connect(app, buildConnectInfo(browserIcons, app, declared, account)) } ?: AppConnectResult.Cancelled
             },
         signerConsentPrompt =
             NostrSignerConsentPrompt { app, op, request ->
-                withTimeoutOrNull(SIGNER_CONSENT_TIMEOUT) {
+                withTimeoutOrNull(CONSENT_TIMEOUT) {
                     prompts.signerOp(app, buildSignerConsentInfo(browserIcons, app, op, request, account, recentEncryptions))
                 } ?: SignerOpGrant.DenyOnce
             },

@@ -31,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -67,11 +68,15 @@ class SignerConsentActivity : ComponentActivity() {
                     group.isEmpty() -> Unit
                     group.size == 1 -> {
                         val p = group.first()
-                        SignerConsentDialog(
-                            info = p.info,
-                            onGrant = { SignerConsentCoordinator.complete(p.token, it) },
-                            onDismiss = { SignerConsentCoordinator.complete(p.token, SignerOpGrant.DenyOnce) },
-                        )
+                        // Keyed by the request: when one times out and the next takes its place, a tap
+                        // already on its way can't land on a dialog it was never meant for.
+                        key(p.token) {
+                            SignerConsentDialog(
+                                info = p.info,
+                                onGrant = { SignerConsentCoordinator.complete(p.token, it) },
+                                onDismiss = { SignerConsentCoordinator.complete(p.token, SignerOpGrant.DenyOnce) },
+                            )
+                        }
                     }
                     else ->
                         BatchedConsentDialog(

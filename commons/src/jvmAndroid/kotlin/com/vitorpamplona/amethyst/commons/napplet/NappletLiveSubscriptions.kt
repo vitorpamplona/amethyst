@@ -33,9 +33,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import java.util.Collections
+import java.util.WeakHashMap
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * The registry of live relay subscriptions applets have open, keyed by the requesting surface's owner
@@ -64,6 +67,19 @@ class NappletLiveSubscriptions<K : Any>(
 
     private val liveSubs = ConcurrentHashMap<Key<K>, LiveSub>()
     private val liveSeq = AtomicInteger(0)
+
+    // Requests are handled concurrently, and a subscribe waits on consent while a close is answered at
+    // once: a page's `subscribe s1` then `close s1` could open s1 after its close, streaming to a page
+    // that thinks it closed. Each request is stamped as it arrives ([arrival]); a close remembers its
+    // stamp, and a subscribe that arrived before it never opens. Guarded by [lock], with [gone]: owners
+    // whose surface went away, so nothing opens for them after [closeAllFor] (held weakly).
+    private val lock = Any()
+    private val arrivals = AtomicLong(0)
+    private val closedAt = HashMap<Key<K>, Long>()
+    private val gone: MutableSet<K> = Collections.newSetFromMap(WeakHashMap())
+
+    /** Stamps a request as it arrives, before anything about it suspends; pass it to [open] and [close]. */
+    fun arrival(): Long = arrivals.incrementAndGet()
 
     private class LiveSub(
         val clientSubId: String,
@@ -103,6 +119,20 @@ class NappletLiveSubscriptions<K : Any>(
         nappletSubId: String,
         filters: List<Filter>,
         account: Account?,
+        arrivedAt: Long,
+        push: (String) -> Unit,
+    ): Unit =
+        synchronized(lock) {
+            // Closed after this request arrived, or its surface is gone: the page doesn't want it.
+            if (owner in gone || (closedAt[Key(owner, nappletSubId)] ?: Long.MIN_VALUE) > arrivedAt) return
+            openLocked(owner, nappletSubId, filters, account, push)
+        }
+
+    private fun openLocked(
+        owner: K,
+        nappletSubId: String,
+        filters: List<Filter>,
+        account: Account?,
         push: (String) -> Unit,
     ) {
         val relays = account?.homeRelays?.flow?.value ?: emptySet()
@@ -112,7 +142,7 @@ class NappletLiveSubscriptions<K : Any>(
         }
 
         val key = Key(owner, nappletSubId)
-        close(owner, nappletSubId)
+        liveSubs.remove(key)?.let(::stop)
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
         // can't collide with the subscription it's replacing.
         val sub =
@@ -188,20 +218,33 @@ class NappletLiveSubscriptions<K : Any>(
         liveSubs.forEach { (key, sub) -> if (key.owner == owner) sub.deliveries.trySend(Delivery.Attended) }
     }
 
-    /** Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it. */
+    /**
+     * Stops [owner]'s live subscription [nappletSubId], unsubscribing from the client that opened it,
+     * and keeps one that was requested before this close ([arrivedAt]) from opening later.
+     */
     fun close(
         owner: K,
         nappletSubId: String,
-    ) {
-        liveSubs.remove(Key(owner, nappletSubId))?.let(::stop)
-    }
+        arrivedAt: Long,
+    ): Unit =
+        synchronized(lock) {
+            val key = Key(owner, nappletSubId)
+            closedAt[key] = maxOf(closedAt[key] ?: Long.MIN_VALUE, arrivedAt)
+            liveSubs.remove(key)?.let(::stop)
+        }
 
-    /** Stops every subscription [owner] still has open (its surface went away without closing them). */
-    fun closeAllFor(owner: K) {
-        liveSubs.keys
-            .filter { it.owner == owner }
-            .forEach { key -> liveSubs.remove(key)?.let(::stop) }
-    }
+    /**
+     * Stops every subscription [owner] still has open (its surface went away without closing them),
+     * and any it requested that hasn't opened yet.
+     */
+    fun closeAllFor(owner: K): Unit =
+        synchronized(lock) {
+            gone += owner
+            closedAt.keys.removeAll { it.owner == owner }
+            liveSubs.keys
+                .filter { it.owner == owner }
+                .forEach { key -> liveSubs.remove(key)?.let(::stop) }
+        }
 
     /** Tears down every open subscription (service teardown). */
     fun closeAll() {

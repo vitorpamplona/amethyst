@@ -4981,6 +4981,11 @@
         <item quantity="one">Removes everyone (%1$d) from this list</item>
         <item quantity="other">Removes everyone (%1$d) from this list</item>
     </plurals>
+    <string name="consent_relays_no_change">No change to your relays</string>
+    <plurals name="consent_relays_wipe">
+        <item quantity="one">Removes your only relay</item>
+        <item quantity="other">Removes all %1$d of your relays</item>
+    </plurals>
     <plurals name="consent_list_names_more">
         <item quantity="one">%1$s and %2$d more</item>
         <item quantity="other">%1$s and %2$d more</item>

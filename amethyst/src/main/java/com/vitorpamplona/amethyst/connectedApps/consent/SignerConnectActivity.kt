@@ -29,11 +29,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -41,47 +46,38 @@ import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConnect
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 class SignerConnectActivity : ComponentActivity() {
-    private var token: String? = null
-    private var decided = false
+    // The request on screen: cancelled if the activity is finished before the user answers it.
+    private var shown: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(SignerConnectCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val info = token?.let { SignerConnectCoordinator.infoFor(it) }
-        if (token == null || info == null) {
-            finish()
-            return
-        }
-
         setContent {
-            // The account the app asks to connect to, which need not be the logged-in one.
-            AmethystTheme(accountPubKey = info.accountPubKey) {
-                SignerConnectScreen(
-                    info = info,
-                    onConnect = { policy ->
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
-                        finish()
-                    },
-                    onBlock = {
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Blocked)
-                        finish()
-                    },
-                    onCancel = {
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Cancelled)
-                        finish()
-                    },
-                )
+            // The oldest request waiting, whichever one brought the activity up: one arriving while
+            // this shows (a NIP-46 client while a site asks) is answered next instead of lost.
+            val pending by SignerConnectCoordinator.pending.collectAsStateWithLifecycle()
+            val request = pending.firstOrNull()
+            LaunchedEffect(request == null) { if (request == null) finish() }
+            if (request != null) {
+                SideEffect { shown = request.token }
+                key(request.token) {
+                    // The account the app asks to connect to, which need not be the logged-in one.
+                    AmethystTheme(accountPubKey = request.info.accountPubKey) {
+                        SignerConnectScreen(
+                            info = request.info,
+                            onConnect = { policy -> SignerConnectCoordinator.complete(request.token, AppConnectResult.Connected(policy)) },
+                            onBlock = { SignerConnectCoordinator.complete(request.token, AppConnectResult.Blocked) },
+                            onCancel = { SignerConnectCoordinator.complete(request.token, AppConnectResult.Cancelled) },
+                        )
+                    }
+                }
             }
         }
     }
 
-    override fun finish() {
-        if (!decided) token?.let { SignerConnectCoordinator.cancel(it) }
-        super.finish()
+    override fun onDestroy() {
+        // Torn down before the user chose: fail closed. A rotation keeps the request.
+        if (isFinishing) shown?.let(SignerConnectCoordinator::cancel)
+        super.onDestroy()
     }
 }
 

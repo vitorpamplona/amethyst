@@ -462,14 +462,15 @@ class CefNappletSession(
 
     private fun handle(payload: String) {
         if (closed) return
+        val arrivedAt = runtime.liveSubscriptions.arrival()
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload)) {
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
-                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, ::send)
-                is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId)
+                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, ::send)
+                is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId, arrivedAt)
                 // The inc bus is not offered on desktop (INC is not a supported NAP domain).
                 else -> {}
             }

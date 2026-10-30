@@ -440,6 +440,8 @@ class NappletBrokerService : Service() {
         val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
+        // Stamped now, before anything suspends: orders this request against a later close of its subscription.
+        val arrivedAt = liveSubscriptions.arrival()
 
         // Resolve the launch token to the trusted identity + declared set. The sandbox never states
         // its own coordinate, so a compromised :napplet process can only ever act as the napplet it
@@ -497,8 +499,8 @@ class NappletBrokerService : Service() {
                         }
                     }
                     is NappletRequestRouter.Outcome.OpenSubscription ->
-                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey)) { push(replyTo, it) }
-                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId)
+                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey), arrivedAt) { push(replyTo, it) }
+                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId, arrivedAt)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
                     is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)
@@ -569,8 +571,9 @@ class NappletBrokerService : Service() {
                 AndroidNappletGateways(
                     account = account,
                     context = applicationContext,
-                    ledger = ledger,
-                    storage = storage,
+                    // The launch account's grants and storage, not whoever is logged in now.
+                    ledger = ledger.forAccount(account.pubKey),
+                    storage = storage.forAccount(account.pubKey),
                     // Per-applet Tor decision (see NappletResourceFetcher): the shared manager routes
                     // through Tor when asked + active, and falls back to clearnet otherwise.
                     httpClient = { useProxy -> Amethyst.instance.okHttpClients.getHttpClient(useProxy) },

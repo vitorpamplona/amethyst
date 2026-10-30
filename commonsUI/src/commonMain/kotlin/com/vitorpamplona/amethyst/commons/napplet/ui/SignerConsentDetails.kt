@@ -50,6 +50,8 @@ import com.vitorpamplona.amethyst.commons.resources.consent_profile_no_change
 import com.vitorpamplona.amethyst.commons.resources.consent_profile_removes
 import com.vitorpamplona.amethyst.commons.resources.consent_profile_removes_other
 import com.vitorpamplona.amethyst.commons.resources.consent_profile_unknown
+import com.vitorpamplona.amethyst.commons.resources.consent_relays_no_change
+import com.vitorpamplona.amethyst.commons.resources.consent_relays_wipe
 import com.vitorpamplona.amethyst.commons.resources.consent_report_content
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person
 import com.vitorpamplona.amethyst.commons.resources.consent_report_person_reason
@@ -74,6 +76,7 @@ import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.nip51Lists.muteList.MuteListEvent
 import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomAuthorizationEvent
 
@@ -131,6 +134,54 @@ suspend fun listChange(
     if (kept > 0) parts += loadPluralStringRes(Res.plurals.consent_list_keeps, kept, kept)
     // Removing more than one person in a single update is unusual for a tap in an app: flag it.
     return ListChange(parts.joinToString(" · "), warning = removed.size > 1)
+}
+
+/**
+ * For a relay list (kind 10002), which relays it adds and drops against the one Amethyst has. The
+ * list is replaced whole, so an app that leaves a relay out drops it, and the notes people read from
+ * it go with it: any removal is a warning.
+ */
+suspend fun relayListChange(
+    account: Account?,
+    kind: Int,
+    tags: Array<Array<String>>,
+): ListChange? {
+    if (kind != AdvertisedRelayListEvent.KIND || account == null) return null
+    val current =
+        account.nip65RelayList
+            .getNIP65RelayList()
+            ?.tags
+            ?.let(::relayUrls) ?: return ListChange(loadStringRes(Res.string.consent_list_unknown), warning = true)
+    val next = relayUrls(tags)
+    if (next.isEmpty() && current.isNotEmpty()) {
+        return ListChange(loadPluralStringRes(Res.plurals.consent_relays_wipe, current.size, current.size), warning = true)
+    }
+    val added = next - current
+    val removed = current - next
+    if (added.isEmpty() && removed.isEmpty()) return ListChange(loadStringRes(Res.string.consent_relays_no_change), warning = false)
+
+    val kept = (current intersect next).size
+    val parts = mutableListOf<String>()
+    if (added.isNotEmpty()) parts += loadStringRes(Res.string.consent_list_adds, relayNames(added))
+    if (removed.isNotEmpty()) parts += loadStringRes(Res.string.consent_list_removes, relayNames(removed))
+    if (kept > 0) parts += loadPluralStringRes(Res.plurals.consent_list_keeps, kept, kept)
+    return ListChange(parts.joinToString(" · "), warning = removed.isNotEmpty())
+}
+
+private fun relayUrls(tags: Array<Array<String>>): Set<String> =
+    tags.mapNotNullTo(HashSet()) { tag ->
+        tag
+            .getOrNull(1)
+            ?.takeIf { tag[0] == "r" }
+            ?.trimEnd('/')
+            ?.lowercase()
+    }
+
+private suspend fun relayNames(urls: Set<String>): String {
+    val shown = urls.take(2).map { it.substringAfter("://") }
+    val more = urls.size - shown.size
+    val listed = shown.joinToString(", ")
+    return if (more > 0) loadPluralStringRes(Res.plurals.consent_list_names_more, more, listed, more) else listed
 }
 
 private suspend fun names(pubkeys: Set<HexKey>): String {

@@ -29,13 +29,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
@@ -48,44 +52,37 @@ import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
  * sees or drives this UI.
  */
 class NappletConsentActivity : ComponentActivity() {
-    private var token: String? = null
-    private var decided = false
+    // The question on screen: dismissed if the activity is finished before the user answers it.
+    private var shown: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val token = intent.getStringExtra(NappletConsentCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val info = token?.let { NappletConsentCoordinator.infoFor(it) }
-
-        if (token == null || info == null) {
-            finish()
-            return
-        }
-
         setContent {
-            AmethystTheme {
-                NappletConsentDialog(
-                    info = info,
-                    onDecision = { grant ->
-                        decided = true
-                        NappletConsentCoordinator.complete(token, grant)
-                        finish()
-                    },
-                    onDismiss = {
-                        decided = true
-                        NappletConsentCoordinator.cancel(token)
-                        finish()
-                    },
-                )
+            // The oldest question waiting, whichever request brought the activity up: a second one
+            // arriving while this shows is answered next instead of lost, and a question that timed out
+            // leaves with the queue.
+            val pending by NappletConsentCoordinator.pending.collectAsStateWithLifecycle()
+            val request = pending.firstOrNull()
+            LaunchedEffect(request == null) { if (request == null) finish() }
+            if (request != null) {
+                SideEffect { shown = request.token }
+                key(request.token) {
+                    AmethystTheme {
+                        NappletConsentDialog(
+                            info = request.info,
+                            onDecision = { grant -> NappletConsentCoordinator.complete(request.token, grant) },
+                            onDismiss = { NappletConsentCoordinator.cancel(request.token) },
+                        )
+                    }
+                }
             }
         }
     }
 
-    override fun finish() {
-        // If the system tears us down before the user chose, fail closed.
-        if (!decided) token?.let { NappletConsentCoordinator.cancel(it) }
-        super.finish()
+    override fun onDestroy() {
+        // Torn down before the user chose: fail closed. A rotation keeps the question.
+        if (isFinishing) shown?.let(NappletConsentCoordinator::cancel)
+        super.onDestroy()
     }
 }
 

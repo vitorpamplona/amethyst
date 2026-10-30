@@ -37,6 +37,9 @@ class DataStoreNappletPermissionStore(
     private val dataStore: DataStore<Preferences>,
     private val accountPubKey: () -> String,
 ) : NappletPermissionStore {
+    // The same file, read for one account: still one DataStore instance per file.
+    override fun forAccount(pubKey: String): NappletPermissionStore = DataStoreNappletPermissionStore(dataStore) { pubKey }
+
     /**
      * Grants belong to one account. [accountPubKey] is read at call time, so an account switch moves
      * every read and write to that account's namespace with no rebuild — a grant made by one account

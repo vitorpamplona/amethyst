@@ -53,6 +53,24 @@ class NappletPermissionLedgerTest {
         }
 
     @Test
+    fun aLedgerForOneAccountIgnoresWhoIsLoggedIn() =
+        runTest {
+            // A full-screen app opened as Alice keeps acting for Alice after the user switches to Bob.
+            var loggedIn = "bob"
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { loggedIn }
+            val alices = ledger.forAccount("alice")
+            ledger.record(applet, NappletCapability.STORAGE, GrantState.ALLOW_SESSION)
+            assertEquals(PermissionDecision.ASK, alices.decide(applet, NappletCapability.STORAGE), "Bob's grant is not Alice's")
+
+            alices.record(applet, NappletCapability.STORAGE, GrantState.ALLOW_SESSION)
+            assertEquals(PermissionDecision.ALLOW, alices.decide(applet, NappletCapability.STORAGE))
+            loggedIn = "alice"
+            assertEquals(PermissionDecision.ALLOW, ledger.decide(applet, NappletCapability.STORAGE), "one set of session grants")
+            ledger.endSession()
+            assertEquals(PermissionDecision.ASK, alices.decide(applet, NappletCapability.STORAGE), "and endSession clears them all")
+        }
+
+    @Test
     fun endSessionDropsSessionGrantsAcrossAppsButKeepsPersistedOnes() =
         runTest {
             // What the broker service calls in onDestroy, once every applet/browser surface has

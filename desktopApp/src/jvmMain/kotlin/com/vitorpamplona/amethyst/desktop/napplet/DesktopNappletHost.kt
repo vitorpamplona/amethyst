@@ -210,9 +210,10 @@ class DesktopNappletHost(
         buildAccountNappletBroker(
             account = account,
             browserIcons = modules.browserIcons,
-            ledger = modules.nappletPermissionLedger,
+            // The account's own grants and storage, whoever is logged in when it asks.
+            ledger = modules.nappletPermissionLedger.forAccount(account.pubKey),
             signerLedger = signerLedger,
-            storage = storage,
+            storage = storage.forAccount(account.pubKey),
             httpClient = { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
             useTor = { coordinate ->
                 networkChoices.awaitReady()

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInf
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_connect_title
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Bridges the broker to the "Connect to Nostr" first-connect UI. Suspends in [requestConnect];
@@ -35,6 +36,20 @@ import com.vitorpamplona.amethyst.commons.resources.nip46_signer_notif_connect_t
  */
 object SignerConnectCoordinator {
     private val queue = ConsentQueue<SignerConnectInfo, AppConnectResult>(unanswered = AppConnectResult.Cancelled)
+
+    /** The requests waiting, oldest first; the activity shows the first. */
+    val pending: StateFlow<List<ConsentQueue.Request<SignerConnectInfo, AppConnectResult>>> = queue.pending
+
+    /** Brings the dialog back when requests still wait on it (see SignerConsentCoordinator.resurfacePending). */
+    fun resurfacePending(context: Context) {
+        if (queue.pending.value.isEmpty()) return
+        runCatching {
+            context.startActivity(
+                Intent(context, SignerConnectActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            )
+        }
+    }
 
     suspend fun requestConnect(
         context: Context,
@@ -50,7 +65,7 @@ object SignerConnectCoordinator {
                 runCatching {
                     context.startActivity(
                         Intent(context, SignerConnectActivity::class.java)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                             .putExtra(EXTRA_TOKEN, request.token),
                     )
                 }

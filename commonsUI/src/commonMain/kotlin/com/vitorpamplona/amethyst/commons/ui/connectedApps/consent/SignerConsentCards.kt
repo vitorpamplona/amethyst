@@ -613,7 +613,7 @@ fun BatchedConsentCard(
                 val tokens = pending.filter { it.token in selected }
                 // Per-op remember uses each request's own op; one-time is a single AllowOnce.
                 if (rememberChoice) {
-                    tokens.forEach { onResolve(listOf(it.token), SignerOpGrant.AllowForOp(it.info.op)) }
+                    tokens.forEach { onResolve(listOf(it.token), SignerOpGrant.AllowForOp(it.info.narrowOp ?: it.info.op)) }
                 } else {
                     onResolve(tokens.map { it.token }, SignerOpGrant.AllowOnce)
                 }

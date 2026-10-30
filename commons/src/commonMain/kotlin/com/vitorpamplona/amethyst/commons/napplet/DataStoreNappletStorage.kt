@@ -39,6 +39,9 @@ class DataStoreNappletStorage(
     private val dataStore: DataStore<Preferences>,
     private val accountPubKey: () -> String,
 ) : NappletStorage {
+    /** The same file, read and written for [pubKey] alone, whoever is logged in. */
+    fun forAccount(pubKey: String): DataStoreNappletStorage = DataStoreNappletStorage(dataStore) { pubKey }
+
     override suspend fun get(
         coordinate: String,
         key: String,
