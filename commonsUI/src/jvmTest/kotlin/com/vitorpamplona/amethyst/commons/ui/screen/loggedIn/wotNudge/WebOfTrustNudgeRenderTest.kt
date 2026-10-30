@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSurface
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystPreviewTheme
 import org.jetbrains.skia.EncodedImageFormat
 import java.io.ByteArrayInputStream
@@ -74,6 +75,24 @@ class WebOfTrustNudgeRenderTest {
     private val strangers = listOf("x", "y", "z").mapIndexed { i, s -> face(s, i + 5) }
     private val me = face("V", 2)
 
+    private val brainstorm = CircleProvider("brainstorm", "Brainstorm", face("B", 3))
+
+    @Composable
+    private fun rings(activation: CircleActivation) =
+        CircleRingsCard(
+            me,
+            follows,
+            followCount = 182,
+            extendedCount = 12_400,
+            providers = listOf(brainstorm),
+            selected = brainstorm,
+            onSelect = {},
+            activation = activation,
+            onActivate = {},
+            onNotNow = {},
+            onDismiss = {},
+        )
+
     private val scenarios: Map<String, @Composable () -> Unit> =
         linkedMapOf(
             "1-facepile" to { CircleFirstCard(follows, followCount = 182, onSetUp = {}, onNotNow = {}, onDismiss = {}) },
@@ -93,7 +112,19 @@ class WebOfTrustNudgeRenderTest {
             },
             "3-friends" to { FriendsUseItCard(follows, listOf("Alice", "Bob", "Carol", "Dan", "Eve", "Fiatjaf"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
             "3b-friends-one" to { FriendsUseItCard(follows.take(1), listOf("Alice"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
-            "4-rings" to { CircleRingsCard(me, follows, followCount = 182, extendedCount = 12_400, onSetUp = {}, onNotNow = {}, onDismiss = {}) },
+            "4-rings" to { rings(CircleActivation.Offer) },
+            "4b-rings-menu" to {
+                // The scene does not draw popups: the open menu, drawn in place under the row.
+                Column(Modifier.padding(horizontal = 28.dp)) {
+                    CircleProviderPicker(listOf(brainstorm), brainstorm, {}, enabled = true)
+                    Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm), brainstorm) {} }
+                    }
+                }
+            },
+            "4c-rings-working" to { rings(CircleActivation.Working("Signing in…")) },
+            "4d-rings-failed" to { rings(CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")) },
+            "4e-rings-activated" to { rings(CircleActivation.Activated) },
             "5-strips" to {
                 Column {
                     CircleFirstStrip(CircleStripPlace.THREAD, onTurnOn = {}, onDismiss = {}, replyCount = 42)
@@ -135,7 +166,9 @@ class WebOfTrustNudgeRenderTest {
                 }
             }
         try {
-            val png = scene.render().encodeToData(EncodedImageFormat.PNG)!!.bytes
+            // A frame into the animations, so a spinner shows as a spinner.
+            scene.render(0)
+            val png = scene.render(600_000_000).encodeToData(EncodedImageFormat.PNG)!!.bytes
             val image = ImageIO.read(ByteArrayInputStream(png))
             val background = image.getRGB(1, image.height - 1)
             // Crop the empty background below the card.

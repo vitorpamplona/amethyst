@@ -7118,6 +7118,7 @@
     <string name="wot_set_up_again">Recompute</string>
     <string name="wot_in_use">In use</string>
     <string name="wot_setup_on_website">Use their website</string>
+    <string name="wot_setup_sharing_graph">Sharing your follows and mutes…</string>
     <string name="wot_setup_signing_in">Signing in…</string>
     <string name="wot_setup_requesting_scores">Requesting your scores…</string>
     <string name="wot_setup_fetching_key">Getting your provider key…</string>
@@ -9177,7 +9178,12 @@
     <string name="wot_nudge_rings_they_trust">they trust</string>
     <string name="wot_nudge_rings_title">Your circle is bigger than your follows</string>
     <string name="wot_nudge_rings_body">Put all of them first in replies, notifications and messages.</string>
-    <string name="wot_nudge_rings_action">Map my circle</string>
+    <string name="wot_nudge_provider">Provider</string>
+    <string name="wot_nudge_activate">Activate</string>
+    <string name="wot_nudge_activated_title">Mapping your circle</string>
+    <string name="wot_nudge_activated_body">%1$s works it out in the background, which can take a while. Once it's ready, your people move to the top on their own.</string>
+    <string name="wot_nudge_activated_status">Running in the background</string>
+    <string name="wot_nudge_got_it">Got it</string>
     <plurals name="wot_nudge_strip_thread">
         <item quantity="one">%1$d reply. See people you know first?</item>
         <item quantity="other">%1$d replies. See people you know first?</item>

@@ -40,6 +40,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,10 +51,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +71,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.wot_brainstorm_description
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activate
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_body
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_status
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_title
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_dismiss
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_action
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_body
@@ -75,11 +85,12 @@ import com.vitorpamplona.amethyst.commons.resources.wot_nudge_friends_copy
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_friends_title_many
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_friends_title_one
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_friends_title_two
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_got_it
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_not_now
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_provider
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_ready_action
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_ready_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_ready_title
-import com.vitorpamplona.amethyst.commons.resources.wot_nudge_rings_action
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_rings_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_rings_they_trust
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_rings_title
@@ -95,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_nudge_thread_title
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_turn_on
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_explainer
 import com.vitorpamplona.amethyst.commons.resources.wot_private_entry_title
+import com.vitorpamplona.amethyst.commons.resources.wot_retry
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_body
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_continue
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_continue_with
@@ -105,6 +117,9 @@ import com.vitorpamplona.amethyst.commons.resources.wot_sheet_key_title
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_note
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_suggested
 import com.vitorpamplona.amethyst.commons.resources.wot_sheet_title
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuItemModifier
+import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuSection
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.showCount
@@ -263,14 +278,46 @@ fun FriendsUseItCard(
     }
 }
 
-/** Variant 4: you, your follows, the people they trust, as rings. */
+/** A trust provider the rings card offers, as the user sees it. */
+class CircleProvider(
+    val id: String,
+    val name: String,
+    /** The provider's picture, filling the modifier it gets. */
+    val picture: NudgeFace,
+)
+
+/** Where [CircleRingsCard] is: offering, signing up, failed, or done and computing. */
+sealed interface CircleActivation {
+    data object Offer : CircleActivation
+
+    /** The sign-up is running; [step] says which part ("Signing in…"). */
+    data class Working(
+        val step: String,
+    ) : CircleActivation
+
+    data class Failed(
+        val message: String,
+    ) : CircleActivation
+
+    /** Signed up. The provider computes the scores in the background. */
+    data object Activated : CircleActivation
+}
+
+/**
+ * Variant 4: you, your follows, the people they trust, as rings. Pick a provider and activate;
+ * the card then turns into the acknowledgement that the circle is being computed.
+ */
 @Composable
 fun CircleRingsCard(
     self: NudgeFace,
     faces: List<NudgeFace>,
     followCount: Int,
     extendedCount: Int,
-    onSetUp: () -> Unit,
+    providers: List<CircleProvider>,
+    selected: CircleProvider,
+    onSelect: (CircleProvider) -> Unit,
+    activation: CircleActivation,
+    onActivate: () -> Unit,
     onNotNow: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -284,10 +331,127 @@ fun CircleRingsCard(
             }
         }
         Spacer(Modifier.height(14.dp))
-        NudgeTitle(stringRes(Res.string.wot_nudge_rings_title))
-        NudgeBody(stringRes(Res.string.wot_nudge_rings_body))
-        NudgeButtons(stringRes(Res.string.wot_nudge_rings_action), onSetUp, stringRes(Res.string.wot_nudge_not_now), onNotNow)
+        if (activation == CircleActivation.Activated) {
+            NudgeTitle(stringRes(Res.string.wot_nudge_activated_title))
+            NudgeBody(stringRes(Res.string.wot_nudge_activated_body, selected.name))
+            Row(
+                Modifier.padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Text(stringRes(Res.string.wot_nudge_activated_status), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.End) {
+                TextButton(onClick = onDismiss) { Text(stringRes(Res.string.wot_nudge_got_it)) }
+            }
+        } else {
+            val working = activation is CircleActivation.Working
+            NudgeTitle(stringRes(Res.string.wot_nudge_rings_title))
+            NudgeBody(stringRes(Res.string.wot_nudge_rings_body))
+            Spacer(Modifier.height(14.dp))
+            CircleProviderPicker(providers, selected, onSelect, enabled = !working)
+            when (activation) {
+                is CircleActivation.Working -> NudgeStatus(activation.step, MaterialTheme.colorScheme.onSurfaceVariant)
+                is CircleActivation.Failed -> NudgeStatus(activation.message, MaterialTheme.colorScheme.error)
+                else -> {}
+            }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TextButton(onClick = onNotNow, enabled = !working) { Text(stringRes(Res.string.wot_nudge_not_now)) }
+                Button(onClick = onActivate, enabled = !working) {
+                    if (working) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(stringRes(if (activation is CircleActivation.Failed) Res.string.wot_retry else Res.string.wot_nudge_activate))
+                }
+            }
+        }
     }
+}
+
+@Composable
+private fun NudgeStatus(
+    text: String,
+    color: Color,
+) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = color, modifier = Modifier.padding(top = 4.dp, start = 16.dp, end = 16.dp))
+}
+
+/** The provider, as a row that opens the app's rounded popup to pick another. */
+@Composable
+internal fun CircleProviderPicker(
+    providers: List<CircleProvider>,
+    selected: CircleProvider,
+    onSelect: (CircleProvider) -> Unit,
+    enabled: Boolean,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Surface(
+            onClick = { expanded = true },
+            enabled = enabled,
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                ProviderPicture(selected, 36.dp)
+                Column(Modifier.weight(1f)) {
+                    Text(stringRes(Res.string.wot_nudge_provider), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(selected.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+                Icon(MaterialSymbols.UnfoldMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        RoundedDropdownMenu(expanded = expanded && enabled, onDismissRequest = { expanded = false }) {
+            CircleProviderMenu(providers, selected) {
+                onSelect(it)
+                expanded = false
+            }
+        }
+    }
+}
+
+/** The popup's content: one section, a row per provider. */
+@Composable
+internal fun CircleProviderMenu(
+    providers: List<CircleProvider>,
+    selected: CircleProvider,
+    onSelect: (CircleProvider) -> Unit,
+) {
+    RoundedMenuSection {
+        providers.forEach { provider ->
+            DropdownMenuItem(
+                modifier = RoundedMenuItemModifier,
+                leadingIcon = { ProviderPicture(provider, 32.dp) },
+                text = { Text(provider.name, style = MaterialTheme.typography.bodyLarge) },
+                trailingIcon =
+                    if (provider.id == selected.id) {
+                        { Icon(MaterialSymbols.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary) }
+                    } else {
+                        null
+                    },
+                onClick = { onSelect(provider) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProviderPicture(
+    provider: CircleProvider,
+    size: Dp,
+) {
+    Box(Modifier.size(size).clip(RoundedCornerShape(size / 4))) { provider.picture(Modifier.fillMaxSize()) }
 }
 
 @Composable
@@ -446,7 +610,7 @@ fun CircleSetupSheet(
             Column {
                 SheetOption(
                     providerName,
-                    stringRes(Res.string.wot_brainstorm_description),
+                    null,
                     badge = stringRes(Res.string.wot_sheet_suggested),
                     selected = selected == CircleSetupOption.GUIDED,
                 ) { onSelect(CircleSetupOption.GUIDED) }
@@ -492,7 +656,7 @@ fun CircleSetupSheet(
 @Composable
 private fun SheetOption(
     title: String,
-    body: String,
+    body: String?,
     badge: String?,
     selected: Boolean,
     onClick: () -> Unit,
@@ -507,7 +671,7 @@ private fun SheetOption(
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 if (badge != null) RelationChip(badge)
             }
-            Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (body != null) Text(body, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

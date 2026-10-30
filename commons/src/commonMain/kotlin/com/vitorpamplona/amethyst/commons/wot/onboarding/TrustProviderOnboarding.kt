@@ -62,6 +62,13 @@ interface TrustProviderOnboarding {
     /** The relay the provider publishes its kind 30382 cards to. */
     val relay: NormalizedRelayUrl
 
+    /**
+     * Relays the provider reads the social graph from. Before a sign-up, Amethyst sends the
+     * user's profile, follow list, mute list and relay list there, so the first scores start
+     * from the user's current graph instead of whatever those relays happened to hold.
+     */
+    val graphRelays: Set<NormalizedRelayUrl> get() = emptySet()
+
     /** Whether the 10040 entry [provider] points at this provider (to mark it "in use"). */
     fun serves(provider: ServiceProviderTag): Boolean
 
@@ -77,6 +84,8 @@ interface TrustProviderOnboarding {
 }
 
 enum class TrustProviderOnboardingStep {
+    /** Sending the user's own graph events to [TrustProviderOnboarding.graphRelays]. */
+    SHARING_GRAPH,
     SIGNING_IN,
     REQUESTING_SCORES,
     FETCHING_SERVICE_KEY,

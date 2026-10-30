@@ -171,6 +171,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_setup_fetching_key
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_on_website
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_requesting_scores
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_saving
+import com.vitorpamplona.amethyst.commons.resources.wot_setup_sharing_graph
 import com.vitorpamplona.amethyst.commons.resources.wot_setup_signing_in
 import com.vitorpamplona.amethyst.commons.resources.wot_sync_now
 import com.vitorpamplona.amethyst.commons.resources.wot_syncing
@@ -429,6 +430,7 @@ private fun setupStepText(setup: WebOfTrustSetup): String? =
     when (setup) {
         is WebOfTrustSetup.Running -> {
             when (setup.step) {
+                TrustProviderOnboardingStep.SHARING_GRAPH -> stringRes(Res.string.wot_setup_sharing_graph)
                 TrustProviderOnboardingStep.SIGNING_IN -> stringRes(Res.string.wot_setup_signing_in)
                 TrustProviderOnboardingStep.REQUESTING_SCORES -> stringRes(Res.string.wot_setup_requesting_scores)
                 TrustProviderOnboardingStep.FETCHING_SERVICE_KEY -> stringRes(Res.string.wot_setup_fetching_key)
