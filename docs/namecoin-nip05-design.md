@@ -221,30 +221,32 @@ This means typing `alice@example.bit`, `example.bit`, `d/example`, or `id/alice`
 
 ## Default ElectrumX Servers
 
-Defined in `quartz/.../nip05DnsIdentifiers/namecoin/ElectrumXServer.kt` as `DEFAULT_ELECTRUMX_SERVERS` (clearnet) and `TOR_ELECTRUMX_SERVERS` (Tor-preferred).
+Defined in `commons/.../model/nip05DnsIdentifiers/namecoin/NamecoinDefaults.kt` as `DEFAULT_ELECTRUMX_SERVERS` (clearnet) and `TOR_ELECTRUMX_SERVERS` (Tor-preferred). Quartz ships no server list since 2.10.1: picking servers, and the certificate to trust for each, is the app's job.
 
 ### Clearnet (`DEFAULT_ELECTRUMX_SERVERS`)
 | Server | Port | TLS | Trust path | Notes |
 |---|---|---|---|---|
-| `electrumx.testls.space` | 50002 | Yes (self-signed) | Pinned | Primary |
+| `electrumx.testls.space` | 50002 | Yes (Let's Encrypt) | System CAs | Primary |
 | `nmc2.bitcoins.sk` | 57002 | Yes (self-signed) | Pinned | Fallback |
 | `46.229.238.187` | 57002 | Yes (self-signed) | Pinned | Bare-IP peer of `nmc2.bitcoins.sk` (same operator/cert/box) |
-| `relay.testls.bit` | 50002 | Yes (self-signed) | Pinned | Second public Namecoin ElectrumX, co-located with the `wss://relay.testls.bit/` Nostr relay |
-| `23.158.233.10` | 50002 | Yes (self-signed) | Pinned | Bare-IP peer of `relay.testls.bit` |
-| `electrum.nmc.ethicnology.com` | 50002 | Yes (Let's Encrypt) | System CAs | Third public deployment ([ethicnology/namecoin-compose](https://github.com/ethicnology/namecoin-compose)); first entry that does NOT require a pinned cert |
+| `relay.testls.bit` | 50012 | Yes (self-signed) | Pinned | Second public Namecoin ElectrumX, co-located with the `wss://relay.testls.bit/` Nostr relay |
+| `23.158.233.10` | 50012 | Yes (self-signed) | Pinned | Bare-IP peer of `relay.testls.bit` |
+| `electrumx2.testls.space` | 50002 | Yes (Let's Encrypt) | System CAs | Same box as `relay.testls.bit`, on the default ports |
+
+`electrum.nmc.ethicnology.com` was dropped: NXDOMAIN since 2026-10-30.
 
 ### Tor (`TOR_ELECTRUMX_SERVERS`, used when "NIP-05 verifications via Tor" is on)
 | Server | Port | TLS | Trust path | Notes |
 |---|---|---|---|---|
-| `i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion` | 50002 | Yes (self-signed) | Pinned | Onion service for `electrumx.testls.space` |
-| `6cbn4rskfdr647otej7gpqlmpqcmj723vg2eoeuu7ljbwu6cpdebozyd.onion` | 50001 | No (plaintext) | n/a | Hidden service shared with the `relay.testls.bit` Nostr onion; onion key authenticates the endpoint |
-| `electrumx.testls.space` | 50002 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
+| `i665jpwsq46zlsdbnj4axgzd3s56uzey5uhotsnxzsknzbn36jaddsid.onion` | 50002 | Yes (self-signed) | Onion key | Onion service for `electrumx.testls.space` |
+| `6cbn4rskfdr647otej7gpqlmpqcmj723vg2eoeuu7ljbwu6cpdebozyd.onion` | 50001 | No (plaintext) | Onion key | Hidden service shared with the `relay.testls.bit` Nostr onion |
+| `electrumx.testls.space` | 50002 | Yes (Let's Encrypt) | System CAs | Clearnet fallback (via Tor SOCKS) |
 | `nmc2.bitcoins.sk` | 57002 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
-| `relay.testls.bit` | 50002 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
-| `23.158.233.10` | 50002 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
-| `electrum.nmc.ethicnology.com` | 50002 | Yes (Let's Encrypt) | System CAs | Clearnet fallback (via Tor SOCKS) |
+| `relay.testls.bit` | 50012 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
+| `23.158.233.10` | 50012 | Yes (self-signed) | Pinned | Clearnet fallback (via Tor SOCKS) |
+| `electrumx2.testls.space` | 50002 | Yes (Let's Encrypt) | System CAs | Clearnet fallback (via Tor SOCKS) |
 
-Servers with `usePinnedTrustStore = true` are validated against the hardcoded `PINNED_ELECTRUMX_CERTS` plus the user's TOFU-pinned cert store; `false` means the system trust store is sufficient (Let's Encrypt path).
+"Pinned" servers carry their own certificate in `ElectrumxServer.pinnedCertsPem`: it is trusted for that server only, on top of the system CAs. "System CAs" servers have no pin, so a certificate rotation needs no release.
 
 Users can add custom servers via the Namecoin settings screen — `NamecoinSettings.customServers` accepts `host:port` (TLS) or `host:port:tcp` (plaintext, useful for local `.onion`). When at least one custom server is configured it is used **exclusively**; the public defaults are skipped unless `fallbackToDefaultElectrumx` is enabled. Custom-server TLS certs are TOFU-pinned at first connection (see [Cert Pinning & TOFU](#cert-pinning--tofu)).
 
@@ -303,9 +305,9 @@ Behaviour:
 
 Namecoin's ElectrumX ecosystem predominantly uses self-signed TLS certs, so a plain system trust store would reject everything. Amethyst's model:
 
-- **`PINNED_ELECTRUMX_CERTS`** — hardcoded PEM bundle inside `ElectrumXClient.kt` covering the self-signed defaults (testls, nmc2.bitcoins.sk, relay.testls.bit, onion services). The bare-IP entries (`46.229.238.187`, `23.158.233.10`) work without SNI because the pin is on the DER SHA-256, not hostname.
-- **User-supplied PEM store** — TOFU-pinned certs captured the first time a custom ElectrumX server (or Namecoin Core RPC endpoint) is tested via the Settings UI. Persisted by `NamecoinSharedPreferences` (Android) / `DesktopNamecoinPreferences` (desktop).
-- **Let's Encrypt path** — `electrum.nmc.ethicnology.com` chains to a publicly-trusted cert, so its `ElectrumxServer` entry has `usePinnedTrustStore = false`. The system trust manager handles it; if the cert rotates we don't need a release to keep working.
+- **Per-server pins** — each self-signed default carries its certificate in `ElectrumxServer.pinnedCertsPem` (`NamecoinDefaults.kt`), accepted for that server only. The bare-IP entries (`46.229.238.187`, `23.158.233.10`) work without SNI because the pin is checked against the certificate, not the hostname.
+- **User-supplied PEM store** — TOFU-pinned certs captured the first time a custom ElectrumX server (or Namecoin Core RPC endpoint) is tested via the Settings UI. Persisted by `NamecoinSharedPreferences` (Android) / `DesktopNamecoinPreferences` (desktop). Custom servers still use quartz's deprecated shared store (`usePinnedTrustStore` + `setDynamicCerts`), where every user-pinned cert is accepted for every custom server; moving them to per-server pins must happen before quartz 3.0.0 removes that store.
+- **Let's Encrypt path** — `electrumx.testls.space` and `electrumx2.testls.space` chain to a publicly-trusted cert and carry no pin. The system trust manager handles them; if the cert rotates we don't need a release to keep working.
 - **`.onion` cert handling** — Onion-routed connections skip cert pinning entirely (the onion key already authenticates the endpoint). Verified for the testls onion in 2025 and documented inline in `ElectrumXClient.kt`.
 - **Test Connection diagnostics** — Settings exposes a per-server test that returns `ServerTestResult { success, responseTimeMs, tlsVersion, serverCertPem, certFingerprint, error }`. The UI uses this to render success/failure plus a fingerprint-confirmation dialog for TOFU.
 

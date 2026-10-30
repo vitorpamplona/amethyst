@@ -81,7 +81,7 @@ kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
 # 2.9.0 is mostly relay-server and event-store work (geode's live fan-out, negentropy store sync,
 # NIP-66/NIP-85 updates); the relay client, sockets and SurgeDns are unchanged from 2.7.3.
-quartzKmp = "2.9.0"
+quartzKmp = "2.10.1"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
 # the version above: 2.9.0 removed no public API they use.
