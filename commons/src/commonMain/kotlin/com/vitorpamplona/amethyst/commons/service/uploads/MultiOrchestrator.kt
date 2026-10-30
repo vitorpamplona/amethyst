@@ -173,13 +173,15 @@ class MultiOrchestrator(
             jobs.joinAll()
         }
 
+        // Like computeFinalResults, a file removed while the upload ran is left out.
+        val remaining = items.filter { (item, _) -> item in list }
         val successful =
-            items.mapNotNull { (item, cipher) ->
+            remaining.mapNotNull { (item, cipher) ->
                 (item.orchestrator.progressState.value as? UploadingState.Finished)?.let { EncryptedUpload(it, cipher) }
             }
-        val errors = items.mapNotNull { (item, _) -> item.orchestrator.progressState.value as? UploadingState.Error }
+        val errors = remaining.mapNotNull { (item, _) -> item.orchestrator.progressState.value as? UploadingState.Error }
 
-        return EncryptedResult(successful.size == items.size, successful, errors)
+        return EncryptedResult(successful.size == remaining.size, successful, errors)
     }
 
     private fun computeFinalResults(): Result {
