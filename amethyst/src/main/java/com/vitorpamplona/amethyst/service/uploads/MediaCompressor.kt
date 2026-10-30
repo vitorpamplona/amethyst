@@ -28,6 +28,7 @@ import androidx.core.graphics.scale
 import androidx.core.net.toUri
 import androidx.media3.common.MimeTypes
 import com.davotoula.lightcompressor.video.GifToMp4Converter
+import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.service.uploads.CompressorQuality
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaCompressorResult
 import com.vitorpamplona.amethyst.commons.service.uploads.isAvif
@@ -80,7 +81,13 @@ class MediaCompressor {
             }
 
             isReencodableImage(contentType) -> {
-                compressImage(uri, contentType, applicationContext, mediaQuality)
+                if (isCartridge(uri, contentType, applicationContext)) {
+                    // A game cart lives in the low bits of its pixels: any re-encode destroys it.
+                    Log.d("MediaCompressor", "Game cartridge detected, uploading it unchanged.")
+                    MediaCompressorResult(uri, contentType, null)
+                } else {
+                    compressImage(uri, contentType, applicationContext, mediaQuality)
+                }
             }
 
             else -> {
@@ -131,7 +138,35 @@ class MediaCompressor {
         }
     }
 
+    /** A 160x205 PNG that loads as a game cartridge. Small files only, so this never reads a photo. */
+    private fun isCartridge(
+        uri: Uri,
+        contentType: String?,
+        context: Context,
+    ): Boolean {
+        if (contentType?.contains("png", ignoreCase = true) != true) return false
+        return try {
+            val bytes =
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    val buffer = ByteArray(MAX_CART_BYTES + 1)
+                    var read = 0
+                    while (read < buffer.size) {
+                        val n = input.read(buffer, read, buffer.size - read)
+                        if (n < 0) break
+                        read += n
+                    }
+                    if (read > MAX_CART_BYTES) null else buffer.copyOf(read)
+                } ?: return false
+            CartDetector.isCartridge(bytes)
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            false
+        }
+    }
+
     companion object {
+        private const val MAX_CART_BYTES = 256 * 1024
+
         /** Still images this compressor re-encodes; animated GIFs, SVGs and AVIFs go up as they are. */
         fun isReencodableImage(contentType: String?): Boolean =
             contentType?.startsWith("image", ignoreCase = true) == true &&

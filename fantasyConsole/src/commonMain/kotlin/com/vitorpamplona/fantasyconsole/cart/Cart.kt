@@ -68,6 +68,25 @@ object CartLoader {
             throw CartFormatException("cannot read cartridge: ${e.message}", e)
         }
 
+    /** Bytes of a PNG needed by [hasCartShape]: the signature and the IHDR size fields. */
+    const val SHAPE_PREFIX_BYTES = 24
+
+    /**
+     * Whether a PNG starting with [prefix] (at least [SHAPE_PREFIX_BYTES] long) is 160x205, the
+     * size of a `.p8.png` cart. Cheap enough to ask of every PNG before downloading the rest.
+     */
+    fun hasCartShape(prefix: ByteArray): Boolean {
+        if (prefix.size < SHAPE_PREFIX_BYTES || !PngDecoder.isPng(prefix)) return false
+
+        fun int32(o: Int) =
+            ((prefix[o].toInt() and 0xff) shl 24) or ((prefix[o + 1].toInt() and 0xff) shl 16) or
+                ((prefix[o + 2].toInt() and 0xff) shl 8) or (prefix[o + 3].toInt() and 0xff)
+        return prefix.decodeToString(12, 16) == "IHDR" && int32(16) == CART_WIDTH && int32(20) == CART_HEIGHT
+    }
+
+    const val CART_WIDTH = 160
+    const val CART_HEIGHT = 205
+
     private fun looksLikeText(bytes: ByteArray): Boolean {
         val head = bytes.copyOf(minOf(bytes.size, 64)).decodeToString()
         return head.startsWith("pico-8 cartridge") || head.contains("__lua__")

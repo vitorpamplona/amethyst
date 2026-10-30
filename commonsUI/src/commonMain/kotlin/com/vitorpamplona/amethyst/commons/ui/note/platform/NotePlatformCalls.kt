@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.platform
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
@@ -28,9 +29,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
+import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
+import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
+import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
+import com.vitorpamplona.amethyst.commons.ui.cartridges.CartPlayOverlay
 import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -45,6 +50,7 @@ import okio.Path
 // Call-site shims for [NotePlatform]: the same names and defaults the app's own composables have,
 // so shared note code reads as it did and only its imports point here.
 
+/** The platform's media view, with a Play button on top when the image is a game cartridge. */
 @Composable
 fun ZoomableContentView(
     content: BaseMediaContent,
@@ -52,13 +58,17 @@ fun ZoomableContentView(
     roundedCorner: Boolean,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
-) = LocalNotePlatform.current.ZoomableContentView(
-    content = content,
-    images = images,
-    roundedCorner = roundedCorner,
-    contentScale = contentScale,
-    accountViewModel = accountViewModel,
-)
+) {
+    val platform = LocalNotePlatform.current
+    if (content is MediaUrlImage && content !is EncryptedMediaUrlImage && CartDetector.mightBeCart(content.url, content.mimeType, content.dim)) {
+        Box {
+            platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
+            CartPlayOverlay(content, accountViewModel, Modifier.matchParentSize())
+        }
+    } else {
+        platform.ZoomableContentView(content, images, roundedCorner, contentScale, accountViewModel)
+    }
+}
 
 @Composable
 fun PdfViewerDialog(

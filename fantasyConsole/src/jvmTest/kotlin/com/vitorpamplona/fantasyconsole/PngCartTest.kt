@@ -28,6 +28,8 @@ import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /** A cart written by the JDK's own PNG encoder must read back bit for bit. */
 class PngCartTest {
@@ -52,5 +54,9 @@ class PngCartTest {
         val cart = CartLoader.load(png)
         assertContentEquals(rom.copyOf(0x4300), cart.rom.copyOf(0x4300))
         assertEquals(code, cart.code)
+
+        assertTrue(CartLoader.hasCartShape(png.copyOf(CartLoader.SHAPE_PREFIX_BYTES)))
+        val other = ByteArrayOutputStream().also { ImageIO.write(BufferedImage(160, 204, BufferedImage.TYPE_INT_ARGB), "png", it) }.toByteArray()
+        assertFalse(CartLoader.hasCartShape(other.copyOf(CartLoader.SHAPE_PREFIX_BYTES)))
     }
 }

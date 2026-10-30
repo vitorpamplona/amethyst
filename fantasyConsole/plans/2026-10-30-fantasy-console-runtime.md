@@ -1,6 +1,7 @@
 # Fantasy-console cart runtime — 2026-10-30
 
-Status: runtime written and tested headless; not wired into any screen yet.
+Status: runtime written and tested; carts in notes get a Play button and a full-screen player
+(Android and Desktop). Checked on Desktop with a real note; not yet on an Android device.
 
 ## Goal
 
@@ -65,14 +66,27 @@ Design points:
 - Exactness of `rnd` sequences, `atan2(0, 0)` and number printing is from community docs, not
   checked against the original.
 
+## In the app
+
+- **Detection** (`commons/.../cartridges/CartDetector.kt`): every image a note shows passes the
+  shared `ZoomableContentView` wrapper (`commonsUI/.../note/platform/NotePlatformCalls.kt`). A PNG
+  whose size is 160x205 or unknown gets its first 24 bytes read with a Range request through the
+  image HTTP client (Tor-aware), and only when the user lets images load. The one cart post found
+  on relays is a bare `image.nostr.build/<hash>.png` with no `imeta`, so tags alone would miss it.
+  Answers are cached per URL.
+- **Player** (`commonsUI/.../ui/cartridges/CartPlayer.kt`, `CartPlayerViewModel` in commons): a
+  full-screen dialog with the screen scaled by whole numbers, a direction pad and O/X buttons
+  (multi-touch, slide between directions), keyboard and gamepad keys, and sound through
+  `AudioTrack` (Android) or `javax.sound` (Desktop). The game runs on its own 16 MiB thread, paced
+  by the clock; it pauses when the dialog closes and resumes where it was. `blossom:` URIs are
+  resolved through the BUD-10 finder, and a declared sha256 is checked before the cart loads.
+- **Uploads**: Android's `MediaCompressor` uploads a PNG that loads as a cart unchanged instead of
+  re-encoding it to JPEG. Desktop never re-encoded PNGs.
+
 ## Next steps
 
-1. Compose player in `commonsUI`: an `ImageBitmap` from `render()`, an on-screen d-pad and
-   O/X buttons, keyboard and gamepad mapping, and a platform audio sink (AudioTrack /
-   `javax.sound`), with the console on its own 16 MiB thread.
-2. Recognize a cart in a note: a `blossom:` PNG whose decoded image is 160x205 and whose ROM
-   decodes, or an explicit marker tag. Show a play button instead of the image.
-3. Upload path that never re-encodes a cart (`MediaCompressor` turns PNGs into JPEGs).
-4. Close the gaps above, starting with wide text and sound fidelity, driven by a larger cart
-   corpus.
-5. Move the module to its own repository once the API settles.
+1. Try it on an Android phone (touch controls, sound latency, rotation keeping the game).
+2. Close the runtime gaps above, starting with wide text and sound fidelity, driven by a larger
+   cart corpus.
+3. iOS: an audio sink and an HTTP client for the two `expect`s that are stubs there.
+4. Move the module to its own repository once the API settles.

@@ -343,4 +343,13 @@ class LuaTest {
             )
         assertEquals(listOf("0", "0.0333"), out)
     }
+
+    @Test
+    fun aTapBetweenFramesStillCounts() {
+        val t = TestConsole("function _update() if (btnp(5)) printh('x') end function _draw() end")
+        t.console.setButtons(0, 0x20)
+        t.console.setButtons(0, 0)
+        t.frames(2)
+        assertEquals(listOf("x"), t.log)
+    }
 }

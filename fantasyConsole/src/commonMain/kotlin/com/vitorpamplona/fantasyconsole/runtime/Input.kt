@@ -23,12 +23,14 @@ package com.vitorpamplona.fantasyconsole.runtime
 /**
  * Buttons for up to eight players: 0 left, 1 right, 2 up, 3 down, 4 O, 5 X, 6 pause. The host
  * sets what is held with [setButtons] from any thread; [beginFrame] takes it in at the start of
- * each frame, so a frame sees one consistent state.
+ * each frame, so a frame sees one consistent state. A press that is released before the next
+ * frame still counts for that frame, so a quick tap or keypress is never lost.
  */
 class Input(
     private val ram: Ram,
 ) {
     private val held = IntArray(8)
+    private val pressedSinceFrame = IntArray(8)
     private val current = IntArray(8)
     private val framesHeld = Array(8) { IntArray(8) }
 
@@ -36,12 +38,15 @@ class Input(
         player: Int,
         mask: Int,
     ) {
-        if (player in 0..7) held[player] = mask
+        if (player !in 0..7) return
+        held[player] = mask
+        pressedSinceFrame[player] = pressedSinceFrame[player] or mask
     }
 
     fun beginFrame() {
         for (p in 0 until 8) {
-            current[p] = held[p]
+            current[p] = held[p] or pressedSinceFrame[p]
+            pressedSinceFrame[p] = 0
             for (b in 0 until 8) {
                 framesHeld[p][b] = if ((current[p] shr b) and 1 != 0) framesHeld[p][b] + 1 else 0
             }

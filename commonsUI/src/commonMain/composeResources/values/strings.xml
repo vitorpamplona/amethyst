@@ -9106,4 +9106,14 @@
     <string name="drss_picture_title">List picture</string>
     <string name="drss_picture_url">Picture URL</string>
     <string name="drss_remove_picture">Remove picture</string>
+    <string name="cart_play">Play</string>
+    <string name="cart_play_description">Play this game cartridge</string>
+    <string name="cart_loading">Loading the game…</string>
+    <string name="cart_not_a_cart">This image is not a game cartridge, or it could not be downloaded.</string>
+    <string name="cart_game_ended">The game ended.</string>
+    <string name="cart_game_error">The game stopped with an error.</string>
+    <string name="cart_keyboard_hint">Arrow keys move. Z and X are the two buttons. Enter pauses.</string>
+    <string name="cart_dpad_description">Direction pad</string>
+    <string name="cart_button_o_description">O button</string>
+    <string name="cart_button_x_description">X button</string>
 </resources>
