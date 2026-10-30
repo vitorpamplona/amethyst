@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -37,12 +38,14 @@ import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
@@ -144,6 +147,20 @@ class DesktopAppPlatform(
     ) {
         val host = nappletHost ?: return
         LaunchedEffect(host, author, identifier, paths, servers) { runCatchingCancellable { host.prefetch(author, identifier, paths, servers) } }
+    }
+
+    // Off-screen Chromium, drawn by the note: wherever napplets can run at all.
+    override val runsNappletsInline: Boolean get() = nappletHost != null
+
+    @Composable
+    override fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = nappletHost ?: return
+        InlineNappletPane(host, manifest, instanceId, onStatus, modifier)
     }
 
     override val hasGeocacheMap: Boolean get() = true

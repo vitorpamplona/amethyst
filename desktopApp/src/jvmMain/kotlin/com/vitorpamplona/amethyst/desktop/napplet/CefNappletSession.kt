@@ -54,6 +54,7 @@ import org.cef.CefSettings
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.browser.CefMessageRouter
+import org.cef.browser.OffscreenCefBrowser
 import org.cef.callback.CefCallback
 import org.cef.callback.CefQueryCallback
 import org.cef.handler.CefDisplayHandlerAdapter
@@ -112,6 +113,11 @@ class CefNappletSession(
     private val account: Account?,
     private val broker: NappletBroker,
     private val runtime: DesktopNappletRuntime,
+    /**
+     * Set for a napplet running inside a note: its browser has no window and paints into this view,
+     * which the note draws and forwards input to. Null for a window of its own.
+     */
+    val offscreen: OffscreenNappletView? = null,
 ) {
     sealed interface State {
         data object Loading : State
@@ -119,8 +125,9 @@ class CefNappletSession(
         /** A site that goes through Tor, waiting for Tor to come up before anything is fetched. */
         data object WaitingForTor : State
 
+        /** The page is up: in [component] for a window, or painting into [offscreen] when that is null. */
         data class Showing(
-            val component: Component,
+            val component: Component?,
         ) : State
 
         data class Failed(
@@ -251,12 +258,22 @@ class CefNappletSession(
                         val client = app.createClient()
                         this@CefNappletSession.client = client
                         installHandlers(client)
-                        client.createBrowser(NappletWebContract.SHELL_URL, false, false).also {
+                        val created =
+                            if (offscreen != null) {
+                                OffscreenCefBrowser(client, NappletWebContract.SHELL_URL, null, OFFSCREEN_FRAME_RATE, offscreen).also {
+                                    offscreen.browser = it
+                                    it.createImmediately()
+                                }
+                            } else {
+                                client.createBrowser(NappletWebContract.SHELL_URL, false, false)
+                            }
+                        created.also {
                             this@CefNappletSession.browser = it
                             runtime.attendance.set(this@CefNappletSession, true)
                         }
                     }
-                mutableState.value = State.Showing(browser.uiComponent)
+                // An off-screen browser's component is a placeholder that is never shown.
+                mutableState.value = State.Showing(if (offscreen != null) null else browser.uiComponent)
             } catch (e: Throwable) {
                 if (e is CancellationException) throw e
                 Log.w(TAG, "${launch.identity.coordinate} did not open", e)
@@ -586,6 +603,7 @@ class CefNappletSession(
             this.browser = null
             this.router = null
         }
+        offscreen?.browser = null
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
@@ -659,6 +677,9 @@ class CefNappletSession(
 
     companion object {
         private const val TAG = "CefNappletSession"
+
+        // A note is a small picture: no need for more, and every frame is copied.
+        private const val OFFSCREEN_FRAME_RATE = 30
         private const val QUERY_FUNCTION = "__amethystNappletQuery"
         private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
         const val MIN_ZOOM = 50

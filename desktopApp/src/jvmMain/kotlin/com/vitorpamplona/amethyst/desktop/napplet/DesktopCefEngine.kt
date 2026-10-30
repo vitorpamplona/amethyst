@@ -106,7 +106,9 @@ class DesktopCefEngine(
                         else -> State.Starting
                     }
             }
-            builder.cefSettings.windowless_rendering_enabled = false
+            // Windows draw their pages natively; a napplet inside a note paints off-screen
+            // (OffscreenCefBrowser), which needs this on from the start.
+            builder.cefSettings.windowless_rendering_enabled = true
             builder.cefSettings.root_cache_path = cacheRoot.absolutePath
             builder.cefSettings.persist_session_cookies = false
             builder.cefSettings.log_severity = CefSettings.LogSeverity.LOGSEVERITY_WARNING

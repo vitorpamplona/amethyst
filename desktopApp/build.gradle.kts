@@ -22,6 +22,8 @@ val appVersion: String = project.version.toString()
 sourceSets {
     main {
         kotlin.srcDir("src/jvmMain/kotlin")
+        // The off-screen Chromium browser subclasses JCEF's package-private base class, so it is Java.
+        java.srcDir("src/jvmMain/java")
         resources.srcDir("src/jvmMain/resources")
     }
     test {

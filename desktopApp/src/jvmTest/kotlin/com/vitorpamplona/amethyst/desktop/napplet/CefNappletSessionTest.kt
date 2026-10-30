@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -33,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineAsks
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -61,8 +65,12 @@ import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.awt.BorderLayout
+import java.awt.Canvas
 import java.awt.Rectangle
 import java.awt.Robot
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
 import java.io.File
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -233,7 +241,7 @@ class CefNappletSessionTest {
         SwingUtilities.invokeAndWait {
             frames +=
                 JFrame("napplet").apply {
-                    contentPane.add(state.component, BorderLayout.CENTER)
+                    contentPane.add(requireNotNull(state.component), BorderLayout.CENTER)
                     setBounds(0, 0, 960, 640)
                     isVisible = true
                 }
@@ -536,4 +544,82 @@ class CefNappletSessionTest {
             delay(1_000)
             assertEquals(otherBefore, second.values.getValue("width").toInt(), "the other window kept its size")
         }
+
+    @Test
+    fun aNappletInsideANotePaintsWithoutAWindowTakesClicksAndNeverAsks() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            val asks = NappletInlineAsks()
+            val prompts = AtomicInteger()
+            // Red until clicked, then blue. On load it writes to storage, which needs the user.
+            val html =
+                """
+                <!doctype html><html><body style="margin:0;height:100vh;background:rgb(255,0,0)"
+                  onclick="document.body.style.background='rgb(0,0,255)'"><script>
+                window.napplet.storage.setItem('boot', '1').catch(function () {});
+                document.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown') document.body.style.background = 'rgb(0,255,0)'; });
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val hash = sha256(html).toHexKey()
+            blobs[hash] = html
+            val author = KeyPair()
+            val broker =
+                NappletBroker(
+                    signer = NostrSignerInternal(author),
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { "tester" },
+                    consentPrompt =
+                        NappletConsentPrompt { _, _, _ ->
+                            prompts.incrementAndGet()
+                            GrantState.ALLOW_ONCE
+                        },
+                    storage = storage,
+                    inlineAsks = asks,
+                )
+            val launch =
+                NappletLaunch(
+                    identity = NappletIdentity(author.pubKey.toHexKey(), "inline", hash),
+                    profile = HostProfile.NAPPLET,
+                    declared = setOf(NappletCapability.STORAGE),
+                    requires = listOf("storage"),
+                    title = "Inline",
+                    paths = listOf(PathTag("/index.html", hash)),
+                    servers = listOf(serverUrl),
+                ).inline("note-1")
+            val view = OffscreenNappletView()
+            view.resize(320, 200, 1.0)
+            val session = CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime, offscreen = view).also { sessions += it }
+            session.start()
+
+            val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+            assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
+            assertEquals(null, state.component, "no window to place")
+
+            val red = withTimeout(60_000) { view.frame.first { it != null && it.centerPixel().red > 0.9f } }!!
+            assertEquals(320 to 200, red.width to red.height, "frames come at the size the note gave")
+
+            SwingUtilities.invokeAndWait {
+                val now = System.currentTimeMillis()
+                val press = MouseEvent(Canvas(), MouseEvent.MOUSE_PRESSED, now, InputEvent.BUTTON1_DOWN_MASK, 160, 100, 1, false, MouseEvent.BUTTON1)
+                view.mouse(press, MouseEvent.MOUSE_PRESSED, 160, 100)
+                val release = MouseEvent(Canvas(), MouseEvent.MOUSE_RELEASED, now + 20, 0, 160, 100, 1, false, MouseEvent.BUTTON1)
+                view.mouse(release, MouseEvent.MOUSE_RELEASED, 160, 100)
+            }
+            withTimeout(30_000) { view.frame.first { it != null && it.centerPixel().blue > 0.9f } }
+
+            // The note forwards the window's own key events once the page has focus.
+            SwingUtilities.invokeAndWait {
+                view.focus(true)
+                val now = System.currentTimeMillis()
+                view.key(KeyEvent(Canvas(), KeyEvent.KEY_PRESSED, now, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED))
+                view.key(KeyEvent(Canvas(), KeyEvent.KEY_RELEASED, now + 20, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED))
+            }
+            withTimeout(30_000) { view.frame.first { it != null && it.centerPixel().green > 0.9f } }
+
+            withTimeout(30_000) { asks.asked("note-1").first { it } }
+            assertEquals(0, prompts.get(), "nothing was asked from inside the note")
+            assertFalse(storage.values.containsKey("boot"), "the write that needed the user was refused")
+        }
+
+    private fun ImageBitmap.centerPixel(): Color = toPixelMap()[width / 2, height / 2]
 }

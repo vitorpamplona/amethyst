@@ -93,6 +93,9 @@ class DesktopNappletHost(
     private val mutableSessions = MutableStateFlow<List<CefNappletSession>>(emptyList())
     val sessions: StateFlow<List<CefNappletSession>> = mutableSessions.asStateFlow()
 
+    // Napplets running inside notes: no window, so they are kept apart from [sessions].
+    private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
+
     @Volatile
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
 
@@ -105,6 +108,7 @@ class DesktopNappletHost(
                 .distinctUntilChanged()
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
         }
@@ -170,6 +174,29 @@ class DesktopNappletHost(
             session.start()
         }
 
+    /**
+     * Runs [manifest] inside a note as instance [instanceId]: its browser paints into
+     * [CefNappletSession.offscreen] for the note to draw, and it may use what the user granted the
+     * app but never asks anything ([NappletLaunch.inline]). The note closes it with [closeInline].
+     */
+    fun openInline(
+        manifest: NappletManifest,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run napplets"))
+        return NappletLaunch.fromManifest(manifest).map { launch ->
+            CefNappletSession(launch.inline(instanceId), account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView()).also { session ->
+                inlineSessions.update { it + session }
+                session.start()
+            }
+        }
+    }
+
+    fun closeInline(session: CefNappletSession) {
+        inlineSessions.update { it - session }
+        session.close()
+    }
+
     fun close(session: CefNappletSession) {
         mutableSessions.update { it - session }
         session.close()
@@ -202,10 +229,12 @@ class DesktopNappletHost(
         if (colors == themeColors) return
         themeColors = colors
         sessions.value.forEach { it.pushTheme(colors) }
+        inlineSessions.value.forEach { it.pushTheme(colors) }
     }
 
     fun shutdown() {
         sessions.value.forEach(::close)
+        inlineSessions.value.forEach(::closeInline)
         runtime.engine.shutdown()
     }
 

@@ -173,7 +173,7 @@ private fun NappletWindow(
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
-                        is CefNappletSession.State.Showing -> SwingPanel(factory = { current.component }, modifier = Modifier.fillMaxSize())
+                        is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
                         is CefNappletSession.State.Loading -> LoadingPane(host, session.launch.title)
                         is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                         is CefNappletSession.State.Failed ->
