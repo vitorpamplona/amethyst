@@ -68,6 +68,7 @@ class UnwrapMalformedGiftWrapTest {
                 host = mockk(relaxed = true),
                 notices = mockk(relaxed = true),
                 noticeResolver = mockk(relaxed = true),
+                coroutineScope = mockAccountScope(),
             )
     }
 

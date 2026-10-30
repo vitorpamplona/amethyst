@@ -63,6 +63,7 @@ class ViewModelErrorGuardsTest {
                 host = mockk(relaxed = true),
                 notices = { notices.add(it) },
                 noticeResolver = mockk(relaxed = true),
+                coroutineScope = mockAccountScope(),
             )
     }
 

@@ -206,12 +206,26 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * How long the navigation pickers wait for the toggles to stop before publishing. Long enough that a
  * run of taps is one publish, short enough that leaving the screen normally finds nothing to flush.
  */
 private const val PICKER_PUBLISH_DEBOUNCE_MS = 2000L
+
+/** The scope `ViewModel()` would have made: a supervisor on the main thread, or none where there is no main thread. */
+private fun defaultViewModelScope(): CoroutineScope {
+    val dispatcher =
+        try {
+            Dispatchers.Main.immediate
+        } catch (_: NotImplementedError) {
+            EmptyCoroutineContext
+        } catch (_: IllegalStateException) {
+            EmptyCoroutineContext
+        }
+    return CoroutineScope(SupervisorJob() + dispatcher)
+}
 
 /**
  * The account's ViewModel, minus everything that needs the UI module: its members are what the
@@ -232,7 +246,10 @@ open class BaseAccountViewModel(
     val host: AccountViewModelHost,
     val notices: UserNoticeSink,
     val noticeResolver: UserNoticeResolver,
-) : ViewModel(),
+    // What viewModelScope will be. Tests pass their own, so the collectors this starts cannot
+    // throw into whichever test runs next.
+    coroutineScope: CoroutineScope = defaultViewModelScope(),
+) : ViewModel(coroutineScope),
     Dao {
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =
