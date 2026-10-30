@@ -75,6 +75,7 @@ class UiSettingsStoreTest {
             assertEquals(FontSizeType.NORMAL, settings.fontSize)
             assertEquals("", settings.composeSignature)
             assertEquals(NoteLayoutType.AUTHOR_COLUMN, settings.noteLayout)
+            assertEquals(ConnectivityType.WIFI_ONLY, settings.automaticallyDownloadTranslationModels)
 
             // Not a constant, and not the data class default either: UiSettings()
             // says ALWAYS, but a store with no feature set reads SIMPLIFIED, and
@@ -144,6 +145,7 @@ class UiSettingsStoreTest {
                     showPayToZapChip = false,
                     spellCheck = SpellCheckType.BUILT_IN,
                     noteLayout = NoteLayoutType.EDGE_TO_EDGE,
+                    automaticallyDownloadTranslationModels = ConnectivityType.ALWAYS,
                 )
 
             store.save(settings)

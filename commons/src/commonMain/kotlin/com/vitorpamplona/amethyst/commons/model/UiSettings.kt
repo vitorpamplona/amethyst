@@ -73,6 +73,9 @@ data class UiSettings(
     val spellCheck: SpellCheckType = SpellCheckType.AUTOMATIC,
     // How a note lays out its author: a picture column beside the text, or a header row above it.
     val noteLayout: NoteLayoutType = NoteLayoutType.AUTHOR_COLUMN,
+    // When the on-device translator may download a language model (~30 MB each). Wi-Fi only by
+    // default: a feed full of languages would otherwise pull several of them over mobile data.
+    val automaticallyDownloadTranslationModels: ConnectivityType = ConnectivityType.WIFI_ONLY,
 )
 
 /**

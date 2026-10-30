@@ -119,6 +119,27 @@ class UiSettingsState(
             },
         )
 
+    /** Whether the on-device translator may download a language model on the current connection. */
+    val downloadTranslationModels =
+        combine(
+            uiSettingsFlow.automaticallyDownloadTranslationModels,
+            isMobileOrMeteredConnection,
+        ) { automaticallyDownloadTranslationModels, isOnMobileOrMeteredConnection ->
+            when (automaticallyDownloadTranslationModels) {
+                ConnectivityType.WIFI_ONLY -> !isOnMobileOrMeteredConnection
+                ConnectivityType.NEVER -> false
+                ConnectivityType.ALWAYS -> true
+            }
+        }.stateIn(
+            scope,
+            SharingStarted.Eagerly,
+            when (uiSettingsFlow.automaticallyDownloadTranslationModels.value) {
+                ConnectivityType.WIFI_ONLY -> !isMobileOrMeteredConnection.value
+                ConnectivityType.NEVER -> false
+                ConnectivityType.ALWAYS -> true
+            },
+        )
+
     fun modernGalleryStyle() =
         when (uiSettingsFlow.gallerySet.value) {
             ProfileGalleryType.CLASSIC -> false

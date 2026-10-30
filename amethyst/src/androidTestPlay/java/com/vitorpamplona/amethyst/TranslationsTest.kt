@@ -35,7 +35,7 @@ class TranslationsTest {
         text: String,
         translateTo: String,
     ): String? {
-        val task = LanguageTranslatorService.autoTranslate(text, emptySet(), translateTo)
+        val task = LanguageTranslatorService.autoTranslate(text, emptySet(), translateTo, allowModelDownload = true)
         return Tasks.await(task).result
     }
 

@@ -65,6 +65,8 @@ import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.resourceId
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
+import com.vitorpamplona.amethyst.commons.resources.automatically_download_translation_models
+import com.vitorpamplona.amethyst.commons.resources.automatically_download_translation_models_description
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars
 import com.vitorpamplona.amethyst.commons.resources.automatically_hide_nav_bars_description
 import com.vitorpamplona.amethyst.commons.resources.automatically_load_images_gifs
@@ -104,6 +106,7 @@ import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_performa
 import com.vitorpamplona.amethyst.commons.resources.ui_feature_set_type_simplified_short
 import com.vitorpamplona.amethyst.commons.resources.ui_style
 import com.vitorpamplona.amethyst.commons.resources.ui_style_description
+import com.vitorpamplona.amethyst.commons.ui.components.LocalTranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
@@ -187,6 +190,10 @@ fun SettingsScreen(
             UrlPreviewTile(sharedPrefs)
             SettingsDivider()
             ProfilePictureTile(sharedPrefs)
+            if (LocalTranslationPlatform.current.downloadsModels) {
+                SettingsDivider()
+                TranslationModelsTile(sharedPrefs)
+            }
         }
 
         SettingsSection(Res.string.settings_section_general) {
@@ -380,6 +387,20 @@ private fun UrlPreviewTile(sharedPrefs: UiSettingsFlow) {
         labelRes = { it.shortLabelRes() },
         selected = value,
         onSelect = { sharedPrefs.automaticallyShowUrlPreview.tryEmit(it) },
+    )
+}
+
+@Composable
+private fun TranslationModelsTile(sharedPrefs: UiSettingsFlow) {
+    val value by sharedPrefs.automaticallyDownloadTranslationModels.collectAsState()
+    SegmentedChoiceTile(
+        icon = MaterialSymbols.Translate,
+        title = Res.string.automatically_download_translation_models,
+        description = Res.string.automatically_download_translation_models_description,
+        options = connectivityOptions(value),
+        labelRes = { it.shortLabelRes() },
+        selected = value,
+        onSelect = { sharedPrefs.automaticallyDownloadTranslationModels.tryEmit(it) },
     )
 }
 

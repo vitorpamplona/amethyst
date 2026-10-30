@@ -3729,6 +3729,8 @@
     <string name="audio_visualizer_settings">Audio Visualizer</string>
     <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>
     <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
+    <string name="automatically_download_translation_models">Translation Models</string>
+    <string name="automatically_download_translation_models_description">Download the language models that translate notes</string>
     <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
     <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
     <string name="automatically_load_images_gifs">Image Preview</string>

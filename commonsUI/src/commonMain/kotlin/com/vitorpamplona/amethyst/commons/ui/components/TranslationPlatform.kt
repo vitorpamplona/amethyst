@@ -63,6 +63,12 @@ interface TranslationPlatform {
         accountViewModel: AccountViewModel,
     ): String? = null
 
+    /**
+     * Whether this translator downloads a model per language, which the app settings then let the
+     * user hold to Wi-Fi. False for [None].
+     */
+    val downloadsModels: Boolean get() = false
+
     /** No translator: the content is always its own translation. */
     object None : TranslationPlatform {
         @Composable
