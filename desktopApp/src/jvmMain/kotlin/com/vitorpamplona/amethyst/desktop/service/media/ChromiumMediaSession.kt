@@ -220,6 +220,7 @@ class ChromiumMediaSession(
                             if (mutableState.value != State.Playing) Log.i(TAG) { "Chromium plays $url" }
                             mutableState.value = State.Playing
                         }
+                        message.startsWith(REFUSED) -> Log.i(TAG) { "Chromium did not start $url: ${message.removePrefix(REFUSED).trim()}" }
                         message.startsWith(MUTED_FALLBACK) -> Log.w(TAG) { "Chromium would not play $url with sound; playing it muted" }
                         message.startsWith(CLOCK) -> parseClock(message.removePrefix(CLOCK))?.let { mutableClock.value = it }
                         message.startsWith(SIZE) -> {
@@ -356,6 +357,9 @@ class ChromiumMediaSession(
         private var chunkSize = 0
         private var chunkOffset = 0
         private var ended = false
+        private var cancelled = false
+        private var range: String? = null
+        private var delivered = 0L
 
         override fun processRequest(
             request: CefRequest,
@@ -363,6 +367,7 @@ class ChromiumMediaSession(
         ): Boolean {
             val relayed = MediaRelay.relayUrlFor(url) ?: return false
             val range = request.getHeaderByName("Range")?.takeIf { it.isNotEmpty() }
+            this.range = range
             scope.launch {
                 try {
                     val call =
@@ -371,9 +376,20 @@ class ChromiumMediaSession(
                             .url(relayed)
                             .apply { range?.let { header("Range", it) } }
                             .build()
-                    response = loopbackHttp.newCall(call).execute().also { body = it.body.byteStream() }
+                    val answered = loopbackHttp.newCall(call).execute()
+                    Log.i(TAG) { "media ${range ?: "whole"} -> ${answered.code} ${answered.header("Content-Range") ?: ""} length=${answered.body.contentLength()}" }
+                    // Chromium gave up on the request while it was on its way: nothing will read it.
+                    val dropped =
+                        synchronized(this@RelayedMediaHandler) {
+                            if (!cancelled) {
+                                response = answered
+                                body = answered.body.byteStream()
+                            }
+                            cancelled
+                        }
+                    if (dropped) answered.close()
                 } catch (e: Exception) {
-                    Log.d(TAG) { "Relay of $url for Chromium failed: ${e.message}" }
+                    Log.w(TAG) { "Relay of $url for Chromium failed (${range ?: "whole"}): ${e.message}" }
                 } finally {
                     callback.Continue()
                 }
@@ -425,11 +441,17 @@ class ChromiumMediaSession(
             // Nothing read ahead: read the next chunk off this thread, and have Chromium ask again.
             scope.launch {
                 val buffer = ByteArray(bytesToRead.coerceAtLeast(MIN_CHUNK))
-                val n = runCatching { body?.read(buffer) ?: -1 }.getOrDefault(-1)
+                val read = runCatching { body?.read(buffer) ?: -1 }
+                val n = read.getOrDefault(-1)
                 synchronized(this@RelayedMediaHandler) {
                     if (n <= 0) {
+                        if (!cancelled) {
+                            val expected = response?.body?.contentLength() ?: -1L
+                            Log.i(TAG) { "media ${range ?: "whole"} ended after $delivered of $expected bytes${read.exceptionOrNull()?.let { " (${it.message})" } ?: ""}" }
+                        }
                         ended = true
                     } else {
+                        delivered += n
                         chunk = buffer
                         chunkSize = n
                         chunkOffset = 0
@@ -443,6 +465,7 @@ class ChromiumMediaSession(
 
         override fun cancel() {
             synchronized(this) {
+                cancelled = true
                 ended = true
                 chunk = null
             }
@@ -499,6 +522,7 @@ class ChromiumMediaSession(
         private const val SIZE = "amethyst-video-size"
         private const val CLOCK = "amethyst-media-clock"
         private const val MUTED_FALLBACK = "amethyst-media-muted"
+        private const val REFUSED = "amethyst-media-refused"
         private const val AUDIO_PAGE_SIZE = 32
 
         private val ORIGIN = "https://video.${NappletWebContract.HOST}"
@@ -560,7 +584,14 @@ class ChromiumMediaSession(
               v.addEventListener('error', () => console.log('$FAILED ' + (v.error ? v.error.code + ' ' + v.error.message : '')));
               let wanted = $wanted;
               let activated = false;
-              const go = () => v.play().catch(e => { console.log('$MUTED_FALLBACK ' + e.name); v.muted = true; v.play().catch(() => {}); });
+              // Only a refusal to play with sound is worth muting for; any other refusal (a pause or
+              // a new load that cut the start short) is reported and left alone.
+              const go = () => v.play().catch(e => {
+                if (e.name !== 'NotAllowedError') { console.log('$REFUSED ' + e.name + ' ' + e.message); return; }
+                console.log('$MUTED_FALLBACK ' + e.name);
+                v.muted = true;
+                v.play().catch(() => {});
+              });
               window.setWanted = (w) => {
                 wanted = w;
                 if (!activated) return;
