@@ -197,3 +197,21 @@ Then the structural review's remaining steps: the broker factory and the consent
 (above), the card is the shared renderer's, and names say what each class is: `CefNappletSession`
 (the JCEF session), `NsiteNetworkChoices`, the string-free consent helpers in commons
 (`SignerConsentFacts.kt`).
+
+A second audit (2026-10-30) fixed, each with a test where one can run here:
+- **WebRTC:** a napplet could open TURN over TCP through an open route. A content-script extension
+  (`DesktopCefEngine.installGuard`, script `NappletWebContract.WEBRTC_GUARD_JS`) takes WebRTC away
+  from the shell and every frame under it; the shell refuses to start a napplet if WebRTC is still
+  there. Android runs the same script in every frame of napplet and Tor-routed WebViews (untested on
+  a device).
+- **Router:** local networks are refused on every route, the app's own `*.napplet.local` names never
+  leave, every resolved address is tried, half-closes pass through, and a failed window releases
+  its route claim.
+- **Cache:** partitioned per account and site (`NappletBlobCache.forSite`), so a site can't learn
+  from a cache hit what else this device opened.
+- **Serving:** percent-encoded paths, first-wins duplicate tags, 502 for a listed file that failed,
+  no exception into the browser.
+- **Consent:** an encrypted publish is judged by the kind it signs, every prompt times out, grants
+  and storage belong to the broker's account, subscriptions keep request order, and clicks are
+  ignored for the first moment a question is up.
+- **Zoom:** CSS zoom on the shell's frame, per window (Chromium's zoom level is per host).
