@@ -82,7 +82,8 @@ object NappletLaunchRegistry {
         browserOrigin: Boolean = false,
     ): String {
         val token = RandomInstance.bytes(32).toHexKey()
-        (if (browserOrigin) browserSessions else sessions).put(token, Session(identity.copy(instanceId = token), declared, accountPubKey))
+        // An inline run in a note comes with the instance id its note follows; any other gets the token.
+        (if (browserOrigin) browserSessions else sessions).put(token, Session(identity.copy(instanceId = identity.instanceId ?: token), declared, accountPubKey))
         return token
     }
 

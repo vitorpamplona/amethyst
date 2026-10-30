@@ -110,6 +110,21 @@ object NappletLauncher {
             .getOrNull()
             ?.let { buildLaunchParams(context, it) }
 
+    /**
+     * The launch parameters for running [manifest] inside a note as instance [instanceId]
+     * ([NappletLaunch.inline]): the broker never asks the user anything for it. Null when refused.
+     */
+    fun buildInlineLaunchParams(
+        context: Context,
+        manifest: NappletManifest,
+        instanceId: String,
+    ): Bundle? =
+        NappletLaunch
+            .fromManifest(manifest)
+            .onFailure { Log.w(TAG, "Refusing inline NIP-5D launch", it) }
+            .getOrNull()
+            ?.let { buildLaunchParams(context, it.inline(instanceId)) }
+
     /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
     fun buildSiteLaunchParams(
         context: Context,

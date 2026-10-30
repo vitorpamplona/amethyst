@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.platform
 
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +44,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
@@ -59,6 +61,7 @@ import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.InlineNappletView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
@@ -256,6 +259,19 @@ object AndroidAppPlatform : AppPlatform {
 
     @Composable
     override fun rememberNappletIconModel(coordinate: String): String? = AppRememberNappletIconModel(coordinate)
+
+    // The same cross-process surface the favorite tabs use, which needs Android 11.
+    override val runsNappletsInline: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
+    @Composable
+    override fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) InlineNappletView(manifest, instanceId, onStatus, modifier)
+    }
 
     @Composable
     override fun PrefetchNappletFiles(
