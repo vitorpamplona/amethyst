@@ -61,10 +61,17 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -79,6 +86,7 @@ import androidx.compose.ui.window.DialogProperties
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel.Buttons
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel.Companion.SCREEN_SIZE
+import com.vitorpamplona.amethyst.commons.cartridges.cartSaveStore
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -90,8 +98,10 @@ import com.vitorpamplona.amethyst.commons.resources.cart_game_error
 import com.vitorpamplona.amethyst.commons.resources.cart_keyboard_hint
 import com.vitorpamplona.amethyst.commons.resources.cart_loading
 import com.vitorpamplona.amethyst.commons.resources.cart_not_a_cart
+import com.vitorpamplona.amethyst.commons.resources.cart_pause_menu
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlin.math.abs
@@ -116,8 +126,8 @@ fun CartPlayerDialog(
 
 /**
  * The game screen with an on-screen direction pad and O/X buttons, and the keyboard or a gamepad
- * (arrows, Z/C/N for O, X/V/M for X, Enter or P to pause). The screen sits above the controls
- * on a tall window and between them on a wide one.
+ * (arrows, Z/C/N for O, X/V/M for X, Enter or P to pause), plus a pause button for touch screens.
+ * The screen sits above the controls on a tall window and between them on a wide one.
  */
 @Composable
 fun CartPlayer(
@@ -126,9 +136,10 @@ fun CartPlayer(
     accountViewModel: AccountViewModel,
     onClose: () -> Unit,
 ) {
+    val appStores = LocalAppServices.current.appStores
     val viewModel =
         rememberViewModel(key = "cart:$url") {
-            CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder)
+            CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore())
         }
     DisposableEffect(viewModel) {
         viewModel.resume()
@@ -137,11 +148,10 @@ fun CartPlayer(
     val status by viewModel.status.collectAsState()
     val frame = viewModel.frame.collectAsState()
 
-    var pad by remember { mutableIntStateOf(0) }
-    var buttonO by remember { mutableIntStateOf(0) }
-    var buttonX by remember { mutableIntStateOf(0) }
-    var keys by remember { mutableIntStateOf(0) }
-    LaunchedEffect(pad, buttonO, buttonX, keys) { viewModel.setButtons(pad or buttonO or buttonX or keys) }
+    // Plain holders, sent on every change: an effect keyed on them would merge a quick tap's
+    // press and release into one recomposition and the game would never see the press.
+    val held = remember { HeldButtons() }
+    val send = { viewModel.setButtons(held.mask) }
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -157,13 +167,16 @@ fun CartPlayer(
                     if (event.type == KeyEventType.KeyUp) onClose()
                     return@onKeyEvent true
                 }
+                // Games that read the keyboard get every key typed, buttons included, as on the original.
+                if (event.type == KeyEventType.KeyDown) typedText(event)?.let(viewModel::type)
                 val bit = KEY_BITS[event.key] ?: return@onKeyEvent false
-                keys =
+                held.keys =
                     when (event.type) {
-                        KeyEventType.KeyDown -> keys or bit
-                        KeyEventType.KeyUp -> keys and bit.inv()
-                        else -> keys
+                        KeyEventType.KeyDown -> held.keys or bit
+                        KeyEventType.KeyUp -> held.keys and bit.inv()
+                        else -> held.keys
                     }
+                send()
                 true
             },
     ) {
@@ -171,13 +184,25 @@ fun CartPlayer(
             val wide = maxWidth > maxHeight
             val control = min(maxWidth.value, maxHeight.value).coerceIn(120f, 200f).dp * if (wide) 0.9f else 0.8f
             val controls: @Composable (Modifier) -> Unit = { modifier ->
-                DirectionPad(onChange = { pad = it }, modifier = modifier.size(control))
+                DirectionPad(
+                    onChange = {
+                        held.pad = it
+                        send()
+                    },
+                    modifier = modifier.size(control),
+                )
             }
             val actions: @Composable () -> Unit = {
                 ActionButtons(
                     size = control,
-                    onO = { buttonO = if (it) Buttons.O else 0 },
-                    onX = { buttonX = if (it) Buttons.X else 0 },
+                    onO = {
+                        held.o = if (it) Buttons.O else 0
+                        send()
+                    },
+                    onX = {
+                        held.x = if (it) Buttons.X else 0
+                        send()
+                    },
                 )
             }
             if (wide) {
@@ -187,13 +212,13 @@ fun CartPlayer(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     controls(Modifier)
-                    GameScreen(frame, Modifier.weight(1f).aspectRatio(1f, matchHeightConstraintsFirst = true))
+                    GameScreen(frame, viewModel, Modifier.weight(1f).aspectRatio(1f, matchHeightConstraintsFirst = true))
                     actions()
                 }
             } else {
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                     Spacer(Modifier.height(48.dp))
-                    GameScreen(frame, Modifier.fillMaxWidth().aspectRatio(1f))
+                    GameScreen(frame, viewModel, Modifier.fillMaxWidth().aspectRatio(1f))
                     Spacer(Modifier.weight(1f))
                     Row(
                         Modifier.fillMaxWidth().padding(horizontal = 24.dp),
@@ -210,10 +235,22 @@ fun CartPlayer(
 
         StatusOverlay(status, Modifier.align(Alignment.Center))
 
+        IconButton(onClick = viewModel::tapPause, modifier = Modifier.align(Alignment.TopStart).safeDrawingPadding()) {
+            Icon(symbol = MaterialSymbols.Pause, contentDescription = stringRes(Res.string.cart_pause_menu), tint = Color.White)
+        }
         IconButton(onClick = onClose, modifier = Modifier.align(Alignment.TopEnd).safeDrawingPadding()) {
             Icon(symbol = MaterialSymbols.Close, contentDescription = stringRes(Res.string.close), tint = Color.White)
         }
     }
+}
+
+/** What each control holds down, as [Buttons] bits. */
+private class HeldButtons {
+    var pad = 0
+    var o = 0
+    var x = 0
+    var keys = 0
+    val mask get() = pad or o or x or keys
 }
 
 /** Keyboard and gamepad keys and the button each holds down. */
@@ -238,27 +275,76 @@ private val KEY_BITS: Map<Key, Int> =
         Key.ButtonStart to Buttons.PAUSE,
     )
 
-/** The 128x128 screen, as large as fits, scaled by a whole number when there is room so pixels stay square. */
+/** What a key types for games that read the keyboard: Enter is a carriage return and Backspace `\b`, as on the original. */
+private fun typedText(event: KeyEvent): String? =
+    when {
+        event.key == Key.Enter -> "\r"
+        event.key == Key.Backspace -> "\b"
+        event.utf16CodePoint >= ' '.code -> event.utf16CodePoint.toChar().toString()
+        else -> null
+    }
+
+/**
+ * The 128x128 screen, as large as fits, scaled by a whole number when there is room so pixels
+ * stay square. The pointer over it (a mouse, or a finger on a touch screen) goes to the game in
+ * game pixels, for games that read it.
+ */
 @Composable
 private fun GameScreen(
     frame: State<CartPlayerViewModel.Frame?>,
+    viewModel: CartPlayerViewModel,
     modifier: Modifier,
 ) {
     val bitmap = remember { newCartScreenBitmap() }
-    Canvas(modifier) {
+    Canvas(
+        modifier.pointerInput(viewModel) {
+            awaitPointerEventScope {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull() ?: continue
+                    if (event.type == PointerEventType.Scroll) {
+                        val dy = change.scrollDelta.y
+                        if (dy != 0f) viewModel.scroll(if (dy < 0) 1 else -1)
+                        continue
+                    }
+                    val (left, top, side) = screenRect(size.width.toFloat(), size.height.toFloat())
+                    val x = ((change.position.x - left) * SCREEN_SIZE / side).toInt().coerceIn(0, SCREEN_SIZE - 1)
+                    val y = ((change.position.y - top) * SCREEN_SIZE / side).toInt().coerceIn(0, SCREEN_SIZE - 1)
+                    val buttons =
+                        if (change.type == PointerType.Mouse) {
+                            (if (event.buttons.isPrimaryPressed) 1 else 0) or
+                                (if (event.buttons.isSecondaryPressed) 2 else 0) or
+                                (if (event.buttons.isTertiaryPressed) 4 else 0)
+                        } else {
+                            if (change.pressed) 1 else 0
+                        }
+                    viewModel.setPointer(x, y, buttons)
+                }
+            }
+        },
+    ) {
         // Read here, not in composition: a new frame redraws without recomposing.
         val current = frame.value ?: return@Canvas
         val image = bitmap.update(current.pixels)
-        val side = min(size.width, size.height)
-        val target = if (side >= SCREEN_SIZE * 2) floor(side / SCREEN_SIZE) * SCREEN_SIZE else side
+        val (left, top, side) = screenRect(size.width, size.height)
         drawImage(
             image = image,
             srcSize = IntSize(SCREEN_SIZE, SCREEN_SIZE),
-            dstOffset = IntOffset(((size.width - target) / 2).toInt(), ((size.height - target) / 2).toInt()),
-            dstSize = IntSize(target.toInt(), target.toInt()),
+            dstOffset = IntOffset(left.toInt(), top.toInt()),
+            dstSize = IntSize(side.toInt(), side.toInt()),
             filterQuality = FilterQuality.None,
         )
     }
+}
+
+/** Where the screen lands in a [width] x [height] area: left, top and side, in pixels. */
+private fun screenRect(
+    width: Float,
+    height: Float,
+): Triple<Float, Float, Float> {
+    val fit = min(width, height)
+    val side = if (fit >= SCREEN_SIZE * 2) floor(fit / SCREEN_SIZE) * SCREEN_SIZE else fit
+    return Triple((width - side) / 2, (height - side) / 2, side)
 }
 
 @Composable

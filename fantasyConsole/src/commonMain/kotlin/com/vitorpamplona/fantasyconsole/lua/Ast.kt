@@ -403,7 +403,7 @@ class Block(
                 if (signal is GotoSignal && labels != null) {
                     val target = labels[signal.label]
                     if (target != null) {
-                        f.interp.checkAbort()
+                        f.interp.backEdge()
                         i = target
                         continue
                     }
@@ -510,7 +510,7 @@ class WhileStat(
         while (true) {
             val c = cond.eval(f)
             if (c == null || c == false) return null
-            f.interp.checkAbort()
+            f.interp.backEdge()
             val signal = block.exec(f)
             if (signal != null) return if (signal === BreakSignal) null else signal
         }
@@ -524,7 +524,7 @@ class RepeatStat(
 ) : Stat(line) {
     override suspend fun exec(f: Frame): Any? {
         while (true) {
-            f.interp.checkAbort()
+            f.interp.backEdge()
             val signal = block.exec(f)
             if (signal != null) return if (signal === BreakSignal) null else signal
             val c = cond.eval(f)
@@ -566,7 +566,7 @@ class NumForStat(
         var i = from.toLong()
         val end = to.toLong()
         while (if (by > 0) i <= end else i >= end) {
-            interp.checkAbort()
+            interp.backEdge()
             f.slots[local.slot] = if (local.captured) Cell(i.toInt()) else i.toInt()
             val signal = block.exec(f)
             if (signal != null) return if (signal === BreakSignal) null else signal
@@ -589,7 +589,7 @@ class GenForStat(
         val state = init.getOrNull(1)
         var control = init.getOrNull(2)
         while (true) {
-            interp.checkAbort()
+            interp.backEdge()
             val r = if (iter is LuaFunction) iter.call(interp, listOf(state, control)) else interp.call(iter, listOf(state, control))
             val first = r.firstOrNull() ?: return null
             control = first

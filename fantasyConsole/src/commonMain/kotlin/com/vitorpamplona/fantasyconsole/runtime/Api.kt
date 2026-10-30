@@ -64,6 +64,9 @@ internal class Api(
 
     private fun Values.intOrNull(i: Int): Int? = getOrNull(i)?.let { interp.toNumber(it)?.let(Fix::toInt) }
 
+    /** A color argument as its raw 16:16 bits, which may carry a fill pattern (see [Graphics]). */
+    private fun Values.colorOrNull(i: Int): Int? = getOrNull(i)?.let { interp.toNumber(it) }
+
     private fun Values.bool(i: Int): Boolean = truthy(getOrNull(i))
 
     private fun Values.table(i: Int): LuaTable? = getOrNull(i) as? LuaTable
@@ -99,9 +102,21 @@ internal class Api(
         tableApi()
         coroutineApi()
         systemApi()
-        // The button glyphs read as their numbers: btn(⬅️) is btn(0).
-        for ((glyph, value) in listOf(139 to 0, 145 to 1, 148 to 2, 131 to 3, 142 to 4, 151 to 5)) {
-            interp.globals.rawset(glyph.toChar().toString(), Fix.fromInt(value))
+        // The glyphs 128-153 are globals: the buttons read as their numbers (btn(⬅️) is btn(0)),
+        // the rest as fill patterns that look like them, with transparency (fillp(▒)).
+        for ((glyph, value) in GLYPH_VALUES) interp.globals.rawset(glyph.toChar().toString(), value)
+        // The main loop the console appends to the cart (see FantasyConsole.MAIN_LOOP).
+        fn("__fc_fps") {
+            console.fps = it.int(0, 30)
+            NONE
+        }
+        fn("__fc_draw") {
+            console.runDraw(it.getOrNull(0))
+            NONE
+        }
+        fn("__fc_flip") {
+            console.waitFrame()
+            NONE
         }
     }
 
@@ -109,24 +124,23 @@ internal class Api(
 
     private fun graphicsApi() {
         proc("cls") { gfx.cls(it.int(0, 0)) }
-        proc("pset") { gfx.pset(it.int(0), it.int(1), it.intOrNull(2)) }
+        proc("pset") { gfx.pset(it.int(0), it.int(1), it.colorOrNull(2)) }
         fn("pget") { int(gfx.pget(it.int(0), it.int(1))) }
         proc("line") {
             when (it.size) {
-                0 -> gfx.resetLine()
-                1 -> gfx.resetLine()
-                2, 3 -> gfx.lineTo(it.int(0), it.int(1), it.intOrNull(2))
-                else -> gfx.line(it.int(0), it.int(1), it.int(2), it.int(3), it.intOrNull(4))
+                0, 1 -> gfx.resetLine()
+                2, 3 -> gfx.lineTo(it.int(0), it.int(1), it.colorOrNull(2))
+                else -> gfx.line(it.int(0), it.int(1), it.int(2), it.int(3), it.colorOrNull(4))
             }
         }
-        proc("rect") { gfx.rect(it.int(0), it.int(1), it.int(2), it.int(3), it.intOrNull(4), filled = false) }
-        proc("rectfill") { gfx.rect(it.int(0), it.int(1), it.int(2), it.int(3), it.intOrNull(4), filled = true) }
-        proc("rrect") { gfx.rrect(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4), it.intOrNull(5), filled = false) }
-        proc("rrectfill") { gfx.rrect(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4), it.intOrNull(5), filled = true) }
-        proc("circ") { gfx.circ(it.int(0), it.int(1), it.int(2, 4), it.intOrNull(3), filled = false) }
-        proc("circfill") { gfx.circ(it.int(0), it.int(1), it.int(2, 4), it.intOrNull(3), filled = true) }
-        proc("oval") { gfx.oval(it.int(0), it.int(1), it.int(2), it.int(3), it.intOrNull(4), filled = false) }
-        proc("ovalfill") { gfx.oval(it.int(0), it.int(1), it.int(2), it.int(3), it.intOrNull(4), filled = true) }
+        proc("rect") { gfx.rect(it.int(0), it.int(1), it.int(2), it.int(3), it.colorOrNull(4), filled = false) }
+        proc("rectfill") { gfx.rect(it.int(0), it.int(1), it.int(2), it.int(3), it.colorOrNull(4), filled = true) }
+        proc("rrect") { gfx.rrect(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4), it.colorOrNull(5), filled = false) }
+        proc("rrectfill") { gfx.rrect(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4), it.colorOrNull(5), filled = true) }
+        proc("circ") { gfx.circ(it.int(0), it.int(1), it.int(2, 4), it.colorOrNull(3), filled = false) }
+        proc("circfill") { gfx.circ(it.int(0), it.int(1), it.int(2, 4), it.colorOrNull(3), filled = true) }
+        proc("oval") { gfx.oval(it.int(0), it.int(1), it.int(2), it.int(3), it.colorOrNull(4), filled = false) }
+        proc("ovalfill") { gfx.oval(it.int(0), it.int(1), it.int(2), it.int(3), it.colorOrNull(4), filled = true) }
         proc("spr") {
             // Width and height count sprites and may be fractional: 0.5 draws 4 pixels.
             val w = (it.num(3, Fix.ONE).toLong() * 8 shr 16).toInt()
@@ -139,7 +153,7 @@ internal class Api(
             gfx.sspr(it.int(0), it.int(1), sw, sh, it.int(4), it.int(5), it.int(6, sw), it.int(7, sh), it.bool(8), it.bool(9))
         }
         fn("sget") { int(gfx.sget(it.int(0), it.int(1))) }
-        proc("sset") { gfx.sset(it.int(0), it.int(1), it.intOrNull(2)) }
+        proc("sset") { gfx.sset(it.int(0), it.int(1), it.colorOrNull(2)) }
         fn("fget") {
             val flags = ram[Addr.FLAGS + (it.int(0) and 0xff)]
             val bit = it.intOrNull(1)
@@ -157,12 +171,17 @@ internal class Api(
         fn("mget") { int(gfx.mget(it.int(0), it.int(1))) }
         proc("mset") { gfx.mset(it.int(0), it.int(1), it.int(2)) }
         val map: (Values) -> Unit = {
-            gfx.map(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4, 128), it.int(5, 64), it.int(6))
+            val (w, h) = gfx.mapSize()
+            gfx.map(it.int(0), it.int(1), it.int(2), it.int(3), it.int(4, w), it.int(5, h), it.int(6))
         }
         proc("map", map)
         proc("mapdraw", map)
         proc("tline") {
-            gfx.tline(it.int(0), it.int(1), it.int(2), it.int(3), it.num(4), it.num(5), it.num(6, Fix.ONE / 8), it.num(7))
+            if (it.size == 1) {
+                gfx.tlinePrecision(it.int(0))
+            } else {
+                gfx.tline(it.int(0), it.int(1), it.int(2), it.int(3), it.num(4), it.num(5), it.num(6, Fix.ONE / 8), it.num(7), it.int(8))
+            }
         }
         proc("pal") { args ->
             val first = args.getOrNull(0)
@@ -179,7 +198,7 @@ internal class Api(
                         gfx.pal(Fix.toInt(c0), Fix.toInt(c1), p)
                     }
                 }
-                args.size == 1 -> if (args.int(0) == 0) gfx.resetDrawPalette()
+                args.size == 1 -> gfx.resetPalette(args.int(0))
                 else -> gfx.pal(args.int(0), args.int(1), args.int(2))
             }
         }
@@ -192,12 +211,12 @@ internal class Api(
         }
         fn("color") {
             val old = ram[Addr.PEN]
-            gfx.color(it.int(0, 6))
+            gfx.colorBits(it.colorOrNull(0) ?: Fix.fromInt(6))
             int(old)
         }
         proc("cursor") {
             gfx.cursor(it.int(0), it.int(1))
-            it.intOrNull(2)?.let(gfx::color)
+            it.colorOrNull(2)?.let(gfx::colorBits)
         }
         fn("camera") {
             val oldX = ram.peek2(Addr.CAMERA_X)
@@ -205,11 +224,14 @@ internal class Api(
             gfx.camera(it.int(0), it.int(1))
             listOf(Fix.fromInt(oldX), Fix.fromInt(oldY))
         }
-        proc("clip") {
-            if (it.isEmpty()) gfx.resetClip() else gfx.clip(it.int(0), it.int(1), it.int(2), it.int(3))
+        fn("clip") {
+            val old = listOf(ram[Addr.CLIP], ram[Addr.CLIP + 1], ram[Addr.CLIP + 2] - ram[Addr.CLIP], ram[Addr.CLIP + 3] - ram[Addr.CLIP + 1])
+            if (it.isEmpty()) gfx.resetClip() else gfx.clip(it.int(0), it.int(1), it.int(2), it.int(3), it.bool(4))
+            old.map(Fix::fromInt)
         }
         fn("fillp") {
-            val old = (ram.peek2(Addr.FILL_PATTERN) shl 16) or (if (ram[Addr.FILL_TRANSPARENT] and 1 != 0) 0x8000 else 0)
+            val mode = ram[Addr.FILL_MODE]
+            val old = (ram.peek2(Addr.FILL_PATTERN) shl 16) or ((mode and 1) shl 15) or ((mode and 2) shl 13) or ((mode and 4) shl 11)
             gfx.fillp(it.num(0))
             num(old)
         }
@@ -220,28 +242,31 @@ internal class Api(
         }
     }
 
-    private fun print(args: Values): Values {
+    private suspend fun print(args: Values): Values {
         val text = tostr(args.getOrNull(0))
         if (args.size <= 2) {
             // At the cursor, which then moves down a line (scrolling the screen at the bottom).
             val col = args.intOrNull(1) ?: ram[Addr.PEN]
-            if (args.size == 2) gfx.color(col)
             val x = ram[Addr.CURSOR_X]
             val y = ram[Addr.CURSOR_Y]
-            val r = gfx.print(text, x, y, col)
+            val r = console.printer.print(text, x, y, col, console::waitFrames)
+            gfx.color(r.color)
             if (!r.stopped) {
-                var nextY = r.lastY + Font.HEIGHT
-                if (nextY > 128 - Font.HEIGHT) {
-                    gfx.scroll(nextY - (128 - Font.HEIGHT))
-                    nextY = 128 - Font.HEIGHT
+                var nextY = r.lastY + r.lineHeight
+                val bottom = 128 - Font.HEIGHT
+                if (nextY > bottom && ram[Addr.MISC_FLAGS] and 0x40 == 0) {
+                    gfx.scroll(nextY - bottom)
+                    nextY = bottom
                 }
                 gfx.cursor(x, nextY)
+            } else {
+                gfx.cursor(ram[Addr.CURSOR_X], r.lastY)
             }
             return int(r.right)
         }
         val col = args.intOrNull(3) ?: ram[Addr.PEN]
-        if (args.size >= 4) gfx.color(col)
-        val r = gfx.print(text, args.int(1), args.int(2), col)
+        val r = console.printer.print(text, args.int(1), args.int(2), col, console::waitFrames)
+        gfx.color(r.color)
         return int(r.right)
     }
 
@@ -256,7 +281,7 @@ internal class Api(
 
     private fun soundApi() {
         proc("sfx") { console.audio.sfx(it.int(0), it.int(1, -1), it.int(2), it.int(3)) }
-        proc("music") { console.audio.music(it.int(0), it.int(2)) }
+        proc("music") { console.audio.music(it.int(0), it.int(1), it.int(2)) }
     }
 
     // ---------------------------------------------------------------- memory
@@ -286,9 +311,11 @@ internal class Api(
             val dest = it.int(0)
             val src = it.int(1)
             val len = it.int(2, Addr.CART_DATA_END)
+            // A fourth argument reads from another cartridge of the same game.
+            val from = it.getOrNull(3)?.let { name -> console.otherCart(tostr(name)) ?: return@proc } ?: console.cart
             for (i in 0 until len) {
                 val s = src + i
-                if (s in 0 until Addr.CART_DATA_END) ram[dest + i] = console.cart.rom[s].toInt()
+                if (s in 0 until Addr.CART_DATA_END) ram[dest + i] = from.rom[s].toInt()
             }
         }
         proc("cstore") {}
@@ -423,7 +450,7 @@ internal class Api(
             one(sb.toString())
         }
         fn("ord") { args ->
-            val s = args.getOrNull(0) as? String ?: return@fn NONE
+            val s = args.getOrNull(0)?.let(::tostr) ?: return@fn NONE
             val start = args.int(1, 1)
             val n = args.int(2, 1)
             List(maxOf(n, 0)) { k ->
@@ -459,10 +486,14 @@ internal class Api(
                     else -> s.split(tostr(sep))
                 }
             val t = LuaTable(parts.size)
-            parts.forEachIndexed { i, p -> t.rawsetInt(i + 1, if (convert) Fix.parse(p) ?: p else p) }
+            // Numbers convert even with spaces around them: "5, 6" gives 5 and 6.
+            parts.forEachIndexed { i, p -> t.rawsetInt(i + 1, if (convert) Fix.parse(p.trim()) ?: p else p) }
             one(t)
         }
         fn("type") { one(Interpreter.typeName(it.getOrNull(0))) }
+        // Lua's own names, which the console still answers to.
+        interp.globals.rawset("tostring", interp.globals.rawget("tostr"))
+        interp.globals.rawset("tonumber", interp.globals.rawget("tonum"))
     }
 
     // ---------------------------------------------------------------- tables
@@ -472,7 +503,7 @@ internal class Api(
             val t = args.table(0) ?: return@fn NONE
             val v = args.getOrNull(1)
             val at = args.intOrNull(2)
-            if (at == null) t.rawsetInt(t.length() + 1, v) else t.insert(at, v)
+            if (at == null) t.rawsetInt(t.length() + 1, v) else t.insert(at.coerceIn(1, t.length() + 1), v)
             one(v)
         }
         fn("del") { args ->
@@ -488,11 +519,12 @@ internal class Api(
         }
         fn("deli") { args ->
             val t = args.table(0) ?: return@fn NONE
-            one(t.removeAt(args.int(1, t.length())))
+            if (t.length() == 0) return@fn one(null)
+            one(t.removeAt(args.int(1, t.length()).coerceIn(1, t.length())))
         }
         fn("count") { args ->
             val t = args.table(0) ?: return@fn int(0)
-            if (args.size < 2) return@fn int(t.length())
+            if (args.size < 2) return@fn int((1..t.length()).count { t.rawgetInt(it) != null })
             val v = args.getOrNull(1)
             var n = 0
             for (i in 1..t.length()) if (t.rawgetInt(i) == v) n++
@@ -514,6 +546,8 @@ internal class Api(
         }
         fn("pairs") { args ->
             val t = args.getOrNull(0)
+            // Like the console, a nil table iterates over nothing instead of raising an error.
+            if (t == null) return@fn listOf(EMPTY_ITERATOR, null, null)
             if (t !is LuaTable) throw LuaError("bad argument #1 to 'pairs' (table expected, got ${Interpreter.typeName(t)})")
             val handler = t.metatable?.rawget("__pairs")
             if (handler != null) return@fn interp.call(handler, listOf(t)).take(3)
@@ -530,16 +564,19 @@ internal class Api(
                 }
             listOf(iter, t, null)
         }
+        val inext =
+            NativeFunction("inext") { a ->
+                val t = a.getOrNull(0) ?: return@NativeFunction one(null)
+                val i = Fix.toInt(a.num(1)) + 1
+                val v = interp.index(t, Fix.fromInt(i))
+                if (v == null) one(null) else listOf(Fix.fromInt(i), v)
+            }
+        interp.globals.rawset("inext", inext)
         fn("ipairs") { args ->
             val t = args.getOrNull(0)
+            if (t == null) return@fn listOf(EMPTY_ITERATOR, null, null)
             if (t !is LuaTable) throw LuaError("bad argument #1 to 'ipairs' (table expected, got ${Interpreter.typeName(t)})")
-            val iter =
-                NativeFunction("ipairs") { a ->
-                    val i = Fix.toInt(a.num(1)) + 1
-                    val v = interp.index(t, Fix.fromInt(i))
-                    if (v == null) one(null) else listOf(Fix.fromInt(i), v)
-                }
-            listOf(iter, t, 0)
+            listOf(inext, t, 0)
         }
         fn("next") { args ->
             val t = args.getOrNull(0) as? LuaTable ?: throw LuaError("bad argument #1 to 'next' (table expected)")
@@ -641,35 +678,118 @@ internal class Api(
             if (!truthy(args.getOrNull(0))) throw LuaError(args.getOrNull(1) ?: "assertion failed!")
             args
         }
-        proc("menuitem") {}
-        proc("extcmd") {}
+        proc("menuitem") { args ->
+            val index = args.int(0) - 1
+            if (index !in 0..4) return@proc
+            val callback = args.getOrNull(2) as? LuaFunction
+            val label = args.getOrNull(1)
+            console.menu.items[index] = if (label == null) null else callback?.let { PauseMenu.Item(PauseMenu.label(label), it) } ?: PauseMenu.Item(PauseMenu.label(label), NativeFunction("menuitem") { NONE })
+        }
+        proc("extcmd") {
+            when (tostr(it.getOrNull(0))) {
+                "pause" -> console.requestPause()
+                "reset" -> console.requestRestart(null)
+                "shutdown" -> console.requestStop(null)
+                "breadcrumb", "go_back" -> console.goBack()
+            }
+        }
         proc("export") {}
-        proc("serial") {}
-        fn("load") { one(false) }
+        // Undocumented helpers some carts call.
+        proc("_set_fps") { console.fps = it.int(0, 30).coerceIn(1, 60) }
+        proc("_update_buttons") {}
+        proc("holdframe") {}
+        proc("_map_display") {}
+        proc("_mark_cpu") {}
+        proc("_startframe") {}
+        proc("_update_framerate") {}
+        proc("_set_mainloop_exists") {}
+        proc("_pausemenu") {}
+        proc("set_draw_slice") {}
+        fn("_get_menu_item_selected") { int(0) }
+        proc("trace") {}
+        fn("serial") { int(0) }
+        fn("ls") { one(null) }
+        // Loading another cartridge (`load("#id")`) is not supported: the cart stops and says so.
+        proc("load") {
+            console.requestLoad(tostr(it.getOrNull(0)), it.getOrNull(1)?.let(::tostr), it.getOrNull(2)?.let(::tostr))
+        }
         proc("reset") { gfx.reset() }
-        proc("stop") { console.requestStop() }
-        proc("run") { console.requestRestart() }
+        proc("stop") { console.requestStop(it.getOrNull(0)?.let(::tostr)) }
+        proc("run") { console.requestRestart(it.getOrNull(0)?.let(::tostr)) }
     }
 
-    /** `stat(n)` values that are not plain numbers, or null to use [stat]. */
+    /** `stat(n)` values that are not plain whole numbers, or null to use [stat]. */
     private fun statValue(n: Int): Values? =
         when (n) {
-            4, 6, 31 -> one("")
-            30 -> one(false)
+            1 -> num(Fix.fromDouble(console.cpuLoad()))
+            4 -> one("")
+            6 -> one(console.runParam)
+            30 -> one(devkit() && console.input.hasKey())
+            31 -> one(if (devkit()) console.input.nextKey() else "")
+            57 -> one(console.audio.musicPlaying())
+            100 -> one(console.breadcrumbLabel)
+            // No id on the original's site: the cart runs locally.
+            101 -> one(null)
+            110, 120, 121 -> one(false)
+            in 80..85 -> int(Clock.utc()[n - 80])
+            in 90..95 -> int(Clock.local(console.host.utcOffsetSeconds())[n - 90])
             else -> null
         }
 
+    private fun devkit(): Boolean = ram[Addr.DEVKIT] and 1 != 0
+
     private fun stat(n: Int): Int =
         when (n) {
-            7, 8 -> console.fps
+            7, 8, 9 -> console.fps
             in 16..19 -> console.audio.channelSfx(n - 16)
             in 20..23 -> console.audio.channelNote(n - 20)
             24 -> console.audio.currentPattern()
+            25 -> console.audio.patternsPlayed()
             26 -> console.audio.patternTicks()
+            32 -> if (devkit()) console.input.mouseX else 0
+            33 -> if (devkit()) console.input.mouseY else 0
+            34 -> if (devkit()) console.input.mouseButtons else 0
+            36 -> if (devkit()) console.input.wheel else 0
             in 46..49 -> console.audio.channelSfx(n - 46)
             in 50..53 -> console.audio.channelNote(n - 50)
             54 -> console.audio.currentPattern()
+            55 -> console.audio.patternsPlayed()
             56 -> console.audio.patternTicks()
             else -> 0
         }
+
+    private companion object {
+        val EMPTY_ITERATOR = NativeFunction("pairs") { listOf(null) }
+
+        /** P8SCII 128-153 as globals: 4x4 pictures of the glyph (set bits transparent), and the buttons. */
+        val GLYPH_VALUES: List<Pair<Int, Int>> =
+            listOf(
+                128 to 0x00008000, // █
+                129 to 0x5a5a8000, // ▒
+                130 to 0x511f8000, // 🐱
+                131 to 0x00030000, // ⬇️ = 3
+                132 to 0x7d7d8000, // ░
+                133 to 0xb81d8000.toInt(), // ✽
+                134 to 0xf99f8000.toInt(), // ●
+                135 to 0x51bf8000, // ♥
+                136 to 0xb5bf8000.toInt(), // ☉
+                137 to 0x999f8000.toInt(), // 웃
+                138 to 0xb11f8000.toInt(), // ⌂
+                139 to 0x00000000, // ⬅️ = 0
+                140 to 0xa0e08000.toInt(), // 😐
+                141 to 0x9b3f8000.toInt(), // ♪
+                142 to 0x00040000, // 🅾️ = 4
+                143 to 0xb1bf8000.toInt(), // ◆
+                144 to 0xf5ff8000.toInt(), // …
+                145 to 0x00010000, // ➡️ = 1
+                146 to 0xb15f8000.toInt(), // ★
+                147 to 0x1b1f8000, // ⧗
+                148 to 0x00020000, // ⬆️ = 2
+                149 to 0xf5bf8000.toInt(), // ˇ
+                150 to 0x7adf8000, // ∧
+                151 to 0x00050000, // ❎ = 5
+                152 to 0x0f0f8000, // ▤
+                153 to 0x55558000, // ▥
+            )
+    }
 }

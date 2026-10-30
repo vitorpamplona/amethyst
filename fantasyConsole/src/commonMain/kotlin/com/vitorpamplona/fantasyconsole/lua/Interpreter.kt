@@ -79,8 +79,18 @@ class Interpreter {
     @Volatile
     var abortRequested = false
 
-    fun checkAbort() {
+    /**
+     * Called every [BACK_EDGE_SAMPLE] loop iterations and backward gotos. The console uses it to
+     * end a frame that has run out of time, as the original does, so a cart that busy-waits on
+     * `time()` or `btnp()` without `flip()` still sees time pass and buttons change.
+     */
+    var frameHook: (suspend () -> Unit)? = null
+    private var backEdges = 0
+
+    /** A loop's back edge: stops an aborted cart and, now and then, lets [frameHook] end the frame. */
+    suspend fun backEdge() {
         if (abortRequested) throw LuaAbort()
+        if (++backEdges and (BACK_EDGE_SAMPLE - 1) == 0) frameHook?.invoke()
     }
 
     /** Compiles [source] into the function a cart's top-level code runs as. */
@@ -408,7 +418,9 @@ class Interpreter {
     }
 
     companion object {
-        const val MAX_DEPTH = 2000
+        /** Nested Lua calls before "stack overflow". The original allows deep recursion too. */
+        const val MAX_DEPTH = 50000
+        private const val BACK_EDGE_SAMPLE = 1024
         private const val MAX_META_CHAIN = 100
 
         private val ARITH_EVENTS =

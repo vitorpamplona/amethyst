@@ -208,6 +208,8 @@ class LuaTest {
                 end
                 printh(last)
                 """.trimIndent(),
+                // The loop takes longer than one frame, so the console cuts it into several.
+                frames = 300,
             )
         assertEquals(listOf("20000"), out)
     }

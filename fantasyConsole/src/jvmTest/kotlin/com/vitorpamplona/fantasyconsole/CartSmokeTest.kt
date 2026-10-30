@@ -25,7 +25,9 @@ import com.vitorpamplona.fantasyconsole.cart.P8scii
 import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
 import java.awt.image.BufferedImage
 import java.io.File
+import java.util.concurrent.atomic.AtomicLong
 import javax.imageio.ImageIO
+import kotlin.concurrent.thread
 import kotlin.test.Test
 
 /**
@@ -42,35 +44,67 @@ class CartSmokeTest {
         val dir = System.getProperty("fantasyConsole.carts")?.let(::File) ?: return
         val out = File(System.getProperty("fantasyConsole.out") ?: "build/cart-screens").apply { mkdirs() }
         val frames = System.getProperty("fantasyConsole.frames")?.toInt() ?: 300
-        val files = dir.listFiles { f -> f.name.endsWith(".p8.png") || f.name.endsWith(".p8") }!!.sortedBy { it.name }
+        val only = System.getProperty("fantasyConsole.only")
+        val files =
+            dir
+                .listFiles { f -> f.name.endsWith(".p8.png") || f.name.endsWith(".p8") }!!
+                .filter { only == null || it.name.startsWith(only) }
+                .sortedBy { it.name }
         for (file in files) {
-            val line = StringBuilder(file.name.padEnd(36))
-            try {
-                val cart = CartLoader.load(file.readBytes())
-                File(out, file.name.removeSuffix(".png").removeSuffix(".p8") + ".lua").writeText(P8scii.toUnicode(cart.code))
-                val console = FantasyConsole(cart)
-                val started = System.nanoTime()
-                for (frame in 0 until frames) {
-                    // Tap X and O every second or so; hold right for a while in between.
-                    val buttons =
-                        when {
-                            frame % 30 in 0..1 -> 0x30
-                            frame % 90 in 40..70 -> 0x02
-                            else -> 0
-                        }
-                    console.setButtons(0, buttons)
-                    console.step()
-                    if (console.state != FantasyConsole.State.RUNNING) break
-                }
-                val ms = (System.nanoTime() - started) / 1_000_000
-                line.append("${console.state} ${console.frameCount}f ${ms}ms code=${cart.code.length}")
-                console.error?.let { line.append("  !! $it") }
-                save(console, File(out, file.name.removeSuffix(".png").removeSuffix(".p8") + ".png"))
-            } catch (e: Exception) {
-                line.append("LOAD FAILED: $e")
-            }
-            println(line)
+            val worker = Thread(null, { runCart(file, out, frames) }, "cart", FantasyConsole.RECOMMENDED_STACK_BYTES).apply { start() }
+            worker.join()
         }
+    }
+
+    private fun runCart(
+        file: File,
+        out: File,
+        frames: Int,
+    ) {
+        val line = StringBuilder(file.name.padEnd(36))
+        try {
+            val cart = CartLoader.load(file.readBytes())
+            File(out, file.name.removeSuffix(".png").removeSuffix(".p8") + ".lua").writeText(P8scii.toUnicode(cart.code))
+            val console = FantasyConsole(cart)
+            val started = System.nanoTime()
+            // A cart stuck inside one frame (an endless loop in _draw) is stopped after 10 s.
+            val stepStarted = AtomicLong(0)
+            val watchdog =
+                thread(isDaemon = true) {
+                    while (!Thread.currentThread().isInterrupted) {
+                        val at = stepStarted.get()
+                        if (at != 0L && System.nanoTime() - at > 10_000_000_000L) console.abort()
+                        try {
+                            Thread.sleep(200)
+                        } catch (_: InterruptedException) {
+                            break
+                        }
+                    }
+                }
+            for (frame in 0 until frames) {
+                // Nothing in the first half second (no player is that fast), then taps and holds.
+                val buttons =
+                    when {
+                        frame < 15 -> 0
+                        frame % 30 in 0..1 -> 0x30
+                        frame % 90 in 40..70 -> 0x02
+                        else -> 0
+                    }
+                console.setButtons(0, buttons)
+                stepStarted.set(System.nanoTime())
+                console.step()
+                stepStarted.set(0)
+                if (console.state != FantasyConsole.State.RUNNING) break
+            }
+            watchdog.interrupt()
+            val ms = (System.nanoTime() - started) / 1_000_000
+            line.append("${console.state} ${console.frameCount}f ${ms}ms code=${cart.code.length}")
+            console.error?.let { line.append("  !! $it") }
+            save(console, File(out, file.name.removeSuffix(".png").removeSuffix(".p8") + ".png"))
+        } catch (e: Exception) {
+            line.append("LOAD FAILED: $e")
+        }
+        println(line)
     }
 
     private fun save(

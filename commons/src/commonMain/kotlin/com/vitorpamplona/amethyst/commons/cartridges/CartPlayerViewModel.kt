@@ -22,21 +22,33 @@ package com.vitorpamplona.amethyst.commons.cartridges
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.fantasyconsole.cart.CartFormatException
 import com.vitorpamplona.fantasyconsole.cart.CartLoader
+import com.vitorpamplona.fantasyconsole.cart.P8scii
 import com.vitorpamplona.fantasyconsole.runtime.Audio
+import com.vitorpamplona.fantasyconsole.runtime.ConsoleHost
 import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.getAndUpdate
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -45,13 +57,15 @@ import kotlin.time.TimeSource
 /**
  * Downloads and runs one cart. The game runs on its own thread ([newCartDispatcher]) at its
  * frame rate, publishing each [frame] and playing its sound; the screen sends the held buttons
- * with [setButtons]. [resume]/[pause] follow the player being on screen, so a rotation or a
- * closed dialog keeps the game where it was.
+ * with [setButtons], and the pointer and typed text for games that read them. Input reaches the
+ * game on its thread, between frames. [resume]/[pause] follow the player being on screen, so a
+ * rotation or a closed dialog keeps the game where it was. What the game saves goes to [saves].
  */
 class CartPlayerViewModel(
     private val url: String,
     private val expectedSha256: String?,
     private val httpClients: IRoleBasedHttpClientBuilder,
+    private val saves: CartSaveStore?,
 ) : ViewModel() {
     sealed interface Status {
         data object Loading : Status
@@ -89,9 +103,74 @@ class CartPlayerViewModel(
     private val dispatcher = lazy { newCartDispatcher() }
     private var loop: Job? = null
 
+    // Saves, read once before the game starts and touched only on the game's thread after that.
+    private var saved: MutableMap<String, IntArray> = HashMap()
+    private var saveJob: Job? = null
+
+    // Written in batches: a game may save every frame. Outlives the ViewModel so the last batch lands.
+    private val unsaved = MutableStateFlow<Map<String, IntArray>>(emptyMap())
+    private val saveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private val host =
+        object : ConsoleHost {
+            override fun log(message: String) = Log.d(TAG) { message }
+
+            override fun loadCartData(id: String): IntArray? = saved[id]
+
+            override fun saveCartData(
+                id: String,
+                values: IntArray,
+            ) {
+                saved[id] = values
+                unsaved.update { it + (id to values) }
+                if (saveJob?.isActive != true) {
+                    saveJob =
+                        saveScope.launch {
+                            delay(SAVE_BATCH)
+                            writeSaves()
+                        }
+                }
+            }
+
+            override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()
+
+            // Games in several carts load the next one by its id on the original's site, or by a
+            // file name. A post has no way to name its other carts yet, so those stop with a message.
+            override fun loadCart(name: String): ByteArray? = null
+        }
+
+    private var buttons = 0
+
     /** The buttons held now, as [Buttons] bits. */
     fun setButtons(mask: Int) {
-        console?.setButtons(0, mask)
+        buttons = mask
+        onGameThread { it.setButtons(0, mask) }
+    }
+
+    /** A tap of the pause button, which opens the game's pause menu (or closes it). */
+    fun tapPause() {
+        val held = buttons
+        onGameThread {
+            it.setButtons(0, held or Buttons.PAUSE)
+            it.setButtons(0, held)
+        }
+    }
+
+    /** The pointer over the screen, in game pixels (0..127), and its buttons (1 left, 2 right, 4 middle). */
+    fun setPointer(
+        x: Int,
+        y: Int,
+        pointerButtons: Int,
+    ) = onGameThread { it.setPointer(x, y, pointerButtons) }
+
+    fun scroll(steps: Int) = onGameThread { it.scroll(steps) }
+
+    /** Typed characters, for games that read the keyboard. */
+    fun type(text: String) = onGameThread { it.type(P8scii.fromUnicode(text)) }
+
+    private fun onGameThread(action: (FantasyConsole) -> Unit) {
+        val game = console ?: return
+        viewModelScope.launch(dispatcher.value) { action(game) }
     }
 
     fun resume() {
@@ -106,6 +185,12 @@ class CartPlayerViewModel(
     fun pause() {
         loop?.cancel()
         loop = null
+        saveScope.launch { writeSaves() }
+    }
+
+    private suspend fun writeSaves() {
+        val batch = unsaved.getAndUpdate { emptyMap() }
+        if (batch.isNotEmpty()) saves?.save(batch)
     }
 
     private suspend fun load(): FantasyConsole? {
@@ -121,7 +206,8 @@ class CartPlayerViewModel(
                 _status.value = Status.NotACart
                 return null
             }
-        return FantasyConsole(cart).also { console = it }
+        saves?.let { saved = it.loadAll().toMutableMap() }
+        return FantasyConsole(cart, host).also { console = it }
     }
 
     private suspend fun play(game: FantasyConsole) {
@@ -146,9 +232,11 @@ class CartPlayerViewModel(
                 val wait = -deadline.elapsedNow()
                 if (wait.isPositive()) {
                     delay(wait)
-                } else if (wait < -MAX_LAG) {
+                } else {
+                    // Behind: still let the input queued for this thread in before the next frame.
+                    yield()
                     // Far behind (the app was busy): drop the backlog instead of racing to catch up.
-                    deadline = TimeSource.Monotonic.markNow()
+                    if (wait < -MAX_LAG) deadline = TimeSource.Monotonic.markNow()
                 }
             }
         } finally {
@@ -187,5 +275,7 @@ class CartPlayerViewModel(
         private const val MAX_CART_BYTES = 1 shl 20
 
         private val MAX_LAG = 250.milliseconds
+        private val SAVE_BATCH = 1.seconds
+        private const val TAG = "CartPlayer"
     }
 }

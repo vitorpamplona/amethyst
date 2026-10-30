@@ -494,6 +494,12 @@ class Parser(
             }
             T.LBRACE -> table()
             T.FUNCTION -> functionBody(false, "anonymous", next().line)
+            T.QUESTION -> {
+                // `?` is shorthand for print( … ) to the end of the line, even inside an expression.
+                val line = next().line
+                val args = if (peek.line == line && !blockFollow(line)) exprList() else emptyArray()
+                CallExpr(GlobalExpr("print"), args)
+            }
             else -> suffixedExpr()
         }
     }

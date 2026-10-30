@@ -60,7 +60,7 @@ kotlin {
 
 // Forwards the opt-in cart smoke test's settings to the test JVM (see CartSmokeTest).
 tasks.withType<Test>().configureEach {
-    listOf("fantasyConsole.carts", "fantasyConsole.out", "fantasyConsole.frames").forEach { key ->
+    listOf("fantasyConsole.carts", "fantasyConsole.out", "fantasyConsole.frames", "fantasyConsole.only").forEach { key ->
         System.getProperty(key)?.let { systemProperty(key, it) }
     }
     outputs.upToDateWhen { System.getProperty("fantasyConsole.carts") == null }

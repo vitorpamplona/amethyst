@@ -9116,4 +9116,5 @@
     <string name="cart_dpad_description">Direction pad</string>
     <string name="cart_button_o_description">O button</string>
     <string name="cart_button_x_description">X button</string>
+    <string name="cart_pause_menu">Pause menu</string>
 </resources>

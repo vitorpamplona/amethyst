@@ -89,6 +89,8 @@ object P8scii {
                 val s = TABLE[i]
                 if (s.isNotEmpty()) put(codePointAt(s, 0), i)
             }
+            // `.p8` files write the console's second case (A-Z) as italic letters: 𝘢 is A.
+            for (k in 0 until 26) put(0x1D622 + k, 'A'.code + k)
         }
 
     private fun codePointAt(

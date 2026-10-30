@@ -29,7 +29,10 @@ package com.vitorpamplona.fantasyconsole.lua
 open class LuaError(
     val luaMessage: Any?,
     cause: Throwable? = null,
-) : Exception(luaMessage?.toString(), cause)
+) : Exception(luaMessage?.toString(), cause) {
+    /** The Lua functions the error passed through, innermost first: `name:line`. */
+    val trace: MutableList<String> = (cause as? LuaError)?.trace ?: ArrayList()
+}
 
 /** Thrown into the running cart when the host stops it. Never caught by Lua code. */
 class LuaAbort : Exception("aborted")
@@ -90,11 +93,17 @@ class Closure(
         try {
             val signal = p.body.exec(Frame(slots, varargs, upvals, interp))
             return if (signal is ReturnSignal) signal.values else NONE
+        } catch (e: LuaError) {
+            // The chunk itself (line 0) adds nothing the error line does not already say.
+            if (p.line > 0 && e.trace.size < MAX_TRACE) e.trace.add("${p.name}:${p.line}")
+            throw e
         } finally {
             interp.depth--
         }
     }
 }
+
+private const val MAX_TRACE = 8
 
 /** One activation of a [Closure]: its locals by slot, its varargs and its upvalues. */
 class Frame(

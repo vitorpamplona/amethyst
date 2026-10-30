@@ -34,6 +34,23 @@ class Input(
     private val current = IntArray(8)
     private val framesHeld = Array(8) { IntArray(8) }
 
+    // Devkit mode (0x5f2d): the pointer in screen pixels, its buttons, the wheel and typed keys.
+    private var pointerX = 0
+    private var pointerY = 0
+    private var pointerButtons = 0
+    private var pointerPressedSinceFrame = 0
+    private var wheelPending = 0
+    private val typed = ArrayDeque<Char>()
+
+    var mouseX = 0
+        private set
+    var mouseY = 0
+        private set
+    var mouseButtons = 0
+        private set
+    var wheel = 0
+        private set
+
     fun setButtons(
         player: Int,
         mask: Int,
@@ -43,15 +60,50 @@ class Input(
         pressedSinceFrame[player] = pressedSinceFrame[player] or mask
     }
 
+    /** Where the pointer is, in screen pixels (0..127), and which of its buttons (1 left, 2 right, 4 middle) are down. */
+    fun setPointer(
+        x: Int,
+        y: Int,
+        buttons: Int,
+    ) {
+        pointerX = x
+        pointerY = y
+        pointerButtons = buttons
+        pointerPressedSinceFrame = pointerPressedSinceFrame or buttons
+    }
+
+    fun scroll(steps: Int) {
+        wheelPending += steps
+    }
+
+    /** Typed text, as P8SCII: read back one character at a time with `stat(31)`. Dropped unless the cart turned the keyboard on. */
+    fun type(text: String) {
+        if (ram[Addr.DEVKIT] and 1 == 0) return
+        for (c in text) if (typed.size < MAX_TYPED) typed.addLast(c)
+    }
+
     fun beginFrame() {
+        mouseX = pointerX
+        mouseY = pointerY
+        mouseButtons = pointerButtons or pointerPressedSinceFrame
+        pointerPressedSinceFrame = 0
+        wheel = wheelPending
+        wheelPending = 0
+        val devkit = ram[Addr.DEVKIT]
+        // Devkit flag 2: the mouse buttons also press O, X and pause for player 0.
+        val mouseAsButtons = if (devkit and 1 != 0 && devkit and 2 != 0) (mouseButtons and 7) shl 4 else 0
         for (p in 0 until 8) {
-            current[p] = held[p] or pressedSinceFrame[p]
+            current[p] = held[p] or pressedSinceFrame[p] or (if (p == 0) mouseAsButtons else 0)
             pressedSinceFrame[p] = 0
             for (b in 0 until 8) {
                 framesHeld[p][b] = if ((current[p] shr b) and 1 != 0) framesHeld[p][b] + 1 else 0
             }
         }
     }
+
+    fun hasKey(): Boolean = typed.isNotEmpty()
+
+    fun nextKey(): String = if (typed.isEmpty()) "" else typed.removeFirst().toString()
 
     fun btn(
         b: Int,
@@ -83,5 +135,9 @@ class Input(
         var bits = 0
         for (p in 0..1) for (b in 0..7) if (btnp(b, p, fps)) bits = bits or (1 shl (b + p * 8))
         return bits
+    }
+
+    private companion object {
+        const val MAX_TYPED = 64
     }
 }

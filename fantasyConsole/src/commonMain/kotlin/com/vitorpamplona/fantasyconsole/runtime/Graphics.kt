@@ -20,14 +20,16 @@
  */
 package com.vitorpamplona.fantasyconsole.runtime
 
-import com.vitorpamplona.fantasyconsole.lua.Fix
 import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
  * The 128x128, 16-color screen and every drawing call. All draw state (palettes, clip, camera,
- * pen, cursor, fill pattern) lives in [Ram] at its documented address, so a cart that pokes it
- * gets what it asked for; each call reads what it needs once, at its start.
+ * pen, cursor, fill pattern, memory remaps) lives in [Ram] at its documented address, so a cart
+ * that pokes it gets what it asked for; each call reads what it needs once, at its start.
+ *
+ * Color arguments arrive as raw 16:16 numbers: with 0x5f34 bit 0 set, a color whose bit
+ * 0x1000.0000 is set also carries a fill pattern in its low 16 bits and fill flags above them.
  */
 class Graphics(
     private val ram: Ram,
@@ -40,23 +42,37 @@ class Graphics(
     private var clipY1 = 128
     private var fill = 0
     private var fillTransparent = false
+    private var fillSprites = false
+    private var fillGlobal = false
+    private var invert = false
+    private var gfxBase = Addr.GFX
+    private var screenBase = Addr.SCREEN
+    private var mapBase = Addr.MAP
+    private var mapWidth = 128
+    private var mapHeight = 64
+    private var mapRegionStart = 0x1000
+    private var mapRegionEnd = 0x3000
 
     /** Where the last `line` ended, for `line(x, y)` continuations. */
     private var lineX = 0
     private var lineY = 0
     private var lineValid = false
 
+    /** Fraction bits of `tline`'s map coordinates: 13 means tiles, 16 means pixels (`tline(16)`). */
+    private var tlinePrecision = 13
+
+    /** `reset()`: the draw and hardware state at 0x5f00-0x5f7f back to the defaults. */
     fun reset() {
+        ram.fill(Addr.DRAW_PAL, 0, 0x80)
         resetPalettes()
         resetClip()
         ram[Addr.PEN] = 6
-        ram[Addr.CURSOR_X] = 0
-        ram[Addr.CURSOR_Y] = 0
-        ram.poke2(Addr.CAMERA_X, 0)
-        ram.poke2(Addr.CAMERA_Y, 0)
-        ram.poke2(Addr.FILL_PATTERN, 0)
-        ram[Addr.FILL_TRANSPARENT] = 0
+        ram[Addr.GFX_ADDR] = 0x00
+        ram[Addr.SCREEN_ADDR] = 0x60
+        ram[Addr.MAP_ADDR] = 0x20
+        ram[Addr.MAP_WIDTH] = 128
         lineValid = false
+        tlinePrecision = 13
     }
 
     // ---------------------------------------------------------------- state
@@ -69,24 +85,79 @@ class Graphics(
         clipX1 = minOf(ram[Addr.CLIP + 2], 128)
         clipY1 = minOf(ram[Addr.CLIP + 3], 128)
         fill = ram[Addr.FILL_PATTERN] or (ram[Addr.FILL_PATTERN + 1] shl 8)
-        fillTransparent = ram[Addr.FILL_TRANSPARENT] and 1 != 0
+        val mode = ram[Addr.FILL_MODE]
+        fillTransparent = mode and 1 != 0
+        fillSprites = mode and 2 != 0
+        fillGlobal = mode and 4 != 0
+        invert = false
+        gfxBase = videoBase(ram[Addr.GFX_ADDR], 0x00)
+        screenBase = videoBase(ram[Addr.SCREEN_ADDR], 0x60)
+        loadMap()
     }
 
-    /** Resolves a call's color argument: given, it also becomes the pen; null keeps the pen. */
-    private fun pen(col: Int?): Int {
-        if (col == null) return ram[Addr.PEN]
-        ram[Addr.PEN] = col and 0xff
-        return col and 0xff
+    /** GFX and SCREEN may live at 0x0000, 0x6000 or in upper memory (0x8000, 0xa000, …). */
+    private fun videoBase(
+        value: Int,
+        default: Int,
+    ): Int =
+        when (value) {
+            0x00, 0x60, 0x80, 0xa0, 0xc0, 0xe0 -> value shl 8
+            else -> default shl 8
+        }
+
+    /**
+     * Where the map lives and how big it is: 0x10-0x2f (0x30-0x3f meaning 0x10-0x1f) inside the
+     * 0x1000-0x2fff region, which wraps (so rows 32-63 of the default map are the shared half),
+     * or 0x80 and above; the height is what fits.
+     */
+    private fun loadMap() {
+        var page = ram[Addr.MAP_ADDR]
+        if (page in 0x30..0x3f) page -= 0x20
+        mapWidth = ram[Addr.MAP_WIDTH].let { if (it == 0) 256 else it }
+        if (page >= 0x80) {
+            mapBase = page shl 8
+            mapRegionStart = mapBase
+            mapRegionEnd = 0x10000
+        } else {
+            mapBase = (if (page in 0x10..0x2f) page else 0x20) shl 8
+            mapRegionStart = 0x1000
+            mapRegionEnd = 0x3000
+        }
+        mapHeight = (mapRegionEnd - mapRegionStart) / mapWidth
+    }
+
+    /**
+     * Resolves a call's color argument (raw 16:16 bits): given, it also becomes the pen; null
+     * keeps the pen. With 0x5f34 bit 0 set it may also set the fill pattern and, with bit 1,
+     * invert this call's filled shape.
+     */
+    private fun pen(colBits: Int?): Int {
+        if (colBits == null) return ram[Addr.PEN]
+        val col = (colBits shr 16) and 0xff
+        val flags = ram[Addr.COLOR_FILL_FLAGS]
+        if (flags and 1 != 0 && colBits and 0x10000000 != 0) {
+            ram.poke2(Addr.FILL_PATTERN, colBits and 0xffff)
+            ram[Addr.FILL_MODE] = (colBits shr 24) and 7
+            fill = colBits and 0xffff
+            fillTransparent = colBits and 0x01000000 != 0
+            fillSprites = colBits and 0x02000000 != 0
+            fillGlobal = colBits and 0x04000000 != 0
+            invert = flags and 2 != 0 && colBits and 0x08000000 != 0
+        }
+        ram[Addr.PEN] = col
+        return col
     }
 
     fun resetPalettes() {
         for (i in 0 until 16) {
             ram[Addr.DRAW_PAL + i] = i
             ram[Addr.SCREEN_PAL + i] = i
+            ram[Addr.SECONDARY_PAL + i] = i or (i shl 4)
         }
         ram[Addr.DRAW_PAL] = 0x10
     }
 
+    /** `pal(c0, c1, p)`: 0 draw palette, 1 screen palette, 2 secondary palette (two colors per entry). */
     fun pal(
         c0: Int,
         c1: Int,
@@ -95,12 +166,20 @@ class Graphics(
         val i = c0 and 0xf
         when (p) {
             1 -> ram[Addr.SCREEN_PAL + i] = c1 and 0x8f
+            2 -> ram[Addr.SECONDARY_PAL + i] = c1 and 0xff
             else -> ram[Addr.DRAW_PAL + i] = (ram[Addr.DRAW_PAL + i] and 0x10) or (c1 and 0xf)
         }
     }
 
-    fun resetDrawPalette() {
-        for (i in 0 until 16) ram[Addr.DRAW_PAL + i] = (ram[Addr.DRAW_PAL + i] and 0x10) or i
+    /** `pal(p)`: one palette back to its defaults. */
+    fun resetPalette(p: Int) {
+        for (i in 0 until 16) {
+            when (p) {
+                1 -> ram[Addr.SCREEN_PAL + i] = i
+                2 -> ram[Addr.SECONDARY_PAL + i] = i or (i shl 4)
+                else -> ram[Addr.DRAW_PAL + i] = (ram[Addr.DRAW_PAL + i] and 0x10) or i
+            }
+        }
     }
 
     fun palt(
@@ -120,16 +199,28 @@ class Graphics(
         for (i in 0 until 16) palt(i, (bits shr (15 - i)) and 1 != 0)
     }
 
+    /** `clip(x, y, w, h, [clip_previous])`: the new rectangle, optionally inside the old one. */
     fun clip(
         x: Int,
         y: Int,
         w: Int,
         h: Int,
+        intersect: Boolean = false,
     ) {
-        ram[Addr.CLIP] = x.coerceIn(0, 128)
-        ram[Addr.CLIP + 1] = y.coerceIn(0, 128)
-        ram[Addr.CLIP + 2] = (x + w).coerceIn(0, 128)
-        ram[Addr.CLIP + 3] = (y + h).coerceIn(0, 128)
+        var x0 = x.coerceIn(0, 128)
+        var y0 = y.coerceIn(0, 128)
+        var x1 = (x + w).coerceIn(0, 128)
+        var y1 = (y + h).coerceIn(0, 128)
+        if (intersect) {
+            x0 = maxOf(x0, ram[Addr.CLIP])
+            y0 = maxOf(y0, ram[Addr.CLIP + 1])
+            x1 = minOf(x1, ram[Addr.CLIP + 2])
+            y1 = minOf(y1, ram[Addr.CLIP + 3])
+        }
+        ram[Addr.CLIP] = x0
+        ram[Addr.CLIP + 1] = y0
+        ram[Addr.CLIP + 2] = maxOf(x0, x1)
+        ram[Addr.CLIP + 3] = maxOf(y0, y1)
     }
 
     fun resetClip() = clip(0, 0, 128, 128)
@@ -146,6 +237,11 @@ class Graphics(
         ram[Addr.PEN] = c and 0xff
     }
 
+    /** `color(colBits)` with a raw 16:16 color, which may carry a fill pattern (see [pen]). */
+    fun colorBits(colBits: Int) {
+        pen(colBits)
+    }
+
     fun cursor(
         x: Int,
         y: Int,
@@ -154,15 +250,16 @@ class Graphics(
         ram[Addr.CURSOR_Y] = y
     }
 
-    /** `fillp(p)`: the integer part is the 4x4 pattern (bit 15 top-left); `.5` makes set bits transparent. */
+    /**
+     * `fillp(p)`: the integer part is the 4x4 pattern (bit 15 top-left); the fraction holds
+     * flags: `.5` set bits transparent, `.25` apply to sprites, `.125` secondary palette everywhere.
+     */
     fun fillp(p: Int) {
         ram.poke2(Addr.FILL_PATTERN, p shr 16)
-        ram[Addr.FILL_TRANSPARENT] = if (p and 0x8000 != 0) 1 else 0
+        ram[Addr.FILL_MODE] = ((p shr 15) and 1) or ((p shr 13) and 2) or ((p shr 11) and 4)
     }
 
     // ---------------------------------------------------------------- pixels
-
-    private val screenBase = Addr.SCREEN
 
     fun screenPixel(
         x: Int,
@@ -183,19 +280,30 @@ class Graphics(
         ram[addr] = if (x and 1 == 0) (b and 0xf0) or c else (b and 0x0f) or (c shl 4)
     }
 
-    /** One pixel of a primitive at screen position [sx], [sy]: clip, fill pattern, draw palette. */
+    private fun patternBit(
+        sx: Int,
+        sy: Int,
+    ): Boolean = fill != 0 && (fill shr (15 - ((sy and 3) * 4 + (sx and 3)))) and 1 != 0
+
+    /** One pixel of a primitive at screen position [sx], [sy]: clip, draw palette, fill pattern. */
     private fun plot(
         sx: Int,
         sy: Int,
         col: Int,
     ) {
         if (sx < clipX0 || sx >= clipX1 || sy < clipY0 || sy >= clipY1) return
-        var c = col and 0xf
-        if (fill != 0 && (fill shr (15 - ((sy and 3) * 4 + (sx and 3)))) and 1 != 0) {
-            if (fillTransparent) return
-            c = (col shr 4) and 0xf
+        var primary = ram[Addr.DRAW_PAL + (col and 0xf)] and 0xf
+        var secondary = ram[Addr.DRAW_PAL + ((col shr 4) and 0xf)] and 0xf
+        if (fillGlobal) {
+            val entry = ram[Addr.SECONDARY_PAL + primary]
+            primary = entry and 0xf
+            secondary = entry shr 4
         }
-        setScreenPixel(sx, sy, ram[Addr.DRAW_PAL + c] and 0xf)
+        if (patternBit(sx, sy)) {
+            if (fillTransparent) return
+            primary = secondary
+        }
+        setScreenPixel(sx, sy, primary)
     }
 
     private fun hspan(
@@ -210,7 +318,43 @@ class Graphics(
         for (x in a..b) plot(x, sy, col)
     }
 
+    /**
+     * A filled shape given as one span per row (screen coordinates, null where the row is
+     * empty). Inverted, it fills everything in the clip rectangle except the shape.
+     */
+    private inline fun fillRows(
+        top: Int,
+        bottom: Int,
+        col: Int,
+        span: (Int) -> Long?,
+    ) {
+        if (!invert) {
+            for (y in maxOf(top, clipY0)..minOf(bottom, clipY1 - 1)) {
+                val s = span(y) ?: continue
+                hspan((s shr 32).toInt(), s.toInt(), y, col)
+            }
+            return
+        }
+        for (y in clipY0 until clipY1) {
+            val s = if (y in top..bottom) span(y) else null
+            if (s == null) {
+                hspan(clipX0, clipX1 - 1, y, col)
+            } else {
+                val a = (s shr 32).toInt()
+                val b = s.toInt()
+                if (a > clipX0) hspan(clipX0, a - 1, y, col)
+                if (b < clipX1 - 1) hspan(b + 1, clipX1 - 1, y, col)
+            }
+        }
+    }
+
+    private fun span(
+        a: Int,
+        b: Int,
+    ): Long = (a.toLong() shl 32) or (b.toLong() and 0xffffffffL)
+
     fun cls(col: Int) {
+        load()
         val c = col and 0xf
         ram.fill(screenBase, c or (c shl 4), 0x2000)
         resetClip()
@@ -231,8 +375,14 @@ class Graphics(
         y: Int,
     ): Int {
         load()
-        return screenPixel(x - camX, y - camY)
+        val sx = x - camX
+        val sy = y - camY
+        if (sx !in 0..127 || sy !in 0..127) return outOfBounds(Addr.OOB_PGET)
+        return screenPixel(sx, sy)
     }
+
+    /** What an out-of-bounds read returns: 0, or the value at [addr] when 0x5f36 bit 0x10 asks for it. */
+    private fun outOfBounds(addr: Int): Int = if (ram[Addr.MISC_FLAGS] and 0x10 != 0) ram[addr] else 0
 
     fun line(
         x0: Int,
@@ -243,17 +393,28 @@ class Graphics(
     ) {
         load()
         val c = pen(col)
-        var x = x0 - camX
-        var y = y0 - camY
-        val ex = x1 - camX
-        val ey = y1 - camY
+        walkLine(x0 - camX, y0 - camY, x1 - camX, y1 - camY) { x, y -> plot(x, y, c) }
+        lineX = x1
+        lineY = y1
+        lineValid = true
+    }
+
+    private inline fun walkLine(
+        x0: Int,
+        y0: Int,
+        ex: Int,
+        ey: Int,
+        each: (Int, Int) -> Unit,
+    ) {
+        var x = x0
+        var y = y0
         val dx = abs(ex - x)
         val dy = -abs(ey - y)
         val stepX = if (x < ex) 1 else -1
         val stepY = if (y < ey) 1 else -1
         var err = dx + dy
         while (true) {
-            plot(x, y, c)
+            each(x, y)
             if (x == ex && y == ey) break
             val e2 = 2 * err
             if (e2 >= dy) {
@@ -265,9 +426,6 @@ class Graphics(
                 y += stepY
             }
         }
-        lineX = x1
-        lineY = y1
-        lineValid = true
     }
 
     /** `line(x, y, [col])`: continues from where the last line ended. */
@@ -304,7 +462,8 @@ class Graphics(
         val t = minOf(y0, y1) - camY
         val b = maxOf(y0, y1) - camY
         if (filled) {
-            for (y in maxOf(t, clipY0)..minOf(b, clipY1 - 1)) hspan(l, r, y, c)
+            val row = span(l, r)
+            fillRows(t, b, c) { row }
         } else {
             hspan(l, r, t, c)
             hspan(l, r, b, c)
@@ -340,16 +499,18 @@ class Graphics(
             if (d <= 0) return 0
             return radius - (sqrt((radius * radius - d * d).toDouble()) + 0.5).toInt()
         }
+        if (filled) {
+            fillRows(t, bottom, c) { row ->
+                val k = inset(minOf(row - t, bottom - row))
+                span(l + k, right - k)
+            }
+            return
+        }
         for (j in 0 until h) {
             val k = inset(minOf(j, h - 1 - j))
-            if (filled) {
-                hspan(l + k, right - k, t + j, c)
-            } else {
-                plot(l + k, t + j, c)
-                plot(right - k, t + j, c)
-            }
+            plot(l + k, t + j, c)
+            plot(right - k, t + j, c)
         }
-        if (filled) return
         for (i in 0 until w) {
             val k = inset(minOf(i, w - 1 - i))
             plot(l + i, t + k, c)
@@ -369,25 +530,41 @@ class Graphics(
         if (r < 0) return
         val x0 = cx - camX
         val y0 = cy - camY
+        if (filled) {
+            // The midpoint walk gives each row's half width.
+            val half = IntArray(r + 1)
+            var x = r
+            var y = 0
+            var err = 1 - r
+            while (x >= y) {
+                half[y] = maxOf(half[y], x)
+                half[x] = maxOf(half[x], y)
+                y++
+                if (err < 0) {
+                    err += 2 * y + 1
+                } else {
+                    x--
+                    err += 2 * (y - x) + 1
+                }
+            }
+            fillRows(y0 - r, y0 + r, c) { row ->
+                val w = half[abs(row - y0)]
+                span(x0 - w, x0 + w)
+            }
+            return
+        }
         var x = r
         var y = 0
         var err = 1 - r
         while (x >= y) {
-            if (filled) {
-                hspan(x0 - x, x0 + x, y0 + y, c)
-                hspan(x0 - x, x0 + x, y0 - y, c)
-                hspan(x0 - y, x0 + y, y0 + x, c)
-                hspan(x0 - y, x0 + y, y0 - x, c)
-            } else {
-                plot(x0 + x, y0 + y, c)
-                plot(x0 - x, y0 + y, c)
-                plot(x0 + x, y0 - y, c)
-                plot(x0 - x, y0 - y, c)
-                plot(x0 + y, y0 + x, c)
-                plot(x0 - y, y0 + x, c)
-                plot(x0 + y, y0 - x, c)
-                plot(x0 - y, y0 - x, c)
-            }
+            plot(x0 + x, y0 + y, c)
+            plot(x0 - x, y0 + y, c)
+            plot(x0 + x, y0 - y, c)
+            plot(x0 - x, y0 - y, c)
+            plot(x0 + y, y0 + x, c)
+            plot(x0 - y, y0 + x, c)
+            plot(x0 + y, y0 - x, c)
+            plot(x0 - y, y0 - x, c)
             y++
             if (err < 0) {
                 err += 2 * y + 1
@@ -416,19 +593,21 @@ class Graphics(
         val cy = (t + b) / 2.0
         val rx = (r - l) / 2.0
         val ry = (b - t) / 2.0
-        for (y in t..b) {
+
+        fun rowSpan(y: Int): Long {
             val dy = if (ry == 0.0) 0.0 else (y - cy) / ry
             val half = rx * sqrt(maxOf(0.0, 1 - dy * dy))
-            val left = (cx - half + 0.5).toInt()
-            val right = (cx + half + 0.5).toInt()
-            if (filled) {
-                hspan(left, right, y, c)
-            } else {
-                plot(left, y, c)
-                plot(right, y, c)
-            }
+            return span((cx - half + 0.5).toInt(), (cx + half + 0.5).toInt())
         }
-        if (filled) return
+        if (filled) {
+            fillRows(t, b, c) { rowSpan(it) }
+            return
+        }
+        for (y in t..b) {
+            val s = rowSpan(y)
+            plot((s shr 32).toInt(), y, c)
+            plot(s.toInt(), y, c)
+        }
         // Columns too, so the flat top and bottom have no gaps.
         for (x in l..r) {
             val dx = if (rx == 0.0) 0.0 else (x - cx) / rx
@@ -444,8 +623,26 @@ class Graphics(
         x: Int,
         y: Int,
     ): Int {
+        if (x !in 0..127 || y !in 0..127) return outOfBounds(Addr.OOB_SGET)
+        val b = ram[gfxBase(), y, x]
+        return if (x and 1 == 0) b and 0xf else b shr 4
+    }
+
+    private fun gfxBase(): Int = videoBase(ram[Addr.GFX_ADDR], 0x00)
+
+    private operator fun Ram.get(
+        base: Int,
+        y: Int,
+        x: Int,
+    ): Int = this[base + y * 64 + (x shr 1)]
+
+    /** A sprite-sheet pixel with the base already resolved; no bounds or fallback. */
+    private fun sheetPixel(
+        x: Int,
+        y: Int,
+    ): Int {
         if (x !in 0..127 || y !in 0..127) return 0
-        val b = ram[Addr.GFX + y * 64 + (x shr 1)]
+        val b = ram[gfxBase + y * 64 + (x shr 1)]
         return if (x and 1 == 0) b and 0xf else b shr 4
     }
 
@@ -456,12 +653,15 @@ class Graphics(
     ) {
         if (x !in 0..127 || y !in 0..127) return
         val c = ram[Addr.DRAW_PAL + (pen(col) and 0xf)] and 0xf
-        val addr = Addr.GFX + y * 64 + (x shr 1)
+        val addr = gfxBase() + y * 64 + (x shr 1)
         val b = ram[addr]
         ram[addr] = if (x and 1 == 0) (b and 0xf0) or c else (b and 0x0f) or (c shl 4)
     }
 
-    /** A sprite-sheet pixel drawn at screen [sx], [sy]: transparent colors skip, the draw palette maps. */
+    /**
+     * A sprite-sheet pixel drawn at screen [sx], [sy]: transparent colors skip, the draw palette
+     * maps, and with the fill pattern applied to sprites the secondary palette picks two colors.
+     */
     private fun blit(
         sx: Int,
         sy: Int,
@@ -470,7 +670,17 @@ class Graphics(
         if (sx < clipX0 || sx >= clipX1 || sy < clipY0 || sy >= clipY1) return
         val mapped = ram[Addr.DRAW_PAL + c]
         if (mapped and 0x10 != 0) return
-        setScreenPixel(sx, sy, mapped and 0xf)
+        var out = mapped and 0xf
+        if (fillSprites) {
+            val entry = ram[Addr.SECONDARY_PAL + out]
+            if (patternBit(sx, sy)) {
+                if (fillTransparent) return
+                out = entry shr 4
+            } else {
+                out = entry and 0xf
+            }
+        }
+        setScreenPixel(sx, sy, out)
     }
 
     fun spr(
@@ -483,15 +693,25 @@ class Graphics(
         flipY: Boolean,
     ) {
         load()
+        drawSprite(n, x - camX, y - camY, w, h, flipX, flipY)
+    }
+
+    private fun drawSprite(
+        n: Int,
+        dx: Int,
+        dy: Int,
+        w: Int,
+        h: Int,
+        flipX: Boolean,
+        flipY: Boolean,
+    ) {
         val sx = (n and 15) * 8
         val sy = (n shr 4 and 15) * 8
-        val dx = x - camX
-        val dy = y - camY
         for (j in 0 until h) {
+            val py = if (flipY) h - 1 - j else j
             for (i in 0 until w) {
                 val px = if (flipX) w - 1 - i else i
-                val py = if (flipY) h - 1 - j else j
-                blit(dx + i, dy + j, sget(sx + px, sy + py))
+                blit(dx + i, dy + j, sheetPixel(sx + px, sy + py))
             }
         }
     }
@@ -509,26 +729,52 @@ class Graphics(
         flipY: Boolean,
     ) {
         load()
-        if (dw <= 0 || dh <= 0 || sw == 0 || sh == 0) return
-        val ox = dx - camX
-        val oy = dy - camY
-        for (j in 0 until dh) {
-            val v = (j * sh) / dh
-            val py = if (flipY) sh - 1 - v else v
-            for (i in 0 until dw) {
-                val u = (i * sw) / dw
-                val px = if (flipX) sw - 1 - u else u
-                blit(ox + i, oy + j, sget(sx + px, sy + py))
+        if (dw == 0 || dh == 0 || sw == 0 || sh == 0) return
+        // A negative destination size draws flipped on that axis, extending left/up from the origin.
+        var fx = flipX
+        var fy = flipY
+        var w = dw
+        var h = dh
+        var ox = dx - camX
+        var oy = dy - camY
+        if (w < 0) {
+            w = -w
+            ox -= w
+            fx = !fx
+        }
+        if (h < 0) {
+            h = -h
+            oy -= h
+            fy = !fy
+        }
+        for (j in 0 until h) {
+            val v = (j * sh) / h
+            val py = if (fy) sh - 1 - v else v
+            for (i in 0 until w) {
+                val u = (i * sw) / w
+                val px = if (fx) sw - 1 - u else u
+                blit(ox + i, oy + j, sheetPixel(sx + px, sy + py))
             }
         }
+    }
+
+    /** The address of map cell [x], [y], or -1 outside the map. */
+    private fun mapAddr(
+        x: Int,
+        y: Int,
+    ): Int {
+        if (x !in 0 until mapWidth || y !in 0 until mapHeight) return -1
+        val offset = mapBase - mapRegionStart + y * mapWidth + x
+        return mapRegionStart + offset % (mapRegionEnd - mapRegionStart)
     }
 
     fun mget(
         x: Int,
         y: Int,
     ): Int {
-        if (x !in 0..127 || y !in 0..63) return 0
-        return if (y < 32) ram[Addr.MAP + y * 128 + x] else ram[Addr.MAP_SHARED + (y - 32) * 128 + x]
+        loadMap()
+        val addr = mapAddr(x, y)
+        return if (addr < 0) outOfBounds(Addr.OOB_MGET) else ram[addr]
     }
 
     fun mset(
@@ -536,8 +782,23 @@ class Graphics(
         y: Int,
         v: Int,
     ) {
-        if (x !in 0..127 || y !in 0..63) return
-        if (y < 32) ram[Addr.MAP + y * 128 + x] = v else ram[Addr.MAP_SHARED + (y - 32) * 128 + x] = v
+        loadMap()
+        val addr = mapAddr(x, y)
+        if (addr >= 0) ram[addr] = v
+    }
+
+    /** The whole map's size, `map()`'s default. */
+    fun mapSize(): Pair<Int, Int> {
+        loadMap()
+        return mapWidth to mapHeight
+    }
+
+    private fun drawsTile(
+        tile: Int,
+        layers: Int,
+    ): Boolean {
+        if (tile == 0 && ram[Addr.MISC_FLAGS] and 0x8 == 0) return false
+        return layers == 0 || ram[Addr.FLAGS + tile] and layers == layers
     }
 
     fun map(
@@ -549,17 +810,28 @@ class Graphics(
         ch: Int,
         layers: Int,
     ) {
+        load()
         for (j in 0 until ch) {
+            val y = sy + j * 8 - camY
+            if (y + 8 <= clipY0 || y >= clipY1) continue
             for (i in 0 until cw) {
-                val tile = mget(cx + i, cy + j)
-                if (tile == 0) continue
-                if (layers != 0 && ram[Addr.FLAGS + tile] and layers != layers) continue
-                spr(tile, sx + i * 8, sy + j * 8, 8, 8, false, false)
+                val x = sx + i * 8 - camX
+                if (x + 8 <= clipX0 || x >= clipX1) continue
+                val addr = mapAddr(cx + i, cy + j)
+                if (addr < 0) continue
+                val tile = ram[addr]
+                if (!drawsTile(tile, layers)) continue
+                drawSprite(tile, x, y, 8, 8, false, false)
             }
         }
     }
 
-    /** `tline`: a line textured from the map, stepping map coordinates (in tiles) by [mdx], [mdy] per pixel. */
+    /** `tline(bits)`: how many fraction bits the next calls' map coordinates use (13 = tiles, 16 = pixels). */
+    fun tlinePrecision(bits: Int) {
+        tlinePrecision = bits.coerceIn(0, 31)
+    }
+
+    /** `tline`: a line textured from the map, stepping map coordinates by [mdx], [mdy] per pixel. */
     fun tline(
         x0: Int,
         y0: Int,
@@ -569,161 +841,52 @@ class Graphics(
         my0: Int,
         mdx: Int,
         mdy: Int,
+        layers: Int,
     ) {
         load()
-        val maskX = ram[Addr.TLINE_MASK_X]
-        val maskY = ram[Addr.TLINE_MASK_Y]
+        val maskX = ram[Addr.TLINE_MASK_X].let { if (it == 0) 256 else it } - 1
+        val maskY = ram[Addr.TLINE_MASK_Y].let { if (it == 0) 256 else it } - 1
         val offX = ram[Addr.TLINE_OFFSET_X]
         val offY = ram[Addr.TLINE_OFFSET_Y]
-        var mx = mx0
-        var my = my0
-        var x = x0 - camX
-        var y = y0 - camY
-        val ex = x1 - camX
-        val ey = y1 - camY
-        val dx = abs(ex - x)
-        val dy = -abs(ey - y)
-        val stepX = if (x < ex) 1 else -1
-        val stepY = if (y < ey) 1 else -1
-        var err = dx + dy
-        while (true) {
-            var tx = Fix.toInt(mx)
-            var ty = Fix.toInt(my)
-            if (maskX != 0) tx = (tx and (maskX - 1)) + offX
-            if (maskY != 0) ty = (ty and (maskY - 1)) + offY
-            val tile = mget(tx, ty)
-            if (tile != 0) {
-                val px = (mx shr 13) and 7
-                val py = (my shr 13) and 7
-                blit(x, y, sget((tile and 15) * 8 + px, (tile shr 4) * 8 + py))
+        val shift = tlinePrecision
+        var mx = mx0.toLong()
+        var my = my0.toLong()
+        walkLine(x0 - camX, y0 - camY, x1 - camX, y1 - camY) { x, y ->
+            val pxX = (mx shr shift).toInt()
+            val pxY = (my shr shift).toInt()
+            val tx = ((pxX shr 3) and maskX) + offX
+            val ty = ((pxY shr 3) and maskY) + offY
+            val addr = mapAddr(tx, ty)
+            val tile = if (addr < 0) 0 else ram[addr]
+            if (drawsTile(tile, layers)) {
+                blit(x, y, sheetPixel((tile and 15) * 8 + (pxX and 7), (tile shr 4) * 8 + (pxY and 7)))
             }
             mx += mdx
             my += mdy
-            if (x == ex && y == ey) break
-            val e2 = 2 * err
-            if (e2 >= dy) {
-                err += dy
-                x += stepX
-            }
-            if (e2 <= dx) {
-                err += dx
-                y += stepY
-            }
         }
     }
 
-    // ---------------------------------------------------------------- text
+    // ---------------------------------------------------------------- text (see Printer)
 
-    /**
-     * Draws [text] with its top-left at [x], [y] and returns the x just past it. Handles the
-     * control codes carts lean on: newline, carriage return, tab, backspace, `\f` (color),
-     * `\#` (background), `\-` `\|` `\+` (nudges), `\^c` (clear) and `\0` (stop); other `\^`
-     * commands and `\a` sounds are skipped.
-     */
-    fun print(
-        text: String,
+    /** Loads the draw state for a run of [textPixel] calls. */
+    internal fun beginText() = load()
+
+    /** A text pixel at world position [x], [y]: camera, clip and draw palette apply, the fill pattern does not. */
+    internal fun textPixel(
         x: Int,
         y: Int,
         col: Int,
-    ): PrintResult {
-        load()
-        var fg = col and 0xf
-        var bg = -1
-        var cx = x
-        var cy = y
-        val homeX = x
-        var right = x
-        var lines = 1
-        var i = 0
-        while (i < text.length) {
-            val code = text[i].code
-            i++
-            when (code) {
-                0 -> return PrintResult(right, cy, lines, stopped = true)
-                1 -> i += 2 // \* repeat: not drawn here
-                2 -> if (i < text.length) bg = paramDigit(text[i++])
-                3 -> if (i < text.length) cx += paramDigit(text[i++]) - 16
-                4 -> if (i < text.length) cy += paramDigit(text[i++]) - 16
-                5 -> {
-                    if (i + 1 < text.length) {
-                        cx += paramDigit(text[i++]) - 16
-                        cy += paramDigit(text[i++]) - 16
-                    }
-                }
-                6 -> i = command(text, i)
-                7 -> while (i < text.length && text[i] != ' ' && text[i].code >= 32) i++
-                8 -> cx -= 4
-                9 -> cx = homeX + ((cx - homeX) / 16 + 1) * 16
-                10 -> {
-                    cx = homeX
-                    cy += Font.HEIGHT
-                    lines++
-                }
-                12 -> if (i < text.length) fg = paramDigit(text[i++]) and 0xf
-                11 -> i += 2 // \v decoration: not drawn here
-                13 -> cx = homeX
-                14, 15 -> {}
-                else -> {
-                    val glyph = Font.glyph(code) ?: continue
-                    if (bg >= 0) {
-                        for (gy in -1 until Font.HEIGHT - 1) hspan(cx - 1 - camX, cx + glyph.advance - 2 - camX, cy + gy - camY, bg)
-                    }
-                    drawGlyph(glyph, cx - camX, cy - camY, fg)
-                    cx += glyph.advance
-                    if (cx > right) right = cx
-                }
-            }
-        }
-        return PrintResult(right, cy, lines, stopped = false)
-    }
-
-    class PrintResult(
-        val right: Int,
-        val lastY: Int,
-        val lines: Int,
-        val stopped: Boolean,
-    )
-
-    private fun command(
-        text: String,
-        start: Int,
-    ): Int {
-        if (start >= text.length) return start
-        val c = text[start]
-        var i = start + 1
-        // How many parameter characters each `\^` command takes; most just toggle a mode.
-        when (c) {
-            'c' -> if (i < text.length) cls(paramDigit(text[i++]))
-            'j' -> i += 2
-            'o' -> i += 3
-            '-', 'x', 'y', 's', 'r', 'd' -> i += 1
-            '.' -> i += 8
-            ':' -> i += 16
-            '@', '!' -> i += 8
-            else -> {}
-        }
-        return minOf(i, text.length)
-    }
-
-    private fun drawGlyph(
-        glyph: Font.Glyph,
-        sx: Int,
-        sy: Int,
-        col: Int,
     ) {
-        val topBit = 1 shl (glyph.width - 1)
-        for (row in 0 until 5) {
-            val bits = glyph.rows[row]
-            if (bits == 0) continue
-            for (col2 in 0 until glyph.width) {
-                if (bits and (topBit shr col2) != 0) plot(sx + col2, sy + row, col)
-            }
-        }
+        val sx = x - camX
+        val sy = y - camY
+        if (sx < clipX0 || sx >= clipX1 || sy < clipY0 || sy >= clipY1) return
+        setScreenPixel(sx, sy, ram[Addr.DRAW_PAL + (col and 0xf)] and 0xf)
     }
 
     /** Moves the whole screen up [rows] pixels, filling the bottom with color 0 (cursor printing past the end). */
     fun scroll(rows: Int) {
         if (rows <= 0) return
+        load()
         val bytes = minOf(rows, 128) * 64
         ram.copy(screenBase, screenBase + bytes, 0x2000 - bytes)
         ram.fill(screenBase + 0x2000 - bytes, 0, bytes)
@@ -737,6 +900,7 @@ class Graphics(
      * and 133-135 rotate.
      */
     fun render(out: IntArray) {
+        screenBase = videoBase(ram[Addr.SCREEN_ADDR], 0x60)
         val pal = IntArray(16) { rgbOf(ram[Addr.SCREEN_PAL + it]) }
         val mode = ram[Addr.SCREEN_MODE]
         if (mode == 0 || mode == 4 || mode == 128 || mode == 132) {
@@ -790,15 +954,6 @@ class Graphics(
     }
 
     companion object {
-        /** `0123456789abcdefghijklmnopqrstuv`: the digit P8SCII control codes take as a parameter. */
-        fun paramDigit(c: Char): Int =
-            when (c) {
-                in '0'..'9' -> c - '0'
-                in 'a'..'v' -> c - 'a' + 10
-                in 'A'..'V' -> c - 'A' + 10
-                else -> 0
-            }
-
         private val BASE =
             intArrayOf(
                 0x000000,

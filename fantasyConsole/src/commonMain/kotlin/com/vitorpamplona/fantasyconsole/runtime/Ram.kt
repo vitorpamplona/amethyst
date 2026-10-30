@@ -44,13 +44,31 @@ object Addr {
     const val CAMERA_X = 0x5f28
     const val CAMERA_Y = 0x5f2a
     const val SCREEN_MODE = 0x5f2c
+    const val DEVKIT = 0x5f2d
+    const val PAUSE_SUPPRESS = 0x5f30
     const val FILL_PATTERN = 0x5f31
-    const val FILL_TRANSPARENT = 0x5f33
+
+    /** Fill flags set by `fillp`: 1 transparency, 2 apply to sprites, 4 secondary palette everywhere. */
+    const val FILL_MODE = 0x5f33
+
+    /** 1: colors may carry a fill pattern in their high bits; 2: and may invert filled shapes. */
+    const val COLOR_FILL_FLAGS = 0x5f34
+
+    /** 0x8 draw sprite 0 in `map`/`tline`; 0x10 custom out-of-bounds reads; 0x40 no print scrolling. */
+    const val MISC_FLAGS = 0x5f36
     const val TLINE_MASK_X = 0x5f38
     const val TLINE_MASK_Y = 0x5f39
     const val TLINE_OFFSET_X = 0x5f3a
     const val TLINE_OFFSET_Y = 0x5f3b
     const val RNG = 0x5f44
+    const val GFX_ADDR = 0x5f54
+    const val SCREEN_ADDR = 0x5f55
+    const val MAP_ADDR = 0x5f56
+    const val MAP_WIDTH = 0x5f57
+    const val OOB_SGET = 0x5f59
+    const val OOB_MGET = 0x5f5a
+    const val OOB_PGET = 0x5f5b
+    const val SECONDARY_PAL = 0x5f60
     const val BTNP_DELAY = 0x5f5c
     const val BTNP_INTERVAL = 0x5f5d
     const val SCREEN = 0x6000
