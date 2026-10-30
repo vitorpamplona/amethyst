@@ -3044,7 +3044,15 @@ open class BaseAccountViewModel(
     ) = launchSigner {
         val noteEvent = note?.event
         if (noteEvent != null) {
-            val resultingNote = unwrapIfNeeded(noteEvent)
+            val resultingNote =
+                try {
+                    unwrapIfNeeded(noteEvent)
+                } catch (e: IllegalArgumentException) {
+                    // The wrap or seal opened to something that is not an event (empty content, or
+                    // a sender's broken JSON): nothing to show, like the indexer's own unwrap.
+                    Log.w("AccountViewModel", "Could not parse the content of ${noteEvent.kind}:${noteEvent.id}", e)
+                    null
+                }
             if (resultingNote != null && resultingNote != note) {
                 onReady(resultingNote)
             }
