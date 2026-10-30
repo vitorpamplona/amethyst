@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
@@ -34,7 +33,8 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
  *
  * Every entry whose state must survive is decorated — the visible stack AND the tab roots the user
  * left — so a tab keeps its ViewModels and scroll position while it is out of sight. Only the
- * visible stack is displayed; an entry's state is dropped once it leaves both.
+ * visible stack is displayed; an entry's state is dropped once it leaves both, and its ViewModels
+ * also once the entry is handed new arguments in place (see [rememberRouteViewModelStoreNavEntryDecorator]).
  */
 @Composable
 fun NavigationHost(
@@ -49,7 +49,7 @@ fun NavigationHost(
             entryDecorators =
                 listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberViewModelStoreNavEntryDecorator(),
+                    rememberRouteViewModelStoreNavEntryDecorator(),
                 ),
             entryProvider = destinations::entryFor,
         )
