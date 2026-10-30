@@ -37,8 +37,6 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.coroutines.executeAsync
-import okio.BufferedSink
-import okio.source
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -339,16 +337,7 @@ open class BlossomClient(
     private fun fileBody(
         file: File,
         contentType: String,
-    ): RequestBody =
-        object : RequestBody() {
-            override fun contentType() = contentType.toMediaType()
-
-            override fun contentLength() = file.length()
-
-            override fun writeTo(sink: BufferedSink) {
-                file.inputStream().source().use(sink::writeAll)
-            }
-        }
+    ): RequestBody = ReopenableStreamBody(contentType.toMediaType(), file.length()) { file.inputStream() }
 
     private suspend fun putBlob(
         endpoint: String,

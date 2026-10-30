@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_messag
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
+import com.vitorpamplona.amethyst.commons.service.upload.ReopenableStreamBody
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
@@ -48,13 +49,9 @@ import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.coroutines.executeAsync
-import okio.Buffer
-import okio.BufferedSink
-import okio.ForwardingSource
-import okio.source
 import java.io.File
+import java.io.IOException
 import java.io.InputStream
 
 class BlossomUploader {
@@ -100,31 +97,29 @@ class BlossomUploader {
 
         val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
 
-        val imageInputStream = contentResolver.openInputStream(uri)
-        checkNotNull(imageInputStream) { "Can't open the image input stream" }
-
-        return imageInputStream
-            .use { stream ->
-                upload(
-                    stream,
-                    hash,
-                    size,
-                    fileName,
-                    myContentType,
-                    alt,
-                    sensitiveContent,
-                    serverBaseUrl,
-                    okHttpClient,
-                    httpAuth,
-                    context,
-                    useMediaEndpoint,
-                    onProgress,
-                )
-            }.mergeLocalMetadata(localMetadata)
+        return upload(
+            { contentResolver.openInputStream(uri) ?: throw IOException("Can't open the image input stream") },
+            hash,
+            size,
+            fileName,
+            myContentType,
+            alt,
+            sensitiveContent,
+            serverBaseUrl,
+            okHttpClient,
+            httpAuth,
+            context,
+            useMediaEndpoint,
+            onProgress,
+        ).mergeLocalMetadata(localMetadata)
     }
 
+    /**
+     * Uploads the blob [openStream] reads. It is called once per attempt: OkHttp writes the
+     * body again when it retries, so it must return a new stream each time.
+     */
     suspend fun upload(
-        inputStream: InputStream,
+        openStream: () -> InputStream,
         hash: HexKey,
         length: Long,
         baseFileName: String?,
@@ -150,39 +145,7 @@ class BlossomUploader {
         val client = okHttpClient(apiUrl)
         val requestBuilder = Request.Builder()
 
-        val requestBody: RequestBody =
-            object : RequestBody() {
-                override fun contentType() = contentType?.toMediaType()
-
-                override fun contentLength() = length
-
-                override fun writeTo(sink: BufferedSink) {
-                    if (onProgress == null) {
-                        inputStream.source().use(sink::writeAll)
-                    } else {
-                        // Close the outer counting wrapper — ForwardingSource.close delegates
-                        // to the underlying source, so one `use` on the outermost wrapper
-                        // covers the whole chain. Canonical okio pattern.
-                        val countingSource =
-                            object : ForwardingSource(inputStream.source()) {
-                                var totalRead = 0L
-
-                                override fun read(
-                                    sink: Buffer,
-                                    byteCount: Long,
-                                ): Long {
-                                    val n = super.read(sink, byteCount)
-                                    if (n > 0) {
-                                        totalRead += n
-                                        onProgress(totalRead, length)
-                                    }
-                                    return n
-                                }
-                            }
-                        countingSource.use { sink.writeAll(it) }
-                    }
-                }
-            }
+        val requestBody = ReopenableStreamBody(contentType?.toMediaType(), length, onProgress, openStream)
 
         httpAuth(hash, length, alt?.let { "Uploading $it" } ?: "Uploading $fileName")?.let {
             requestBuilder.addHeader("Authorization", it.toAuthorizationHeader())

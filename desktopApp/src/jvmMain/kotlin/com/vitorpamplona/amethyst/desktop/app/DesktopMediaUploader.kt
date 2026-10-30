@@ -290,7 +290,7 @@ class DesktopMediaUploader(
                     }
                 val result =
                     Nip96Uploader().upload(
-                        inputStream = payload.bytes.inputStream(),
+                        openStream = { payload.bytes.inputStream() },
                         length = payload.bytes.size.toLong(),
                         contentType = payload.contentType,
                         alt = alt,

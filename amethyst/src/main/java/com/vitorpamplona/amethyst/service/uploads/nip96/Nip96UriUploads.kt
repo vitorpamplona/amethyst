@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import okhttp3.OkHttpClient
+import java.io.IOException
 
 /** Android's extension lookup, ahead of the shared client's own table. */
 fun androidExtensionFor(mimeType: String): String? = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
@@ -93,23 +94,16 @@ suspend fun Nip96Uploader.upload(
     val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
 
     val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
-    val imageInputStream = contentResolver.openInputStream(uri)
-
-    checkNotNull(imageInputStream) { "Can't open the image input stream" }
-
-    return imageInputStream
-        .use { stream ->
-            upload(
-                inputStream = stream,
-                length = length,
-                contentType = myContentType,
-                alt = alt,
-                sensitiveContent = sensitiveContent,
-                server = server,
-                okHttpClient = okHttpClient,
-                onProgress = onProgress,
-                httpAuth = httpAuth,
-                extensionFor = ::androidExtensionFor,
-            )
-        }.mergeLocalMetadata(localMetadata)
+    return upload(
+        openStream = { contentResolver.openInputStream(uri) ?: throw IOException("Can't open the image input stream") },
+        length = length,
+        contentType = myContentType,
+        alt = alt,
+        sensitiveContent = sensitiveContent,
+        server = server,
+        okHttpClient = okHttpClient,
+        onProgress = onProgress,
+        httpAuth = httpAuth,
+        extensionFor = ::androidExtensionFor,
+    ).mergeLocalMetadata(localMetadata)
 }

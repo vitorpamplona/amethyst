@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.commons.service.upload.ReopenableStreamBody
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_EXTENSION
 import com.vitorpamplona.amethyst.commons.service.uploads.AVIF_MIME
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
@@ -49,8 +50,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.coroutines.executeAsync
-import okio.BufferedSink
-import okio.source
 import java.io.File
 import java.io.InputStream
 
@@ -70,22 +69,24 @@ class Nip96Uploader {
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
     ): MediaUploadResult =
-        file.inputStream().use { stream ->
-            upload(
-                inputStream = stream,
-                length = file.length(),
-                contentType = contentType,
-                alt = alt,
-                sensitiveContent = sensitiveContent,
-                server = ServerInfoRetriever().loadInfo(serverBaseUrl, okHttpClient),
-                okHttpClient = okHttpClient,
-                onProgress = onProgress,
-                httpAuth = httpAuth,
-            )
-        }
+        upload(
+            openStream = { file.inputStream() },
+            length = file.length(),
+            contentType = contentType,
+            alt = alt,
+            sensitiveContent = sensitiveContent,
+            server = ServerInfoRetriever().loadInfo(serverBaseUrl, okHttpClient),
+            okHttpClient = okHttpClient,
+            onProgress = onProgress,
+            httpAuth = httpAuth,
+        )
 
+    /**
+     * Uploads the file [openStream] reads. It is called once per attempt: OkHttp writes the
+     * body again when it retries, so it must return a new stream each time.
+     */
     suspend fun upload(
-        inputStream: InputStream,
+        openStream: () -> InputStream,
         length: Long,
         contentType: String?,
         alt: String?,
@@ -118,15 +119,7 @@ class Nip96Uploader {
                 }.addFormDataPart(
                     "file",
                     "$fileName.$extension",
-                    object : RequestBody() {
-                        override fun contentType() = contentType?.toMediaType()
-
-                        override fun contentLength() = length
-
-                        override fun writeTo(sink: BufferedSink) {
-                            inputStream.source().use(sink::writeAll)
-                        }
-                    },
+                    ReopenableStreamBody(contentType?.toMediaType(), length, openStream = openStream),
                 ).build()
 
         httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", it.toAuthToken()) }
