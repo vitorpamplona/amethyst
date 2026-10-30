@@ -144,7 +144,7 @@ class CashuWalletHistoryEoseManager(
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's cashu-history cursors and the relay
         // set it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.cashuHistory, key.account.scope) { historyRelaySet(key.account) }
+        pager.bind(key.account.cashuHistory, key.account.scope, owner = user(key)) { historyRelaySet(key.account) }
 
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
@@ -212,6 +212,8 @@ class CashuWalletHistoryEoseManager(
     ) {
         super.endSub(key, subId)
         userJobMap.remove(key)?.forEach { it.cancel() }
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
     }
 
     companion object {
