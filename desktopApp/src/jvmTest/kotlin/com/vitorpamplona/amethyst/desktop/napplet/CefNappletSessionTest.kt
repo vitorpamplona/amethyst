@@ -280,6 +280,28 @@ class CefNappletSessionTest {
         }
 
     @Test
+    fun aNappletDrawsItsOwnInlineImagesAndFonts() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            // A single-file napplet carries its pictures and fonts as data: URLs.
+            val pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            val probe =
+                """
+                <!doctype html><html><body><script>
+                var img = new Image();
+                img.onload = function () { window.napplet.storage.setItem('img', 'loaded'); };
+                img.onerror = function () { window.napplet.storage.setItem('img', 'blocked'); };
+                img.src = 'data:image/png;base64,$pixel';
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            show(session(probe, storage, runtime))
+
+            withTimeout(60_000) { while (storage.values["img"] == null) delay(100) }
+            assertEquals("loaded", storage.values["img"])
+        }
+
+    @Test
     fun aBurstOfRepliesReachesTheNappletWhole() =
         runBlocking {
             val runtime = cefRuntime()

@@ -181,9 +181,14 @@ object NappletWebContract {
     /**
      * CSP for the shell document: it may inline its own bridge script/style and frame **only this
      * applet's** origin, but has no network and cannot navigate or submit anywhere.
+     *
+     * A napplet's `srcdoc` frame inherits this policy on top of [APP_CSP], so the inline images and
+     * fonts a one-file napplet carries (`data:`, `blob:`, which never reach the network) must be
+     * allowed here as well, or they are blocked however [APP_CSP] reads.
      */
     fun shellCsp(frameSource: String): String =
         "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
+            "img-src data: blob:; font-src data:; " +
             "frame-src $frameSource; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     /**
