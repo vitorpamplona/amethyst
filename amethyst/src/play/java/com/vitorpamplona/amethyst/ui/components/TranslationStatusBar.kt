@@ -145,11 +145,13 @@ private fun LangSettingsDropdown(
     val preferenceForPair = settings.preferenceBetween(source, target)
 
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
+        val blocked = source in accountViewModel.dontTranslateFrom()
         LangMenuItem(
-            checked = source in accountViewModel.dontTranslateFrom(),
+            checked = blocked,
             label = stringRes(Res.string.translations_never_translate_from_lang, sourceDisplay),
             onClick = {
                 accountViewModel.toggleDontTranslateFrom(source)
+                if (!blocked) MlKitTranslationPlatform.onLanguageBlocked(source, accountViewModel)
                 onDismiss()
             },
         )

@@ -62,6 +62,7 @@ class UiSettingsFlow(
     val deckMode: MutableStateFlow<Boolean> = MutableStateFlow(false),
     val spellCheck: MutableStateFlow<SpellCheckType> = MutableStateFlow(SpellCheckType.AUTOMATIC),
     val noteLayout: MutableStateFlow<NoteLayoutType> = MutableStateFlow(NoteLayoutType.AUTHOR_COLUMN),
+    val automaticallyDownloadTranslationModels: MutableStateFlow<ConnectivityType> = MutableStateFlow(ConnectivityType.WIFI_ONLY),
 ) {
     val listOfFlows: List<Flow<Any?>> =
         listOf<Flow<Any?>>(
@@ -99,6 +100,7 @@ class UiSettingsFlow(
             deckMode,
             spellCheck,
             noteLayout,
+            automaticallyDownloadTranslationModels,
         )
 
     // emits at every change in any of the propertyes.
@@ -140,6 +142,7 @@ class UiSettingsFlow(
                 flows[31] as Boolean,
                 flows[32] as SpellCheckType,
                 flows[33] as NoteLayoutType,
+                flows[34] as ConnectivityType,
             )
         }
 
@@ -179,6 +182,7 @@ class UiSettingsFlow(
             deckMode.value,
             spellCheck.value,
             noteLayout.value,
+            automaticallyDownloadTranslationModels.value,
         )
 
     fun update(torSettings: UiSettings): Boolean {
@@ -320,6 +324,10 @@ class UiSettingsFlow(
             noteLayout.tryEmit(torSettings.noteLayout)
             any = true
         }
+        if (automaticallyDownloadTranslationModels.value != torSettings.automaticallyDownloadTranslationModels) {
+            automaticallyDownloadTranslationModels.tryEmit(torSettings.automaticallyDownloadTranslationModels)
+            any = true
+        }
 
         return any
     }
@@ -379,6 +387,7 @@ class UiSettingsFlow(
                 MutableStateFlow(uiSettings.deckMode),
                 MutableStateFlow(uiSettings.spellCheck),
                 MutableStateFlow(uiSettings.noteLayout),
+                MutableStateFlow(uiSettings.automaticallyDownloadTranslationModels),
             )
     }
 }
