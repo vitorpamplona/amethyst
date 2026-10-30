@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
+import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
@@ -1710,6 +1711,11 @@ open class BaseAccountViewModel(
             Log.w("AccountViewModel", "SignerExceptions", e)
         } catch (e: IllegalStateException) {
             notices.notify(SignerNotice.Failed(e))
+        } catch (e: IllegalArgumentException) {
+            // Data the action could not use (malformed JSON, a bad key or tag from a relay or
+            // another app): viewModelScope has no handler, so letting it escape kills the app.
+            Log.w("AccountViewModel", "Action failed on data it could not use", e)
+            notices.notify(ActionFailed(e))
         }
     }
 
@@ -2239,9 +2245,16 @@ open class BaseAccountViewModel(
         return note.getReactionBy(userProfile())
     }
 
-    fun runOnIO(runOnIO: suspend () -> Unit) {
-        viewModelScope.launch(Dispatchers.IO) { runOnIO() }
-    }
+    fun runOnIO(runOnIO: suspend () -> Unit) =
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                runOnIO()
+            } catch (e: IllegalArgumentException) {
+                // Like [reportSignerErrors]: bad input from a relay or another app (a NIP-55 signer's
+                // reply arrives here) is not a crash.
+                Log.w("AccountViewModel", "Background task failed on data it could not use", e)
+            }
+        }
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
 

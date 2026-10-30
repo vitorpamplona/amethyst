@@ -38,6 +38,14 @@ sealed interface SignerNotice : UserNotice {
     ) : SignerNotice
 }
 
+/**
+ * An action failed on data it could not use (a malformed event, list or reply from another app
+ * or relay), not on the signer; [cause] is shown as details.
+ */
+data class ActionFailed(
+    val cause: Throwable,
+) : UserNotice
+
 /** A note action the user asked for that can't be done. */
 sealed interface NoteActionNotice : UserNotice {
     data object CannotQuoteDraft : NoteActionNotice
