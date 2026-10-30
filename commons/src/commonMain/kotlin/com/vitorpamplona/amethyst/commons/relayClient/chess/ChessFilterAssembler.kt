@@ -38,6 +38,14 @@ class ChessFilterAssembler(
         subAssembler.onChessEvent = callback
     }
 
+    /**
+     * Drops [callback] only if it is still the one set: when the lobby leaves after the board
+     * registered its own, clearing unconditionally would cut the board off from live events.
+     */
+    fun clearOnChessEvent(callback: (Event) -> Unit) {
+        if (subAssembler.onChessEvent === callback) subAssembler.onChessEvent = null
+    }
+
     override fun invalidateKeys() = invalidateFilters()
 
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }

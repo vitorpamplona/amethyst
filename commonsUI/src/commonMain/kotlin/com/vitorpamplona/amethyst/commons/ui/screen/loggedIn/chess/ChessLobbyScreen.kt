@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -86,8 +87,8 @@ import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_gam
 import com.vitorpamplona.amethyst.commons.resources.dismiss
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.route_chess
+import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
-import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.FabBottomBarPadded
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -106,9 +107,9 @@ fun ChessLobbyScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Scope ViewModel to Activity so it's shared between lobby and game screens
+    // Shared with the game screen through the account's store, cleared on account switch
     val chessViewModel: ChessViewModel =
-        rememberWindowViewModel(
+        rememberAccountSharedViewModel(
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
             factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
@@ -121,17 +122,19 @@ fun ChessLobbyScreen(
         chessViewModel.selectGame(null)
     }
 
-    // Set lobby mode (poll all games) when screen is visible
-    // Don't stop polling in onDispose - ViewModel lifecycle handles that
-    // This prevents the race where lobby's onDispose fires AFTER game screen enters
-    DisposableEffect(Unit) {
+    // Set lobby mode (poll all games) when the screen is visible
+    DisposableEffect(chessViewModel) {
         chessViewModel.clearFocusedGame() // Clear any focused game from game screen
-        chessViewModel.startPolling()
-        onDispose {
-            // Don't stop polling here - it causes a race condition:
-            // 1. Game screen enters and sets focused mode
-            // 2. Lobby's onDispose fires and stops ALL polling
-            // ViewModel.onCleared() will stop polling when user leaves chess entirely
+        onDispose { }
+    }
+
+    // Poll while the lobby is on screen and the app is in the foreground. Polling is held, not
+    // started: the game screen holds it too, so the lobby leaving after the board entered keeps it
+    // running, and it stops once neither screen is left or the app goes to the background.
+    LifecycleStartEffect(chessViewModel) {
+        chessViewModel.holdPolling()
+        onStopOrDispose {
+            chessViewModel.releasePolling()
         }
     }
 

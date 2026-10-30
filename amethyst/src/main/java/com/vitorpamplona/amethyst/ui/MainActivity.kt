@@ -26,10 +26,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.runtime.CompositionLocalProvider
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
-import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConnectCoordinator
 import com.vitorpamplona.amethyst.connectedApps.consent.SignerConsentCoordinator
@@ -63,11 +61,7 @@ class MainActivity : AppCompatActivity() {
         setContent {
             AmethystTheme {
                 NowProvider {
-                    // The Activity outlives every nav destination: screens that share state
-                    // across destinations (chess lobby + board, the Cordn group draft) keep it here.
-                    CompositionLocalProvider(LocalWindowViewModelStoreOwner provides this) {
-                        AmethystApp(Amethyst.instance.sessionManager, AndroidAppRoot)
-                    }
+                    AmethystApp(Amethyst.instance.sessionManager, AndroidAppRoot)
                 }
             }
         }

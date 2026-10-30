@@ -130,20 +130,24 @@ class ChessRelayFetchHelper(
             }
 
         client.subscribe(subId, filters, listener)
-        val eoseResult = withTimeoutOrNull(timeoutMs) { allEose.await() }
+        try {
+            val eoseResult = withTimeoutOrNull(timeoutMs) { allEose.await() }
 
-        // Mark timed-out relays
-        if (eoseResult == null) {
-            val eoseSnapshot = eoseLock.withLock { eoseReceived.toSet() }
-            filters.keys.forEach { relay ->
-                if (relay !in eoseSnapshot) {
-                    val count = relayEventCounts.get(relay)?.load() ?: 0
-                    onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.TIMEOUT, count))
+            // Mark timed-out relays
+            if (eoseResult == null) {
+                val eoseSnapshot = eoseLock.withLock { eoseReceived.toSet() }
+                filters.keys.forEach { relay ->
+                    if (relay !in eoseSnapshot) {
+                        val count = relayEventCounts.get(relay)?.load() ?: 0
+                        onProgress?.invoke(RelayFetchProgress(relay, RelayFetchStatus.TIMEOUT, count))
+                    }
                 }
             }
+        } finally {
+            // Also when the poll is cancelled mid-wait: the client is app-wide, so a REQ left open
+            // would keep this listener (and the lobby state its progress callback captures) forever.
+            client.unsubscribe(subId)
         }
-
-        client.unsubscribe(subId)
 
         return events.values().toList()
     }

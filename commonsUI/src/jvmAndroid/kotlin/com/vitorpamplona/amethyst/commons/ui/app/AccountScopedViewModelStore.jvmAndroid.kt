@@ -25,6 +25,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
+import com.vitorpamplona.amethyst.commons.ui.components.LocalAccountViewModelStoreOwner
 
 /**
  * The owner is keyed by the account. While the same account stays logged in, the call site is
@@ -32,6 +33,9 @@ import androidx.lifecycle.viewmodel.compose.rememberViewModelStoreOwner
  * is parented to the window's [LocalViewModelStoreOwner]. When the account changes, the previous
  * owner leaves the composition and Lifecycle 2.11's [rememberViewModelStoreOwner] clears its store
  * immediately.
+ *
+ * The same owner is the account's shared store ([LocalAccountViewModelStoreOwner]) for view models
+ * that several destinations share, so they are cleared with the account too.
  */
 @Composable
 actual fun AccountScopedViewModelStore(
@@ -42,6 +46,7 @@ actual fun AccountScopedViewModelStore(
         val owner = rememberViewModelStoreOwner()
         CompositionLocalProvider(
             LocalViewModelStoreOwner provides owner,
+            LocalAccountViewModelStoreOwner provides owner,
             content = content,
         )
     }

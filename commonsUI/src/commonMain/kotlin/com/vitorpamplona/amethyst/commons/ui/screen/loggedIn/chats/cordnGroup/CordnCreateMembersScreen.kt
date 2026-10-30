@@ -71,7 +71,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_info_has_key_package
 import com.vitorpamplona.amethyst.commons.resources.cordn_info_remove_member
 import com.vitorpamplona.amethyst.commons.resources.cordn_member_count
 import com.vitorpamplona.amethyst.commons.ui.components.EmptyState
-import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
+import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
@@ -358,15 +358,15 @@ private fun MemberRow(
 /**
  * The one draft both create screens fill in.
  *
- * Scoped to the Activity, the way the chess lobby and board share theirs: a
- * Navigation destination is disposed when you leave it, so a draft kept in
- * `remember` would lose the group's name on the way to picking people. Keyed
- * per account so switching accounts starts a new draft rather than inheriting
- * a roster built under another key.
+ * Scoped to the account's shared store, the way the chess lobby and board share
+ * theirs: a Navigation destination is disposed when you leave it, so a draft kept
+ * in `remember` would lose the group's name on the way to picking people. The
+ * store is cleared on an account switch, so the next account starts a new draft
+ * rather than inheriting a roster built under another key.
  */
 @Composable
 fun rememberCordnGroupDraft(accountViewModel: AccountViewModel): CordnGroupDraft =
-    rememberWindowViewModel(
+    rememberAccountSharedViewModel(
         key = "CordnGroupDraft-${accountViewModel.account.signer.pubKey}",
     ) { CordnGroupDraft() }
 

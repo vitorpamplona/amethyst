@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
-import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
@@ -291,8 +290,8 @@ fun main(args: Array<String>) {
 
                     frameScope?.DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
-                    // The window outlives every destination: screens that share state across destinations
-                    // (the chess lobby and board, the Cordn group draft) keep it here.
+                    // The window's root store, the parent of the account-scoped one that AmethystApp
+                    // nests under it per logged-in account.
                     val windowViewModels =
                         remember {
                             object : ViewModelStoreOwner {
@@ -313,7 +312,6 @@ fun main(args: Array<String>) {
                         NowProvider {
                             CompositionLocalProvider(
                                 LocalViewModelStoreOwner provides windowViewModels,
-                                LocalWindowViewModelStoreOwner provides windowViewModels,
                                 LocalAppServices provides services,
                                 LocalAppPlatform provides platform,
                                 LocalNotePlatform provides DesktopNotePlatform,

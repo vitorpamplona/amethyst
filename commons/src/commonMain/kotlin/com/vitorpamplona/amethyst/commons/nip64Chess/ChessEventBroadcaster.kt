@@ -111,12 +111,13 @@ class ChessEventBroadcaster(
             // Open subscription to all target relays (triggers connection)
             val filterMap = targetRelays.associateWith { listOf(dummyFilter) }
             client.subscribe(subId, filterMap, listener)
-
-            // Wait for relays to connect (poll with timeout)
-            waitForRelays(targetRelays, 5000L)
-
-            // Close the dummy subscription
-            client.unsubscribe(subId)
+            try {
+                // Wait for relays to connect (poll with timeout)
+                waitForRelays(targetRelays, 5000L)
+            } finally {
+                // Close the dummy subscription, also when cancelled while waiting
+                client.unsubscribe(subId)
+            }
         }
 
         // Step 3: Send the event and wait for OK responses
