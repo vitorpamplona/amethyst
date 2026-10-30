@@ -147,24 +147,54 @@ class LuaTable(
         return (if (n == out.size) out else out.copyOf(n)) as Array<Any>
     }
 
+    // The hash keys of the traversal `next` is in, and where it is: each step costs O(1), and a
+    // key the loop sets to nil still leads to the one after it, as Lua allows.
+    private var walkKeys: Array<Any>? = null
+    private var walkAt = 0
+
     /** Lua's `next`: the key after [key] (null for the first), or null at the end. */
     fun next(key: Any?): Any? {
         var start = 0
         if (key != null) {
-            if (key is Int && key and 0xffff == 0 && (key shr 16) in 1..arraySize) {
-                start = key shr 16
+            val index = if (key is Int && key and 0xffff == 0) key shr 16 else 0
+            if (index in 1..arraySize) {
+                start = index
+            } else if (index > arraySize && hash?.containsKey(key) != true) {
+                // An array slot the loop just cleared, which shrank the array: carry on after it.
+                start = arraySize
             } else {
-                val h = hash ?: return null
-                var found = false
-                for (k in h.keys) {
-                    if (found) return k
-                    if (k == key) found = true
-                }
-                return null
+                return nextHashKey(key)
             }
         }
         for (i in start until arraySize) if (array[i] != null) return Fix.fromInt(i + 1)
-        return hash?.keys?.firstOrNull()
+        return nextHashKey(null)
+    }
+
+    private fun nextHashKey(after: Any?): Any? {
+        val h = hash ?: return null
+        var keys = walkKeys
+        var i: Int
+        if (after == null) {
+            keys = h.keys.toTypedArray()
+            walkKeys = keys
+            i = 0
+        } else {
+            if (keys == null || walkAt >= keys.size || keys[walkAt] != after) {
+                // Not where the last step left off: find the key again (a fresh walk, or a jump).
+                keys = h.keys.toTypedArray()
+                walkKeys = keys
+                walkAt = keys.indexOf(after)
+                if (walkAt < 0) return null
+            }
+            i = walkAt + 1
+        }
+        while (i < keys.size && h[keys[i]] == null) i++
+        if (i >= keys.size) {
+            walkKeys = null
+            return null
+        }
+        walkAt = i
+        return keys[i]
     }
 
     override fun toString(): String = "table"

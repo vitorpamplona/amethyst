@@ -63,6 +63,12 @@ interface ConsoleHost {
      * block; null when the host cannot find it.
      */
     fun loadCart(name: String): ByteArray? = null
+
+    /**
+     * Whether the process is short of memory. Asked every thousand or so loop iterations and
+     * calls; true ends the cart with "out of memory" before it takes the app's heap with it.
+     */
+    fun memoryLow(): Boolean = false
 }
 
 /**
@@ -162,7 +168,10 @@ class FantasyConsole(
         graphics.reset()
         interp = Interpreter()
         interp.memory = ram
-        interp.frameHook = { if (!inDraw && !inCallback && frameStart.elapsedNow() > 1.seconds / fps) waitFrame() }
+        interp.frameHook = {
+            if (host.memoryLow()) throw LuaError("out of memory")
+            if (!inDraw && !inCallback && frameStart.elapsedNow() > 1.seconds / fps) waitFrame()
+        }
         Api(this, interp).install()
         state = State.RUNNING
         error = null

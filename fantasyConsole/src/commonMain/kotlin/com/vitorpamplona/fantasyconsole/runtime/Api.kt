@@ -321,7 +321,8 @@ internal class Api(
         proc("cstore") {}
         fn("cartdata") { args ->
             if (console.cartDataId != null) return@fn one(false)
-            val id = tostr(args.getOrNull(0))
+            // The original allows 64 characters; a longer one would only bloat the host's store.
+            val id = tostr(args.getOrNull(0)).take(MAX_CART_DATA_ID)
             console.cartDataId = id
             val saved = console.host.loadCartData(id)
             saved?.forEachIndexed { i, v -> if (i < 64) ram.poke4(Addr.CART_DATA + i * 4, v) }
@@ -759,6 +760,8 @@ internal class Api(
         }
 
     private companion object {
+        const val MAX_CART_DATA_ID = 64
+
         val EMPTY_ITERATOR = NativeFunction("pairs") { listOf(null) }
 
         /** P8SCII 128-153 as globals: 4x4 pictures of the glyph (set bits transparent), and the buttons. */

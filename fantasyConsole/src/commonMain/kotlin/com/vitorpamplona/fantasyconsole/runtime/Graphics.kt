@@ -747,11 +747,12 @@ class Graphics(
             oy -= h
             fy = !fy
         }
-        for (j in 0 until h) {
-            val v = (j * sh) / h
+        // Only the part inside the clip: `sspr(…, 32767, 32767)` must not walk a billion pixels.
+        for (j in maxOf(0, clipY0 - oy) until minOf(h, clipY1 - oy)) {
+            val v = ((j.toLong() * sh) / h).toInt()
             val py = if (fy) sh - 1 - v else v
-            for (i in 0 until w) {
-                val u = (i * sw) / w
+            for (i in maxOf(0, clipX0 - ox) until minOf(w, clipX1 - ox)) {
+                val u = ((i.toLong() * sw) / w).toInt()
                 val px = if (fx) sw - 1 - u else u
                 blit(ox + i, oy + j, sheetPixel(sx + px, sy + py))
             }
@@ -811,11 +812,14 @@ class Graphics(
         layers: Int,
     ) {
         load()
-        for (j in 0 until ch) {
-            val y = sy + j * 8 - camY
+        // Only the cells that can touch the clip, so a huge map() costs what it draws.
+        val top = sy - camY
+        val left = sx - camX
+        for (j in maxOf(0, (clipY0 - top - 7).floorDiv(8)) until minOf(ch, (clipY1 - top - 1).floorDiv(8) + 1)) {
+            val y = top + j * 8
             if (y + 8 <= clipY0 || y >= clipY1) continue
-            for (i in 0 until cw) {
-                val x = sx + i * 8 - camX
+            for (i in maxOf(0, (clipX0 - left - 7).floorDiv(8)) until minOf(cw, (clipX1 - left - 1).floorDiv(8) + 1)) {
+                val x = left + i * 8
                 if (x + 8 <= clipX0 || x >= clipX1) continue
                 val addr = mapAddr(cx + i, cy + j)
                 if (addr < 0) continue

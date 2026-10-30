@@ -25,6 +25,7 @@ import com.vitorpamplona.fantasyconsole.runtime.ConsoleHost
 import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ConsoleFeaturesTest {
     @Test
@@ -214,5 +215,24 @@ class ConsoleFeaturesTest {
     fun aMissingCartIsAClearError() {
         val out = run("load(\"#elsewhere\")")
         assertEquals(listOf("ERROR: this game continues in another cartridge (#elsewhere), which can't be loaded here"), out)
+    }
+
+    @Test
+    fun nextKeepsWalkingWhenTheLoopClearsWhatItVisits() {
+        val out = run("t={a=1,b=2,c=3,d=4} t[1]=5 for k in next,t do t[k]=nil end n=0 for k in pairs(t) do n+=1 end printh(n)")
+        assertEquals(listOf("0"), out)
+    }
+
+    @Test
+    fun aStringThatDoublesForeverRunsOutOfMemory() {
+        val out = run("s='x' while true do s=s..s end")
+        assertEquals(1, out.size)
+        assertTrue(out[0].contains("out of memory"), out[0])
+    }
+
+    @Test
+    fun cartDataIdsAreCappedAtTheOriginalsLength() {
+        val t = TestConsole("cartdata('" + "a".repeat(300) + "') dset(0, 7)").frames(1)
+        assertEquals(listOf("a".repeat(64)), t.saved.keys.toList())
     }
 }

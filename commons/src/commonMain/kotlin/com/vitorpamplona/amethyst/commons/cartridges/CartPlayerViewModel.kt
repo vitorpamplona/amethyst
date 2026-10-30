@@ -25,7 +25,6 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.fantasyconsole.cart.CartFormatException
 import com.vitorpamplona.fantasyconsole.cart.CartLoader
 import com.vitorpamplona.fantasyconsole.cart.P8scii
 import com.vitorpamplona.fantasyconsole.runtime.Audio
@@ -34,6 +33,8 @@ import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -44,8 +45,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.yield
 import kotlin.concurrent.Volatile
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
 /**
@@ -98,6 +101,14 @@ class CartPlayerViewModel(
     private val dispatcher = lazy { newCartDispatcher() }
     private var loop: Job? = null
 
+    // When the frame running now started, for the watchdog: a cart can loop for ever in `_draw`
+    // or in a menu callback, where the console never ends the frame on its own.
+    @Volatile
+    private var stepStarted: TimeMark? = null
+
+    @Volatile
+    private var hung = false
+
     private val saves = CartSaves(saveStore)
 
     private val host =
@@ -116,6 +127,8 @@ class CartPlayerViewModel(
             // Games in several carts load the next one by its id on the original's site, or by a
             // file name. A post has no way to name its other carts yet, so those stop with a message.
             override fun loadCart(name: String): ByteArray? = null
+
+            override fun memoryLow(): Boolean = isCartMemoryLow()
         }
 
     private var buttons = 0
@@ -162,9 +175,19 @@ class CartPlayerViewModel(
     }
 
     fun pause() {
+        // Cancelling cannot interrupt a frame that never ends; stop such a game instead of
+        // leaving its thread spinning behind a closed player.
+        if (isStuck(PAUSE_STUCK)) stopHungGame()
         loop?.cancel()
         loop = null
         saves.flush()
+    }
+
+    private fun isStuck(after: Duration) = (stepStarted?.elapsedNow() ?: Duration.ZERO) > after
+
+    private fun stopHungGame() {
+        hung = true
+        console?.abort()
     }
 
     private suspend fun load(): FantasyConsole? {
@@ -173,15 +196,18 @@ class CartPlayerViewModel(
             _status.value = Status.NotACart
             return null
         }
-        val cart =
-            try {
-                CartLoader.load(bytes)
-            } catch (_: CartFormatException) {
-                _status.value = Status.NotACart
-                return null
-            }
         saves.load()
-        return FantasyConsole(cart, host).also { console = it }
+        return try {
+            FantasyConsole(CartLoader.load(bytes), host).also { console = it }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            // A hostile file must never take the app down: anything that fails to load, even
+            // with an Error, is simply not a cart.
+            Log.w(TAG, "Could not load the cart at $url", e)
+            _status.value = Status.NotACart
+            null
+        }
     }
 
     private suspend fun play(game: FantasyConsole) {
@@ -192,13 +218,25 @@ class CartPlayerViewModel(
         }
         _status.value = Status.Playing
         val sound = openCartAudioSink(Audio.SAMPLE_RATE)
+        val watchdog =
+            viewModelScope.launch(Dispatchers.Default) {
+                while (isActive) {
+                    delay(WATCHDOG_INTERVAL)
+                    if (isStuck(MAX_FRAME)) stopHungGame()
+                }
+            }
         try {
             var deadline = TimeSource.Monotonic.markNow()
             while (currentCoroutineContext().isActive) {
-                game.step()
+                stepStarted = TimeSource.Monotonic.markNow()
+                try {
+                    game.step()
+                } finally {
+                    stepStarted = null
+                }
                 publishFrame(game)
                 if (game.state != FantasyConsole.State.RUNNING) {
-                    _status.value = Status.Stopped(game.error)
+                    _status.value = Status.Stopped(if (hung) NOT_RESPONDING else game.error)
                     break
                 }
                 sound?.write(game.audioBuffer, game.audioSamples)
@@ -214,6 +252,7 @@ class CartPlayerViewModel(
                 }
             }
         } finally {
+            watchdog.cancel()
             sound?.close()
         }
     }
@@ -249,6 +288,12 @@ class CartPlayerViewModel(
         private const val MAX_CART_BYTES = 1 shl 20
 
         private val MAX_LAG = 250.milliseconds
+
+        /** A frame this long is a game stuck in a loop the console cannot end. */
+        private val MAX_FRAME = 10.seconds
+        private val PAUSE_STUCK = 1.seconds
+        private val WATCHDOG_INTERVAL = 1.seconds
+        private const val NOT_RESPONDING = "the game stopped responding"
         private const val TAG = "CartPlayer"
     }
 }

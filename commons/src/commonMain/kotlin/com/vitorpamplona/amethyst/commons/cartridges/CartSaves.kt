@@ -55,6 +55,7 @@ class CartSaves(
     private val writing = Mutex()
     private var lastWrite: TimeMark? = null
     private var pending: Job? = null
+    private var newIds = 0
 
     /** Reads every save once, before the game starts. */
     suspend fun load() {
@@ -67,6 +68,9 @@ class CartSaves(
         id: String,
         values: IntArray,
     ) {
+        // A game uses one save id, a few for a series; a cart that cycles `cartdata` + `run()`
+        // through endless ids would otherwise grow the app's store without bound.
+        if (id !in saved && newIds++ >= MAX_NEW_IDS) return
         saved = saved + (id to values)
         unsaved.update { it + (id to values) }
         if (pending?.isActive == true) return
@@ -87,5 +91,9 @@ class CartSaves(
             val batch = unsaved.getAndUpdate { emptyMap() }
             if (batch.isNotEmpty()) store?.save(batch)
         }
+    }
+
+    private companion object {
+        const val MAX_NEW_IDS = 8
     }
 }

@@ -29,3 +29,5 @@ import kotlinx.coroutines.newSingleThreadContext
 actual fun newCartDispatcher(): CloseableCoroutineDispatcher = newSingleThreadContext("cart")
 
 actual fun openCartAudioSink(sampleRate: Int): CartAudioSink? = null
+
+actual fun isCartMemoryLow(): Boolean = false

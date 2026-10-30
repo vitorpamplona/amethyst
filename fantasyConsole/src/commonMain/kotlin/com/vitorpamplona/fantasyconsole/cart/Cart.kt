@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.fantasyconsole.cart
 
+import com.vitorpamplona.fantasyconsole.lua.Interpreter
+import com.vitorpamplona.fantasyconsole.lua.LuaSyntaxError
 import com.vitorpamplona.fantasyconsole.png.PngDecoder
 import com.vitorpamplona.fantasyconsole.runtime.Addr
 
@@ -82,6 +84,27 @@ object CartLoader {
             ((prefix[o].toInt() and 0xff) shl 24) or ((prefix[o + 1].toInt() and 0xff) shl 16) or
                 ((prefix[o + 2].toInt() and 0xff) shl 8) or (prefix[o + 3].toInt() and 0xff)
         return prefix.decodeToString(12, 16) == "IHDR" && int32(16) == CART_WIDTH && int32(20) == CART_HEIGHT
+    }
+
+    /**
+     * Whether [bytes] are a cart and not just a PNG of a cart's size. Any 160x205 image has
+     * something where the code would be, so the code must also parse.
+     */
+    fun isCart(bytes: ByteArray): Boolean {
+        if (!hasCartShape(bytes)) return false
+        val code =
+            try {
+                load(bytes).code
+            } catch (e: CartFormatException) {
+                return false
+            }
+        if (code.isBlank()) return false
+        return try {
+            Interpreter().load(code)
+            true
+        } catch (e: LuaSyntaxError) {
+            false
+        }
     }
 
     const val CART_WIDTH = 160

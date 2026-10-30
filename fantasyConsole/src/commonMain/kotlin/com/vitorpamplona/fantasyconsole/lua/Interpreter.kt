@@ -87,7 +87,7 @@ class Interpreter {
     var frameHook: (suspend () -> Unit)? = null
     private var backEdges = 0
 
-    /** A loop's back edge: stops an aborted cart and, now and then, lets [frameHook] end the frame. */
+    /** A loop's back edge or a call: stops an aborted cart and, now and then, lets [frameHook] end the frame. */
     suspend fun backEdge() {
         if (abortRequested) throw LuaAbort()
         if (++backEdges and (BACK_EDGE_SAMPLE - 1) == 0) frameHook?.invoke()
@@ -346,7 +346,13 @@ class Interpreter {
         a: Expr? = null,
         b: Expr? = null,
     ): Any? {
-        if ((x is String || x is Int) && (y is String || y is Int)) return tostr(x) + tostr(y)
+        if ((x is String || x is Int) && (y is String || y is Int)) {
+            val sx = tostr(x)
+            val sy = tostr(y)
+            // The original has 2 MiB for everything; this stops `s = s .. s` before the app's heap.
+            if (sx.length.toLong() + sy.length > MAX_STRING) throw LuaError("out of memory")
+            return sx + sy
+        }
         val handler = metamethod(x, y, "__concat")
         if (handler != null) return call(handler, listOf(x, y)).firstOrNull()
         val (culprit, source) = if (x is String || x is Int) y to b else x to a
@@ -418,6 +424,9 @@ class Interpreter {
     }
 
     companion object {
+        /** Longest string a concatenation may build. */
+        const val MAX_STRING = 1 shl 21
+
         /** Nested Lua calls before "stack overflow". The original allows deep recursion too. */
         const val MAX_DEPTH = 50000
         private const val BACK_EDGE_SAMPLE = 1024

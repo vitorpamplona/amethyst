@@ -28,6 +28,12 @@ import kotlinx.coroutines.CloseableCoroutineDispatcher
  */
 expect fun newCartDispatcher(): CloseableCoroutineDispatcher
 
+/**
+ * Whether the app's heap is nearly full, so a cart allocating without end is stopped before the
+ * app runs out of memory. Asked from the cart's thread every thousand or so steps of its code.
+ */
+expect fun isCartMemoryLow(): Boolean
+
 /** Where a cart's sound goes: mono float samples in [-1, 1]. */
 interface CartAudioSink {
     /** Queues [count] samples, waiting while the device's buffer is full. */

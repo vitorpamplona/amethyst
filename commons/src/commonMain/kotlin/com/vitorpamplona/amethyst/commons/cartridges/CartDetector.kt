@@ -70,5 +70,5 @@ object CartDetector {
     }
 
     /** Whether [bytes] are a cart that loads: what an upload checks before it would re-encode a PNG. */
-    fun isCartridge(bytes: ByteArray): Boolean = CartLoader.hasCartShape(bytes) && runCatching { CartLoader.load(bytes) }.isSuccess
+    fun isCartridge(bytes: ByteArray): Boolean = CartLoader.isCart(bytes)
 }

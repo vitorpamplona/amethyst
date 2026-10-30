@@ -89,6 +89,8 @@ class Closure(
         }
         val varargs = if (p.isVararg && args.size > params.size) args.subList(params.size, args.size) else NONE
         if (interp.depth >= Interpreter.MAX_DEPTH) throw LuaError("stack overflow")
+        // A call is a back edge too: code that only recurses must still stop when aborted.
+        interp.backEdge()
         interp.depth++
         try {
             val signal = p.body.exec(Frame(slots, varargs, upvals, interp))

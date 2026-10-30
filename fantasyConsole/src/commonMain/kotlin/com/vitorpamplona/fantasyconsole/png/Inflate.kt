@@ -26,21 +26,28 @@ object Inflate {
         message: String,
     ) : Exception(message)
 
-    /** Inflates a zlib stream: a 2-byte header, the deflate data, then a checksum this ignores. */
-    fun zlib(data: ByteArray): ByteArray {
+    /**
+     * Inflates a zlib stream: a 2-byte header, the deflate data, then a checksum this ignores.
+     * Throws [Corrupt] past [maxOutput] bytes, so a small stream cannot expand without bound.
+     */
+    fun zlib(
+        data: ByteArray,
+        maxOutput: Int = Int.MAX_VALUE,
+    ): ByteArray {
         if (data.size < 2) throw Corrupt("truncated zlib header")
         val cmf = data[0].toInt() and 0xff
         if (cmf and 0x0f != 8) throw Corrupt("not deflate")
         if (data[1].toInt() and 0x20 != 0) throw Corrupt("preset dictionary not supported")
-        return raw(data, 2)
+        return raw(data, 2, maxOutput)
     }
 
     fun raw(
         data: ByteArray,
         start: Int,
+        maxOutput: Int = Int.MAX_VALUE,
     ): ByteArray {
         val r = BitReader(data, start)
-        val out = Output()
+        val out = Output(maxOutput)
         do {
             val last = r.bits(1) == 1
             when (r.bits(2)) {
@@ -56,12 +63,17 @@ object Inflate {
         return out.toByteArray()
     }
 
-    private class Output {
-        var buf = ByteArray(1 shl 16)
+    private class Output(
+        val max: Int,
+    ) {
+        var buf = ByteArray(minOf(1 shl 16, max))
         var size = 0
 
         fun put(b: Int) {
-            if (size == buf.size) buf = buf.copyOf(buf.size * 2)
+            if (size == buf.size) {
+                if (size >= max) throw Corrupt("inflates past $max bytes")
+                buf = buf.copyOf(minOf(buf.size.toLong() * 2, max.toLong()).toInt())
+            }
             buf[size++] = b.toByte()
         }
 

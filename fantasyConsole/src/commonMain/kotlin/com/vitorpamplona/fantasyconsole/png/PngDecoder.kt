@@ -36,6 +36,9 @@ object PngDecoder {
         message: String,
     ) : Exception(message)
 
+    /** Larger than any cart image; keeps a hostile header from asking for gigabytes. */
+    private const val MAX_SIDE = 1024
+
     private val SIGNATURE = byteArrayOf(-119, 80, 78, 71, 13, 10, 26, 10)
 
     fun isPng(bytes: ByteArray): Boolean = bytes.size >= 8 && (0 until 8).all { bytes[it] == SIGNATURE[it] }
@@ -52,7 +55,8 @@ object PngDecoder {
             val length = int32(bytes, pos)
             val type = bytes.decodeToString(pos + 4, pos + 8)
             val dataStart = pos + 8
-            if (length < 0 || dataStart + length > bytes.size) throw Unsupported("truncated chunk $type")
+            // Compared as a difference: dataStart + length overflows for a length near Int.MAX_VALUE.
+            if (length < 0 || length > bytes.size - dataStart) throw Unsupported("truncated chunk $type")
             when (type) {
                 "IHDR" -> {
                     width = int32(bytes, dataStart)
@@ -76,14 +80,13 @@ object PngDecoder {
             }
             pos = dataStart + length + 4
         }
-        if (width <= 0 || height <= 0 || width > 4096 || height > 4096) throw Unsupported("size ${width}x$height")
+        if (width <= 0 || height <= 0 || width > MAX_SIDE || height > MAX_SIDE) throw Unsupported("size ${width}x$height")
         val compressed = ByteArray(idat.sumOf { it.size })
         var at = 0
         for (chunk in idat) {
             chunk.copyInto(compressed, at)
             at += chunk.size
         }
-        val raw = Inflate.zlib(compressed)
         val channels =
             when (colorType) {
                 0, 3 -> 1
@@ -92,6 +95,8 @@ object PngDecoder {
                 else -> 4
             }
         val stride = width * channels
+        // The image's exact size is known, so a stream that inflates past it is rejected early.
+        val raw = Inflate.zlib(compressed, maxOutput = height * (stride + 1))
         if (raw.size < height * (stride + 1)) throw Unsupported("image data too short")
         val pixels = unfilter(raw, width, height, channels)
         val out = IntArray(width * height)

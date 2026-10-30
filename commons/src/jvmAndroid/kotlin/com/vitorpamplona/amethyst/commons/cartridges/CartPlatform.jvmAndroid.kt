@@ -25,6 +25,30 @@ import kotlinx.coroutines.CloseableCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.Executors
 
+@Volatile
+private var lastCollection = 0L
+
+@Volatile
+private var shortAfterCollection = false
+
+actual fun isCartMemoryLow(): Boolean {
+    val runtime = Runtime.getRuntime()
+
+    fun used() = runtime.totalMemory() - runtime.freeMemory()
+    if (used() < runtime.maxMemory() / 10 * 9) return false
+    // Much of that may be garbage: only a heap still full after a collection is short. At most
+    // one collection every few seconds, so an app that simply runs near its limit is not slowed.
+    val now = System.nanoTime()
+    if (now - lastCollection > COLLECTION_INTERVAL_NS) {
+        lastCollection = now
+        System.gc()
+        shortAfterCollection = used() > runtime.maxMemory() / 10 * 8
+    }
+    return shortAfterCollection
+}
+
+private const val COLLECTION_INTERVAL_NS = 5_000_000_000L
+
 actual fun newCartDispatcher(): CloseableCoroutineDispatcher =
     Executors
         .newSingleThreadExecutor { runnable ->

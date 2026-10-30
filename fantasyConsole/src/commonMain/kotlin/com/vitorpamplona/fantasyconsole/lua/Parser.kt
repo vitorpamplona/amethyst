@@ -107,6 +107,8 @@ class Parser(
 
     private fun error(message: String) = LuaSyntaxError(message, peek.line)
 
+    private var nesting = 0
+
     private fun describe(t: Token): String =
         when (t.type) {
             T.EOF -> "<eof>"
@@ -147,7 +149,9 @@ class Parser(
             else -> lineLimit >= 0 && peek.line != lineLimit
         }
 
-    private fun blockNoScope(lineLimit: Int): Block {
+    private fun blockNoScope(lineLimit: Int): Block = nested { blockStatements(lineLimit) }
+
+    private fun blockStatements(lineLimit: Int): Block {
         val stats = ArrayList<Stat>()
         while (!blockFollow(lineLimit)) {
             if (check(T.RETURN)) {
@@ -429,7 +433,22 @@ class Parser(
 
     private fun expr(): Expr = subExpr(0)
 
-    private fun subExpr(limit: Int): Expr {
+    private fun subExpr(limit: Int): Expr = nested { subExprAt(limit) }
+
+    /**
+     * Runs one level of nested syntax. Deeper than [MAX_NESTING] is an error, as in Lua, instead of
+     * a parser that recurses until the thread's stack runs out on `((((…))))`.
+     */
+    private inline fun <T> nested(body: () -> T): T {
+        if (++nesting > MAX_NESTING) throw error("too many nested levels")
+        try {
+            return body()
+        } finally {
+            nesting--
+        }
+    }
+
+    private fun subExprAt(limit: Int): Expr {
         var left =
             if (peek.type in UNARY_OPS) {
                 val op = next().type
@@ -597,6 +616,7 @@ class Parser(
 
     companion object {
         private const val UNARY_PRIORITY = 12
+        private const val MAX_NESTING = 200
 
         private val UNARY_OPS = setOf(T.NOT, T.MINUS, T.HASH, T.TILDE, T.AT, T.PERCENT, T.DOLLAR)
 
