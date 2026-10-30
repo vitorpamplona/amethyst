@@ -25,15 +25,23 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.Response
 import okhttp3.coroutines.executeAsync
-import java.net.HttpURLConnection
-import java.net.URI
 
-class ImageDownloader {
+/**
+ * Downloads files back from media servers. [maxAttempts] and [retryDelayMs] set how long the
+ * `wait*` calls give a server that has not started serving a fresh upload yet.
+ */
+class ImageDownloader(
+    private val maxAttempts: Int = 15,
+    private val retryDelayMs: Long = 1000,
+) {
     class Blob(
         val bytes: ByteArray,
         val contentType: String?,
@@ -63,46 +71,74 @@ class ImageDownloader {
     )
 
     /**
-     * Stream download and calculate hash for verification without loading entire file into memory.
-     * This is memory-efficient for large files (videos, high-res images, etc.)
+     * Runs [operation] until it returns a value, [maxAttempts] times at most, [retryDelayMs] apart:
+     * a server that just accepted a file often does not serve it yet.
      */
-    private suspend fun <T> retryWithDelay(
-        maxAttempts: Int = 15,
-        delayMs: Long = 1000,
-        operation: suspend () -> T?,
-    ): T? =
-        withContext(Dispatchers.IO) {
-            var result: T? = null
-            var tentatives = 0
-
-            // Servers are usually not ready, so tries to download it for 15 times/seconds.
-            while (result == null && tentatives < maxAttempts) {
-                result =
-                    try {
-                        operation()
-                    } catch (e: Exception) {
-                        if (e is CancellationException) throw e
-                        null
-                    }
-
-                if (result == null) {
-                    tentatives++
-                    delay(delayMs)
+    private suspend fun <T> retryWithDelay(operation: suspend () -> T?): T? {
+        repeat(maxAttempts) { attempt ->
+            val result =
+                try {
+                    operation()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    null
                 }
-            }
-
-            return@withContext result
+            if (result != null) return result
+            if (attempt < maxAttempts - 1) delay(retryDelayMs)
         }
+        return null
+    }
 
+    /**
+     * Downloads [imageUrl] and hashes it as it streams, without holding the file in memory.
+     * Null when the server never served it.
+     */
     suspend fun waitAndVerifyStream(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? = retryWithDelay { tryStreamAndVerify(imageUrl, okHttpClient) }
+    ): StreamVerification? =
+        retryWithDelay {
+            get(imageUrl, okHttpClient(imageUrl)) { response ->
+                val (hash, totalBytes) = response.body.byteStream().use { sha256StreamWithCount(it) }
+                StreamVerification(hash.toHexKey(), totalBytes, response.header("Content-Type"))
+            }
+        }
 
     suspend fun waitAndGetImage(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,
-    ): Blob? = retryWithDelay { tryGetTheImage(imageUrl, okHttpClient) }
+    ): Blob? =
+        retryWithDelay {
+            get(imageUrl, okHttpClient(imageUrl)) { response ->
+                Blob(response.body.bytes(), response.header("Content-Type"))
+            }
+        }
+
+    /**
+     * GETs [url] and hands a successful response to [read], or returns null for any other status.
+     * The body is read on [Dispatchers.IO]; cancelling the caller cancels the call, which closes
+     * the socket a blocked read is waiting on instead of leaving it to the read timeout.
+     */
+    private suspend fun <T> get(
+        url: String,
+        client: OkHttpClient,
+        read: (Response) -> T,
+    ): T? =
+        coroutineScope {
+            val call = client.newCall(Request.Builder().url(url).build())
+            call.executeAsync().use { response ->
+                if (!response.isSuccessful) return@coroutineScope null
+                // runCatching keeps a read error from cancelling this scope: it comes back as the
+                // IOException it is, which the retry loop handles, not as a cancellation.
+                val reader = async(Dispatchers.IO) { runCatching { read(response) } }
+                try {
+                    reader.await().getOrThrow()
+                } catch (e: CancellationException) {
+                    call.cancel()
+                    throw e
+                }
+            }
+        }
 
     /**
      * One GET of a link someone pasted, through [client] so it carries the app's user agent, DNS
@@ -128,102 +164,6 @@ class ImageDownloader {
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
                 null
-            }
-        }
-
-    private data class HttpConnection(
-        val connection: HttpURLConnection,
-        val responseCode: Int,
-        val contentType: String?,
-    )
-
-    private suspend fun openHttpConnection(
-        imageUrl: String,
-        okHttpClient: (url: String) -> OkHttpClient,
-    ): HttpConnection =
-        withContext(Dispatchers.IO) {
-            // TODO: Migrate to OkHttp
-            HttpURLConnection.setFollowRedirects(true)
-            var url = URI(imageUrl).toURL()
-            var clientProxy = okHttpClient(imageUrl).proxy
-            var huc =
-                if (clientProxy != null) {
-                    url.openConnection(clientProxy) as HttpURLConnection
-                } else {
-                    url.openConnection() as HttpURLConnection
-                }
-            huc.instanceFollowRedirects = true
-            var responseCode = huc.responseCode
-
-            // Handle redirects
-            if (responseCode in 300..400) {
-                val newUrl: String = huc.getHeaderField("Location")
-
-                // open the new connection again
-                url = URI(newUrl).toURL()
-                clientProxy = okHttpClient(newUrl).proxy
-                huc =
-                    if (clientProxy != null) {
-                        url.openConnection(clientProxy) as HttpURLConnection
-                    } else {
-                        url.openConnection() as HttpURLConnection
-                    }
-                responseCode = huc.responseCode
-            }
-
-            return@withContext HttpConnection(
-                connection = huc,
-                responseCode = responseCode,
-                contentType = huc.headerFields.get("Content-Type")?.firstOrNull(),
-            )
-        }
-
-    private suspend fun tryStreamAndVerify(
-        imageUrl: String,
-        okHttpClient: (url: String) -> OkHttpClient,
-    ): StreamVerification? =
-        withContext(Dispatchers.IO) {
-            val httpConn = openHttpConnection(imageUrl, okHttpClient)
-
-            return@withContext try {
-                if (httpConn.responseCode in 200..300) {
-                    val (hash, totalBytes) =
-                        httpConn.connection.inputStream.use {
-                            sha256StreamWithCount(it)
-                        }
-
-                    StreamVerification(
-                        hash = hash.toHexKey(),
-                        size = totalBytes,
-                        contentType = httpConn.contentType,
-                    )
-                } else {
-                    null
-                }
-            } finally {
-                // Always disconnect to release connection resources
-                httpConn.connection.disconnect()
-            }
-        }
-
-    private suspend fun tryGetTheImage(
-        imageUrl: String,
-        okHttpClient: (url: String) -> OkHttpClient,
-    ): Blob? =
-        withContext(Dispatchers.IO) {
-            val httpConn = openHttpConnection(imageUrl, okHttpClient)
-
-            return@withContext try {
-                if (httpConn.responseCode in 200..300) {
-                    Blob(
-                        httpConn.connection.inputStream.use { it.readBytes() },
-                        httpConn.contentType,
-                    )
-                } else {
-                    null
-                }
-            } finally {
-                httpConn.connection.disconnect()
             }
         }
 

@@ -59,6 +59,7 @@ suspend fun Nip96Uploader.upload(
     onProgress: (percentage: Float) -> Unit,
     httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
     context: Context,
+    onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
 ): MediaUploadResult =
     upload(
         uri,
@@ -71,6 +72,7 @@ suspend fun Nip96Uploader.upload(
         onProgress,
         httpAuth,
         context,
+        onUploadProgress,
     )
 
 /**
@@ -88,6 +90,7 @@ suspend fun Nip96Uploader.upload(
     onProgress: (percentage: Float) -> Unit,
     httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
     context: Context,
+    onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
 ): MediaUploadResult {
     val contentResolver = context.contentResolver
     val myContentType = contentType ?: contentResolver.getType(uri)
@@ -105,5 +108,6 @@ suspend fun Nip96Uploader.upload(
         onProgress = onProgress,
         httpAuth = httpAuth,
         extensionFor = ::androidExtensionFor,
+        onUploadProgress = onUploadProgress,
     ).mergeLocalMetadata(localMetadata)
 }

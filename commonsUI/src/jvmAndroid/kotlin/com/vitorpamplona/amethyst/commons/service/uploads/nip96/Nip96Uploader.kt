@@ -39,6 +39,7 @@ import com.vitorpamplona.quartz.nip96FileStorage.actions.PartialEvent
 import com.vitorpamplona.quartz.nip96FileStorage.actions.UploadResult
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -58,7 +59,10 @@ import java.io.InputStream
  * it has one) and delete. Platforms feed it a stream or a [File]; [extensionFor] lets Android
  * consult its `MimeTypeMap` before the built-in table.
  */
-class Nip96Uploader {
+class Nip96Uploader(
+    /** How often [waitProcessing] asks the server how far along it is. */
+    private val pollIntervalMs: Long = 500,
+) {
     suspend fun upload(
         file: File,
         contentType: String?,
@@ -68,6 +72,7 @@ class Nip96Uploader {
         okHttpClient: (String) -> OkHttpClient,
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
+        onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult =
         upload(
             openStream = { file.inputStream() },
@@ -79,11 +84,15 @@ class Nip96Uploader {
             okHttpClient = okHttpClient,
             onProgress = onProgress,
             httpAuth = httpAuth,
+            onUploadProgress = onUploadProgress,
         )
 
     /**
      * Uploads the file [openStream] reads. It is called once per attempt: OkHttp writes the
      * body again when it retries, so it must return a new stream each time.
+     *
+     * [onUploadProgress] follows the bytes sent; [onProgress] follows the server's processing
+     * of the file afterwards, when it reports any.
      */
     suspend fun upload(
         openStream: () -> InputStream,
@@ -96,6 +105,7 @@ class Nip96Uploader {
         onProgress: (percentage: Float) -> Unit,
         httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
         extensionFor: (mimeType: String) -> String? = { null },
+        onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         val fileName = RandomInstance.randomChars(16)
         val extension =
@@ -119,7 +129,7 @@ class Nip96Uploader {
                 }.addFormDataPart(
                     "file",
                     "$fileName.$extension",
-                    ReopenableStreamBody(contentType?.toMediaType(), length, openStream = openStream),
+                    ReopenableStreamBody(contentType?.toMediaType(), length, onUploadProgress, openStream),
                 ).build()
 
         httpAuth(server.apiUrl, "POST", null)?.let { requestBuilder.addHeader("Authorization", it.toAuthToken()) }
@@ -278,6 +288,11 @@ class Nip96Uploader {
         }
     }
 
+    /**
+     * Polls the server's processing URL until it reports 100%. Gives up after
+     * [MAX_FAILED_POLLS] polls in a row that fail or [MAX_PROCESSING_POLLS] in all, so a server
+     * that errors or stalls forever ends the upload instead of holding it open.
+     */
     private suspend fun waitProcessing(
         result: UploadResult,
         okHttpClient: (String) -> OkHttpClient,
@@ -287,7 +302,14 @@ class Nip96Uploader {
 
         val procUrl = result.processingUrl
 
+        var polls = 0
+        var failedPolls = 0
         while (!procUrl.isNullOrBlank() && (currentResult.percentage ?: 100) < 100) {
+            if (polls >= MAX_PROCESSING_POLLS || failedPolls >= MAX_FAILED_POLLS) {
+                throw RuntimeException("The server did not finish processing the file")
+            }
+            polls++
+
             onProgress((currentResult.percentage ?: 100) / 100f)
 
             val request: Request =
@@ -296,16 +318,26 @@ class Nip96Uploader {
                     .url(procUrl)
                     .build()
 
-            val client = okHttpClient(procUrl)
-            client.newCall(request).executeAsync().use { response ->
-                withContext(Dispatchers.IO) {
-                    if (response.isSuccessful) {
-                        currentResult = JsonMapper.fromJson<UploadResult>(response.body.string())
+            val polled =
+                try {
+                    okHttpClient(procUrl).newCall(request).executeAsync().use { response ->
+                        withContext(Dispatchers.IO) {
+                            if (response.isSuccessful) JsonMapper.fromJson<UploadResult>(response.body.string()) else null
+                        }
                     }
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    null
                 }
+
+            if (polled != null) {
+                currentResult = polled
+                failedPolls = 0
+            } else {
+                failedPolls++
             }
 
-            delay(500)
+            delay(pollIntervalMs)
         }
         onProgress((currentResult.percentage ?: 100) / 100f)
 
@@ -316,5 +348,13 @@ class Nip96Uploader {
         } else {
             throw RuntimeException("Error waiting for processing. Final result is unavailable")
         }
+    }
+
+    companion object {
+        /** Polls in a row that may fail before the upload is given up. */
+        const val MAX_FAILED_POLLS = 20
+
+        /** Polls in all: 10 minutes at the default interval, for a long video the server transcodes. */
+        const val MAX_PROCESSING_POLLS = 1200
     }
 }

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.ReopenableStreamBody
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
+import com.vitorpamplona.amethyst.commons.service.uploads.PreviewHashes
 import com.vitorpamplona.amethyst.commons.service.uploads.extensionFromMimeType
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
@@ -69,22 +70,26 @@ class BlossomUploader {
             }
         }.getOrNull()
 
-    suspend fun upload(
+    /** What an upload of one file needs before the first request: its hash, size, name and preview hashes. */
+    class PreparedBlob(
+        val hash: HexKey,
+        val size: Long,
+        val fileName: String?,
+        val contentType: String?,
+        val localMetadata: PreviewHashes?,
+    )
+
+    /**
+     * Reads [uri] once to hash it and once to compute its preview hashes. A caller sending the
+     * same file to several servers prepares it once and passes the result to each [upload].
+     */
+    fun prepare(
         uri: Uri,
         contentType: String?,
-        size: Long?,
-        alt: String?,
-        sensitiveContent: String?,
-        serverBaseUrl: String,
-        okHttpClient: (String) -> OkHttpClient,
-        httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
         context: Context,
-        useMediaEndpoint: Boolean = false,
-        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
-    ): MediaUploadResult {
+    ): PreparedBlob {
         val contentResolver = context.contentResolver
         val myContentType = contentType ?: contentResolver.getType(uri)
-        val fileName = context.getFileName(uri)
 
         val imageInputStreamForHash = contentResolver.openInputStream(uri)
         checkNotNull(imageInputStreamForHash) { "Can't open the image input stream" }
@@ -95,14 +100,37 @@ class BlossomUploader {
                 hashBytes.toHexKey() to totalBytes
             }
 
-        val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
+        return PreparedBlob(
+            hash = hash,
+            size = size,
+            fileName = context.getFileName(uri),
+            contentType = myContentType,
+            localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType),
+        )
+    }
+
+    suspend fun upload(
+        uri: Uri,
+        contentType: String?,
+        alt: String?,
+        sensitiveContent: String?,
+        serverBaseUrl: String,
+        okHttpClient: (String) -> OkHttpClient,
+        httpAuth: suspend (hash: HexKey, size: Long, alt: String) -> BlossomAuthorizationEvent?,
+        context: Context,
+        useMediaEndpoint: Boolean = false,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+        prepared: PreparedBlob? = null,
+    ): MediaUploadResult {
+        val blob = prepared ?: prepare(uri, contentType, context)
+        val contentResolver = context.contentResolver
 
         return upload(
             { contentResolver.openInputStream(uri) ?: throw IOException("Can't open the image input stream") },
-            hash,
-            size,
-            fileName,
-            myContentType,
+            blob.hash,
+            blob.size,
+            blob.fileName,
+            blob.contentType,
             alt,
             sensitiveContent,
             serverBaseUrl,
@@ -111,7 +139,7 @@ class BlossomUploader {
             context,
             useMediaEndpoint,
             onProgress,
-        ).mergeLocalMetadata(localMetadata)
+        ).mergeLocalMetadata(blob.localMetadata)
     }
 
     /**
