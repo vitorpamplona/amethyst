@@ -23,105 +23,62 @@ package com.vitorpamplona.amethyst.connectedApps.consent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
-import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
-import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppIcon
-import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
-import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.cancel
-import com.vitorpamplona.amethyst.commons.resources.napplet_connect_block
-import com.vitorpamplona.amethyst.commons.resources.napplet_connect_button
-import com.vitorpamplona.amethyst.commons.resources.napplet_connect_how_handle
-import com.vitorpamplona.amethyst.commons.resources.napplet_connect_subtitle
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_full_trust_desc
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_paranoid_desc
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable
-import com.vitorpamplona.amethyst.commons.resources.napplet_policy_reasonable_desc
-import com.vitorpamplona.amethyst.commons.resources.nip46_connect_requests_title
-import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConnectedAccountRow
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConsentInputGuard
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConnectCard
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 class SignerConnectActivity : ComponentActivity() {
-    private var token: String? = null
-    private var decided = false
+    // The request on screen: cancelled if the activity is finished before the user answers it.
+    private var shown: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val token = intent.getStringExtra(SignerConnectCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val info = token?.let { SignerConnectCoordinator.infoFor(it) }
-        if (token == null || info == null) {
-            finish()
-            return
-        }
-
         setContent {
-            // The account the app asks to connect to, which need not be the logged-in one.
-            AmethystTheme(accountPubKey = info.accountPubKey) {
-                SignerConnectScreen(
-                    info = info,
-                    onConnect = { policy ->
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Connected(policy))
-                        finish()
-                    },
-                    onBlock = {
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Blocked)
-                        finish()
-                    },
-                    onCancel = {
-                        decided = true
-                        SignerConnectCoordinator.complete(token, AppConnectResult.Cancelled)
-                        finish()
-                    },
-                )
+            // The oldest request waiting, whichever one brought the activity up: one arriving while
+            // this shows (a NIP-46 client while a site asks) is answered next instead of lost.
+            val pending by SignerConnectCoordinator.pending.collectAsStateWithLifecycle()
+            val request = pending.firstOrNull()
+            LaunchedEffect(request == null) { if (request == null) finish() }
+            if (request != null) {
+                SideEffect { shown = request.token }
+                key(request.token) {
+                    // The account the app asks to connect to, which need not be the logged-in one.
+                    AmethystTheme(accountPubKey = request.info.accountPubKey) {
+                        SignerConnectScreen(
+                            info = request.info,
+                            onConnect = { policy -> SignerConnectCoordinator.complete(request.token, AppConnectResult.Connected(policy)) },
+                            onBlock = { SignerConnectCoordinator.complete(request.token, AppConnectResult.Blocked) },
+                            onCancel = { SignerConnectCoordinator.complete(request.token, AppConnectResult.Cancelled) },
+                        )
+                    }
+                }
             }
         }
     }
 
-    override fun finish() {
-        if (!decided) token?.let { SignerConnectCoordinator.cancel(it) }
-        super.finish()
+    override fun onDestroy() {
+        // Torn down before the user chose: fail closed. A rotation keeps the request.
+        if (isFinishing) shown?.let(SignerConnectCoordinator::cancel)
+        super.onDestroy()
     }
 }
 
@@ -132,7 +89,6 @@ private fun SignerConnectScreen(
     onBlock: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    var selected by remember { mutableStateOf(AppSignerPolicy.REASONABLE) }
     val maxHeight = LocalConfiguration.current.screenHeightDp.dp * 0.9f
 
     Dialog(
@@ -149,194 +105,7 @@ private fun SignerConnectScreen(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
         ) {
-            Column(
-                modifier =
-                    Modifier
-                        .verticalScroll(rememberScrollState())
-                        .padding(vertical = 24.dp),
-            ) {
-                // Centered header: icon + app name + connect subtitle
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    val isBrowser = info.coordinate.startsWith("browser:")
-                    FavoriteAppIcon(
-                        app =
-                            if (isBrowser) {
-                                FavoriteApp.WebApp(info.coordinate.substringAfter(':'), info.appletTitle, 0L, info.iconUrl)
-                            } else {
-                                FavoriteApp.NostrApp(info.coordinate, info.appletTitle, 0L, info.iconUrl)
-                            },
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(56.dp),
-                    )
-                    Text(
-                        info.appletTitle,
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                    )
-                    Text(
-                        stringRes(Res.string.napplet_connect_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                    )
-                    // Show WHICH account is being connected (avatar + name), not a raw pubkey.
-                    if (info.accountName != null) {
-                        ConnectedAccountRow(info.accountName, info.accountPicture, info.accountPubKey)
-                    } else {
-                        Text(
-                            info.domain,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-
-                // What the app declared it needs (nostrconnect `perms`) — so consent is informed,
-                // not a silent grant. Approving connects and pre-grants exactly these.
-                if (info.requestedPermissions.isNotEmpty()) {
-                    Spacer(Modifier.height(16.dp))
-                    Surface(
-                        modifier = Modifier.padding(horizontal = 24.dp).fillMaxWidth(),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                stringRes(Res.string.nip46_connect_requests_title),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                            info.requestedPermissions.forEach { perm ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(
-                                        MaterialSymbols.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                    Text(perm, style = MaterialTheme.typography.bodySmall)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    stringRes(Res.string.napplet_connect_how_handle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                )
-                Spacer(Modifier.height(8.dp))
-
-                // Trust level options
-                Column(
-                    modifier = Modifier.padding(horizontal = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    PolicyOption(
-                        selected = selected == AppSignerPolicy.FULL_TRUST,
-                        symbol = MaterialSymbols.LockOpen,
-                        label = stringRes(Res.string.napplet_policy_full_trust),
-                        description = stringRes(Res.string.napplet_policy_full_trust_desc),
-                        onClick = { selected = AppSignerPolicy.FULL_TRUST },
-                    )
-                    PolicyOption(
-                        selected = selected == AppSignerPolicy.REASONABLE,
-                        symbol = MaterialSymbols.Shield,
-                        label = stringRes(Res.string.napplet_policy_reasonable),
-                        description = stringRes(Res.string.napplet_policy_reasonable_desc),
-                        onClick = { selected = AppSignerPolicy.REASONABLE },
-                    )
-                    PolicyOption(
-                        selected = selected == AppSignerPolicy.PARANOID,
-                        symbol = MaterialSymbols.Lock,
-                        label = stringRes(Res.string.napplet_policy_paranoid),
-                        description = stringRes(Res.string.napplet_policy_paranoid_desc),
-                        onClick = { selected = AppSignerPolicy.PARANOID },
-                    )
-                }
-
-                Spacer(Modifier.height(16.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) {
-                        Text(stringRes(Res.string.cancel))
-                    }
-                    Button(onClick = { onConnect(selected) }, modifier = Modifier.weight(1f)) {
-                        Text(stringRes(Res.string.napplet_connect_button))
-                    }
-                }
-
-                OutlinedButton(
-                    onClick = onBlock,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) {
-                    Text(
-                        stringRes(Res.string.napplet_connect_block, info.domain),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PolicyOption(
-    selected: Boolean,
-    symbol: MaterialSymbol,
-    label: String,
-    description: String,
-    onClick: () -> Unit,
-) {
-    val borderColor = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    val bgColor = if (selected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface
-
-    Surface(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .border(width = if (selected) 2.dp else 1.dp, color = borderColor, shape = RoundedCornerShape(12.dp))
-                .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = bgColor,
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(
-                symbol = symbol,
-                contentDescription = null,
-                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(26.dp),
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (selected) {
-                Icon(
-                    symbol = MaterialSymbols.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-            }
+            ConsentInputGuard { SignerConnectCard(info, onConnect, onBlock, onCancel) }
         }
     }
 }

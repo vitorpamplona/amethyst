@@ -21,8 +21,10 @@
 package com.vitorpamplona.amethyst.ui.platform
 
 import android.content.Context
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -35,10 +37,15 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.NostrConnectApp
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
@@ -48,11 +55,14 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.isDebug
+import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
 import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
+import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.InlineNappletView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationCategorySettings
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.settings.AndroidNotificationDeliverySettings
@@ -61,11 +71,19 @@ import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.OpenURIIfNotLoggedIn
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.nostrConnectSignerApps
 import com.vitorpamplona.amethyst.ui.screen.loggedOff.login.openNostrConnectInSigner
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.isExternalSignerInstalled
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.nipACWebRtcCalls.tags.CallType
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as AppBottomBarImpl
 import com.vitorpamplona.amethyst.favorites.rememberManifestIconModel as AppRememberManifestIconModel
 import com.vitorpamplona.amethyst.favorites.rememberNappletIconModel as AppRememberNappletIconModel
@@ -243,6 +261,57 @@ object AndroidAppPlatform : AppPlatform {
     @Composable
     override fun rememberNappletIconModel(coordinate: String): String? = AppRememberNappletIconModel(coordinate)
 
+    // The same cross-process surface the favorite tabs use, which needs Android 11.
+    override val runsNappletsInline: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+
+    @Composable
+    override fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) InlineNappletView(manifest, instanceId, onStatus, modifier)
+    }
+
+    @Composable
+    override fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val context = LocalContext.current
+            InlineNappletView(app.url to postId, instanceId, onStatus, modifier) {
+                NappletLauncher.buildInlineWebxdcParams(context, app, postId, poster, instanceId)
+            }
+        }
+    }
+
+    @Composable
+    override fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {
+        val context = LocalContext.current
+        LaunchedEffect(paths, servers) {
+            // Off the main thread: context.cacheDir touches disk (ensurePrivateCacheDirExists), so reading
+            // it on the composition dispatcher trips StrictMode. The prefetch itself is already IO-bound.
+            withContext(Dispatchers.IO) {
+                val torPort = Amethyst.instance.torManager.activePortOrNull.value
+                if (torPort == null && Amethyst.instance.torPrefs.torType.value != TorType.OFF) return@withContext
+                // The partition its launch will use: the per-account WebView profile and the site.
+                val partition = NappletBlobCache.partitionOf(NappletWebViewProfiles.current().orEmpty(), author, identifier)
+                runCatchingCancellable { NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort ?: -1, partition) }
+            }
+        }
+    }
+
     @Composable
     override fun rememberManifestIconModel(
         author: String,
@@ -265,4 +334,22 @@ private class AndroidAppLauncher(
         url: String,
         preferTor: Boolean,
     ) = FavoriteAppLauncher.launchUrl(context, url, preferTor)
+
+    // Napplets and nSites hand off to the sandboxed :napplet process.
+    override val opensNapplets: Boolean get() = true
+
+    override fun openNapplet(manifest: NappletManifest) {
+        when (manifest) {
+            is RootNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, "")
+            is NamedNappletEvent -> NappletLauncher.launch(context, manifest, manifest.pubKey, manifest.identifier())
+        }
+    }
+
+    override fun openSite(site: Event) = NappletLauncher.launchSite(context, site)
+
+    override fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) = NappletLauncher.launchWebxdc(context, app, postId, poster)
 }

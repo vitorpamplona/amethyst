@@ -69,6 +69,8 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.quartz)
+                // The headless cart runtime that plays 128x128 fantasy-console carts in notes.
+                implementation(libs.kiko)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)

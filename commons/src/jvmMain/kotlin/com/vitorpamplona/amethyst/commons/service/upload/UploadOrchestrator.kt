@@ -81,6 +81,8 @@ class UploadOrchestrator(
         preCompressed: File? = null,
         // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
         fallbackServerBaseUrls: List<String> = emptyList(),
+        // The bytes sent, per attempt: a retry or the next server starts again from zero.
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): UploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -144,6 +146,7 @@ class UploadOrchestrator(
                         contentType = metadata.mimeType,
                         serverBaseUrl = server,
                         authHeader = authHeader,
+                        onProgress = onProgress,
                     )
                 }
 
@@ -180,6 +183,8 @@ class UploadOrchestrator(
         declareRealMimeType: Boolean = false,
         // Tried in order after [serverBaseUrl] fails; see [uploadToFirstAccepting].
         fallbackServerBaseUrls: List<String> = emptyList(),
+        // The bytes sent, per attempt: a retry or the next server starts again from zero.
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): EncryptedUploadResult {
         var reencodedTemp: File? = null
         var strippedTemp: File? = null
@@ -248,6 +253,7 @@ class UploadOrchestrator(
                         contentType = uploadContentType,
                         serverBaseUrl = server,
                         authHeader = authHeader,
+                        onProgress = onProgress,
                     )
                 }
 

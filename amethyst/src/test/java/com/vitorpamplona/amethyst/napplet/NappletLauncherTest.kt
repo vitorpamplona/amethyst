@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
 import android.content.Intent
-import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
-import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.Assert.assertNull
@@ -88,24 +86,5 @@ class NappletLauncherTest {
     fun refusesAnUnsupportedRequiredDomain() {
         val event = named(required = listOf("relay", "mesh"))
         assertNull(NappletLauncher.buildLaunchParams(context, event, event.pubKey, "demo"))
-    }
-
-    @Test
-    fun rawLaunchRejectsNappletProfile() {
-        every { context.startActivity(any<Intent>()) } returns Unit
-
-        NappletLauncher.launch(
-            context = context,
-            paths = emptyList(),
-            servers = emptyList(),
-            authorPubKey = author,
-            identifier = "demo",
-            aggregateHash = null,
-            title = "Demo",
-            requires = emptyList(),
-            profile = HostProfile.NAPPLET,
-        )
-
-        verify(exactly = 0) { context.startActivity(any<Intent>()) }
     }
 }

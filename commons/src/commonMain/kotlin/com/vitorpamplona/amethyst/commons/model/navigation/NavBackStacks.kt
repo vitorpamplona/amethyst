@@ -47,10 +47,26 @@ class NavStackEntry(
     val id: Long,
     tabRoute: Route? = null,
     drawerRoot: Boolean = false,
+    routeVersion: Int = 0,
 ) {
     /** What this screen shows. Replaced in place when the same destination is reopened with other arguments. */
     var route by mutableStateOf(route)
-        internal set
+        private set
+
+    /**
+     * How many times [route] was replaced in place. The screen is built anew for each version, with
+     * ViewModels and saved UI state of its own, so the previous arguments' ViewModels are cleared
+     * instead of living on in the entry until it is popped (which, for a tab root, is never).
+     */
+    var routeVersion by mutableStateOf(routeVersion)
+        private set
+
+    /** Hands this screen other arguments, as a new version of it. */
+    internal fun reArgue(newRoute: Route) {
+        if (newRoute == route) return
+        route = newRoute
+        routeVersion++
+    }
 
     /**
      * The bottom-bar route this entry is the root of, or null when it is not a tab root. Kept apart
@@ -71,7 +87,7 @@ class NavStackEntry(
 
     override fun hashCode(): Int = id.hashCode()
 
-    override fun toString(): String = "NavStackEntry($id, $route, tabRoute=$tabRoute, drawerRoot=$drawerRoot)"
+    override fun toString(): String = "NavStackEntry($id, $route, v$routeVersion, tabRoute=$tabRoute, drawerRoot=$drawerRoot)"
 }
 
 /**
@@ -129,14 +145,15 @@ class NavBackStacks private constructor(
      * Opens [route] as the start of a fresh stretch of history: drops the most recent copy of
      * [route] and everything above it, then shows [route] once. When the screen left on top is the
      * same destination with other arguments, that screen takes the new arguments in place rather
-     * than stacking a second copy — the same entry, so its ViewModels, saved state and root flags
-     * carry over and nothing animates, as Navigation 2's single-top launch behaved.
+     * than stacking a second copy — the same entry, so its root flags carry over and nothing
+     * animates, as Navigation 2's single-top launch behaved. Its content is a new
+     * [NavStackEntry.routeVersion], though: the previous arguments' ViewModels are cleared.
      */
     fun newStack(route: Route) {
         val existing = stack.indexOfLast { it.route == route }
         if (existing >= 0) removeFrom(existing)
         if (stack.isNotEmpty() && topRoute::class == route::class) {
-            top.route = route
+            top.reArgue(route)
         } else {
             stack.add(newEntry(route))
         }
@@ -224,6 +241,7 @@ class NavBackStacks private constructor(
         val id: Long,
         val tabRoute: Route? = null,
         val drawerRoot: Boolean = false,
+        val routeVersion: Int = 0,
     )
 
     @Serializable
@@ -233,12 +251,12 @@ class NavBackStacks private constructor(
         val nextId: Long,
     )
 
-    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot)
+    private fun NavStackEntry.toSaved() = SavedEntry(route, id, tabRoute, drawerRoot, routeVersion)
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
 
-        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot)
+        private fun SavedEntry.toEntry() = NavStackEntry(route, id, tabRoute, drawerRoot, routeVersion)
 
         /** Restores what [encode] wrote, or null when it can't be read (an app update renamed a route). */
         fun decode(encoded: String): NavBackStacks? =

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderQueryStat
 import com.vitorpamplona.amethyst.commons.relays.EOSEAccountFast
 import com.vitorpamplona.amethyst.commons.relays.MutableTime
 import com.vitorpamplona.amethyst.commons.relays.SincePerRelayMap
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -37,7 +38,11 @@ class EventWatcherSubAssembler(
     allKeys: () -> Set<EventFinderQueryState>,
 ) : SingleSubEoseManager<EventFinderQueryState>(client, allKeys) {
     var lastNotesOnFilter = emptyList<Note>()
-    var latestEOSEs: EOSEAccountFast<Note> = EOSEAccountFast(1000)
+
+    // Keyed by note id, not by the Note: this assembler lives as long as the app, and a Note key
+    // held up to a thousand notes (with their replies and reactions) that LocalCache's soft cache
+    // would otherwise let go, and missed a note LocalCache had rebuilt for the same id.
+    var latestEOSEs: EOSEAccountFast<HexKey> = EOSEAccountFast(1000)
 
     override fun newEose(
         relay: NormalizedRelayUrl,
@@ -45,7 +50,7 @@ class EventWatcherSubAssembler(
         filters: List<Filter>?,
     ) {
         lastNotesOnFilter.forEach {
-            latestEOSEs.newEose(it, relay, time)
+            latestEOSEs.newEose(it.idHex, relay, time)
         }
         super.newEose(relay, time, filters)
     }
@@ -55,6 +60,8 @@ class EventWatcherSubAssembler(
         since: SincePerRelayMap?,
     ): List<RelayBasedFilter>? {
         if (keys.isEmpty()) {
+            // Nothing is watched: let go of the last batch rather than holding it until the next.
+            lastNotesOnFilter = emptyList()
             return null
         }
 
@@ -91,10 +98,10 @@ class EventWatcherSubAssembler(
 
     fun groupByRelayPresence(
         notes: Iterable<Note>,
-        eoseCache: EOSEAccountFast<Note>,
+        eoseCache: EOSEAccountFast<HexKey>,
     ): Collection<List<Note>> =
         notes
-            .groupBy { eoseCache.since(it)?.keys?.hashCode() }
+            .groupBy { eoseCache.since(it.idHex)?.keys?.hashCode() }
             .values
             .map {
                 // important to keep in order otherwise the Relay thinks the filter has changed and we REQ again
@@ -103,12 +110,12 @@ class EventWatcherSubAssembler(
 
     fun findMinimumEOSEs(
         notes: List<Note>,
-        eoseCache: EOSEAccountFast<Note>,
+        eoseCache: EOSEAccountFast<HexKey>,
     ): SincePerRelayMap {
         val minLatestEOSEs = mutableMapOf<NormalizedRelayUrl, MutableTime>()
 
         notes.forEach { note ->
-            eoseCache.since(note)?.forEach {
+            eoseCache.since(note.idHex)?.forEach {
                 val minEose = minLatestEOSEs[it.key]
                 if (minEose == null) {
                     minLatestEOSEs.put(it.key, it.value.copy())

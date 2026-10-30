@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.quartz.experimental.clink.pointers.NOffer
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.ImmutableMap
@@ -71,6 +72,15 @@ class PdfSegment(
 @Immutable
 class LinkSegment(
     segment: String,
+) : Segment(segment)
+
+/** A webxdc app attached to the post: drawn as the app's card, not as a link. */
+@Immutable
+class WebxdcSegment(
+    segment: String,
+    val app: WebxdcApp,
+    /** The post's `nostr:` URI, which names the app instance and its poster. */
+    val postUri: String?,
 ) : Segment(segment)
 
 @Immutable

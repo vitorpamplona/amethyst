@@ -228,8 +228,13 @@ class AccountCacheState(
      * Deletes the on-disk per-account directory (the MLS/Marmot stores created in
      * [loadAccount]). Call only on permanent account deletion — [removeAccount] just
      * drops the in-memory copy and leaves these files behind.
+     *
+     * Also drops the account's DM index from [cache]: nothing else removes it, so the logged-out
+     * account's conversations (decrypted NIP-17 messages included) stayed in memory until the
+     * process died.
      */
     override fun deleteAccountFiles(pubkey: HexKey) {
+        cache.chatroomList.remove(pubkey)
         val dir = File(accountsRootDir(), pubkey)
         if (dir.exists() && !dir.deleteRecursively()) {
             Log.w("AccountCacheState") { "Failed to delete account directory ${dir.absolutePath}" }
@@ -259,8 +264,13 @@ class AccountCacheState(
 
     private fun remoteSignerFor(settings: AccountSettings): NostrSignerRemote {
         val pubKey = settings.keyPair.pubKey.toHexKey()
-        return remoteSigners.getOrPut(pubKey) {
-            val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
+        remoteSigners[pubKey]?.let { return it }
+        // getOrPut on a ConcurrentMap may run its block in two racing loads (the UI login and the
+        // always-on preload) and keep one, which left the other's relay subscription open,
+        // unreachable and never closed. Here the loser closes its own. Opened before it is
+        // published, so a removal that finds it in the map always finds it open and closes it.
+        val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
+        val built =
             NostrSignerRemote
                 .fromBunkerUri(
                     settings.remoteSignerBunkerUri!!,
@@ -281,9 +291,13 @@ class AccountCacheState(
                     // The user's key, not the transport key: self-encryption (private lists, drafts)
                     // keys off signer.pubKey.
                     it.bindUserPubkey(pubKey)
-                    it.openSubscription()
                 }
+        built.openSubscription()
+        remoteSigners.putIfAbsent(pubKey, built)?.let { winner ->
+            built.closeSubscription()
+            return winner
         }
+        return built
     }
 
     override fun loadAccount(accountSettings: AccountSettings): Account {

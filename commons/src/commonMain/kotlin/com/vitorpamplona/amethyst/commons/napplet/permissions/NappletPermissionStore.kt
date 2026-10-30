@@ -50,6 +50,9 @@ interface NappletPermissionStore {
         coordinate: String,
         capability: NappletCapability,
     )
+
+    /** This store's grants for [pubKey] alone, whoever is logged in. A store kept per account overrides it. */
+    fun forAccount(pubKey: String): NappletPermissionStore = this
 }
 
 /** A thread-safe in-memory [NappletPermissionStore] for tests and ephemeral sessions. */

@@ -54,7 +54,6 @@ import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
-import com.vitorpamplona.amethyst.commons.ui.components.LocalWindowViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
@@ -66,6 +65,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletWindows
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -93,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPubl
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalChromiumVideoEngine
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
@@ -205,8 +207,15 @@ fun main(args: Array<String>) {
 
     modules.initiate()
 
+    // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
+    val nappletHost = DesktopNappletHost(modules)
+    // Audio the audio engine can't decode (WebM, Ogg) plays in the same Chromium.
+    GlobalMediaPlayer.chromiumEngine = nappletHost.engine
+
+    // A crash or a kill comes through here; a quit has shut Chromium down already (below).
     Runtime.getRuntime().addShutdownHook(
         Thread {
+            runCatching { nappletHost.shutdown() }
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
             runCatching { modules.flushUiPrefs() }
@@ -225,10 +234,14 @@ fun main(args: Array<String>) {
             desktopSpellCheck = spellCheck,
             // Decrypted pictures of private communities: owner-only, like the rest of the profile.
             concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
+            nappletHost = nappletHost,
         )
     val root = DesktopAppRoot(modules)
 
-    application {
+    // Chromium has to shut down before the JVM starts exiting, while the app's threads still run: on
+    // macOS it must go on the main thread, and jcefmaven's own exit hook would otherwise do it on the
+    // AWT thread and crash the app as it quits.
+    application(exitProcessOnExit = false) {
         // Opens where it was left; the first time, or when that spot is off every screen now, at the
         // default size in the middle of the screen.
         val savedBounds = remember { SavedWindowBounds(File(filesDir, "window-bounds.properties")) }
@@ -284,8 +297,8 @@ fun main(args: Array<String>) {
 
                     frameScope?.DesktopMenuBar(root.navigator, onQuit = ::exitApplication)
 
-                    // The window outlives every destination: screens that share state across destinations
-                    // (the chess lobby and board, the Cordn group draft) keep it here.
+                    // The window's root store, the parent of the account-scoped one that AmethystApp
+                    // nests under it per logged-in account.
                     val windowViewModels =
                         remember {
                             object : ViewModelStoreOwner {
@@ -306,7 +319,6 @@ fun main(args: Array<String>) {
                         NowProvider {
                             CompositionLocalProvider(
                                 LocalViewModelStoreOwner provides windowViewModels,
-                                LocalWindowViewModelStoreOwner provides windowViewModels,
                                 LocalAppServices provides services,
                                 LocalAppPlatform provides platform,
                                 LocalNotePlatform provides DesktopNotePlatform,
@@ -314,6 +326,7 @@ fun main(args: Array<String>) {
                                 LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
                                 // The lightbox and the video player go full screen through the AWT window.
                                 LocalAwtWindow provides window,
+                                LocalChromiumVideoEngine provides nappletHost.engine,
                                 LocalIsImmersiveFullscreen provides immersiveFullscreen,
                                 LocalDrawerMetrics provides DesktopDrawerMetrics,
                                 // Throws when no app can open a link, as on Android, so a wallet
@@ -340,6 +353,9 @@ fun main(args: Array<String>) {
                                     // The video player's full-screen button: the playing video over the
                                     // whole window, in OS full screen.
                                     GlobalFullscreenOverlay()
+
+                                    // Each open napplet, in its own window.
+                                    DesktopNappletWindows(nappletHost)
                                 }
                             }
                         }
@@ -348,6 +364,10 @@ fun main(args: Array<String>) {
             }
         }
     }
+
+    // Every window is closed: the Quit menu, the updater, the last window's close button.
+    runCatching { nappletHost.shutdown() }
+    exitProcess(0)
 }
 
 /**

@@ -91,6 +91,21 @@
 #
 # secp256k1-kmp is already covered by the `-keep class fr.acinq.secp256k1.**`
 # rule mirrored from mobile above.
+# JCEF (Chromium for napplets): libjcef.so calls back into org.cef.* by name, for handlers,
+# callbacks and the native-side fields of browsers and requests; jcefmaven reads its bundle
+# metadata through gson. None of it may be stripped or renamed.
+-keep class org.cef.** { *; }
+-keep class me.friwi.jcefmaven.** { *; }
+-keep class com.jogamp.** { *; }
+-dontwarn org.cef.**
+-dontwarn com.jogamp.**
+-dontwarn me.friwi.jcefmaven.**
+# jcefmaven unpacks its bundle with commons-compress (tar + gzip only); the xz, brotli, zstd and
+# pack200 (ASM) codecs it can also reach are optional and absent. JOGL's NEWT can drive SWT and
+# JavaFX windows; JCEF's windowed browser uses neither.
+-dontwarn org.apache.commons.compress.**
+-dontwarn jogamp.**
+
 -keep class androidx.sqlite.** { *; }
 -keepclassmembers class androidx.sqlite.** {
     native <methods>;

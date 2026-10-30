@@ -77,15 +77,7 @@ object PreviewMetadataCalculator {
             }
 
             isImage(mimeType) -> {
-                // The real size comes from the header; the pixels are decoded at a fraction of it,
-                // since the preview hashes only look at about 100 of them.
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
-                val options = createBitmapOptions().apply { inSampleSize = sampleSizeForHashes(bounds.outWidth, bounds.outHeight) }
-                val bitmap = BitmapFactory.decodeByteArray(data, 0, data.size, options)
-                val hashes = processBitmap(bitmap)
-                val realDim = if (bitmap != null && bounds.outWidth > 0 && bounds.outHeight > 0) DimensionTag(bounds.outWidth, bounds.outHeight) else null
-                hashes.copy(dim = realDim ?: hashes.dim ?: dimPrecomputed)
+                processSampledImage(dimPrecomputed) { options -> BitmapFactory.decodeByteArray(data, 0, data.size, options) }
             }
 
             isVideo(mimeType) -> {
@@ -119,10 +111,9 @@ object PreviewMetadataCalculator {
                 }
 
                 isImage(mimeType) -> {
-                    context.contentResolver.openInputStream(uri)?.use { stream ->
-                        val bitmap = BitmapFactory.decodeStream(stream, null, createBitmapOptions())
-                        processImage(bitmap, dimPrecomputed)
-                    } ?: PreviewHashes(dim = dimPrecomputed)
+                    processSampledImage(dimPrecomputed) { options ->
+                        context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, options) }
+                    }
                 }
 
                 isVideo(mimeType) -> {
@@ -143,6 +134,24 @@ object PreviewMetadataCalculator {
             Log.w(LOG_TAG, "Failed to compute metadata from uri", e)
             null
         }
+    }
+
+    /**
+     * The real size comes from the header; the pixels are decoded at a fraction of it, since the
+     * preview hashes only look at about 100 of them. A full decode of a 50 MP photo would need a
+     * 200 MB bitmap. [decode] runs twice: once for the bounds, once for the sampled pixels.
+     */
+    private fun processSampledImage(
+        dimPrecomputed: DimensionTag?,
+        decode: (BitmapFactory.Options) -> Bitmap?,
+    ): PreviewHashes {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        decode(bounds)
+        val options = createBitmapOptions().apply { inSampleSize = sampleSizeForHashes(bounds.outWidth, bounds.outHeight) }
+        val bitmap = decode(options)
+        val hashes = processBitmap(bitmap)
+        val realDim = if (bitmap != null && bounds.outWidth > 0 && bounds.outHeight > 0) DimensionTag(bounds.outWidth, bounds.outHeight) else null
+        return hashes.copy(dim = realDim ?: hashes.dim ?: dimPrecomputed)
     }
 
     private fun processImage(

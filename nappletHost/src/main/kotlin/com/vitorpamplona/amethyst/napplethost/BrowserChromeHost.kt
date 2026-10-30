@@ -20,7 +20,11 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.graphics.PointF
+import android.graphics.RectF
 import android.view.Gravity
+import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.widget.FrameLayout
@@ -41,6 +45,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toAndroidRectF
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
@@ -63,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogCard
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageInfoSheet
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PermissionPromptCard
+import kotlin.math.abs
 
 /**
  * The browser chrome of a full-screen `:napplet` window (the web browser and the nsite/napplet host), drawn
@@ -172,6 +180,14 @@ class BrowserChromeHost(
 
     private var topView: ComposeView? = null
 
+    // The collapsed handle's place in the window, for telling a swipe on it from a touch on the page.
+    private var handleBounds: RectF? = null
+    private val touchSlop = ViewConfiguration.get(activity).scaledTouchSlop
+
+    // A touch that started on the handle: still undecided, or taken over to open the pill.
+    private var handleDown: PointF? = null
+    private var swipeTaken = false
+
     /** Lays the chrome over [root], above the page. */
     fun attach(root: FrameLayout) {
         val top =
@@ -245,6 +261,48 @@ class BrowserChromeHost(
         pageInfoOpen = true
     }
 
+    /**
+     * The window's touches, before the page sees them. The handle takes no touches itself, so a tap on
+     * it lands on whatever the page draws beneath (a game's buttons can sit right there); only a
+     * downward swipe that starts on it opens the pill, and the page then gets that touch cancelled.
+     * Call from `Activity.dispatchTouchEvent`, with [page] being the activity's own dispatch.
+     */
+    fun dispatchTouchEvent(
+        event: MotionEvent,
+        page: (MotionEvent) -> Boolean,
+    ): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                swipeTaken = false
+                handleDown = if (!expanded && handleBounds?.contains(event.x, event.y) == true) PointF(event.x, event.y) else null
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val down = handleDown
+                if (down != null && !swipeTaken) {
+                    val dx = event.x - down.x
+                    val dy = event.y - down.y
+                    if (dy > touchSlop && dy > abs(dx)) {
+                        swipeTaken = true
+                        val cancel = MotionEvent.obtain(event).apply { action = MotionEvent.ACTION_CANCEL }
+                        page(cancel)
+                        cancel.recycle()
+                        showPill(true)
+                    } else if (abs(dx) > touchSlop || dy < -touchSlop) {
+                        handleDown = null
+                    }
+                }
+            }
+        }
+        if (swipeTaken) {
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                swipeTaken = false
+                handleDown = null
+            }
+            return true
+        }
+        return page(event)
+    }
+
     /** Back closes, in order: the open pill, find, then nothing (the page's own history). */
     fun handleBack(): Boolean =
         when {
@@ -288,6 +346,9 @@ class BrowserChromeHost(
                 suggestionsFor = suggestionsFor,
                 onPasteAndGo = if (clipboardHasText()) ({ pasteAndGo() }) else null,
                 modifier = Modifier.align(Alignment.TopCenter),
+                // Swipe-only: see dispatchTouchEvent.
+                handleTapToOpen = false,
+                handleModifier = Modifier.onGloballyPositioned { handleBounds = it.boundsInWindow().toAndroidRectF() },
             )
         }
         PageDialogs()

@@ -3212,8 +3212,8 @@ open class EventCache :
         relay: NormalizedRelayUrl?,
     ) {
         // Match zap.stream: only show zaps whose receiver is the live activity host.
-        val hosts = event.zappedAuthor().toHashSet()
-        if (hosts.isEmpty()) return
+        val receivers = event.zappedAuthor().toHashSet()
+        if (receivers.isEmpty()) return
 
         // Route into every live-activity address this zap references (zap.stream uses one, but
         // a receipt could legitimately reference multiple simulcasted streams).
@@ -3221,11 +3221,27 @@ open class EventCache :
             .zappedAddresses()
             .asSequence()
             .mapNotNull(Address::parse)
-            .filter { it.kind == LiveActivitiesEvent.KIND && it.pubKeyHex in hosts }
+            .filter { it.kind == LiveActivitiesEvent.KIND }
             .distinct()
             .forEach { address ->
-                getOrCreateLiveChannel(address).addNote(note, relay)
+                val channel = getOrCreateLiveChannel(address)
+                if (isPaidToLiveActivityHost(channel, receivers)) channel.addNote(note, relay)
             }
+    }
+
+    /**
+     * Streaming services (zap.stream, Shosho, …) sign the kind-30311 with their own key and name
+     * the streamer in a `p … host` tag, so a zap to the streamer carries the service's key in its
+     * `a` and the host's in its `p`. Before the stream event is cached there is no host to check;
+     * the receipt's `a` already ties it to this stream, so it is kept rather than lost for good.
+     */
+    private fun isPaidToLiveActivityHost(
+        channel: LiveActivitiesChannel,
+        receivers: Set<HexKey>,
+    ): Boolean {
+        if (channel.address.pubKeyHex in receivers) return true
+        val info = channel.info ?: return true
+        return info.hosts().any { it.pubKey in receivers }
     }
 
     private fun attachZapToLiveActivityChannel(
@@ -3238,8 +3254,9 @@ open class EventCache :
         // `a` would place the zap in a stream its validation never covered.
         val host = event.recipient() ?: return
         val address = event.zappedAddress()?.let { Address.parse(it) } ?: return
-        if (address.kind == LiveActivitiesEvent.KIND && address.pubKeyHex == host) {
-            getOrCreateLiveChannel(address).addNote(note, relay)
+        if (address.kind == LiveActivitiesEvent.KIND) {
+            val channel = getOrCreateLiveChannel(address)
+            if (isPaidToLiveActivityHost(channel, setOf(host))) channel.addNote(note, relay)
         }
     }
 

@@ -241,10 +241,10 @@ private fun DeletedBookmarksBanner(
     bookmarkType: BookmarkType,
     accountViewModel: AccountViewModel,
 ) {
-    val postsFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.publicPosts() }
-    val privatePostsFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.privatePosts() }
-    val articlesFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.publicArticles() }
-    val privateArticlesFlow = remember(bookmarkGroupViewModel) { bookmarkGroupViewModel.privateArticles() }
+    val postsFlow = bookmarkGroupViewModel.publicPosts
+    val privatePostsFlow = bookmarkGroupViewModel.privatePosts
+    val articlesFlow = bookmarkGroupViewModel.publicArticles
+    val privateArticlesFlow = bookmarkGroupViewModel.privateArticles
 
     val publicPosts by postsFlow.collectAsStateWithLifecycle()
     val privatePosts by privatePostsFlow.collectAsStateWithLifecycle()

@@ -8440,7 +8440,10 @@
     <string name="namecoin_fallback_policy">Tartalék szabályzat</string>
     <string name="namecoin_fallback_policy_description">Mit próbáljon, ha az elsődleges háttérprogram nem érhető el. Alapértelmezés szerint kikapcsolva – a tartalék megoldások kiszivárogtathatják a kereséseit más üzemeltetők felé.</string>
     <string name="namecoin_fallback_custom_label">Visszaesés az egyéni ElectrumX-kiszolgálóimra</string>
-    <string name="namecoin_fallback_custom_description">Ha a Namecoin Core RPC meghiúsul, próbálja meg az alább beállított %1$d egyéni ElectrumX-kiszolgálót.</string>
+    <plurals name="namecoin_fallback_custom_description">
+        <item quantity="one">Ha a Namecoin Core RPC meghiúsul, próbálja meg az alább beállított %1$d egyéni ElectrumX-kiszolgálót.</item>
+        <item quantity="other">Ha a Namecoin Core RPC meghiúsul, próbálja meg az alább beállított %1$d egyéni ElectrumX-kiszolgálót.</item>
+    </plurals>
     <string name="namecoin_fallback_custom_none">Nincsenek egyéni ElectrumX-kiszolgálók beállítva. Adjon hozzá egyet az alábbi szakaszban a beállítás engedélyezéséhez.</string>
     <string name="namecoin_fallback_default_label">Visszaesés az alapértelmezett nyilvános ElectrumX-kiszolgálókra</string>
     <string name="namecoin_fallback_default_custom_failed">Ha az összes egyéni ElectrumX-kiszolgálóm meghiúsul, próbálja meg a beépített nyilvános alapértelmezetteket is.</string>
@@ -8651,11 +8654,24 @@
     <string name="namecoin_resolution_invalid_identifier">Érvénytelen Namecoin-azonosító</string>
     <string name="namecoin_resolution_timeout">A feloldás időtúllépés miatt megszakadt – a kiszolgálók lassúak lehetnek, próbálja újra</string>
     <string name="namecoin_resolution_unknown_error">Ismeretlen hiba</string>
-    <string name="chess_sync_events_count">%1$s esemény</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d esemény</item>
+        <item quantity="other">%1$d esemény</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">%1$s szinkronizálása…</string>
     <string name="chess_sync_synced">Szinkronizálva</string>
-    <string name="chess_sync_syncing_detail">%1$s/%2$s átjátszó • %3$s esemény</string>
-    <string name="chess_sync_synced_detail">%1$s/%2$s átjátszó • %3$s kihívás • %4$s játék</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%1$d/%2$d átjátszó</item>
+        <item quantity="other">%1$d/%2$d átjátszó</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d kihívás</item>
+        <item quantity="other">%1$d kihívás</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d játék</item>
+        <item quantity="other">%1$d játék</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">Koppintson az újrapróbálkozáshoz</string>
     <string name="chess_game_parse_failed">Nem sikerült feldolgozni a PGN-t</string>
     <string name="chess_game_invalid">Érvénytelen sakkjátszma</string>

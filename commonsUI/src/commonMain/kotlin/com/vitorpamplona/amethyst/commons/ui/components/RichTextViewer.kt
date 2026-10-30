@@ -148,6 +148,7 @@ fun RichTextViewer(
                 state = state,
                 canPreview = canPreview,
                 quotesLeft = quotesLeft,
+                authorPubKey = authorPubKey,
             )
         }
     }

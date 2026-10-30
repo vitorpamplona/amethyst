@@ -41,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -64,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_note_termination
 import com.vitorpamplona.amethyst.commons.resources.chess_note_time
 import com.vitorpamplona.amethyst.commons.resources.chess_note_versus
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
+import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
@@ -133,8 +133,9 @@ fun RenderLiveChessChallenge(
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
     val gameId = event.gameId()
 
+    // The lobby's instance, from the account's shared store: a card must not create a model per feed
     val chessViewModel: ChessViewModel =
-        viewModel(
+        rememberAccountSharedViewModel(
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
             factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )

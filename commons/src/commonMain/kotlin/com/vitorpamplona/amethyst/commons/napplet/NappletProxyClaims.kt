@@ -38,14 +38,22 @@ package com.vitorpamplona.amethyst.commons.napplet
  * the Tor session. The cost is that an open-web page goes through Tor while another open page needs it;
  * surfaces show why (see [Route.usesTor]).
  *
+ * A Tor claim filed before Tor's port is known ([TOR_NOT_READY]) makes the route [Route.blocked]
+ * unless another claim already has the port: Tor is wanted and can't be reached, so nothing may go
+ * out, not even directly. A host whose browser has no network of its own until a page asks for one
+ * (the desktop's) also treats [isEmpty] as blocked.
+ *
  * Not thread-safe: the caller serializes access (the sandbox touches it only on its main thread).
  */
 class NappletProxyClaims {
-    /** The route to apply: through Tor on [torPort] when [usesTor], else no proxy. */
+    /** The route to apply: through Tor on [torPort] when [usesTor], nowhere when [blocked], else no proxy. */
     data class Route(
         val torPort: Int,
     ) {
         val usesTor: Boolean get() = torPort > 0
+
+        /** Tor is wanted and its port isn't known yet. */
+        val blocked: Boolean get() = torPort == TOR_NOT_READY
     }
 
     // Insertion-ordered; a re-claim moves the owner to the end, so the last entry is the latest claim.
@@ -74,10 +82,20 @@ class NappletProxyClaims {
      */
     fun torWantedByOthers(owner: Any): Boolean = claims.any { (other, port) -> other !== owner && port > 0 }
 
-    fun route(): Route = Route(claims.values.lastOrNull { it > 0 } ?: NO_PROXY)
+    fun route(): Route =
+        Route(
+            claims.values.lastOrNull { it > 0 }
+                ?: if (TOR_NOT_READY in claims.values) TOR_NOT_READY else NO_PROXY,
+        )
+
+    /** No surface has a claim. */
+    fun isEmpty(): Boolean = claims.isEmpty()
 
     companion object {
         const val NO_PROXY = -1
+
+        /** A Tor claim whose port isn't known yet. */
+        const val TOR_NOT_READY = 0
         val DIRECT = Route(NO_PROXY)
     }
 }

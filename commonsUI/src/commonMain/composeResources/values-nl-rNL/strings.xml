@@ -8440,7 +8440,10 @@
     <string name="namecoin_fallback_policy">Terugvalbeleid</string>
     <string name="namecoin_fallback_policy_description">Wat te proberen als de primaire backend niet bereikbaar is. Standaard uit — terugvallen kan je zoekopdrachten lekken naar andere beheerders.</string>
     <string name="namecoin_fallback_custom_label">Terugvallen op mijn eigen ElectrumX-servers</string>
-    <string name="namecoin_fallback_custom_description">Als Namecoin Core RPC faalt, probeer dan de %1$d eigen ElectrumX-server(s) die hieronder zijn geconfigureerd.</string>
+    <plurals name="namecoin_fallback_custom_description">
+        <item quantity="one">Als Namecoin Core RPC faalt, probeer dan de %1$d eigen ElectrumX-server die hieronder is geconfigureerd.</item>
+        <item quantity="other">Als Namecoin Core RPC faalt, probeer dan de %1$d eigen ElectrumX-servers die hieronder zijn geconfigureerd.</item>
+    </plurals>
     <string name="namecoin_fallback_custom_none">Geen eigen ElectrumX-servers geconfigureerd. Voeg er een toe in het gedeelte hieronder om deze optie in te schakelen.</string>
     <string name="namecoin_fallback_default_label">Terugvallen op standaard openbare ElectrumX-servers</string>
     <string name="namecoin_fallback_default_custom_failed">Als al mijn eigen ElectrumX-servers falen, probeer dan ook de ingebouwde openbare standaardservers.</string>
@@ -8651,11 +8654,24 @@
     <string name="namecoin_resolution_invalid_identifier">Ongeldige Namecoin-identificatie</string>
     <string name="namecoin_resolution_timeout">Opzoeken duurde te lang — servers zijn mogelijk traag, probeer het opnieuw</string>
     <string name="namecoin_resolution_unknown_error">Onbekende fout</string>
-    <string name="chess_sync_events_count">%1$s events</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">%1$s synchroniseren...</string>
     <string name="chess_sync_synced">Gesynchroniseerd</string>
-    <string name="chess_sync_syncing_detail">%1$s/%2$s relays • %3$s events</string>
-    <string name="chess_sync_synced_detail">%1$s/%2$s relays • %3$s uitdagingen • %4$s partijen</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%1$d/%2$d relay</item>
+        <item quantity="other">%1$d/%2$d relays</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d uitdaging</item>
+        <item quantity="other">%1$d uitdagingen</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d partij</item>
+        <item quantity="other">%1$d partijen</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">Tik om opnieuw te proberen</string>
     <string name="chess_game_parse_failed">PGN kon niet worden verwerkt</string>
     <string name="chess_game_invalid">Ongeldige schaakpartij</string>

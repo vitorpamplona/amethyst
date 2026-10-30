@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.auth
 
+import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
@@ -38,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent
 import com.vitorpamplona.quartz.utils.Log
-import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -268,7 +268,9 @@ class AuthCoordinator(
             try {
                 // Cache the signer by secret so we don't re-derive the secp256k1 keypair for every
                 // plane on every relay challenge/reconnect.
-                streamSigners.getOrPut(secret.toHexKey()) { NostrSignerSync(KeyPair(privKey = secret)) }.sign(authTemplate)
+                val key = secret.toHexKey()
+                val signer = streamSigners[key] ?: NostrSignerSync(KeyPair(privKey = secret)).also { streamSigners.put(key, it) }
+                signer.sign(authTemplate)
             } catch (e: Exception) {
                 Log.e("AuthCoordinator", "Failed to sign a Concord stream-key AUTH", e)
                 null
@@ -297,8 +299,9 @@ class AuthCoordinator(
         return EventTemplate(template.createdAt, template.kind, template.tags + arrayOf(authTag), template.content)
     }
 
-    // stream secret (hex) -> its local signer. Bounded by joined communities × channels.
-    private val streamSigners = ConcurrentMap<HexKey, NostrSignerSync>()
+    // stream secret (hex) -> its local signer. An LRU: every rekey and every new plane brings a new
+    // secret and nothing removed the old ones, so retired private stream keys stayed resident.
+    private val streamSigners = LruCache<HexKey, NostrSignerSync>(256)
 
     /**
      * True when [account] has a first-party reason to authenticate with [relayUrl] on the shared

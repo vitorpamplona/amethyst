@@ -77,10 +77,22 @@ class NavBackStacksTest {
         stacks.newStack(Route.Pictures(attachments = listOf("content://shared")))
 
         assertEquals(listOf(Route.Home, Route.Pictures(attachments = listOf("content://shared"))), stacks.routes())
-        // The same entry, as Navigation 2's single-top launch kept it: its ViewModels and saved state
-        // carry over, and it stays a tab root.
+        // The same entry, as Navigation 2's single-top launch kept it: it stays a tab root and
+        // nothing animates. Its content is a new version, so the previous arguments' ViewModels go.
         assertSame(feed, stacks.top)
         assertTrue(stacks.top.tabRoot, "a re-argued tab root stays a tab root")
+        assertEquals(1, stacks.top.routeVersion)
+    }
+
+    @Test
+    fun everyReArgumentIsANewVersion() {
+        val stacks = NavBackStacks()
+        stacks.push(Route.Note("a"))
+        stacks.newStack(Route.Note("b"))
+        stacks.newStack(Route.Note("c"))
+
+        assertEquals(listOf(Route.Home, Route.Note("c")), stacks.routes())
+        assertEquals(2, stacks.top.routeVersion)
     }
 
     @Test
@@ -130,12 +142,15 @@ class NavBackStacksTest {
         stacks.switchTab(Route.Message)
         stacks.switchTab(Route.Search("nostr"))
         stacks.push(Route.Note("n"), drawerRoot = true)
+        stacks.newStack(Route.Note("m"))
 
         val restored = NavBackStacks.decode(stacks.encode())!!
 
         assertEquals(stacks.routes(), restored.routes())
         assertEquals(stacks.stack.map { it.contentKey }, restored.stack.map { it.contentKey })
         assertEquals(stacks.stack.map { it.tabRoute to it.drawerRoot }, restored.stack.map { it.tabRoute to it.drawerRoot })
+        // A re-argued screen comes back as the same version, so its saved UI state is found again.
+        assertEquals(listOf(0, 0, 1), restored.stack.map { it.routeVersion })
         assertEquals(stacks.savedTabs.keys.toSet(), restored.savedTabs.keys.toSet())
 
         // Ids keep counting from where they left off, so a new screen never reuses a saved key.

@@ -33,6 +33,7 @@ object NappletActingRequests {
         setOf(
             "relay.publish",
             "relay.publishEncrypted",
+            "outbox.publish",
             "value.payInvoice",
             "upload.upload",
             "notify.create",
@@ -44,4 +45,10 @@ object NappletActingRequests {
         )
 
     fun actsForUser(requestType: String?): Boolean = requestType in ACTING
+
+    // Reads whose results are decrypted with the user's key (the encrypted events they return).
+    private val DECRYPTING_READS = setOf("relay.query", "outbox.query", "outbox.getEvent")
+
+    /** Whether [requestType] is a read decrypted with the user's key, which waits until someone is looking. */
+    fun readsForUser(requestType: String?): Boolean = requestType in DECRYPTING_READS
 }

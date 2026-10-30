@@ -37,8 +37,6 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.coroutines.executeAsync
-import okio.BufferedSink
-import okio.source
 import java.io.File
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -64,12 +62,14 @@ data class BlossomPreflightResult(
 open class BlossomClient(
     private val okHttpClient: OkHttpClient = OkHttpClient(),
 ) : BlossomBlobClient {
+    /** [onProgress] follows the bytes sent, restarting from zero if OkHttp retries the request. */
     open suspend fun upload(
         file: File,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), fileBody(file, contentType), serverBaseUrl, authHeader)
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), fileBody(file, contentType, onProgress), serverBaseUrl, authHeader)
 
     /**
      * Upload [file], naming its [sha256] up front as `X-SHA-256` and `Content-Digest` (the hex hash,
@@ -91,14 +91,24 @@ open class BlossomClient(
         )
 
     /**
-     * Upload raw bytes (e.g. encrypted blobs) to a Blossom server.
+     * Upload raw bytes (e.g. encrypted blobs) to a Blossom server. [onProgress] follows the bytes
+     * sent.
      */
     open suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-    ): BlossomUploadResult = putBlob(BlossomServerUrl.upload(serverBaseUrl), bytes.toRequestBody(contentType.toMediaType()), serverBaseUrl, authHeader)
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): BlossomUploadResult {
+        val body =
+            if (onProgress == null) {
+                bytes.toRequestBody(contentType.toMediaType())
+            } else {
+                ReopenableStreamBody(contentType.toMediaType(), bytes.size.toLong(), onProgress) { bytes.inputStream() }
+            }
+        return putBlob(BlossomServerUrl.upload(serverBaseUrl), body, serverBaseUrl, authHeader)
+    }
 
     /**
      * BUD-05 media-optimization upload: `PUT /media`. The server MAY transform the
@@ -339,16 +349,8 @@ open class BlossomClient(
     private fun fileBody(
         file: File,
         contentType: String,
-    ): RequestBody =
-        object : RequestBody() {
-            override fun contentType() = contentType.toMediaType()
-
-            override fun contentLength() = file.length()
-
-            override fun writeTo(sink: BufferedSink) {
-                file.inputStream().source().use(sink::writeAll)
-            }
-        }
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): RequestBody = ReopenableStreamBody(contentType.toMediaType(), file.length(), onProgress) { file.inputStream() }
 
     private suspend fun putBlob(
         endpoint: String,

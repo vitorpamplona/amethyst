@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip59GiftWraps
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
@@ -131,6 +132,15 @@ class AccountGiftWrapsHistoryEoseManager(
         invalidateFilters()
     }
 
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
+    }
+
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's gift-wrap cursors (on its ChatroomList)
         // and the relays it fans out to, refreshing the display flows from the restored progress.
@@ -139,6 +149,7 @@ class AccountGiftWrapsHistoryEoseManager(
             key.account.chatroomList.giftWrapHistory,
             key.account.scope,
             isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP17) },
+            owner = user(key),
         ) { historyRelays(key.account) }
 
         return requestNewSubscription(historyListener(key))

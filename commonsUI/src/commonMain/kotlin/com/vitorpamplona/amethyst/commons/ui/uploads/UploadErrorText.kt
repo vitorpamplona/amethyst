@@ -27,8 +27,10 @@ import com.vitorpamplona.amethyst.commons.resources.could_not_check_downloaded_f
 import com.vitorpamplona.amethyst.commons.resources.could_not_download_from_the_server
 import com.vitorpamplona.amethyst.commons.resources.could_not_open_the_compressed_file
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_media
+import com.vitorpamplona.amethyst.commons.resources.file_too_large_to_encrypt
 import com.vitorpamplona.amethyst.commons.resources.login_with_a_private_key_to_be_able_to_upload
 import com.vitorpamplona.amethyst.commons.resources.server_did_not_provide_a_url_after_uploading
+import com.vitorpamplona.amethyst.commons.resources.server_returned_different_file
 import com.vitorpamplona.amethyst.commons.resources.upload_cancelled
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadingState
@@ -45,6 +47,8 @@ val UploadingState.Error.errorResource: StringResource
             UploadError.BLOSSOM_PAYMENT_REQUIRED -> Res.string.blossom_payment_required
             UploadError.SERVER_DID_NOT_PROVIDE_URL -> Res.string.server_did_not_provide_a_url_after_uploading
             UploadError.COULD_NOT_DOWNLOAD_FROM_SERVER -> Res.string.could_not_download_from_the_server
+            UploadError.SERVER_RETURNED_DIFFERENT_FILE -> Res.string.server_returned_different_file
+            UploadError.FILE_TOO_LARGE_TO_ENCRYPT -> Res.string.file_too_large_to_encrypt
             UploadError.AVIF_METADATA_STRIP_FAILED -> Res.string.avif_metadata_strip_failed
             UploadError.UPLOAD_CANCELLED -> Res.string.upload_cancelled
         }

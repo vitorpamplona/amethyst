@@ -131,6 +131,8 @@ enum class ConcordIngestOutcome {
 class ConcordCommunitySession(
     entry: ConcordCommunityListEntry,
     val myPubKey: HexKey,
+    /** How many chat wraps each channel's buffer keeps; see [MAX_CHANNEL_WRAPS]. */
+    private val maxChannelWraps: Int = MAX_CHANNEL_WRAPS,
     private val onRumor: ConcordRumorSink = { _, _, _, _ -> },
 ) {
     /**
@@ -276,12 +278,19 @@ class ConcordCommunitySession(
     // never join the live fold, they only produce the anti-rollback floor.
     private val historicalControlWraps = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
 
-    private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>() // channelIdHex -> (wrapId -> wrap)
+    // channelIdHex -> (wrapId -> wrap), in delivery order. Holds each channel's [maxChannelWraps] most
+    // recently delivered wraps (see [trimChannelWrapsLocked]): every wrap a busy channel ever
+    // delivered used to stay for the session's whole life. An evicted wrap delivered again is opened
+    // again.
+    private val channelWrapsById = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
 
     // Chat rumor id -> the id of the wrap that carried it, filled as each wrap is emitted. A pin
     // proves its message with the ORIGINAL kind-20013 seal (CORD-04 §7), which only the wrap holds,
     // so pinning reopens that wrap rather than re-deriving anything from the stored rumor.
     private val wrapIdByRumorId = HashMap<HexKey, HexKey>()
+
+    // The reverse of [wrapIdByRumorId], so a wrap leaving the buffer takes its index entry along.
+    private val rumorIdByWrapId = HashMap<HexKey, HexKey>()
 
     /** Pin-entry verdicts memoized by entry identity (CORD-04 §7 Weight). */
     private val pinVerifier = ConcordPinVerifier()
@@ -758,7 +767,12 @@ class ConcordCommunitySession(
         if (wasSwept(wrap.id)) return ConcordIngestOutcome.NON_STRUCTURAL
         val isNew =
             lock.withLock {
-                channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }.put(wrap.id, wrap) == null
+                val held = channelWrapsById.getOrPut(channelIdHex) { LinkedHashMap() }
+                // A re-delivery moves the wrap to the newest end, as recently seen as a new one.
+                val fresh = held.remove(wrap.id) == null
+                held[wrap.id] = wrap
+                if (fresh) trimChannelWrapsLocked(held)
+                fresh
             }
         // Project only the newly-arrived wrap — the buffer's earlier wraps were already emitted when
         // they landed, so re-decrypting the whole history on every message would be O(history) per
@@ -905,6 +919,23 @@ class ConcordCommunitySession(
         }
     }
 
+    /**
+     * Keeps [held] at the [maxChannelWraps] most recently delivered wraps, dropping each evicted
+     * wrap's rumor index entry with it. By delivery, not by created_at: what the user is looking at
+     * is what arrived last, live or paged in by scrolling back, so it stays pinnable; created_at
+     * order would drop every scrolled-back page the moment it landed. A pin or jump-to-context for
+     * an evicted message finds no wrap here, as for any message this session never held.
+     */
+    private fun trimChannelWrapsLocked(held: LinkedHashMap<HexKey, Event>) {
+        val oldestFirst = held.values.iterator()
+        while (held.size > maxChannelWraps && oldestFirst.hasNext()) {
+            val wrap = oldestFirst.next()
+            oldestFirst.remove()
+            val rumorId = rumorIdByWrapId.remove(wrap.id) ?: continue
+            if (wrapIdByRumorId[rumorId] == wrap.id) wrapIdByRumorId.remove(rumorId)
+        }
+    }
+
     /** Re-decrypts and re-projects a channel's WHOLE wrap buffer at the current epoch. Only for a
      *  re-fold (keys may change). Prior-epoch wraps in the buffer simply won't open under the current
      *  key and are skipped — they were already emitted when they landed (the sink dedups by id). */
@@ -940,8 +971,15 @@ class ConcordCommunitySession(
                 }
                 continue
             }
-            // Pins reopen the carrying wrap to disclose this one message's keys (CORD-04 §7).
-            lock.withLock { wrapIdByRumorId[rumor.id] = wrap.id }
+            // Pins reopen the carrying wrap to disclose this one message's keys (CORD-04 §7). Indexed
+            // only while the buffer holds the wrap: one already trimmed away could never be reopened,
+            // and its entry would never be removed.
+            lock.withLock {
+                if (channelWrapsById[channelIdHex]?.containsKey(wrap.id) == true) {
+                    wrapIdByRumorId[rumor.id] = wrap.id
+                    rumorIdByWrapId[wrap.id] = rumor.id
+                }
+            }
             // CORD-08 §3: only the rumor's own tag counts. A rumor carrying one is remembered so the
             // sweep purges it (and its wrap) when it expires; one already expired is refused here —
             // never handed to the store — and queued for the next sweep so its wrap goes too.
@@ -1088,6 +1126,7 @@ class ConcordCommunitySession(
                 expiringByWrapId.remove(expiring.wrapId)
                 channelWrapsById[expiring.channelIdHex]?.remove(expiring.wrapId)
                 wrapIdByRumorId.remove(expiring.rumorId)
+                rumorIdByWrapId.remove(expiring.wrapId)
                 sweptWrapIds.add(expiring.wrapId)
                 out.add(expiring)
             }
@@ -1179,6 +1218,9 @@ class ConcordCommunitySession(
 
         /** WebXDC signals held per channel (the reference client scans its newest 2000 for peer signals). */
         const val MAX_WEBXDC_PER_CHANNEL = 2000
+
+        /** Chat wraps each channel's buffer keeps (most recently delivered) for pins, jump-to-context and re-projection. */
+        const val MAX_CHANNEL_WRAPS = 2000
 
         /** How many swept (expired) wrap ids a session remembers to drop their re-deliveries unopened. */
         const val MAX_SWEPT_WRAP_IDS = 4096

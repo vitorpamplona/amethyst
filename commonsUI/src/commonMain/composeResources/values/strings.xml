@@ -143,6 +143,14 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
+    <string name="webxdc_card_kind">Webxdc app</string>
+    <string name="webxdc_start">Start</string>
+    <string name="webxdc_unverified">Unverified: the post gives no hash for it</string>
+    <string name="webxdc_open_failed">This app can’t be opened here.</string>
+    <string name="napplet_inline_run">Run here</string>
+    <string name="napplet_inline_stop">Stop</string>
+    <string name="napplet_inline_needs_you">%1$s wants to ask you something. Open it to answer.</string>
+    <string name="napplet_inline_failed">%1$s didn’t start here.</string>
 
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Use direct URL</string>
@@ -1141,6 +1149,16 @@
     <string name="napplet_consent_hide_event">Hide Event</string>
     <string name="napplet_consent_more_options">More options</string>
     <string name="napplet_consent_fewer_options">Fewer options</string>
+    <string name="napplet_desktop_engine_downloading">Downloading the browser engine napplets run in (%1$s). This happens once.</string>
+    <string name="napplet_desktop_engine_starting">Starting the browser engine…</string>
+    <string name="napplet_desktop_fetching">Fetching %1$s…</string>
+    <string name="napplet_desktop_failed_fetch">Could not fetch %1$s from its Blossom servers.</string>
+    <string name="napplet_desktop_failed_engine">The browser engine napplets run in did not start.</string>
+    <string name="napplet_desktop_permission_title">%1$s asks for permission</string>
+    <string name="napplet_desktop_open_failed">This napplet can’t be opened here.</string>
+    <string name="nsite_open_failed">This site can’t be opened here.</string>
+    <string name="napplet_desktop_failed_route">Tor isn’t running, so %1$s didn’t open. Nothing left this computer.</string>
+    <string name="napplet_desktop_retry">Try again</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_session">Allow for this session</string>
     <string name="napplet_signer_allow_24h">Allow for 24 hours</string>
@@ -3719,6 +3737,8 @@
     <string name="audio_visualizer_settings">Audio Visualizer</string>
     <string name="auto_create_drafts_setting_description">Saves a draft event automatically when you type or leave a composer with unsent text and sends to your private outbox relays.</string>
     <string name="auto_create_drafts_setting_title">Automatically create drafts</string>
+    <string name="automatically_download_translation_models">Translation Models</string>
+    <string name="automatically_download_translation_models_description">Download the language models that translate notes</string>
     <string name="automatically_hide_nav_bars">Immersive Scrolling</string>
     <string name="automatically_hide_nav_bars_description">Hide Nav Bars when Scrolling</string>
     <string name="automatically_load_images_gifs">Image Preview</string>
@@ -4835,6 +4855,8 @@
     <string name="napplet_cap_identity_desc">Read your public key</string>
     <string name="napplet_cap_inc">Messaging</string>
     <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_outbox_desc">Read people's posts from their own relays, and sign &amp; publish your events</string>
     <string name="napplet_cap_keys">Keyboard actions</string>
     <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
     <string name="napplet_cap_notify">Notifications</string>
@@ -4909,6 +4931,7 @@
     <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
     <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
+    <string name="napplet_consent_outbox_read">This nApplet wants to read events from the relays of the people it asks about.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
@@ -4970,6 +4993,11 @@
     <plurals name="consent_list_wipe">
         <item quantity="one">Removes everyone (%1$d) from this list</item>
         <item quantity="other">Removes everyone (%1$d) from this list</item>
+    </plurals>
+    <string name="consent_relays_no_change">No change to your relays</string>
+    <plurals name="consent_relays_wipe">
+        <item quantity="one">Removes your only relay</item>
+        <item quantity="other">Removes all %1$d of your relays</item>
     </plurals>
     <plurals name="consent_list_names_more">
         <item quantity="one">%1$s and %2$d more</item>
@@ -5830,6 +5858,8 @@
     <string name="send_payment_onchain_txid">Transaction: %1$s</string>
     <string name="send_payment_paying_via">Paying via %1$s…</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
+    <string name="server_returned_different_file">%1$s serves a different file than the one uploaded</string>
+    <string name="file_too_large_to_encrypt">This file is too large to encrypt on this device</string>
     <string name="settings">Settings</string>
     <string name="settings_muted_threads_empty">No muted threads</string>
     <string name="settings_muted_threads_title">Muted threads</string>
@@ -6311,6 +6341,7 @@
     <string name="browser_pill_access_manage">Manage permissions</string>
     <string name="browser_pill_access_nsite">nSite · sandboxed</string>
     <string name="browser_pill_access_napplet">nApplet · sandboxed</string>
+    <string name="browser_pill_access_webxdc">Webxdc app · offline</string>
     <string name="browser_pill_console">Console</string>
     <string name="browser_pill_security_https">Secure connection</string>
     <string name="browser_pill_security_http">Not secure</string>
@@ -8558,7 +8589,10 @@
     <string name="namecoin_fallback_policy">Fallback policy</string>
     <string name="namecoin_fallback_policy_description">What to try if the primary backend can't be reached. Off by default — fallbacks can leak your lookups to other operators.</string>
     <string name="namecoin_fallback_custom_label">Fall back to my custom ElectrumX servers</string>
-    <string name="namecoin_fallback_custom_description">If Namecoin Core RPC fails, try the %1$d custom ElectrumX server(s) configured below.</string>
+    <plurals name="namecoin_fallback_custom_description">
+        <item quantity="one">If Namecoin Core RPC fails, try the %1$d custom ElectrumX server configured below.</item>
+        <item quantity="other">If Namecoin Core RPC fails, try the %1$d custom ElectrumX servers configured below.</item>
+    </plurals>
     <string name="namecoin_fallback_custom_none">No custom ElectrumX servers configured. Add one in the section below to enable this option.</string>
     <string name="namecoin_fallback_default_label">Fall back to default public ElectrumX servers</string>
     <string name="namecoin_fallback_default_custom_failed">If all of my custom ElectrumX servers fail, also try the hardcoded public defaults.</string>
@@ -8769,11 +8803,24 @@
     <string name="namecoin_resolution_invalid_identifier">Invalid Namecoin identifier</string>
     <string name="namecoin_resolution_timeout">Resolution timed out — servers may be slow, try again</string>
     <string name="namecoin_resolution_unknown_error">Unknown error</string>
-    <string name="chess_sync_events_count">%1$s events</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">Syncing %1$s...</string>
     <string name="chess_sync_synced">Synced</string>
-    <string name="chess_sync_syncing_detail">%1$s/%2$s relays • %3$s events</string>
-    <string name="chess_sync_synced_detail">%1$s/%2$s relays • %3$s challenges • %4$s games</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%1$d/%2$d relay</item>
+        <item quantity="other">%1$d/%2$d relays</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d challenge</item>
+        <item quantity="other">%1$d challenges</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d game</item>
+        <item quantity="other">%1$d games</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">Tap to retry</string>
     <string name="chess_game_parse_failed">Failed to parse PGN</string>
     <string name="chess_game_invalid">Invalid Chess Game</string>
@@ -9091,4 +9138,14 @@
     <string name="drss_picture_title">List picture</string>
     <string name="drss_picture_url">Picture URL</string>
     <string name="drss_remove_picture">Remove picture</string>
+    <string name="cart_play">Play</string>
+    <string name="cart_play_description">Play this game cartridge</string>
+    <string name="cart_loading">Loading the game…</string>
+    <string name="cart_not_a_cart">This image is not a game cartridge, or it could not be downloaded.</string>
+    <string name="cart_game_ended">The game ended.</string>
+    <string name="cart_game_error">The game stopped with an error.</string>
+    <string name="cart_dpad_description">Direction pad</string>
+    <string name="cart_button_o_description">O button</string>
+    <string name="cart_button_x_description">X button</string>
+    <string name="cart_pause_menu">Pause menu</string>
 </resources>

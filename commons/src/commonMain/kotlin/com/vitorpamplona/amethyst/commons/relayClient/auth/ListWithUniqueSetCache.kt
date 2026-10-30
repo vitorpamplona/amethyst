@@ -32,9 +32,20 @@ class ListWithUniqueSetCache<T, U>(
 
     fun isEmpty() = list.load().isEmpty()
 
-    fun add(item: T) = set(list.load() + item)
+    // Compare-and-set: screens add and remove on the main thread while notification workers do it
+    // in the background. A plain load-then-store can let an add write back a list that still holds
+    // an item another thread just removed, keeping that item (and the account it holds) forever.
+    fun add(item: T) = update { it + item }
 
-    fun remove(item: T) = set(list.load() - item)
+    fun remove(item: T) = update { it - item }
+
+    private inline fun update(change: (List<T>) -> List<T>) {
+        while (true) {
+            val current = list.load()
+            if (list.compareAndSet(current, change(current))) break
+        }
+        cacheSet.store(null)
+    }
 
     fun set(newList: List<T>) {
         list.store(newList)

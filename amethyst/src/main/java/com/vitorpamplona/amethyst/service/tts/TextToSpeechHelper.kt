@@ -105,7 +105,10 @@ class TextToSpeechHelper private constructor(
         ttsEngine?.destroy()
         ttsEngine = null
         action.invoke()
-        instance = null
+        // A stale helper's lifecycle event must not drop the newer one getInstance handed out.
+        synchronized(TextToSpeechHelper::class.java) {
+            if (instance === this) instance = null
+        }
     }
 
     fun onStart(onStartListener: () -> Unit): TextToSpeechHelper {
@@ -173,6 +176,8 @@ class TextToSpeechHelper private constructor(
             event == Lifecycle.Event.ON_STOP ||
             event == Lifecycle.Event.ON_PAUSE
         ) {
+            // Every speak() registers on its screen's lifecycle; once destroyed, stop listening.
+            source.lifecycle.removeObserver(this)
             destroy { customActionForDestroy?.invoke() }
         }
     }

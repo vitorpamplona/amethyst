@@ -76,8 +76,8 @@ class AccountViewModel(
         super.onCleared()
         // Only the ViewModel references are dropped; see BaseAccountViewModel.onCleared.
         CallSessionBridge
-            .clearViewModel()
+            .clearViewModel(this)
         NestBridge
-            .clear()
+            .clear(this)
     }
 }

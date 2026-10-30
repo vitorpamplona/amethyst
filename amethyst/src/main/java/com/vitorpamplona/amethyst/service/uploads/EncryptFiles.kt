@@ -26,7 +26,9 @@ import androidx.core.net.toUri
 import com.vitorpamplona.crypto.SymmetricCipher
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.utils.Log
 import java.io.File
+import java.io.InputStream
 
 class EncryptFilesResult(
     val uri: Uri,
@@ -37,6 +39,11 @@ class EncryptFilesResult(
 )
 
 class EncryptFiles {
+    /**
+     * Encrypts [inputFile] into a temp file. [SymmetricCipher] only takes a whole array, so the
+     * file and its ciphertext are both in memory at once: a file too big for that throws
+     * [OutOfMemoryError], and the temp file is deleted on any failure.
+     */
     fun encryptFile(
         context: Context,
         inputFile: Uri,
@@ -46,7 +53,20 @@ class EncryptFiles {
 
         val encryptedFile = File.createTempFile("EncryptFiles", ".encrypted", context.getCacheDir())
 
-        resolver.openInputStream(inputFile)!!.use { inputStream ->
+        try {
+            return encrypt(resolver.openInputStream(inputFile)!!, encryptedFile, cipher)
+        } catch (e: Throwable) {
+            if (!encryptedFile.delete() && encryptedFile.exists()) Log.w("EncryptFiles") { "Could not delete ${encryptedFile.path}" }
+            throw e
+        }
+    }
+
+    private fun encrypt(
+        input: InputStream,
+        encryptedFile: File,
+        cipher: SymmetricCipher,
+    ): EncryptFilesResult {
+        input.use { inputStream ->
             val bytes = inputStream.readBytes()
             val originalHash = sha256(bytes).toHexKey()
             val encrypted = cipher.encrypt(bytes)

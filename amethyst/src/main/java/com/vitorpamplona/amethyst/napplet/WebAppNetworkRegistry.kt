@@ -49,7 +49,7 @@ private val webUrlNetworkDataStore: DataStore<Preferences>
 /**
  * Per-web-client network-routing preference: whether a favorited URL / browsed site routes through
  * **Tor** (the default when Tor is active) or over the **open web**. The web-client sibling of
- * [NappletNetworkRegistry] — same model, but keyed by the site's **host** (so every page of a site
+ * [NsiteNetworkRegistry] — same model, but keyed by the site's **host** (so every page of a site
  * shares the choice and it survives across launches).
  *
  * This exists because some sites' servers reject Tor exit connections; the user toggles such a site to

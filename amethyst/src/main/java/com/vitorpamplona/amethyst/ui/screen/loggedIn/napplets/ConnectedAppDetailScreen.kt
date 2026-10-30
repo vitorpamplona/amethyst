@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.connectedApps.consent.counterpartyLabel
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46PermissionAuthorizer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -81,7 +82,10 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletSignerKey
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.commons.napplet.ui.PolicyCard
+import com.vitorpamplona.amethyst.commons.napplet.ui.descriptionRes
+import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
 import com.vitorpamplona.amethyst.commons.napplet.ui.symbol
 import com.vitorpamplona.amethyst.commons.nip46RemoteSigner.ui.Nip46ActivityCard
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -138,10 +142,6 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.napplet.NappletBrokerService
 import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
-import com.vitorpamplona.amethyst.napplet.counterpartyLabel
-import com.vitorpamplona.amethyst.napplet.descriptionRes
-import com.vitorpamplona.amethyst.napplet.labelRes
-import com.vitorpamplona.amethyst.napplet.resolveNappletMeta
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip42RelayAuth.RelayAuthEvent

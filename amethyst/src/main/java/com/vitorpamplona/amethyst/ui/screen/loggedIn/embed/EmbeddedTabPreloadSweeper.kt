@@ -25,7 +25,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.navigation.favoriteIds
-import com.vitorpamplona.amethyst.napplet.NappletNetworkRegistry
+import com.vitorpamplona.amethyst.napplet.NsiteNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -108,9 +108,9 @@ object EmbeddedTabPreloadSweeper {
         // it waiting for Tor), which is exactly what breaks Tor-incompatible servers. On a re-warm these
         // are already hydrated, so they return without suspending and the first tab is built inline.
         WebAppNetworkRegistry.init(context)
-        NappletNetworkRegistry.init(context)
+        NsiteNetworkRegistry.preload()
         WebAppNetworkRegistry.awaitReady()
-        NappletNetworkRegistry.awaitReady()
+        NsiteNetworkRegistry.awaitReady()
         var attempt = 0
         while (isActive) {
             val byId =

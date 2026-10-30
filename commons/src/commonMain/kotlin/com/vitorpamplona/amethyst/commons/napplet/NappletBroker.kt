@@ -81,11 +81,14 @@ class NappletBroker(
     private val signerLedger: NostrSignerPermissionLedger? = null,
     private val nostrConnectPrompt: NostrConnectPrompt? = null,
     private val signerConsentPrompt: NostrSignerConsentPrompt? = null,
+    private val outbox: NappletOutboxGateway? = null,
     // Plaintext of recent nip44.encrypt calls, read back by the consent prompt for the seal that
     // carries the ciphertext (see [NappletRecentEncryptions]).
     private val recentEncryptions: NappletRecentEncryptions? = null,
     // Wall-clock source (ms) for the post-cancel re-prompt cooldown; injectable for tests.
     private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
+    // Where a request that needed the user, from an app running inside a note, is recorded instead.
+    private val inlineAsks: NappletInlineAsks = NappletInlineAsks.shared,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -205,10 +208,26 @@ class NappletBroker(
                     PermissionDecision.ASK -> {}
                 }
             }
-            val grant = consentPrompt.request(identity, capability, request)
+            if (identity.inline) return@withLock refuseInline(identity)
+            val grant = consentPrompt.request(identity, capability, request.consentView())
             ledger.record(identity, capability, effectiveGrant(capability, grant))
             grant.allowsExecution
         }
+
+    /**
+     * What a prompt shows for [this]: an outbox publish is shown as the event it signs, so the user
+     * sees and decides it exactly as a relay publish.
+     */
+    private fun NappletRequest.consentView(): NappletRequest = if (this is NappletRequest.OutboxPublish) template else this
+
+    /**
+     * An app running inside a note asked for something only the user can give. Nothing is asked
+     * and nothing is recorded against the app: the note offers to open it, where it can ask again.
+     */
+    private fun refuseInline(identity: NappletIdentity): Boolean {
+        inlineAsks.record(identity)
+        return false
+    }
 
     /** Downgrades a grant to one-shot when the capability forbids persisting that scope (e.g. payments). */
     private fun effectiveGrant(
@@ -274,6 +293,51 @@ class NappletBroker(
 
             // The broker only authorizes the subscription (consent + declaration); the host opens the
             // live relay subscription and streams relay.event/relay.eose/relay.closed by subId.
+            is NappletRequest.OutboxGetEvent -> {
+                val gateway = outbox ?: return NappletResponse.Unsupported("outbox.getEvent")
+                val read = gateway.getEvent(request.eventId, request.author, request.relays, request.timeoutMs)
+                // NAP-OUTBOX: the shell MUST check the event it returns is the one asked for.
+                val found = read.events.firstOrNull { it.event.id == request.eventId }
+                NappletResponse.OutboxFound(found, read.incomplete, if (found == null) "not found" else null)
+            }
+
+            is NappletRequest.OutboxQuery -> {
+                val gateway = outbox ?: return NappletResponse.Unsupported("outbox.query")
+                if (request.filters.size > NappletOutboxGateway.MAX_FILTERS) return NappletResponse.Failed("too many filters")
+                val read = gateway.query(request.filters, request.authors, request.relays, request.timeoutMs)
+                // Never more than a read returns, and never a negative count.
+                val limit = (request.limit ?: request.filters.mapNotNull { it.limit }.maxOrNull() ?: NappletOutboxGateway.MAX_RESULTS).coerceIn(0, NappletOutboxGateway.MAX_RESULTS)
+                NappletResponse.OutboxEvents(read.events.take(limit), read.incomplete)
+            }
+
+            // Like relay.subscribe, the broker only authorizes and picks the relays; the host streams.
+            is NappletRequest.OutboxSubscribe -> {
+                val gateway = outbox ?: return NappletResponse.Unsupported("outbox.subscribe")
+                if (request.filters.size > NappletOutboxGateway.MAX_FILTERS) return NappletResponse.Failed("too many filters")
+                NappletResponse.OutboxSubscribed(gateway.subscriptionRelays(request.filters, request.authors, request.relays))
+            }
+
+            is NappletRequest.OutboxPublish -> {
+                val gateway = outbox ?: return NappletResponse.Unsupported("outbox.publish")
+                val template = request.template
+                // Signed once, whatever the fan-out: NAP-OUTBOX allows one event per publish.
+                val signed: Event = signer.sign(TimeUtils.now(), template.kind, template.tags, template.content)
+                val delivery = gateway.publish(signed, request.toOutbox, request.toInboxes, request.relays)
+                val relays = delivery.relays.mapKeys { it.key.url }
+                val error =
+                    when {
+                        delivery.unresolvedInboxes.isNotEmpty() -> "relay list unavailable"
+                        relays.values.none { it } -> "publish failed"
+                        else -> null
+                    }
+                NappletResponse.OutboxPublished(error == null, signed, relays, error)
+            }
+
+            is NappletRequest.OutboxResolveRelays -> {
+                val gateway = outbox ?: return NappletResponse.Unsupported("outbox.resolveRelays")
+                NappletResponse.OutboxPlan(gateway.plan(request.authors, request.write))
+            }
+
             is NappletRequest.Subscribe -> {
                 relay ?: return NappletResponse.Unsupported("relay.subscribe")
                 NappletResponse.Subscribed
@@ -430,6 +494,7 @@ class NappletBroker(
             }
 
             val prompt = nostrConnectPrompt ?: return@withLock true
+            if (identity.inline) return@withLock refuseInline(identity)
             when (val result = prompt.request(identity, declared)) {
                 is AppConnectResult.Connected -> {
                     cancelledUntil.remove(identity.coordinate)
@@ -495,7 +560,8 @@ class NappletBroker(
                         return@withLock true
                     }
                     val prompt = signerConsentPrompt ?: return@withLock true
-                    val grant = prompt.request(identity, op, request)
+                    if (identity.inline) return@withLock refuseInline(identity)
+                    val grant = prompt.request(identity, op, request.consentView())
                     // Record the GRANT's own op, never the requested one: the dialog may hand back a
                     // narrower op ("only from this counterparty"), and a stored grant must never be
                     // wider than what the user actually tapped.

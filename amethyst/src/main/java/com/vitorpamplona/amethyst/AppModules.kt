@@ -66,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCache
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupDeletionStore
 import com.vitorpamplona.amethyst.commons.model.preferences.TorSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.UiSettingsStore
+import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.nests.room.activity.NestBridge
 import com.vitorpamplona.amethyst.commons.privacylock.DataStorePrivacyLockSettings
@@ -138,7 +139,6 @@ import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.accountsCache.defaultMarmotStreamTransport
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
-import com.vitorpamplona.amethyst.napplet.DataStoreNappletPermissionStore
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderLogMigrations
 import com.vitorpamplona.amethyst.service.calendar.calendarReminderSettings

@@ -32,8 +32,11 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 fun NappletRequest.toSignerOp(): NostrSignerOp? =
     when (this) {
         is NappletRequest.Publish -> NostrSignerOp.SignKind(kind)
+        is NappletRequest.OutboxPublish -> NostrSignerOp.SignKind(template.kind)
         is NappletRequest.SignEvent -> NostrSignerOp.SignKind(kind)
-        is NappletRequest.PublishEncrypted -> NostrSignerOp.Encrypt
+        // What leaves is a signed event of [kind], so that is what is gated: as "encrypt" alone, an
+        // app allowed to encrypt could publish a follow list, a deletion or a relay list unasked.
+        is NappletRequest.PublishEncrypted -> NostrSignerOp.SignKind(kind)
         is NappletRequest.Nip44Encrypt -> NostrSignerOp.Encrypt
         // The broad grant, matching what NIP-46's nip44_decrypt maps to. The narrower
         // DecryptFrom(peer) exists, but only the NIP-46 authorizer honours it today; recording one

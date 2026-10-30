@@ -169,6 +169,7 @@ class DesktopMediaUploader(
                         signer = forcedSigner ?: account.signer,
                         stripExif = stripMetadata && !prepared,
                         quality = if (prepared) null else compressionQuality.toTarget(),
+                        onProgress = progress.uploadProgress(BLOSSOM_COMPRESSING_CEILING, BLOSSOM_SENT_CEILING),
                     )
                 val url = result.blossom.url ?: return@withVideoPrepared progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
                 progress.finish(
@@ -218,6 +219,7 @@ class DesktopMediaUploader(
                         signer = forcedSigner ?: account.signer,
                         stripExif = stripMetadata && !prepared,
                         quality = if (prepared) null else compressionQuality.toTarget(),
+                        onProgress = progress.uploadProgress(BLOSSOM_COMPRESSING_CEILING, BLOSSOM_SENT_CEILING),
                     )
                 val url = result.blossom.url ?: return@withVideoPrepared progress.error(UploadError.SERVER_DID_NOT_PROVIDE_URL)
                 progress.finish(
@@ -290,15 +292,16 @@ class DesktopMediaUploader(
                     }
                 val result =
                     Nip96Uploader().upload(
-                        inputStream = payload.bytes.inputStream(),
+                        openStream = { payload.bytes.inputStream() },
                         length = payload.bytes.size.toLong(),
                         contentType = payload.contentType,
                         alt = alt,
                         sensitiveContent = contentWarningReason,
                         server = ServerInfoRetriever().loadInfo(server.baseUrl, httpClients::okHttpClientForUploads),
                         okHttpClient = httpClients::okHttpClientForUploads,
-                        onProgress = { percent -> progress.updateState(0.2 + (0.2 * percent), UploadingState.Uploading) },
+                        onProgress = { percent -> progress.updateState(0.4 + (0.2 * percent), UploadingState.Uploading) },
                         httpAuth = httpAuth,
+                        onUploadProgress = progress.uploadProgress(0.2, 0.4),
                     )
                 verifyNip96(progress, result, payload)
             }
@@ -573,6 +576,9 @@ class DesktopMediaUploader(
         // so the bar never jumps backwards.
         const val COMPRESSING_FLOOR = 0.02
         const val BLOSSOM_COMPRESSING_CEILING = 0.2
+
+        // Where the bar stands once a Blossom upload has sent its last byte; the server's reply finishes it.
+        const val BLOSSOM_SENT_CEILING = 0.95
     }
 }
 

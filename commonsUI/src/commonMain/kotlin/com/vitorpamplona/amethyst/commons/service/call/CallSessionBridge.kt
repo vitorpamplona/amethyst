@@ -71,8 +71,12 @@ object CallSessionBridge {
      * ViewModel and holds a strong reference to it either way, so clearing here would free
      * nothing and would only break the running call's UI. It is replaced wholesale by [set] as
      * soon as MainActivity comes back, and dropped by [clear] on logout / account switch.
+     *
+     * Only [viewModel]'s own reference is dropped: on an account switch the next account's
+     * ViewModel is created (and [set]) before the previous one is cleared.
      */
-    fun clearViewModel() {
+    fun clearViewModel(viewModel: AccountViewModel) {
+        if (accountViewModel !== viewModel) return
         if (callManager?.state?.value !is CallState.Idle) return
         accountViewModel = null
     }
