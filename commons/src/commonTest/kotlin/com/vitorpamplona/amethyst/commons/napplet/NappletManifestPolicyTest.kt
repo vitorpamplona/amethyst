@@ -68,4 +68,13 @@ class NappletManifestPolicyTest {
         assertTrue(event.isLaunchable())
         assertEquals(listOf("NAP-RELAY"), manifest(arrayOf("R", "NAP-RELAY")).unsupportedRequired())
     }
+
+    @Test
+    fun outboxIsAnImplementedDomain() {
+        // The published Minesweeper and Game Boy Color napplets require outbox; the NES one also needs fs.
+        assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).isLaunchable())
+        assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox"), arrayOf("R", "relay"), arrayOf("R", "resource")).isLaunchable())
+        assertEquals(listOf("upload", "fs"), manifest(arrayOf("R", "outbox"), arrayOf("R", "upload"), arrayOf("R", "fs")).unsupportedRequired())
+        assertEquals(listOf("identity", "outbox"), manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).exposedDomains())
+    }
 }

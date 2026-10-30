@@ -28,8 +28,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -184,5 +190,163 @@ class NappletRequestRouterTest {
         runTest {
             assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"identity.watch"}"""))
             assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"identity.unwatch"}"""))
+        }
+
+    private class Outbox(
+        private val events: List<OutboxEvent> = emptyList(),
+    ) : NappletOutboxGateway {
+        var lastQuery: Triple<List<Filter>, List<String>, List<String>>? = null
+        var lastPublish: Triple<Boolean, List<String>, List<String>>? = null
+
+        override suspend fun getEvent(
+            eventId: String,
+            author: String?,
+            relayHints: List<String>,
+            timeoutMs: Long?,
+        ) = OutboxRead(events)
+
+        override suspend fun query(
+            filters: List<Filter>,
+            authors: List<String>,
+            relayHints: List<String>,
+            timeoutMs: Long?,
+        ): OutboxRead {
+            lastQuery = Triple(filters, authors, relayHints)
+            return OutboxRead(events)
+        }
+
+        override suspend fun subscriptionRelays(
+            filters: List<Filter>,
+            authors: List<String>,
+            relayHints: List<String>,
+        ) = setOf(RelayUrlNormalizer.normalize("wss://author.example.com"))
+
+        override suspend fun publish(
+            event: Event,
+            toOutbox: Boolean,
+            toInboxes: List<String>,
+            relays: List<String>,
+        ): OutboxDelivery {
+            lastPublish = Triple(toOutbox, toInboxes, relays)
+            return OutboxDelivery(mapOf(RelayUrlNormalizer.normalize("wss://mine.example.com") to true, RelayUrlNormalizer.normalize("wss://slow.example.com") to false))
+        }
+
+        override suspend fun plan(
+            authors: List<String>,
+            write: Boolean,
+        ) = OutboxRelayPlan(listOf("wss://author.example.com/"), OutboxRelayPlan.Source.NIP65, listOf("cc".repeat(32)))
+    }
+
+    private suspend fun routeOutbox(
+        payload: String,
+        outbox: Outbox = Outbox(),
+        answer: GrantState = GrantState.ALLOW_ONCE,
+    ) = NappletRequestRouter.route(
+        NappletBroker(signer, NappletPermissionLedger(InMemoryNappletPermissionStore()), Prompt(answer), outbox = outbox),
+        applet,
+        allDeclared,
+        payload,
+    )
+
+    private fun json(payload: String) = Json.parseToJsonElement(payload).jsonObject
+
+    @Test
+    fun anOutboxQueryTakesOneFilterAndRepliesWithRelayEventResults() =
+        runTest {
+            val note = signer.sign<Event>(1, 1, emptyArray(), "hi")
+            val outbox = Outbox(listOf(OutboxEvent(note, listOf("wss://author.example.com/"))))
+            val outcome = routeOutbox("""{"type":"outbox.query","id":"q1","filters":{"authors":["ab"],"kinds":[1]},"options":{"authors":["cd"],"relays":["wss://hint.example.com"],"timeoutMs":3000}}""", outbox)
+
+            assertEquals(Triple(listOf("ab"), listOf("cd"), listOf("wss://hint.example.com")), outbox.lastQuery?.let { Triple(it.first.single().authors, it.second, it.third) })
+            assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
+            val reply = json(outcome.payload)
+            assertEquals("outbox.query.result", reply["type"]!!.jsonPrimitive.content)
+            val result = reply["events"]!!.jsonArray.single().jsonObject
+            assertEquals(note.id, result["event"]!!.jsonObject["id"]!!.jsonPrimitive.content)
+            assertEquals(
+                "wss://author.example.com/",
+                result["sidecar"]!!
+                    .jsonObject["relayHints"]!!
+                    .jsonArray
+                    .single()
+                    .jsonPrimitive.content,
+            )
+        }
+
+    @Test
+    fun anOutboxPublishReportsEachRelay() =
+        runTest {
+            val outbox = Outbox()
+            val outcome = routeOutbox("""{"type":"outbox.publish","id":"p1","event":{"kind":1111,"content":"gg","tags":[["p","ab"]]},"options":{"toOutbox":false,"toInboxes":["ab"],"relays":["wss://x.example.com"]}}""", outbox)
+
+            assertEquals(Triple(false, listOf("ab"), listOf("wss://x.example.com")), outbox.lastPublish)
+            assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
+            val reply = json(outcome.payload)
+            assertEquals(true, reply["ok"]!!.jsonPrimitive.boolean)
+            assertEquals(
+                1111,
+                reply["event"]!!
+                    .jsonObject["kind"]!!
+                    .jsonPrimitive.content
+                    .toInt(),
+            )
+            assertEquals(reply["event"]!!.jsonObject["id"], reply["eventId"])
+            val relays = reply["relays"]!!.jsonObject
+            assertEquals(true, relays["wss://mine.example.com/"]!!.jsonPrimitive.boolean)
+            assertEquals(false, relays["wss://slow.example.com/"]!!.jsonPrimitive.boolean)
+        }
+
+    @Test
+    fun aRefusedOutboxRequestStillAnswersInItsOwnShape() =
+        runTest {
+            val publish = routeOutbox("""{"type":"outbox.publish","id":"p1","event":{"kind":1,"content":"x","tags":[]}}""", answer = GrantState.DENY)
+            assertIs<NappletRequestRouter.Outcome.Reply>(publish)
+            assertEquals(false, json(publish.payload)["ok"]!!.jsonPrimitive.boolean)
+            // NAP-OUTBOX's word for a refused publish.
+            assertEquals("publish denied", json(publish.payload)["error"]!!.jsonPrimitive.content)
+
+            val query = routeOutbox("""{"type":"outbox.query","id":"q1","filters":[{"kinds":[1]}]}""", answer = GrantState.DENY)
+            assertIs<NappletRequestRouter.Outcome.Reply>(query)
+            assertEquals(0, json(query.payload)["events"]!!.jsonArray.size)
+            assertEquals("policy denied", json(query.payload)["error"]!!.jsonPrimitive.content)
+        }
+
+    @Test
+    fun outboxSubscriptionsOpenOnTheRoutedRelaysAndClose() =
+        runTest {
+            val opened = routeOutbox("""{"type":"outbox.subscribe","id":"s","subId":"o1","filters":[{"authors":["ab"]}]}""")
+            assertIs<NappletRequestRouter.Outcome.OpenSubscription>(opened)
+            assertEquals("o1", opened.subId)
+            assertTrue(opened.outbox)
+            assertEquals(setOf(RelayUrlNormalizer.normalize("wss://author.example.com")), opened.relays)
+
+            val refused = routeOutbox("""{"type":"outbox.subscribe","id":"s","subId":"o1","filters":[{"authors":["ab"]}]}""", answer = GrantState.DENY)
+            assertIs<NappletRequestRouter.Outcome.Push>(refused)
+            assertEquals("outbox.closed", json(refused.payloads.single())["type"]!!.jsonPrimitive.content)
+
+            assertEquals(NappletRequestRouter.Outcome.CloseSubscription("o1"), routeOutbox("""{"type":"outbox.close","id":"c","subId":"o1"}"""))
+        }
+
+    @Test
+    fun resolveRelaysReturnsThePlan() =
+        runTest {
+            val outcome = routeOutbox("""{"type":"outbox.resolveRelays","id":"r1","target":{"pubkey":"ab","direction":"read"}}""")
+            assertIs<NappletRequestRouter.Outcome.Reply>(outcome)
+            val plan = json(outcome.payload)["plan"]!!.jsonObject
+            assertEquals("nip65", plan["source"]!!.jsonPrimitive.content)
+            assertEquals(
+                "wss://author.example.com/",
+                plan["relays"]!!
+                    .jsonArray
+                    .single()
+                    .jsonPrimitive.content,
+            )
+            assertEquals(
+                "cc".repeat(32),
+                plan["missingAuthors"]!!
+                    .jsonArray
+                    .single()
+                    .jsonPrimitive.content,
+            )
         }
 }

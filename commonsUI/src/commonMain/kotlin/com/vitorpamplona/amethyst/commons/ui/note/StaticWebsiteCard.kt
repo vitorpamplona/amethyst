@@ -73,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.PrefetchNappletFiles
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberNappletIconModel
+import com.vitorpamplona.amethyst.commons.ui.platform.runsNappletsInline
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteToggleButton
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -83,10 +84,10 @@ import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import org.jetbrains.compose.resources.stringResource
 
-private val CardShape = RoundedCornerShape(16.dp)
-private val IconShape = RoundedCornerShape(14.dp)
-private val CardPadding = 12.dp
-private val IconSize = 56.dp
+internal val CardShape = RoundedCornerShape(16.dp)
+internal val IconShape = RoundedCornerShape(14.dp)
+internal val CardPadding = 12.dp
+internal val IconSize = 56.dp
 
 /**
  * What a napplet card shows and gates on, read off its manifest once per event (`remember(event)`)
@@ -155,6 +156,8 @@ private fun NappletManifestCard(
     val launcher = rememberAppLauncher()
     val icon = rememberNappletIconModel(coordinate)
     PrefetchNappletFiles((event as Event).pubKey, identifier.orEmpty(), info.artifactFiles, info.servers)
+    val canOpen = info.launchable && launcher.opensNapplets
+    val label = info.title ?: identifier ?: NAPPLET_LABEL
 
     StaticWebsiteCard(
         title = info.title,
@@ -165,9 +168,23 @@ private fun NappletManifestCard(
         isNapplet = true,
         requires = info.required,
         icon = icon,
-        // The card itself never executes code: Open hands the napplet to the platform's sandbox.
-        onOpen = if (info.launchable && launcher.opensNapplets) ({ launcher.openNapplet(event) }) else null,
-        headerActions = { FavoriteToggleButton(coordinate, info.title ?: identifier ?: NAPPLET_LABEL, icon) },
+        // The card itself never executes code: Open and Run here hand the napplet to the platform's sandbox.
+        onOpen =
+            if (canOpen) {
+                {
+                    InlineNappletRuns.stopApp(coordinate)
+                    launcher.openNapplet(event)
+                }
+            } else {
+                null
+            },
+        headerActions = { FavoriteToggleButton(coordinate, label, icon) },
+        stage =
+            if (canOpen && runsNappletsInline) {
+                { InlineNappletStage(event, coordinate, label, icon, onOpen = { launcher.openNapplet(event) }) }
+            } else {
+                null
+            },
     )
 }
 
@@ -220,6 +237,8 @@ fun StaticWebsiteCard(
     onOpen: (() -> Unit)? = null,
     // Optional trailing slot in the header row (the favorite star).
     headerActions: @Composable (() -> Unit)? = null,
+    // Optional slot under the description: where a napplet runs inside the note.
+    stage: @Composable (() -> Unit)? = null,
 ) {
     val displayTitle = title?.ifBlank { null } ?: identifier?.ifBlank { null } ?: stringResource(Res.string.nsite_root_site)
     val kindLabel = stringResource(if (isNapplet) Res.string.napplet_card_kind else Res.string.nsite_website_kind)
@@ -275,6 +294,8 @@ fun StaticWebsiteCard(
             )
         }
 
+        stage?.invoke()
+
         if (requires.isNotEmpty() || !source.isNullOrBlank() || servers.isNotEmpty()) {
             DetailsDisclosure(requires = requires, source = source, servers = servers)
         }
@@ -283,7 +304,7 @@ fun StaticWebsiteCard(
 
 /** Square app icon: the manifest [iconUrl] when present, otherwise a colored monogram from [title]. */
 @Composable
-private fun AppIcon(
+internal fun AppIcon(
     iconUrl: String?,
     title: String,
 ) {

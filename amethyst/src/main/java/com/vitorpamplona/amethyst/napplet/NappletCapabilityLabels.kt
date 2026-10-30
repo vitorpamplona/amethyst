@@ -43,4 +43,5 @@ fun NappletCapability.labelResId(): Int =
         NappletCapability.THEME -> R.string.napplet_cap_theme
         NappletCapability.NOTIFY -> R.string.napplet_cap_notify
         NappletCapability.INC -> R.string.napplet_cap_inc
+        NappletCapability.OUTBOX -> R.string.napplet_cap_outbox
     }

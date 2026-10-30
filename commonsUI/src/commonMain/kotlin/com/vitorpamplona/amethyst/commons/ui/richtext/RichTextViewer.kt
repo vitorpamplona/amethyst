@@ -82,11 +82,13 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
+import com.vitorpamplona.amethyst.commons.richtext.WebxdcSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
+import com.vitorpamplona.amethyst.commons.ui.note.WebxdcPostCard
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -106,6 +108,8 @@ fun RichTextViewer(
     canPreview: Boolean,
     quotesLeft: Int,
     modifier: Modifier = Modifier,
+    // Who wrote the text, when the note knows (a direct message's URI names its gift wrap's key).
+    authorPubKey: String? = null,
 ) {
     val renderer = LocalRichTextSegmentRenderer.current
     val baseStyle = LocalTextStyle.current
@@ -130,7 +134,7 @@ fun RichTextViewer(
                             LocalLayoutDirection provides if (paragraph.isRTL) LayoutDirection.Rtl else LayoutDirection.Ltr,
                             LocalTextStyle provides paragraphStyle,
                         ) {
-                            RenderParagraph(paragraph, state, canPreview, quotesLeft, mediaBleed, Modifier.align(align))
+                            RenderParagraph(paragraph, state, canPreview, quotesLeft, mediaBleed, authorPubKey, Modifier.align(align))
                         }
                     }
                 }
@@ -147,6 +151,7 @@ private fun RenderParagraph(
     canPreview: Boolean,
     quotesLeft: Int,
     mediaBleed: Dp,
+    authorPubKey: String?,
     modifier: Modifier,
 ) {
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
@@ -156,7 +161,7 @@ private fun RenderParagraph(
         itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         paragraph.words.forEach { word ->
-            RenderWord(word, state, canPreview, quotesLeft, mediaBleed)
+            RenderWord(word, state, canPreview, quotesLeft, mediaBleed, authorPubKey)
         }
     }
 }
@@ -168,6 +173,7 @@ private fun RenderWord(
     canPreview: Boolean,
     quotesLeft: Int,
     mediaBleed: Dp,
+    authorPubKey: String?,
 ) {
     val renderer = LocalRichTextSegmentRenderer.current
     val actions = LocalRichTextInteractions.current
@@ -187,6 +193,10 @@ private fun RenderWord(
             ProvideMediaBleed(mediaBleed) { renderer.Media(word, state, Modifier) }
 
         is MathSegment -> renderer.Equation(word, Modifier)
+
+        // The post's author as the note knows it: a direct message's URI names its gift wrap's
+        // throwaway key instead.
+        is WebxdcSegment -> WebxdcPostCard(word.app, word.postUri, authorPubKey)
 
         is LinkSegment ->
             if (canPreview) {

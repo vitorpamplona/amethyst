@@ -53,7 +53,7 @@ class NappletBlobStore(
     private val client: OkHttpClient,
     paths: List<PathTag>,
     private val servers: List<String>,
-) {
+) : NappletFiles {
     /** One verified file: streamed from the cache when it is there, else held from its download. */
     class Blob(
         val path: String,
@@ -79,6 +79,8 @@ class NappletBlobStore(
     // A blob being downloaded: concurrent requests for it wait for the one download.
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<ByteArray?>>()
 
+    override fun isListed(requestPath: String): Boolean = lookup(requestPath) != null
+
     /**
      * The tag that serves [requestPath], as quartz's resolver matches it (`/` is `index.html`). Browsers
      * send paths percent-encoded (`/my%20file.js`), while the event lists them as written.
@@ -86,13 +88,13 @@ class NappletBlobStore(
     fun lookup(requestPath: String): PathTag? = byPath[normalizeStaticPath(decodePath(requestPath.substringBefore('?').substringBefore('#')))]
 
     /** Whether [requestPath] is cached already or can be fetched now, without reading it. */
-    suspend fun isAvailable(requestPath: String): Boolean {
+    override suspend fun isAvailable(requestPath: String): Boolean {
         val match = lookup(requestPath) ?: return false
         return cache.file(match.hash) != null || download(match) != null
     }
 
     /** The verified file serving [requestPath], or null when the event doesn't list it or no server has it. */
-    suspend fun find(requestPath: String): Blob? {
+    override suspend fun find(requestPath: String): Blob? {
         val match = lookup(requestPath) ?: return null
         cache.file(match.hash)?.let { return Blob(match.path, match.hash, contentTypeOf(match.path) { head(it) }, it, null) }
         val bytes = download(match) ?: return null
@@ -159,18 +161,6 @@ class NappletBlobStore(
                 buffer.copyOf(read)
             }
         }.getOrDefault(ByteArray(0))
-
-    /**
-     * Releases [client]'s threads and connections and cancels any fetch in flight. Only for a client
-     * this store's owner built for it alone; never call it on the app's shared client.
-     */
-    fun closeClient() {
-        runCatching {
-            client.dispatcher.cancelAll()
-            client.dispatcher.executorService.shutdown()
-            client.connectionPool.evictAll()
-        }
-    }
 
     companion object {
         /** Marker "server" for a blob served from the local cache. */

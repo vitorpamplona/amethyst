@@ -7,7 +7,7 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright-c
 const root = new URL('../../', import.meta.url);
 const shim = await readFile(new URL('commonsUI/src/commonMain/composeResources/files/napplet/shim.js', root), 'utf8');
 const shell = await readFile(new URL('commonsUI/src/commonMain/composeResources/files/napplet/shell.html', root), 'utf8');
-const contract = await readFile(new URL('commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/napplet/NappletWebContract.kt', root), 'utf8');
+const contract = await readFile(new URL('commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/napplet/NappletWebContract.kt', root), 'utf8');
 const csp = contract.match(/const val APP_CSP: String =([\s\S]*?)\n\n/)[1].match(/"[^"]*"/g).map(s => JSON.parse(s)).join('');
 const shellCsp = contract.match(/fun shellCsp[^=]*=([\s\S]*?)\n\n/)[1].match(/"[^"]*"/g).map(s => JSON.parse(s)).join('').replace('$frameSource', "'self'");
 
@@ -81,4 +81,35 @@ test('optional unavailable domains remain absent', async () => {
   await host(async ({frame}) => {
     assert.deepEqual(await frame.evaluate(() => Object.keys(window.napplet)), ['resource']);
   }, ['resource']);
+});
+
+test('outbox results resolve as NAP-OUTBOX objects, failures included; subscriptions stream and close', async () => {
+  await host(async ({page, frame, reply}) => {
+    // A publish the relays refused still resolves: the napplet reads `ok` and `error` itself.
+    await frame.evaluate(() => { window.published = window.napplet.outbox.publish({kind:30078,content:'save',tags:[['d','slot']]}, {toInboxes:['ab']}); });
+    await page.waitForFunction(() => window.requests.length === 1);
+    const publish = await page.evaluate(() => window.requests[0]);
+    assert.equal(publish.type, 'outbox.publish');
+    assert.deepEqual(publish.options, {toInboxes:['ab']});
+    await reply({type:'outbox.publish.result',id:publish.id,ok:false,relays:{'wss://a/':false},error:'publish failed'});
+    assert.deepEqual(await frame.evaluate(() => window.published), {ok:false,relays:{'wss://a/':false},error:'publish failed'});
+
+    // A query resolves to its events, even when refused.
+    await frame.evaluate(() => { window.queried = window.napplet.outbox.query({kinds:[1]}, {timeoutMs:3000}); });
+    await page.waitForFunction(() => window.requests.length === 2);
+    const query = await page.evaluate(() => window.requests[1]);
+    await reply({type:'outbox.query.result',id:query.id,events:[],error:'policy denied'});
+    assert.deepEqual(await frame.evaluate(() => window.queried), {events:[],error:'policy denied'});
+
+    // A subscription hands each event to on('event') and its end to on('closed').
+    await frame.evaluate(() => { window.got = []; window.sub = window.napplet.outbox.subscribe([{kinds:[1]}]).on('event', r => window.got.push(r.event.id)).on('closed', reason => window.got.push('closed:' + reason)); });
+    await page.waitForFunction(() => window.requests.length === 3);
+    const subscribe = await page.evaluate(() => window.requests[2]);
+    assert.equal(subscribe.type, 'outbox.subscribe');
+    await reply({type:'outbox.event',subId:subscribe.subId,result:{event:{id:'e1'}}});
+    await reply({type:'outbox.closed',subId:subscribe.subId,reason:'done'});
+    await reply({type:'outbox.event',subId:subscribe.subId,result:{event:{id:'late'}}});
+    await frame.waitForFunction(() => window.got.length === 2);
+    assert.deepEqual(await frame.evaluate(() => window.got), ['e1','closed:done']);
+  }, ['outbox']);
 });

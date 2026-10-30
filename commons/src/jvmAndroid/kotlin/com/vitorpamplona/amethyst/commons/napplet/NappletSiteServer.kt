@@ -20,11 +20,12 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.SequenceInputStream
 
 /**
  * What a host serves for one napplet or nSite, whatever its browser: the trusted shell on
@@ -40,7 +41,7 @@ import java.io.InputStream
  *   prelude with NIP-07. Requests to other hosts are the browser's to send ([serve] returns null).
  */
 class NappletSiteServer(
-    private val blobs: NappletBlobStore,
+    private val blobs: NappletFiles,
     private val shellHtml: ByteArray,
     private val shimJs: String,
     private val appOrigin: String,
@@ -88,6 +89,7 @@ class NappletSiteServer(
 
     // The prelude every page of this launch gets: built once, prepended to each page's bytes.
     private val prelude by lazy {
+        if (profile == HostProfile.WEBXDC) return@lazy NappletWebContract.webxdcPrelude()
         NappletWebContract.preludePrefix(
             shimJs = shimJs,
             declaredDomains = declaredDomains,
@@ -103,9 +105,12 @@ class NappletSiteServer(
      */
     suspend fun isAvailable(requestPath: String): Boolean = blobs.isAvailable(requestPath)
 
+    /** The launch ended: any download its files started stops. */
+    fun close() = blobs.close()
+
     /**
      * The response for a request to [url], or null when the browser should handle it itself (a
-     * request that isn't a GET, or a site's request to another host). [acceptsHtml] is whether the
+     * site's request to another host). [acceptsHtml] is whether the
      * request is a document navigation.
      */
     suspend fun serve(
@@ -113,12 +118,17 @@ class NappletSiteServer(
         url: String,
         acceptsHtml: Boolean,
     ): Response? {
-        if (!method.equals("GET", ignoreCase = true)) return null
+        if (!method.equals("GET", ignoreCase = true)) {
+            // Nothing here answers anything but a GET. Left to the browser, a POST to the app's own
+            // host would go out and look that host up: a lookup that says which app is running.
+            val internal = url == NappletWebContract.SHELL_URL || url == appOrigin || url.startsWith("$appOrigin/")
+            return if (internal || !profile.allowsOffOrigin) methodNotAllowed() else null
+        }
         return try {
             when {
                 url == NappletWebContract.SHELL_URL -> shell()
                 url == appOrigin || url.startsWith("$appOrigin/") -> appResource(url, acceptsHtml)
-                // A napplet has no network (its CSP is connect-src 'none'); a site is a normal web app.
+                // A napplet or webxdc app has no network; a site is a normal web app.
                 profile.allowsOffOrigin -> null
                 else -> notFound()
             }
@@ -159,7 +169,7 @@ class NappletSiteServer(
         val blob =
             blobs.find(requestPath)
                 ?: when {
-                    blobs.lookup(requestPath) != null -> return unavailable()
+                    blobs.isListed(requestPath) -> return unavailable()
                     acceptsHtml && requestPath != "/" -> blobs.find("/")
                     else -> null
                 } ?: return notFound()
@@ -168,7 +178,8 @@ class NappletSiteServer(
         // A locked napplet gets the strict app CSP; a site sets its own.
         val headers = (profile.appCsp?.let { mapOf("Content-Security-Policy" to it) } ?: emptyMap()) + NO_STORE
         return if (mime.equals(MIME_HTML, ignoreCase = true)) {
-            Response(200, "OK", mime, charset, headers, prelude + blob.readBytes())
+            // Streamed behind the prelude, never read whole: an archive's page can be any size.
+            Response(200, "OK", mime, charset, headers, prelude.size + blob.length) { SequenceInputStream(ByteArrayInputStream(prelude), blob.open()) }
         } else {
             Response(200, "OK", mime, charset, headers, blob.length, blob::open)
         }
@@ -185,6 +196,8 @@ class NappletSiteServer(
         private const val TAG = "NappletSiteServer"
 
         fun notFound(): Response = Response(404, "Not Found", "text/plain", "utf-8", emptyMap(), ByteArray(0))
+
+        private fun methodNotAllowed(): Response = Response(405, "Method Not Allowed", "text/plain", "utf-8", mapOf("Allow" to "GET"), ByteArray(0))
 
         /** A file the event lists that couldn't be fetched or read. */
         fun unavailable(): Response = Response(502, "Bad Gateway", "text/plain", "utf-8", emptyMap(), ByteArray(0))

@@ -26,7 +26,8 @@ napplet and compare it with its `x` tag. It needs `curl`, `git`, `unzip` and `py
 The test plays the build inside Amethyst's real `shell.html` and `shim.js`, with the prelude and CSP
 injected the way `NappletWebContract.injectPrelude` does on the device, and a fake native bridge
 that keeps storage in memory. It boots to the title loop with music, starts a game from the
-keyboard, turns and fires, saves to napplet storage, loads that save on a fresh launch, and keeps
+keyboard, turns and fires, slides one pointer around the touch pad (directions change without
+lifting it, and its corners move and turn at once), saves to napplet storage, loads that save on a fresh launch, and keeps
 playing when storage is denied or not declared. The mods test builds a PWAD that replaces the title
 picture, serves it through a `nostr:` note that links it by `blossom:` hash, and checks the title,
 the remembered mod list, the per-mod saves, and that a wrong hash is refused. Screenshots land in `build/screens/`. It uses the

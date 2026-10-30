@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.os.Bundle
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
+
 /**
  * Intent-extra contract for launching [NappletHostActivity]. Lives in the sandbox module so the
  * activity (here) and the launcher (in `:amethyst`) share the keys without a dependency cycle —
@@ -106,6 +109,40 @@ object NappletHostContract {
      * NB: unrelated to [EXTRA_HOST_PROFILE], which is the WEBSITE/NAPPLET host posture.
      */
     const val EXTRA_WEBVIEW_PROFILE = "napplet_webview_profile"
+
+    /**
+     * A webxdc launch ([HostProfile.WEBXDC]): its archive URL and sha256 (absent when the post gives
+     * none), and the user as its `webxdc.js` shows them. Absent for a napplet or site.
+     */
+    const val EXTRA_WEBXDC_URL = "napplet_webxdc_url"
+    const val EXTRA_WEBXDC_HASH = "napplet_webxdc_hash"
+    const val EXTRA_WEBXDC_SELF_ADDR = "napplet_webxdc_self_addr"
+    const val EXTRA_WEBXDC_SELF_NAME = "napplet_webxdc_self_name"
+    const val EXTRA_WEBXDC_IS_SENDER = "napplet_webxdc_is_sender"
+
+    /** Writes [webxdc] into launch [params]. */
+    fun putWebxdc(
+        params: Bundle,
+        webxdc: WebxdcLaunch,
+    ) {
+        params.putString(EXTRA_WEBXDC_URL, webxdc.url)
+        params.putString(EXTRA_WEBXDC_HASH, webxdc.hash)
+        params.putString(EXTRA_WEBXDC_SELF_ADDR, webxdc.selfAddr)
+        params.putString(EXTRA_WEBXDC_SELF_NAME, webxdc.selfName)
+        params.putBoolean(EXTRA_WEBXDC_IS_SENDER, webxdc.isAppSender)
+    }
+
+    /** The webxdc launch in [params], or null when it isn't one. */
+    fun webxdcOf(params: Bundle?): WebxdcLaunch? {
+        val url = params?.getString(EXTRA_WEBXDC_URL)?.ifBlank { null } ?: return null
+        return WebxdcLaunch(
+            url = url,
+            hash = params.getString(EXTRA_WEBXDC_HASH)?.ifBlank { null },
+            selfAddr = params.getString(EXTRA_WEBXDC_SELF_ADDR).orEmpty(),
+            selfName = params.getString(EXTRA_WEBXDC_SELF_NAME).orEmpty(),
+            isAppSender = params.getBoolean(EXTRA_WEBXDC_IS_SENDER, false),
+        )
+    }
 
     /**
      * FQN of the main-process broker service (in `:amethyst`). The sandbox binds it by name so it

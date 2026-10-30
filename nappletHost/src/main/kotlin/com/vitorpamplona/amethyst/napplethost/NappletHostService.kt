@@ -61,8 +61,10 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -72,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
+import kotlin.concurrent.thread
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
@@ -111,6 +114,8 @@ class NappletHostService : Service() {
         // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
         val webViewProfile: String?,
         val declaredDomains: List<String>,
+        // Set for a webxdc app: its archive and who runs it.
+        val webxdc: WebxdcLaunch? = null,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
@@ -304,7 +309,9 @@ class NappletHostService : Service() {
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
         val pathList = data.getStringArrayList(NappletHostContract.EXTRA_PATHS) ?: return null
         val hashList = data.getStringArrayList(NappletHostContract.EXTRA_HASHES) ?: return null
-        if (pathList.size != hashList.size || pathList.isEmpty()) return null
+        val webxdc = NappletHostContract.webxdcOf(data)
+        // A webxdc app's one file is its archive, which comes as its own extra.
+        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null)) return null
         val author = data.getString(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         val launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         if (author.isEmpty() || launchToken.isEmpty()) return null
@@ -329,6 +336,7 @@ class NappletHostService : Service() {
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
                 webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
                 declaredDomains = declaredDomains,
+                webxdc = webxdc,
             )
         return tab
     }
@@ -420,7 +428,7 @@ class NappletHostService : Service() {
         // profile has otherwise been used), so the storage partition must be chosen before the
         // hardening/bridge setup and the loadUrl below.
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer =
             NappletContentServer(
@@ -435,6 +443,7 @@ class NappletHostService : Service() {
                 tab.profile,
                 tab.declaredDomains,
                 imeProxy = true,
+                webxdc = tab.webxdc,
             )
 
         hardenWebView(wv, tab)
@@ -459,6 +468,29 @@ class NappletHostService : Service() {
                 torPort = effectiveProxy,
                 onFailed = { reportRouteBlocked(tab) },
             ) { if (tab.webView === wv) wv.loadUrl(NappletWebContract.SHELL_URL) }
+        } else if (tab.webxdc != null) {
+            // A webxdc archive downloads on first use, inside the page's own request, where a failure
+            // is only a 404 in an empty frame. Fetch it first, as the activity does, so a miss shows
+            // the retry instead.
+            val server = tab.contentServer
+            pushLoadState(tab, isLoading = true)
+            thread(name = "webxdc-probe", isDaemon = true) {
+                val available = server?.isAvailable(NappletSiteServer.INDEX_PATH) == true
+                probeResults.post {
+                    if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post
+                    if (available) {
+                        wv.loadUrl(NappletWebContract.SHELL_URL)
+                    } else {
+                        // Dropped, so the client's retry builds the tab again, with a new download.
+                        (wv.parent as? ViewGroup)?.removeView(wv)
+                        wv.destroy()
+                        tab.webView = null
+                        tab.bridgeReplyProxy = null
+                        tab.loadFailed = true
+                        pushLoadState(tab, isLoading = false)
+                    }
+                }
+            }
         } else {
             wv.loadUrl(NappletWebContract.SHELL_URL)
         }
@@ -695,7 +727,7 @@ class NappletHostService : Service() {
         ): Boolean {
             val uri = request.url
             if (NappletWebContract.isInternalHost(uri.host)) return false
-            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+            if (tab.profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             return true
@@ -839,6 +871,9 @@ class NappletHostService : Service() {
     }
 
     private val heldExpiry = Handler(Looper.getMainLooper())
+
+    // Where a webxdc tab's availability probe hands its answer back to the main thread.
+    private val probeResults = Handler(Looper.getMainLooper())
 
     /** Tells the broker whether [tab] is being looked at, which gates decrypting its relay reads. */
     private fun reportAttended(tab: NappletTab) {

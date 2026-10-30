@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -30,6 +31,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
+import java.io.File
 
 /**
  * What every napplet and nSite window shares: the browser engine, the blob cache, the network route,
@@ -48,6 +50,8 @@ class DesktopNappletRuntime(
     val nappletBlobsUseTor: () -> Boolean = { false },
     /** How long a site that asked for Tor waits for it before failing closed. */
     val torWaitMs: Long = 30_000L,
+    /** Where webxdc apps are unpacked, one directory per archive. */
+    val webxdcBundles: WebxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(File(System.getProperty("java.io.tmpdir"), "amethyst"))),
 ) {
     val attendance = NappletAttendance<CefNappletSession>()
 

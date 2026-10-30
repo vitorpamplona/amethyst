@@ -24,9 +24,14 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking
@@ -67,8 +72,25 @@ class NappletContentServer(
     // IME proxy agent that relays the focused field to the host's keyboard. The full-screen Activity
     // host has a native keyboard and leaves this false.
     imeProxy: Boolean = false,
+    // A webxdc app's archive and who runs it; its files come from the unpacked archive instead of paths.
+    webxdc: WebxdcLaunch? = null,
 ) {
-    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(cachePartition), NappletBlobHttp.client(proxyPort), paths, servers)
+    // This instance's own client (its threads and connections end with close()).
+    private val client = NappletBlobHttp.client(proxyPort)
+
+    private val blobs: NappletFiles =
+        if (webxdc != null) {
+            WebxdcFiles(
+                WebxdcBundles(WebxdcBundles.dirFor(cacheDir)),
+                WebxdcFiles.downloadClient(client),
+                webxdc.url,
+                webxdc.hash,
+                servers,
+                WebxdcRuntime.script(webxdc.selfAddr, webxdc.selfName, webxdc.isAppSender),
+            )
+        } else {
+            NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(cachePartition), client, paths, servers)
+        }
 
     private val server = NappletSiteServer(blobs, shellHtmlBytes, shimJs, appOrigin, profile, declaredDomains, imeProxy)
 
@@ -84,7 +106,15 @@ class NappletContentServer(
      * any in-flight blob fetch. A new content server is built per embedded tab, so without this each
      * opened-then-closed napplet/nSite tab would leak OkHttp threads and keep-alive connections.
      */
-    fun close() = blobs.closeClient()
+    fun close() {
+        // First, so a webxdc download stops at its next read instead of moving to the next server.
+        server.close()
+        runCatching {
+            client.dispatcher.cancelAll()
+            client.dispatcher.executorService.shutdown()
+            client.connectionPool.evictAll()
+        }
+    }
 
     /** The response for [request], or null to let the WebView handle it. Runs on a WebView worker thread. */
     fun serve(request: WebResourceRequest): WebResourceResponse? {

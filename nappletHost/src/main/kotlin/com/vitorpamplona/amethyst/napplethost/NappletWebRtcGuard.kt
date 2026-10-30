@@ -29,7 +29,7 @@ import com.vitorpamplona.quartz.utils.Log
 
 /**
  * Takes WebRTC away from every frame of a WebView that must not have it. The WebView's proxy covers
- * HTTP, not WebRTC: its UDP goes straight out, so a napplet would have a network, and a site the user
+ * HTTP, not WebRTC: its UDP goes straight out, so a napplet or webxdc app would have a network, and a site the user
  * put on Tor would show its real address. A site on the open web keeps WebRTC; its traffic is its own.
  *
  * The napplet's own frame loses it in the prelude too ([NappletWebContract.preludePrefix]); this also
@@ -41,7 +41,7 @@ object NappletWebRtcGuard {
     fun isNeeded(
         profile: HostProfile,
         useTor: Boolean,
-    ): Boolean = profile == HostProfile.NAPPLET || useTor
+    ): Boolean = profile != HostProfile.WEBSITE || useTor
 
     fun install(webView: WebView) {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {

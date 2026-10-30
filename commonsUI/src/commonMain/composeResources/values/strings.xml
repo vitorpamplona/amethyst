@@ -143,6 +143,15 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
+    <string name="webxdc_card_kind">Webxdc app</string>
+    <string name="webxdc_start">Start</string>
+    <string name="webxdc_unverified">Unverified: the post gives no hash for it</string>
+    <string name="webxdc_open_failed">This app can’t be opened here.</string>
+    <string name="napplet_inline_run">Run here</string>
+    <string name="napplet_inline_running">Running in this note</string>
+    <string name="napplet_inline_stop">Stop</string>
+    <string name="napplet_inline_needs_you">%1$s wants to ask you something. Open it to answer.</string>
+    <string name="napplet_inline_failed">%1$s didn’t start here.</string>
 
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Use direct URL</string>
@@ -4847,6 +4856,8 @@
     <string name="napplet_cap_identity_desc">Read your public key</string>
     <string name="napplet_cap_inc">Messaging</string>
     <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_outbox_desc">Read people's posts from their own relays, and sign &amp; publish your events</string>
     <string name="napplet_cap_keys">Keyboard actions</string>
     <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
     <string name="napplet_cap_notify">Notifications</string>
@@ -4921,6 +4932,7 @@
     <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
     <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
+    <string name="napplet_consent_outbox_read">This nApplet wants to read events from the relays of the people it asks about.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>
@@ -6328,6 +6340,7 @@
     <string name="browser_pill_access_manage">Manage permissions</string>
     <string name="browser_pill_access_nsite">nSite · sandboxed</string>
     <string name="browser_pill_access_napplet">nApplet · sandboxed</string>
+    <string name="browser_pill_access_webxdc">Webxdc app · offline</string>
     <string name="browser_pill_console">Console</string>
     <string name="browser_pill_security_https">Secure connection</string>
     <string name="browser_pill_security_http">Not secure</string>

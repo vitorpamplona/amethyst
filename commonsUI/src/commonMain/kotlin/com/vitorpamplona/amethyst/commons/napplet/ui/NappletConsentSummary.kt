@@ -53,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_consent_identity_rea
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_nip44_decrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_nip44_encrypt
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_notify
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_outbox_read
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_pay_amount
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_pay_no_amount
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_publish
@@ -323,6 +324,10 @@ class NappletConsentSummary(
             // the decision the user is actually making ("let this page read messages from X").
             is NappletRequest.Nip44Decrypt -> loadStringRes(Res.string.napplet_consent_nip44_decrypt, counterpartyLabel(request.peer))
             is NappletRequest.QueryEvents, is NappletRequest.Subscribe -> loadStringRes(Res.string.napplet_consent_query)
+            is NappletRequest.OutboxGetEvent, is NappletRequest.OutboxQuery, is NappletRequest.OutboxSubscribe, is NappletRequest.OutboxResolveRelays ->
+                loadStringRes(Res.string.napplet_consent_outbox_read)
+            // The broker shows the template it signs; this is only reached if a host asks with the wrapper.
+            is NappletRequest.OutboxPublish -> summaryFor(request.template)
             is NappletRequest.StorageGet, is NappletRequest.StorageSet, is NappletRequest.StorageRemove, is NappletRequest.StorageKeys ->
                 loadStringRes(Res.string.napplet_consent_storage)
             is NappletRequest.NotifyCreate -> {

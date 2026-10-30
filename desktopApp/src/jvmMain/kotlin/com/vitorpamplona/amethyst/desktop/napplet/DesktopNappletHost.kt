@@ -33,9 +33,13 @@ import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -66,12 +70,13 @@ class DesktopNappletHost(
 ) {
     val runtime =
         DesktopNappletRuntime(
-            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache")),
+            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache"), onQuit = { modules.quitRequests.tryEmit(Unit) }),
             blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
             nappletBlobsUseTor = { torEnabled() },
+            webxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(modules.filesDir)),
         )
 
     val engine get() = runtime.engine
@@ -93,6 +98,9 @@ class DesktopNappletHost(
     private val mutableSessions = MutableStateFlow<List<CefNappletSession>>(emptyList())
     val sessions: StateFlow<List<CefNappletSession>> = mutableSessions.asStateFlow()
 
+    // Napplets running inside notes: no window, so they are kept apart from [sessions].
+    private val inlineSessions = MutableStateFlow<Set<CefNappletSession>>(emptySet())
+
     @Volatile
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
 
@@ -105,6 +113,9 @@ class DesktopNappletHost(
                 .distinctUntilChanged()
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
+                    inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
+                    // The last frames shown were the old account's screens.
+                    InlineNappletPosters.clear()
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
         }
@@ -140,6 +151,20 @@ class DesktopNappletHost(
     }
 
     /**
+     * Runs the webxdc [app] attached to post [postId] by [poster] in a new window: offline, at an
+     * origin of its own for this account and app instance.
+     */
+    fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
+        val selfName = account.userProfile().toBestDisplayName()
+        return runCatching { open(NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, selfName), account, useTor = false) }
+    }
+
+    /**
      * Moves an open site to Tor or the open web: remembers the choice, then reopens the window on
      * the new route, as Android relaunches its activity.
      */
@@ -169,6 +194,55 @@ class DesktopNappletHost(
             mutableSessions.update { it + session }
             session.start()
         }
+
+    /**
+     * Runs [manifest] inside a note as instance [instanceId]: its browser paints into
+     * [CefNappletSession.offscreen] for the note to draw, and it may use what the user granted the
+     * app but never asks anything ([NappletLaunch.inline]). The note closes it with [closeInline].
+     */
+    fun openInline(
+        manifest: NappletManifest,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run napplets"))
+        return NappletLaunch.fromManifest(manifest).map { launch -> startInline(launch.inline(instanceId), account) }
+    }
+
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId]:
+     * the same offline origin, and so the same storage, its window has.
+     */
+    fun openInlineWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
+        val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName()).inline(instanceId)
+        return runCatching { startInline(launch, account) }
+    }
+
+    private fun startInline(
+        launch: NappletLaunch,
+        account: Account,
+    ): CefNappletSession {
+        val session = CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView())
+        inlineSessions.update { it + session }
+        // The account may have left between reading it and listing the session, after the switch
+        // closed what it found: this one would run on as someone who left.
+        if (modules.sessionManager.loggedInAccount()?.pubKey != account.pubKey) {
+            closeInline(session)
+            throw IllegalStateException("The account changed")
+        }
+        session.start()
+        return session
+    }
+
+    fun closeInline(session: CefNappletSession) {
+        inlineSessions.update { it - session }
+        session.close()
+    }
 
     fun close(session: CefNappletSession) {
         mutableSessions.update { it - session }
@@ -202,10 +276,12 @@ class DesktopNappletHost(
         if (colors == themeColors) return
         themeColors = colors
         sessions.value.forEach { it.pushTheme(colors) }
+        inlineSessions.value.forEach { it.pushTheme(colors) }
     }
 
     fun shutdown() {
         sessions.value.forEach(::close)
+        inlineSessions.value.forEach(::closeInline)
         runtime.engine.shutdown()
     }
 

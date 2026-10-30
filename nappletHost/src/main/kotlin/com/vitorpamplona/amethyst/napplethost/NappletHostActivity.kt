@@ -36,6 +36,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -72,6 +73,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -265,6 +267,29 @@ class NappletHostActivity : ComponentActivity() {
             }
         }
 
+    /**
+     * This activity is `singleTask`, so opening a napplet while another is still in the background
+     * arrives here instead of starting a new one. The same napplet comes back as it was; a different
+     * one rebuilds the screen around the new intent, since everything here is set up in onCreate.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (isSameLaunch(intent)) return
+        setIntent(intent)
+        recreate()
+    }
+
+    private fun isSameLaunch(other: Intent): Boolean =
+        other.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty() == author &&
+            other.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty() == identifier &&
+            HostProfile.fromName(other.getStringExtra(NappletHostContract.EXTRA_HOST_PROFILE)) == profile &&
+            other.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE) == webViewProfile &&
+            other.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true) == useTor &&
+            NappletHostContract.webxdcOf(other.extras).let { it?.url == webxdc?.url && it?.hash == webxdc?.hash }
+
+    // The chrome sees touches first, so a swipe down on its handle opens it over the page.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean = chrome?.dispatchTouchEvent(ev) { super.dispatchTouchEvent(it) } ?: super.dispatchTouchEvent(ev)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SandboxComposeResources.ensure(this)
@@ -295,12 +320,12 @@ class NappletHostActivity : ComponentActivity() {
         fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
         val shellHtml = readContractAsset(NappletWebResources.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier, profile = profile))
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
         val cachePartition = NappletBlobCache.partitionOf(webViewProfile.orEmpty(), author, identifier)
-        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, cachePartition, shellHtml, shim, appOrigin, profile, declaredDomains)
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, cachePartition, shellHtml, shim, appOrigin, profile, declaredDomains, webxdc = webxdc)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -568,7 +593,9 @@ class NappletHostActivity : ComponentActivity() {
     private fun readManifestExtras(): Boolean {
         val pathList = intent.getStringArrayListExtra(NappletHostContract.EXTRA_PATHS) ?: return false
         val hashList = intent.getStringArrayListExtra(NappletHostContract.EXTRA_HASHES) ?: return false
-        if (pathList.size != hashList.size || pathList.isEmpty()) return false
+        webxdc = NappletHostContract.webxdcOf(intent.extras)
+        // A webxdc app's one file is its archive, which comes as its own extra.
+        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null)) return false
 
         for (i in pathList.indices) paths.add(PathTag(pathList[i], hashList[i]))
         servers.addAll(intent.getStringArrayListExtra(NappletHostContract.EXTRA_SERVERS) ?: emptyList())
@@ -593,6 +620,9 @@ class NappletHostActivity : ComponentActivity() {
     }
 
     private var title: String = ""
+
+    // Set for a webxdc app: its archive and who runs it.
+    private var webxdc: WebxdcLaunch? = null
 
     @Suppress("SetJavaScriptEnabled")
     private fun hardenWebView(webView: WebView) {
@@ -713,7 +743,7 @@ class NappletHostActivity : ComponentActivity() {
             // An external link the user actually tapped is handed to the system browser. A user
             // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
             // and only http(s) is honored so it can't fire arbitrary intent schemes.
-            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+            if (profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
                 runCatching {
                     startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }

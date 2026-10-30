@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -276,6 +277,38 @@ interface AppPlatform {
         servers: List<String>,
     ) {}
 
+    /** Whether [InlineNappletSurface] runs a napplet inside a note here. */
+    val runsNappletsInline: Boolean get() = false
+
+    /**
+     * Runs [manifest] inside a note as its own instance [instanceId], filling [modifier], in the
+     * platform's sandbox. It may use what the user already granted the app and never asks anything
+     * ([com.vitorpamplona.amethyst.commons.napplet.NappletIdentity.inline]). The page gets taps and
+     * keys; the feed keeps the scroll. It runs while it is composed and on screen, and ends when it
+     * leaves the composition. [onStatus] follows its loading.
+     */
+    @Composable
+    fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId],
+     * where [runsNappletsInline]: offline at its own origin, the same storage its window has.
+     */
+    @Composable
+    fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
     fun rememberManifestIconModel(
@@ -365,6 +398,39 @@ fun PrefetchNappletFiles(
     servers: List<String>,
 ) = LocalAppPlatform.current.PrefetchNappletFiles(author, identifier, paths, servers)
 
+val runsNappletsInline: Boolean
+    @Composable get() = LocalAppPlatform.current.runsNappletsInline
+
+@Composable
+fun InlineNappletSurface(
+    manifest: NappletManifest,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineNappletSurface(manifest, instanceId, onStatus, modifier)
+
+@Composable
+fun InlineWebxdcSurface(
+    app: WebxdcApp,
+    postId: HexKey,
+    poster: HexKey,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineWebxdcSurface(app, postId, poster, instanceId, onStatus, modifier)
+
+/** Where a napplet running inside a note is. */
+enum class InlineNappletStatus {
+    /** Fetching and verifying its files, or starting its page. */
+    LOADING,
+
+    /** Its page has painted. */
+    SHOWING,
+
+    /** It could not start here: no server had its files, or the sandbox did not come up. */
+    FAILED,
+}
+
 @Composable
 fun rememberManifestIconModel(
     author: String,
@@ -399,6 +465,16 @@ interface AppLauncher {
 
     /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
     fun openSite(site: Event) {}
+
+    /**
+     * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
+     * [opensNapplets]), or tells the user why it can't.
+     */
+    fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {}
 
     /** Launches nothing: front ends without an app surface yet. */
     object None : AppLauncher {

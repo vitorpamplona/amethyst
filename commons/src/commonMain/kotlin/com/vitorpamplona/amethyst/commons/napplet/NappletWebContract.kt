@@ -57,15 +57,23 @@ object NappletWebContract {
      * persists across launches; different applets derive different subdomains, so their storage is
      * isolated from one another. A host whose browser keeps one storage jar for every account passes
      * that account as [partition], so each account gets its own origin.
+     *
+     * A webxdc app's seed starts with a name no site's can: a site's starts with a hex key, so a site
+     * whose `d` tag spells a webxdc instance (`webxdc:<id>`) still can't land on the app's origin and
+     * read what was typed into it, with the network the app never had.
      */
     fun appId(
         author: String,
         identifier: String,
         partition: String? = null,
+        profile: HostProfile = HostProfile.NAPPLET,
     ): String {
-        val seed = if (partition == null) "$author:$identifier" else "$partition:$author:$identifier"
+        val base = if (partition == null) "$author:$identifier" else "$partition:$author:$identifier"
+        val seed = if (profile == HostProfile.WEBXDC) "$WEBXDC_SEED_PREFIX$base" else base
         return "n" + sha256(seed.encodeToByteArray()).toHexKey().take(31)
     }
+
+    private const val WEBXDC_SEED_PREFIX = "webxdc/"
 
     /** A filled-in shell page and the Content-Security-Policy header it must be served with. */
     class ShellPage(
@@ -93,7 +101,13 @@ object NappletWebContract {
         head: String = "",
     ): ShellPage {
         val napplet = profile == HostProfile.NAPPLET
-        val sandbox = if (napplet) "allow-scripts" else "allow-scripts allow-same-origin"
+        val sandbox =
+            when (profile) {
+                HostProfile.NAPPLET -> "allow-scripts"
+                HostProfile.WEBSITE -> "allow-scripts allow-same-origin"
+                // Forms post to the app's own origin (its CSP's form-action); nothing else is added.
+                HostProfile.WEBXDC -> "allow-scripts allow-same-origin allow-forms"
+            }
         val frameSource = if (napplet) "'self'" else appOrigin
         val template =
             shellHtml
@@ -105,7 +119,9 @@ object NappletWebContract {
         val after = template.substringAfter(APP_BOOTSTRAP_PLACEHOLDER, "").encodeToByteArray()
 
         if (!napplet) {
-            return ShellPage(before + "iframe.src = '$appOrigin/';".encodeToByteArray() + after, shellCsp(frameSource))
+            // A webxdc app opens at its root with index.html appended, as the spec requires.
+            val entry = if (profile == HostProfile.WEBXDC) "/index.html" else "/"
+            return ShellPage(before + "iframe.src = '$appOrigin$entry';".encodeToByteArray() + after, shellCsp(frameSource))
         }
 
         // NIP-5D identity is bound to the exact verified bytes that execute: they reach the
@@ -181,9 +197,14 @@ object NappletWebContract {
     /**
      * CSP for the shell document: it may inline its own bridge script/style and frame **only this
      * applet's** origin, but has no network and cannot navigate or submit anywhere.
+     *
+     * A napplet's `srcdoc` frame inherits this policy on top of [APP_CSP], so the inline images and
+     * fonts a one-file napplet carries (`data:`, `blob:`, which never reach the network) must be
+     * allowed here as well, or they are blocked however [APP_CSP] reads.
      */
     fun shellCsp(frameSource: String): String =
         "default-src 'none'; script-src 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'unsafe-inline'; " +
+            "img-src data: blob:; font-src data:; " +
             "frame-src $frameSource; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
     /**
@@ -196,6 +217,23 @@ object NappletWebContract {
             "img-src data: blob:; font-src data:; connect-src 'none'; worker-src 'none'; " +
             "child-src 'none'; frame-src 'none'; media-src 'none'; object-src 'none'; " +
             "manifest-src 'none'; base-uri 'none'; form-action 'none'"
+
+    /**
+     * A webxdc app's CSP: everything from its own origin (the archive, served locally) and inline
+     * `data:`/`blob:`, nothing from anywhere else. Webxdc requires that an app has no Internet access.
+     */
+    const val WEBXDC_CSP: String =
+        "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' data: blob:; " +
+            "style-src 'self' 'unsafe-inline' data: blob:; img-src 'self' data: blob:; font-src 'self' data: blob:; " +
+            "media-src 'self' data: blob:; connect-src 'self' data: blob:; worker-src 'self' data: blob:; " +
+            "frame-src 'self' data: blob:; child-src 'self' data: blob:; object-src 'none'; " +
+            "manifest-src 'self'; base-uri 'self'; form-action 'self'"
+
+    /**
+     * What goes before every page of a webxdc app: WebRTC taken away before any of its scripts run,
+     * and nothing of the napplet runtime. The app loads its `webxdc.js` itself.
+     */
+    fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS</script>".encodeToByteArray()
 
     /**
      * Takes WebRTC away from the frame it runs in, before any page script: a napplet has no network,

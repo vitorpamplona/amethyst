@@ -28,8 +28,10 @@ import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
+import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
@@ -80,6 +82,29 @@ object NappletLauncher {
         }
     }
 
+    /**
+     * Runs the webxdc [app] attached to post [postId] by [poster], as the logged-in user. A refused
+     * launch (nobody logged in) says so.
+     */
+    fun launchWebxdc(
+        context: Context,
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {
+        val account = Amethyst.instance.sessionManager.loggedInAccount()
+        if (account != null) {
+            val selfName = account.userProfile().toBestDisplayName()
+            openHost(context, buildLaunchParams(context, NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, selfName)))
+        } else {
+            val appContext = context.applicationContext
+            Amethyst.instance.applicationIOScope.launch {
+                val message = loadStringRes(Res.string.webxdc_open_failed)
+                withContext(Dispatchers.Main) { Toast.makeText(appContext, message, Toast.LENGTH_SHORT).show() }
+            }
+        }
+    }
+
     private fun openHost(
         context: Context,
         params: Bundle,
@@ -109,6 +134,37 @@ object NappletLauncher {
             .onFailure { Log.w(TAG, "Refusing NIP-5D launch", it) }
             .getOrNull()
             ?.let { buildLaunchParams(context, it) }
+
+    /**
+     * The launch parameters for running [manifest] inside a note as instance [instanceId]
+     * ([NappletLaunch.inline]): the broker never asks the user anything for it. Null when refused.
+     */
+    fun buildInlineLaunchParams(
+        context: Context,
+        manifest: NappletManifest,
+        instanceId: String,
+    ): Bundle? =
+        NappletLaunch
+            .fromManifest(manifest)
+            .onFailure { Log.w(TAG, "Refusing inline NIP-5D launch", it) }
+            .getOrNull()
+            ?.let { buildLaunchParams(context, it.inline(instanceId)) }
+
+    /**
+     * The launch parameters for running the webxdc [app] posted in [postId] by [poster] inside its
+     * note as instance [instanceId], or null when nobody is logged in.
+     */
+    fun buildInlineWebxdcParams(
+        context: Context,
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+    ): Bundle? {
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+        val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName())
+        return buildLaunchParams(context, launch.inline(instanceId))
+    }
 
     /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
     fun buildSiteLaunchParams(
@@ -183,6 +239,7 @@ object NappletLauncher {
             // Opaque per-account storage partition, so a napplet/nSite can't carry one npub's cookies
             // and localStorage into another. Derived here (the sandbox never sees the pubkey).
             putString(NappletHostContract.EXTRA_WEBVIEW_PROFILE, NappletWebViewProfiles.current())
+            launch.webxdc?.let { NappletHostContract.putWebxdc(this, it) }
         }
     }
 

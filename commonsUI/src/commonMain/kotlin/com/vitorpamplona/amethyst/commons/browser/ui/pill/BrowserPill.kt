@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -117,6 +118,8 @@ fun BrowserPill(
     initiallyEditing: Boolean = false,
     initiallyTextSizeOpen: Boolean = false,
     onPasteAndGo: (() -> Unit)? = null,
+    handleTapToOpen: Boolean = true,
+    handleModifier: Modifier = Modifier,
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         AnimatedVisibility(
@@ -139,7 +142,7 @@ fun BrowserPill(
                 onPasteAndGo = onPasteAndGo,
             )
         }
-        PillHandle(ui, expanded, onExpandedChange)
+        PillHandle(ui, expanded, onExpandedChange, handleModifier, tapToOpen = handleTapToOpen)
     }
 }
 
@@ -154,6 +157,10 @@ fun BrowserPill(
  * that is always lit is one nobody reads — it just makes the handle loud on every page. Tor keeps its
  * badge inside the pill, where the address and "Onion-routed" say it in words for anyone who opens it.
  * What is left in the handle is plain HTTP, which is a warning, and a dot for console errors.
+ *
+ * With [tapToOpen] off the handle takes no touches at all, so a tap on it reaches the page beneath (a
+ * game's buttons can sit right there); the host then opens the pill on a downward swipe that starts on
+ * it, and accessibility services still get a click action.
  */
 @Composable
 fun PillHandle(
@@ -161,6 +168,7 @@ fun PillHandle(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    tapToOpen: Boolean = true,
 ) {
     val barColor =
         when (ui.security) {
@@ -171,18 +179,30 @@ fun PillHandle(
         modifier
             .clip(RoundedCornerShape(bottomStart = 14.dp, bottomEnd = 14.dp))
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.72f))
-            .clickable { onExpandedChange(!expanded) }
-            .draggable(
-                orientation = Orientation.Vertical,
-                state =
-                    rememberDraggableState { delta ->
-                        if (delta > 1f) {
-                            onExpandedChange(true)
-                        } else if (delta < -1f) {
-                            onExpandedChange(false)
+            .then(
+                if (tapToOpen) {
+                    Modifier
+                        .clickable { onExpandedChange(!expanded) }
+                        .draggable(
+                            orientation = Orientation.Vertical,
+                            state =
+                                rememberDraggableState { delta ->
+                                    if (delta > 1f) {
+                                        onExpandedChange(true)
+                                    } else if (delta < -1f) {
+                                        onExpandedChange(false)
+                                    }
+                                },
+                        )
+                } else {
+                    Modifier.semantics {
+                        onClick {
+                            onExpandedChange(!expanded)
+                            true
                         }
-                    },
-            ).padding(horizontal = 18.dp, vertical = 8.dp),
+                    }
+                },
+            ).padding(horizontal = 12.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {

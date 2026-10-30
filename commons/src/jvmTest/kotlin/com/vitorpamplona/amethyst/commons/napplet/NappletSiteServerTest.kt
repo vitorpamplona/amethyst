@@ -153,7 +153,9 @@ class NappletSiteServerTest {
     fun theBrowserHandlesWhatIsNotOurs() =
         runBlocking {
             assertNull(site.serve("GET", "https://relay.example/", acceptsHtml = false), "a site talks to other hosts itself")
-            assertNull(site.serve("POST", "$origin/api", acceptsHtml = false), "and sends anything but GETs itself")
+            assertNull(site.serve("POST", "https://relay.example/api", acceptsHtml = false), "and sends anything but GETs there itself")
+            // Its own host has no server behind it: a POST there would only go out to look it up.
+            assertEquals(405, assertNotNull(site.serve("POST", "$origin/api", acceptsHtml = false)).status)
         }
 
     @Test

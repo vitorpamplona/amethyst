@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
+import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
@@ -483,7 +484,7 @@ class NappletBrokerService : Service() {
                 }
                 // A query's results are decrypted with the user's key: while nobody is looking at the page it
                 // waits (as its sign / decrypt requests do), and gives up like them.
-                if (requestType == "relay.query" && !attendance.awaitAttended(replyTo, NappletHeldRequests.MAX_AGE_MS)) {
+                if (NappletActingRequests.readsForUser(requestType) && !attendance.awaitAttended(replyTo, NappletHeldRequests.MAX_AGE_MS)) {
                     reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed(NappletHeldRequests.EXPIRED)))
                     return@launch
                 }
@@ -499,7 +500,7 @@ class NappletBrokerService : Service() {
                         }
                     }
                     is NappletRequestRouter.Outcome.OpenSubscription ->
-                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey), arrivedAt) { push(replyTo, it) }
+                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey), arrivedAt, outcome.relays, outcome.outbox) { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId, arrivedAt)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)

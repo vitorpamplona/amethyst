@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
@@ -89,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_napplet
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_nsite
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_webxdc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_back
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find
@@ -123,6 +125,8 @@ import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConsent
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import androidx.compose.material3.Icon as VectorIcon
 
 /**
@@ -156,16 +160,21 @@ private fun NappletWindow(
         title = session.launch.title,
         icon = IconResources.adaptedBitmapPainter,
     ) {
+        // macOS: the title bar turns transparent over the toolbar, as on the main window.
+        frameScope?.applyNativeWindowChrome()
+
         val state by session.state.collectAsState()
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize()) {
+            // The toolbar starts below the traffic lights; full screen has no title bar.
+            val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+            Column(Modifier.fillMaxSize().padding(top = titleBar)) {
                 // The trusted chrome, drawn by Amethyst above the page, which can't draw over it.
                 SandboxToolbar(session, host, onAccessInfo = { showAccess = true })
                 HorizontalDivider()
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
-                        is CefNappletSession.State.Showing -> SwingPanel(factory = { current.component }, modifier = Modifier.fillMaxSize())
+                        is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
                         is CefNappletSession.State.Loading -> LoadingPane(host, session.launch.title)
                         is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                         is CefNappletSession.State.Failed ->
@@ -234,7 +243,13 @@ private fun SandboxToolbar(
                 Column {
                     Text(session.launch.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        stringRes(if (isWebsite) Res.string.browser_pill_access_nsite else Res.string.browser_pill_access_napplet),
+                        stringRes(
+                            when (session.launch.profile) {
+                                HostProfile.WEBSITE -> Res.string.browser_pill_access_nsite
+                                HostProfile.WEBXDC -> Res.string.browser_pill_access_webxdc
+                                HostProfile.NAPPLET -> Res.string.browser_pill_access_napplet
+                            },
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,

@@ -26,28 +26,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
+import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.rememberDecryptedConcordImageModel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -132,7 +138,8 @@ class DesktopAppPlatform(
         val toaster = rememberToaster()
         val nappletFailed = stringRes(Res.string.napplet_desktop_open_failed)
         val siteFailed = stringRes(Res.string.nsite_open_failed)
-        return remember(toaster, nappletFailed, siteFailed) { DesktopAppLauncher(nappletHost, toaster, nappletFailed, siteFailed) }
+        val webxdcFailed = stringRes(Res.string.webxdc_open_failed)
+        return remember(toaster, nappletFailed, siteFailed, webxdcFailed) { DesktopAppLauncher(nappletHost, toaster, nappletFailed, siteFailed, webxdcFailed) }
     }
 
     @Composable
@@ -144,6 +151,35 @@ class DesktopAppPlatform(
     ) {
         val host = nappletHost ?: return
         LaunchedEffect(host, author, identifier, paths, servers) { runCatchingCancellable { host.prefetch(author, identifier, paths, servers) } }
+    }
+
+    // Off-screen Chromium, drawn by the note: wherever napplets can run at all.
+    override val runsNappletsInline: Boolean get() = nappletHost != null
+
+    @Composable
+    override fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = nappletHost ?: return
+        InlineNappletPane(host, manifest, instanceId, onStatus, modifier)
+    }
+
+    @Composable
+    override fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = nappletHost ?: return
+        InlineNappletPane(host, app.stageKey(poster, postId), instanceId, onStatus, modifier) {
+            host.openInlineWebxdc(app, postId, poster, instanceId)
+        }
     }
 
     override val hasGeocacheMap: Boolean get() = true
@@ -168,6 +204,7 @@ private class DesktopAppLauncher(
     private val toaster: Toaster,
     private val nappletFailed: String,
     private val siteFailed: String,
+    private val webxdcFailed: String,
 ) : AppLauncher {
     override fun launch(
         app: FavoriteApp,
@@ -209,6 +246,18 @@ private class DesktopAppLauncher(
         host.openSite(site).onFailure {
             Log.w(TAG, "Refusing to open nSite ${site.id}", it)
             toaster.show(siteFailed, false)
+        }
+    }
+
+    override fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {
+        val host = napplets ?: return
+        host.openWebxdc(app, postId, poster).onFailure {
+            Log.w(TAG, "Refusing to open webxdc app ${app.url}", it)
+            toaster.show(webxdcFailed, false)
         }
     }
 

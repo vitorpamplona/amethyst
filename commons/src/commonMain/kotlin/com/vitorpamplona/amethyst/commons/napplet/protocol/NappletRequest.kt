@@ -227,6 +227,65 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.RELAY
     }
 
+    /**
+     * `outbox.getEvent` — one event by [eventId], read from [author]'s write relays when given, or
+     * from the cache and the user's relays otherwise. [relays] are hints, checked by the shell.
+     */
+    data class OutboxGetEvent(
+        val eventId: HexKey,
+        val author: HexKey? = null,
+        val relays: List<String> = emptyList(),
+        val timeoutMs: Long? = null,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.OUTBOX
+    }
+
+    /**
+     * `outbox.query` — [filters] read from the write relays of their authors (the filters' own and
+     * [authors]), deduplicated. [relays] are hints, checked by the shell.
+     */
+    data class OutboxQuery(
+        val filters: List<Filter>,
+        val authors: List<HexKey> = emptyList(),
+        val relays: List<String> = emptyList(),
+        val limit: Int? = null,
+        val timeoutMs: Long? = null,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.OUTBOX
+    }
+
+    /** `outbox.subscribe` — a live [OutboxQuery]: the host streams `outbox.event` until `outbox.close`. */
+    data class OutboxSubscribe(
+        val filters: List<Filter>,
+        val authors: List<HexKey> = emptyList(),
+        val relays: List<String> = emptyList(),
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.OUTBOX
+    }
+
+    /**
+     * `outbox.publish` — sign [template] once and send it to the user's write relays (unless
+     * [toOutbox] is false), the read relays of every author in [toInboxes], and the checked
+     * [relays]. The template is a [Publish], so it is shown and gated exactly as `relay.publish` is.
+     */
+    data class OutboxPublish(
+        val template: Publish,
+        val toOutbox: Boolean = true,
+        val toInboxes: List<HexKey> = emptyList(),
+        val relays: List<String> = emptyList(),
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.OUTBOX
+        override val signsAsUser get() = true
+    }
+
+    /** `outbox.resolveRelays` — the relays the shell would use to read from or write to [authors]. */
+    data class OutboxResolveRelays(
+        val authors: List<HexKey>,
+        val write: Boolean,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.OUTBOX
+    }
+
     /** Read a value from this napplet's sandboxed key-value store (`storage.getItem`). */
     data class StorageGet(
         val key: String,

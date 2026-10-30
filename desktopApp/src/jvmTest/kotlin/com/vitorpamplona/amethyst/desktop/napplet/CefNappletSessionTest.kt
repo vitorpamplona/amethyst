@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toPixelMap
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
@@ -33,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineAsks
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -40,12 +44,15 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogSink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,8 +68,13 @@ import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.awt.BorderLayout
+import java.awt.Canvas
 import java.awt.Rectangle
 import java.awt.Robot
+import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
+import java.awt.event.MouseEvent
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -72,7 +84,10 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
@@ -233,7 +248,7 @@ class CefNappletSessionTest {
         SwingUtilities.invokeAndWait {
             frames +=
                 JFrame("napplet").apply {
-                    contentPane.add(state.component, BorderLayout.CENTER)
+                    contentPane.add(requireNotNull(state.component), BorderLayout.CENTER)
                     setBounds(0, 0, 960, 640)
                     isVisible = true
                 }
@@ -270,6 +285,134 @@ class CefNappletSessionTest {
             assertFalse(storage.values.containsKey("smuggled"), "the iframe's own call to the bridge was refused")
             assertFalse("/leak" in requested, "the napplet's fetch never reached the network")
         }
+
+    @Test
+    fun aNappletDrawsItsOwnInlineImagesAndFonts() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            // A single-file napplet carries its pictures and fonts as data: URLs.
+            val pixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+            val probe =
+                """
+                <!doctype html><html><body><script>
+                var img = new Image();
+                img.onload = function () { window.napplet.storage.setItem('img', 'loaded'); };
+                img.onerror = function () { window.napplet.storage.setItem('img', 'blocked'); };
+                img.src = 'data:image/png;base64,$pixel';
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            show(session(probe, storage, runtime))
+
+            withTimeout(60_000) { while (storage.values["img"] == null) delay(100) }
+            assertEquals("loaded", storage.values["img"])
+        }
+
+    @Test
+    fun aWebxdcAppKeepsItsStorageAndUpdatesButHasNoNetwork() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // The app reports through its console, the one way out it has; the session logs it.
+            val results = ConcurrentLinkedQueue<String>()
+            val previousSink = Log.sink
+            Log.sink =
+                LogSink { level, tag, message, throwable ->
+                    message.substringAfter("XDCRESULT ", "").takeIf { it.isNotEmpty() }?.let { results += it.substringBefore(" (") }
+                    previousSink.log(level, tag, message, throwable)
+                }
+            try {
+                val page =
+                    """
+                    <!doctype html><html><head><script src="webxdc.js"></script></head><body><script>
+                    (async function () {
+                      var r = { self: window.webxdc.selfAddr, name: window.webxdc.selfName };
+                      try { r.before = localStorage.getItem('k'); localStorage.setItem('k', 'v'); r.local = localStorage.getItem('k'); } catch (e) { r.local = 'blocked'; }
+                      try { await fetch('$serverUrl/leak'); r.net = 'open'; } catch (e) { r.net = 'blocked'; }
+                      try { await fetch('/js/data.json').then(function (x) { return x.json(); }).then(function (j) { r.own = j.ok; }); } catch (e) { r.own = 'blocked'; }
+                      r.rtc = typeof RTCPeerConnection;
+                      var got = [];
+                      await window.webxdc.setUpdateListener(function (u) { got.push(u.payload.n + '@' + u.serial); }, 0);
+                      r.replayed = got.join(',');
+                      window.webxdc.sendUpdate({ payload: { n: got.length + 1 } }, '');
+                      setTimeout(function () { r.after = got.join(','); console.log('XDCRESULT ' + JSON.stringify(r)); }, 500);
+                    })();
+                    </script></body></html>
+                    """.trimIndent()
+                val archive = zip("index.html" to page, "js/data.json" to "{\"ok\":true}", "manifest.toml" to "name = \"Probe\"")
+                blobs["probe.xdc"] = archive
+                val app = WebxdcApp("$serverUrl/probe.xdc", sha256(archive).toHexKey(), "instance-1", "Probe", null, null)
+                val poster = KeyPair().pubKey.toHexKey()
+                val me = KeyPair().pubKey.toHexKey()
+                val launch = NappletLaunch.fromWebxdc(app, "post-1", poster, me, "Tester")
+
+                fun open() = CefNappletSession(launch, me, useTor = false, account = null, broker = refusingBroker(), runtime = runtime).also { sessions += it }
+
+                val first = open()
+                show(first)
+                val run1 =
+                    withTimeout(60_000) {
+                        while (results.isEmpty()) delay(100)
+                        results.poll()
+                    }
+                assertTrue(run1.contains("\"local\":\"v\""), run1)
+                assertTrue(run1.contains("\"net\":\"blocked\""), run1)
+                assertTrue(run1.contains("\"own\":true"), "its own files load: $run1")
+                assertTrue(run1.contains("\"rtc\":\"undefined\""), run1)
+                assertTrue(run1.contains("\"replayed\":\"\""), run1)
+                assertTrue(run1.contains("\"after\":\"1@1\""), run1)
+                // A pseudonym of its own in this app, never the user's key.
+                assertTrue(run1.contains("\"name\":\"Tester\"") && run1.contains("\"self\":\"${WebxdcApp.selfAddr(me, poster, "instance-1")}\""), run1)
+                assertFalse(run1.contains("npub1") || run1.contains(me), run1)
+                first.close()
+
+                // Opened again: the same origin, so its storage and its update log are still there.
+                show(open())
+                val run2 =
+                    withTimeout(60_000) {
+                        while (results.isEmpty()) delay(100)
+                        results.poll()
+                    }
+                assertTrue(run2.contains("\"before\":\"v\""), run2)
+                assertTrue(run2.contains("\"replayed\":\"1@1\""), run2)
+                assertTrue(run2.contains("\"after\":\"1@1,2@2\""), run2)
+
+                // Two documents of the app at once (the note's run and a window): each takes its own
+                // serial, where both used to take the next one and the second write replaced the first.
+                show(open())
+                show(open())
+                val pair =
+                    withTimeout(60_000) {
+                        while (results.size < 2) delay(100)
+                        listOf(results.poll(), results.poll())
+                    }
+                val serials = pair.map { run -> Regex("@(\\d+)").findAll(run.substringAfter("\"after\":")).map { it.groupValues[1].toInt() }.toList() }
+                serials.forEach { assertEquals(it.distinct(), it, "no serial twice: $pair") }
+                assertEquals(setOf(1, 2, 3, 4), serials.flatten().toSet(), "both updates kept: $pair")
+                assertFalse(requested.contains("/leak"), "the app reached the network")
+            } finally {
+                Log.sink = previousSink
+            }
+        }
+
+    /** A broker that answers nothing: a webxdc app never reaches one. */
+    private fun refusingBroker() =
+        NappletBroker(
+            signer = NostrSignerInternal(KeyPair()),
+            ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { "tester" },
+            consentPrompt = NappletConsentPrompt { _, _, _ -> GrantState.DENY },
+        )
+
+    private fun zip(vararg entries: Pair<String, String>): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            entries.forEach { (name, content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.encodeToByteArray())
+                zip.closeEntry()
+            }
+        }
+        return out.toByteArray()
+    }
 
     @Test
     fun aBurstOfRepliesReachesTheNappletWhole() =
@@ -370,6 +513,35 @@ class CefNappletSessionTest {
             // The failed window keeps no claim: a site on the open web still gets its route.
             assertTrue(runtime.routes.claim(Any(), useTor = false, timeoutMs = 0))
             assertEquals(DesktopSocksRouter.Route.Direct, runtime.engine.router.route)
+        }
+
+    @Test
+    fun aClosedWindowStopsItsPage() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // Seen live: a closed game window went on running (and playing) unseen, since Chromium
+            // refuses to close a windowed browser it wasn't told it may close.
+            val ticks = AtomicInteger()
+            server.createContext("/tick") { exchange ->
+                ticks.incrementAndGet()
+                exchange.sendResponseHeaders(204, -1)
+                exchange.close()
+            }
+            val index = "<!doctype html><html><body><script>setInterval(function () { fetch('$serverUrl/tick', { mode: 'no-cors' }).catch(function () {}); }, 100);</script></body></html>"
+            val session = site(mapOf("/index.html" to index.encodeToByteArray()), runtime, NostrSignerInternal(KeyPair()), NostrSignerInternal(KeyPair()))
+            show(session)
+            withTimeout(60_000) { while (ticks.get() < 5) delay(100) }
+
+            // As the app does it: Close closes the session on the AWT thread, and the window that held
+            // the browser goes right after, while Chromium has the close to do.
+            SwingUtilities.invokeAndWait {
+                session.close()
+                frames.removeLast().dispose()
+            }
+            delay(1_500)
+            val afterClose = ticks.get()
+            delay(1_500)
+            assertEquals(afterClose, ticks.get(), "the page kept running after its window closed")
         }
 
     @Test
@@ -536,4 +708,82 @@ class CefNappletSessionTest {
             delay(1_000)
             assertEquals(otherBefore, second.values.getValue("width").toInt(), "the other window kept its size")
         }
+
+    @Test
+    fun aNappletInsideANotePaintsWithoutAWindowTakesClicksAndNeverAsks() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            val asks = NappletInlineAsks()
+            val prompts = AtomicInteger()
+            // Red until clicked, then blue. On load it writes to storage, which needs the user.
+            val html =
+                """
+                <!doctype html><html><body style="margin:0;height:100vh;background:rgb(255,0,0)"
+                  onclick="document.body.style.background='rgb(0,0,255)'"><script>
+                window.napplet.storage.setItem('boot', '1').catch(function () {});
+                document.addEventListener('keydown', function (e) { if (e.key === 'ArrowDown') document.body.style.background = 'rgb(0,255,0)'; });
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val hash = sha256(html).toHexKey()
+            blobs[hash] = html
+            val author = KeyPair()
+            val broker =
+                NappletBroker(
+                    signer = NostrSignerInternal(author),
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { "tester" },
+                    consentPrompt =
+                        NappletConsentPrompt { _, _, _ ->
+                            prompts.incrementAndGet()
+                            GrantState.ALLOW_ONCE
+                        },
+                    storage = storage,
+                    inlineAsks = asks,
+                )
+            val launch =
+                NappletLaunch(
+                    identity = NappletIdentity(author.pubKey.toHexKey(), "inline", hash),
+                    profile = HostProfile.NAPPLET,
+                    declared = setOf(NappletCapability.STORAGE),
+                    requires = listOf("storage"),
+                    title = "Inline",
+                    paths = listOf(PathTag("/index.html", hash)),
+                    servers = listOf(serverUrl),
+                ).inline("note-1")
+            val view = OffscreenNappletView()
+            view.resize(320, 200, 1.0)
+            val session = CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime, offscreen = view).also { sessions += it }
+            session.start()
+
+            val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
+            assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
+            assertEquals(null, state.component, "no window to place")
+
+            val red = withTimeout(60_000) { view.frame.first { it != null && it.centerPixel().red > 0.9f } }!!
+            assertEquals(320 to 200, red.width to red.height, "frames come at the size the note gave")
+
+            SwingUtilities.invokeAndWait {
+                val now = System.currentTimeMillis()
+                val press = MouseEvent(Canvas(), MouseEvent.MOUSE_PRESSED, now, InputEvent.BUTTON1_DOWN_MASK, 160, 100, 1, false, MouseEvent.BUTTON1)
+                view.mouse(press, MouseEvent.MOUSE_PRESSED, 160, 100)
+                val release = MouseEvent(Canvas(), MouseEvent.MOUSE_RELEASED, now + 20, 0, 160, 100, 1, false, MouseEvent.BUTTON1)
+                view.mouse(release, MouseEvent.MOUSE_RELEASED, 160, 100)
+            }
+            withTimeout(30_000) { view.frame.first { it != null && it.centerPixel().blue > 0.9f } }
+
+            // The note forwards the window's own key events once the page has focus.
+            SwingUtilities.invokeAndWait {
+                view.focus(true)
+                val now = System.currentTimeMillis()
+                view.key(KeyEvent(Canvas(), KeyEvent.KEY_PRESSED, now, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED))
+                view.key(KeyEvent(Canvas(), KeyEvent.KEY_RELEASED, now + 20, 0, KeyEvent.VK_DOWN, KeyEvent.CHAR_UNDEFINED))
+            }
+            withTimeout(30_000) { view.frame.first { it != null && it.centerPixel().green > 0.9f } }
+
+            withTimeout(30_000) { asks.asked("note-1").first { it } }
+            assertEquals(0, prompts.get(), "nothing was asked from inside the note")
+            assertFalse(storage.values.containsKey("boot"), "the write that needed the user was refused")
+        }
+
+    private fun ImageBitmap.centerPixel(): Color = toPixelMap()[width / 2, height / 2]
 }

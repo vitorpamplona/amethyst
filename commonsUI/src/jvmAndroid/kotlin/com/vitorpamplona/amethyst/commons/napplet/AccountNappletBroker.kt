@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
+import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletOutboxGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletWalletGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
@@ -108,5 +109,6 @@ fun buildAccountNappletBroker(
                 } ?: SignerOpGrant.DenyOnce
             },
         recentEncryptions = recentEncryptions,
+        outbox = AccountNappletOutboxGateway(account),
     )
 }
