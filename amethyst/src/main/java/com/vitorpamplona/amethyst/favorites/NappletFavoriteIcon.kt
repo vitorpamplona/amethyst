@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -101,8 +102,11 @@ private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
         withContext(Dispatchers.IO) {
             val file = File(NappletBlobCache.dirFor(context.cacheDir), icon.path.hash.lowercase())
             if (!file.isFile) {
-                val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort) }
+                val torPort = Amethyst.instance.torManager.activePortOrNull.value
+                // Never in the clear while the user wants Tor and it isn't up yet: the icon can wait.
+                if (torPort != null || Amethyst.instance.torPrefs.torType.value == TorType.OFF) {
+                    runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort ?: -1) }
+                }
             }
             if (file.isFile && (icon.mime == null || verifiedIcon(file, icon))) model = "file://" + file.absolutePath
         }

@@ -208,6 +208,9 @@ class CefNappletSession(
                 }
                 if (!routed) {
                     Log.w(TAG) { "Tor is not running; not opening ${launch.identity.coordinate}" }
+                    // A window showing its failure has no traffic: its claim must not keep holding the
+                    // route for the others ("Tor not ready" blocks every window).
+                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.ROUTE_BLOCKED)
                     return@launch
                 }
@@ -228,6 +231,7 @@ class CefNappletSession(
                 // message, not a blank page.
                 if (!server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
+                    if (isWebsite) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
                     return@launch
                 }

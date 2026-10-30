@@ -32,6 +32,7 @@ import org.junit.After
 import org.junit.Test
 import java.io.DataInputStream
 import java.net.InetAddress
+import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import kotlin.concurrent.thread
@@ -95,14 +96,14 @@ class DesktopSocksRouterTest {
 
     @Test
     fun nothingLeavesWhileBlocked() {
-        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val router = DesktopSocksRouter(allowLocal = true).closing()
         val (code, _) = connect(router.port, "127.0.0.1", echoServer().localPort)
         assertEquals(2, code, "connection not allowed")
     }
 
     @Test
     fun aRefusedConnectionIsClosed() {
-        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val router = DesktopSocksRouter(allowLocal = true).closing()
         val (code, socket) = connect(router.port, "127.0.0.1", echoServer().localPort)
         assertEquals(2, code)
         // The router hung up after its reply, instead of leaving the socket open until a route change.
@@ -116,7 +117,7 @@ class DesktopSocksRouterTest {
 
     @Test
     fun theOpenWebGoesStraightOut() {
-        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val router = DesktopSocksRouter(allowLocal = true).closing()
         router.route = DesktopSocksRouter.Route.Direct
         val (code, socket) = connect(router.port, "127.0.0.1", echoServer().localPort)
         assertEquals(0, code)
@@ -135,10 +136,57 @@ class DesktopSocksRouterTest {
     }
 
     @Test
+    fun aPageCannotReachTheLocalNetwork() {
+        val router = DesktopSocksRouter().closing()
+        router.route = DesktopSocksRouter.Route.Direct
+        val own =
+            NetworkInterface
+                .getNetworkInterfaces()
+                .asSequence()
+                .filter { it.isUp && !it.isLoopback }
+                .flatMap { it.inetAddresses.asSequence() }
+                .map { it.hostAddress.substringBefore('%') }
+                .toList()
+        // A home router, a cloud metadata endpoint, carrier-grade NAT, IPv6's private range, an IPv4
+        // address written as IPv6, and this machine's own addresses.
+        val local = listOf("192.168.1.1", "10.0.0.1", "172.16.0.1", "169.254.169.254", "100.64.0.1", "fd00::1", "::ffff:192.168.1.1", "0.0.0.0") + own
+        local.forEach { assertEquals(2, connect(router.port, it, 80).first, "$it is refused") }
+    }
+
+    @Test
+    fun theAppsOwnNamesNeverLeave() {
+        // A site's per-account origin would tell the DNS server, or a Tor exit, which sites are open.
+        val router = DesktopSocksRouter(allowLocal = true).closing()
+        router.route = DesktopSocksRouter.Route.Direct
+        assertEquals(2, connect(router.port, "napplet.local", 443).first)
+        assertEquals(2, connect(router.port, "n0123456789abcdef.napplet.local", 443).first)
+        assertEquals(2, connect(router.port, "N0123.NAPPLET.LOCAL.", 443).first)
+    }
+
+    @Test
+    fun aClientThatFinishesSendingStillGetsTheAnswer() {
+        // A server that answers only once the request has ended, as some protocols do.
+        val server = ServerSocket(0, 8, InetAddress.getLoopbackAddress()).closing()
+        thread(isDaemon = true) {
+            val client = runCatching { server.accept() }.getOrNull() ?: return@thread
+            val request = client.getInputStream().readBytes()
+            client.getOutputStream().write("got ${request.size}".toByteArray())
+            client.close()
+        }
+        val router = DesktopSocksRouter(allowLocal = true).closing()
+        router.route = DesktopSocksRouter.Route.Direct
+        val (code, socket) = connect(router.port, "127.0.0.1", server.localPort)
+        assertEquals(0, code)
+        socket.getOutputStream().write("hello".toByteArray())
+        socket.shutdownOutput()
+        assertEquals("got 5", String(socket.getInputStream().readBytes()))
+    }
+
+    @Test
     fun torCarriesTheConnectionThroughItsProxy() {
         // Another router stands in for Tor's SOCKS port.
-        val tor = DesktopSocksRouter(allowLoopback = true).closing()
-        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val tor = DesktopSocksRouter(allowLocal = true).closing()
+        val router = DesktopSocksRouter(allowLocal = true).closing()
         router.route = DesktopSocksRouter.Route.Tor(tor.port)
         val echo = echoServer().localPort
 
@@ -154,7 +202,7 @@ class DesktopSocksRouterTest {
 
     @Test
     fun switchingTheRouteClosesWhatWasOpen() {
-        val router = DesktopSocksRouter(allowLoopback = true).closing()
+        val router = DesktopSocksRouter(allowLocal = true).closing()
         router.route = DesktopSocksRouter.Route.Direct
         val (_, socket) = connect(router.port, "127.0.0.1", echoServer().localPort)
         assertTrue(socket.echoes())

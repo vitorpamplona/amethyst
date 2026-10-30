@@ -132,7 +132,7 @@ class CefNappletSessionTest {
         private val sharedEngine by lazy {
             val installDir = System.getenv("AMETHYST_CEF_DIR")?.let(::File) ?: File(System.getProperty("java.io.tmpdir"), "amethyst-jcef-test")
             // Loopback allowed: the test's local server stands in for the web a site talks to.
-            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile(), DesktopSocksRouter(allowLoopback = true))
+            DesktopCefEngine(installDir, createTempDirectory("napplet-cef-cache").toFile(), DesktopSocksRouter(allowLocal = true))
         }
     }
 
@@ -360,12 +360,16 @@ class CefNappletSessionTest {
     fun aTorSiteDoesNotOpenWhileTorIsDown() =
         runBlocking {
             val user = NostrSignerInternal(KeyPair())
-            val session = site(mapOf("/index.html" to "<p>hi</p>".encodeToByteArray()), runtime(), user, NostrSignerInternal(KeyPair()), useTor = true)
+            val runtime = runtime()
+            val session = site(mapOf("/index.html" to "<p>hi</p>".encodeToByteArray()), runtime, user, NostrSignerInternal(KeyPair()), useTor = true)
             session.start()
             val state = withTimeout(30_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
             assertIs<CefNappletSession.State.Failed>(state)
             assertEquals(CefNappletSession.Failure.ROUTE_BLOCKED, state.reason)
             assertTrue(requested.isEmpty(), "not even its files were fetched: $requested")
+            // The failed window keeps no claim: a site on the open web still gets its route.
+            assertTrue(runtime.routes.claim(Any(), useTor = false, timeoutMs = 0))
+            assertEquals(DesktopSocksRouter.Route.Direct, runtime.engine.router.route)
         }
 
     @Test
