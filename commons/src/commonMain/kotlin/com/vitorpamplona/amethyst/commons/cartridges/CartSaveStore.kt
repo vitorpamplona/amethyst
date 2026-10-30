@@ -30,6 +30,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import okio.IOException
 
+/** Where [CartSaves] keeps what games save: [CartSaveStore] in the app, a fake in tests. */
+interface CartSaveStorage {
+    /** Every save, by id. */
+    suspend fun loadAll(): Map<String, IntArray>
+
+    suspend fun save(saves: Map<String, IntArray>)
+}
+
 /**
  * What games save with `cartdata(id)`: 64 numbers per id (high scores, progress, settings). The
  * id is the game's own name for its save, so two posts of the same game share it, as they do on
@@ -37,9 +45,9 @@ import okio.IOException
  */
 class CartSaveStore(
     private val store: DataStore<Preferences>,
-) {
+) : CartSaveStorage {
     /** Every save, by id. They are 512 characters each, and few games use one. */
-    suspend fun loadAll(): Map<String, IntArray> {
+    override suspend fun loadAll(): Map<String, IntArray> {
         val prefs = store.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }.first()
         val saves = HashMap<String, IntArray>()
         for ((key, value) in prefs.asMap()) {
@@ -49,7 +57,7 @@ class CartSaveStore(
         return saves
     }
 
-    suspend fun save(saves: Map<String, IntArray>) {
+    override suspend fun save(saves: Map<String, IntArray>) {
         store.edit { prefs ->
             for ((id, values) in saves) prefs[stringPreferencesKey(PREFIX + id)] = encode(values)
         }

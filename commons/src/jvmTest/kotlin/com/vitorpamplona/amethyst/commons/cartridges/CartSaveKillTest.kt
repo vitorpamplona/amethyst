@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit
 /**
  * Saves outlive a killed app: a separate JVM plays a game that saves, is killed with SIGKILL
  * (no shutdown hooks, no flush), and the next one must read the save back through `dget`.
+ * How soon a save is written is [CartSavesTest]'s, on virtual time: here a kill waits for the
+ * write to reach the disk, so a busy machine cannot make the test flaky.
  */
 class CartSaveKillTest {
     @get:Rule
@@ -51,14 +53,28 @@ class CartSaveKillTest {
 
     private fun play(mode: String) = Game(folder.root, mode).also { games.add(it) }
 
+    private fun saveFile() = File(folder.root, "datastore/cart_saves.preferences_pb")
+
+    /** Waits until the save file differs from [before], for up to 10 s. */
+    private fun awaitWrite(before: ByteArray?) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (System.nanoTime() < deadline) {
+            val now = saveFile().takeIf { it.exists() }?.readBytes()
+            if (now != null && !now.contentEquals(before)) return
+            Thread.sleep(10)
+        }
+        error("the save never reached the disk")
+    }
+
     @Test
     fun aCheckpointSurvivesAKillRightAfterIt() {
         for (life in 0 until 3) {
             val game = play("checkpoint")
             assertEquals("loaded $life", game.waitFor { it.startsWith("loaded") })
+            val before = saveFile().takeIf { it.exists() }?.readBytes()
             game.waitFor { it == "checkpoint" }
-            // A player who swipes the app away right after reaching a checkpoint.
-            Thread.sleep(100)
+            // A player who swipes the app away as soon as the checkpoint is on disk.
+            awaitWrite(before)
             game.kill()
         }
         val last = play("checkpoint")
@@ -67,7 +83,7 @@ class CartSaveKillTest {
     }
 
     @Test
-    fun aGameThatSavesEveryFrameLosesAtMostASecond() {
+    fun aGameThatSavesEveryFrameKeepsAWholeSave() {
         val game = play("everyframe")
         assertEquals("loaded 0", game.waitFor { it.startsWith("loaded") })
         game.waitFor { it == "frame 90" }
@@ -76,8 +92,8 @@ class CartSaveKillTest {
         val next = play("everyframe")
         val loaded = next.waitFor { it.startsWith("loaded") }.removePrefix("loaded ").toInt()
         next.kill()
-        // 30 frames is one second of play; a little more for the kill landing mid-write.
-        assertTrue("reloaded $loaded", loaded in 90 - 35..90)
+        // Some frame's save, whole: a kill in the middle of a write leaves the previous one.
+        assertTrue("reloaded $loaded", loaded in 1..90)
     }
 
     /** One run of [CartSaveKillChild] in its own process. */

@@ -46,7 +46,7 @@ import kotlin.time.TimeSource
  * [load] and [save] are called on the game's thread; the writes run on [scope].
  */
 class CartSaves(
-    private val store: CartSaveStore?,
+    private val store: CartSaveStorage?,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
     private val minInterval: Duration = 1.seconds,
 ) {
