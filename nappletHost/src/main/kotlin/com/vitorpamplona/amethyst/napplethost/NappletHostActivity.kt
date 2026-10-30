@@ -266,6 +266,25 @@ class NappletHostActivity : ComponentActivity() {
             }
         }
 
+    /**
+     * This activity is `singleTask`, so opening a napplet while another is still in the background
+     * arrives here instead of starting a new one. The same napplet comes back as it was; a different
+     * one rebuilds the screen around the new intent, since everything here is set up in onCreate.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (isSameLaunch(intent)) return
+        setIntent(intent)
+        recreate()
+    }
+
+    private fun isSameLaunch(other: Intent): Boolean =
+        other.getStringExtra(NappletHostContract.EXTRA_AUTHOR).orEmpty() == author &&
+            other.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty() == identifier &&
+            HostProfile.fromName(other.getStringExtra(NappletHostContract.EXTRA_HOST_PROFILE)) == profile &&
+            other.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE) == webViewProfile &&
+            other.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true) == useTor
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SandboxComposeResources.ensure(this)

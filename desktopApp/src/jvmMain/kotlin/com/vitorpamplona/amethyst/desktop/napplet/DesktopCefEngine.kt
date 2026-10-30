@@ -34,10 +34,12 @@ import me.friwi.jcefmaven.EnumProgress
 import me.friwi.jcefmaven.MavenCefAppHandlerAdapter
 import org.cef.CefApp
 import org.cef.CefSettings
+import org.cef.OS
 import org.cef.browser.CefRequestContext
 import java.io.File
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The one Chromium (JCEF) the desktop runs napplets in, started the first time a napplet opens.
@@ -59,6 +61,11 @@ class DesktopCefEngine(
     private val cacheRoot: File,
     /** Chromium's only way out; its route is set by whoever opens nSites. */
     val router: DesktopSocksRouter = DesktopSocksRouter(),
+    /**
+     * Quits the app. Once Chromium runs on macOS, JCEF takes over the app's Quit (⌘Q, the Dock) and
+     * hands it here, so the app quits its usual way and shuts Chromium down in [shutdown].
+     */
+    private val onQuit: () -> Unit = {},
 ) {
     sealed interface State {
         data object Idle : State
@@ -83,6 +90,7 @@ class DesktopCefEngine(
     }
 
     private val mutex = Mutex()
+    private val stopped = AtomicBoolean(false)
     private val mutableState = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = mutableState.asStateFlow()
 
@@ -123,6 +131,13 @@ class DesktopCefEngine(
                 object : MavenCefAppHandlerAdapter() {
                     // CEF's UI thread, the only one that may set a preference.
                     override fun onContextInitialized() = context.apply()
+
+                    // macOS Quit, which JCEF intercepts. Left to JCEF, it disposes Chromium on the AWT
+                    // thread, which macOS 27 aborts the app for (see MacCefShutdown); true keeps it ours.
+                    override fun onBeforeTerminate(): Boolean {
+                        onQuit()
+                        return true
+                    }
                 },
             )
             val app = builder.build()
@@ -178,14 +193,17 @@ class DesktopCefEngine(
     }
 
     /**
-     * Closes Chromium's processes; called once, as the app exits. Bounded: CEF's teardown waits on
-     * the AWT event thread, which may already be gone, and must not keep the JVM from exiting.
+     * Closes Chromium's processes; called as the app exits, before the JVM does, so that jcefmaven's
+     * own exit hook finds nothing left to do. Bounded: CEF's teardown waits on the AWT event thread,
+     * which may already be gone, and must not keep the JVM from exiting.
      */
     fun shutdown() {
+        if (!stopped.compareAndSet(false, true)) return
         val app = (mutableState.value as? State.Ready)?.app
         if (app != null) {
+            val dispose = { if (OS.isMacintosh()) MacCefShutdown.shutdown(app) else app.dispose() }
             val teardown =
-                Thread({ runCatching { app.dispose() }.onFailure { Log.w(TAG, "Chromium did not shut down cleanly", it) } }, "cef-shutdown")
+                Thread({ runCatching(dispose).onFailure { Log.w(TAG, "Chromium did not shut down cleanly", it) } }, "cef-shutdown")
             teardown.isDaemon = true
             teardown.start()
             teardown.join(SHUTDOWN_WAIT_MS)

@@ -70,7 +70,7 @@ class DesktopNappletHost(
 ) {
     val runtime =
         DesktopNappletRuntime(
-            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache")),
+            engine = DesktopCefEngine(File(modules.filesDir, "jcef"), File(modules.filesDir, "jcef-cache"), onQuit = { modules.quitRequests.tryEmit(Unit) }),
             blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,

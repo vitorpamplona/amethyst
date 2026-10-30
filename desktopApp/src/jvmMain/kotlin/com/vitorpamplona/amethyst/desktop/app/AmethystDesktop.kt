@@ -210,6 +210,7 @@ fun main(args: Array<String>) {
     // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
     val nappletHost = DesktopNappletHost(modules)
 
+    // A crash or a kill comes through here; a quit has shut Chromium down already (below).
     Runtime.getRuntime().addShutdownHook(
         Thread {
             runCatching { nappletHost.shutdown() }
@@ -235,7 +236,10 @@ fun main(args: Array<String>) {
         )
     val root = DesktopAppRoot(modules)
 
-    application {
+    // Chromium has to shut down before the JVM starts exiting, while the app's threads still run: on
+    // macOS it must go on the main thread, and jcefmaven's own exit hook would otherwise do it on the
+    // AWT thread and crash the app as it quits.
+    application(exitProcessOnExit = false) {
         // Opens where it was left; the first time, or when that spot is off every screen now, at the
         // default size in the middle of the screen.
         val savedBounds = remember { SavedWindowBounds(File(filesDir, "window-bounds.properties")) }
@@ -358,6 +362,10 @@ fun main(args: Array<String>) {
             }
         }
     }
+
+    // Every window is closed: the Quit menu, the updater, the last window's close button.
+    runCatching { nappletHost.shutdown() }
+    exitProcess(0)
 }
 
 /**
