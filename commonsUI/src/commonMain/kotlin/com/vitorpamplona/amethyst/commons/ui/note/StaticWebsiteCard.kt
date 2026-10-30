@@ -178,10 +178,13 @@ private fun NappletManifestCard(
             } else {
                 null
             },
-        headerActions = { FavoriteToggleButton(coordinate, label, icon) },
+        headerActions = {
+            InlineStopButton(coordinate)
+            FavoriteToggleButton(coordinate, label, icon)
+        },
         stage =
             if (canOpen && runsNappletsInline) {
-                { InlineNappletStage(event, coordinate, label, icon, onOpen = { launcher.openNapplet(event) }) }
+                { InlineNappletStage(event, coordinate, label, icon) }
             } else {
                 null
             },

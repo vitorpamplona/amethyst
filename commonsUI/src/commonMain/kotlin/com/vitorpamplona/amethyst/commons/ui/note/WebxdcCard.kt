@@ -141,6 +141,7 @@ fun WebxdcCard(
                 }
             }
 
+            stageKey?.let { InlineStopButton(it) }
             start?.let {
                 Spacer(Modifier.width(8.dp))
                 FilledTonalButton(onClick = it) { Text(stringResource(Res.string.webxdc_start)) }
@@ -153,7 +154,6 @@ fun WebxdcCard(
                 coordinate = stageKey,
                 title = title,
                 icon = app.image,
-                onOpen = start,
             ) { instanceId, onStatus, modifier ->
                 InlineWebxdcSurface(app, postId, poster, instanceId, onStatus, modifier)
             }
