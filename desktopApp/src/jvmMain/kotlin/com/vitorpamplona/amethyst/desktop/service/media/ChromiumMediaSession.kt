@@ -43,6 +43,7 @@ import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.browser.OffscreenCefBrowser
 import org.cef.callback.CefCallback
+import org.cef.callback.CefResourceSkipCallback
 import org.cef.handler.CefDisplayHandlerAdapter
 import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.cef.handler.CefLoadHandlerAdapter
@@ -53,6 +54,7 @@ import org.cef.handler.CefResourceRequestHandler
 import org.cef.handler.CefResourceRequestHandlerAdapter
 import org.cef.misc.BoolRef
 import org.cef.misc.IntRef
+import org.cef.misc.LongRef
 import org.cef.misc.StringRef
 import org.cef.network.CefRequest
 import org.cef.network.CefResponse
@@ -349,6 +351,12 @@ class ChromiumMediaSession(
     /**
      * The video, fetched through [MediaRelay] with Chromium's own range, so seeking works. Reads
      * happen off Chromium's IO thread: a slow Tor circuit would otherwise stall every page.
+     *
+     * For a range request CEF calls [skip] with the range's first byte, but passes the handler's
+     * headers to Chromium as they are. So the handler answers with the range itself (the relay's
+     * 206 and Content-Range) and skips by noting those bytes are already behind its body. Without
+     * a skip every range past byte 0 was cancelled: an Ogg (which Chromium reads from its tail
+     * first) never played, and a seek past what had loaded failed.
      */
     private inner class RelayedMediaHandler : CefResourceHandlerAdapter() {
         @Volatile private var response: Response? = null
@@ -363,6 +371,9 @@ class ChromiumMediaSession(
         private var reading = false
         private var range: String? = null
         private var delivered = 0L
+
+        // Where in the file the relay's body starts: the first byte of the range it answered.
+        @Volatile private var bodyStart = 0L
 
         override fun processRequest(
             request: CefRequest,
@@ -387,6 +398,8 @@ class ChromiumMediaSession(
                             if (!cancelled) {
                                 response = answered
                                 body = answered.body.byteStream()
+                                // Known before CEF asks: it may skip before it reads the headers.
+                                bodyStart = if (answered.code == 206) contentRangeOf(answered)?.first ?: 0L else 0L
                             }
                             cancelled
                         }
@@ -411,11 +424,15 @@ class ChromiumMediaSession(
                 responseLength.set(0)
                 return
             }
+            response.mimeType = upstream.header("Content-Type")?.substringBefore(';')?.trim() ?: "video/webm"
+            upstream.header("Content-Type")?.let { response.setHeaderByName("Content-Type", it, true) }
+            response.setHeaderByName("Accept-Ranges", "bytes", true)
+            // Passed to Chromium as they are: the range's own 206, Content-Range and length.
             response.status = upstream.code
             response.statusText = upstream.message
-            response.mimeType = upstream.header("Content-Type")?.substringBefore(';')?.trim() ?: "video/webm"
-            FORWARDED_HEADERS.forEach { name -> upstream.header(name)?.let { response.setHeaderByName(name, it, true) } }
+            upstream.header("Content-Range")?.let { response.setHeaderByName("Content-Range", it, true) }
             val length = upstream.body.contentLength()
+            length.takeIf { it >= 0 }?.let { response.setHeaderByName("Content-Length", it.toString(), true) }
             responseLength.set(if (length in 0..Int.MAX_VALUE) length.toInt() else -1)
         }
 
@@ -471,6 +488,42 @@ class ChromiumMediaSession(
                 callback.Continue()
             }
             bytesRead.set(0)
+            return true
+        }
+
+        /** "bytes <first>-<last>/<total>" as <first> to <total>. */
+        private fun contentRangeOf(response: Response): Pair<Long, Long>? {
+            val header = response.header("Content-Range") ?: return null
+            val first = header.substringAfter("bytes ", "").substringBefore('-').toLongOrNull() ?: return null
+            val total = header.substringAfter('/', "").toLongOrNull() ?: return null
+            return first to total
+        }
+
+        override fun skip(
+            bytesToSkip: Long,
+            bytesSkipped: LongRef,
+            callback: CefResourceSkipCallback,
+        ): Boolean {
+            // CEF counts from the start of the file; the body already starts at bodyStart.
+            val behind = bytesToSkip - bodyStart
+            if (behind == 0L) {
+                bytesSkipped.set(bytesToSkip)
+                return true
+            }
+            if (behind < 0L) {
+                Log.w(TAG) { "media ${range ?: "whole"}: asked to skip to $bytesToSkip, but the body starts at $bodyStart" }
+                bytesSkipped.set(-2L)
+                return false
+            }
+            // The server ignored the range and sent the file from its start: read past the gap.
+            val stream = body
+            val skipped = runCatching { stream?.skipNBytes(behind) }.isSuccess && stream != null
+            if (!skipped) {
+                Log.w(TAG) { "media ${range ?: "whole"}: could not skip $behind bytes to reach $bytesToSkip (body starts at $bodyStart)" }
+                bytesSkipped.set(-2L)
+                return false
+            }
+            bytesSkipped.set(bytesToSkip)
             return true
         }
 
@@ -551,8 +604,6 @@ class ChromiumMediaSession(
         private val ORIGIN = "https://video.${NappletWebContract.HOST}"
         private val PAGE_URL = "$ORIGIN/"
         private val MEDIA_URL = "$ORIGIN/media"
-
-        private val FORWARDED_HEADERS = listOf("Content-Type", "Content-Range", "Accept-Ranges", "Content-Length")
 
         // Every event forwarded to Chromium needs a source; it reads only the event's fields.
         private val EVENT_SOURCE = Canvas()
