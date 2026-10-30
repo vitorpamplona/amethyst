@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.accessibility_download_for_offline
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
+import com.vitorpamplona.amethyst.commons.resources.play
 import com.vitorpamplona.amethyst.commons.resources.video_error_open_in_default_player
 import com.vitorpamplona.amethyst.commons.ui.components.DisplayBlurHash
 import com.vitorpamplona.amethyst.commons.ui.components.LocalShortVideo
@@ -72,12 +73,16 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
@@ -131,6 +136,13 @@ fun DesktopVideoPlayer(
     blurhash: String? = null,
     thumbhash: String? = null,
 ) {
+    // Decided once per card: a video learned meanwhile keeps the player it started with.
+    val chromium = LocalChromiumVideoEngine.current
+    if (chromium != null && remember(url) { ChromiumVideoRoute.prefersChromium(url) }) {
+        ChromiumRoutedVideo(chromium, url, modifier, autoPlay, autoPlayWhenVisible, pauseWhenHidden, loadOnDemand, shape, pictureSource, declaredRatio, posterUrl, blurhash, thumbhash)
+        return
+    }
+
     // This card, as the one composable allowed to draw the engine (see videoSurfaceOwner).
     val surfaceOwner = remember { Any() }
 
@@ -377,7 +389,21 @@ fun DesktopVideoPlayer(
             }
 
             if (errorReason != null) {
-                PlaybackErrorMessage(url = url, reason = errorReason)
+                var chromiumFailed by remember(url) { mutableStateOf(false) }
+                // What the native engine can't decode (WebM on macOS) may still play in Chromium.
+                if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumMediaSession.canTry(url)) {
+                    ChromiumVideoPane(
+                        chromium,
+                        url,
+                        muted = GlobalMediaPlayer.defaultMuted,
+                        onFailed = { chromiumFailed = true },
+                        modifier = Modifier.fillMaxSize(),
+                        // Played where the native engine failed: the next card for it skips that engine.
+                        onPlaying = { scope.launch(Dispatchers.IO) { ChromiumVideoRoute.learn(url) } },
+                    )
+                } else {
+                    PlaybackErrorMessage(url = url, reason = errorReason)
+                }
             } else if (activePlayer != null) {
                 VideoSurface(playerState = activePlayer, url = url, modifier = Modifier.fillMaxSize())
                 // The surface is black until the engine has decoded a frame: the thumbnail stays over
@@ -461,6 +487,124 @@ fun DesktopVideoPlayer(
 }
 
 /**
+ * A video [ChromiumVideoRoute] sends to Chromium: never opened by [GlobalMediaPlayer], so a feed of
+ * WebM on macOS no longer waits on each one to fail. The card opens its page paused once it has
+ * been on screen a moment, and plays when it takes the middle of a feed that plays videos on its
+ * own, or when the user presses play. A playing feed card pauses when another takes the middle, and
+ * leaving the screen closes its page. Chromium's own controls drive it once it is open.
+ */
+@Composable
+private fun ChromiumRoutedVideo(
+    engine: DesktopCefEngine,
+    url: String,
+    modifier: Modifier,
+    autoPlay: Boolean,
+    autoPlayWhenVisible: Boolean,
+    pauseWhenHidden: Boolean,
+    loadOnDemand: Boolean,
+    shape: Shape,
+    pictureSource: ZoomSourceAnchor?,
+    declaredRatio: Float?,
+    posterUrl: String?,
+    blurhash: String?,
+    thumbhash: String?,
+) {
+    var loaded by remember(url) { mutableStateOf(!loadOnDemand || autoPlay) }
+    // The user asked for this one (the lightbox, a click on play): it plays wherever it sits.
+    var chosen by remember(url) { mutableStateOf(autoPlay) }
+    var failed by remember(url) { mutableStateOf(false) }
+    var measured by remember(url) { mutableStateOf<Float?>(null) }
+    var thumbnail by remember(url) { mutableStateOf(VideoThumbnailCache.getCached(url)) }
+    var posterFailed by remember(url, posterUrl) { mutableStateOf(false) }
+    val poster = posterUrl?.takeUnless { posterFailed }
+
+    LaunchedEffect(url, loaded, poster) {
+        if (loaded && thumbnail == null && poster == null) VideoThumbnailCache.getThumbnail(url)?.let { thumbnail = it }
+    }
+
+    val tracksVisibility = autoPlayWhenVisible || pauseWhenHidden
+    val (visibilityModifier, isWinner) =
+        if (tracksVisibility) rememberVideoVisibilityWinner(url) else Modifier to remember { mutableStateOf(true) }
+    val playing = loaded && (chosen || (autoPlayWhenVisible && isWinner.value))
+
+    // The page opens paused once the card has stayed on screen a moment (so a fling past it opens
+    // nothing), as the feed opens native engines ahead: play then only has to resume it. It stays
+    // open while the card is on screen.
+    var onScreen by remember { mutableStateOf(false) }
+    var prepared by remember(url) { mutableStateOf(false) }
+    LaunchedEffect(loaded, onScreen) {
+        if (loaded && onScreen && !prepared) {
+            delay(CARD_ENGINE_DELAY_MS)
+            prepared = true
+        }
+    }
+    if (playing) prepared = true
+    val onScreenModifier =
+        Modifier.onGloballyPositioned { coordinates ->
+            val shown = coordinates.boundsInWindow()
+            onScreen = coordinates.isAttached && shown.width > 0f && shown.height > 0f
+        }
+
+    val targetRatio =
+        measured
+            ?: MediaAspectRatioCache.measured(url)
+            ?: thumbnail?.takeIf { it.width > 0 && it.height > 0 }?.let { it.width.toFloat() / it.height }
+            ?: declaredRatio
+            ?: MediaAspectRatioCache.get(url)
+            ?: (16f / 9f)
+    val ratio by animateFloatAsState(targetValue = targetRatio, animationSpec = tween(durationMillis = 200), label = "videoShape")
+
+    BoxWithConstraints(modifier = modifier.then(visibilityModifier).then(onScreenModifier), contentAlignment = Alignment.TopCenter) {
+        val desiredHeight = maxWidth / ratio
+        val height = if (constraints.hasBoundedHeight) minOf(desiredHeight, maxHeight) else desiredHeight
+        val width = (height * ratio).coerceIn(minOf(MinControlsWidth, maxWidth), maxWidth)
+        Box(
+            Modifier
+                .width(width)
+                .height(height)
+                .then(if (pictureSource != null) Modifier.zoomSourceAnchor(pictureSource) else Modifier)
+                .clip(shape)
+                .background(if (failed) MaterialTheme.colorScheme.surfaceContainerHigh else Color.Black),
+            contentAlignment = Alignment.Center,
+        ) {
+            when {
+                failed -> PlaybackErrorMessage(url = url, reason = stringRes(Res.string.error_video_playback_failed))
+                prepared ->
+                    ChromiumVideoPane(
+                        engine,
+                        url,
+                        muted = GlobalMediaPlayer.defaultMuted,
+                        onFailed = { failed = true },
+                        modifier = Modifier.fillMaxSize(),
+                        playing = playing,
+                        onRatio = { measured = it },
+                    )
+                else -> {
+                    if (blurhash != null || thumbhash != null) {
+                        DisplayBlurHash(blurhash, null, ContentScale.Crop, Modifier.fillMaxSize(), thumbhash = thumbhash)
+                    }
+                    if (loaded) VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
+                    IconButton(
+                        onClick = {
+                            loaded = true
+                            chosen = true
+                        },
+                        modifier = Modifier.size(64.dp),
+                    ) {
+                        Icon(
+                            if (loaded) MaterialSymbols.PlayArrow else MaterialSymbols.DownloadForOffline,
+                            contentDescription = stringRes(if (loaded) Res.string.play else Res.string.accessibility_download_for_offline),
+                            tint = Color.White,
+                            modifier = Modifier.size(56.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
  * Waits for the card's own engine ([player]) to open its video, and says whether it got a frame. A
  * card that stays on screen ([onScreen]) without an engine, because the feed has already opened as
  * many as it keeps, or one whose engine errors or takes too long, gets false: it extracts a
@@ -498,6 +642,9 @@ private const val ENGINE_FRAME_WAIT_MS = 10_000L
 
 /** Below this the top, middle and bottom rows of [VideoControls] overflow. */
 private val MinControlsWidth = 280.dp
+
+// GlobalMediaPlayer's prefix for a download that failed, which Chromium would fail at too.
+private const val NETWORK_ERROR = "Network:"
 
 // Longer than the navigation's push and pop transitions (the default 300 ms tween).
 private const val SCREEN_TRANSITION_MS = 400L

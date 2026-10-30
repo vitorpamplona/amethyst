@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
 import com.vitorpamplona.amethyst.commons.service.playback.VideoViewedPositionCache
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
 import com.vitorpamplona.amethyst.desktop.platform.PlatformInfo
 import com.vitorpamplona.amethyst.desktop.service.media.BackgroundOpenGate.Verdict
 import com.vitorpamplona.amethyst.desktop.ui.media.MediaType
@@ -117,6 +118,12 @@ data class MediaPlaybackState(
 object GlobalMediaPlayer {
     private const val TAG = "GlobalMediaPlayer"
 
+    // Audio cards kept ready in Chromium at once (see prepareAudio): each is a renderer process.
+    private const val MAX_PREPARED_AUDIO = 3
+
+    // How long an audio card stays on screen before its page opens, so a fling past it opens nothing.
+    const val PREPARE_AUDIO_DELAY_MS = 300L
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     // Engine handles. Constructed lazily on first playback request so that app
@@ -126,6 +133,17 @@ object GlobalMediaPlayer {
     // Audio has its own engine: the video one needs a video track on macOS and Windows and fails
     // every audio-only file there ("Failed to retrieve video size").
     @Volatile private var audioPlayer: AudioPlayer? = null
+
+    /** The app's Chromium, for audio the audio engine can't decode; set once the app starts. */
+    @Volatile var chromiumEngine: DesktopCefEngine? = null
+
+    // The audio Chromium plays instead of [audioPlayer] (see ChromiumVideoRoute.prefersChromiumAudio).
+    @Volatile private var chromiumAudio: ChromiumMediaSession? = null
+    private var chromiumAudioSyncJob: Job? = null
+
+    // Pages opened paused for audio cards on screen, newest last, so Play only resumes one: a new
+    // page, the file's head and (for Ogg) its tail otherwise took seconds after the click.
+    private val preparedAudio = LinkedHashMap<String, ChromiumMediaSession>()
 
     // In-flight `openUri` for the current video track. Cancelled before a new open so two rapid
     // track switches (e.g. opening one live stream while another is still loading) can't interleave
@@ -510,7 +528,7 @@ object GlobalMediaPlayer {
         warmRequests.values
             .reversed()
             .flatMap { list -> list.nearest(playing) }
-            .filter { it != playing && !MediaHttp.isEncrypted(it) && cardEngines.values.none { card -> card.url == it } }
+            .filter { it != playing && !MediaHttp.isEncrypted(it) && !ChromiumVideoRoute.prefersChromium(it) && cardEngines.values.none { card -> card.url == it } }
             .distinct()
             .take(MAX_WARM_ENGINES)
 
@@ -671,7 +689,7 @@ object GlobalMediaPlayer {
         owner: Any,
         url: String,
     ) {
-        if (shutDown || MediaHttp.isEncrypted(url)) return
+        if (shutDown || MediaHttp.isEncrypted(url) || ChromiumVideoRoute.prefersChromium(url)) return
         var stale: VideoPlayerState? = null
         val needsOpen =
             synchronized(initLock) {
@@ -788,6 +806,12 @@ object GlobalMediaPlayer {
         startMillis: Long? = null,
     ) {
         val current = _audioState.value
+        val chromium = chromiumEngine
+        if (chromium != null && ChromiumVideoRoute.prefersChromiumAudio(url)) {
+            playChromiumAudio(chromium, url, startMillis)
+            return
+        }
+        closeChromiumAudio()
         val player =
             ensureAudioPlayer() ?: run {
                 _audioState.value =
@@ -826,6 +850,106 @@ object GlobalMediaPlayer {
         audioOpenJob?.cancel()
         pendingAudioStartMillis = startMillis
         audioOpenJob = scope.launch(Dispatchers.IO) { openAudio(player, url) }
+    }
+
+    /**
+     * Plays [url] in a Chromium page instead of the audio engine. The audio card and the now-playing
+     * bar drive it through the same verbs; its clock feeds [audioState] as the engine's does.
+     */
+    private fun playChromiumAudio(
+        engine: DesktopCefEngine,
+        url: String,
+        startMillis: Long?,
+    ) {
+        val current = _audioState.value
+        val session = chromiumAudio
+        if (session != null && current.url == url && current.errorReason == null) {
+            startMillis?.let { session.seekTo(it) }
+            session.setPlaying(true)
+            return
+        }
+        audioOpenJob?.cancel()
+        audioPlayer?.stop()
+        closeChromiumAudio()
+        val volume = if (current.isMuted) 0 else current.volume
+        _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true, volume = volume, isMuted = current.isMuted)
+        val prepared = synchronized(preparedAudio) { preparedAudio.remove(url) }
+        Log.i(TAG) { "Playing audio $url in Chromium${if (prepared != null) " (prepared)" else ""}" }
+        val opened = prepared ?: ChromiumMediaSession(engine, url, muted = false, audioOnly = true, startMillis = startMillis ?: 0L)
+        chromiumAudio = opened
+        if (prepared != null) {
+            startMillis?.let { opened.seekTo(it) }
+        } else {
+            opened.open()
+        }
+        opened.setPlaying(true)
+        if (volume != 100) opened.setVolume(volume / 100f)
+        chromiumAudioSyncJob =
+            scope.launch {
+                launch {
+                    opened.state.collect { state ->
+                        if (state is ChromiumMediaSession.State.Failed && chromiumAudio === opened) {
+                            _audioState.update { it.copy(isBuffering = false, isPlaying = false, errorReason = state.reason.ifBlank { "Can't play this audio" }) }
+                        }
+                    }
+                }
+                var volumeApplied = volume == 100
+                opened.clock.collect { clock ->
+                    if (chromiumAudio !== opened) return@collect
+                    // The page may load after the first volume call: apply it once it reports.
+                    if (!volumeApplied && clock.durationMillis > 0L) {
+                        opened.setVolume(_audioState.value.volume / 100f)
+                        volumeApplied = true
+                    }
+                    _audioState.update { state ->
+                        if (state.url != url) return@update state
+                        val duration = clock.durationMillis.takeIf { it > 0L } ?: state.duration
+                        state.copy(
+                            isPlaying = !clock.paused && !clock.waiting,
+                            isBuffering = !clock.paused && clock.waiting,
+                            duration = duration,
+                            currentTime = clock.currentMillis,
+                            position = if (duration > 0L) (clock.currentMillis.toFloat() / duration).coerceIn(0f, 1f) else state.position,
+                        )
+                    }
+                }
+            }
+    }
+
+    /**
+     * Opens [url]'s Chromium page paused, for an audio card on screen, if Chromium would play it.
+     * At most [MAX_PREPARED_AUDIO] stay open; the oldest goes first.
+     */
+    fun prepareAudio(url: String) {
+        val engine = chromiumEngine ?: return
+        if (shutDown || !ChromiumVideoRoute.prefersChromiumAudio(url) || _audioState.value.url == url) return
+        val evicted =
+            synchronized(preparedAudio) {
+                if (url in preparedAudio) return
+                val session = ChromiumMediaSession(engine, url, muted = false, audioOnly = true)
+                session.setPlaying(false)
+                session.open()
+                preparedAudio[url] = session
+                val stale = mutableListOf<ChromiumMediaSession>()
+                while (preparedAudio.size > MAX_PREPARED_AUDIO) {
+                    val oldest = preparedAudio.keys.first()
+                    preparedAudio.remove(oldest)?.let { stale += it }
+                }
+                stale
+            }
+        evicted.forEach { it.close() }
+    }
+
+    /** The card for [url] left the screen: its paused page goes, unless it is the one playing. */
+    fun releasePreparedAudio(url: String) {
+        synchronized(preparedAudio) { preparedAudio.remove(url) }?.close()
+    }
+
+    private fun closeChromiumAudio() {
+        chromiumAudioSyncJob?.cancel()
+        chromiumAudioSyncJob = null
+        chromiumAudio?.close()
+        chromiumAudio = null
     }
 
     /** Hands [url] to the engine, then applies the start position it was opened with, if any. */
@@ -911,8 +1035,17 @@ object GlobalMediaPlayer {
     }
 
     fun toggleAudioPlayPause() {
-        val player = audioPlayer ?: return
         val state = _audioState.value
+        chromiumAudio?.let {
+            if (state.isPlaying || state.isBuffering) {
+                it.setPlaying(false)
+            } else {
+                if (state.position >= ENDED_POSITION) it.seekTo(0L)
+                it.setPlaying(true)
+            }
+            return
+        }
+        val player = audioPlayer ?: return
         val url = state.url ?: return
         if (state.isPlaying) player.pause() else resumeAudio(player, url)
     }
@@ -943,6 +1076,14 @@ object GlobalMediaPlayer {
 
     fun seekAudio(position: Float) {
         val target = position.coerceIn(0f, 1f)
+        chromiumAudio?.let { session ->
+            val durationMillis = _audioState.value.duration
+            if (durationMillis <= 0L) return
+            val targetMillis = (target * durationMillis).toLong()
+            session.seekTo(targetMillis)
+            _audioState.update { it.copy(position = target, currentTime = targetMillis) }
+            return
+        }
         val player = audioPlayer ?: return
         val durationMillis = player.currentDuration() ?: _audioState.value.duration
         if (durationMillis <= 0L) return
@@ -953,6 +1094,10 @@ object GlobalMediaPlayer {
 
     /** Seeks the loaded audio to [millis], playing or not. */
     fun seekAudioMillis(millis: Long) {
+        chromiumAudio?.let { session ->
+            session.seekTo(millis)
+            return
+        }
         val player = audioPlayer ?: return
         val durationMillis = player.currentDuration() ?: _audioState.value.duration
         if (durationMillis <= 0L) return
@@ -960,11 +1105,17 @@ object GlobalMediaPlayer {
     }
 
     fun pauseAudio() {
+        chromiumAudio?.setPlaying(false)
         audioPlayer?.pause()
     }
 
     /** Plays the loaded audio at [speed], 1 = normal. */
     fun setAudioSpeed(speed: Float) {
+        chromiumAudio?.let { session ->
+            session.setRate(speed)
+            _audioState.update { it.copy(speed = speed) }
+            return
+        }
         val player = audioPlayer ?: return
         player.setRate(speed)
         _audioState.update { it.copy(speed = speed) }
@@ -982,6 +1133,7 @@ object GlobalMediaPlayer {
     }
 
     fun setAudioVolume(volume: Int) {
+        chromiumAudio?.setVolume(volume.coerceIn(0, 100) / 100f)
         audioPlayer?.setVolume(volume.coerceIn(0, 100) / 100f)
         _audioState.update { it.copy(volume = volume, isMuted = it.isMuted && volume == 0) }
         if (volume > 0) preMuteAudioVolume = volume
@@ -1008,6 +1160,7 @@ object GlobalMediaPlayer {
             _audioState.update { it.copy(isMuted = false) }
         } else {
             preMuteAudioVolume = state.volume.coerceAtLeast(1)
+            chromiumAudio?.setVolume(0f)
             audioPlayer?.setVolume(0f)
             _audioState.update { it.copy(isMuted = true, volume = 0) }
         }
@@ -1099,6 +1252,7 @@ object GlobalMediaPlayer {
         audioOpenJob?.cancel()
         pendingAudioStartMillis = null
         audioStarting = false
+        closeChromiumAudio()
         audioPlayer?.stop()
         _audioState.value = MediaPlaybackState(type = MediaType.AUDIO)
     }
@@ -1142,6 +1296,8 @@ object GlobalMediaPlayer {
         shutDown = true
         videoSyncJob?.cancel()
         audioSyncJob?.cancel()
+        runCatching { closeChromiumAudio() }
+        synchronized(preparedAudio) { preparedAudio.values.toList().also { preparedAudio.clear() } }.forEach { runCatching { it.close() } }
         runCatching { videoPlayer?.dispose() }
         runCatching { audioPlayer?.release() }
         // Their delayed release dies with the scope below.
