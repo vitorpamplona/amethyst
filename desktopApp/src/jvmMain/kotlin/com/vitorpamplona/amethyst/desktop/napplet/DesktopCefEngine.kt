@@ -140,6 +140,8 @@ class DesktopCefEngine(
                     }
                 },
             )
+            builder.install()
+            removeNotificationHelper()
             val app = builder.build()
             // JCEF initializes Chromium with the first client, and the context comes up after that. No
             // window may load before the policies are in, so a throwaway client starts it and the
@@ -153,6 +155,18 @@ class DesktopCefEngine(
             mutableState.value = State.Failed(e.message ?: e::class.simpleName.orEmpty())
             throw e
         }
+    }
+
+    /**
+     * Deletes Chromium's macOS notification helper from the bundle before Chromium starts. Started,
+     * it asks macOS for permission to post notifications under JCEF's own name ("jcef Helper
+     * (Alerts)"), the first time any napplet opens. Napplets are denied notifications anyway, and
+     * Chromium runs without the helper. Every start checks, since a JCEF update reinstalls it.
+     */
+    private fun removeNotificationHelper() {
+        if (!OS.isMacintosh()) return
+        val helper = File(installDir, NOTIFICATION_HELPER)
+        if (helper.exists() && !helper.deleteRecursively()) Log.w(TAG) { "Could not remove $helper" }
     }
 
     /**
@@ -231,6 +245,7 @@ class DesktopCefEngine(
             )
 
         private const val GUARD_DIR = "napplet-guard"
+        private const val NOTIFICATION_HELPER = "jcef Helper (Alerts).app"
 
         // match_origin_as_fallback reaches the opaque srcdoc and about:blank frames under the shell.
         private val GUARD_MANIFEST =
