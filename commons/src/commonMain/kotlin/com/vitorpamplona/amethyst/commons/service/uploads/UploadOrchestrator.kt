@@ -59,6 +59,24 @@ class UploadOrchestrator {
         progressState.value = newState
     }
 
+    /**
+     * Maps the bytes an upload body has sent onto [from]..[to] of the progress bar, reporting
+     * only whole-percent changes. A retried request starts again from zero, and so does the bar.
+     */
+    fun uploadProgress(
+        from: Double,
+        to: Double,
+    ): (bytesWritten: Long, totalBytes: Long) -> Unit {
+        var lastPercent = -1L
+        return { written, total ->
+            val percent = if (total > 0) written * 100 / total else 0
+            if (percent != lastPercent) {
+                lastPercent = percent
+                updateState(from + (to - from) * percent / 100, UploadingState.Uploading)
+            }
+        }
+    }
+
     suspend fun compressIfNeeded(
         uri: MediaUri,
         mimeType: String?,

@@ -104,6 +104,49 @@ class ImageDownloader(
             }
         }
 
+    /** What a `HEAD` request says about a file: [ServedCheck.Served], or that the server has no `HEAD`. */
+    sealed interface ServedCheck {
+        /** [size] is null when the server did not say, or said it for an encoded (compressed) body. */
+        class Served(
+            val size: Long?,
+            val contentType: String?,
+        ) : ServedCheck
+
+        data object HeadNotSupported : ServedCheck
+    }
+
+    /**
+     * Waits for [url] to be served, asking with `HEAD` so nothing is downloaded: enough when the
+     * caller already knows the bytes, as after a Blossom upload whose descriptor names the hash
+     * that was sent. Null when the server never served it.
+     */
+    suspend fun waitUntilServed(
+        url: String,
+        okHttpClient: (url: String) -> OkHttpClient,
+    ): ServedCheck? =
+        retryWithDelay {
+            okHttpClient(url)
+                .newCall(
+                    Request
+                        .Builder()
+                        .url(url)
+                        .head()
+                        .build(),
+                ).executeAsync()
+                .use { response ->
+                    when {
+                        response.isSuccessful -> {
+                            val size = response.header("Content-Length")?.toLongOrNull()?.takeIf { response.header("Content-Encoding") == null }
+                            ServedCheck.Served(size, response.header("Content-Type"))
+                        }
+
+                        response.code == 405 || response.code == 501 -> ServedCheck.HeadNotSupported
+
+                        else -> null
+                    }
+                }
+        }
+
     suspend fun waitAndGetImage(
         imageUrl: String,
         okHttpClient: (url: String) -> OkHttpClient,

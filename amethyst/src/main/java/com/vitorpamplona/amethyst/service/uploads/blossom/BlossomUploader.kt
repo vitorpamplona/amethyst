@@ -162,11 +162,6 @@ class BlossomUploader {
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): MediaUploadResult {
         val fileName = baseFileName ?: RandomInstance.randomChars(16)
-        val extension =
-            contentType?.let {
-                MimeTypeMap.getSingleton().getExtensionFromMimeType(it) ?: extensionFromMimeType(it)
-            } ?: ""
-
         // BUD-05: /media asks the server to optimize; /upload stores the exact bytes.
         val apiUrl = if (useMediaEndpoint) BlossomServerUrl.media(serverBaseUrl) else BlossomServerUrl.upload(serverBaseUrl)
 

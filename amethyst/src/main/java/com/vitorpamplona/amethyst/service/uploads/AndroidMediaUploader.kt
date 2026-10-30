@@ -140,23 +140,10 @@ class AndroidMediaUploader(
             newState: UploadingState,
         ) = progress.updateState(newProgress, newState)
 
-        /**
-         * Maps the bytes an upload body has sent onto [from]..[to] of the progress bar, reporting
-         * only whole-percent changes. A retried request starts again from zero, and so does the bar.
-         */
         fun uploadProgress(
             from: Double,
             to: Double,
-        ): (bytesWritten: Long, totalBytes: Long) -> Unit {
-            var lastPercent = -1L
-            return { written, total ->
-                val percent = if (total > 0) written * 100 / total else 0
-                if (percent != lastPercent) {
-                    lastPercent = percent
-                    updateState(from + (to - from) * percent / 100, UploadingState.Uploading)
-                }
-            }
-        }
+        ) = progress.uploadProgress(from, to)
 
         private suspend fun uploadNIP96(
             fileUri: Uri,
@@ -312,6 +299,7 @@ class AndroidMediaUploader(
             // Buzz workspace, whose relay checks the imeta `x` against the blob it stored.
             val useMedia = !buzzWorkspace && forcedSigner == null && account.settings.optimizeMediaOnUpload.value
             return try {
+                val blob = shared.blob { BlossomUploader().prepare(fileUri, contentType, context) }
                 val result =
                     BlossomUploader()
                         .upload(
@@ -352,7 +340,7 @@ class AndroidMediaUploader(
                             context = context,
                             useMediaEndpoint = useMedia,
                             onProgress = uploadProgress(from = 0.2, to = 0.6),
-                            prepared = shared.blob { BlossomUploader().prepare(fileUri, contentType, context) },
+                            prepared = blob,
                         )
 
                 val finalState =
@@ -371,6 +359,10 @@ class AndroidMediaUploader(
                             // A Blossom URL names its blob by hash, so the server must serve exactly
                             // the blob its descriptor reports.
                             expectedHash = result.sha256,
+                            // /upload stores the exact bytes: a descriptor naming the hash we sent
+                            // confirms them, so only that the server serves them is left to check.
+                            // /media may have transformed them, so that one is downloaded.
+                            sent = blob.takeIf { !useMedia && result.sha256.equals(it.hash, ignoreCase = true) },
                         )
                     }
 
@@ -464,6 +456,15 @@ class AndroidMediaUploader(
             return finish(UploadOrchestrator.OrchestratorResult.ServerResult(fileHeader, url, uploadResult.magnet, hash, originalContentType, originalHash))
         }
 
+        /**
+         * Confirms the server serves the upload and builds its header from what it serves.
+         *
+         * When the server reported storing exactly the bytes sent ([sent]: a Blossom `/upload`
+         * whose descriptor names the hash computed before sending), a `HEAD` request is enough:
+         * the hash and size are already known, and downloading the whole file back would double the
+         * data the upload costs. Otherwise, or when the server has no `HEAD`, the file is downloaded
+         * and hashed, and must hash to [expectedHash] when one is given.
+         */
         private suspend fun verifyHeader(
             uploadResult: MediaUploadResult,
             localContentType: String?,
@@ -471,6 +472,7 @@ class AndroidMediaUploader(
             originalHash: String?,
             okHttpClient: (String) -> OkHttpClient,
             expectedHash: String? = null,
+            sent: BlossomUploader.PreparedBlob? = null,
         ): UploadingFinalState {
             val url = uploadResult.url
             if (url.isNullOrBlank()) {
@@ -478,6 +480,26 @@ class AndroidMediaUploader(
             }
 
             updateState(0.6, UploadingState.Downloading)
+
+            if (sent != null) {
+                when (val check = ImageDownloader().waitUntilServed(url, okHttpClient)) {
+                    null -> {
+                        return error(UploadError.COULD_NOT_DOWNLOAD_FROM_SERVER)
+                    }
+
+                    is ImageDownloader.ServedCheck.Served -> {
+                        if (check.size != null && check.size != sent.size) {
+                            Log.w("UploadOrchestrator") { "$url serves ${check.size} bytes, not the uploaded ${sent.size}" }
+                            return error(UploadError.SERVER_RETURNED_DIFFERENT_FILE, BlossomServerUrl.domain(url))
+                        }
+                        return finishVerified(uploadResult, url, sent.hash, sent.size, localContentType ?: check.contentType, originalContentType, originalHash)
+                    }
+
+                    ImageDownloader.ServedCheck.HeadNotSupported -> {
+                        Unit
+                    }
+                }
+            }
 
             // Use streaming verification for memory efficiency with large files
             val verification =
@@ -491,13 +513,24 @@ class AndroidMediaUploader(
                 return error(UploadError.SERVER_RETURNED_DIFFERENT_FILE, BlossomServerUrl.domain(url))
             }
 
-            // Create FileHeader with hash from streaming verification
-            // Note: We skip blurhash/dimensions since we already have them from upload
+            return finishVerified(uploadResult, url, verification.hash, verification.size, localContentType ?: verification.contentType, originalContentType, originalHash)
+        }
+
+        private fun finishVerified(
+            uploadResult: MediaUploadResult,
+            url: String,
+            hash: String,
+            size: Long,
+            localContentType: String?,
+            originalContentType: String?,
+            originalHash: String?,
+        ): UploadingFinalState {
+            // Blurhash and dimensions come from the upload result, which already merged the local ones.
             val fileHeader =
                 FileHeader(
-                    mimeType = uploadResult.type ?: localContentType ?: verification.contentType,
-                    hash = verification.hash,
-                    size = verification.size.toInt(),
+                    mimeType = uploadResult.type ?: localContentType,
+                    hash = hash,
+                    size = size.toInt(),
                     dim = uploadResult.dimension,
                     blurHash = uploadResult.blurHash,
                 )
@@ -666,8 +699,17 @@ class AndroidMediaUploader(
 
             if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
-            val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
-            deleteTempUri(finalUri, uri)
+            val encrypted =
+                try {
+                    EncryptFiles().encryptFile(context, finalUri, encrypt)
+                } catch (_: OutOfMemoryError) {
+                    // The cipher takes the whole file as one array, next to its ciphertext. A file too
+                    // big for that fails one large allocation, which is freed as this unwinds: report
+                    // it instead of crashing the app.
+                    return error(UploadError.FILE_TOO_LARGE_TO_ENCRYPT)
+                } finally {
+                    deleteTempUri(finalUri, uri)
+                }
 
             try {
                 return when (server.type) {

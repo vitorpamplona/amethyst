@@ -38,6 +38,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -59,6 +60,29 @@ class ImageDownloaderVerifyTest {
         server.executor = Executors.newCachedThreadPool()
         server.createContext("/") { exchange ->
             val count = requests.incrementAndGet()
+            if (exchange.requestMethod == "HEAD") {
+                when (exchange.requestURI.path) {
+                    "/blob", "/later" -> {
+                        if (exchange.requestURI.path == "/later" && count <= 2) {
+                            exchange.sendResponseHeaders(404, -1)
+                        } else {
+                            exchange.responseHeaders.add("Content-Type", "video/mp4")
+                            exchange.responseHeaders.add("Content-Length", blob.size.toString())
+                            exchange.sendResponseHeaders(200, -1)
+                        }
+                    }
+
+                    "/no-head" -> {
+                        exchange.sendResponseHeaders(405, -1)
+                    }
+
+                    else -> {
+                        exchange.sendResponseHeaders(404, -1)
+                    }
+                }
+                exchange.close()
+                return@createContext
+            }
             when (exchange.requestURI.path) {
                 "/blob" -> {
                     exchange.responseHeaders.add("Content-Type", "video/mp4")
@@ -150,6 +174,39 @@ class ImageDownloaderVerifyTest {
 
         assertNull(verification)
         assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started) < 5_000)
+    }
+
+    @Test
+    fun aHeadRequestConfirmsTheFileIsServedWithoutDownloadingIt() {
+        val check = runBlocking { ImageDownloader().waitUntilServed(url("/blob")) { client } }
+
+        val served = assertIs<ImageDownloader.ServedCheck.Served>(check)
+        assertEquals(blob.size.toLong(), served.size)
+        assertEquals("video/mp4", served.contentType)
+        assertEquals(1, requests.get())
+    }
+
+    @Test
+    fun aHeadRequestWaitsForAServerThatIsNotServingTheFileYet() {
+        val check = runBlocking { ImageDownloader(maxAttempts = 5, retryDelayMs = 10).waitUntilServed(url("/later")) { client } }
+
+        assertIs<ImageDownloader.ServedCheck.Served>(check)
+        assertEquals(3, requests.get())
+    }
+
+    @Test
+    fun aServerWithoutHeadIsReportedSoTheCallerCanDownloadInstead() {
+        val check = runBlocking { ImageDownloader(maxAttempts = 5, retryDelayMs = 10).waitUntilServed(url("/no-head")) { client } }
+
+        assertEquals(ImageDownloader.ServedCheck.HeadNotSupported, check)
+        assertEquals(1, requests.get())
+    }
+
+    @Test
+    fun aFileThatIsNeverServedIsNull() {
+        val check = runBlocking { ImageDownloader(maxAttempts = 2, retryDelayMs = 10).waitUntilServed(url("/missing")) { client } }
+
+        assertNull(check)
     }
 
     @Test

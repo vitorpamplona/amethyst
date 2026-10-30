@@ -5846,6 +5846,7 @@
     <string name="send_payment_paying_via">Paying via %1$s…</string>
     <string name="server_did_not_provide_a_url_after_uploading">Server did not provide a URL after uploading</string>
     <string name="server_returned_different_file">%1$s serves a different file than the one uploaded</string>
+    <string name="file_too_large_to_encrypt">This file is too large to encrypt on this device</string>
     <string name="settings">Settings</string>
     <string name="settings_muted_threads_empty">No muted threads</string>
     <string name="settings_muted_threads_title">Muted threads</string>
