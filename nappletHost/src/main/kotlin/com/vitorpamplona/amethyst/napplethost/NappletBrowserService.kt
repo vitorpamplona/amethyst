@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -199,7 +200,7 @@ class NappletBrowserService : Service() {
     private var downloadSeq = 0L
 
     // The shim never changes; read+decode it once instead of per tab on the main thread.
-    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
+    private val shimJs: String by lazy { readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -1451,7 +1452,7 @@ class NappletBrowserService : Service() {
         return true
     }
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     /** Address-bar text → URL via the shared [OmniboxInput] rules (bare domain → https, else search). */
     private fun normalizeUrl(input: String): String = OmniboxInput.resolve(input)?.url ?: ABOUT_BLANK

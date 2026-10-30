@@ -66,6 +66,8 @@ import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletHost
+import com.vitorpamplona.amethyst.desktop.napplet.DesktopNappletWindows
 import com.vitorpamplona.amethyst.desktop.platform.AmethystWindowExceptionHandlerFactory
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.DesktopDrawerMetrics
@@ -205,8 +207,12 @@ fun main(args: Array<String>) {
 
     modules.initiate()
 
+    // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
+    val nappletHost = DesktopNappletHost(modules)
+
     Runtime.getRuntime().addShutdownHook(
         Thread {
+            runCatching { nappletHost.shutdown() }
             // Releases the native video and audio engines before the JVM goes.
             GlobalMediaPlayer.shutdown()
             runCatching { modules.flushUiPrefs() }
@@ -225,6 +231,7 @@ fun main(args: Array<String>) {
             desktopSpellCheck = spellCheck,
             // Decrypted pictures of private communities: owner-only, like the rest of the profile.
             concordImageDir = File(filesDir, "concord-images").apply { mkdirs() }.also { it.restrictToOwner("AmethystDesktop") },
+            nappletHost = nappletHost,
         )
     val root = DesktopAppRoot(modules)
 
@@ -340,6 +347,9 @@ fun main(args: Array<String>) {
                                     // The video player's full-screen button: the playing video over the
                                     // whole window, in OS full screen.
                                     GlobalFullscreenOverlay()
+
+                                    // Each open napplet, in its own window.
+                                    DesktopNappletWindows(nappletHost)
                                 }
                             }
                         }

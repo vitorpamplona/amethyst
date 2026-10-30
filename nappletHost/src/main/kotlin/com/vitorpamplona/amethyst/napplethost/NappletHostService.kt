@@ -58,16 +58,17 @@ import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
@@ -164,8 +165,8 @@ class NappletHostService : Service() {
     private val tabs = mutableMapOf<String, NappletTab>()
 
     // The shell HTML and shim never change; read+decode them once instead of per tab on the main thread.
-    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebContract.SHELL_HTML_PATH) }
-    private val shimJs: String by lazy { readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString() }
+    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebResources.SHELL_HTML_PATH) }
+    private val shimJs: String by lazy { readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -419,7 +420,7 @@ class NappletHostService : Service() {
         // profile has otherwise been used), so the storage partition must be chosen before the
         // hardening/bridge setup and the loadUrl below.
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(deriveAppId(tab.author, tab.identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer =
             NappletContentServer(
@@ -427,6 +428,7 @@ class NappletHostService : Service() {
                 tab.servers,
                 effectiveProxy,
                 cacheDir,
+                NappletBlobCache.partitionOf(tab.webViewProfile.orEmpty(), tab.author, tab.identifier),
                 shellHtml,
                 shimJs,
                 appOrigin,
@@ -518,6 +520,7 @@ class NappletHostService : Service() {
         }
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
+        if (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor)) NappletWebRtcGuard.install(wv)
         wv.webViewClient = HostClient(tab)
         wv.webChromeClient = HostChromeClient(tab)
     }
@@ -923,12 +926,7 @@ class NappletHostService : Service() {
         tab.toClient(message)
     }
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
-
-    private fun deriveAppId(
-        author: String,
-        identifier: String,
-    ): String = "n" + sha256("$author:$identifier".encodeToByteArray()).toHexKey().take(31)
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     private companion object {
         private const val TAG = "NappletHostService"

@@ -869,6 +869,33 @@ class NappletBrokerTest {
         }
 
     @Test
+    fun anEncryptedPublishIsJudgedByTheKindItSigns() =
+        runTest {
+            // Allowed to encrypt is not allowed to replace the follow list: the event published is
+            // a kind 3 either way, so it asks as a plain kind-3 publish does.
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.REASONABLE)
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.DenyOnce)
+            val relay = RecordingRelay()
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS),
+                    relay = relay,
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = opPrompt,
+                )
+
+            val peer = NostrSignerInternal(KeyPair("44".repeat(32).hexToByteArray()))
+            val response =
+                broker.handle(applet, NappletRequest.PublishEncrypted(3, arrayOf(arrayOf("p", peer.pubKey)), "{}", peer.pubKey, "nip44"), allDeclared)
+            assertIs<NappletResponse.Denied>(response)
+            assertEquals(1, opPrompt.calls)
+            assertTrue(relay.published.isEmpty())
+        }
+
+    @Test
     fun aDeclinedDecryptReturnsNoPlaintext() =
         runTest {
             val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())

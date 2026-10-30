@@ -66,18 +66,18 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolution
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
@@ -292,14 +292,15 @@ class NappletHostActivity : ComponentActivity() {
         // This isolated `:napplet` process skips app init (to stay key-free), so the compose-resources
         // Android context is never set here and `Res.readBytes` would crash — read the contract bytes
         // straight from the APK assets, where compose-resources packages them.
-        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
-        val shellHtml = readContractAsset(NappletWebContract.SHELL_HTML_PATH)
-        val shim = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
-        val appOrigin = NappletWebContract.appOrigin(deriveAppId(author, identifier))
+        fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+        val shellHtml = readContractAsset(NappletWebResources.SHELL_HTML_PATH)
+        val shim = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier))
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
-        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, shellHtml, shim, appOrigin, profile, declaredDomains)
+        val cachePartition = NappletBlobCache.partitionOf(webViewProfile.orEmpty(), author, identifier)
+        contentServer = NappletContentServer(paths, servers, effectiveProxy, cacheDir, cachePartition, shellHtml, shim, appOrigin, profile, declaredDomains)
 
         // Create + warm the WebView NOW so its (slow, first-in-process) Chromium init runs on the main
         // thread concurrently with the index probe below (which runs on IO) — instead of serially after
@@ -368,7 +369,7 @@ class NappletHostActivity : ComponentActivity() {
         contentFrame.removeAllViews()
         loadingView = buildLoadingView().also { contentFrame.addView(it) }
         uiScope.launch {
-            val available = withContext(Dispatchers.IO) { contentServer.resolve("/") is StaticSiteResolution.Resolved }
+            val available = withContext(Dispatchers.IO) { contentServer.isAvailable("/") }
             if (available) {
                 mountWebView()
             } else {
@@ -525,6 +526,8 @@ class NappletHostActivity : ComponentActivity() {
         // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.
         releaseFromBroker()
         WebViewProxyPolicy.release(this)
+        // Its own HTTP client: threads and keep-alive connections that would outlive the screen.
+        if (this::contentServer.isInitialized) contentServer.close()
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()
@@ -589,19 +592,6 @@ class NappletHostActivity : ComponentActivity() {
         return author.isNotEmpty() && launchToken.isNotEmpty()
     }
 
-    /**
-     * Stable, unique, DNS-label-safe id for this applet's sandbox origin: a sha256 of
-     * `author:identifier`, hex, truncated to 31 chars and letter-prefixed (`n`). The leading letter
-     * avoids any numeric-host parsing quirk and keeps it ≤63 chars (a valid DNS label). The same
-     * applet always derives the same id, so its origin — and therefore its localStorage/IndexedDB —
-     * persists across launches; different applets derive different subdomains, so their storage is
-     * isolated from one another.
-     */
-    private fun deriveAppId(
-        author: String,
-        identifier: String,
-    ): String = "n" + sha256("$author:$identifier".encodeToByteArray()).toHexKey().take(31)
-
     private var title: String = ""
 
     @Suppress("SetJavaScriptEnabled")
@@ -635,6 +625,7 @@ class NappletHostActivity : ComponentActivity() {
         // seam (a stray white band at the bottom). The applet's own content still scrolls normally.
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
+        if (NappletWebRtcGuard.isNeeded(profile, useTor)) NappletWebRtcGuard.install(webView)
         webView.webViewClient = NappletWebViewClient()
         webView.webChromeClient = NappletWebChromeClient()
     }

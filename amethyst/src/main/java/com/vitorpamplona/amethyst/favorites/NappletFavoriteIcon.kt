@@ -32,8 +32,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.napplethost.NappletBlobCache
-import com.vitorpamplona.amethyst.napplethost.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -52,6 +54,9 @@ import java.io.File
 private class IconBlob(
     val path: PathTag,
     val servers: List<String>,
+    // The site it belongs to, whose cache partition holds it.
+    val author: String,
+    val identifier: String,
     val mime: String? = null,
 )
 
@@ -92,10 +97,6 @@ fun rememberNappletIconModel(coordinate: String): String? {
     return rememberVerifiedIconModel(icon)
 }
 
-/** Used by feed cards as well as favorite/connected-app surfaces. Never returns a remote icon URL. */
-@Composable
-fun rememberNappletEventIconModel(event: Event): String? = rememberVerifiedIconModel(remember(event) { resolveIconBlob(event) })
-
 @Composable
 private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
     val context = LocalContext.current
@@ -103,12 +104,17 @@ private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
     LaunchedEffect(icon?.path?.hash, icon?.mime, icon?.servers) {
         if (icon == null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val file = File(NappletBlobCache.dirFor(context.cacheDir), icon.path.hash.lowercase())
-            if (!file.isFile) {
-                val torPort = Amethyst.instance.torManager.activePortOrNull.value ?: -1
-                runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort) }
+            val partition = NappletBlobCache.partitionOf(NappletWebViewProfiles.current().orEmpty(), icon.author, icon.identifier)
+            val cache = NappletBlobCache(NappletBlobCache.dirFor(context.cacheDir)).forSite(partition)
+            if (cache.file(icon.path.hash) == null) {
+                val torPort = Amethyst.instance.torManager.activePortOrNull.value
+                // Never in the clear while the user wants Tor and it isn't up yet: the icon can wait.
+                if (torPort != null || Amethyst.instance.torPrefs.torType.value == TorType.OFF) {
+                    runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort ?: -1, partition) }
+                }
             }
-            if (file.isFile && (icon.mime == null || verifiedIcon(file, icon))) model = "file://" + file.absolutePath
+            val file = cache.file(icon.path.hash)
+            if (file != null && (icon.mime == null || verifiedIcon(file, icon))) model = "file://" + file.absolutePath
         }
     }
     return model
@@ -140,12 +146,12 @@ private fun resolveIconBlob(event: Event?): IconBlob? =
         // per event inside remember(event). The blob itself is then hash-checked and decoded.
         is NappletManifest ->
             if (event.isValid() && event.verify()) {
-                event.icon()?.let { IconBlob(PathTag("/icon", it.hash), event.servers(), it.mimeType) }
+                event.icon()?.let { IconBlob(PathTag("/icon", it.hash), event.servers(), event.pubKey, (event as? NamedNappletEvent)?.identifier() ?: "", it.mimeType) }
             } else {
                 null
             }
-        is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
-        is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers()) }
+        is RootSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers(), event.pubKey, "") }
+        is NamedSiteEvent -> event.iconBlob()?.let { IconBlob(it, event.servers(), event.pubKey, event.identifier()) }
         else -> null
     }
 

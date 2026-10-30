@@ -103,6 +103,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
@@ -360,7 +361,7 @@ class NappletBrowserActivity : ComponentActivity() {
             return
         }
 
-        shimJs = readContractAsset(NappletWebContract.SHIM_JS_PATH).decodeToString()
+        shimJs = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
         // Which route is really in effect: an open-web page goes through Tor while another page needs it.
         WebViewProxyPolicy.observeRoute(this) {
             routedOverTor = it
@@ -2000,7 +2001,7 @@ class NappletBrowserActivity : ComponentActivity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebContract.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
+    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     companion object {
         private const val TAG = "NappletBrowserActivity"

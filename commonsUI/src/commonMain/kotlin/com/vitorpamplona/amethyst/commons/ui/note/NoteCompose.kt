@@ -152,10 +152,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderGitRepositoryEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedNappletEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderNamedSiteEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootNappletEvent
-import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderRootSiteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.timeAheadNoDot
 import com.vitorpamplona.amethyst.commons.ui.note.types.BadgeDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.DisplayContactList
@@ -1990,18 +1986,18 @@ internal fun RenderNoteRow(
             }
 
             is RootSiteEvent -> {
-                RenderRootSiteEvent(baseNote, accountViewModel, nav)
+                StaticWebsiteManifestCard(noteEvent)
             }
 
             is NamedSiteEvent -> {
-                RenderNamedSiteEvent(baseNote, accountViewModel, nav)
+                StaticWebsiteManifestCard(noteEvent)
             }
 
             // Other apps publish their own formats under these kinds: only a valid NIP-5D manifest
             // gets the napplet card, the rest get the fallback card that shows what they carry.
             is RootNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    RenderRootNappletEvent(baseNote, accountViewModel, nav)
+                    StaticWebsiteManifestCard(noteEvent)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
@@ -2009,7 +2005,7 @@ internal fun RenderNoteRow(
 
             is NamedNappletEvent -> {
                 if (noteEvent.isValid()) {
-                    RenderNamedNappletEvent(baseNote, accountViewModel, nav)
+                    StaticWebsiteManifestCard(noteEvent)
                 } else {
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }

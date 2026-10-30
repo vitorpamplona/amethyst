@@ -39,6 +39,9 @@ jackson = "2.22.4"
 jacksonModuleKotlin = "2.22.4"
 snakeyaml = "2.7"
 jna = "5.19.1"
+# Chromium (JCEF) for the desktop napplet host. jcefmaven is Apache-2.0; JCEF and CEF are BSD-3;
+# the native bundle it downloads on first use is Chromium, whose libcef.so includes FFmpeg (LGPL-2.1).
+jcefmaven = "152.0.6"
 # Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
 lucene = "10.5.2"
 javaKeyring = "1.0.4"
@@ -233,6 +236,7 @@ jackson-dataformat-yaml = { group = "com.fasterxml.jackson.dataformat", name = "
 snakeyaml = { group = "org.yaml", name = "snakeyaml", version.ref = "snakeyaml" }
 apksig = { group = "com.android.tools.build", name = "apksig", version.ref = "agp" }
 jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }
+jcefmaven = { group = "me.friwi", name = "jcefmaven", version.ref = "jcefmaven" }
 lucene-analysis-common = { group = "org.apache.lucene", name = "lucene-analysis-common", version.ref = "lucene" }
 java-keyring = { group = "com.github.javakeyring", name = "java-keyring", version.ref = "javaKeyring" }
 kmp-tor-runtime = { group = "io.matthewnelson.kmp-tor", name = "runtime", version.ref = "kmpTorRuntime" }

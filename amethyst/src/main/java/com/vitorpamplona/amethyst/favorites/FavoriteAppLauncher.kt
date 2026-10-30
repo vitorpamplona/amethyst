@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.napplet.WebAppNetworkRegistry
-import com.vitorpamplona.amethyst.napplethost.HostProfile
 import com.vitorpamplona.amethyst.napplethost.NappletBrowserActivity
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
@@ -134,29 +133,9 @@ object FavoriteAppLauncher {
             is NamedNappletEvent ->
                 NappletLauncher.launch(context, event, event.pubKey, event.identifier())
             is RootSiteEvent ->
-                NappletLauncher.launch(
-                    context = context,
-                    paths = event.paths(),
-                    servers = event.servers(),
-                    authorPubKey = event.pubKey,
-                    identifier = "",
-                    aggregateHash = null,
-                    title = event.title() ?: "nsite",
-                    requires = emptyList(),
-                    profile = HostProfile.WEBSITE,
-                )
+                NappletLauncher.launchSite(context, event)
             is NamedSiteEvent ->
-                NappletLauncher.launch(
-                    context = context,
-                    paths = event.paths(),
-                    servers = event.servers(),
-                    authorPubKey = event.pubKey,
-                    identifier = event.identifier(),
-                    aggregateHash = null,
-                    title = event.title() ?: event.identifier(),
-                    requires = emptyList(),
-                    profile = HostProfile.WEBSITE,
-                )
+                NappletLauncher.launchSite(context, event)
             else -> {
                 Log.w("FavoriteAppLauncher") { "Favorited app not resolvable yet: $coordinate" }
                 Toast.makeText(context, stillLoading, Toast.LENGTH_SHORT).show()
@@ -191,29 +170,9 @@ object FavoriteAppLauncher {
                     identifier = event.identifier(),
                 )
             is RootSiteEvent ->
-                NappletLauncher.buildLaunchParams(
-                    context,
-                    event.paths(),
-                    event.servers(),
-                    event.pubKey,
-                    "",
-                    null,
-                    event.title() ?: "nsite",
-                    emptyList(),
-                    HostProfile.WEBSITE,
-                )
+                NappletLauncher.buildSiteLaunchParams(context, event)
             is NamedSiteEvent ->
-                NappletLauncher.buildLaunchParams(
-                    context,
-                    event.paths(),
-                    event.servers(),
-                    event.pubKey,
-                    event.identifier(),
-                    null,
-                    event.title() ?: event.identifier(),
-                    emptyList(),
-                    HostProfile.WEBSITE,
-                )
+                NappletLauncher.buildSiteLaunchParams(context, event)
             else -> null
         }
     }

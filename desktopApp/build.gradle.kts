@@ -125,6 +125,10 @@ dependencies {
     // Already shipped (nestsClient's Opus bindings); declared so desktopApp can compile against it.
     implementation(libs.jna)
 
+    // Chromium for napplets (NIP-5D): the sandboxed web view the shared shell and shim run in. The
+    // native bundle is downloaded into the data dir the first time a napplet opens, not shipped.
+    implementation(libs.jcefmaven)
+
     // Hunspell spell checking for the composers where the OS has no checker (Linux) or it fails.
     // Lucene's pure-Java port; Apache-2.0, and its only dependency is lucene-core (Apache-2.0).
     implementation(libs.lucene.analysis.common)
@@ -174,6 +178,14 @@ compose.desktop {
         // which is the one the packages bundle) get it.
         if (File(System.getProperty("java.home"), "lib/libawt_wlawt.so").isFile) {
             jvmArgs += "--add-exports=java.desktop/sun.awt.wl=ALL-UNNAMED"
+        }
+
+        // Chromium (JCEF) for napplets reads the AWT peer of the window it draws into: sun.awt
+        // everywhere, sun.lwawt on macOS (packages are built on the OS they ship for).
+        jvmArgs += "--add-exports=java.desktop/sun.awt=ALL-UNNAMED"
+        if (System.getProperty("os.name").startsWith("Mac")) {
+            jvmArgs += "--add-exports=java.desktop/sun.lwawt=ALL-UNNAMED"
+            jvmArgs += "--add-exports=java.desktop/sun.lwawt.macosx=ALL-UNNAMED"
         }
 
         jvmArgs += "-Xmx2g"
