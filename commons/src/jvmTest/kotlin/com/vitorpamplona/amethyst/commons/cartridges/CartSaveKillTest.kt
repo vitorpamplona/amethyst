@@ -21,9 +21,9 @@
 package com.vitorpamplona.amethyst.commons.cartridges
 
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.fantasyconsole.cart.Cart
-import com.vitorpamplona.fantasyconsole.runtime.ConsoleHost
-import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
+import com.vitorpamplona.kiko.cart.Cart
+import com.vitorpamplona.kiko.runtime.ConsoleHost
+import com.vitorpamplona.kiko.runtime.FantasyConsole
 import kotlinx.coroutines.runBlocking
 import okio.Path.Companion.toPath
 import org.junit.After

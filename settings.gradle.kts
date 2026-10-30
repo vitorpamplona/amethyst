@@ -52,7 +52,6 @@ include(":geode")
 include(":commons")
 include(":commonsUI")
 include(":nestsClient")
-include(":fantasyConsole")
 include(":desktopApp")
 include(":cli")
 include(":relayBench")
@@ -110,6 +109,17 @@ providers.gradleProperty("quicKmpDir").orNull?.let { dir ->
     includeBuild(dir) {
         dependencySubstitution {
             substitute(module("com.vitorpamplona.quic:quic")).using(project(":quic"))
+        }
+    }
+}
+
+// The fantasy-console cart runtime lives in its own repo (vitorpamplona/kiko-kmp) and comes from
+// Maven Central. To change it alongside the cart player in commons, build a local checkout:
+//   ./gradlew -PkikoKmpDir=../kiko-kmp :commons:jvmTest
+providers.gradleProperty("kikoKmpDir").orNull?.let { dir ->
+    includeBuild(dir) {
+        dependencySubstitution {
+            substitute(module("com.vitorpamplona.kiko:kiko")).using(project(":kiko"))
         }
     }
 }

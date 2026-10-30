@@ -24,7 +24,7 @@ import kotlinx.coroutines.CloseableCoroutineDispatcher
 
 /**
  * A single thread for one running cart, with a stack deep enough for the interpreter
- * ([com.vitorpamplona.fantasyconsole.runtime.FantasyConsole.RECOMMENDED_STACK_BYTES]).
+ * ([com.vitorpamplona.kiko.runtime.FantasyConsole.RECOMMENDED_STACK_BYTES]).
  */
 expect fun newCartDispatcher(): CloseableCoroutineDispatcher
 

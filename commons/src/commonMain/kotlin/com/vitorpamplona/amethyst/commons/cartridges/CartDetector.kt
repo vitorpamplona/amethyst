@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.cartridges
 
 import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.fantasyconsole.cart.CartLoader
+import com.vitorpamplona.kiko.cart.CartLoader
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 
 /**

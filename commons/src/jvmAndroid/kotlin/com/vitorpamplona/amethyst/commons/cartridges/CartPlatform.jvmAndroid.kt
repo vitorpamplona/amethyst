@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.cartridges
 
-import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
+import com.vitorpamplona.kiko.runtime.FantasyConsole
 import kotlinx.coroutines.CloseableCoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.Executors

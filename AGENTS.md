@@ -19,10 +19,7 @@ humans, agents, and interop tests. `geode` is a standalone JVM Nostr relay (Ktor
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `fantasyConsole` is a
-headless, stdlib-only runtime for 128x128 fantasy-console carts (`.p8.png`): its own Lua
-interpreter with 16:16 numbers, graphics, sound and cart formats, kept free of app code so it
-can become a library (`fantasyConsole/README.md`). `nestsClient` runs
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
@@ -42,15 +39,18 @@ On Maven Central; `-P<name>Dir=../<repo>` builds a local checkout instead.
 | marmot-kmp (`marmot`, `marmot.quic`) | Marmot logic needing MLS state, `MarmotManager`, store interfaces, agent-stream codecs + raw-QUIC transport, MDK bench | `marmotKmpDir` |
 | cordn-kmp (`cordn`) | cordn specs, `CordnGroupManager`, `CordnSyncLoop`, the registry, store interfaces | `cordnKmpDir` |
 | quic-kmp (`quic`) | QUIC v1/v2 client and server, TLS 1.3, HTTP/3, QPACK, WebTransport (JVM, Android) | `quicKmpDir` |
+| kiko-kmp (`kiko`) | The 128x128 fantasy-console cart runtime (Lua dialect, graphics, sound, `.p8.png`) behind the note cart player. No Nostr, stdlib only | `kikoKmpDir` |
 
 Dependencies: crypto-kmp ← quartz, mls-kmp, quic-kmp; quartz + mls-kmp ← marmot-kmp, cordn-kmp
-(never each other); quic-kmp ← `nestsClient`, marmot-quic. Quartz depends on no MLS.
+(never each other); quic-kmp ← `nestsClient`, marmot-quic; kiko-kmp ← `commons` (the cart player).
+Quartz depends on no MLS.
 
 **What goes where.** If another client of that protocol (`amy`, White Noise, a bot) would need the
 code, it goes in a library. Signed Nostr kinds, tags, codecs → quartz. Primitives → crypto-kmp. RFC
 9420 → mls-kmp. A binding's rules, MLS state or not → its repo: group operations, and the shape and
 validation of the unsigned events members send inside a group (edits, polls, emoji, reports). QUIC →
-quic-kmp; MoQ → `nestsClient`. A test or vector of one library → that library. **Stays here:** at-rest
+quic-kmp; MoQ → `nestsClient`. Running a cart (Lua, graphics, sound, cart formats) → kiko-kmp; finding
+carts in notes, the player screen and saves stay here. A test or vector of one library → that library. **Stays here:** at-rest
 stores, account wiring (relays, signer, LocalCache; not protocol steps inside `AccountMarmotActions`
 or `CordnRuntime`), chatrooms, feeds, UI, `amy` verbs, tests needing both bindings.
 

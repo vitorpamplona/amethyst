@@ -25,11 +25,10 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.fantasyconsole.cart.CartLoader
-import com.vitorpamplona.fantasyconsole.cart.P8scii
-import com.vitorpamplona.fantasyconsole.runtime.Audio
-import com.vitorpamplona.fantasyconsole.runtime.ConsoleHost
-import com.vitorpamplona.fantasyconsole.runtime.FantasyConsole
+import com.vitorpamplona.kiko.cart.CartLoader
+import com.vitorpamplona.kiko.cart.P8scii
+import com.vitorpamplona.kiko.runtime.ConsoleHost
+import com.vitorpamplona.kiko.runtime.FantasyConsole
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -232,7 +231,7 @@ class CartPlayerViewModel(
             return
         }
         _status.value = Status.Playing
-        val sound = openCartAudioSink(Audio.SAMPLE_RATE)
+        val sound = openCartAudioSink(FantasyConsole.SAMPLE_RATE)
         val watchdog =
             viewModelScope.launch(Dispatchers.Default) {
                 while (isActive) {

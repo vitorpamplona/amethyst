@@ -89,6 +89,8 @@ cordnKmp = "1.2.0"
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
 # versions those libraries were built against.
 cryptoKmp = "2.1.0"
+# The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp).
+kikoKmp = "0.1.0"
 mlsKmp = "1.3.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.0"
@@ -266,6 +268,7 @@ marmot = { module = "com.vitorpamplona.marmot:marmot", version.ref = "marmotKmp"
 marmot-quic = { module = "com.vitorpamplona.marmot:marmot-quic", version.ref = "marmotKmp" }
 cordn = { module = "com.vitorpamplona.cordn:cordn", version.ref = "cordnKmp" }
 crypto = { module = "com.vitorpamplona.crypto:crypto", version.ref = "cryptoKmp" }
+kiko = { module = "com.vitorpamplona.kiko:kiko", version.ref = "kikoKmp" }
 mls-kmp = { module = "com.vitorpamplona.mls:mls", version.ref = "mlsKmp" }
 quic = { module = "com.vitorpamplona.quic:quic", version.ref = "quicKmp" }
 kchesslib = { module = "io.github.cvb941:kchesslib", version.ref = "kchesslib" }
