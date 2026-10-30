@@ -117,6 +117,7 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_retry
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.BatchedConsentCard
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConsentInputGuard
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConnectCard
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConsentCard
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -221,11 +222,15 @@ private fun SandboxToolbar(
             }
 
             Row(
-                Modifier.weight(1f).clickable(onClick = onAccessInfo).padding(horizontal = 8.dp),
+                Modifier.weight(1f).clickable(onClick = onAccessInfo).padding(end = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(MaterialSymbols.Shield, contentDescription = stringRes(Res.string.browser_pill_access), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                // The same 48 dp slot and size as the toolbar's buttons, so the shield sits as far from
+                // the reload button as the buttons sit from each other, and the title starts where a
+                // top bar's title does after its leading icon.
+                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    Icon(MaterialSymbols.Shield, contentDescription = stringRes(Res.string.browser_pill_access), modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                }
                 Column {
                     Text(session.launch.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
@@ -255,7 +260,8 @@ private fun SandboxToolbar(
             }
 
             // Only an nSite has a route of its own to choose, and only while Tor is on.
-            if (isWebsite && host.torEnabled) {
+            val torEnabled by host.torEnabledState.collectAsState()
+            if (isWebsite && torEnabled) {
                 val useTor = session.useTor
                 Row(
                     Modifier.padding(horizontal = 8.dp),
@@ -367,6 +373,7 @@ private fun AccessWindow(
     onDone: () -> Unit,
 ) {
     val isWebsite = session.launch.profile == HostProfile.WEBSITE
+    val torEnabled by host.torEnabledState.collectAsState()
     val capabilities =
         session.launch.declared
             .map { stringRes(it.labelRes()) }
@@ -382,7 +389,7 @@ private fun AccessWindow(
                 title = session.launch.title,
                 isWebsite = isWebsite,
                 capabilities = capabilities,
-                torOn = if (isWebsite && host.torEnabled) session.useTor else null,
+                torOn = if (isWebsite && torEnabled) session.useTor else null,
                 // The per-app permission screen is Android's for now.
                 onManagePermissions = null,
                 onDone = onDone,
@@ -454,7 +461,7 @@ private fun ConsentWindow(
         icon = IconResources.adaptedBitmapPainter,
     ) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-            content()
+            ConsentInputGuard(content)
         }
     }
 }

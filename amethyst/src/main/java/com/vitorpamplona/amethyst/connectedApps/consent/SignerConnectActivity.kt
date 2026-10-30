@@ -42,6 +42,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConsentInputGuard
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConnectCard
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -104,7 +105,7 @@ private fun SignerConnectScreen(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
         ) {
-            SignerConnectCard(info, onConnect, onBlock, onCancel)
+            ConsentInputGuard { SignerConnectCard(info, onConnect, onBlock, onCancel) }
         }
     }
 }

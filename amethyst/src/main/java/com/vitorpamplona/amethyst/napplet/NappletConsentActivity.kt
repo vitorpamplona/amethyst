@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConsentInputGuard
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
 /**
@@ -108,7 +109,7 @@ private fun NappletConsentDialog(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
         ) {
-            NappletConsentCard(info, onDecision)
+            ConsentInputGuard { NappletConsentCard(info, onDecision) }
         }
     }
 }

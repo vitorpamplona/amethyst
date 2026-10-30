@@ -75,6 +75,7 @@ import java.awt.Component
 import java.io.InputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.swing.SwingUtilities
 
 /**
  * One open napplet or nSite window: its Chromium browser, the trusted shell it loads, and the bridge
@@ -591,12 +592,18 @@ class CefNappletSession(
         scope.cancel()
         // The cache is shared, so it is trimmed as windows close.
         runtime.trimBlobCache()
-        runCatching {
-            browser?.close(true)
-            if (client != null && router != null) client.removeMessageRouter(router)
-            router?.dispose()
-            client?.dispose()
-        }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
+        // On the AWT thread, where the browser's component lives: a logout closes windows from a
+        // background coroutine, and tearing Chromium down there raced the window still painting it.
+        val teardown = {
+            runCatching {
+                browser?.close(true)
+                if (client != null && router != null) client.removeMessageRouter(router)
+                router?.dispose()
+                client?.dispose()
+            }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
+            Unit
+        }
+        if (SwingUtilities.isEventDispatchThread()) teardown() else SwingUtilities.invokeLater(teardown)
     }
 
     /** A [NappletSiteServer.Response], to Chromium, streamed: a large script or wasm file isn't loaded whole. */

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.consent.oldestAccountGro
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.BatchedConsentCard
+import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.ConsentInputGuard
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConsentCard
 import com.vitorpamplona.amethyst.ui.theme.AmethystTheme
 
@@ -121,7 +122,7 @@ private fun ConsentSheet(
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
         ) {
-            content()
+            ConsentInputGuard(content)
         }
     }
 }

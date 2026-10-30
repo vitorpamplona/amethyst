@@ -39,10 +39,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
@@ -110,6 +112,12 @@ class DesktopNappletHost(
 
     /** Whether Tor is on for the app; a site that chose Tor then goes through it. */
     val torEnabled: Boolean get() = torEnabled()
+
+    /** [torEnabled] as it changes, for the windows' onion switch to follow the app's Tor setting. */
+    val torEnabledState: StateFlow<Boolean> =
+        modules.torPrefs.torType
+            .map { it != TorType.OFF }
+            .stateIn(modules.applicationIOScope, SharingStarted.Eagerly, torEnabled())
 
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
 
