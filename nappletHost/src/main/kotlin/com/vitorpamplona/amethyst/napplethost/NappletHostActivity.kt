@@ -284,7 +284,8 @@ class NappletHostActivity : ComponentActivity() {
             other.getStringExtra(NappletHostContract.EXTRA_IDENTIFIER).orEmpty() == identifier &&
             HostProfile.fromName(other.getStringExtra(NappletHostContract.EXTRA_HOST_PROFILE)) == profile &&
             other.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE) == webViewProfile &&
-            other.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true) == useTor
+            other.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true) == useTor &&
+            NappletHostContract.webxdcOf(other.extras).let { it?.url == webxdc?.url && it?.hash == webxdc?.hash }
 
     // The chrome sees touches first, so a swipe down on its handle opens it over the page.
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean = chrome?.dispatchTouchEvent(ev) { super.dispatchTouchEvent(it) } ?: super.dispatchTouchEvent(ev)
