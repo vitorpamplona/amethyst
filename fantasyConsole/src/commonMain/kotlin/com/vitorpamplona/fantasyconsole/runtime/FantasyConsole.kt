@@ -316,6 +316,9 @@ class FantasyConsole(
         mask: Int,
     ) = input.setButtons(player, mask)
 
+    /** Whether the pause menu is open: the game is frozen behind it. */
+    val isPaused: Boolean get() = menu.isOpen
+
     /** The screen as 128x128 ARGB pixels, with the pause menu over it while it is open. */
     fun render(out: IntArray) {
         graphics.render(out)

@@ -97,7 +97,13 @@ Design points:
   full-screen dialog with the screen scaled by whole numbers, a direction pad and O/X buttons
   (multi-touch, slide between directions), keyboard and gamepad keys, and sound through
   `AudioTrack` (Android) or `javax.sound` (Desktop). A pause button opens the game's pause menu
-  on touch screens. The pointer over the screen and typed keys reach games that read them. Input
+  on touch screens. The pad and the O/X area each read every finger as it slides, so a thumb
+  moves between directions, diagonals and off the pad's edge without lifting, and rolls from O to
+  X through a strip that presses both (`CartControlsTouchTest`). Each new press gives a haptic
+  tick. Both areas are excluded from Android's edge gestures, and Back opens the pause menu
+  (Back again closes the player), so a stray swipe never ends a game. Landscape hides the system
+  bars; the screen stays on while the player is open. The keyboard hint shows only with a
+  physical keyboard. The pointer over the screen and typed keys reach games that read them. Input
   is handed to the game's own thread between frames, so a tap shorter than a frame still counts.
   The game runs on its own thread, paced by the clock; it pauses when the dialog closes and
   resumes where it was. `blossom:` URIs are resolved through the BUD-10 finder, and a declared

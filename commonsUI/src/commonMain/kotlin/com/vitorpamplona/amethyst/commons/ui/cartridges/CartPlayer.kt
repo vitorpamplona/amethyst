@@ -58,7 +58,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
@@ -72,6 +74,7 @@ import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isTertiaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -81,7 +84,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.LifecycleStartEffect
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel
 import com.vitorpamplona.amethyst.commons.cartridges.CartPlayerViewModel.Buttons
@@ -100,6 +102,9 @@ import com.vitorpamplona.amethyst.commons.resources.cart_loading
 import com.vitorpamplona.amethyst.commons.resources.cart_not_a_cart
 import com.vitorpamplona.amethyst.commons.resources.cart_pause_menu
 import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
+import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
+import com.vitorpamplona.amethyst.commons.ui.components.edgeToEdgeDialogProperties
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -118,8 +123,10 @@ fun CartPlayerDialog(
 ) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnClickOutside = false),
+        // Back is the player's to handle: it pauses the game before it closes anything.
+        properties = edgeToEdgeDialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
     ) {
+        SetDialogToEdgeToEdge()
         CartPlayer(url, sha256, accountViewModel, onDismiss)
     }
 }
@@ -127,7 +134,8 @@ fun CartPlayerDialog(
 /**
  * The game screen with an on-screen direction pad and O/X buttons, and the keyboard or a gamepad
  * (arrows, Z/C/N for O, X/V/M for X, Enter or P to pause), plus a pause button for touch screens.
- * The screen sits above the controls on a tall window and between them on a wide one.
+ * The screen sits above the controls on a tall window, and between them, full screen, on a wide
+ * one. Back (or Escape) opens the game's pause menu; Back again closes the player.
  */
 @Composable
 fun CartPlayer(
@@ -154,6 +162,12 @@ fun CartPlayer(
     // press and release into one recomposition and the game would never see the press.
     val held = remember { HeldButtons() }
     val send = { viewModel.setButtons(held.mask) }
+    // A tick for each new press: a touch screen gives the thumb nothing else to feel.
+    val haptics = LocalHapticFeedback.current
+    val tickIfPressed = { before: Int, now: Int -> if (now and before.inv() != 0) haptics.performHapticFeedback(HapticFeedbackType.VirtualKey) }
+    val back = { if (!viewModel.openPauseMenu()) onClose() }
+    PlatformBackHandler(onBack = back)
+    val hasKeyboard = rememberHasHardwareKeyboard()
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -166,7 +180,7 @@ fun CartPlayer(
             .focusable()
             .onKeyEvent { event ->
                 if (event.key == Key.Escape || event.key == Key.Back) {
-                    if (event.type == KeyEventType.KeyUp) onClose()
+                    if (event.type == KeyEventType.KeyUp) back()
                     return@onKeyEvent true
                 }
                 // Games that read the keyboard get every key typed, buttons included, as on the original.
@@ -184,10 +198,12 @@ fun CartPlayer(
     ) {
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
             val wide = maxWidth > maxHeight
+            CartWindowMode(fullScreen = wide)
             val control = min(maxWidth.value, maxHeight.value).coerceIn(120f, 200f).dp * if (wide) 0.9f else 0.8f
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 DirectionPad(
                     onChange = {
+                        tickIfPressed(held.pad, it)
                         held.pad = it
                         send()
                     },
@@ -197,12 +213,9 @@ fun CartPlayer(
             val actions: @Composable () -> Unit = {
                 ActionButtons(
                     size = control,
-                    onO = {
-                        held.o = if (it) Buttons.O else 0
-                        send()
-                    },
-                    onX = {
-                        held.x = if (it) Buttons.X else 0
+                    onChange = {
+                        tickIfPressed(held.actions, it)
+                        held.actions = it
                         send()
                     },
                 )
@@ -230,7 +243,7 @@ fun CartPlayer(
                         controls(Modifier)
                         actions()
                     }
-                    Hint(stringRes(Res.string.cart_keyboard_hint), Modifier.padding(16.dp))
+                    if (hasKeyboard) Hint(stringRes(Res.string.cart_keyboard_hint), Modifier.padding(16.dp))
                 }
             }
         }
@@ -249,10 +262,9 @@ fun CartPlayer(
 /** What each control holds down, as [Buttons] bits. */
 private class HeldButtons {
     var pad = 0
-    var o = 0
-    var x = 0
+    var actions = 0
     var keys = 0
-    val mask get() = pad or o or x or keys
+    val mask get() = pad or actions or keys
 }
 
 /** Keyboard and gamepad keys and the button each holds down. */
@@ -385,7 +397,7 @@ private val PressedColor = Color.White.copy(alpha = 0.55f)
 
 /** A cross that reads every finger on it, so sliding between directions and diagonals work. */
 @Composable
-private fun DirectionPad(
+internal fun DirectionPad(
     onChange: (Int) -> Unit,
     modifier: Modifier,
 ) {
@@ -393,6 +405,7 @@ private fun DirectionPad(
     val description = stringRes(Res.string.cart_dpad_description)
     Canvas(
         modifier
+            .claimSystemGestures()
             .semantics { contentDescription = description }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
@@ -447,53 +460,88 @@ private fun directionOf(
 
 private const val TAN_22_5 = 0.4142f
 
+/**
+ * O and X, staggered like a handheld (O low on the left, X high on the right), read as one area
+ * like the direction pad: a thumb rolls from one to the other without lifting, the strip between
+ * them presses both, and every finger on it counts.
+ */
 @Composable
-private fun ActionButtons(
+internal fun ActionButtons(
     size: Dp,
-    onO: (Boolean) -> Unit,
-    onX: (Boolean) -> Unit,
+    onChange: (Int) -> Unit,
 ) {
-    val button = size * 0.45f
-    // Staggered like a handheld: O low on the left, X high on the right.
-    Box(Modifier.width(size).height(size)) {
-        ActionButton(isX = false, onPress = onO, modifier = Modifier.size(button).align(Alignment.BottomStart))
-        ActionButton(isX = true, onPress = onX, modifier = Modifier.size(button).align(Alignment.TopEnd))
-    }
-}
-
-@Composable
-private fun ActionButton(
-    isX: Boolean,
-    onPress: (Boolean) -> Unit,
-    modifier: Modifier,
-) {
-    var pressed by remember { mutableIntStateOf(0) }
-    val description = stringRes(if (isX) Res.string.cart_button_x_description else Res.string.cart_button_o_description)
+    var held by remember { mutableIntStateOf(0) }
+    val description =
+        stringRes(Res.string.cart_button_o_description) + ", " + stringRes(Res.string.cart_button_x_description)
     Canvas(
-        modifier
+        Modifier
+            .size(size)
+            .claimSystemGestures()
             .semantics { contentDescription = description }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     while (true) {
                         val event = awaitPointerEvent()
-                        val down = if (event.changes.any { it.pressed }) 1 else 0
-                        event.changes.forEach { it.consume() }
-                        if (down != pressed) {
-                            pressed = down
-                            onPress(down == 1)
+                        var bits = 0
+                        for (change in event.changes) {
+                            if (!change.pressed) continue
+                            bits = bits or buttonsAt(change.position, this.size.width.toFloat())
+                            change.consume()
+                        }
+                        if (bits != held) {
+                            held = bits
+                            onChange(bits)
                         }
                     }
                 }
             },
     ) {
-        drawCircle(if (pressed == 1) PressedColor else ControlColor)
-        val mark = size.minDimension * 0.22f
-        val stroke = size.minDimension * 0.07f
-        if (isX) {
-            drawLine(Color.White, center - Offset(mark, mark), center + Offset(mark, mark), stroke, StrokeCap.Round)
-            drawLine(Color.White, center - Offset(mark, -mark), center + Offset(mark, -mark), stroke, StrokeCap.Round)
-        } else {
-            drawCircle(Color.White, mark, style = Stroke(stroke))
-        }
+        val radius = this.size.minDimension * BUTTON_RADIUS
+        drawActionButton(Offset(radius, this.size.height - radius), radius, isX = false, pressed = held and Buttons.O != 0)
+        drawActionButton(Offset(this.size.width - radius, radius), radius, isX = true, pressed = held and Buttons.X != 0)
     }
 }
+
+private fun DrawScope.drawActionButton(
+    center: Offset,
+    radius: Float,
+    isX: Boolean,
+    pressed: Boolean,
+) {
+    drawCircle(if (pressed) PressedColor else ControlColor, radius, center)
+    val mark = radius * 0.49f
+    val stroke = radius * 0.155f
+    if (isX) {
+        drawLine(Color.White, center - Offset(mark, mark), center + Offset(mark, mark), stroke, StrokeCap.Round)
+        drawLine(Color.White, center - Offset(mark, -mark), center + Offset(mark, -mark), stroke, StrokeCap.Round)
+    } else {
+        drawCircle(Color.White, mark, center, style = Stroke(stroke))
+    }
+}
+
+/**
+ * Which buttons a touch at [position] holds in an area [side] wide: the nearer one, a little past
+ * its edge, or both in the strip halfway between them.
+ */
+private fun buttonsAt(
+    position: Offset,
+    side: Float,
+): Int {
+    val radius = side * BUTTON_RADIUS
+    val toO = (position - Offset(radius, side - radius)).getDistance()
+    val toX = (position - Offset(side - radius, radius)).getDistance()
+    if (abs(toO - toX) < radius * BOTH_STRIP && maxOf(toO, toX) < radius * BOTH_REACH) return Buttons.O or Buttons.X
+    val nearest = min(toO, toX)
+    if (nearest > radius * REACH) return 0
+    return if (toO <= toX) Buttons.O else Buttons.X
+}
+
+/** Each button's radius, as a share of the area's side. */
+private const val BUTTON_RADIUS = 0.225f
+
+/** How far past its edge a button still answers, in radii. */
+private const val REACH = 1.6f
+
+/** The strip that presses both: within this many radii of halfway, and this close to each. */
+private const val BOTH_STRIP = 0.6f
+private const val BOTH_REACH = 2.2f

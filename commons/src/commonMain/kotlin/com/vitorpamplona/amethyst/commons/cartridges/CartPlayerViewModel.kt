@@ -109,6 +109,9 @@ class CartPlayerViewModel(
     @Volatile
     private var hung = false
 
+    @Volatile
+    private var menuOpen = false
+
     private val saves = CartSaves(saveStore)
 
     private val host =
@@ -146,6 +149,18 @@ class CartPlayerViewModel(
             it.setButtons(0, held or Buttons.PAUSE)
             it.setButtons(0, held)
         }
+    }
+
+    /**
+     * Back while playing opens the game's pause menu, so a stray swipe never ends a game.
+     * Returns false when there is nothing to pause (or it is paused already): the player closes.
+     */
+    fun openPauseMenu(): Boolean {
+        if (_status.value != Status.Playing || menuOpen) return false
+        // Until the next frame says so: a quick second Back must close, not toggle the menu shut.
+        menuOpen = true
+        tapPause()
+        return true
     }
 
     /** The pointer over the screen, in game pixels (0..127), and its buttons (1 left, 2 right, 4 middle). */
@@ -234,6 +249,7 @@ class CartPlayerViewModel(
                 } finally {
                     stepStarted = null
                 }
+                menuOpen = game.isPaused
                 publishFrame(game)
                 if (game.state != FantasyConsole.State.RUNNING) {
                     _status.value = Status.Stopped(if (hung) NOT_RESPONDING else game.error)
