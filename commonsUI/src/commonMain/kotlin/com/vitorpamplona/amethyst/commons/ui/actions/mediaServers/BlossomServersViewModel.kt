@@ -68,21 +68,7 @@ class BlossomServersViewModel : ViewModel() {
 
     fun refresh() {
         isModified = false
-        _fileServers.update {
-            val obtainedFileServers = obtainFileServers()
-            obtainedFileServers.mapNotNull { serverUrl ->
-                try {
-                    ServerName(
-                        Rfc3986.host(serverUrl),
-                        serverUrl,
-                        ServerType.Blossom,
-                    )
-                } catch (e: Exception) {
-                    Log.d("MediaServersViewModel", "Invalid URL in Blossom server list")
-                    null
-                }
-            }
-        }
+        _fileServers.update { toServerNames(obtainFileServers()) }
         pruneHealth()
     }
 
@@ -158,7 +144,7 @@ class BlossomServersViewModel : ViewModel() {
                 normalizedUrl,
                 ServerType.Blossom,
             )
-        if (_fileServers.value.contains(serverRef)) return false
+        if (_fileServers.value.any { it.baseUrl == serverRef.baseUrl }) return false
 
         _fileServers.update { it.plus(serverRef) }
         probeServer(serverRef.baseUrl)
@@ -204,4 +190,25 @@ class BlossomServersViewModel : ViewModel() {
     }
 
     private fun obtainFileServers(): List<String> = account.blossomServers.flow.value
+
+    companion object {
+        /**
+         * Turns the kind-10063 server URLs into list rows. Drops invalid URLs and repeated ones:
+         * a list written by another client can name a server twice, and the screen keys its
+         * rows by URL, so a repeat would crash the LazyColumn.
+         */
+        fun toServerNames(serverUrls: List<String>): List<ServerName> =
+            serverUrls.distinct().mapNotNull { serverUrl ->
+                try {
+                    ServerName(
+                        Rfc3986.host(serverUrl),
+                        serverUrl,
+                        ServerType.Blossom,
+                    )
+                } catch (e: Exception) {
+                    Log.d("MediaServersViewModel", "Invalid URL in Blossom server list")
+                    null
+                }
+            }
+    }
 }
