@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.navigation.host
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.viewmodel.ViewModelStoreProvider
@@ -47,22 +48,32 @@ import com.vitorpamplona.amethyst.commons.model.navigation.NavStackEntry
  * is cleared only when its entry is popped or re-argued.
  */
 @Composable
-internal fun rememberRouteViewModelStoreNavEntryDecorator(): NavEntryDecorator<NavStackEntry> {
+internal fun rememberRouteViewModelStoreNavEntryDecorator(backStack: List<NavStackEntry>): NavEntryDecorator<NavStackEntry> {
     val provider = rememberViewModelStoreProvider()
-    return remember(provider) { routeViewModelStoreNavEntryDecorator(provider) }
+    val decorator = remember(provider) { RouteViewModelStoreNavEntryDecorator(provider) }
+    // Every entry on the back stack, composed or not: after an Activity recreation only the screen on
+    // top is composed again, and an entry popped without being recomposed must still find its store.
+    SideEffect { decorator.track(backStack) }
+    return decorator
 }
 
-private fun routeViewModelStoreNavEntryDecorator(provider: ViewModelStoreProvider): NavEntryDecorator<NavStackEntry> {
-    // contentKey -> the store key of the version on screen, so a pop clears that version's store.
-    // Touched only from composition and its effects, on the main thread.
-    val currentStoreKeys = HashMap<Any, String>()
+private fun storeKeyOf(
+    contentKey: Any,
+    version: Int,
+) = "$contentKey#v$version"
 
-    return NavEntryDecorator(
+private class RouteViewModelStoreNavEntryDecorator(
+    provider: ViewModelStoreProvider,
+    // contentKey -> the store key of the entry's current version, so a pop clears that version's
+    // store. Added for every entry on the back stack and removed on pop. Touched only from
+    // composition and its effects, on the main thread.
+    private val currentStoreKeys: HashMap<Any, String> = HashMap(),
+) : NavEntryDecorator<NavStackEntry>(
         onPop = { contentKey -> currentStoreKeys.remove(contentKey)?.let(provider::clearKey) },
         decorate = { entry ->
             val navStackEntry = entry.metadata[NavDestinations.NAV_STACK_ENTRY] as NavStackEntry
             val version = navStackEntry.routeVersion
-            val storeKey = "${entry.contentKey}#v$version"
+            val storeKey = storeKeyOf(entry.contentKey, version)
 
             DisposableEffect(storeKey) {
                 currentStoreKeys[entry.contentKey] = storeKey
@@ -80,5 +91,8 @@ private fun routeViewModelStoreNavEntryDecorator(provider: ViewModelStoreProvide
                 CompositionLocalProvider(LocalViewModelStoreOwner provides owner) { entry.Content() }
             }
         },
-    )
+    ) {
+    fun track(backStack: List<NavStackEntry>) {
+        backStack.forEach { currentStoreKeys[it.contentKey] = storeKeyOf(it.contentKey, it.routeVersion) }
+    }
 }

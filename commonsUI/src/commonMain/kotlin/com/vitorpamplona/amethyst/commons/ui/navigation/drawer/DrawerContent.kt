@@ -817,10 +817,11 @@ fun CatalogSection(
     val visible = remember(section, hidden) { DrawerSectionVisibility.visibleItems(section, hidden) }
     if (visible.isEmpty() && !section.hasVisibleFixedRows()) return
 
-    // Without a bottom bar the Navigate rows are the bar, so they switch tabs as its items do. As
-    // pushes, every click added a screen (and its ViewModels) to a back stack nothing ever
-    // unwound: a permanent drawer is used for hours without a back press.
-    val opensAsTab = section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle != NavigationStyle.BOTTOM_BAR
+    // In a permanent drawer the Navigate rows are the bar (no bar or rail is shown), so they switch
+    // tabs as its items do. As pushes, every click added a screen (and its ViewModels) to a back
+    // stack nothing ever unwound: a permanent drawer is used for hours without a back press. A
+    // modal drawer (beside a bar or a rail, which hold these tabs) keeps opening them as pushes.
+    val opensAsTab = section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
 
     CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {
         when (section.id) {

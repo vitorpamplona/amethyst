@@ -270,6 +270,7 @@ fun PrepareViewContentDiscoveryModels(
 ) {
     // Every refresh is a new request id: a store per request clears the previous request's feed
     // model, which the screen's own store would otherwise keep, still collecting, until it is popped.
+    // The store outlives a screen pushed on top (RouteScopedViewModelsUiTest pins that).
     key(dvmRequestId) {
         ScopedViewModelStore {
             val resultFeedViewModel: DvmContentDiscoveryFeedViewModel =

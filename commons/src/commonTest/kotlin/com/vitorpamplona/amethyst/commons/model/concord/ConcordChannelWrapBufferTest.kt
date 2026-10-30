@@ -36,8 +36,8 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * A channel's wrap buffer keeps its newest wraps only: every wrap a busy channel delivered used to
- * stay for the session's whole life, with an index entry per message beside it.
+ * A channel's wrap buffer keeps its most recently delivered wraps only: every wrap a busy channel
+ * delivered used to stay for the session's whole life, with an index entry per message beside it.
  */
 class ConcordChannelWrapBufferTest {
     private val owner = NostrSignerInternal(KeyPair())
@@ -71,7 +71,7 @@ class ConcordChannelWrapBufferTest {
             val messages = emitted.filter { it.content.startsWith("m") }
             assertEquals(30, messages.size)
             val held = wraps.filter { session.isBuffered(general, it.id) }
-            assertTrue(held.size in 10..11, "trimmed back near the cap, held ${held.size}")
+            assertEquals(wraps.takeLast(10), held, "the ten most recently delivered stay")
             assertTrue(session.isBuffered(general, wraps.last().id), "the newest wrap stays")
             assertFalse(session.isBuffered(general, wraps.first().id), "the oldest wrap goes")
 
@@ -81,8 +81,12 @@ class ConcordChannelWrapBufferTest {
             assertTrue(session.holdsRumor(messages.last().id))
             assertNotNull(session.pinSource(general, messages.last().id))
 
-            // An evicted wrap delivered again is opened again rather than silently dropped.
+            // An evicted wrap delivered again (a page scrolled back to) is opened again, and is now
+            // among the most recent, so its message can be pinned; the oldest held one makes room.
             session.ingest(wraps.first())
             assertEquals(31, emitted.count { it.content.startsWith("m") })
+            assertTrue(session.isBuffered(general, wraps.first().id))
+            assertNotNull(session.pinSource(general, messages.first().id))
+            assertFalse(session.isBuffered(general, wraps[20].id))
         }
 }

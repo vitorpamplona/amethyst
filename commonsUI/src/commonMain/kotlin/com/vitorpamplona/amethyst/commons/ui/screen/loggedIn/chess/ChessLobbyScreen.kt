@@ -43,7 +43,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -123,9 +122,8 @@ fun ChessLobbyScreen(
     }
 
     // Set lobby mode (poll all games) when the screen is visible
-    DisposableEffect(chessViewModel) {
+    LaunchedEffect(chessViewModel) {
         chessViewModel.clearFocusedGame() // Clear any focused game from game screen
-        onDispose { }
     }
 
     // Poll while the lobby is on screen and the app is in the foreground. Polling is held, not

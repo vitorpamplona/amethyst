@@ -265,9 +265,10 @@ class AccountCacheState(
     private fun remoteSignerFor(settings: AccountSettings): NostrSignerRemote {
         val pubKey = settings.keyPair.pubKey.toHexKey()
         remoteSigners[pubKey]?.let { return it }
-        // Built outside the map and opened only by the winner: getOrPut on a ConcurrentMap may run
-        // its block in two racing loads (the UI login and the always-on preload) and keep one, which
-        // left the other's relay subscription open, unreachable and never closed.
+        // getOrPut on a ConcurrentMap may run its block in two racing loads (the UI login and the
+        // always-on preload) and keep one, which left the other's relay subscription open,
+        // unreachable and never closed. Here the loser closes its own. Opened before it is
+        // published, so a removal that finds it in the map always finds it open and closes it.
         val transport = NostrSignerInternal(KeyPair(privKey = settings.remoteSignerTransportKey!!.hexToByteArray()))
         val built =
             NostrSignerRemote
@@ -291,8 +292,11 @@ class AccountCacheState(
                     // keys off signer.pubKey.
                     it.bindUserPubkey(pubKey)
                 }
-        remoteSigners.putIfAbsent(pubKey, built)?.let { return it }
         built.openSubscription()
+        remoteSigners.putIfAbsent(pubKey, built)?.let { winner ->
+            built.closeSubscription()
+            return winner
+        }
         return built
     }
 

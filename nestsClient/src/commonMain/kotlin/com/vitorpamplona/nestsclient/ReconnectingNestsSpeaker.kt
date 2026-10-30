@@ -233,15 +233,8 @@ suspend fun connectReconnectingNestsSpeaker(
                         // through the recycle and the listener hears
                         // continuous audio.
                         val toClose = speaker
-                        scope.launch {
-                            try {
-                                toClose.close()
-                            } catch (ce: kotlinx.coroutines.CancellationException) {
-                                throw ce
-                            } catch (_: Throwable) {
-                                // Best-effort.
-                            }
-                        }
+                        // Best-effort: a close that fails leaves nothing more to do.
+                        scope.launch { runCatchingCancellable { toClose.close() } }
                         attempt = 0
                         refreshTriggered = true
                     } else if (terminal is NestsSpeakerState.Failed && !isUserCancelledSpeaker(terminal)) {
@@ -251,15 +244,8 @@ suspend fun connectReconnectingNestsSpeaker(
                         // or its session, pumps and QUIC connection stay up for as long as the
                         // relay keeps the connection alive.
                         val toClose = speaker
-                        scope.launch {
-                            try {
-                                toClose.close()
-                            } catch (ce: kotlinx.coroutines.CancellationException) {
-                                throw ce
-                            } catch (_: Throwable) {
-                                // Best-effort.
-                            }
-                        }
+                        // Best-effort: a close that fails leaves nothing more to do.
+                        scope.launch { runCatchingCancellable { toClose.close() } }
                         attempt++
                         if (!policy.isExhausted(attempt)) {
                             val delayMs = policy.delayForAttempt(attempt)

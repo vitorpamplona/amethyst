@@ -46,6 +46,8 @@ object NappletNotificationStore {
     }
 
     private const val MAX_PER_NAPPLET = 50
+    private const val MAX_TITLE_CHARS = 256
+    private const val MAX_BODY_CHARS = 4096
 
     private val byCoordinate = ConcurrentMap<String, Bucket>()
     private val seq = AtomicLong(0)
@@ -58,7 +60,8 @@ object NappletNotificationStore {
         val id = "n${TimeUtils.nowMillis()}-${seq.addAndFetch(1L)}"
         val bucket = byCoordinate.getOrPut(coordinate) { Bucket() }
         bucket.lock.withLock {
-            bucket.map[id] = NappletNotification(id, title, body)
+            // Untrusted text: capped like the count, or 50 notifications could still hold anything.
+            bucket.map[id] = NappletNotification(id, title.take(MAX_TITLE_CHARS), body.take(MAX_BODY_CHARS))
             // A napplet is untrusted and only removes what it dismisses; a create loop must not
             // grow this process-wide store forever. Drops the oldest beyond the cap.
             val iterator = bucket.map.keys.iterator()

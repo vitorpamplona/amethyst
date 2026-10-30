@@ -23,14 +23,21 @@ package com.vitorpamplona.amethyst.desktop.ui.navigation
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
@@ -87,10 +94,10 @@ class RouteScopedViewModelsUiTest {
 
     private val nav = Nav(NavBackStacks(), scope)
 
-    private fun show() {
+    private fun show(home: @Composable () -> Unit = { Screen("home") }) {
         val destinations =
             NavDestinations().apply {
-                composable<Route.Home> { Screen("home") }
+                composable<Route.Home> { home() }
                 composable<Route.Message> { Screen("messages") }
                 composableArgs<Route.Note> { Screen("note:${it.id}") }
             }
@@ -98,8 +105,13 @@ class RouteScopedViewModelsUiTest {
             object : ViewModelStoreOwner {
                 override val viewModelStore = ViewModelStore()
             }
+        // A started window, as in the app: a composition-scoped store clears on leaving only then.
+        val window =
+            object : LifecycleOwner {
+                override val lifecycle = LifecycleRegistry.createUnsafe(this).apply { currentState = Lifecycle.State.RESUMED }
+            }
         compose.setContent {
-            CompositionLocalProvider(LocalViewModelStoreOwner provides root) {
+            CompositionLocalProvider(LocalViewModelStoreOwner provides root, LocalLifecycleOwner provides window) {
                 NavigationHost(nav, destinations)
             }
         }
@@ -146,5 +158,24 @@ class RouteScopedViewModelsUiTest {
         compose.onNodeWithText("messages").assertExists()
         assertEquals(listOf("home", "messages"), created)
         assertEquals(emptyList(), cleared)
+    }
+
+    @Test
+    fun aScopedStoreSurvivesAScreenPushedOnTopAndClearsOnANewKey() {
+        // The shape DVM content discovery uses for its per-request results.
+        val request = mutableStateOf("r1")
+        show { key(request.value) { ScopedViewModelStore { Screen("results:${request.value}") } } }
+
+        // Home leaves the composition under the pushed note, and comes back with the same model.
+        act { push(Route.Note("a")) }
+        act { pop() }
+        assertEquals(listOf("results:r1", "note:a"), created)
+        assertEquals(listOf("note:a"), cleared)
+
+        // A new key (a refresh with a new request) clears the previous key's model.
+        compose.runOnIdle { request.value = "r2" }
+        compose.waitForIdle()
+        assertEquals(listOf("results:r1", "note:a", "results:r2"), created)
+        assertEquals(listOf("note:a", "results:r1"), cleared)
     }
 }

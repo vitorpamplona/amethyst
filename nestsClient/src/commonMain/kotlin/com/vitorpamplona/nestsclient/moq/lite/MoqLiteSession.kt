@@ -227,10 +227,19 @@ class MoqLiteSession internal constructor(
                     // see an end-of-flow.
                 }
             }
-        state.withLock {
-            announcePumps.removeAll { it.isCompleted }
-            announcePumps += pump
-        }
+        // A close() that ran while this pump was starting has already taken the list: cancel the
+        // pump here, or nothing would.
+        val cancelNow =
+            state.withLock {
+                if (closed) {
+                    true
+                } else {
+                    announcePumps.removeAll { it.isCompleted }
+                    announcePumps += pump
+                    false
+                }
+            }
+        if (cancelNow) pump.cancel()
         return MoqLiteAnnouncesHandle(
             updates = updates,
             close = {

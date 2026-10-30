@@ -43,13 +43,14 @@ fun NavigationHost(
     modifier: Modifier = Modifier,
 ) {
     val visible = nav.stacks.stack.toList()
+    val retained = visible + nav.stacks.savedTabs.values
     val decorated =
         rememberDecoratedNavEntries(
-            backStack = visible + nav.stacks.savedTabs.values,
+            backStack = retained,
             entryDecorators =
                 listOf(
                     rememberSaveableStateHolderNavEntryDecorator(),
-                    rememberRouteViewModelStoreNavEntryDecorator(),
+                    rememberRouteViewModelStoreNavEntryDecorator(retained),
                 ),
             entryProvider = destinations::entryFor,
         )
