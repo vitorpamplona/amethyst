@@ -101,10 +101,12 @@ class ChessViewModel(
      * while composed, so going from one to the other never stops polling, and leaving chess does.
      */
     fun holdPolling() {
+        Log.d("chessdebug") { "[ChessVM] holdPolling: holders=${pollingHolders + 1}" }
         if (pollingHolders++ == 0) logic.startPolling()
     }
 
     fun releasePolling() {
+        Log.d("chessdebug") { "[ChessVM] releasePolling: holders=${(pollingHolders - 1).coerceAtLeast(0)}" }
         if (pollingHolders > 0 && --pollingHolders == 0) logic.stopPolling()
     }
 
