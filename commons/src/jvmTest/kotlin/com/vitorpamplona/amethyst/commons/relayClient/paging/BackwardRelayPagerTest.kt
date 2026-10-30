@@ -316,4 +316,59 @@ class BackwardRelayPagerTest {
         assertEquals(0, p.status.value.stalledCount)
         assertFalse(p.status.value.exhausted)
     }
+
+    @Test
+    fun unbindLetsGoOfTheEndedSubscriptionsScope() {
+        val cursors = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope, owner = "alice") { listOf(r1, r2) }
+        p.advance(r1)
+        assertTrue(p.loadingMore.value)
+
+        p.unbind("alice")
+
+        // Nothing of the scope is left: no cursors, no relays, no spinner, an empty status.
+        assertFalse(p.isBoundTo(cursors))
+        assertFalse(p.loadingMore.value)
+        assertEquals(PagingStatus(), p.status.value)
+        assertFalse(p.advance(r2))
+        assertFalse(p.advanceAll())
+        // A late page of the ended subscription lands nowhere.
+        assertFalse(p.onEose(r1))
+        assertEquals(emptyList(), p.armedRelays(listOf(r1, r2)))
+    }
+
+    @Test
+    fun unbindFromAnOlderSubscriptionLeavesTheNewerBinding() {
+        val cursorsA = RelayLoadingCursors()
+        val cursorsB = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursorsA, scope, owner = "alice") { listOf(r1) }
+        p.bind(cursorsB, scope, owner = "bob") { listOf(r3) }
+
+        p.unbind("alice")
+
+        assertTrue(p.isBoundTo(cursorsB))
+        assertTrue(p.advance(r3))
+    }
+
+    @Test
+    fun aScopeBoundAgainAfterUnbindKeepsItsProgress() {
+        val cursors = RelayLoadingCursors()
+        val p = BackwardRelayPager("test")
+        p.bind(cursors, scope, owner = "alice") { listOf(r1, r2) }
+        p.advance(r1)
+        p.onEose(r1) // an empty page: r1 is done
+
+        p.unbind("alice")
+        p.bind(cursors, scope, owner = "alice") { listOf(r1, r2) }
+
+        assertTrue(
+            p.status.value.relayProgress
+                .getValue(r1)
+                .done,
+        )
+        assertFalse(p.advance(r1))
+        assertTrue(p.advance(r2))
+    }
 }

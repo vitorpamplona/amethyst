@@ -127,6 +127,10 @@ class CachePruner(
         cache.relayGroupChannels.forEach { _, channel ->
             pruneHiddenMessagesChannel(channel, account)
         }
+
+        cache.concordChannels.forEach { _, channel ->
+            pruneHiddenMessagesChannel(channel, account)
+        }
     }
 
     // 2× the 10-min `PRESENCE_FRESHNESS_WINDOW_SECONDS` used by
@@ -180,6 +184,11 @@ class CachePruner(
         }
 
         cache.relayGroupChannels.forEach { _, channel ->
+            pruneOldMessagesChannel(channel)
+        }
+
+        // Concord channels were left out, so a busy community's messages were never trimmed.
+        cache.concordChannels.forEach { _, channel ->
             pruneOldMessagesChannel(channel)
         }
 

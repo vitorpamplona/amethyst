@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +82,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_git_pr
 import com.vitorpamplona.amethyst.commons.resources.kind_git_pr_update
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrlOrBlossom
+import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -945,6 +947,23 @@ private fun RenderGitRepositoryEvent(
  */
 @Composable
 private fun RepoSnapshotDashboard(
+    noteEvent: GitRepositoryEvent,
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    // A store per card: in the screen's store, every repo scrolled past kept its model and loaded
+    // snapshot until the screen was popped, around GitRepoSnapshotCache's deliberately small LRU.
+    // Scrolling back reads that cache first.
+    key(note.idHex) {
+        ScopedViewModelStore {
+            RepoSnapshotDashboardContent(noteEvent, note, accountViewModel, nav)
+        }
+    }
+}
+
+@Composable
+private fun RepoSnapshotDashboardContent(
     noteEvent: GitRepositoryEvent,
     note: Note,
     accountViewModel: AccountViewModel,

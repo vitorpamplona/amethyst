@@ -160,7 +160,7 @@ class AccountNotificationsHistoryEoseManager(
     override fun newSub(key: AccountQueryState): Subscription {
         // Repoint the single-active orchestrator at this account's notification cursors and the relay set
         // it fans out to, refreshing the display flows from the restored progress.
-        pager.bind(key.account.notificationHistory, key.account.scope) { notificationRelaySet(key.account) }
+        pager.bind(key.account.notificationHistory, key.account.scope, owner = user(key)) { notificationRelaySet(key.account) }
 
         val user = user(key)
         userJobMap[user]?.forEach { it.cancel() }
@@ -239,7 +239,9 @@ class AccountNotificationsHistoryEoseManager(
         subId: String,
     ) {
         super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
+        userJobMap.remove(key)?.forEach { it.cancel() }
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
     }
 
     companion object {

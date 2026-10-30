@@ -112,9 +112,18 @@ class RelayGroupOpenThreadsHistorySubAssembler(
         if (pager.advanceAll()) invalidateFilters()
     }
 
+    override fun endSub(
+        key: GroupId,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
+    }
+
     override fun newSub(key: RelayGroupOpenThreadsHistoryQueryState): Subscription {
         // Repoint the single-active orchestrator at this group's thread cursors and its host relay.
-        pager.bind(cursorsFor(key), key.account.scope) { relaysFor(key) }
+        pager.bind(cursorsFor(key), key.account.scope, owner = id(key)) { relaysFor(key) }
         return requestNewSubscription(historyListener(key))
     }
 

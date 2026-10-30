@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Event
 
 /**
  * Subscribe to chess events when the Chess screen is active.
@@ -70,11 +71,10 @@ fun ChessSubscription(
     // Wire incoming chess events from relay subscriptions to the ViewModel
     val chessAssembler = accountViewModel.dataSources().chess
     DisposableEffect(chessAssembler, chessViewModel) {
-        chessAssembler.setOnChessEvent { event ->
-            chessViewModel.handleIncomingEvent(event)
-        }
+        val callback: (Event) -> Unit = { event -> chessViewModel.handleIncomingEvent(event) }
+        chessAssembler.setOnChessEvent(callback)
         onDispose {
-            chessAssembler.setOnChessEvent(null)
+            chessAssembler.clearOnChessEvent(callback)
         }
     }
 

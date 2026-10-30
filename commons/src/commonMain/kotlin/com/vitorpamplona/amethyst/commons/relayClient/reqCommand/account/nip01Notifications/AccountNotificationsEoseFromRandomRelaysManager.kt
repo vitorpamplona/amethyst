@@ -129,7 +129,7 @@ class AccountNotificationsEoseFromRandomRelaysManager(
         subId: String,
     ) {
         super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
+        userJobMap.remove(key)?.forEach { it.cancel() }
     }
 
     companion object {

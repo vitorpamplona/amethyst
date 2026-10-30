@@ -39,9 +39,10 @@ import kotlinx.coroutines.flow.StateFlow
  * the user's actions. Each platform supplies its own adapters (how to publish, fetch, resolve
  * metadata and remember dismissed games) and its polling cadence.
  *
- * On Android it is a lifecycle-scoped `ViewModel`: [scope] defaults to `viewModelScope` and
- * polling stops in [onCleared]. Desktop, which has no `ViewModelStore`, passes the scope of the
- * composition that owns it; polling then ends when that scope is cancelled.
+ * It is a lifecycle-scoped `ViewModel`: [scope] defaults to `viewModelScope`. Polling runs only
+ * while a chess screen holds it ([holdPolling]/[releasePolling]); a challenge card in a feed reads
+ * the same instance without polling. The instance lives in the account's shared store, so it is
+ * cleared, and stops for good, on an account switch or logout.
  */
 @Stable
 class ChessViewModel(
@@ -90,12 +91,24 @@ class ChessViewModel(
 
     init {
         Log.d("chessdebug") { "[ChessVM] init: userPubkey=${userPubkey.take(8)}" }
-        logic.startPolling()
     }
 
-    fun startPolling() = logic.startPolling()
+    // Chess screens currently on screen. Touched only from composition effects (main thread).
+    private var pollingHolders = 0
 
-    fun stopPolling() = logic.stopPolling()
+    /**
+     * Polls relays while at least one chess screen holds it. The lobby and the board each hold it
+     * while composed, so going from one to the other never stops polling, and leaving chess does.
+     */
+    fun holdPolling() {
+        Log.d("chessdebug") { "[ChessVM] holdPolling: holders=${pollingHolders + 1}" }
+        if (pollingHolders++ == 0) logic.startPolling()
+    }
+
+    fun releasePolling() {
+        Log.d("chessdebug") { "[ChessVM] releasePolling: holders=${(pollingHolders - 1).coerceAtLeast(0)}" }
+        if (pollingHolders > 0 && --pollingHolders == 0) logic.stopPolling()
+    }
 
     fun forceRefresh() = logic.forceRefresh()
 

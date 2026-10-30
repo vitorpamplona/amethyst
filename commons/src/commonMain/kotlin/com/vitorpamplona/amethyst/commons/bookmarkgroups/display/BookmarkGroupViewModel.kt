@@ -26,11 +26,14 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.AddressBookmark
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.BookmarkIdTag
 import com.vitorpamplona.quartz.nip51Lists.bookmarkList.tags.EventBookmark
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -46,25 +49,27 @@ class BookmarkGroupViewModel(
             .getBookmarkSetFlow(bookmarkGroupIdentifier)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(2500), null)
 
-    fun publicPosts() =
+    // Built once per model: as functions, every call added another collector to viewModelScope, and
+    // the list views called them on every recomposition.
+    val publicPosts: StateFlow<List<Note>> =
         selectedBookmarkGroupFlow
             .filterNotNull()
             .map { group -> group.publicPostBookmarks.map { account.cache.getOrCreateNote(it.eventId) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun privatePosts() =
+    val privatePosts: StateFlow<List<Note>> =
         selectedBookmarkGroupFlow
             .filterNotNull()
             .map { group -> group.privatePostBookmarks.map { account.cache.getOrCreateNote(it.eventId) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun publicArticles() =
+    val publicArticles: StateFlow<List<AddressableNote>> =
         selectedBookmarkGroupFlow
             .filterNotNull()
             .map { group -> group.publicArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    fun privateArticles() =
+    val privateArticles: StateFlow<List<AddressableNote>> =
         selectedBookmarkGroupFlow
             .filterNotNull()
             .map { group -> group.privateArticleBookmarks.map { account.cache.getOrCreateAddressableNote(it.address) } }

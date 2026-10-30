@@ -817,6 +817,12 @@ fun CatalogSection(
     val visible = remember(section, hidden) { DrawerSectionVisibility.visibleItems(section, hidden) }
     if (visible.isEmpty() && !section.hasVisibleFixedRows()) return
 
+    // In a permanent drawer the Navigate rows are the bar (no bar or rail is shown), so they switch
+    // tabs as its items do. As pushes, every click added a screen (and its ViewModels) to a back
+    // stack nothing ever unwound: a permanent drawer is used for hours without a back press. A
+    // modal drawer (beside a bar or a rail, which hold these tabs) keeps opening them as pushes.
+    val opensAsTab = section.id == DrawerSectionId.NAVIGATE && LocalScreenLayout.current.navigationStyle == NavigationStyle.PERMANENT_DRAWER
+
     CollapsibleSection(title = section.titleRes, expanded = expanded, onToggleExpand = onToggleExpand) {
         when (section.id) {
             DrawerSectionId.CREATE -> CreateRows(nav)
@@ -837,7 +843,7 @@ fun CatalogSection(
                 if (def.id == NavBarItem.SCHEDULED_POSTS) {
                     ScheduledPostsNavigationRow(def, tint, accountViewModel, nav)
                 } else {
-                    CatalogNavigationRow(def, tint, accountViewModel, nav)
+                    CatalogNavigationRow(def, tint, accountViewModel, nav, opensAsTab)
                 }
             }
         }
@@ -920,10 +926,24 @@ fun CatalogNavigationRow(
     tint: Color,
     accountViewModel: AccountViewModel,
     nav: INav,
+    opensAsTab: Boolean = false,
 ) {
     // A row whose screen this front end doesn't have (My Fitness on desktop) is left out.
     val route = remember(def, accountViewModel) { def.resolveRoute(accountViewModel) }
     if (!canOpen(route)) return
+
+    if (opensAsTab) {
+        IconRow(
+            title = def.labelRes,
+            icon = def.icon,
+            tint = tint,
+            onClick = {
+                nav.closeDrawer()
+                nav.navBottomBar(def.resolveRoute(accountViewModel))
+            },
+        )
+        return
+    }
 
     NavigationRow(
         title = def.labelRes,

@@ -43,6 +43,9 @@ import java.util.concurrent.atomic.AtomicLong
 object NappletBlobPrefetcher {
     private const val MAX_PARALLEL = 5
 
+    // Clearnet and the current Tor port, with room for a change of port mid-launch.
+    private const val MAX_CLIENTS = 3
+
     // The whole cache is walked to trim it: not after every card, at most this often.
     private const val TRIM_INTERVAL_MS = 10L * 60 * 1000
 
@@ -73,6 +76,9 @@ object NappletBlobPrefetcher {
         withContext(Dispatchers.IO) {
             val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(partition)
             val client = clients.getOrPut(proxyPort) { NappletBlobHttp.client(proxyPort) }
+            // Tor's port changes when it restarts (desktop picks one each time): keep the client of
+            // the route in use, not one per port ever seen.
+            if (clients.size > MAX_CLIENTS) clients.keys.removeIf { it != proxyPort }
             val gate = Semaphore(MAX_PARALLEL)
 
             // Fetch the entry document(s) first so first paint is fastest, then the rest in parallel

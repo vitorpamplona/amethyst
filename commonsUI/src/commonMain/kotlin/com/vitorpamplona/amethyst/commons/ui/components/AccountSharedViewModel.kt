@@ -30,35 +30,39 @@ import androidx.lifecycle.ViewModelStoreOwner
 import kotlin.reflect.KClass
 
 /**
- * The store that outlives every navigation destination in this window: Android's Activity. The
- * platform entry point provides it above the nav host, whose destinations each get a store of
- * their own.
+ * The store that outlives every navigation destination of the logged-in account.
+ * `AccountScopedViewModelStore` provides it above the nav host, whose destinations each get a
+ * store of their own, and clears it when the account is switched or logged out.
+ *
+ * Not the Activity's store: a view model kept there lives until the Activity finishes, so it keeps
+ * running (and holding its `Account`) after the user leaves the screen, switches accounts or logs out.
  */
-val LocalWindowViewModelStoreOwner: ProvidableCompositionLocal<ViewModelStoreOwner?> = staticCompositionLocalOf { null }
+val LocalAccountViewModelStoreOwner: ProvidableCompositionLocal<ViewModelStoreOwner?> = staticCompositionLocalOf { null }
 
 /**
- * A view model shared by every destination of this window, for state that has to survive
+ * A view model shared by every destination of the logged-in account, for state that has to survive
  * navigating between screens (a draft filled in over two screens, a game the lobby and the board
- * both watch). Without a window store it falls back to [rememberViewModel], scoped to the caller.
+ * both watch). It is cleared with the account. Without an account store it falls back to
+ * [rememberViewModel], scoped to the caller.
  */
 @Composable
-fun <VM : ViewModel> rememberWindowViewModel(
+fun <VM : ViewModel> rememberAccountSharedViewModel(
     modelClass: KClass<VM>,
     key: String,
     factory: ViewModelProvider.Factory,
 ): VM {
-    val owner = LocalWindowViewModelStoreOwner.current ?: return rememberViewModel(modelClass, key, factory)
+    val owner = LocalAccountViewModelStoreOwner.current ?: return rememberViewModel(modelClass, key, factory)
     return remember(owner, key) { ViewModelProvider.create(owner, factory).get(key, modelClass) }
 }
 
 @Composable
-inline fun <reified VM : ViewModel> rememberWindowViewModel(
+inline fun <reified VM : ViewModel> rememberAccountSharedViewModel(
     key: String,
     factory: ViewModelProvider.Factory,
-): VM = rememberWindowViewModel(VM::class, key, factory)
+): VM = rememberAccountSharedViewModel(VM::class, key, factory)
 
 @Composable
-inline fun <reified VM : ViewModel> rememberWindowViewModel(
+inline fun <reified VM : ViewModel> rememberAccountSharedViewModel(
     key: String,
     noinline factory: () -> VM,
-): VM = rememberWindowViewModel(VM::class, key, rememberLambdaFactory(factory))
+): VM = rememberAccountSharedViewModel(VM::class, key, rememberLambdaFactory(factory))

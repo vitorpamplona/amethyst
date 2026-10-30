@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleStartEffect
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -78,8 +79,8 @@ import com.vitorpamplona.amethyst.commons.resources.connected
 import com.vitorpamplona.amethyst.commons.resources.go_back
 import com.vitorpamplona.amethyst.commons.resources.relay_settings
 import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
+import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
-import com.vitorpamplona.amethyst.commons.ui.components.rememberWindowViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessSubscription
@@ -104,9 +105,9 @@ fun ChessGameScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Scope ViewModel to Activity so it's shared between lobby and game screens
+    // Shared with the lobby through the account's store, cleared on account switch
     val chessViewModel: ChessViewModel =
-        rememberWindowViewModel(
+        rememberAccountSharedViewModel(
             key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
             factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
         )
@@ -172,8 +173,14 @@ fun ChessGameScreen(
         }
     }
 
-    // Set focused game mode when screen is visible (only poll this game)
-    // ViewModel already starts polling in init, so no need to start here
+    // Poll while the board is visible and the app is in the foreground, focused on this game only
+    LifecycleStartEffect(chessViewModel) {
+        chessViewModel.holdPolling()
+        onStopOrDispose {
+            chessViewModel.releasePolling()
+        }
+    }
+
     DisposableEffect(gameId) {
         chessViewModel.setFocusedGame(gameId) // Focus on just this game
         onDispose {

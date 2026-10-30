@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.chats.privateDM.datasource
 
+import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.chats.ChatFeedType
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.DmRelayLog
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserAndFollowListEoseManager
@@ -113,6 +114,15 @@ class ChatroomNip04HistorySubAssembler(
         invalidateFilters()
     }
 
+    override fun endSub(
+        key: User,
+        subId: String,
+    ) {
+        super.endSub(key, subId)
+        // The subscription is gone: let go of what the app-wide pager holds for it.
+        pager.unbind(key)
+    }
+
     override fun newSub(key: ChatroomQueryState): Subscription {
         // Repoint the single-active orchestrator at this conversation's cursors (on its Chatroom) and the
         // relays it fans out to, refreshing the display flows from the restored progress.
@@ -121,6 +131,7 @@ class ChatroomNip04HistorySubAssembler(
             cursorsFor(key),
             key.account.scope,
             isEnabled = { key.account.chatFeedToggles.isEnabled(ChatFeedType.NIP04) },
+            owner = user(key),
         ) { nip04DmRelayRouting(key.room.users, key.account)?.all }
 
         return requestNewSubscription(historyListener(key))

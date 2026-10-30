@@ -116,6 +116,11 @@ class BackwardRelayPager(
     @Volatile
     private var isEnabled: () -> Boolean = { true }
 
+    // Who the current binding is for (see [bind]'s `owner`), so [unbind] from an ended subscription
+    // leaves a binding a newer subscription made alone.
+    @Volatile
+    private var boundOwner: Any? = null
+
     // Relays not advancing for the active scope (auth CLOSE / unreachable / silent). Transient: cleared
     // and recomputed on each [bind]; a stalled relay is kept (its sub stays open) and retried on advance.
     private val stalledRelays = ConcurrentSet<NormalizedRelayUrl>()
@@ -146,20 +151,43 @@ class BackwardRelayPager(
      * [isEnabled] gate (false = this scope must not load at all) and the [relaysForScope] lookup. Resets the transient orchestration (in-flight, stalled) and recomputes
      * the display flows from the bound cursors — so a previously-paged scope restores its progress
      * instead of restarting.
+     *
+     * [owner] names the subscription this binding serves (the owner's subscription key: its user, or
+     * its id), for [unbind] when that subscription ends.
      */
     fun bind(
         scopeCursors: RelayLoadingCursors,
         scope: CoroutineScope,
         isEnabled: () -> Boolean = { true },
+        owner: Any = scopeCursors,
         relaysForScope: () -> Collection<NormalizedRelayUrl>?,
     ) {
         cursors = scopeCursors
         relaysFor = relaysForScope
         this.isEnabled = isEnabled
+        boundOwner = owner
         loadTracker.bind(scope)
         loadTracker.reset()
         stalledRelays.clear()
         publishStatus()
+    }
+
+    /**
+     * Lets go of the scope bound for [owner], when the subscription it served ended. The pager lives as
+     * long as the app, and what a binding holds (the cursors, the relay lookup and the gate, which
+     * capture the account or the conversation, and the account's scope) would otherwise stay reachable
+     * after the account logs out or the conversation closes, until some other scope is bound. A binding
+     * made since for another owner is left alone. The cursors keep their progress for the next [bind].
+     */
+    fun unbind(owner: Any) {
+        if (boundOwner != owner) return
+        boundOwner = null
+        cursors = null
+        relaysFor = { null }
+        isEnabled = { true }
+        loadTracker.unbind()
+        stalledRelays.clear()
+        _status.value = PagingStatus()
     }
 
     /**

@@ -194,22 +194,24 @@ fun PdfViewerContent(
 
     @Suppress("ProduceStateDoesNotAssignValue")
     val handleState by produceState<PdfDocumentHandle?>(initialValue = null, key1 = content.url) {
+        // Set as soon as the handle exists. Closing the viewer mid-download cancels this producer,
+        // and the blocking download and renderer still finish; withContext then drops the handle
+        // it built, so without this record nothing would close its snapshot and renderer.
+        var opened: PdfDocumentHandle? = null
         value =
             try {
-                withContext(Dispatchers.IO) {
-                    val snapshot =
-                        PdfFetcher.fetchSnapshot(content.url, { checkNotNull(SingletonImageLoader.get(platformContext).diskCache) }) { url ->
-                            accountViewModel.httpClientBuilder.okHttpClientForPreview(url)
-                        }
-                    try {
-                        PdfDocumentHandle(snapshot, PdfPageRenderer(snapshot.data.toFile()))
-                    } catch (t: Throwable) {
-                        runCatching { snapshot.close() }
-                        throw t
-                    }
+                PdfFetcher.openSnapshot(
+                    content.url,
+                    { checkNotNull(SingletonImageLoader.get(platformContext).diskCache) },
+                    { url -> accountViewModel.httpClientBuilder.okHttpClientForPreview(url) },
+                ) { snapshot ->
+                    PdfDocumentHandle(snapshot, PdfPageRenderer(snapshot.data.toFile())).also { opened = it }
                 }
             } catch (e: Exception) {
-                if (e is CancellationException) throw e
+                if (e is CancellationException) {
+                    opened?.let { orphan -> closeScope.launch { orphan.mutex.withLock { orphan.close() } } }
+                    throw e
+                }
                 Log.w("PdfViewerDialog", "Failed to open PDF: ${content.url}", e)
                 null
             }

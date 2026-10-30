@@ -1297,6 +1297,20 @@ class Account(
     val liveNotificationFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultNotificationFollowList)
     val liveNotificationFollowListsPerRelay = OutboxLoaderState(liveNotificationFollowLists, cache, scope).flow
 
+    // The split Notifications tabs pin a list each. Built once per account: the filters that read
+    // them are rebuilt with every AccountViewModel, and each build would add another collector
+    // that runs on [scope] until the account is removed.
+    private val pinnedAllFollowsNotificationLists by lazy { topNavFilterFlow(MutableStateFlow(TopFilter.AllFollows)) }
+    private val pinnedGlobalNotificationLists by lazy { topNavFilterFlow(MutableStateFlow(TopFilter.Global)) }
+
+    /** The follow lists of a Notifications tab pinned to [filter], shared by every filter that pins the same one. */
+    fun pinnedNotificationFollowLists(filter: TopFilter): StateFlow<IFeedTopNavFilter> =
+        when (filter) {
+            TopFilter.AllFollows -> pinnedAllFollowsNotificationLists
+            TopFilter.Global -> pinnedGlobalNotificationLists
+            else -> topNavFilterFlow(MutableStateFlow(filter))
+        }
+
     val livePollsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultPollsFollowList)
     val livePollsFollowListsPerRelay = OutboxLoaderState(livePollsFollowLists, cache, scope).flow
 
@@ -4204,11 +4218,14 @@ class Account(
 
     fun hasDonatedInThisVersion() = settings.hasDonatedInVersion(appVersion)
 
-    fun observeDonatedInThisVersion() =
+    // Built once: the donation card reads it from composition, and a stateIn per call would add a
+    // collector on [scope] every time the card recomposes, never to be removed.
+    val donatedInThisVersion: StateFlow<Boolean> by lazy {
         settings
             .observeDonatedInVersion(appVersion)
             .flowOn(Dispatchers.IO)
             .stateIn(scope, SharingStarted.Eagerly, hasDonatedInThisVersion())
+    }
 
     fun markDonatedInThisVersion() = settings.markDonatedInThisVersion(appVersion)
 
