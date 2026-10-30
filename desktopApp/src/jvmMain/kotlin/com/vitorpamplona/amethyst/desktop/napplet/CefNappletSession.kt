@@ -220,7 +220,9 @@ class CefNappletSession(
                         appOrigin = appOrigin,
                         profile = launch.profile,
                         declaredDomains = launch.declaredDomains,
-                        shellHead = BRIDGE_SCRIPT,
+                        // A napplet's shell refuses to start it while WebRTC is still there: without the
+                        // engine's guard extension, it would have a way out through the router.
+                        shellHead = if (isWebsite) BRIDGE_SCRIPT else WEBRTC_CHECK + BRIDGE_SCRIPT,
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
@@ -364,6 +366,10 @@ class CefNappletSession(
                     line: Int,
                 ): Boolean {
                     Log.d(TAG) { "${launch.identity.coordinate} console [$level] $message ($source:$line)" }
+                    if (message.contains(WEBRTC_PRESENT)) {
+                        Log.w(TAG) { "The napplet guard did not load; not starting ${launch.identity.coordinate}" }
+                        mutableState.value = State.Failed(Failure.ENGINE)
+                    }
                     return false
                 }
             },
@@ -632,6 +638,13 @@ class CefNappletSession(
          * out to the host, `onmessage({data})` in. The router's query function is captured and
          * removed from the shell's window, so nothing loaded later in the shell finds it there.
          */
+        private const val WEBRTC_PRESENT = "napplet-guard: WebRTC is present"
+
+        /** Stops the shell before it starts the napplet when the guard extension did not take WebRTC away. */
+        private const val WEBRTC_CHECK =
+            "<script>if(typeof RTCPeerConnection!=='undefined'||typeof webkitRTCPeerConnection!=='undefined'){" +
+                "window.stop();console.error('$WEBRTC_PRESENT');throw new Error('$WEBRTC_PRESENT');}</script>"
+
         private val BRIDGE_SCRIPT =
             "<script>(function(){var q=window.$QUERY_FUNCTION;try{delete window.$QUERY_FUNCTION;}catch(_){}" +
                 "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +

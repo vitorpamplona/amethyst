@@ -69,6 +69,7 @@ import java.net.DatagramSocket
 import java.net.Inet4Address
 import java.net.InetSocketAddress
 import java.net.NetworkInterface
+import java.net.ServerSocket
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -454,6 +455,50 @@ class CefNappletSessionTest {
                 assertEquals(0, packets.get(), "no UDP left the machine around the router")
             } finally {
                 stun.close()
+            }
+        }
+
+    @Test
+    fun aNappletCannotReachAnOpenRouteThroughWebRtc() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // TURN over TCP goes through the proxy like any page request, so while an nSite has the
+            // route open, WebRTC alone would give a napplet a way out. The napplet, and a frame it
+            // makes, each try one.
+            val address =
+                NetworkInterface
+                    .getNetworkInterfaces()
+                    .asSequence()
+                    .filter { it.isUp && !it.isLoopback }
+                    .flatMap { it.inetAddresses.asSequence() }
+                    .firstOrNull { it is Inet4Address }
+            assumeTrue("No non-loopback IPv4 address to stand a TURN server on", address != null)
+            val turn = ServerSocket(0, 50, address)
+            val connections = AtomicInteger()
+            thread(isDaemon = true) {
+                while (!turn.isClosed) runCatching { turn.accept().also { connections.incrementAndGet() }.close() }
+            }
+            runtime.engine.router.route = DesktopSocksRouter.Route.Direct
+            try {
+                val attempt =
+                    "try{var c=new RTCPeerConnection({iceServers:[{urls:'turn:${address!!.hostAddress}:${turn.localPort}?transport=tcp'," +
+                        "username:'u',credential:'p'}],iceTransportPolicy:'relay'});c.createDataChannel('x');" +
+                        "c.createOffer().then(function(o){return c.setLocalDescription(o);});}catch(e){}"
+                val probe =
+                    """
+                    <!doctype html><html><body><script>
+                    $attempt
+                    var child = document.createElement('iframe');
+                    child.srcdoc = '<script>' + "$attempt" + '<' + '/script>';
+                    document.body.appendChild(child);
+                    </script></body></html>
+                    """.trimIndent().encodeToByteArray()
+                show(session(probe, RecordingStorage(), runtime))
+                delay(8_000)
+                assertEquals(0, connections.get(), "no TURN connection left through the open route")
+            } finally {
+                runtime.engine.router.route = DesktopSocksRouter.Route.Blocked
+                turn.close()
             }
         }
 }

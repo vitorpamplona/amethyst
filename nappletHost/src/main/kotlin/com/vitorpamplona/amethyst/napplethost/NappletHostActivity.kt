@@ -621,6 +621,7 @@ class NappletHostActivity : ComponentActivity() {
         // seam (a stray white band at the bottom). The applet's own content still scrolls normally.
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
+        if (NappletWebRtcGuard.isNeeded(profile, useTor)) NappletWebRtcGuard.install(webView)
         webView.webViewClient = NappletWebViewClient()
         webView.webChromeClient = NappletWebChromeClient()
     }

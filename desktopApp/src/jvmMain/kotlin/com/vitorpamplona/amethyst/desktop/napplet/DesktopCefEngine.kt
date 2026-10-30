@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,7 +110,12 @@ class DesktopCefEngine(
             builder.cefSettings.root_cache_path = cacheRoot.absolutePath
             builder.cefSettings.persist_session_cookies = false
             builder.cefSettings.log_severity = CefSettings.LogSeverity.LOGSEVERITY_WARNING
-            builder.addJcefArgs(*CHROMIUM_ARGS, "--proxy-server=socks5://127.0.0.1:${router.port}", "--proxy-bypass-list=<-loopback>")
+            builder.addJcefArgs(
+                *CHROMIUM_ARGS,
+                "--proxy-server=socks5://127.0.0.1:${router.port}",
+                "--proxy-bypass-list=<-loopback>",
+                "--load-extension=${installGuard().absolutePath}",
+            )
             val context = ContextSetup()
             builder.setAppHandler(
                 object : MavenCefAppHandlerAdapter() {
@@ -130,6 +136,20 @@ class DesktopCefEngine(
             mutableState.value = State.Failed(e.message ?: e::class.simpleName.orEmpty())
             throw e
         }
+    }
+
+    /**
+     * Writes the napplet guard, fresh on every start, and returns its folder: an extension whose content
+     * script ([NappletWebContract.WEBRTC_GUARD_JS]) runs at document start in the shell and every frame
+     * under it, the napplet's srcdoc and any frame it makes, which no script of the page itself can
+     * reach. nSites, on their own origins, keep WebRTC: their traffic is theirs to route.
+     */
+    private fun installGuard(): File {
+        val dir = File(cacheRoot, GUARD_DIR)
+        if (!dir.isDirectory && !dir.mkdirs()) throw IllegalStateException("Cannot create $dir")
+        File(dir, "manifest.json").writeText(GUARD_MANIFEST)
+        File(dir, "guard.js").writeText(NappletWebContract.WEBRTC_GUARD_JS)
+        return dir
     }
 
     /**
@@ -190,13 +210,36 @@ class DesktopCefEngine(
                 "profile.cookie_controls_mode" to 1,
             )
 
+        private const val GUARD_DIR = "napplet-guard"
+
+        // match_origin_as_fallback reaches the opaque srcdoc and about:blank frames under the shell.
+        private val GUARD_MANIFEST =
+            """
+            {
+              "manifest_version": 3,
+              "name": "Amethyst napplet guard",
+              "version": "1.0",
+              "content_scripts": [{
+                "matches": ["${NappletWebContract.ORIGIN}/*"],
+                "js": ["guard.js"],
+                "all_frames": true,
+                "match_about_blank": true,
+                "match_origin_as_fallback": true,
+                "run_at": "document_start",
+                "world": "MAIN"
+              }]
+            }
+            """.trimIndent()
+
         private val CHROMIUM_ARGS =
             arrayOf(
                 "--disable-background-networking",
                 "--disable-component-update",
                 "--disable-sync",
                 "--no-first-run",
-                "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying",
+                // One list: Chromium keeps only the last of a repeated switch. The guard extension is
+                // loaded from the command line, which newer Chromium turns off by default.
+                "--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,NetworkTimeServiceQuerying,DisableLoadExtensionCommandLineSwitch",
                 // No camera, microphone, location or notification prompts: a page asking is told no,
                 // as Android's host answers.
                 "--deny-permission-prompts",

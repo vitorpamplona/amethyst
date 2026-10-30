@@ -198,6 +198,17 @@ object NappletWebContract {
             "manifest-src 'none'; base-uri 'none'; form-action 'none'"
 
     /**
+     * Takes WebRTC away from the frame it runs in, before any page script: a napplet has no network,
+     * and WebRTC reaches one anyway (its TURN connections go through the browser's proxy, which an
+     * open nSite may have routed out; Android's WebView sends its UDP around the proxy, and Tor, too).
+     * The constants become non-writable `undefined`s, so a page can't put them back.
+     */
+    const val WEBRTC_GUARD_JS: String =
+        "(function(){var n=['RTCPeerConnection','webkitRTCPeerConnection','RTCDataChannel','RTCIceCandidate'," +
+            "'RTCSessionDescription','RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
+            "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:false,configurable:false});}catch(e){}}})();"
+
+    /**
      * Injects host-owned policy and the runtime prelude before any authored element in `head`.
      * [locked] is the NIP-5D posture; WEBSITE callers deliberately retain Amethyst's NIP-07 and
      * normal-origin behavior. Only syntactically valid, explicitly authorized NAP domains are
@@ -223,9 +234,10 @@ object NappletWebContract {
         injectNip07: Boolean = false,
         imeProxy: Boolean = false,
     ): ByteArray {
+        // A locked napplet also loses WebRTC in its own frame; the hosts cover the frames it makes.
         val policy =
             if (locked) {
-                "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\">"
+                "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\"><script>$WEBRTC_GUARD_JS</script>"
             } else {
                 ""
             }

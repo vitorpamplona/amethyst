@@ -518,6 +518,7 @@ class NappletHostService : Service() {
         }
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
+        if (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor)) NappletWebRtcGuard.install(wv)
         wv.webViewClient = HostClient(tab)
         wv.webChromeClient = HostChromeClient(tab)
     }
