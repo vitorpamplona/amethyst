@@ -232,7 +232,11 @@ open class BaseAccountViewModel(
     val host: AccountViewModelHost,
     val notices: UserNoticeSink,
     val noticeResolver: UserNoticeResolver,
-) : ViewModel(),
+    // Becomes viewModelScope; the default is lifecycle's own. Tests on a mocked Account pass one
+    // with an exception handler: every feed this class starts eagerly fails on such an Account, on
+    // IO, and the failure would otherwise land on whichever runTest runs next in that JVM.
+    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+) : ViewModel(scope),
     Dao {
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =

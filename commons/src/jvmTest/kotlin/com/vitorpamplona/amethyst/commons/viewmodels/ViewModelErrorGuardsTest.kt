@@ -27,6 +27,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -47,6 +48,8 @@ import kotlin.test.assertIs
 class ViewModelErrorGuardsTest {
     private val notices = Collections.synchronizedList(ArrayList<UserNotice>())
 
+    private val scope = mockAccountViewModelScope()
+
     private lateinit var viewModel: BaseAccountViewModel
 
     @BeforeTest
@@ -63,11 +66,15 @@ class ViewModelErrorGuardsTest {
                 host = mockk(relaxed = true),
                 notices = { notices.add(it) },
                 noticeResolver = mockk(relaxed = true),
+                scope = scope,
             )
     }
 
     @AfterTest
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        scope.cancel()
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun launchSignerReportsUnreadableData() =

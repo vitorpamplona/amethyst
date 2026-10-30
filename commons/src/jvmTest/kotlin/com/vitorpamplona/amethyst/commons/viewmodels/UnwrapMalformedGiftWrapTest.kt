@@ -31,6 +31,7 @@ import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -50,6 +51,8 @@ class UnwrapMalformedGiftWrapTest {
     private val me = NostrSignerInternal(KeyPair())
     private val sender = NostrSignerInternal(KeyPair())
 
+    private val scope = mockAccountViewModelScope()
+
     private lateinit var viewModel: BaseAccountViewModel
 
     @BeforeTest
@@ -68,11 +71,15 @@ class UnwrapMalformedGiftWrapTest {
                 host = mockk(relaxed = true),
                 notices = mockk(relaxed = true),
                 noticeResolver = mockk(relaxed = true),
+                scope = scope,
             )
     }
 
     @AfterTest
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        scope.cancel()
+        Dispatchers.resetMain()
+    }
 
     private fun noteOf(event: Event) = Note(event.id).also { it.event = event }
 
