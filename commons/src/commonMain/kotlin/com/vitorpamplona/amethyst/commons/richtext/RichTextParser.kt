@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.richtext
 import com.vitorpamplona.amethyst.commons.actions.ConcordActions
 import com.vitorpamplona.amethyst.commons.emojicoder.EmojiCoder
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.util.isValidUrl
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.experimental.clink.pointers.ClinkPointerParser
@@ -209,6 +210,7 @@ class RichTextParser {
         val imageUrls = mediaForPager.filterValues { it is MediaUrlImage }.keys
         val videoUrls = mediaForPager.filterValues { it is MediaUrlVideo }.keys
         val pdfUrls = mediaForPager.filterValues { it is MediaUrlPdf }.keys
+        val webxdcApps = webxdcApps(urlSet.withScheme, imetas, callbackUri)
 
         val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
 
@@ -216,7 +218,7 @@ class RichTextParser {
 
         val newContent = fixMissingSpaces(content, allUrls)
 
-        val segments = findTextSegments(newContent, imageUrls, videoUrls, pdfUrls, urlSet, emojiMap, tags)
+        val segments = findTextSegments(newContent, imageUrls, videoUrls, pdfUrls, webxdcApps, urlSet, emojiMap, tags)
 
         val mediaForPagerWithBase64 =
             mediaForPager +
@@ -244,11 +246,30 @@ class RichTextParser {
         )
     }
 
+    /**
+     * The webxdc apps among the post's links: typed `application/x-webxdc` by their `imeta`, or a
+     * bare `.xdc` link. Only full URLs: a schemeless `name.xdc` is a word, not an app.
+     */
+    private fun webxdcApps(
+        urls: Set<String>,
+        imetas: Map<String, IMetaTag>,
+        postUri: String?,
+    ): Map<String, WebxdcSegment> {
+        var found: HashMap<String, WebxdcSegment>? = null
+        for (url in urls) {
+            val properties = imetas[url]?.properties
+            val app = WebxdcApp.from(url) { properties?.get(it)?.firstOrNull() } ?: continue
+            (found ?: HashMap<String, WebxdcSegment>().also { found = it })[url] = WebxdcSegment(url, app, postUri)
+        }
+        return found ?: emptyMap()
+    }
+
     private fun findTextSegments(
         content: String,
         images: Set<String>,
         videos: Set<String>,
         pdfs: Set<String>,
+        webxdcs: Map<String, WebxdcSegment>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -280,9 +301,9 @@ class RichTextParser {
                         val prefixLength = nip19OpeningPunctuationLength(token.text)
                         if (prefixLength > 0) {
                             segments.add(RegularTextSegment(token.text.substring(0, prefixLength)))
-                            segments.add(wordIdentifier(token.text.substring(prefixLength), images, videos, pdfs, urls, emojis, tags))
+                            segments.add(wordIdentifier(token.text.substring(prefixLength), images, videos, pdfs, webxdcs, urls, emojis, tags))
                         } else {
-                            segments.add(wordIdentifier(token.text, images, videos, pdfs, urls, emojis, tags))
+                            segments.add(wordIdentifier(token.text, images, videos, pdfs, webxdcs, urls, emojis, tags))
                         }
                     }
                 }
@@ -337,6 +358,7 @@ class RichTextParser {
         images: Set<String>,
         videos: Set<String>,
         pdfs: Set<String>,
+        webxdcs: Map<String, WebxdcSegment>,
         urls: Urls,
         emojis: Map<String, String>,
         tags: ImmutableListOfLists<String>,
@@ -375,6 +397,8 @@ class RichTextParser {
             parseNowhereLink(word)?.let { return it }
             return SchemelessUrlSegment(word)
         }
+
+        webxdcs[word]?.let { return it }
 
         if (urls.withScheme.contains(word)) {
             // Concord and Buzz invites are plain https URLs that would otherwise render as bare

@@ -33,6 +33,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
@@ -165,14 +167,14 @@ class CefNappletSession(
 
     private val isWebsite = launch.profile == HostProfile.WEBSITE
 
-    // A website's origin is its own per account: this browser keeps one storage jar for everyone, so
-    // the account goes into the origin instead of choosing a separate jar as Android does.
+    // A website's or webxdc app's origin is its own per account: this browser keeps one storage jar
+    // for everyone, so the account goes into the origin instead of choosing a separate jar as Android does.
     private val appOrigin =
         NappletWebContract.appOrigin(
             NappletWebContract.appId(
                 author = launch.identity.authorPubKey,
                 identifier = launch.identity.identifier,
-                partition = if (isWebsite) accountPubKey else null,
+                partition = if (launch.profile.ownsOrigin) accountPubKey else null,
             ),
         )
 
@@ -223,15 +225,27 @@ class CefNappletSession(
                     return@launch
                 }
                 mutableState.value = State.Loading
+                val webxdc = launch.webxdc
                 server =
                     NappletSiteServer(
                         blobs =
-                            NappletBlobStore(
-                                runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
-                                runtime.httpClient(blobsUseTor),
-                                launch.paths,
-                                launch.servers,
-                            ),
+                            if (webxdc != null) {
+                                WebxdcFiles(
+                                    runtime.webxdcBundles,
+                                    WebxdcFiles.downloadClient(runtime.httpClient(blobsUseTor)),
+                                    webxdc.url,
+                                    webxdc.hash,
+                                    launch.servers,
+                                    WebxdcRuntime.script(webxdc.selfAddr, webxdc.selfName, webxdc.isAppSender),
+                                )
+                            } else {
+                                NappletBlobStore(
+                                    runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
+                                    runtime.httpClient(blobsUseTor),
+                                    launch.paths,
+                                    launch.servers,
+                                )
+                            },
                         shellHtml = NappletWebResources.shellHtml(),
                         shimJs = NappletWebResources.shimJs().decodeToString(),
                         appOrigin = appOrigin,

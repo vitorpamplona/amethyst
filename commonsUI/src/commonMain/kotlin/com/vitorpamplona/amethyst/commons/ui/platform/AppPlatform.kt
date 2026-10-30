@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -440,6 +441,16 @@ interface AppLauncher {
 
     /** Opens a NIP-5A nSite ([RootSiteEvent] or [NamedSiteEvent]), or tells the user why it can't. */
     fun openSite(site: Event) {}
+
+    /**
+     * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
+     * [opensNapplets]), or tells the user why it can't.
+     */
+    fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {}
 
     /** Launches nothing: front ends without an app surface yet. */
     object None : AppLauncher {

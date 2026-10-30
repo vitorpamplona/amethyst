@@ -33,9 +33,12 @@ import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -72,6 +75,7 @@ class DesktopNappletHost(
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
             nappletBlobsUseTor = { torEnabled() },
+            webxdcBundles = WebxdcBundles(WebxdcBundles.dirFor(modules.filesDir)),
         )
 
     val engine get() = runtime.engine
@@ -141,6 +145,20 @@ class DesktopNappletHost(
         return NappletLaunch.fromSite(event).map { launch ->
             open(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate))
         }
+    }
+
+    /**
+     * Runs the webxdc [app] attached to post [postId] by [poster] in a new window: offline, at an
+     * origin of its own for this account and app instance.
+     */
+    fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
+        val selfName = account.userProfile().toBestDisplayName()
+        return runCatching { open(NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, selfName), account, useTor = false) }
     }
 
     /**

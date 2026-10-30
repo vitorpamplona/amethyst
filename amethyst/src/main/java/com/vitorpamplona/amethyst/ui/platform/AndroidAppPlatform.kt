@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
@@ -328,4 +329,10 @@ private class AndroidAppLauncher(
     }
 
     override fun openSite(site: Event) = NappletLauncher.launchSite(context, site)
+
+    override fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) = NappletLauncher.launchWebxdc(context, app, postId, poster)
 }

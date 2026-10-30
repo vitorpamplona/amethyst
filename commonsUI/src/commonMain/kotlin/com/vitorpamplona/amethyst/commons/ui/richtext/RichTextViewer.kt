@@ -82,11 +82,13 @@ import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
+import com.vitorpamplona.amethyst.commons.richtext.WebxdcSegment
 import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.richtext.dropBlankLineAfterBlocks
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
+import com.vitorpamplona.amethyst.commons.ui.note.WebxdcCard
 
 /**
  * Cross-platform rich-text renderer. Owns everything identical on every front
@@ -187,6 +189,8 @@ private fun RenderWord(
             ProvideMediaBleed(mediaBleed) { renderer.Media(word, state, Modifier) }
 
         is MathSegment -> renderer.Equation(word, Modifier)
+
+        is WebxdcSegment -> WebxdcCard(word.app, word.postUri)
 
         is LinkSegment ->
             if (canPreview) {

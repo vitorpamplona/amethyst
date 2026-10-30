@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayInputStream
 import java.io.IOException
@@ -40,7 +40,7 @@ import java.io.InputStream
  *   prelude with NIP-07. Requests to other hosts are the browser's to send ([serve] returns null).
  */
 class NappletSiteServer(
-    private val blobs: NappletBlobStore,
+    private val blobs: NappletFiles,
     private val shellHtml: ByteArray,
     private val shimJs: String,
     private val appOrigin: String,
@@ -88,6 +88,7 @@ class NappletSiteServer(
 
     // The prelude every page of this launch gets: built once, prepended to each page's bytes.
     private val prelude by lazy {
+        if (profile == HostProfile.WEBXDC) return@lazy NappletWebContract.webxdcPrelude()
         NappletWebContract.preludePrefix(
             shimJs = shimJs,
             declaredDomains = declaredDomains,
@@ -118,7 +119,7 @@ class NappletSiteServer(
             when {
                 url == NappletWebContract.SHELL_URL -> shell()
                 url == appOrigin || url.startsWith("$appOrigin/") -> appResource(url, acceptsHtml)
-                // A napplet has no network (its CSP is connect-src 'none'); a site is a normal web app.
+                // A napplet or webxdc app has no network; a site is a normal web app.
                 profile.allowsOffOrigin -> null
                 else -> notFound()
             }
@@ -159,7 +160,7 @@ class NappletSiteServer(
         val blob =
             blobs.find(requestPath)
                 ?: when {
-                    blobs.lookup(requestPath) != null -> return unavailable()
+                    blobs.isListed(requestPath) -> return unavailable()
                     acceptsHtml && requestPath != "/" -> blobs.find("/")
                     else -> null
                 } ?: return notFound()

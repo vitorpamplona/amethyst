@@ -33,6 +33,12 @@ enum class HostProfile {
 
     /** NIP-5A nSite ("website mode"): a normal web app — NIP-07 provider, no app CSP, off-origin + per-site Tor toggle. */
     WEBSITE,
+
+    /**
+     * A webxdc app: its own origin and storage, as a site has, but no network at all and nothing of
+     * the user's — no NIP-07, no broker capabilities. Its `window.webxdc` is the messenger's own script.
+     */
+    WEBXDC,
     ;
 
     /**
@@ -49,11 +55,20 @@ enum class HostProfile {
         when (this) {
             WEBSITE -> NappletCapability.WEBSITE_CAPABILITIES
             NAPPLET -> resolveRequiredCapabilities(requires).capabilities.toSet()
+            WEBXDC -> emptySet()
         }
 
-    /** Strict app CSP for a locked applet (connect-src 'none', etc.); null for a website, which sets its own. */
+    /** Strict app CSP for a locked applet (connect-src 'none', etc.) or a webxdc app (its own origin only); null for a website, which sets its own. */
     val appCsp: String?
-        get() = if (this == NAPPLET) NappletWebContract.APP_CSP else null
+        get() =
+            when (this) {
+                NAPPLET -> NappletWebContract.APP_CSP
+                WEBXDC -> NappletWebContract.WEBXDC_CSP
+                WEBSITE -> null
+            }
+
+    /** Runs at a real origin of its own ([NappletWebContract.appOrigin]), so its storage persists and stays its own. */
+    val ownsOrigin: Boolean get() = this != NAPPLET
 
     /** Install the NIP-07 `window.nostr` provider before the shim runs. */
     val injectsNip07: Boolean get() = this == WEBSITE

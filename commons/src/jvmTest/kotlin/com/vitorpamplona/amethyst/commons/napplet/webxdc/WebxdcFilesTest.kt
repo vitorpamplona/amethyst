@@ -1,0 +1,160 @@
+/*
+ * Copyright (c) 2025 Vitor Pamplona
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of
+ * this software and associated documentation files (the "Software"), to deal in
+ * the Software without restriction, including without limitation the rights to use,
+ * copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
+ * Software, and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+ * FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+ * COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN
+ * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+package com.vitorpamplona.amethyst.commons.napplet.webxdc
+
+import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
+import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
+import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
+import com.vitorpamplona.crypto.sha2.sha256
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import java.io.ByteArrayOutputStream
+import java.net.InetSocketAddress
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+
+class WebxdcFilesTest {
+    @get:Rule val folder = TemporaryFolder()
+
+    private val client = OkHttpClient()
+    private val served = HashMap<String, ByteArray>()
+    private var requests = 0
+    private val http =
+        HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/") { exchange ->
+                requests++
+                val body = served[exchange.requestURI.path]
+                if (body == null) {
+                    exchange.sendResponseHeaders(404, -1)
+                } else {
+                    exchange.sendResponseHeaders(200, body.size.toLong())
+                    exchange.responseBody.use { it.write(body) }
+                }
+                exchange.close()
+            }
+            start()
+        }
+    private val base = "http://127.0.0.1:${http.address.port}"
+
+    @After fun stop() = http.stop(0)
+
+    private fun zip(vararg entries: Pair<String, String>): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            entries.forEach { (name, content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.encodeToByteArray())
+                zip.closeEntry()
+            }
+        }
+        return out.toByteArray()
+    }
+
+    private fun files(
+        url: String,
+        hash: String?,
+    ) = WebxdcFiles(WebxdcBundles(folder.newFolder()), client, url, hash, emptyList(), WebxdcRuntime.script("npub1me", "Me", isAppSender = false))
+
+    @Test
+    fun anAppIsServedFromItsArchiveWithTheMessengersRuntime() =
+        runBlocking {
+            val archive = zip("index.html" to "<script src=\"webxdc.js\"></script><p>game</p>", "manifest.toml" to "name = \"Game\"", "js/app.js" to "go()")
+            served["/game.xdc"] = archive
+            val files = files("$base/game.xdc", sha256(archive).toHexKey())
+
+            assertTrue(files.isAvailable("/"))
+            assertEquals("<script src=\"webxdc.js\"></script><p>game</p>", files.find("/index.html")?.readBytes()?.decodeToString())
+            assertEquals("go()", files.find("/js/app.js")?.readBytes()?.decodeToString())
+            assertTrue(files.find("/js/app.js")!!.contentType.contains("javascript"))
+            val runtime = files.find("/webxdc.js")!!.readBytes().decodeToString()
+            assertTrue(runtime.contains("window.webxdc") && runtime.contains("\"npub1me\""))
+            assertNull(files.find("/missing.js"))
+            assertNull("no way out of the archive", files.find("/../../etc/passwd"))
+            assertNull(files.find("/%2e%2e/%2e%2e/etc/passwd"))
+            // One download for every request after the first.
+            assertEquals(1, requests)
+        }
+
+    @Test
+    fun aWrongArchiveIsRefusedAndNothingIsKept() =
+        runBlocking {
+            served["/game.xdc"] = zip("index.html" to "<p>swapped</p>")
+            val files = files("$base/game.xdc", "ab".repeat(32))
+            assertFalse(files.isAvailable("/"))
+            assertNull(files.find("/index.html"))
+        }
+
+    @Test
+    fun anArchiveWithoutIndexIsNotAnApp() =
+        runBlocking {
+            served["/game.xdc"] = zip("readme.txt" to "hi")
+            assertFalse(files("$base/game.xdc", null).isAvailable("/"))
+        }
+
+    @Test
+    fun aZipSlipEntryIsNeverWrittenOutside() {
+        val archive = folder.newFile("slip.xdc").apply { writeBytes(zip("index.html" to "ok", "../../escaped.txt" to "pwned", "/abs.txt" to "pwned", "__MACOSX/._index.html" to "junk")) }
+        val dir = folder.newFolder("unpacked")
+        assertTrue(WebxdcArchive.unpack(archive, dir))
+        assertEquals(
+            setOf("index.html"),
+            dir
+                .walkTopDown()
+                .filter { it.isFile }
+                .map { it.relativeTo(dir).path }
+                .toSet(),
+        )
+        assertFalse(folder.root.walkTopDown().any { it.name == "escaped.txt" || it.name == "abs.txt" })
+        assertNull(WebxdcArchive.entryPath("a/../../b"))
+        assertEquals("a/b.js", WebxdcArchive.entryPath("./a//b.js"))
+    }
+
+    @Test
+    fun theWebxdcPostureServesNothingOffOriginAndLocksItsPages() =
+        runBlocking {
+            val archive = zip("index.html" to "<p>game</p>")
+            served["/game.xdc"] = archive
+            val origin = NappletWebContract.appOrigin("nabc")
+            val server = NappletSiteServer(files("$base/game.xdc", sha256(archive).toHexKey()), "<html><head></head><body>__APP_BOOTSTRAP__</body></html>".encodeToByteArray(), "", origin, HostProfile.WEBXDC, emptyList())
+
+            val page = server.serve("GET", "$origin/index.html", acceptsHtml = true)
+            assertNotNull(page)
+            assertEquals(NappletWebContract.WEBXDC_CSP, page!!.headers["Content-Security-Policy"])
+            val html = page.readBody().decodeToString()
+            assertTrue("WebRTC goes before the app", html.indexOf("RTCPeerConnection") in 0 until html.indexOf("<p>game</p>"))
+            assertFalse("no napplet runtime", html.contains("__nappletDomains"))
+            // The network is never the app's: another host is a 404 here, not the browser's to fetch.
+            assertEquals(404, server.serve("GET", "https://example.com/track.js", acceptsHtml = false)?.status)
+            val shell = server.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true)!!.readBody().decodeToString()
+            assertTrue(shell.contains("iframe.src = '$origin/index.html'"))
+        }
+}

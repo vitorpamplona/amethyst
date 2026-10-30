@@ -84,10 +84,10 @@ import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import org.jetbrains.compose.resources.stringResource
 
-private val CardShape = RoundedCornerShape(16.dp)
-private val IconShape = RoundedCornerShape(14.dp)
-private val CardPadding = 12.dp
-private val IconSize = 56.dp
+internal val CardShape = RoundedCornerShape(16.dp)
+internal val IconShape = RoundedCornerShape(14.dp)
+internal val CardPadding = 12.dp
+internal val IconSize = 56.dp
 
 /**
  * What a napplet card shows and gates on, read off its manifest once per event (`remember(event)`)

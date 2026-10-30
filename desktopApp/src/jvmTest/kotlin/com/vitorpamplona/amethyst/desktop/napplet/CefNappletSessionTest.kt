@@ -44,12 +44,15 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.LogSink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,6 +74,7 @@ import java.awt.Robot
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -80,7 +84,10 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.URLDecoder
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
@@ -300,6 +307,97 @@ class CefNappletSessionTest {
             withTimeout(60_000) { while (storage.values["img"] == null) delay(100) }
             assertEquals("loaded", storage.values["img"])
         }
+
+    @Test
+    fun aWebxdcAppKeepsItsStorageAndUpdatesButHasNoNetwork() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // The app reports through its console, the one way out it has; the session logs it.
+            val results = ConcurrentLinkedQueue<String>()
+            val previousSink = Log.sink
+            Log.sink =
+                LogSink { level, tag, message, throwable ->
+                    message.substringAfter("XDCRESULT ", "").takeIf { it.isNotEmpty() }?.let { results += it.substringBefore(" (") }
+                    previousSink.log(level, tag, message, throwable)
+                }
+            try {
+                val page =
+                    """
+                    <!doctype html><html><head><script src="webxdc.js"></script></head><body><script>
+                    (async function () {
+                      var r = { self: window.webxdc.selfAddr, name: window.webxdc.selfName };
+                      try { r.before = localStorage.getItem('k'); localStorage.setItem('k', 'v'); r.local = localStorage.getItem('k'); } catch (e) { r.local = 'blocked'; }
+                      try { await fetch('$serverUrl/leak'); r.net = 'open'; } catch (e) { r.net = 'blocked'; }
+                      try { await fetch('/js/data.json').then(function (x) { return x.json(); }).then(function (j) { r.own = j.ok; }); } catch (e) { r.own = 'blocked'; }
+                      r.rtc = typeof RTCPeerConnection;
+                      var got = [];
+                      await window.webxdc.setUpdateListener(function (u) { got.push(u.payload.n + '@' + u.serial); }, 0);
+                      r.replayed = got.join(',');
+                      window.webxdc.sendUpdate({ payload: { n: got.length + 1 } }, '');
+                      setTimeout(function () { r.after = got.join(','); console.log('XDCRESULT ' + JSON.stringify(r)); }, 500);
+                    })();
+                    </script></body></html>
+                    """.trimIndent()
+                val archive = zip("index.html" to page, "js/data.json" to "{\"ok\":true}", "manifest.toml" to "name = \"Probe\"")
+                blobs["probe.xdc"] = archive
+                val app = WebxdcApp("$serverUrl/probe.xdc", sha256(archive).toHexKey(), "instance-1", "Probe", null, null)
+                val poster = KeyPair().pubKey.toHexKey()
+                val me = KeyPair().pubKey.toHexKey()
+                val launch = NappletLaunch.fromWebxdc(app, "post-1", poster, me, "Tester")
+
+                fun open() = CefNappletSession(launch, me, useTor = false, account = null, broker = refusingBroker(), runtime = runtime).also { sessions += it }
+
+                val first = open()
+                show(first)
+                val run1 =
+                    withTimeout(60_000) {
+                        while (results.isEmpty()) delay(100)
+                        results.poll()
+                    }
+                assertTrue(run1.contains("\"local\":\"v\""), run1)
+                assertTrue(run1.contains("\"net\":\"blocked\""), run1)
+                assertTrue(run1.contains("\"own\":true"), "its own files load: $run1")
+                assertTrue(run1.contains("\"rtc\":\"undefined\""), run1)
+                assertTrue(run1.contains("\"replayed\":\"\""), run1)
+                assertTrue(run1.contains("\"after\":\"1@1\""), run1)
+                assertTrue(run1.contains("\"name\":\"Tester\"") && run1.contains("npub1"), run1)
+                first.close()
+
+                // Opened again: the same origin, so its storage and its update log are still there.
+                show(open())
+                val run2 =
+                    withTimeout(60_000) {
+                        while (results.isEmpty()) delay(100)
+                        results.poll()
+                    }
+                assertTrue(run2.contains("\"before\":\"v\""), run2)
+                assertTrue(run2.contains("\"replayed\":\"1@1\""), run2)
+                assertTrue(run2.contains("\"after\":\"1@1,2@2\""), run2)
+                assertFalse(requested.contains("/leak"), "the app reached the network")
+            } finally {
+                Log.sink = previousSink
+            }
+        }
+
+    /** A broker that answers nothing: a webxdc app never reaches one. */
+    private fun refusingBroker() =
+        NappletBroker(
+            signer = NostrSignerInternal(KeyPair()),
+            ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()) { "tester" },
+            consentPrompt = NappletConsentPrompt { _, _, _ -> GrantState.DENY },
+        )
+
+    private fun zip(vararg entries: Pair<String, String>): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            entries.forEach { (name, content) ->
+                zip.putNextEntry(ZipEntry(name))
+                zip.write(content.encodeToByteArray())
+                zip.closeEntry()
+            }
+        }
+        return out.toByteArray()
+    }
 
     @Test
     fun aBurstOfRepliesReachesTheNappletWhole() =

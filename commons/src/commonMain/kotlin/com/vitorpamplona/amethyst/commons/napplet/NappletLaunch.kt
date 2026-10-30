@@ -21,9 +21,12 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
+import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -54,6 +57,8 @@ class NappletLaunch(
     val title: String,
     val paths: List<PathTag>,
     val servers: List<String>,
+    /** Set for a webxdc app ([HostProfile.WEBXDC]): its archive, and who is running it. */
+    val webxdc: WebxdcLaunch? = null,
 ) {
     /** Exact NAP domain names the prelude projects onto `window.napplet`; absence is the availability signal. */
     val declaredDomains: List<String> = declared.map { it.name.lowercase() }.distinct()
@@ -62,7 +67,7 @@ class NappletLaunch(
      * This launch, run inside a note as its own instance [instanceId]: it keeps what the user granted
      * the app, and its questions wait for the user to open it ([NappletIdentity.inline]).
      */
-    fun inline(instanceId: String): NappletLaunch = NappletLaunch(identity.copy(inline = true, instanceId = instanceId), profile, declared, requires, title, paths, servers)
+    fun inline(instanceId: String): NappletLaunch = NappletLaunch(identity.copy(inline = true, instanceId = instanceId), profile, declared, requires, title, paths, servers, webxdc)
 
     companion object {
         /**
@@ -142,6 +147,48 @@ class NappletLaunch(
                 )
             }
 
+        /**
+         * A webxdc [app] attached to post [postId] by [poster], run by the user [selfPubKey], shown to
+         * the app as [selfName]. Its origin, and so its storage, is the poster's app instance
+         * ([WebxdcApp.instance]): another author reusing the same `webxdc` id gets an origin of its own.
+         */
+        fun fromWebxdc(
+            app: WebxdcApp,
+            postId: HexKey,
+            poster: HexKey,
+            selfPubKey: HexKey,
+            selfName: String,
+        ): NappletLaunch =
+            NappletLaunch(
+                identity =
+                    NappletIdentity(
+                        authorPubKey = poster,
+                        identifier = WEBXDC_IDENTIFIER_PREFIX + app.instance(postId),
+                        aggregateHash = app.hash,
+                    ),
+                profile = HostProfile.WEBXDC,
+                declared = HostProfile.WEBXDC.declaredCapabilities(emptyList()),
+                requires = emptyList(),
+                title =
+                    app.title ?: app.url
+                        .substringBefore('?')
+                        .substringAfterLast('/')
+                        .ifBlank { "webxdc" },
+                paths = emptyList(),
+                servers = withAuthorServers(emptyList(), poster),
+                webxdc =
+                    WebxdcLaunch(
+                        url = app.url,
+                        hash = app.hash,
+                        selfAddr = selfPubKey.hexToByteArray().toNpub(),
+                        selfName = selfName,
+                        isAppSender = poster == selfPubKey,
+                    ),
+            )
+
+        /** Marks a webxdc instance in [NappletIdentity.identifier], apart from any napplet or site name. */
+        const val WEBXDC_IDENTIFIER_PREFIX = "webxdc:"
+
         private fun withAuthorServers(
             servers: List<String>,
             author: HexKey,
@@ -154,3 +201,15 @@ class NappletLaunch(
         }
     }
 }
+
+/** A webxdc launch's archive and the facts its `webxdc.js` gives the app. */
+class WebxdcLaunch(
+    val url: String,
+    /** The archive's sha256; null when the post gives none, and it runs as served. */
+    val hash: HexKey?,
+    /** The user as the app sees them: their npub (NIP-DC), never trusted by the app for anything. */
+    val selfAddr: String,
+    val selfName: String,
+    /** Whether the user posted the app. */
+    val isAppSender: Boolean,
+)

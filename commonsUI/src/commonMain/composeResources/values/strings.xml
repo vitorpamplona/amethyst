@@ -143,6 +143,10 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
+    <string name="webxdc_card_kind">Webxdc app</string>
+    <string name="webxdc_start">Start</string>
+    <string name="webxdc_unverified">Unverified: the post gives no hash for it</string>
+    <string name="webxdc_open_failed">This app can’t be opened here.</string>
     <string name="napplet_inline_run">Run here</string>
     <string name="napplet_inline_running">Running in this note</string>
     <string name="napplet_inline_stop">Stop</string>
@@ -6334,6 +6338,7 @@
     <string name="browser_pill_access_manage">Manage permissions</string>
     <string name="browser_pill_access_nsite">nSite · sandboxed</string>
     <string name="browser_pill_access_napplet">nApplet · sandboxed</string>
+    <string name="browser_pill_access_webxdc">Webxdc app · offline</string>
     <string name="browser_pill_console">Console</string>
     <string name="browser_pill_security_https">Secure connection</string>
     <string name="browser_pill_security_http">Not secure</string>

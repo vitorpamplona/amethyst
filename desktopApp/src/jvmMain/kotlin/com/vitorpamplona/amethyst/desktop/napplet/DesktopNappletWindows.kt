@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_napplet
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_nsite
+import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_webxdc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_back
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find
@@ -242,7 +243,13 @@ private fun SandboxToolbar(
                 Column {
                     Text(session.launch.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
-                        stringRes(if (isWebsite) Res.string.browser_pill_access_nsite else Res.string.browser_pill_access_napplet),
+                        stringRes(
+                            when (session.launch.profile) {
+                                HostProfile.WEBSITE -> Res.string.browser_pill_access_nsite
+                                HostProfile.WEBXDC -> Res.string.browser_pill_access_webxdc
+                                HostProfile.NAPPLET -> Res.string.browser_pill_access_napplet
+                            },
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
