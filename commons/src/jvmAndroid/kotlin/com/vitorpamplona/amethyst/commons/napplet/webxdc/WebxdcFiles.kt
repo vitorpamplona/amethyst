@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.webxdc
 
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.crypto.sha2.sha256
@@ -32,6 +33,9 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.normalizeStaticPath
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -53,8 +57,8 @@ class WebxdcBundles(
 
     /**
      * The unpacked archive at [url] (sha256 [hash] when known), downloaded through [client] from it
-     * or from [servers] when it isn't here yet. Null when no copy could be had, it isn't a webxdc
-     * app (no `index.html`), or [cancelled] said to stop.
+     * or from [servers] when it isn't here yet, telling [onProgress] how far that download is. Null
+     * when no copy could be had, it isn't a webxdc app (no `index.html`), or [cancelled] said to stop.
      */
     suspend fun open(
         url: String,
@@ -62,6 +66,7 @@ class WebxdcBundles(
         servers: List<String>,
         client: OkHttpClient,
         cancelled: () -> Boolean = { false },
+        onProgress: (bytes: Long, total: Long?) -> Unit = { _, _ -> },
     ): File? =
         withContext(Dispatchers.IO) {
             val key = hash?.lowercase() ?: ("u" + sha256(url.encodeToByteArray()).toHexKey())
@@ -79,7 +84,7 @@ class WebxdcBundles(
                 try {
                     if (!staging.delete() || !staging.mkdirs()) return@withLock null
                     val candidates = listOf(url) + (hash?.let { StaticSiteResolver.candidateUrls(servers, it) } ?: emptyList())
-                    if (WebxdcArchive.download(client, candidates, hash, archive, cancelled) == null) return@withLock null
+                    if (WebxdcArchive.download(client, candidates, hash, archive, cancelled, onProgress) == null) return@withLock null
                     if (!WebxdcArchive.unpack(archive, staging)) return@withLock null
                     if (!File(staging, INDEX).isFile) {
                         Log.w(TAG) { "$url has no $INDEX" }
@@ -144,6 +149,10 @@ class WebxdcFiles(
     @Volatile
     private var closed = false
 
+    private val downloading = MutableStateFlow<NappletDownloadProgress?>(null)
+
+    override val download: StateFlow<NappletDownloadProgress?> = downloading.asStateFlow()
+
     private suspend fun dir(): Pair<File, String>? {
         dir?.let { return it }
         if (failed || closed) return null
@@ -151,7 +160,12 @@ class WebxdcFiles(
             dir ?: if (failed || closed) {
                 null
             } else {
-                val opened = bundles.open(url, hash, servers, client) { closed }
+                val opened =
+                    try {
+                        bundles.open(url, hash, servers, client, { closed }, ::onProgress)
+                    } finally {
+                        downloading.value = null
+                    }
                 if (opened == null) {
                     if (!closed) failed = true
                     null
@@ -165,6 +179,18 @@ class WebxdcFiles(
 
     override fun close() {
         closed = true
+    }
+
+    // Every read is a call: a bar needs a few hundred steps, not one per 64 KB.
+    private fun onProgress(
+        bytes: Long,
+        total: Long?,
+    ) {
+        val shown = downloading.value
+        val step = maxOf(MIN_PROGRESS_STEP, (total ?: 0) / PROGRESS_STEPS)
+        if (shown == null || shown.total != total || bytes < shown.bytes || bytes - shown.bytes >= step || bytes == total) {
+            downloading.value = NappletDownloadProgress(bytes, total)
+        }
     }
 
     override suspend fun isAvailable(requestPath: String): Boolean = find(requestPath) != null
@@ -193,6 +219,9 @@ class WebxdcFiles(
 
     companion object {
         const val RUNTIME_PATH = "webxdc.js"
+
+        private const val PROGRESS_STEPS = 200
+        private const val MIN_PROGRESS_STEP = 64L * 1024
 
         /**
          * [client], given the time a large archive needs: the blob client gives a call 45 s, and a

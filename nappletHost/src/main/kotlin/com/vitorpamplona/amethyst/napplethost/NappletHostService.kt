@@ -60,6 +60,7 @@ import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -475,9 +476,14 @@ class NappletHostService : Service() {
             val server = tab.contentServer
             pushLoadState(tab, isLoading = true)
             thread(name = "webxdc-probe", isDaemon = true) {
-                val available = server?.isAvailable(NappletSiteServer.INDEX_PATH) == true
+                val available =
+                    server?.isAvailable(NappletSiteServer.INDEX_PATH) { download ->
+                        probeResults.post { if (tabs[tab.sessionId] === tab) pushDownload(tab, download) }
+                    } == true
                 probeResults.post {
                     if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post
+                    // The watch stops with the probe and may miss the download's end.
+                    pushDownload(tab, null)
                     if (available) {
                         wv.loadUrl(NappletWebContract.SHELL_URL)
                     } else {
@@ -796,6 +802,24 @@ class NappletHostService : Service() {
                         putBoolean(NappletEmbedContract.KEY_LOAD_FAILED, tab.loadFailed)
                         putBoolean(NappletEmbedContract.KEY_RENDERER_GONE, rendererGone)
                         putBoolean(NappletEmbedContract.KEY_ROUTE_BLOCKED, routeBlocked)
+                    }
+            }
+        tab.toClient(message)
+    }
+
+    /** Tells the client how far the tab's download has come, or (null) that it ended, for its loading bar. */
+    private fun pushDownload(
+        tab: NappletTab,
+        download: NappletDownloadProgress?,
+    ) {
+        val message =
+            Message.obtain(null, NappletEmbedContract.MSG_DOWNLOAD).apply {
+                data =
+                    Bundle().apply {
+                        if (download != null) {
+                            putLong(NappletEmbedContract.KEY_DOWNLOAD_BYTES, download.bytes)
+                            putLong(NappletEmbedContract.KEY_DOWNLOAD_TOTAL, download.total ?: -1)
+                        }
                     }
             }
         tab.toClient(message)

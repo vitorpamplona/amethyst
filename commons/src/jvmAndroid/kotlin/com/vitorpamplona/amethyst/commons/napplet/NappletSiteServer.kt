@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.flow.StateFlow
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -107,6 +108,9 @@ class NappletSiteServer(
 
     /** The launch ended: any download its files started stops. */
     fun close() = blobs.close()
+
+    /** The download [isAvailable] is waiting on, while it runs, for a loading screen's bar. */
+    val download: StateFlow<NappletDownloadProgress?> get() = blobs.download
 
     /**
      * The response for a request to [url], or null when the browser should handle it itself (a

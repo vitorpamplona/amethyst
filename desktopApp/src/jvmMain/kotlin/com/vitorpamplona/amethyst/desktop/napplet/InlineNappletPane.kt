@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -116,6 +117,8 @@ fun InlineNappletPane(
         return
     }
     val state by current.state.collectAsState()
+    // The note's stage draws the bar; the run is known to it by its instance id.
+    LaunchedEffect(current, instanceId) { current.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
@@ -161,6 +162,11 @@ class CefNappletSession(
     private val mutableState = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = mutableState.asStateFlow()
 
+    private val mutableDownload = MutableStateFlow<NappletDownloadProgress?>(null)
+
+    /** The download the page waits on while [State.Loading], for the loading screen's bar. */
+    val download: StateFlow<NappletDownloadProgress?> = mutableDownload.asStateFlow()
+
     private val mutablePage = MutableStateFlow(Page())
     val page: StateFlow<Page> = mutablePage.asStateFlow()
 
@@ -292,7 +298,15 @@ class CefNappletSession(
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
-                if (!server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)) {
+                val watch = scope.launch { server.download.collect { mutableDownload.value = it } }
+                val available =
+                    try {
+                        server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)
+                    } finally {
+                        watch.cancel()
+                        mutableDownload.value = null
+                    }
+                if (!available) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     if (isWebsite) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.UNREACHABLE)
