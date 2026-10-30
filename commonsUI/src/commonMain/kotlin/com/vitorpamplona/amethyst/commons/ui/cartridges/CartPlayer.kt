@@ -161,9 +161,12 @@ fun CartPlayer(
     // press and release into one recomposition and the game would never see the press.
     val held = remember { HeldButtons() }
     val send = { viewModel.setButtons(held.mask) }
-    // A tick for each new press: a touch screen gives the thumb nothing else to feel.
+    // A tick for each change the thumb makes: a touch screen gives it nothing else to feel.
     val haptics = LocalHapticFeedback.current
-    val tickIfPressed = { before: Int, now: Int -> if (now and before.inv() != 0) haptics.performHapticFeedback(HapticFeedbackType.VirtualKey) }
+    val tick = { haptics.performHapticFeedback(HapticFeedbackType.VirtualKey) }
+    // Buttons tick when one goes down; the pad on every new direction, diagonals included, but not on letting go.
+    val tickIfPressed = { before: Int, now: Int -> if (now and before.inv() != 0) tick() }
+    val tickIfTurned = { before: Int, now: Int -> if (now != before && now != 0) tick() }
     val back = { if (!viewModel.openPauseMenu()) onClose() }
     PlatformBackHandler(onBack = back)
 
@@ -201,7 +204,7 @@ fun CartPlayer(
             val controls: @Composable (Modifier) -> Unit = { modifier ->
                 DirectionPad(
                     onChange = {
-                        tickIfPressed(held.pad, it)
+                        tickIfTurned(held.pad, it)
                         held.pad = it
                         send()
                     },
