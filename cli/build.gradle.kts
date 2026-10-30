@@ -43,6 +43,12 @@ tasks.named<Test>("test") {
         .dir(rootProject.layout.projectDirectory.dir("tools/buzz-agent"))
         .withPropertyName("buzzAgentWrapperReference")
         .withPathSensitivity(PathSensitivity.RELATIVE)
+    // RelayDialSpanBenchmark opts in; off by default (it opens thousands of local sockets).
+    System.getProperty("dialSpanBench")?.let {
+        systemProperty("dialSpanBench", it)
+        testLogging.showStandardStreams = true
+    }
+    System.getProperty("dialSpanRelays")?.let { systemProperty("dialSpanRelays", it) }
 }
 
 dependencies {

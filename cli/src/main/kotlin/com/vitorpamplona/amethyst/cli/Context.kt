@@ -87,6 +87,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.coroutines.executeAsync
 import java.lang.management.ManagementFactory
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -161,12 +162,9 @@ class Context(
             // and keep connectTimeout tight-ish so an unreachable relay frees its
             // slot fast. This is orthogonal to REQ concurrency (that runs on
             // already-open sockets, bounded by AdaptiveRelayLimiter), so it can't
-            // trip a relay's REQ rate-limit — it only speeds connection setup. The
-            // executor thread pool is unbounded on demand, so raising maxRequests
-            // just lets more of those short-lived handshakes proceed at once
-            // (1 platform thread per in-flight handshake — ~1k is fine on a JVM,
-            // 10k is not). Sized against the process FD budget: every pending
-            // handshake and every open socket is one file descriptor. 7s
+            // trip a relay's REQ rate-limit — it only speeds connection setup.
+            // Sized against the process FD budget: every pending handshake and
+            // every open socket is one file descriptor. 7s
             // (not 5s): a 5s cap struck too many merely-busy relays as connect
             // failures — the crawl treats a connect *timeout* as retryable anyway,
             // but the extra headroom lets slow-but-alive relays finish the handshake.
@@ -180,8 +178,16 @@ class Context(
             // stale-while-revalidate positives, 10-min negative TTL, persisted
             // across runs via [dnsStore].
             .dns(surgeDns)
+            // Virtual threads: OkHttp runs each websocket's reader loop inside its
+            // call, so every open relay socket holds a dispatcher thread for life,
+            // and the default executor starts each as a platform thread inside the
+            // caller of newWebSocket — a mass dial then serializes behind
+            // Thread.start. OkHttp 5 locks with ReentrantLock, so a reader blocked in
+            // a socket read unmounts instead of pinning its carrier. Thread dumps:
+            // `jcmd <pid> Thread.print` omits virtual threads; use
+            // `jcmd <pid> Thread.dump_to_file -format=json <file>`.
             .dispatcher(
-                Dispatcher().apply {
+                Dispatcher(Executors.newVirtualThreadPerTaskExecutor()).apply {
                     maxRequests = maxParallelHandshakes
                     maxRequestsPerHost = 16
                 },
@@ -1040,8 +1046,8 @@ class Context(
         /**
          * Concurrent WS-upgrade handshakes (OkHttp Dispatcher.maxRequests): a quarter
          * of the FD budget, so pending dials can never crowd out the sockets already
-         * held open (warm pool, drains, parked subs). Also bounds the transient
-         * platform threads OkHttp spawns — one per in-flight handshake.
+         * held open (warm pool, drains, parked subs). It is not a thread budget: the
+         * dispatcher runs on virtual threads, so in-flight calls cost no platform thread.
          */
         val maxParallelHandshakes: Int =
             ((maxFileDescriptors - FD_RESERVE) / 4).coerceIn(64, 1024).toInt()

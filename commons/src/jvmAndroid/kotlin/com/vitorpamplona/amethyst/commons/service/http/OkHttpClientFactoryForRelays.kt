@@ -28,11 +28,21 @@ import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
 import java.time.Duration
+import java.util.concurrent.ExecutorService
 
+/**
+ * @param dispatcherExecutor runs OkHttp's async calls. A relay websocket's reader loop lives
+ * inside its call, so every open socket holds one of this executor's threads for its whole
+ * life. Null keeps OkHttp's default (a platform thread per socket), which Android needs: ART
+ * has no JVM virtual threads. JVM-only callers (desktop, `amy`) pass a virtual-thread
+ * executor so a large relay set doesn't hold a platform thread per socket or serialize its
+ * dials behind `Thread.start`.
+ */
 class OkHttpClientFactoryForRelays(
     userAgent: String,
     private val dns: SurgeDns,
     private val onionCache: OnionLocationCache,
+    dispatcherExecutor: ExecutorService? = null,
 ) {
     companion object {
         // by picking a random proxy port, the connection will fail as it should.
@@ -57,7 +67,7 @@ class OkHttpClientFactoryForRelays(
     }
 
     val myDispatcher =
-        Dispatcher().apply {
+        (if (dispatcherExecutor != null) Dispatcher(dispatcherExecutor) else Dispatcher()).apply {
             if (!HttpClientEnvironment.isEmulator) {
                 maxRequestsPerHost = 10
                 maxRequests = 1024
