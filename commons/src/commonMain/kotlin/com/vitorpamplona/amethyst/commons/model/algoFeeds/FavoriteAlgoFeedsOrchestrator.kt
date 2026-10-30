@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.model.algoFeeds
 
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -38,12 +40,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 private const val RESPONSE_TIMEOUT_MS = 20_000L
+
+// How long a feed that is no longer a favorite may go uncollected before it is stopped.
+private const val IDLE_STOP_MS = 60_000L
 
 /**
  * Immutable snapshot of a favorite algo feed's current request/response state.
@@ -74,6 +79,11 @@ data class FavoriteAlgoFeedsSnapshot(
  * snapshots until [stop] (or account tear-down). Call [refresh] to re-issue the
  * kind-5300 request (e.g. pull-to-refresh).
  *
+ * A feed is stopped on its own once it is no longer a favorite and nothing has collected its
+ * snapshot for [IDLE_STOP_MS]: each one keeps a job and two LocalCache observers, which otherwise
+ * stayed for every DVM feed ever looked at until the account was removed. A favorite stays warm,
+ * so flipping back to it does not publish (and maybe pay for) a new request.
+ *
  * This class does not own the relay subscriptions that fetch DVM responses and
  * matching notes. Those are issued by `HomeOutboxEventsEoseManager` while the
  * user has a `TopFilter.FavoriteAlgoFeed` selected. The orchestrator merely observes
@@ -83,36 +93,72 @@ class FavoriteAlgoFeedsOrchestrator(
     val account: Account,
     val scope: CoroutineScope,
 ) {
+    // Read from feed flows on any thread: every map is touched only under [lock].
     private val flows = mutableMapOf<Address, MutableStateFlow<FavoriteAlgoFeedsSnapshot>>()
     private val jobs = mutableMapOf<Address, Job>()
-    private val mutex = Mutex()
+    private val idleWatchers = mutableMapOf<Address, Job>()
+    private val lock = KmpLock()
 
     fun observe(feedAddress: Address): StateFlow<FavoriteAlgoFeedsSnapshot> {
-        flows[feedAddress]?.let { return it.asStateFlow() }
-
-        val seed = MutableStateFlow(FavoriteAlgoFeedsSnapshot())
-        flows[feedAddress] = seed
-        scope.launch { startFor(feedAddress, seed) }
+        val (seed, isNew) =
+            lock.withLock {
+                flows[feedAddress]?.let { return@withLock it to false }
+                MutableStateFlow(FavoriteAlgoFeedsSnapshot()).also { flows[feedAddress] = it } to true
+            }
+        if (isNew) {
+            scope.launch { startFor(feedAddress, seed) }
+            watchIdle(feedAddress, seed)
+        }
         return seed.asStateFlow()
     }
 
     fun refresh(feedAddress: Address) {
-        val seed = flows[feedAddress] ?: return
+        val seed = lock.withLock { flows[feedAddress] } ?: return
         scope.launch {
-            mutex.withLock {
-                jobs.remove(feedAddress)?.cancel()
-            }
+            lock.withLock { jobs.remove(feedAddress) }?.cancel()
             startFor(feedAddress, seed)
         }
     }
 
     fun stop(feedAddress: Address) {
-        scope.launch {
-            mutex.withLock {
-                jobs.remove(feedAddress)?.cancel()
+        stopIfCurrent(feedAddress, null)
+    }
+
+    // Stops [feedAddress], or only while [seed] is still its current snapshot when one is given, so a
+    // late idle check never stops a feed that was stopped and observed again since.
+    private fun stopIfCurrent(
+        feedAddress: Address,
+        seed: MutableStateFlow<FavoriteAlgoFeedsSnapshot>?,
+    ) {
+        val (job, watcher) =
+            lock.withLock {
+                if (seed != null && flows[feedAddress] !== seed) return
                 flows.remove(feedAddress)
+                jobs.remove(feedAddress) to idleWatchers.remove(feedAddress)
             }
-        }
+        job?.cancel()
+        watcher?.cancel()
+    }
+
+    private fun watchIdle(
+        feedAddress: Address,
+        seed: MutableStateFlow<FavoriteAlgoFeedsSnapshot>,
+    ) {
+        val watcher =
+            scope.launch {
+                combine(seed.subscriptionCount, account.favoriteAlgoFeedsList.flow) { collectors, favorites ->
+                    collectors == 0 && feedAddress !in favorites
+                }.distinctUntilChanged()
+                    .collectLatest { unused ->
+                        if (unused) {
+                            delay(IDLE_STOP_MS)
+                            stopIfCurrent(feedAddress, seed)
+                        }
+                    }
+            }
+        // The feed may have been stopped before its watcher got here.
+        val registered = lock.withLock { (flows[feedAddress] === seed).also { if (it) idleWatchers[feedAddress] = watcher } }
+        if (!registered) watcher.cancel()
     }
 
     private suspend fun startFor(
@@ -194,7 +240,10 @@ class FavoriteAlgoFeedsOrchestrator(
                 }
             }
 
-        mutex.withLock { jobs[feedAddress] = job }
+        // Replaces (and cancels) a cycle a concurrent refresh started, or is dropped itself when the
+        // feed was stopped while this request started.
+        val superseded = lock.withLock { if (flows[feedAddress] === seed) jobs.put(feedAddress, job) else job }
+        superseded?.cancel()
     }
 
     private fun splitInnerTags(innerTags: List<HexKey>): Pair<Set<HexKey>, Set<String>> {
