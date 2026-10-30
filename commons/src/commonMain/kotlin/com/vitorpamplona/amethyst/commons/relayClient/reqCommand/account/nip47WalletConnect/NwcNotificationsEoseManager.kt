@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip47WalletConnect
 
+import androidx.collection.LruCache
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUserEoseManager
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.AccountQueryState
@@ -36,7 +37,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip47WalletConnect.events.NwcNotificationEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
-import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.IO
@@ -65,7 +65,9 @@ class NwcNotificationsEoseManager(
     allKeys: () -> Set<AccountQueryState>,
 ) : PerUserEoseManager<AccountQueryState>(client, allKeys) {
     private val startSince = TimeUtils.now()
-    private val seen = ConcurrentSet<HexKey>()
+
+    // Only needs to cover re-delivery on reconnect; an unbounded set kept every payment id ever seen.
+    private val seen = LruCache<HexKey, Boolean>(500)
     private val userJobMap = mutableMapOf<User, List<Job>>()
 
     override fun user(key: AccountQueryState) = key.account.userProfile()
@@ -134,7 +136,7 @@ class NwcNotificationsEoseManager(
                     if (isLive) newEose(key, relay, TimeUtils.now(), forFilters)
 
                     val notification = event as? NwcNotificationEvent ?: return
-                    if (seen.add(notification.id)) {
+                    if (seen.put(notification.id, true) == null) {
                         key.account.scope.launch(Dispatchers.IO) {
                             key.account.nip47SignerState.handleIncomingNotification(notification)
                         }
@@ -149,7 +151,6 @@ class NwcNotificationsEoseManager(
         subId: String,
     ) {
         super.endSub(key, subId)
-        userJobMap[key]?.forEach { it.cancel() }
-        userJobMap.remove(key)
+        userJobMap.remove(key)?.forEach { it.cancel() }
     }
 }
