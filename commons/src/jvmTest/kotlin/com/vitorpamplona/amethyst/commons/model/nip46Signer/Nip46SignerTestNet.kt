@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.model.nip46Signer
 
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.InMemoryNip46ClientStore
+import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
@@ -47,6 +48,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 internal class Nip46SignerTestNet(
     relays: List<NormalizedRelayUrl>,
     val acceptsSignerTraffic: Boolean = true,
+    val clientStore: Nip46ClientStore = InMemoryNip46ClientStore(),
 ) {
     private object NeverConnects : WebSocket {
         override fun needsReconnect() = false
@@ -72,7 +74,6 @@ internal class Nip46SignerTestNet(
         )
     val identity = NostrSignerInternal(KeyPair())
     val ledger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
-    val clientStore = InMemoryNip46ClientStore()
 
     fun signerState(inbox: Set<NormalizedRelayUrl>) =
         Nip46SignerState(
