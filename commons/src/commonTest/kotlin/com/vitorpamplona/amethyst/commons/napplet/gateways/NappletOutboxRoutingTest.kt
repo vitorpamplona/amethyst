@@ -111,6 +111,37 @@ class NappletOutboxRoutingTest {
         }
 
     @Test
+    fun theUsersOwnEventsAreReadWhereTheAppWritesThem() =
+        runTest {
+            // A cached NIP-65 list that names one relay, while the app also writes to its local
+            // and private relays: a game's save must be found on all of them, and none cut by the limit.
+            val lists = Lists()
+            lists.write[alice] = listOf(relay("wss://public.example.com"))
+            lists.write[bob] = listOf(relay("wss://bob.example.com"))
+            val home = (1..5).mapTo(LinkedHashSet()) { relay("wss://home$it.example.com") }
+            val inbox = setOf(relay("wss://inbox.example.com"))
+            val routing =
+                NappletOutboxRouting(
+                    relayListOf = { author, write -> (if (write) lists.write else lists.read)[author] },
+                    fetchRelayLists = { authors -> lists.fetched += authors },
+                    fallback = { mine },
+                    user = alice,
+                    userRelays = { write -> if (write) home else inbox },
+                )
+
+            val reads = routing.route(listOf(bob, alice), write = true)
+            assertEquals(home.toList() + relay("wss://bob.example.com"), reads.relays.toList())
+            assertEquals(OutboxRelayPlan.Source.NIP65, reads.source)
+
+            assertEquals(inbox, routing.route(listOf(alice), write = false).relays)
+            // The user's list is never fetched: the app already holds it.
+            assertTrue(lists.fetched.isEmpty())
+
+            val nowhere = NappletOutboxRouting({ _, _ -> null }, {}, { mine }, user = alice, userRelays = { emptySet() })
+            assertEquals(listOf(alice), nowhere.route(listOf(alice), write = false).missing)
+        }
+
+    @Test
     fun hintsOnPrivateNetworksAreDropped() {
         val checked =
             NappletOutboxRouting.checkedHints(

@@ -40,6 +40,13 @@ class NappletOutboxRouting(
     private val fetchRelayLists: suspend (authors: List<HexKey>) -> Unit,
     /** Where to read when no author narrows it: the user's own relays. */
     private val fallback: () -> Set<NormalizedRelayUrl>,
+    /** The logged-in user, whose own relays come from [userRelays] rather than a cached list. */
+    private val user: HexKey? = null,
+    /**
+     * The user's own relays, as the app itself reads ([write]) and delivers to them: all of them,
+     * private and local ones included, so a game finds its saves where the app wrote them.
+     */
+    private val userRelays: (write: Boolean) -> Set<NormalizedRelayUrl> = { emptySet() },
 ) {
     class Route(
         val relays: Set<NormalizedRelayUrl>,
@@ -52,9 +59,10 @@ class NappletOutboxRouting(
 
     /**
      * The relays to read [authors] from ([write], their outboxes) or to deliver to them (their
-     * inboxes). An author without a known list is fetched once; still missing, it is reported. With
-     * no relay found for anyone, reads fall back to the user's relays; deliveries never do, since a
-     * recipient who never said where they read can't be reached by guessing.
+     * inboxes); the [user] gets all of their own. An author without a known list is fetched once;
+     * still missing, it is reported. With no relay found for anyone, reads fall back to the user's
+     * relays; deliveries never do, since a recipient who never said where they read can't be
+     * reached by guessing.
      */
     suspend fun route(
         authors: List<HexKey>,
@@ -63,12 +71,18 @@ class NappletOutboxRouting(
         val wanted = authors.filter { it.length == 64 }.distinct().take(MAX_AUTHORS)
         if (wanted.isEmpty()) return Route(if (write) fallback() else emptySet(), OutboxRelayPlan.Source.FALLBACK, emptyList())
 
-        val unknown = wanted.filter { relayListOf(it, write) == null }
+        val unknown = wanted.filter { it != user && relayListOf(it, write) == null }
         if (unknown.isNotEmpty()) fetchRelayLists(unknown)
 
         val relays = LinkedHashSet<NormalizedRelayUrl>()
         val missing = mutableListOf<HexKey>()
+        // The user's own relays first, so the limit never cuts them.
+        if (user != null && user in wanted) {
+            val own = userRelays(write)
+            if (own.isEmpty()) missing += user else relays += own
+        }
         for (author in wanted) {
+            if (author == user) continue
             val list = relayListOf(author, write)
             if (list.isNullOrEmpty()) {
                 missing += author

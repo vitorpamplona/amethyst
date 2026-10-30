@@ -33,12 +33,13 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAllWithHooks
-import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishAndConfirmDetailed
+import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.publishStream
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -61,6 +62,8 @@ class AccountNappletOutboxGateway(
             },
             fetchRelayLists = { authors -> fetchRelayLists(authors, relayListBudgetMs) },
             fallback = { account.homeRelays.flow.value },
+            user = account.pubKey,
+            userRelays = { write -> if (write) account.homeRelays.flow.value else account.notificationRelays.flow.value },
         )
 
     override suspend fun getEvent(
@@ -117,7 +120,12 @@ class AccountNappletOutboxGateway(
         targets += NappletOutboxRouting.checkedHints(relays)
         if (targets.isEmpty()) return OutboxDelivery(emptyMap(), inboxes?.missing.orEmpty())
 
-        val answers = runCatchingCancellable { client.publishAndConfirmDetailed(event, targets, PUBLISH_TIMEOUT_SECONDS) }.getOrDefault(emptyMap())
+        val answers =
+            runCatchingCancellable {
+                NappletOutboxPublish().publish(targets) { relay, answered ->
+                    client.publishStream(relay, flowOf(event), idleTimeoutMs = NappletOutboxPublish.CAP_MS) { _, result -> answered(result.accepted) }
+                }
+            }.getOrDefault(emptyMap())
         // A relay that never answered didn't take it.
         return OutboxDelivery(targets.associateWith { answers[it] ?: false }, inboxes?.missing.orEmpty())
     }
@@ -210,6 +218,5 @@ class AccountNappletOutboxGateway(
         const val MAX_TIMEOUT_MS = 15_000L
         const val MIN_READ_MS = 500L
         const val RELAY_LIST_TIMEOUT_MS = 4_000L
-        const val PUBLISH_TIMEOUT_SECONDS = 15L
     }
 }
