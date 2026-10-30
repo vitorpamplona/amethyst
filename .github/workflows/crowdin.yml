@@ -1,9 +1,14 @@
 name: Crowdin Action
 
 on:
-  push:
-    # paths: ["app/src/main/res/**/strings.xml"] // removes filter to allow downloads at any moment.
-    branches: [ main ]
+  # DISABLED (2026-10-30): Crowdin suspended the project for exceeding the open-source
+  # plan's usage, so the automatic sync on every push to main is off. Only a manual
+  # run from the Actions tab remains. To re-enable, restore the push trigger:
+  #
+  # push:
+  #   # paths: ["app/src/main/res/**/strings.xml"] // removes filter to allow downloads at any moment.
+  #   branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: write
