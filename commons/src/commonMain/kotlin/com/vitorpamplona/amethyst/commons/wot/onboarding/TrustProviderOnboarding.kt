@@ -69,6 +69,13 @@ interface TrustProviderOnboarding {
      */
     val graphRelays: Set<NormalizedRelayUrl> get() = emptySet()
 
+    /**
+     * A relay the provider runs for the whole network, when it has one. A sign-up adds it to the
+     * user's trusted, search, indexer and favorite relay lists, and moves every feed set to
+     * Global onto it.
+     */
+    val networkRelay: NormalizedRelayUrl? get() = null
+
     /** Whether the 10040 entry [provider] points at this provider (to mark it "in use"). */
     fun serves(provider: ServiceProviderTag): Boolean
 

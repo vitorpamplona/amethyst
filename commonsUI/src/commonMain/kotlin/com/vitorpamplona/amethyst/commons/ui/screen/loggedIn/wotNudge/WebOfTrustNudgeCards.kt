@@ -135,8 +135,8 @@ import kotlin.math.sin
  * draws the faces with the app's avatar and opens the setup sheet ([CircleSetupSheet]).
  */
 
-/** Draws one person's avatar, filling the modifier it gets. */
-typealias NudgeFace = @Composable (Modifier) -> Unit
+/** Draws one person's avatar at the size it gets; the card clips it to its shape. */
+typealias NudgeFace = @Composable (Dp) -> Unit
 
 /** A reply in [ThreadPreviewCard]'s mock thread. */
 class NudgePreviewReply(
@@ -223,7 +223,7 @@ fun ThreadPreviewCard(
 @Composable
 private fun PreviewReplyRow(reply: NudgePreviewReply) {
     Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(32.dp).clip(CircleShape)) { reply.face(Modifier.fillMaxSize()) }
+        Box(Modifier.size(32.dp).clip(CircleShape)) { reply.face(32.dp) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(reply.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -327,7 +327,10 @@ fun CircleRingsCard(
             CircleRings(self, faces.take(6), Modifier.size(132.dp))
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 RingCount(showCount(followCount), stringRes(Res.string.wot_nudge_rings_you_follow), strong = true)
-                RingCount("~" + showCount(extendedCount), stringRes(Res.string.wot_nudge_rings_they_trust), strong = false)
+                // Zero until the follows' own lists load: better no number than a wrong one.
+                if (extendedCount > 0) {
+                    RingCount("~" + showCount(extendedCount), stringRes(Res.string.wot_nudge_rings_they_trust), strong = false)
+                }
             }
         }
         Spacer(Modifier.height(14.dp))
@@ -451,7 +454,7 @@ private fun ProviderPicture(
     provider: CircleProvider,
     size: Dp,
 ) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(size / 4))) { provider.picture(Modifier.fillMaxSize()) }
+    Box(Modifier.size(size).clip(RoundedCornerShape(size / 4))) { provider.picture(size) }
 }
 
 @Composable
@@ -504,11 +507,11 @@ private fun CircleRings(
                     .size(22.dp)
                     .clip(CircleShape)
                     .border(1.5.dp, MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
-            ) { face(Modifier.fillMaxSize()) }
+            ) { face(22.dp) }
         }
         Box(
             Modifier.size(34.dp).clip(CircleShape).border(2.dp, inner, CircleShape),
-        ) { self(Modifier.fillMaxSize()) }
+        ) { self(34.dp) }
     }
 }
 
@@ -742,7 +745,7 @@ private fun FacePile(
         content = {
             faces.forEach { face ->
                 Box(Modifier.size(size).clip(CircleShape).border(2.dp, ring, CircleShape)) {
-                    face(Modifier.fillMaxSize())
+                    face(size)
                     if (dimmed) Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)))
                 }
             }

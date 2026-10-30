@@ -100,6 +100,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderEph
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderGeohashBubble
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.BackupKeysNudge
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wotNudge.WebOfTrustNudge
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -310,6 +311,11 @@ private fun HomePages(
                         .padding(top = paddingValues.calculateTopPadding()),
             ) {
                 BackupKeysNudge(
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+
+                WebOfTrustNudge(
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

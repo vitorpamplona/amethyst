@@ -1537,6 +1537,19 @@ class Account(
     }
 
     /**
+     * Adopts a trust provider's network [relay]: adds it to the trusted, search, indexer and
+     * favorite relay lists (each only when missing, keeping what the list had) and moves every
+     * feed set to Global onto it.
+     */
+    suspend fun adoptTrustProviderRelay(relay: NormalizedRelayUrl) {
+        trustedRelayList.addRelay(relay)?.let { sendMyPublicAndPrivateOutbox(it) }
+        searchRelayList.withRelay(relay)?.let { saveSearchRelayList(it) }
+        indexerRelayList.withRelay(relay)?.let { saveIndexerRelayList(it) }
+        if (relay !in favoriteRelayList.flowNoDefaults.value) followRelayFeed(relay)
+        settings.moveGlobalFeedsTo(TopFilter.Relay(relay.url))
+    }
+
+    /**
      * Before a rewrite of the kind 10040: on a device that has not received the user's list yet
      * (a fresh login), building on nothing would publish a list with only the new rows and drop
      * every row other clients keep there (other providers, Trusted Lists).

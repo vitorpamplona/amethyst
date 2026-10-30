@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -65,8 +66,8 @@ class WebOfTrustNudgeRenderTest {
         initial: String,
         i: Int,
     ): NudgeFace =
-        { modifier ->
-            Box(modifier.background(Color(palette[i % palette.size])), contentAlignment = Alignment.Center) {
+        { size ->
+            Box(Modifier.size(size).background(Color(palette[i % palette.size])), contentAlignment = Alignment.Center) {
                 Text(initial, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
         }

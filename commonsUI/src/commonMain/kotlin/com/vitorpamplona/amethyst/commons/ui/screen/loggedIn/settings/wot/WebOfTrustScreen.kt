@@ -426,7 +426,7 @@ private fun WithProviderName(
 
 /** What the guided sign-up is doing, in the user's language. */
 @Composable
-private fun setupStepText(setup: WebOfTrustSetup): String? =
+internal fun setupStepText(setup: WebOfTrustSetup): String? =
     when (setup) {
         is WebOfTrustSetup.Running -> {
             when (setup.step) {
@@ -448,7 +448,7 @@ private fun setupStepText(setup: WebOfTrustSetup): String? =
 
 /** Why a sign-up with [providerName] failed, in the user's language. */
 @Composable
-private fun setupErrorText(
+internal fun setupErrorText(
     failed: WebOfTrustSetup.Failed,
     providerName: String,
 ): String =

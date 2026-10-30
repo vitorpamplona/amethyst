@@ -126,6 +126,15 @@ class IndexerRelayListState(
                 emptySet(),
             )
 
+    /**
+     * The relays to save to add [relay], or null when it is already there. Starts from the
+     * defaults when the user has no list, so adding one keeps the indexers the user had.
+     */
+    suspend fun withRelay(relay: NormalizedRelayUrl): List<NormalizedRelayUrl>? {
+        val current = normalizeIndexerRelayListWithBackup(indexerListNote)
+        return if (relay in current) null else current.toList() + relay
+    }
+
     suspend fun saveRelayList(indexerRelays: List<NormalizedRelayUrl>): IndexerRelayListEvent {
         val relayListForIndexer = getIndexerRelayList()
 

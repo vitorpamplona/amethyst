@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transform
@@ -292,6 +293,21 @@ class TopNavFilterState(
             )
         }
 
+    /**
+     * The favorite relays (kind 10012) alone, for the catalogs that take no other interests but do
+     * offer Global: a relay feed is everything on that relay, so it narrows any kind.
+     */
+    val liveFavoriteRelaysFlow: Flow<List<FeedDefinition>> =
+        account.favoriteRelayList.flow
+            .map { relays -> relays.map { FeedDefinition(TopFilter.Relay(it.url), RelayName(it)) }.sortedBy { it.name.name() } }
+            .onStart {
+                emit(
+                    account.favoriteRelayList.flow.value
+                        .map { FeedDefinition(TopFilter.Relay(it.url), RelayName(it)) }
+                        .sortedBy { it.name.name() },
+                )
+            }
+
     private val _kind3GlobalPeopleRoutes =
         combineTransform(
             livePeopleListsFlow,
@@ -308,22 +324,24 @@ class TopNavFilterState(
         }
 
     private val _badgeRoutes =
-        livePeopleListsFlow.transform { peopleLists ->
+        combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
                     peopleLists,
+                    relays,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
         }
 
     private val _communityRoutes =
-        livePeopleListsFlow.transform { peopleLists ->
+        combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
                     peopleLists,
+                    relays,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
@@ -449,26 +467,29 @@ class TopNavFilterState(
         }
 
     private val _kind3GlobalPeople =
-        livePeopleListsFlow.transform { peopleLists ->
+        combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, aroundMe, teleport, globalFollow),
                     peopleLists,
+                    relays,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )
         }
 
     // Author-only catalog for browse screens whose events carry no topical tags (no `t`/`g`/`a`),
-    // e.g. the nApplet (NIP-5D) and nSite (NIP-5A) manifests. These can only be narrowed by author,
-    // so the interest entries (hashtags, geohashes, communities, relays, favorites, interest sets)
-    // and AroundMe — none of which can match a tag-less manifest — are deliberately left out.
+    // e.g. the nApplet (NIP-5D) and nSite (NIP-5A) manifests. These can only be narrowed by author
+    // or by relay, so the tag-based interest entries (hashtags, geohashes, communities, favorite
+    // feeds, interest sets) and AroundMe — none of which can match a tag-less manifest — are
+    // deliberately left out. Favorite relays stay: a relay feed is everything on that relay.
     private val _authorOnlyRoutes =
-        livePeopleListsFlow.transform { peopleLists ->
+        combineTransform(livePeopleListsFlow, liveFavoriteRelaysFlow) { peopleLists, relays ->
             emit(
                 listOf(
                     listOf(allFollows, userFollows, kind3Follows, globalFollow, mineFollow),
                     peopleLists,
+                    relays,
                     listOf(muteListFollow),
                 ).flatten().toImmutableList(),
             )

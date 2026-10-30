@@ -125,8 +125,8 @@ class WebOfTrustViewModel(
 
     /**
      * Sends the user's graph to [onboarding]'s graph relays, signs up with it and publishes the
-     * rows it serves the user with, as the provider would (in the public tags). One sign-up at a
-     * time.
+     * rows it serves the user with, as the provider would (in the public tags), then adopts its
+     * network relay. One sign-up at a time.
      */
     fun setUp(onboarding: TrustProviderOnboarding) {
         if (_setup.value is WebOfTrustSetup.Running || _setup.value is WebOfTrustSetup.Saving) return
@@ -143,6 +143,7 @@ class WebOfTrustViewModel(
                     val registration = onboarding.register(account.signer) { step -> _setup.value = WebOfTrustSetup.Running(onboarding.id, step) }
                     _setup.value = WebOfTrustSetup.Saving(onboarding.id)
                     account.setTrustProviderRows(registration.rows, isPrivate = false)
+                    onboarding.networkRelay?.let { adoptNetworkRelay(it) }
                     WebOfTrustSetup.Idle
                 } catch (e: CancellationException) {
                     throw e
@@ -155,6 +156,27 @@ class WebOfTrustViewModel(
                 }
         }
     }
+
+    /** Best effort: the provider is already set, so a relay list the signer refuses does not undo it. */
+    private suspend fun adoptNetworkRelay(relay: NormalizedRelayUrl) {
+        try {
+            account.adoptTrustProviderRelay(relay)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("WebOfTrust", "Could not add $relay to the relay lists", e)
+        }
+    }
+
+    /** The key of [onboarding]'s own observer account, to show its picture; null when it has none. */
+    suspend fun houseObserverKey(onboarding: TrustProviderOnboarding): HexKey? =
+        try {
+            onboarding.houseObserver?.let { resolveUserHexOrNull(it, nip05Client) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
 
     private val _copy = MutableStateFlow<WebOfTrustCopy>(WebOfTrustCopy.Idle)
     val copy: StateFlow<WebOfTrustCopy> = _copy.asStateFlow()

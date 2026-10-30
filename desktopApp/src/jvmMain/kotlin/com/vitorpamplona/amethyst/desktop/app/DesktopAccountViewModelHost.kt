@@ -30,6 +30,8 @@ import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.commons.wot.onboarding.OkHttpTrustProviderHttp
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
@@ -70,6 +72,8 @@ class DesktopAccountViewModelHost(
     override val lnurlTransport: LnurlHttpTransport by lazy { OkHttpLnurlTransport(modules.roleBasedHttpClientBuilder::okHttpClientForMoney) }
 
     override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torEvaluatorFlow
+
+    override val trustProviderHttp: TrustProviderHttp by lazy { OkHttpTrustProviderHttp(modules.roleBasedHttpClientBuilder::okHttpClientForNip05) }
 
     override val torRelayEvaluation: StateFlow<TorRelayEvaluation> get() = modules.torEvaluatorFlow.flow
 

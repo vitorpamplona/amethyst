@@ -87,6 +87,9 @@ class BrainstormOnboarding(
         )
     override val relay: NormalizedRelayUrl = RelayUrlNormalizer.normalize(SCORES_RELAY)
 
+    // The scores relay also serves the network's notes, ranked: a better Global than the user's own relays.
+    override val networkRelay: NormalizedRelayUrl = relay
+
     // The service key is per user and only known after a sign-up, but Brainstorm's scores relay
     // carries nothing but Brainstorm's keys, so an entry on it is Brainstorm's.
     override fun serves(provider: ServiceProviderTag): Boolean = provider.relayUrl == relay
