@@ -117,6 +117,9 @@ import com.vitorpamplona.amethyst.commons.resources.signer_illegal_state_excepti
 import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception
 import com.vitorpamplona.amethyst.commons.resources.signer_not_found_exception_description
 import com.vitorpamplona.amethyst.commons.resources.the_receiver_s_lightning_service_at_is_not_available_it_was_calculated_from_the_lightning_address_error_check_if_the_server_is_up_and_if_the_lightning_address_is_correct
+import com.vitorpamplona.amethyst.commons.resources.timestamp_failed_message
+import com.vitorpamplona.amethyst.commons.resources.timestamp_failed_message_with_reason
+import com.vitorpamplona.amethyst.commons.resources.timestamp_failed_title
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_element_pr_not_found_in_the_resulting_json_with_user
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error
 import com.vitorpamplona.amethyst.commons.resources.unable_to_create_a_lightning_invoice_before_sending_the_zap_the_receiver_s_lightning_wallet_sent_the_following_error_with_user
@@ -216,6 +219,11 @@ fun UserNotice.text(): NoticeText =
 
         NoteActionNotice.CannotQuoteDraft -> text(Res.string.draft_note, Res.string.it_s_not_possible_to_quote_to_a_draft_note)
         NoteActionNotice.ReadOnlyCannotBoost -> text(Res.string.read_only_user, Res.string.login_with_a_private_key_to_be_able_to_boost_posts)
+        is NoteActionNotice.TimestampFailed ->
+            NoticeText(
+                Res.string.timestamp_failed_title,
+                message?.let { str(Res.string.timestamp_failed_message_with_reason, raw(it)) } ?: str(Res.string.timestamp_failed_message),
+            )
 
         is UploadNotice.VideoCompressionFailed ->
             NoticeText(

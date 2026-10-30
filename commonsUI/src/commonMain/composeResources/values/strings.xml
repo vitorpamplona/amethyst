@@ -464,6 +464,9 @@
     <string name="timestamp_it">Timestamp it</string>
     <string name="timestamp_pending">Timestamp: Pending Confirmations</string>
     <string name="timestamp_pending_short">OTS: Pending</string>
+    <string name="timestamp_failed_title">Could not timestamp</string>
+    <string name="timestamp_failed_message">None of the OpenTimestamps servers could be reached. Check your connection and Tor settings, then try again.</string>
+    <string name="timestamp_failed_message_with_reason">None of the OpenTimestamps servers could be reached. Check your connection and Tor settings, then try again. Error: %1$s</string>
     <string name="one_year_plus">1y+</string>
     <string name="block_report">Block / Report</string>
     <string name="report_spam_scam">Report Spam / Scam</string>

@@ -1557,7 +1557,21 @@ open class BaseAccountViewModel(
         return event.sig.isNotEmpty() || note.rumorHost != null
     }
 
-    fun timestamp(note: Note) = launchSigner { account.otsState.timestamp(note) }
+    /**
+     * Stamping posts to the OpenTimestamps calendars, so it fails like any HTTP call: no network,
+     * calendars down, or a Tor proxy that isn't running. That is not a signer failure, so
+     * [reportSignerErrors] would let it escape [viewModelScope] and crash the app.
+     */
+    fun timestamp(note: Note) =
+        launchSigner {
+            try {
+                account.otsState.timestamp(note)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.w("AccountViewModel", "Could not timestamp ${note.idHex}", e)
+                notices.notify(NoteActionNotice.TimestampFailed(e.message))
+            }
+        }
 
     /** Deletes [notes], each inside its room when it has one and publicly otherwise. */
     fun delete(notes: List<Note>) =

@@ -43,6 +43,11 @@ sealed interface NoteActionNotice : UserNotice {
     data object CannotQuoteDraft : NoteActionNotice
 
     data object ReadOnlyCannotBoost : NoteActionNotice
+
+    /** No OpenTimestamps calendar accepted the note; [message] is the network error. */
+    data class TimestampFailed(
+        val message: String?,
+    ) : NoteActionNotice
 }
 
 /** A proof-of-work mined post that failed to sign or broadcast after the composer closed. */
