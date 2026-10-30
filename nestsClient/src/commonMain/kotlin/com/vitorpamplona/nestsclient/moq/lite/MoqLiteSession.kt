@@ -119,6 +119,13 @@ class MoqLiteSession internal constructor(
     private var announceWatchJob: Job? = null
 
     /**
+     * Pumps of the announce bidis [announce] opened, guarded by [state]. They run on the caller's
+     * scope, which outlives this session across token recycles and reconnects, so [close] cancels
+     * them instead of waiting for the transport to end their streams.
+     */
+    private val announcePumps = mutableListOf<Job>()
+
+    /**
      * Active publishers on this session. moq-lite models a broadcast as
      * `(suffix, set-of-tracks)`; the relay multiplexes Subscribe
      * messages to whichever publisher claims the requested track. We
@@ -220,6 +227,10 @@ class MoqLiteSession internal constructor(
                     // see an end-of-flow.
                 }
             }
+        state.withLock {
+            announcePumps.removeAll { it.isCompleted }
+            announcePumps += pump
+        }
         return MoqLiteAnnouncesHandle(
             updates = updates,
             close = {
@@ -1306,11 +1317,14 @@ class MoqLiteSession internal constructor(
         closed = true
         val toClose: List<ListenerSubscription>
         val publishersToClose: List<PublisherStateImpl>
+        val announcePumpsToCancel: List<Job>
         state.withLock {
             toClose = subscriptionsBySubscribeId.values.toList()
             subscriptionsBySubscribeId.clear()
             publishersToClose = activePublishers.toList()
             activePublishers.clear()
+            announcePumpsToCancel = announcePumps.toList()
+            announcePumps.clear()
         }
         for (sub in toClose) {
             runCatching { sub.bidi.finish() }
@@ -1321,6 +1335,8 @@ class MoqLiteSession internal constructor(
         }
         groupPump?.cancelAndJoin()
         bidiPump?.cancelAndJoin()
+        announceWatchJob?.cancel()
+        announcePumpsToCancel.forEach { it.cancel() }
         runCatching { transport.close() }
     }
 
