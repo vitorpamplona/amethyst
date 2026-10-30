@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -35,6 +37,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
  * Every entry whose state must survive is decorated — the visible stack AND the tab roots the user
  * left — so a tab keeps its ViewModels and scroll position while it is out of sight. Only the
  * visible stack is displayed; an entry's state is dropped once it leaves both.
+ *
+ * The host paints the theme background under the screens: a push or pop fades them (and scales the
+ * one behind), so mid-transition what is under the host shows through. That is the window's own
+ * background, which does not follow the theme the user picked, so a dark theme flashed light on
+ * every back.
  */
 @Composable
 fun NavigationHost(
@@ -56,7 +63,7 @@ fun NavigationHost(
 
     NavDisplay(
         entries = decorated.subList(0, visible.size),
-        modifier = modifier,
+        modifier = modifier.background(MaterialTheme.colorScheme.background),
         transitionSpec = { destinations.pushTransition(this) },
         popTransitionSpec = { destinations.popTransition(this) },
         // A back gesture runs the same motion as a back press, scrubbed by the finger.
