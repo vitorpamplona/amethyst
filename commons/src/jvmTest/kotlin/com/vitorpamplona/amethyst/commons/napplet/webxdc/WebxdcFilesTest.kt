@@ -22,13 +22,17 @@ package com.vitorpamplona.amethyst.commons.napplet.webxdc
 
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -42,8 +46,10 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayOutputStream
 import java.net.InetSocketAddress
+import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.random.Random
 
 class WebxdcFilesTest {
     @get:Rule val folder = TemporaryFolder()
@@ -106,6 +112,46 @@ class WebxdcFilesTest {
             // One download for every request after the first.
             assertEquals(1, requests)
         }
+
+    @Test
+    fun theDownloadReportsItsProgressAndClearsWhenDone() =
+        runBlocking {
+            // Stored, not deflated, and random: the archive is as large as its contents.
+            val noise = Random(7).nextBytes(1_500_000)
+            val out = ByteArrayOutputStream()
+            ZipOutputStream(out).use { zip ->
+                zip.setMethod(ZipOutputStream.STORED)
+                zip.putNextEntry(
+                    ZipEntry("index.html").apply {
+                        size = noise.size.toLong()
+                        crc = CRC32().apply { update(noise) }.value
+                    },
+                )
+                zip.write(noise)
+                zip.closeEntry()
+            }
+            val archive = out.toByteArray()
+            served["/big.xdc"] = archive
+            val files = files("$base/big.xdc", sha256(archive).toHexKey())
+
+            val seen = mutableListOf<NappletDownloadProgress>()
+            val watch = launch(start = CoroutineStart.UNDISPATCHED) { files.download.filterNotNull().collect { seen += it } }
+            assertTrue(files.isAvailable("/"))
+            watch.cancel()
+
+            assertTrue("the bar moved: $seen", seen.isNotEmpty())
+            assertTrue(seen.all { it.total == archive.size.toLong() })
+            assertEquals(seen.map { it.bytes }.sorted(), seen.map { it.bytes })
+            assertNull("nothing is downloading any more", files.download.value)
+        }
+
+    @Test
+    fun progressReadsAsSizesWithoutWords() {
+        assertEquals("2.4 MB / 5.8 MB", NappletDownloadProgress(2_400_000, 5_825_997).label())
+        assertEquals("512 KB", NappletDownloadProgress(512_000, null).label())
+        assertEquals(0.5f, NappletDownloadProgress(50, 100).fraction)
+        assertNull(NappletDownloadProgress(50, null).fraction)
+    }
 
     @Test
     fun aWrongArchiveIsRefusedAndNothingIsKept() =

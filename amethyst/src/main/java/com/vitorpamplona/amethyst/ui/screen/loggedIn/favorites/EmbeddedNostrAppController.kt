@@ -45,6 +45,7 @@ import androidx.privacysandbox.ui.core.SandboxedUiAdapter
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_paid
 import com.vitorpamplona.amethyst.commons.resources.favorite_notice_published
@@ -163,6 +164,9 @@ class EmbeddedNostrAppController(
     /** Notified on the main thread whenever [loadStatus] changes. */
     override var onLoadStatusChanged: ((EmbeddedLoadStatus) -> Unit)? = null
 
+    /** Notified on the main thread with how far the download the page waits on has come; null when it ended. */
+    var onDownloadChanged: ((NappletDownloadProgress?) -> Unit)? = null
+
     override var onImeEvent: ((ImeEvent) -> Unit)? = null
 
     override var onMagnifierFrame: ((MagnifierFrame) -> Unit)? = null
@@ -248,6 +252,7 @@ class EmbeddedNostrAppController(
         onImeEvent = null
         onMagnifierFrame = null
         onLoadStatusChanged = null
+        onDownloadChanged = null
     }
 
     /**
@@ -508,6 +513,19 @@ class EmbeddedNostrAppController(
                 }
             }
             NappletEmbedContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletEmbedContract.KEY_ROUTE_TOR, false) ?: false
+            NappletEmbedContract.MSG_DOWNLOAD -> {
+                val data = msg.data
+                val download =
+                    if (data != null && data.containsKey(NappletEmbedContract.KEY_DOWNLOAD_BYTES)) {
+                        NappletDownloadProgress(
+                            data.getLong(NappletEmbedContract.KEY_DOWNLOAD_BYTES),
+                            data.getLong(NappletEmbedContract.KEY_DOWNLOAD_TOTAL, -1).takeIf { it > 0 },
+                        )
+                    } else {
+                        null
+                    }
+                onDownloadChanged?.invoke(download)
+            }
             NappletEmbedContract.MSG_FIND_RESULT -> {
                 val data = msg.data ?: return true
                 _findResult.value = FindResult(data.getInt(NappletEmbedContract.KEY_FIND_ACTIVE), data.getInt(NappletEmbedContract.KEY_FIND_TOTAL))

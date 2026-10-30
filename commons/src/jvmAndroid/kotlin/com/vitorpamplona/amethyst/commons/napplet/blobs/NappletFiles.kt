@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.blobs
 
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+
 /**
  * The files one launch serves on its origin, as [com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer]
  * reads them: an event's Blossom blobs ([NappletBlobStore]) or an unpacked webxdc archive.
@@ -39,4 +43,12 @@ interface NappletFiles {
 
     /** The launch ended: stop any download it started, so a closed app stops costing data. */
     fun close() {}
+
+    /**
+     * The one large download this launch is waiting on, while it runs (a webxdc archive), for the
+     * loading screen's bar. Null otherwise: blobs are many small files, each quick.
+     */
+    val download: StateFlow<NappletDownloadProgress?> get() = NO_DOWNLOAD
 }
+
+private val NO_DOWNLOAD: StateFlow<NappletDownloadProgress?> = MutableStateFlow(null)

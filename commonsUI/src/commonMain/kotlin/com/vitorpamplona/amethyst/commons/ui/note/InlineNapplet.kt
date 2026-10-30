@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,6 +62,8 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineAsks
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_failed
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_needs_you
@@ -231,14 +232,23 @@ private fun LiveRun(
     onRetry: () -> Unit,
 ) {
     var status by remember(instanceId) { mutableStateOf(InlineNappletStatus.LOADING) }
+    val download by remember(instanceId) { NappletInlineDownloads.shared.progress(instanceId) }.collectAsState(null)
+    DisposableEffect(instanceId) { onDispose { NappletInlineDownloads.shared.forget(instanceId) } }
 
     surface(instanceId, { status = it }, Modifier.fillMaxSize().swallowTaps())
 
     when (status) {
         // Opaque, so it also covers the surface before the page's first frame.
         InlineNappletStatus.LOADING ->
-            Box(Modifier.fillMaxSize().swallowTaps().background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(Modifier.size(32.dp))
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .swallowTaps()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                NappletDownloadIndicator(download)
             }
         InlineNappletStatus.FAILED ->
             Column(

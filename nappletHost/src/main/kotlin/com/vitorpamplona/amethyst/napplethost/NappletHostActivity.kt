@@ -69,6 +69,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -198,6 +199,11 @@ class NappletHostActivity : ComponentActivity() {
     // The loading splash (monogram + spinner). Kept on top of the mounted WebView and removed only on
     // first paint, so there's never a blank/dark gap between the index probe and the shell's first frame.
     private var loadingView: View? = null
+
+    // The splash's spinner, and the bar and sizes that take its place while a webxdc archive downloads.
+    private var loadingSpinner: View? = null
+    private var downloadBar: ProgressBar? = null
+    private var downloadLabel: TextView? = null
 
     // The trusted pull-down pill, find and the developer console — the shared Compose chrome.
     private var chrome: BrowserChromeHost? = null
@@ -394,7 +400,10 @@ class NappletHostActivity : ComponentActivity() {
         contentFrame.removeAllViews()
         loadingView = buildLoadingView().also { contentFrame.addView(it) }
         uiScope.launch {
-            val available = withContext(Dispatchers.IO) { contentServer.isAvailable("/") }
+            val available = withContext(Dispatchers.IO) { contentServer.isAvailable("/") { runOnUiThread { showDownload(it) } } }
+            // The watch stops with the probe and may miss the download's end: the spinner returns
+            // while the page loads.
+            showDownload(null)
             if (available) {
                 mountWebView()
             } else {
@@ -956,8 +965,41 @@ class NappletHostActivity : ComponentActivity() {
                 },
             )
             addView(spacer(dp(20)))
-            addView(ProgressBar(this@NappletHostActivity))
+            addView(ProgressBar(this@NappletHostActivity).also { loadingSpinner = it })
+            addView(
+                ProgressBar(this@NappletHostActivity, null, android.R.attr.progressBarStyleHorizontal)
+                    .apply {
+                        max = DOWNLOAD_BAR_MAX
+                        visibility = View.GONE
+                        layoutParams = LinearLayout.LayoutParams(dp(240), LinearLayout.LayoutParams.WRAP_CONTENT)
+                    }.also { downloadBar = it },
+            )
+            addView(
+                TextView(this@NappletHostActivity)
+                    .apply {
+                        setTextColor(resolveThemeColor(android.R.attr.textColorSecondary))
+                        textSize = 13f
+                        gravity = Gravity.CENTER
+                        visibility = View.GONE
+                        setPadding(0, dp(8), 0, 0)
+                    }.also { downloadLabel = it },
+            )
         }
+
+    /** The bar and its sizes while a download runs; the spinner before and after it. */
+    private fun showDownload(download: NappletDownloadProgress?) {
+        val bar = downloadBar ?: return
+        val fraction = download?.fraction
+        loadingSpinner?.visibility = if (download == null) View.VISIBLE else View.GONE
+        bar.visibility = if (download == null) View.GONE else View.VISIBLE
+        // No size from the server: the bar still moves, and the label counts the bytes.
+        bar.isIndeterminate = download != null && fraction == null
+        if (fraction != null) bar.progress = (fraction * DOWNLOAD_BAR_MAX).toInt()
+        downloadLabel?.let {
+            it.visibility = if (download == null) View.GONE else View.VISIBLE
+            it.text = download?.label()
+        }
+    }
 
     private fun buildErrorView(onRetry: () -> Unit): View =
         centeredColumn().apply {
@@ -1154,6 +1196,9 @@ class NappletHostActivity : ComponentActivity() {
 
     companion object {
         private const val TAG = "NappletHostActivity"
+
+        // The bar's resolution: a step per 0.1%.
+        private const val DOWNLOAD_BAR_MAX = 1000
 
         /**
          * How often a resumed host renews its foreground lease with the broker. Comfortably shorter than

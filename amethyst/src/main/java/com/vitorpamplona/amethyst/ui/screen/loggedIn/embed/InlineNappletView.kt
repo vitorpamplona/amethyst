@@ -37,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -96,9 +97,12 @@ fun InlineNappletView(
     DisposableEffect(controller) {
         controller.bind()
         controller.onLoadStatusChanged = { status.value(it.toInline()) }
+        // The note's stage draws the bar; the run is known to it by its instance id.
+        controller.onDownloadChanged = { NappletInlineDownloads.shared.report(instanceId, it) }
         status.value(controller.loadStatus.toInline())
         onDispose {
             controller.onLoadStatusChanged = null
+            controller.onDownloadChanged = null
             controller.teardown()
         }
     }

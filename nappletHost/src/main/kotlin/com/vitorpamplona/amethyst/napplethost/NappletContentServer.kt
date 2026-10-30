@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.napplethost
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -97,9 +99,21 @@ class NappletContentServer(
     /**
      * Whether [requestPath] is cached or can be fetched now. Used by the host to probe availability for
      * the loading screen before showing the WebView. A fetch warms the cache as a side effect, so the
-     * subsequent WebView request serves from disk.
+     * subsequent WebView request serves from disk. [onDownload] hears how far a large download (a
+     * webxdc archive) has come while the probe waits on it, on the probing thread.
      */
-    fun isAvailable(requestPath: String): Boolean = runBlocking { server.isAvailable(requestPath) }
+    fun isAvailable(
+        requestPath: String,
+        onDownload: ((NappletDownloadProgress?) -> Unit)? = null,
+    ): Boolean =
+        runBlocking {
+            val watch = onDownload?.let { report -> launch { server.download.collect(report) } }
+            try {
+                server.isAvailable(requestPath)
+            } finally {
+                watch?.cancel()
+            }
+        }
 
     /**
      * Releases the per-instance OkHttp client (its dispatcher thread pool + connection pool) and cancels

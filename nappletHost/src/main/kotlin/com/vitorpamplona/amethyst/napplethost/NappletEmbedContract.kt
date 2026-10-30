@@ -158,6 +158,13 @@ object NappletEmbedContract {
      */
     const val MSG_ROUTE = 27
 
+    /**
+     * Provider → client: how far the download the tab waits on has come ([KEY_DOWNLOAD_BYTES] of
+     * [KEY_DOWNLOAD_TOTAL], -1 when the server gave no size), so the client can draw a bar instead of a
+     * spinner. A webxdc archive downloads before its page loads. No [KEY_DOWNLOAD_BYTES]: the download ended.
+     */
+    const val MSG_DOWNLOAD = 28
+
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"
     const val KEY_FIND_ACTIVE = "findActive"
@@ -198,6 +205,8 @@ object NappletEmbedContract {
     const val KEY_LOAD_FAILED = "loadFailed"
     const val KEY_RENDERER_GONE = "rendererGone"
     const val KEY_ROUTE_TOR = "routeTor"
+    const val KEY_DOWNLOAD_BYTES = "downloadBytes"
+    const val KEY_DOWNLOAD_TOTAL = "downloadTotal"
 
     /**
      * On [MSG_LOAD_STATE]: the applet was not loaded because its network route can't be honored (Tor wanted

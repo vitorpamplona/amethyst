@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.awt.awtEventOrNull
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -47,11 +48,11 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
+import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
-import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
 import java.awt.event.MouseWheelEvent
 import kotlin.math.roundToInt
@@ -116,6 +117,8 @@ fun InlineNappletPane(
         return
     }
     val state by current.state.collectAsState()
+    // The note's stage draws the bar; the run is known to it by its instance id.
+    LaunchedEffect(current, instanceId) { current.download.collect { NappletInlineDownloads.shared.report(instanceId, it) } }
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
     val frame = view.frame.collectAsState()
     val painted by remember(frame) { derivedStateOf { frame.value != null } }
@@ -140,7 +143,9 @@ fun InlineNappletPane(
             .onSizeChanged { view.resize((it.width / density).roundToInt(), (it.height / density).roundToInt(), density.toDouble()) }
             // Before focusTarget(): key events reach the focused node and what wraps it, not what it wraps.
             .onKeyEvent { event ->
-                val native = event.nativeKeyEvent as? KeyEvent ?: return@onKeyEvent false
+                // Not nativeKeyEvent: that is Compose's own event now, and a cast of it to AWT's failed
+                // for every key, so none reached the page and Enter went on to open the note.
+                val native = event.awtEventOrNull ?: return@onKeyEvent false
                 view.key(native)
                 true
             }.focusRequester(focus)

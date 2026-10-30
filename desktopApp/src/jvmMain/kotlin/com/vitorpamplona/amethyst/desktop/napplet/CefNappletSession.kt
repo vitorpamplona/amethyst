@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
@@ -44,13 +45,16 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
 import org.cef.CefSettings
@@ -160,6 +164,11 @@ class CefNappletSession(
 
     private val mutableState = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = mutableState.asStateFlow()
+
+    private val mutableDownload = MutableStateFlow<NappletDownloadProgress?>(null)
+
+    /** The download the page waits on while [State.Loading], for the loading screen's bar. */
+    val download: StateFlow<NappletDownloadProgress?> = mutableDownload.asStateFlow()
 
     private val mutablePage = MutableStateFlow(Page())
     val page: StateFlow<Page> = mutablePage.asStateFlow()
@@ -292,7 +301,19 @@ class CefNappletSession(
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
-                if (!server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)) {
+                val watch = scope.launch { server.download.collect { mutableDownload.value = it } }
+                val available =
+                    try {
+                        server.isAvailable(if (isWebsite) "/" else NappletSiteServer.INDEX_PATH)
+                    } finally {
+                        // Joined first: a collector mid-write on another thread would put its value
+                        // back after this null.
+                        withContext(NonCancellable) {
+                            watch.cancelAndJoin()
+                            mutableDownload.value = null
+                        }
+                    }
+                if (!available) {
                     Log.w(TAG) { "No Blossom server returned ${launch.identity.coordinate}'s files" }
                     if (isWebsite) runtime.routes.release(this@CefNappletSession)
                     mutableState.value = State.Failed(Failure.UNREACHABLE)

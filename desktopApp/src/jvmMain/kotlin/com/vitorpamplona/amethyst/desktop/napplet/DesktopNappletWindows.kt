@@ -85,6 +85,7 @@ import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access
@@ -175,7 +176,7 @@ private fun NappletWindow(
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
                         is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
-                        is CefNappletSession.State.Loading -> LoadingPane(host, session.launch.title)
+                        is CefNappletSession.State.Loading -> LoadingPane(host, session, session.launch.title)
                         is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
                         is CefNappletSession.State.Failed ->
                             MessagePane(
@@ -484,9 +485,11 @@ private fun ConsentWindow(
 @Composable
 private fun LoadingPane(
     host: DesktopNappletHost,
+    session: CefNappletSession,
     title: String,
 ) {
     val engine by host.engine.state.collectAsState()
+    val download by session.download.collectAsState()
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             Modifier.widthIn(max = 420.dp).padding(24.dp),
@@ -503,7 +506,7 @@ private fun LoadingPane(
                     Text(stringRes(Res.string.napplet_desktop_engine_starting), textAlign = TextAlign.Center)
                 }
                 else -> {
-                    CircularProgressIndicator()
+                    NappletDownloadIndicator(download, spinnerSize = 40.dp)
                     Text(stringRes(Res.string.napplet_desktop_fetching, title), textAlign = TextAlign.Center)
                 }
             }

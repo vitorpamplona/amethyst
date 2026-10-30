@@ -51,8 +51,9 @@ object WebxdcArchive {
     /**
      * Downloads the first of [urls] that answers with an archive into [target], at most
      * [MAX_ARCHIVE_BYTES]. With an [expectedHash], anything else is refused; without one, the
-     * archive is taken as served. Gives up as soon as [cancelled] says so. Returns the archive's
-     * sha256, or null when nothing usable came.
+     * archive is taken as served. Gives up as soon as [cancelled] says so. [onProgress] hears the bytes
+     * read so far and the size the server gave, if any, from the start of each server tried. Returns
+     * the archive's sha256, or null when nothing usable came.
      */
     fun download(
         client: OkHttpClient,
@@ -60,10 +61,11 @@ object WebxdcArchive {
         expectedHash: HexKey?,
         target: File,
         cancelled: () -> Boolean = { false },
+        onProgress: (bytes: Long, total: Long?) -> Unit = { _, _ -> },
     ): HexKey? {
         for (url in urls.distinct()) {
             if (cancelled()) break
-            val hash = downloadOne(client, url, target, cancelled) ?: continue
+            val hash = downloadOne(client, url, target, cancelled, onProgress) ?: continue
             if (expectedHash == null || hash == expectedHash.lowercase()) return hash
             Log.w(TAG) { "$url is not the archive the post names ($hash)" }
         }
@@ -76,6 +78,7 @@ object WebxdcArchive {
         url: String,
         target: File,
         cancelled: () -> Boolean,
+        onProgress: (bytes: Long, total: Long?) -> Unit,
     ): HexKey? {
         val call: Call =
             client.newCall(
@@ -88,6 +91,8 @@ object WebxdcArchive {
         return try {
             call.execute().use { response ->
                 if (!response.isSuccessful || response.body.contentLength() > MAX_ARCHIVE_BYTES) return null
+                val size = response.body.contentLength().takeIf { it > 0 }
+                onProgress(0, size)
                 val digest = MessageDigest.getInstance("SHA-256")
                 var total = 0L
                 response.body.byteStream().use { input ->
@@ -101,6 +106,7 @@ object WebxdcArchive {
                             if (total > MAX_ARCHIVE_BYTES || cancelled()) return null
                             digest.update(buffer, 0, read)
                             output.write(buffer, 0, read)
+                            onProgress(total, size)
                         }
                     }
                 }
