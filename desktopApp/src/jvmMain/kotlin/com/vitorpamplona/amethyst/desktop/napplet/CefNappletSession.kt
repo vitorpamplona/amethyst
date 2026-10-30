@@ -77,6 +77,7 @@ import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
 import java.io.InputStream
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
@@ -211,6 +212,19 @@ class CefNappletSession(
     // Guards closed against the browser's creation, so close() and start() can't interleave.
     private val lifecycle = Any()
 
+    // This session's own name for the query function. Chromium keeps one router per name for every
+    // browser in a renderer, and the shells all share one: a window opened while a note's run closed
+    // joined that run's router, which the close then removed, so the window's page could reach no one.
+    private val queryFunction = QUERY_FUNCTION_PREFIX + UUID.randomUUID().toString().replace("-", "")
+
+    // The object the shared shell expects at [NappletWebContract.BRIDGE_NAME]: `postMessage(String)`
+    // out to the host, `onmessage({data})` in. The query function is captured and removed from the
+    // shell's window, so nothing loaded later in the shell finds it there.
+    private val bridgeScript =
+        "<script>(function(){var q=window.$queryFunction;try{delete window.$queryFunction;}catch(_){}" +
+            "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +
+            "q({request:String(s),persistent:false,onSuccess:function(){},onFailure:function(){}});}};})();</script>"
+
     // Payloads for the page, waiting for the next flush.
     private val outbox = ConcurrentLinkedQueue<String>()
     private val flushQueued = AtomicBoolean(false)
@@ -274,7 +288,7 @@ class CefNappletSession(
                         declaredDomains = launch.declaredDomains,
                         // A napplet's shell refuses to start it while WebRTC is still there: without the
                         // engine's guard extension, it would have a way out through the router.
-                        shellHead = if (isWebsite) BRIDGE_SCRIPT else WEBRTC_CHECK + BRIDGE_SCRIPT,
+                        shellHead = if (isWebsite) bridgeScript else WEBRTC_CHECK + bridgeScript,
                     )
                 // The entry point must resolve before a window shows: a missing site is a clear
                 // message, not a blank page.
@@ -318,7 +332,7 @@ class CefNappletSession(
     }
 
     private fun installHandlers(client: CefClient) {
-        val router = CefMessageRouter.create(CefMessageRouter.CefMessageRouterConfig(QUERY_FUNCTION, QUERY_CANCEL_FUNCTION))
+        val router = CefMessageRouter.create(CefMessageRouter.CefMessageRouterConfig(queryFunction, "${queryFunction}Cancel"))
         router.addHandler(
             object : CefMessageRouterHandlerAdapter() {
                 override fun onQuery(
@@ -751,27 +765,16 @@ class CefNappletSession(
 
         // A note is a small picture: no need for more, and every frame is copied.
         private const val OFFSCREEN_FRAME_RATE = 30
-        private const val QUERY_FUNCTION = "__amethystNappletQuery"
-        private const val QUERY_CANCEL_FUNCTION = "__amethystNappletQueryCancel"
+        private const val QUERY_FUNCTION_PREFIX = "__amethystNappletQuery_"
         const val MIN_ZOOM = 50
         const val MAX_ZOOM = 300
 
-        /**
-         * The object the shared shell expects at [NappletWebContract.BRIDGE_NAME]: `postMessage(String)`
-         * out to the host, `onmessage({data})` in. The router's query function is captured and
-         * removed from the shell's window, so nothing loaded later in the shell finds it there.
-         */
         private const val WEBRTC_PRESENT = "napplet-guard: WebRTC is present"
 
         /** Stops the shell before it starts the napplet when the guard extension did not take WebRTC away. */
         private const val WEBRTC_CHECK =
             "<script>if(typeof RTCPeerConnection!=='undefined'||typeof webkitRTCPeerConnection!=='undefined'){" +
                 "window.stop();console.error('$WEBRTC_PRESENT');throw new Error('$WEBRTC_PRESENT');}</script>"
-
-        private val BRIDGE_SCRIPT =
-            "<script>(function(){var q=window.$QUERY_FUNCTION;try{delete window.$QUERY_FUNCTION;}catch(_){}" +
-                "window.${NappletWebContract.BRIDGE_NAME}={onmessage:null,postMessage:function(s){" +
-                "q({request:String(s),persistent:false,onSuccess:function(){},onFailure:function(){}});}};})();</script>"
 
         /**
          * Whether [url] is ours: https on the shell host or a napplet.local subdomain. Read from the

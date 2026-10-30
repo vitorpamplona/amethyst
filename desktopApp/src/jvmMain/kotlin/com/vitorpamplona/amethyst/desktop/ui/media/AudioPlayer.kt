@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.desktop.ui.media
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -36,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.audio.player.AudioPlaybackUi
 import com.vitorpamplona.amethyst.commons.audio.player.PlayableMediaCard
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 
@@ -70,6 +73,14 @@ fun AudioPlayer(
             GlobalMediaPlayer.audioState.map { it.playbackFor(url) }.distinctUntilChanged()
         }
     val playback by ownPlayback.collectAsState(GlobalMediaPlayer.audioState.value.playbackFor(url))
+
+    // Audio Chromium plays (WebM, Ogg) is opened paused while the card is on screen, so Play only
+    // resumes it; the page goes when the card does.
+    LaunchedEffect(url) {
+        delay(GlobalMediaPlayer.PREPARE_AUDIO_DELAY_MS)
+        GlobalMediaPlayer.prepareAudio(url)
+    }
+    DisposableEffect(url) { onDispose { GlobalMediaPlayer.releasePreparedAudio(url) } }
 
     val info =
         remember(url, title, artist, mimeType, waveform, artworkUrl, seed) {

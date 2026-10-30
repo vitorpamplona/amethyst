@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
@@ -211,6 +212,8 @@ object DesktopNotePlatform : NotePlatform {
                 // an MP4-family one that doesn't say (`.mp4`, `video/mp4`) has its track list read,
                 // because Blossom serves AAC uploads that way and the video engine can't open them
                 // ("Failed to retrieve video size").
+                // A WebM the note declares goes to Chromium, whatever its URL looks like.
+                ChromiumVideoRoute.declare(url, video?.mimeType)
                 val tracks = if (video != null && !isLive) rememberMediaTracks(url, video.mimeType, accountViewModel) else MediaTracks.UNKNOWN
                 val isAudio =
                     video != null && !isLive &&

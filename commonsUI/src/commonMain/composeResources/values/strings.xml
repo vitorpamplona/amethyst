@@ -148,7 +148,6 @@
     <string name="webxdc_unverified">Unverified: the post gives no hash for it</string>
     <string name="webxdc_open_failed">This app can’t be opened here.</string>
     <string name="napplet_inline_run">Run here</string>
-    <string name="napplet_inline_running">Running in this note</string>
     <string name="napplet_inline_stop">Stop</string>
     <string name="napplet_inline_needs_you">%1$s wants to ask you something. Open it to answer.</string>
     <string name="napplet_inline_failed">%1$s didn’t start here.</string>
