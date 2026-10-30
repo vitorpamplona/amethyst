@@ -501,6 +501,35 @@ class CefNappletSessionTest {
         }
 
     @Test
+    fun aClosedWindowStopsItsPage() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // Seen live: a closed game window went on running (and playing) unseen, since Chromium
+            // refuses to close a windowed browser it wasn't told it may close.
+            val ticks = AtomicInteger()
+            server.createContext("/tick") { exchange ->
+                ticks.incrementAndGet()
+                exchange.sendResponseHeaders(204, -1)
+                exchange.close()
+            }
+            val index = "<!doctype html><html><body><script>setInterval(function () { fetch('$serverUrl/tick', { mode: 'no-cors' }).catch(function () {}); }, 100);</script></body></html>"
+            val session = site(mapOf("/index.html" to index.encodeToByteArray()), runtime, NostrSignerInternal(KeyPair()), NostrSignerInternal(KeyPair()))
+            show(session)
+            withTimeout(60_000) { while (ticks.get() < 5) delay(100) }
+
+            // As the app does it: Close closes the session on the AWT thread, and the window that held
+            // the browser goes right after, while Chromium has the close to do.
+            SwingUtilities.invokeAndWait {
+                session.close()
+                frames.removeLast().dispose()
+            }
+            delay(1_500)
+            val afterClose = ticks.get()
+            delay(1_500)
+            assertEquals(afterClose, ticks.get(), "the page kept running after its window closed")
+        }
+
+    @Test
     fun aSiteRunsAtItsOwnOriginWithNip07() =
         runBlocking {
             val runtime = cefRuntime()

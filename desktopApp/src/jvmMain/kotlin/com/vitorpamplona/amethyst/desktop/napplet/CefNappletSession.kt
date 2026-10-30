@@ -628,6 +628,12 @@ class CefNappletSession(
         // background coroutine, and tearing Chromium down there raced the window still painting it.
         val teardown = {
             runCatching {
+                // The page goes first, whatever Chromium then does with the close: a closed window's
+                // browser was seen living on unseen, its game still running and playing. Dropping the
+                // app's frame from the trusted shell ends its document, timers and sound at once.
+                browser?.executeJavaScript(DROP_APP_FRAME, NappletWebContract.SHELL_URL, 0)
+                // Without this, Chromium only asks the browser's window to close, and waits for it.
+                browser?.setCloseAllowed()
                 browser?.close(true)
                 if (client != null && router != null) client.removeMessageRouter(router)
                 router?.dispose()
@@ -690,6 +696,9 @@ class CefNappletSession(
     }
 
     companion object {
+        /** Run in the shell: removes the app's frame, ending everything the app had running. */
+        private const val DROP_APP_FRAME = "var f=document.getElementById('app');if(f)f.remove();"
+
         private const val TAG = "CefNappletSession"
 
         // A note is a small picture: no need for more, and every frame is copied.
