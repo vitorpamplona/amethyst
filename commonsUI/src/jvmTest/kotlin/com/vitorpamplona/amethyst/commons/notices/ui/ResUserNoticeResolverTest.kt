@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.notices.ui
 
+import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.NwcFailure
@@ -30,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.notices.ZapNotice
 import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -42,6 +44,14 @@ class ResUserNoticeResolverTest {
         val text = resolve(SignerNotice.ReadOnly)
         assertTrue(text.title.isNotBlank())
         assertTrue(text.message.isNotBlank())
+    }
+
+    @Test
+    fun anActionFailedOnBadDataIsNotBlamedOnTheSigner() {
+        val text = resolve(ActionFailed(IllegalArgumentException("expected '{' at offset 0")))
+        assertEquals("Action failed", text.title)
+        assertTrue("could not read" in text.message, text.message)
+        assertFalse("Signer" in text.title, text.title)
     }
 
     @Test

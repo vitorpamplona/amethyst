@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components.toasts
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
@@ -40,6 +41,6 @@ class NoticeToastMsg(
 private fun UserNotice.severity(): ToastSeverity =
     when (this) {
         Bolt12OfferNotice.PaymentSent, ConcordNotice.ChannelKeyRotated, is CashuRedeemNotice.Redeemed -> ToastSeverity.INFO
-        is SignerNotice.Failed -> ToastSeverity.ERROR
+        is SignerNotice.Failed, is ActionFailed -> ToastSeverity.ERROR
         else -> ToastSeverity.WARNING
     }

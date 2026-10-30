@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
+import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ClinkDebitFailed
@@ -45,6 +46,8 @@ import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.V4VNotice
 import com.vitorpamplona.amethyst.commons.notices.ZapNotice
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.action_failed_description
+import com.vitorpamplona.amethyst.commons.resources.action_failed_title
 import com.vitorpamplona.amethyst.commons.resources.bolt12_offers
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_failed
 import com.vitorpamplona.amethyst.commons.resources.bolt12_payment_sent
@@ -213,6 +216,7 @@ fun UserNotice.text(): NoticeText =
         SignerNotice.SignerNotFound -> text(Res.string.signer_not_found_exception, Res.string.signer_not_found_exception_description)
         is SignerNotice.Failed ->
             NoticeText(Res.string.signer_not_found_exception, str(Res.string.signer_illegal_state_exception_description), cause)
+        is ActionFailed -> NoticeText(Res.string.action_failed_title, str(Res.string.action_failed_description), cause)
 
         NoteActionNotice.CannotQuoteDraft -> text(Res.string.draft_note, Res.string.it_s_not_possible_to_quote_to_a_draft_note)
         NoteActionNotice.ReadOnlyCannotBoost -> text(Res.string.read_only_user, Res.string.login_with_a_private_key_to_be_able_to_boost_posts)
