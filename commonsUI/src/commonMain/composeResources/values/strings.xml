@@ -8573,7 +8573,10 @@
     <string name="namecoin_fallback_policy">Fallback policy</string>
     <string name="namecoin_fallback_policy_description">What to try if the primary backend can't be reached. Off by default — fallbacks can leak your lookups to other operators.</string>
     <string name="namecoin_fallback_custom_label">Fall back to my custom ElectrumX servers</string>
-    <string name="namecoin_fallback_custom_description">If Namecoin Core RPC fails, try the %1$d custom ElectrumX server(s) configured below.</string>
+    <plurals name="namecoin_fallback_custom_description">
+        <item quantity="one">If Namecoin Core RPC fails, try the %1$d custom ElectrumX server configured below.</item>
+        <item quantity="other">If Namecoin Core RPC fails, try the %1$d custom ElectrumX servers configured below.</item>
+    </plurals>
     <string name="namecoin_fallback_custom_none">No custom ElectrumX servers configured. Add one in the section below to enable this option.</string>
     <string name="namecoin_fallback_default_label">Fall back to default public ElectrumX servers</string>
     <string name="namecoin_fallback_default_custom_failed">If all of my custom ElectrumX servers fail, also try the hardcoded public defaults.</string>
@@ -8784,11 +8787,24 @@
     <string name="namecoin_resolution_invalid_identifier">Invalid Namecoin identifier</string>
     <string name="namecoin_resolution_timeout">Resolution timed out — servers may be slow, try again</string>
     <string name="namecoin_resolution_unknown_error">Unknown error</string>
-    <string name="chess_sync_events_count">%1$s events</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">Syncing %1$s...</string>
     <string name="chess_sync_synced">Synced</string>
-    <string name="chess_sync_syncing_detail">%1$s/%2$s relays • %3$s events</string>
-    <string name="chess_sync_synced_detail">%1$s/%2$s relays • %3$s challenges • %4$s games</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%1$d/%2$d relay</item>
+        <item quantity="other">%1$d/%2$d relays</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d challenge</item>
+        <item quantity="other">%1$d challenges</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d game</item>
+        <item quantity="other">%1$d games</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">Tap to retry</string>
     <string name="chess_game_parse_failed">Failed to parse PGN</string>
     <string name="chess_game_invalid">Invalid Chess Game</string>

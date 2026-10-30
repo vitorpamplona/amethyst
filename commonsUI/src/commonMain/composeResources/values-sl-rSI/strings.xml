@@ -8990,7 +8990,12 @@
     <string name="namecoin_fallback_policy">Pravilo nadomestnih možnosti</string>
     <string name="namecoin_fallback_policy_description">Kaj naj se poskusi, če primarnega zaledja ni mogoče doseči. Privzeto izklopljeno — nadomestne možnosti lahko tvoja iskanja razkrijejo drugim upravljavcem.</string>
     <string name="namecoin_fallback_custom_label">Preklopi na moje lastne strežnike ElectrumX</string>
-    <string name="namecoin_fallback_custom_description">Če Namecoin Core RPC ne uspe, poskusi %1$d spodaj nastavljenih lastnih strežnikov ElectrumX.</string>
+    <plurals name="namecoin_fallback_custom_description">
+        <item quantity="one">Če Namecoin Core RPC ne uspe, poskusi %1$d spodaj nastavljeni lastni strežnik ElectrumX.</item>
+        <item quantity="two">Če Namecoin Core RPC ne uspe, poskusi %1$d spodaj nastavljena lastna strežnika ElectrumX.</item>
+        <item quantity="few">Če Namecoin Core RPC ne uspe, poskusi %1$d spodaj nastavljene lastne strežnike ElectrumX.</item>
+        <item quantity="other">Če Namecoin Core RPC ne uspe, poskusi %1$d spodaj nastavljenih lastnih strežnikov ElectrumX.</item>
+    </plurals>
     <string name="namecoin_fallback_custom_none">Ni nastavljenih lastnih strežnikov ElectrumX. Dodaj enega v spodnjem razdelku, da omogočiš to možnost.</string>
     <string name="namecoin_fallback_default_label">Preklopi na privzete javne strežnike ElectrumX</string>
     <string name="namecoin_fallback_default_custom_failed">Če vsi moji lastni strežniki ElectrumX odpovejo, poskusi tudi vgrajene javne privzete strežnike.</string>
@@ -9209,11 +9214,32 @@
     <string name="namecoin_resolution_invalid_identifier">Neveljaven identifikator Namecoin</string>
     <string name="namecoin_resolution_timeout">Razreševanje je poteklo — strežniki so morda počasni, poskusi znova</string>
     <string name="namecoin_resolution_unknown_error">Neznana napaka</string>
-    <string name="chess_sync_events_count">%1$s dogodkov</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d dogodek</item>
+        <item quantity="two">%1$d dogodka</item>
+        <item quantity="few">%1$d dogodki</item>
+        <item quantity="other">%1$d dogodkov</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">Sinhroniziram %1$s...</string>
     <string name="chess_sync_synced">Sinhronizirano</string>
-    <string name="chess_sync_syncing_detail">%1$s/%2$s relejev • %3$s dogodkov</string>
-    <string name="chess_sync_synced_detail">%1$s/%2$s relejev • %3$s izzivov • %4$s iger</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%1$d/%2$d relej</item>
+        <item quantity="two">%1$d/%2$d releja</item>
+        <item quantity="few">%1$d/%2$d releji</item>
+        <item quantity="other">%1$d/%2$d relejev</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d izziv</item>
+        <item quantity="two">%1$d izziva</item>
+        <item quantity="few">%1$d izzivi</item>
+        <item quantity="other">%1$d izzivov</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d igra</item>
+        <item quantity="two">%1$d igri</item>
+        <item quantity="few">%1$d igre</item>
+        <item quantity="other">%1$d iger</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">Dotakni se za ponovni poskus</string>
     <string name="chess_game_parse_failed">PGN ni bilo mogoče razčleniti</string>
     <string name="chess_game_invalid">Neveljavna šahovska igra</string>

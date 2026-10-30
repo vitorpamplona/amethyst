@@ -8622,11 +8622,24 @@
     <string name="namecoin_resolution_invalid_identifier">अमान्य नामरूप्य परिचायक</string>
     <string name="namecoin_resolution_timeout">सुलझाव समयसीमा पार। सेवासंगणक सम्भाव्यतः मन्द। पुनःप्रयास करें</string>
     <string name="namecoin_resolution_unknown_error">अज्ञात अपक्रम</string>
-    <string name="chess_sync_events_count">%1$s घटनाएँ</string>
+    <plurals name="chess_sync_events_count">
+        <item quantity="one">%1$d घटना</item>
+        <item quantity="other">%1$d घटनाएँ</item>
+    </plurals>
     <string name="chess_sync_syncing_phase">समचरणीकरण मध्य %1$s...</string>
     <string name="chess_sync_synced">समचरणीकृत</string>
-    <string name="chess_sync_syncing_detail">%2$s में से %1$s पुनःप्रसारक। %3$s घटनाएँ</string>
-    <string name="chess_sync_synced_detail">%2$s में से %1$s पुनःप्रसारक। %3$s चुनौतियाँ। %4$s खेल</string>
+    <plurals name="chess_sync_relays_progress">
+        <item quantity="one">%2$d में से %1$d पुनःप्रसारक</item>
+        <item quantity="other">%2$d में से %1$d पुनःप्रसारक</item>
+    </plurals>
+    <plurals name="chess_sync_challenges_count">
+        <item quantity="one">%1$d चुनौती</item>
+        <item quantity="other">%1$d चुनौतियाँ</item>
+    </plurals>
+    <plurals name="chess_sync_games_count">
+        <item quantity="one">%1$d खेल</item>
+        <item quantity="other">%1$d खेल</item>
+    </plurals>
     <string name="chess_sync_tap_to_retry">पुनःप्रयास के लिए दबाएँ</string>
     <string name="chess_game_parse_failed">पीजीएन विश्लेषण असफल</string>
     <string name="chess_game_invalid">अमान्य चतुरंग खेल</string>

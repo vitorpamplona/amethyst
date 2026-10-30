@@ -62,14 +62,16 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessSyncStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncState
 import com.vitorpamplona.amethyst.commons.nip64Chess.RelaySyncStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_challenges_count
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_events_count
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_games_count
+import com.vitorpamplona.amethyst.commons.resources.chess_sync_relays_progress
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced
-import com.vitorpamplona.amethyst.commons.resources.chess_sync_synced_detail
-import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_detail
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_syncing_phase
 import com.vitorpamplona.amethyst.commons.resources.chess_sync_tap_to_retry
 import com.vitorpamplona.amethyst.commons.resources.collapse
 import com.vitorpamplona.amethyst.commons.resources.expand
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**
@@ -235,7 +237,7 @@ private fun RelayStatusRow(relay: RelaySyncState) {
         )
 
         Text(
-            text = stringRes(Res.string.chess_sync_events_count, relay.eventsReceived),
+            text = pluralStringRes(Res.plurals.chess_sync_events_count, relay.eventsReceived, relay.eventsReceived),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
         )
@@ -305,11 +307,23 @@ private fun getSyncStatusText(status: ChessSyncStatus): String =
 @Composable
 private fun getSyncStatusDetail(status: ChessSyncStatus): String =
     when (status) {
-        is ChessSyncStatus.Syncing -> stringRes(Res.string.chess_sync_syncing_detail, status.eoseCount, status.totalCount, status.totalEventsReceived)
-        is ChessSyncStatus.Synced -> stringRes(Res.string.chess_sync_synced_detail, status.successCount, status.totalCount, status.challengeCount, status.gameCount)
+        is ChessSyncStatus.Syncing ->
+            joinSyncDetail(
+                pluralStringRes(Res.plurals.chess_sync_relays_progress, status.totalCount, status.eoseCount, status.totalCount),
+                pluralStringRes(Res.plurals.chess_sync_events_count, status.totalEventsReceived, status.totalEventsReceived),
+            )
+        is ChessSyncStatus.Synced ->
+            joinSyncDetail(
+                pluralStringRes(Res.plurals.chess_sync_relays_progress, status.totalCount, status.successCount, status.totalCount),
+                pluralStringRes(Res.plurals.chess_sync_challenges_count, status.challengeCount, status.challengeCount),
+                pluralStringRes(Res.plurals.chess_sync_games_count, status.gameCount, status.gameCount),
+            )
         is ChessSyncStatus.PartialSync -> stringRes(Res.string.chess_sync_tap_to_retry)
         is ChessSyncStatus.Idle -> ""
     }
+
+/** Each count is its own plural, so every language can inflect its noun; the separator is not translated. */
+private fun joinSyncDetail(vararg parts: String): String = parts.joinToString(" • ")
 
 @Composable
 private fun getSyncStatusDetailColor(status: ChessSyncStatus): Color =
