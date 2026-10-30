@@ -49,8 +49,8 @@ fun RenderArticleList(
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
-    val privateArticles by bookmarkGroupViewModel.privateArticles().collectAsStateWithLifecycle()
-    val publicArticles by bookmarkGroupViewModel.publicArticles().collectAsStateWithLifecycle()
+    val privateArticles by bookmarkGroupViewModel.privateArticles.collectAsStateWithLifecycle()
+    val publicArticles by bookmarkGroupViewModel.publicArticles.collectAsStateWithLifecycle()
 
     HorizontalPager(pagerState, modifier) { page ->
         when (page) {
