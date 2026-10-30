@@ -2936,8 +2936,6 @@
     <string name="new_chess_game">Novo Jogo de Xadrez</string>
     <string name="chess_loading_game">Carregando jogo…</string>
     <string name="chess_game_not_found">Jogo não encontrado</string>
-    <string name="chess_game_waiting">Este jogo pode ter terminado ou está aguardando um oponente.</string>
-    <string name="chess_game_id">ID do Jogo: %1$s…</string>
     <string name="badge_and_n_others"> e mais %1$d</string>
     <string name="remove_language">Remover %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Comece com um ótimo feed seguindo as mesmas pessoas que alguém em quem você confia.</string>
@@ -8416,33 +8414,12 @@
     <string name="chess_result_in_progress">Em andamento</string>
     <string name="chess_result_game_drawn">Partida empatada</string>
     <string name="chess_watching_spectator_mode">Assistindo à partida - modo espectador</string>
-    <string name="chess_leave_game">Sair da Partida</string>
     <string name="chess_waiting_for_opponent_accept">Aguardando o oponente aceitar o desafio</string>
     <string name="chess_move_history">Histórico de Lances</string>
     <string name="chess_no_moves_yet">Nenhum lance ainda</string>
     <string name="chess_resign">Abandonar</string>
     <string name="chess_continue">Continuar</string>
     <string name="chess_game_over_result">Fim de Jogo - %1$s</string>
-    <string name="chess_relay_settings_title">Configurações de Relays de Xadrez</string>
-    <string name="chess_relay_active_title">Relays de Xadrez Ativos</string>
-    <string name="chess_relay_active_description">O xadrez usa 3 relays dedicados para consultas rápidas e confiáveis</string>
-    <string name="chess_relay_inbox_title">Relays de Caixa de Entrada (%1$d)</string>
-    <string name="chess_relay_inbox_description">Os desafios pessoais são buscados aqui</string>
-    <string name="chess_relay_inbox_empty">Nenhum relay de caixa de entrada configurado</string>
-    <string name="chess_relay_more">+%1$d mais</string>
-    <string name="chess_relay_global_title">Relays Globais (%1$d)</string>
-    <string name="chess_relay_global_description">Os desafios abertos e as partidas públicas são buscados aqui</string>
-    <string name="chess_relay_global_empty">Nenhum relay global configurado - os desafios abertos não vão carregar!</string>
-    <string name="chess_relay_outbox_title">Relays de Saída (%1$d)</string>
-    <string name="chess_relay_outbox_description">Seus desafios e lances são publicados aqui</string>
-    <string name="chess_relay_outbox_empty">Nenhum relay de saída configurado</string>
-    <string name="chess_relay_stat_challenges">Desafios</string>
-    <string name="chess_relay_stat_live_games">Partidas ao Vivo</string>
-    <string name="chess_relay_preferred">preferido</string>
-    <string name="chess_relay_connected_description">Conectado</string>
-    <string name="chess_relay_not_connected_description">Não conectado</string>
-    <string name="chess_relay_connected">conectado</string>
-    <string name="chess_relay_not_connected">não conectado</string>
     <string name="namecoin_settings_explanation">Nomes Namecoin (.bit, d/, id/) são resolvidos consultando o blockchain da Namecoin. Escolha abaixo entre ElectrumX (cliente leve) ou Namecoin Core RPC (seu próprio nó completo).</string>
     <string name="namecoin_testing_next_server">Testando o próximo servidor…</string>
     <string name="namecoin_resolution_title">Resolução Namecoin</string>
@@ -8579,10 +8556,6 @@
     <string name="chess_move_navigator_counter">Lance %1$d / %2$d</string>
     <string name="chess_move_navigator_next">Próximo lance</string>
     <string name="chess_move_navigator_final">Posição final</string>
-    <string name="chess_game_relays_title">Relays da Partida de Xadrez</string>
-    <string name="chess_game_relays_broadcast">Os lances são transmitidos para estes relays:</string>
-    <string name="chess_game_relays_no_write">Nenhum relay de escrita configurado</string>
-    <string name="chess_game_relays_game_id">ID da Partida</string>
     <string name="bunker_heartbeat_connected">Bunker conectado</string>
     <string name="bunker_heartbeat_disconnected">Bunker desconectado</string>
     <string name="auth_approval_once">Uma vez</string>
@@ -8614,31 +8587,9 @@
     <string name="chess_result_notation">Resultado: %1$s</string>
     <string name="chess_round">Rodada %1$s</string>
     <string name="chess_your_turn">Sua vez</string>
-    <string name="chess_waiting">Aguardando...</string>
-    <string name="chess_challenge_from">Desafio de %1$s</string>
-    <string name="chess_open_challenge_by">Desafio aberto de %1$s</string>
-    <string name="chess_challenger_plays_white">Desafiante joga de Brancas</string>
-    <string name="chess_challenger_plays_black">Desafiante joga de Pretas</string>
-    <string name="chess_challenge_to">Desafio para %1$s</string>
-    <string name="chess_open_challenge_awaiting">Desafio aberto (aguardando oponente)</string>
-    <string name="chess_you_play_white">Você joga de Brancas</string>
-    <string name="chess_you_play_black">Você joga de Pretas</string>
-    <string name="chess_watching_game">Assistindo à partida</string>
-    <plurals name="chess_moves_played">
-        <item quantity="one">%1$d lance jogado</item>
-        <item quantity="other">%1$d lances jogados</item>
-    </plurals>
-    <string name="chess_players_versus">%1$s vs %2$s</string>
     <plurals name="chess_moves_count">
         <item quantity="one">%1$d lance</item>
         <item quantity="other">%1$d lances</item>
-    </plurals>
-    <string name="chess_watch">Assistir</string>
-    <string name="chess_result_won">Vitória</string>
-    <string name="chess_result_lost">Derrota</string>
-    <plurals name="chess_moves_with_result">
-        <item quantity="one">%1$d lance • %2$s</item>
-        <item quantity="other">%1$d lances • %2$s</item>
     </plurals>
     <string name="signing_waiting_for_signer">Aguardando aprovação do assinador... (%1$ss)</string>
     <string name="signing_default_label">Assinando</string>
@@ -8694,24 +8645,6 @@
     <string name="namecoin_resolution_invalid_identifier">Identificador Namecoin inválido</string>
     <string name="namecoin_resolution_timeout">A resolução expirou — os servidores podem estar lentos, tente novamente</string>
     <string name="namecoin_resolution_unknown_error">Erro desconhecido</string>
-    <plurals name="chess_sync_events_count">
-        <item quantity="one">%1$d evento</item>
-        <item quantity="other">%1$d eventos</item>
-    </plurals>
-    <string name="chess_sync_syncing_phase">Sincronizando %1$s...</string>
-    <string name="chess_sync_synced">Sincronizado</string>
-    <plurals name="chess_sync_relays_progress">
-        <item quantity="one">%1$d/%2$d relay</item>
-        <item quantity="other">%1$d/%2$d relays</item>
-    </plurals>
-    <plurals name="chess_sync_challenges_count">
-        <item quantity="one">%1$d desafio</item>
-        <item quantity="other">%1$d desafios</item>
-    </plurals>
-    <plurals name="chess_sync_games_count">
-        <item quantity="one">%1$d jogo</item>
-        <item quantity="other">%1$d jogos</item>
-    </plurals>
     <string name="chess_sync_tap_to_retry">Toque para tentar novamente</string>
     <string name="chess_game_parse_failed">Falha ao analisar o PGN</string>
     <string name="chess_game_invalid">Jogo de xadrez inválido</string>
@@ -8720,18 +8653,8 @@
     <string name="article_author_description">Autor</string>
     <string name="article_reading_time_minutes">%1$s min de leitura</string>
     <string name="geocache_new_precision_warning">⚠️ Quem procurar precisa de %1$s caracteres ou mais de precisão.</string>
-    <string name="chess_lobby_clear_all">Limpar tudo</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_empty_title">Nenhum jogo ou desafio</string>
-    <string name="chess_lobby_empty_create_hint">Crie um novo jogo para começar</string>
-    <string name="chess_lobby_empty_refresh_hint">Puxe para baixo para atualizar</string>
     <string name="chess_lobby_section_your_games">Seus jogos</string>
-    <string name="chess_lobby_section_your_challenges">Seus desafios</string>
-    <string name="chess_lobby_section_watching">Assistindo</string>
-    <string name="chess_lobby_section_incoming">Desafios recebidos</string>
-    <string name="chess_lobby_section_open">Desafios abertos</string>
-    <string name="chess_lobby_section_live">Jogos ao vivo</string>
-    <string name="chess_lobby_section_finished">Jogos finalizados</string>
     <string name="geohash_new_your_channels">Seus canais</string>
     <string name="geohash_new_enter_geohash">Digite um geohash</string>
     <string name="geohash_new_enter_hint">Todos na mesma célula de geohash compartilham o canal.</string>
@@ -8767,13 +8690,6 @@
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>
     </plurals>
-    <string name="chess_broadcast_broadcasting">Transmitindo: %1$s</string>
-    <string name="chess_broadcast_sent">Enviado: %1$s</string>
-    <string name="chess_broadcast_failed">Falhou: %1$s</string>
-    <string name="chess_broadcast_waiting_opponent">Aguardando a jogada do oponente...</string>
-    <string name="chess_broadcast_syncing">Sincronizando o estado do jogo...</string>
-    <string name="chess_broadcast_desynced">Jogo dessincronizado: %1$s</string>
-    <string name="chess_broadcast_tap_to_resync">Toque para ressincronizar</string>
     <string name="podcast_episode_subtitle_season_episode">T%1$s · E%2$s</string>
     <string name="podcast_episode_subtitle_episode">Ep. %1$s</string>
     <string name="podcast_episode_subtitle_season">Temporada %1$s</string>

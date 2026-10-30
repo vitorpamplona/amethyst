@@ -1452,8 +1452,6 @@
     <string name="new_chess_game">Nueva partida de ajedrez</string>
     <string name="chess_loading_game">Cargando partida…</string>
     <string name="chess_game_not_found">Partida no encontrada</string>
-    <string name="chess_game_waiting">Es posible que esta partida haya terminado o esté esperando al oponente.</string>
-    <string name="chess_game_id">ID de partida: %1$s…</string>
     <string name="badge_and_n_others"> y %1$d más</string>
     <string name="remove_language">Eliminar %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Empieza con un gran feed siguiendo a las mismas personas que alguien en quien confíes.</string>

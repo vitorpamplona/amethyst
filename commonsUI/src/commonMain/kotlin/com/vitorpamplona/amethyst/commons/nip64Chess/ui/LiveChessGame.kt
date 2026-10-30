@@ -50,7 +50,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,9 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
-import com.vitorpamplona.amethyst.commons.nip64Chess.LiveChessGameState
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.chess_challenge_pending
@@ -76,19 +74,16 @@ import com.vitorpamplona.amethyst.commons.resources.chess_color_white_selected
 import com.vitorpamplona.amethyst.commons.resources.chess_continue
 import com.vitorpamplona.amethyst.commons.resources.chess_create_game
 import com.vitorpamplona.amethyst.commons.resources.chess_game_over_result
-import com.vitorpamplona.amethyst.commons.resources.chess_leave_game
 import com.vitorpamplona.amethyst.commons.resources.chess_live_better_luck
 import com.vitorpamplona.amethyst.commons.resources.chess_live_black_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_live_congratulations
 import com.vitorpamplona.amethyst.commons.resources.chess_live_defeat
 import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_exclaim
 import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_subtitle
-import com.vitorpamplona.amethyst.commons.resources.chess_live_game_label
 import com.vitorpamplona.amethyst.commons.resources.chess_live_game_over
 import com.vitorpamplona.amethyst.commons.resources.chess_live_open_challenge
 import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
 import com.vitorpamplona.amethyst.commons.resources.chess_live_victory
-import com.vitorpamplona.amethyst.commons.resources.chess_live_waiting_for
 import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_move_history
 import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
@@ -108,14 +103,13 @@ import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
 import com.vitorpamplona.amethyst.commons.resources.chess_spectating
 import com.vitorpamplona.amethyst.commons.resources.chess_turn_black
 import com.vitorpamplona.amethyst.commons.resources.chess_turn_white
-import com.vitorpamplona.amethyst.commons.resources.chess_versus_opponent
 import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_watching_spectator_mode
 import com.vitorpamplona.amethyst.commons.resources.chess_your_color
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
 import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import androidx.compose.ui.graphics.Color as ComposeColor
@@ -124,7 +118,7 @@ import androidx.compose.ui.graphics.Color as ComposeColor
  * Dialog for creating a new chess game challenge
  *
  * @param onDismiss Callback when dialog is dismissed
- * @param onCreateGame Callback when game is created (opponentPubkey, playerColor)
+ * @param onCreateGame Callback when game is created (opponent hex key or null for an open challenge, playerColor)
  */
 @Composable
 fun NewChessGameDialog(
@@ -133,6 +127,8 @@ fun NewChessGameDialog(
 ) {
     var opponentPubkey by remember { mutableStateOf("") }
     var selectedColor by remember { mutableStateOf(Color.WHITE) }
+    // npub, nprofile or hex; blank is an open challenge.
+    val opponentHex = remember(opponentPubkey) { opponentPubkey.trim().ifBlank { null }?.let { decodePublicKeyAsHexOrNull(it) } }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -211,12 +207,8 @@ fun NewChessGameDialog(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
-                        onClick = {
-                            onCreateGame(
-                                opponentPubkey.ifBlank { null },
-                                selectedColor,
-                            )
-                        },
+                        enabled = opponentPubkey.isBlank() || opponentHex != null,
+                        onClick = { onCreateGame(opponentHex, selectedColor) },
                     ) {
                         Text(stringRes(Res.string.chess_create_game))
                     }
@@ -227,30 +219,18 @@ fun NewChessGameDialog(
 }
 
 /**
- * Complete live chess game UI with board, controls, and game info
+ * The board screen's body: who plays, the board, the moves so far and what the user can do now.
  *
- * This version observes LiveChessGameState flows for automatic UI updates
- * when polling refreshes the game state.
- *
- * @param modifier Modifier for the root layout
- * @param gameState Live chess game state (observed for updates)
- * @param opponentName Opponent's display name
- * @param onMoveMade Callback when player makes a move (from, to, san)
- * @param onResign Callback when player resigns
- * @param isSpectatorOverride If non-null, overrides gameState.isSpectator. Use this when
- *        spectator status is determined by which map the game is in (activeGames vs spectatingGames)
- *        rather than the potentially stale isSpectator flag from relay reconstruction.
+ * Everything comes from [game], a snapshot rebuilt from the game's events; this composable keeps
+ * no game state. The board accepts input only when it is the user's turn, and [onMoveMade] is
+ * expected to publish the move: the board redraws when the next snapshot arrives with it.
  */
 @Composable
 fun LiveChessGameScreen(
-    modifier: Modifier = Modifier,
-    gameState: LiveChessGameState,
-    opponentName: String,
+    game: ChessGameSnapshot,
     onMoveMade: (from: String, to: String, san: String) -> Unit,
     onResign: () -> Unit,
-    isSpectatorOverride: Boolean? = null,
-    onGameEndDismiss: (() -> Unit)? = null,
-    onLeaveSpectating: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
     whiteName: String = stringRes(Res.string.chess_color_white),
     whiteHex: String = "",
     whiteAvatarUrl: String? = null,
@@ -259,29 +239,20 @@ fun LiveChessGameScreen(
     blackAvatarUrl: String? = null,
     onPlayerClick: ((pubkeyHex: String) -> Unit)? = null,
 ) {
-    // Observe state flows for automatic recomposition on updates
-    val currentPosition by gameState.currentPosition.collectAsState()
-    val moveHistory by gameState.moveHistory.collectAsState()
-    val gameStatus by gameState.gameStatus.collectAsState()
+    val position = game.state.currentPosition
+    val gameStatus = game.state.gameStatus
+    val myColor = game.myColor
 
-    // Use override if provided, otherwise fall back to gameState flag
-    val isSpectator = isSpectatorOverride ?: gameState.isSpectator
-
-    // Spectators cannot make moves; pending challenges still allow board interaction
-    // (matches Desktop behavior where board is always interactive for participants)
-    val canMakeMoves = !isSpectator
-
-    // Track if game end overlay was dismissed
+    // Celebrate an ending seen live, not one the screen opened on.
+    val finishedWhenOpened = remember(game.gameId) { game.isFinished }
     var gameEndDismissed by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
         ) {
-            // Calculate board size dynamically based on available space
-            // Use a percentage of available height to leave room for other UI elements
-            val availableWidth = maxWidth - 32.dp // Account for horizontal padding
-            // Reserve ~35% of height for header, history, controls, and any banners
+            // Leave ~35% of the height for the header, the move list and the controls.
+            val availableWidth = maxWidth - 32.dp
             val availableHeight = maxHeight * 0.65f
             val boardSize = min(availableWidth, availableHeight).coerceIn(150.dp, 520.dp)
 
@@ -293,7 +264,6 @@ fun LiveChessGameScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Player vs Player avatar header
                 if (whiteHex.isNotEmpty() || blackHex.isNotEmpty()) {
                     ChessPlayerVsHeader(
                         whiteName = whiteName,
@@ -302,296 +272,131 @@ fun LiveChessGameScreen(
                         blackName = blackName,
                         blackHex = blackHex,
                         blackAvatarUrl = blackAvatarUrl,
-                        isWhiteTurn = currentPosition.activeColor == Color.WHITE,
+                        isWhiteTurn = position.activeColor == Color.WHITE,
                         onWhiteClick = onPlayerClick?.let { { it(whiteHex) } },
                         onBlackClick = onPlayerClick?.let { { it(blackHex) } },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
 
-                // Game info - use currentPosition.activeColor for turn display
-                GameInfoHeader(
-                    gameId = gameState.startEventId,
-                    opponentName = opponentName,
-                    playerColor = gameState.playerColor,
-                    currentTurn = currentPosition.activeColor,
-                    isSpectator = isSpectator,
-                    isPendingChallenge = gameState.isPendingChallenge,
-                    gameStatus = gameStatus,
-                )
+                GameInfoHeader(game)
 
-                // Interactive chess board - flip when playing black (spectators see from white's view)
-                // Auto-sized to fit available space
+                // Black sees the board from its side; spectators from white's.
                 InteractiveChessBoard(
-                    engine = gameState.engine,
+                    engine = game.engine,
                     boardSize = boardSize,
-                    flipped = !isSpectator && gameState.playerColor == Color.BLACK,
-                    playerColor = gameState.playerColor,
-                    isSpectator = !canMakeMoves,
-                    positionVersion = moveHistory.size,
+                    flipped = myColor == Color.BLACK,
+                    playerColor = myColor,
+                    isSpectator = !game.isMyTurn,
+                    positionVersion = game.moveCount,
                     onMoveMade = onMoveMade,
                 )
 
-                // Move history (scrollable) - observed from state flow
-                MoveHistoryDisplay(
-                    moves = moveHistory,
-                )
+                MoveHistoryDisplay(moves = game.state.moveHistory)
 
-                // Show appropriate controls based on game state
                 when {
-                    gameStatus is GameStatus.Finished -> {
-                        GameEndInfo(
-                            result = (gameStatus as GameStatus.Finished).result,
-                            playerColor = gameState.playerColor,
-                            isSpectator = isSpectator,
-                        )
-                    }
-
-                    gameState.isPendingChallenge -> {
-                        PendingChallengeInfo()
-                    }
-
-                    isSpectator -> {
-                        SpectatorInfo(onLeaveSpectating = onLeaveSpectating)
-                    }
-
-                    else -> {
-                        GameControls(onResign = onResign)
-                    }
+                    gameStatus is GameStatus.Finished -> GameEndInfo(gameStatus.result, myColor ?: Color.WHITE, isSpectator = myColor == null || game.isOpenSeat)
+                    game.isWaitingForOpponent -> PendingChallengeInfo()
+                    myColor == null -> SpectatorInfo()
+                    !game.isOpenSeat -> GameControls(onResign = onResign)
                 }
             }
         }
 
-        // Game end celebration overlay
-        if (gameStatus is GameStatus.Finished && !gameEndDismissed) {
+        if (gameStatus is GameStatus.Finished && !finishedWhenOpened && !gameEndDismissed) {
             GameEndOverlay(
-                result = (gameStatus as GameStatus.Finished).result,
-                playerColor = gameState.playerColor,
-                isSpectator = isSpectator,
-                onDismiss = {
-                    gameEndDismissed = true
-                    onGameEndDismiss?.invoke()
-                },
+                result = gameStatus.result,
+                playerColor = myColor ?: Color.WHITE,
+                isSpectator = myColor == null,
+                onDismiss = { gameEndDismissed = true },
             )
         }
     }
 }
 
 /**
- * Legacy version that takes engine directly (for backwards compatibility)
- *
- * @param modifier Modifier for the root layout
- * @param engine Chess engine instance
- * @param playerColor Color the player is playing as
- * @param gameId Unique game identifier
- * @param opponentName Opponent's display name
- * @param onMoveMade Callback when player makes a move (from, to, san)
- * @param onResign Callback when player resigns
+ * The line under the players: the user's colour, and whose turn it is or how the game ended.
  */
 @Composable
-fun LiveChessGameScreen(
-    modifier: Modifier = Modifier,
-    engine: ChessEngine,
-    playerColor: Color,
-    gameId: String,
-    opponentName: String,
-    onMoveMade: (from: String, to: String, san: String) -> Unit,
-    onResign: () -> Unit,
-) {
-    BoxWithConstraints(
-        modifier = modifier.fillMaxSize(),
-    ) {
-        // Calculate board size based on available space
-        // Leave room for header (~100dp), history (~60dp), controls (~60dp), and padding
-        val availableWidth = maxWidth - 32.dp // Account for horizontal padding
-        val availableHeight = maxHeight - 250.dp // Account for other UI elements
-        val boardSize = min(availableWidth, availableHeight).coerceAtLeast(200.dp)
-
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Game info
-            GameInfoHeader(
-                gameId = gameId,
-                opponentName = opponentName,
-                playerColor = playerColor,
-                currentTurn = engine.getSideToMove(),
-            )
-
-            // Interactive chess board - flip when playing black
-            // Auto-sized to fit available space
-            InteractiveChessBoard(
-                engine = engine,
-                boardSize = boardSize,
-                flipped = playerColor == Color.BLACK,
-                positionVersion = engine.getMoveHistory().size,
-                onMoveMade = onMoveMade,
-            )
-
-            // Move history (scrollable)
-            MoveHistoryDisplay(
-                moves = engine.getMoveHistory(),
-            )
-
-            // Game controls
-            GameControls(
-                onResign = onResign,
-            )
-        }
-    }
-}
-
-/**
- * Game information header showing game ID, opponent, and current turn
- */
-@Composable
-private fun GameInfoHeader(
-    gameId: String,
-    opponentName: String,
-    playerColor: Color,
-    currentTurn: Color,
-    isSpectator: Boolean = false,
-    isPendingChallenge: Boolean = false,
-    gameStatus: GameStatus = GameStatus.InProgress,
-) {
-    // Extract human-readable game name if available
-    val gameName =
-        remember(gameId) {
-            ChessGameNameGenerator.extractDisplayName(gameId)
-        }
+private fun GameInfoHeader(game: ChessGameSnapshot) {
+    val myColor = game.myColor
+    val currentTurn = game.state.currentPosition.activeColor
+    val gameStatus = game.state.gameStatus
 
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // Show readable name prominently if available
-        if (gameName != null) {
-            Text(
-                text = gameName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-
-        Text(
-            text = if (gameName != null) gameId.take(16) else stringRes(Res.string.chess_live_game_label, gameId.take(8)),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
         when {
-            isPendingChallenge -> {
-                Text(
-                    text = stringRes(Res.string.chess_challenge_pending),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary,
-                )
-
-                Text(
-                    text = if (playerColor == Color.WHITE) stringRes(Res.string.chess_playing_as_white) else stringRes(Res.string.chess_playing_as_black),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-
-                Text(
-                    text = if (opponentName.isNotEmpty()) stringRes(Res.string.chess_live_waiting_for, opponentName) else stringRes(Res.string.chess_live_open_challenge),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            isSpectator -> {
+            myColor == null -> {
                 Text(
                     text = stringRes(Res.string.chess_spectating),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.tertiary,
                 )
+            }
 
-                val turnText = if (currentTurn == Color.WHITE) stringRes(Res.string.chess_turn_white) else stringRes(Res.string.chess_turn_black)
+            game.isWaitingForOpponent -> {
                 Text(
-                    text = turnText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = stringRes(Res.string.chess_challenge_pending),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary,
                 )
             }
 
-            else -> {
+            game.isOpenSeat -> {
                 Text(
-                    text = stringRes(Res.string.chess_versus_opponent, opponentName),
+                    text = stringRes(Res.string.chess_live_open_challenge),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                 )
-
-                Text(
-                    text = if (playerColor == Color.WHITE) stringRes(Res.string.chess_playing_as_white) else stringRes(Res.string.chess_playing_as_black),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-
-                // Show turn or game result
-                when (gameStatus) {
-                    is GameStatus.Finished -> {
-                        val result = gameStatus.result
-                        val resultText =
-                            when {
-                                result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw)
-
-                                (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> stringRes(Res.string.chess_result_you_won)
-
-                                else -> stringRes(Res.string.chess_result_you_lost)
-                            }
-                        val resultColor =
-                            when {
-                                result == GameResult.DRAW -> {
-                                    MaterialTheme.colorScheme.secondary
-                                }
-
-                                (result == GameResult.WHITE_WINS && playerColor == Color.WHITE) ||
-                                    (result == GameResult.BLACK_WINS && playerColor == Color.BLACK) -> {
-                                    ComposeColor(0xFF4CAF50)
-                                }
-
-                                else -> {
-                                    MaterialTheme.colorScheme.error
-                                }
-                            }
-                        Text(
-                            text = resultText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = resultColor,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-
-                    else -> {
-                        val turnText =
-                            if (currentTurn == playerColor) {
-                                stringRes(Res.string.chess_your_turn)
-                            } else {
-                                stringRes(Res.string.chess_live_opponents_turn)
-                            }
-
-                        Text(
-                            text = turnText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color =
-                                if (currentTurn == playerColor) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                },
-                            fontWeight = if (currentTurn == playerColor) FontWeight.Bold else FontWeight.Normal,
-                        )
-                    }
-                }
             }
+        }
+
+        if (myColor != null) {
+            Text(
+                text = stringRes(if (myColor == Color.WHITE) Res.string.chess_playing_as_white else Res.string.chess_playing_as_black),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        if (gameStatus is GameStatus.Finished) {
+            val result = gameStatus.result
+            val won = (result == GameResult.WHITE_WINS && myColor == Color.WHITE) || (result == GameResult.BLACK_WINS && myColor == Color.BLACK)
+            val resultText =
+                when {
+                    result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw)
+                    myColor == null || game.isOpenSeat -> stringRes(if (result == GameResult.WHITE_WINS) Res.string.chess_result_white_wins else Res.string.chess_result_black_wins)
+                    won -> stringRes(Res.string.chess_result_you_won)
+                    else -> stringRes(Res.string.chess_result_you_lost)
+                }
+            Text(
+                text = resultText,
+                style = MaterialTheme.typography.bodyMedium,
+                color =
+                    when {
+                        result == GameResult.DRAW || myColor == null -> MaterialTheme.colorScheme.secondary
+                        won -> ComposeColor(0xFF4CAF50)
+                        else -> MaterialTheme.colorScheme.error
+                    },
+                fontWeight = FontWeight.Bold,
+            )
+        } else if (!game.isWaitingForOpponent) {
+            val turnText =
+                when {
+                    game.isMyTurn -> stringRes(Res.string.chess_your_turn)
+                    myColor != null -> stringRes(Res.string.chess_live_opponents_turn)
+                    currentTurn == Color.WHITE -> stringRes(Res.string.chess_turn_white)
+                    else -> stringRes(Res.string.chess_turn_black)
+                }
+            Text(
+                text = turnText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (game.isMyTurn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (game.isMyTurn) FontWeight.Bold else FontWeight.Normal,
+            )
         }
     }
 }
@@ -600,7 +405,7 @@ private fun GameInfoHeader(
  * Info banner shown when spectating a game
  */
 @Composable
-private fun SpectatorInfo(onLeaveSpectating: (() -> Unit)? = null) {
+private fun SpectatorInfo() {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -621,11 +426,6 @@ private fun SpectatorInfo(onLeaveSpectating: (() -> Unit)? = null) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onTertiaryContainer,
             )
-        }
-        onLeaveSpectating?.let { onLeave ->
-            OutlinedButton(onClick = onLeave) {
-                Text(stringRes(Res.string.chess_leave_game))
-            }
         }
     }
 }

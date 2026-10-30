@@ -2939,8 +2939,6 @@
     <string name="new_chess_game">Nieuw schaakspel</string>
     <string name="chess_loading_game">Spel laden…</string>
     <string name="chess_game_not_found">Spel niet gevonden</string>
-    <string name="chess_game_waiting">Dit spel is mogelijk beëindigd of wacht op een tegenstander.</string>
-    <string name="chess_game_id">Spel-ID: %1$s…</string>
     <string name="badge_and_n_others"> en %1$d anderen</string>
     <string name="remove_language">%1$s verwijderen</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Begin met een goede feed door dezelfde mensen te volgen als iemand die je vertrouwt.</string>
@@ -8376,33 +8374,12 @@
     <string name="chess_result_in_progress">Bezig</string>
     <string name="chess_result_game_drawn">Remise</string>
     <string name="chess_watching_spectator_mode">Spel bekijken - toeschouwermodus</string>
-    <string name="chess_leave_game">Spel verlaten</string>
     <string name="chess_waiting_for_opponent_accept">Wachten tot de tegenstander de uitdaging accepteert</string>
     <string name="chess_move_history">Zetgeschiedenis</string>
     <string name="chess_no_moves_yet">Nog geen zetten</string>
     <string name="chess_resign">Opgeven</string>
     <string name="chess_continue">Doorgaan</string>
     <string name="chess_game_over_result">Spel afgelopen - %1$s</string>
-    <string name="chess_relay_settings_title">Relay-instellingen voor schaken</string>
-    <string name="chess_relay_active_title">Actieve schaakrelays</string>
-    <string name="chess_relay_active_description">Schaken gebruikt 3 speciale relays voor snelle, betrouwbare zoekopdrachten</string>
-    <string name="chess_relay_inbox_title">Inbox-relays (%1$d)</string>
-    <string name="chess_relay_inbox_description">Persoonlijke uitdagingen worden hier opgehaald</string>
-    <string name="chess_relay_inbox_empty">Geen inbox-relays ingesteld</string>
-    <string name="chess_relay_more">+%1$d meer</string>
-    <string name="chess_relay_global_title">Globale relays (%1$d)</string>
-    <string name="chess_relay_global_description">Open uitdagingen en openbare spellen worden hier opgehaald</string>
-    <string name="chess_relay_global_empty">Geen globale relays ingesteld - open uitdagingen worden niet geladen!</string>
-    <string name="chess_relay_outbox_title">Outbox-relays (%1$d)</string>
-    <string name="chess_relay_outbox_description">Je uitdagingen en zetten worden hier gepubliceerd</string>
-    <string name="chess_relay_outbox_empty">Geen outbox-relays ingesteld</string>
-    <string name="chess_relay_stat_challenges">Uitdagingen</string>
-    <string name="chess_relay_stat_live_games">Live partijen</string>
-    <string name="chess_relay_preferred">voorkeur</string>
-    <string name="chess_relay_connected_description">Verbonden</string>
-    <string name="chess_relay_not_connected_description">Niet verbonden</string>
-    <string name="chess_relay_connected">verbonden</string>
-    <string name="chess_relay_not_connected">niet verbonden</string>
     <string name="namecoin_settings_explanation">Namecoin-namen (.bit, d/, id/) worden opgezocht via de Namecoin-blockchain. Kies hieronder ElectrumX (light client) of Namecoin Core RPC (je eigen full node).</string>
     <string name="namecoin_testing_next_server">Volgende server testen…</string>
     <string name="namecoin_resolution_title">Namecoin-resolutie</string>
@@ -8539,10 +8516,6 @@
     <string name="chess_move_navigator_counter">Zet %1$d / %2$d</string>
     <string name="chess_move_navigator_next">Volgende zet</string>
     <string name="chess_move_navigator_final">Eindstelling</string>
-    <string name="chess_game_relays_title">Relays voor schaakpartij</string>
-    <string name="chess_game_relays_broadcast">Zetten worden uitgezonden naar deze relays:</string>
-    <string name="chess_game_relays_no_write">Geen schrijfrelays geconfigureerd</string>
-    <string name="chess_game_relays_game_id">Partij-ID</string>
     <string name="bunker_heartbeat_connected">Bunker verbonden</string>
     <string name="bunker_heartbeat_disconnected">Bunker niet verbonden</string>
     <string name="auth_approval_once">Eenmalig</string>
@@ -8574,31 +8547,9 @@
     <string name="chess_result_notation">Uitslag: %1$s</string>
     <string name="chess_round">Ronde %1$s</string>
     <string name="chess_your_turn">Jij bent aan zet</string>
-    <string name="chess_waiting">Wachten...</string>
-    <string name="chess_challenge_from">Uitdaging van %1$s</string>
-    <string name="chess_open_challenge_by">Open uitdaging van %1$s</string>
-    <string name="chess_challenger_plays_white">Uitdager speelt met wit</string>
-    <string name="chess_challenger_plays_black">Uitdager speelt met zwart</string>
-    <string name="chess_challenge_to">Uitdaging aan %1$s</string>
-    <string name="chess_open_challenge_awaiting">Open uitdaging (wacht op tegenstander)</string>
-    <string name="chess_you_play_white">Jij speelt met wit</string>
-    <string name="chess_you_play_black">Jij speelt met zwart</string>
-    <string name="chess_watching_game">Partij bekijken</string>
-    <plurals name="chess_moves_played">
-        <item quantity="one">%1$d zet gespeeld</item>
-        <item quantity="other">%1$d zetten gespeeld</item>
-    </plurals>
-    <string name="chess_players_versus">%1$s vs %2$s</string>
     <plurals name="chess_moves_count">
         <item quantity="one">%1$d zet</item>
         <item quantity="other">%1$d zetten</item>
-    </plurals>
-    <string name="chess_watch">Bekijken</string>
-    <string name="chess_result_won">Gewonnen</string>
-    <string name="chess_result_lost">Verloren</string>
-    <plurals name="chess_moves_with_result">
-        <item quantity="one">%1$d zet • %2$s</item>
-        <item quantity="other">%1$d zetten • %2$s</item>
     </plurals>
     <string name="signing_waiting_for_signer">Wachten op goedkeuring van signer... (%1$ss)</string>
     <string name="signing_default_label">Ondertekenen</string>
@@ -8654,24 +8605,6 @@
     <string name="namecoin_resolution_invalid_identifier">Ongeldige Namecoin-identificatie</string>
     <string name="namecoin_resolution_timeout">Opzoeken duurde te lang — servers zijn mogelijk traag, probeer het opnieuw</string>
     <string name="namecoin_resolution_unknown_error">Onbekende fout</string>
-    <plurals name="chess_sync_events_count">
-        <item quantity="one">%1$d event</item>
-        <item quantity="other">%1$d events</item>
-    </plurals>
-    <string name="chess_sync_syncing_phase">%1$s synchroniseren...</string>
-    <string name="chess_sync_synced">Gesynchroniseerd</string>
-    <plurals name="chess_sync_relays_progress">
-        <item quantity="one">%1$d/%2$d relay</item>
-        <item quantity="other">%1$d/%2$d relays</item>
-    </plurals>
-    <plurals name="chess_sync_challenges_count">
-        <item quantity="one">%1$d uitdaging</item>
-        <item quantity="other">%1$d uitdagingen</item>
-    </plurals>
-    <plurals name="chess_sync_games_count">
-        <item quantity="one">%1$d partij</item>
-        <item quantity="other">%1$d partijen</item>
-    </plurals>
     <string name="chess_sync_tap_to_retry">Tik om opnieuw te proberen</string>
     <string name="chess_game_parse_failed">PGN kon niet worden verwerkt</string>
     <string name="chess_game_invalid">Ongeldige schaakpartij</string>
@@ -8680,18 +8613,8 @@
     <string name="article_author_description">Auteur</string>
     <string name="article_reading_time_minutes">%1$s min lezen</string>
     <string name="geocache_new_precision_warning">⚠️ %1$s tekens of nauwkeuriger is wat een vinder nodig heeft.</string>
-    <string name="chess_lobby_clear_all">Alles wissen</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_empty_title">Geen partijen of uitdagingen</string>
-    <string name="chess_lobby_empty_create_hint">Maak een nieuwe partij aan om te beginnen</string>
-    <string name="chess_lobby_empty_refresh_hint">Trek omlaag om te vernieuwen</string>
     <string name="chess_lobby_section_your_games">Jouw partijen</string>
-    <string name="chess_lobby_section_your_challenges">Jouw uitdagingen</string>
-    <string name="chess_lobby_section_watching">Aan het bekijken</string>
-    <string name="chess_lobby_section_incoming">Inkomende uitdagingen</string>
-    <string name="chess_lobby_section_open">Open uitdagingen</string>
-    <string name="chess_lobby_section_live">Live partijen</string>
-    <string name="chess_lobby_section_finished">Afgelopen partijen</string>
     <string name="geohash_new_your_channels">Jouw kanalen</string>
     <string name="geohash_new_enter_geohash">Voer een geohash in</string>
     <string name="geohash_new_enter_hint">Iedereen in dezelfde geohash-cel deelt het kanaal.</string>
@@ -8727,13 +8650,6 @@
         <item quantity="one">%1$d relay</item>
         <item quantity="other">%1$d relays</item>
     </plurals>
-    <string name="chess_broadcast_broadcasting">Uitzenden: %1$s</string>
-    <string name="chess_broadcast_sent">Verzonden: %1$s</string>
-    <string name="chess_broadcast_failed">Mislukt: %1$s</string>
-    <string name="chess_broadcast_waiting_opponent">Wachten op zet van tegenstander...</string>
-    <string name="chess_broadcast_syncing">Partijstatus synchroniseren...</string>
-    <string name="chess_broadcast_desynced">Partij niet meer synchroon: %1$s</string>
-    <string name="chess_broadcast_tap_to_resync">Tik om opnieuw te synchroniseren</string>
     <string name="podcast_episode_subtitle_season_episode">S%1$s · E%2$s</string>
     <string name="podcast_episode_subtitle_episode">Afl. %1$s</string>
     <string name="podcast_episode_subtitle_season">Seizoen %1$s</string>

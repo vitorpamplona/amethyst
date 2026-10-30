@@ -2939,8 +2939,6 @@
     <string name="new_chess_game">Új sakkjáték</string>
     <string name="chess_loading_game">Játék betöltése\u2026</string>
     <string name="chess_game_not_found">Nem található játék</string>
-    <string name="chess_game_waiting">Ez a játék már véget ért, vagy ellenfelet vár.</string>
-    <string name="chess_game_id">Játékazonosító: %1$s\u2026</string>
     <string name="badge_and_n_others"> és %1$d további</string>
     <string name="remove_language">%1$s eltávolítása</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Kezdje egy remek hírfolyammal, követve azokat az embereket, akikben megbízik.</string>
@@ -8376,33 +8374,12 @@
     <string name="chess_result_in_progress">Folyamatban</string>
     <string name="chess_result_game_drawn">A játék döntetlen</string>
     <string name="chess_watching_spectator_mode">Játék megtekintése – nézői mód</string>
-    <string name="chess_leave_game">Játék elhagyása</string>
     <string name="chess_waiting_for_opponent_accept">Várakozás az ellenfél kihívásának elfogadására</string>
     <string name="chess_move_history">Lépések előzményei</string>
     <string name="chess_no_moves_yet">Még nincsenek lépések</string>
     <string name="chess_resign">Feladás</string>
     <string name="chess_continue">Folytatás</string>
     <string name="chess_game_over_result">Játék vége – %1$s</string>
-    <string name="chess_relay_settings_title">Sakk-átjátszó beállítások</string>
-    <string name="chess_relay_active_title">Aktív sakk-átjátszók</string>
-    <string name="chess_relay_active_description">A sakk 3 dedikált átjátszót használ a gyors és megbízható lekérdezésekhez</string>
-    <string name="chess_relay_inbox_title">Bejövő átjátszók (%1$d)</string>
-    <string name="chess_relay_inbox_description">Innen töltődnek le a személyes kihívások</string>
-    <string name="chess_relay_inbox_empty">Nincsenek bejövő átjátszók beállítva</string>
-    <string name="chess_relay_more">+%1$d további</string>
-    <string name="chess_relay_global_title">Globális átjátszók (%1$d)</string>
-    <string name="chess_relay_global_description">Innen töltődnek le a nyílt kihívások és a nyilvános játékok</string>
-    <string name="chess_relay_global_empty">Nincsenek globális átjátszók beállítva – a nyílt kihívások nem töltődnek be!</string>
-    <string name="chess_relay_outbox_title">Kimenő átjátszók (%1$d)</string>
-    <string name="chess_relay_outbox_description">Ide lesznek közzétéve az Ön kihívásai és lépései</string>
-    <string name="chess_relay_outbox_empty">Nincsenek kimenő átjátszók beállítva</string>
-    <string name="chess_relay_stat_challenges">Kihívások</string>
-    <string name="chess_relay_stat_live_games">Élő játékok</string>
-    <string name="chess_relay_preferred">előnyben részesített</string>
-    <string name="chess_relay_connected_description">Kapcsolódva</string>
-    <string name="chess_relay_not_connected_description">Nincs kapcsolat</string>
-    <string name="chess_relay_connected">kapcsolódva</string>
-    <string name="chess_relay_not_connected">nincs kapcsolat</string>
     <string name="namecoin_settings_explanation">A Namecoin nevek (.bit, d/, id/) feloldása a Namecoin blokklánc lekérdezésével történik. Válassza alább az ElectrumX (könnyű kliens) vagy a Namecoin Core RPC (saját teljes csomópont) lehetőséget.</string>
     <string name="namecoin_testing_next_server">Következő kiszolgáló tesztelése…</string>
     <string name="namecoin_resolution_title">Namecoin-feloldás</string>
@@ -8539,10 +8516,6 @@
     <string name="chess_move_navigator_counter">%1$d. lépés / %2$d</string>
     <string name="chess_move_navigator_next">Következő lépés</string>
     <string name="chess_move_navigator_final">Végső állás</string>
-    <string name="chess_game_relays_title">Sakkjáték-átjátszók</string>
-    <string name="chess_game_relays_broadcast">A lépések ezekre az átjátszókra lesznek közvetítve:</string>
-    <string name="chess_game_relays_no_write">Nincsenek írási átjátszók beállítva</string>
-    <string name="chess_game_relays_game_id">Játékazonosító</string>
     <string name="bunker_heartbeat_connected">Bunker kapcsolódva</string>
     <string name="bunker_heartbeat_disconnected">Bunker leválasztva</string>
     <string name="auth_approval_once">Egyszer</string>
@@ -8574,31 +8547,9 @@
     <string name="chess_result_notation">Eredmény: %1$s</string>
     <string name="chess_round">%1$s. forduló</string>
     <string name="chess_your_turn">Ön következik</string>
-    <string name="chess_waiting">Várakozás…</string>
-    <string name="chess_challenge_from">Kihívás tőle: %1$s</string>
-    <string name="chess_open_challenge_by">Nyílt kihívás tőle: %1$s</string>
-    <string name="chess_challenger_plays_white">A kihívó a világos bábukkal játszik</string>
-    <string name="chess_challenger_plays_black">A kihívó a sötét bábukkal játszik</string>
-    <string name="chess_challenge_to">Kihívás neki: %1$s</string>
-    <string name="chess_open_challenge_awaiting">Nyílt kihívás (ellenfélre vár)</string>
-    <string name="chess_you_play_white">Ön a világos bábukkal játszik</string>
-    <string name="chess_you_play_black">Ön a sötét bábukkal játszik</string>
-    <string name="chess_watching_game">Játék megtekintése</string>
-    <plurals name="chess_moves_played">
-        <item quantity="one">%1$d lépés megtéve</item>
-        <item quantity="other">%1$d lépés megtéve</item>
-    </plurals>
-    <string name="chess_players_versus">%1$s vs. %2$s</string>
     <plurals name="chess_moves_count">
         <item quantity="one">%1$d lépés</item>
         <item quantity="other">%1$d lépés</item>
-    </plurals>
-    <string name="chess_watch">Megtekintés</string>
-    <string name="chess_result_won">Nyert</string>
-    <string name="chess_result_lost">Vesztett</string>
-    <plurals name="chess_moves_with_result">
-        <item quantity="one">%1$d lépés • %2$s</item>
-        <item quantity="other">%1$d lépés • %2$s</item>
     </plurals>
     <string name="signing_waiting_for_signer">Várakozás az aláíró jóváhagyására… (%1$s mp)</string>
     <string name="signing_default_label">Aláírás</string>
@@ -8654,24 +8605,6 @@
     <string name="namecoin_resolution_invalid_identifier">Érvénytelen Namecoin-azonosító</string>
     <string name="namecoin_resolution_timeout">A feloldás időtúllépés miatt megszakadt – a kiszolgálók lassúak lehetnek, próbálja újra</string>
     <string name="namecoin_resolution_unknown_error">Ismeretlen hiba</string>
-    <plurals name="chess_sync_events_count">
-        <item quantity="one">%1$d esemény</item>
-        <item quantity="other">%1$d esemény</item>
-    </plurals>
-    <string name="chess_sync_syncing_phase">%1$s szinkronizálása…</string>
-    <string name="chess_sync_synced">Szinkronizálva</string>
-    <plurals name="chess_sync_relays_progress">
-        <item quantity="one">%1$d/%2$d átjátszó</item>
-        <item quantity="other">%1$d/%2$d átjátszó</item>
-    </plurals>
-    <plurals name="chess_sync_challenges_count">
-        <item quantity="one">%1$d kihívás</item>
-        <item quantity="other">%1$d kihívás</item>
-    </plurals>
-    <plurals name="chess_sync_games_count">
-        <item quantity="one">%1$d játék</item>
-        <item quantity="other">%1$d játék</item>
-    </plurals>
     <string name="chess_sync_tap_to_retry">Koppintson az újrapróbálkozáshoz</string>
     <string name="chess_game_parse_failed">Nem sikerült feldolgozni a PGN-t</string>
     <string name="chess_game_invalid">Érvénytelen sakkjátszma</string>
@@ -8680,18 +8613,8 @@
     <string name="article_author_description">Szerző</string>
     <string name="article_reading_time_minutes">Olvasási idő: %1$s perc</string>
     <string name="geocache_new_precision_warning">⚠️ A megtalálóknak %1$s karakteres vagy pontosabb helymeghatározásra van szükségük.</string>
-    <string name="chess_lobby_clear_all">Összes törlése</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_empty_title">Nincsenek játékok vagy kihívások</string>
-    <string name="chess_lobby_empty_create_hint">Hozzon létre egy új játékot a kezdéshez</string>
-    <string name="chess_lobby_empty_refresh_hint">Húzza le a frissítéshez</string>
     <string name="chess_lobby_section_your_games">Saját játékok</string>
-    <string name="chess_lobby_section_your_challenges">Saját kihívások</string>
-    <string name="chess_lobby_section_watching">Megtekintés</string>
-    <string name="chess_lobby_section_incoming">Beérkező kihívások</string>
-    <string name="chess_lobby_section_open">Nyílt kihívások</string>
-    <string name="chess_lobby_section_live">Élő játékok</string>
-    <string name="chess_lobby_section_finished">Befejezett játékok</string>
     <string name="geohash_new_your_channels">Saját csatornák</string>
     <string name="geohash_new_enter_geohash">Adjon meg egy geohash-t</string>
     <string name="geohash_new_enter_hint">Mindenki, aki ugyanabban a geohash-cellában van, ugyanazt a csatornát használja.</string>
@@ -8727,13 +8650,6 @@
         <item quantity="one">%1$d átjátszó</item>
         <item quantity="other">%1$d átjátszó</item>
     </plurals>
-    <string name="chess_broadcast_broadcasting">Közvetítés: %1$s</string>
-    <string name="chess_broadcast_sent">Elküldve: %1$s</string>
-    <string name="chess_broadcast_failed">Sikertelen: %1$s</string>
-    <string name="chess_broadcast_waiting_opponent">Várakozás az ellenfél lépésére…</string>
-    <string name="chess_broadcast_syncing">Játékállapot szinkronizálása…</string>
-    <string name="chess_broadcast_desynced">A játék deszinkronizálódott: %1$s</string>
-    <string name="chess_broadcast_tap_to_resync">Koppintson az újraszinkronizáláshoz</string>
     <string name="podcast_episode_subtitle_season_episode">S%1$s · E%2$s</string>
     <string name="podcast_episode_subtitle_episode">%1$s. rész</string>
     <string name="podcast_episode_subtitle_season">%1$s. évad</string>

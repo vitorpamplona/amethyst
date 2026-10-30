@@ -2981,8 +2981,6 @@
     <string name="new_chess_game">Nova partija šaha</string>
     <string name="chess_loading_game">Nalagam partijo\u2026</string>
     <string name="chess_game_not_found">Partija ni najdena</string>
-    <string name="chess_game_waiting">Ta partija je zaključena ali pa, čaka na nasprotnika</string>
-    <string name="chess_game_id">ID Partije: %1$s\u2026</string>
     <string name="badge_and_n_others"> in %1$d ostalih</string>
     <string name="remove_language">Odstrani %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Zagotovite si odličen vir objav tako, da sledite istim ljudem kot nekdo, ki mu zaupate.</string>
@@ -8926,33 +8924,12 @@
     <string name="chess_result_in_progress">V teku</string>
     <string name="chess_result_game_drawn">Igra neodločena</string>
     <string name="chess_watching_spectator_mode">Opazuješ igro - način gledalca</string>
-    <string name="chess_leave_game">Zapusti igro</string>
     <string name="chess_waiting_for_opponent_accept">Čakam, da nasprotnik sprejme izziv</string>
     <string name="chess_move_history">Zgodovina potez</string>
     <string name="chess_no_moves_yet">Ni še potez</string>
     <string name="chess_resign">Predaj se</string>
     <string name="chess_continue">Nadaljuj</string>
     <string name="chess_game_over_result">Konec igre - %1$s</string>
-    <string name="chess_relay_settings_title">Nastavitve šahovskih relejev</string>
-    <string name="chess_relay_active_title">Dejavni šahovski releji</string>
-    <string name="chess_relay_active_description">Šah uporablja 3 namenske releje za hitre in zanesljive poizvedbe</string>
-    <string name="chess_relay_inbox_title">Vhodni releji (%1$d)</string>
-    <string name="chess_relay_inbox_description">Osebni izzivi se pridobivajo od tukaj</string>
-    <string name="chess_relay_inbox_empty">Ni nastavljenih vhodnih relejev</string>
-    <string name="chess_relay_more">+%1$d več</string>
-    <string name="chess_relay_global_title">Globalni releji (%1$d)</string>
-    <string name="chess_relay_global_description">Odprti izzivi in javne igre se pridobivajo od tukaj</string>
-    <string name="chess_relay_global_empty">Ni nastavljenih globalnih relejev - odprti izzivi se ne bodo naložili!</string>
-    <string name="chess_relay_outbox_title">Izhodni releji (%1$d)</string>
-    <string name="chess_relay_outbox_description">Tvoji izzivi in poteze se objavljajo tukaj</string>
-    <string name="chess_relay_outbox_empty">Ni nastavljenih izhodnih relejev</string>
-    <string name="chess_relay_stat_challenges">Izzivi</string>
-    <string name="chess_relay_stat_live_games">Igre v živo</string>
-    <string name="chess_relay_preferred">prednostni</string>
-    <string name="chess_relay_connected_description">Povezan</string>
-    <string name="chess_relay_not_connected_description">Ni povezan</string>
-    <string name="chess_relay_connected">povezan</string>
-    <string name="chess_relay_not_connected">ni povezan</string>
     <string name="namecoin_settings_explanation">Imena Namecoin (.bit, d/, id/) se razrešujejo s poizvedovanjem po verigi blokov Namecoin. Spodaj izberi ElectrumX (lahki odjemalec) ali Namecoin Core RPC (svoje polno vozlišče).</string>
     <string name="namecoin_testing_next_server">Preizkušam naslednji strežnik…</string>
     <string name="namecoin_resolution_title">Razreševanje Namecoin</string>
@@ -9091,10 +9068,6 @@
     <string name="chess_move_navigator_counter">Poteza %1$d / %2$d</string>
     <string name="chess_move_navigator_next">Naslednja poteza</string>
     <string name="chess_move_navigator_final">Končni položaj</string>
-    <string name="chess_game_relays_title">Releji šahovske igre</string>
-    <string name="chess_game_relays_broadcast">Poteze se razpošiljajo na te releje:</string>
-    <string name="chess_game_relays_no_write">Ni nastavljenih relejev za pisanje</string>
-    <string name="chess_game_relays_game_id">ID igre</string>
     <string name="bunker_heartbeat_connected">Bunker povezan</string>
     <string name="bunker_heartbeat_disconnected">Bunker nepovezan</string>
     <string name="auth_approval_once">Enkrat</string>
@@ -9128,37 +9101,11 @@
     <string name="chess_result_notation">Rezultat: %1$s</string>
     <string name="chess_round">Krog %1$s</string>
     <string name="chess_your_turn">Na vrsti si</string>
-    <string name="chess_waiting">Čakam...</string>
-    <string name="chess_challenge_from">Izziv od %1$s</string>
-    <string name="chess_open_challenge_by">Odprti izziv, ki ga je objavil/a %1$s</string>
-    <string name="chess_challenger_plays_white">Izzivalec igra z belimi</string>
-    <string name="chess_challenger_plays_black">Izzivalec igra s črnimi</string>
-    <string name="chess_challenge_to">Izziv za %1$s</string>
-    <string name="chess_open_challenge_awaiting">Odprti izziv (čaka nasprotnika)</string>
-    <string name="chess_you_play_white">Igraš z belimi</string>
-    <string name="chess_you_play_black">Igraš s črnimi</string>
-    <string name="chess_watching_game">Opazuješ igro</string>
-    <plurals name="chess_moves_played">
-        <item quantity="one">Odigrana %1$d poteza</item>
-        <item quantity="two">Odigrani %1$d potezi</item>
-        <item quantity="few">Odigrane %1$d poteze</item>
-        <item quantity="other">Odigranih %1$d potez</item>
-    </plurals>
-    <string name="chess_players_versus">%1$s proti %2$s</string>
     <plurals name="chess_moves_count">
         <item quantity="one">%1$d poteza</item>
         <item quantity="two">%1$d potezi</item>
         <item quantity="few">%1$d poteze</item>
         <item quantity="other">%1$d potez</item>
-    </plurals>
-    <string name="chess_watch">Opazuj</string>
-    <string name="chess_result_won">Dobljena</string>
-    <string name="chess_result_lost">Izgubljena</string>
-    <plurals name="chess_moves_with_result">
-        <item quantity="one">%1$d poteza • %2$s</item>
-        <item quantity="two">%1$d potezi • %2$s</item>
-        <item quantity="few">%1$d poteze • %2$s</item>
-        <item quantity="other">%1$d potez • %2$s</item>
     </plurals>
     <string name="signing_waiting_for_signer">Čakam na odobritev podpisnika... (%1$ss)</string>
     <string name="signing_default_label">Podpisovanje</string>
@@ -9214,32 +9161,6 @@
     <string name="namecoin_resolution_invalid_identifier">Neveljaven identifikator Namecoin</string>
     <string name="namecoin_resolution_timeout">Razreševanje je poteklo — strežniki so morda počasni, poskusi znova</string>
     <string name="namecoin_resolution_unknown_error">Neznana napaka</string>
-    <plurals name="chess_sync_events_count">
-        <item quantity="one">%1$d dogodek</item>
-        <item quantity="two">%1$d dogodka</item>
-        <item quantity="few">%1$d dogodki</item>
-        <item quantity="other">%1$d dogodkov</item>
-    </plurals>
-    <string name="chess_sync_syncing_phase">Sinhroniziram %1$s...</string>
-    <string name="chess_sync_synced">Sinhronizirano</string>
-    <plurals name="chess_sync_relays_progress">
-        <item quantity="one">%1$d/%2$d relej</item>
-        <item quantity="two">%1$d/%2$d releja</item>
-        <item quantity="few">%1$d/%2$d releji</item>
-        <item quantity="other">%1$d/%2$d relejev</item>
-    </plurals>
-    <plurals name="chess_sync_challenges_count">
-        <item quantity="one">%1$d izziv</item>
-        <item quantity="two">%1$d izziva</item>
-        <item quantity="few">%1$d izzivi</item>
-        <item quantity="other">%1$d izzivov</item>
-    </plurals>
-    <plurals name="chess_sync_games_count">
-        <item quantity="one">%1$d igra</item>
-        <item quantity="two">%1$d igri</item>
-        <item quantity="few">%1$d igre</item>
-        <item quantity="other">%1$d iger</item>
-    </plurals>
     <string name="chess_sync_tap_to_retry">Dotakni se za ponovni poskus</string>
     <string name="chess_game_parse_failed">PGN ni bilo mogoče razčleniti</string>
     <string name="chess_game_invalid">Neveljavna šahovska igra</string>
@@ -9248,18 +9169,8 @@
     <string name="article_author_description">Avtor</string>
     <string name="article_reading_time_minutes">%1$s min branja</string>
     <string name="geocache_new_precision_warning">⚠️ Iskalec potrebuje %1$s znakov ali natančneje.</string>
-    <string name="chess_lobby_clear_all">Počisti vse</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_empty_title">Ni iger ali izzivov</string>
-    <string name="chess_lobby_empty_create_hint">Za začetek ustvari novo igro</string>
-    <string name="chess_lobby_empty_refresh_hint">Povleci navzdol za osvežitev</string>
     <string name="chess_lobby_section_your_games">Tvoje igre</string>
-    <string name="chess_lobby_section_your_challenges">Tvoji izzivi</string>
-    <string name="chess_lobby_section_watching">Opazovanje</string>
-    <string name="chess_lobby_section_incoming">Prejeti izzivi</string>
-    <string name="chess_lobby_section_open">Odprti izzivi</string>
-    <string name="chess_lobby_section_live">Igre v živo</string>
-    <string name="chess_lobby_section_finished">Končane igre</string>
     <string name="geohash_new_your_channels">Tvoji kanali</string>
     <string name="geohash_new_enter_geohash">Vnesi geohash</string>
     <string name="geohash_new_enter_hint">Vsi v isti celici geohash si delijo kanal.</string>
@@ -9297,13 +9208,6 @@
         <item quantity="few">%1$d releji</item>
         <item quantity="other">%1$d relejev</item>
     </plurals>
-    <string name="chess_broadcast_broadcasting">Razpošiljanje: %1$s</string>
-    <string name="chess_broadcast_sent">Poslano: %1$s</string>
-    <string name="chess_broadcast_failed">Neuspešno: %1$s</string>
-    <string name="chess_broadcast_waiting_opponent">Čakam na nasprotnikovo potezo...</string>
-    <string name="chess_broadcast_syncing">Sinhroniziram stanje igre...</string>
-    <string name="chess_broadcast_desynced">Igra ni sinhronizirana: %1$s</string>
-    <string name="chess_broadcast_tap_to_resync">Dotakni se za ponovno sinhronizacijo</string>
     <string name="podcast_episode_subtitle_season_episode">S%1$s · E%2$s</string>
     <string name="podcast_episode_subtitle_episode">Ep. %1$s</string>
     <string name="podcast_episode_subtitle_season">Sezona %1$s</string>

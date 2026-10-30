@@ -144,10 +144,11 @@ class TopNavFollowListStoreTest {
         assertEquals("defaultHomeFollowList", FollowListSlot.HOME.prefKey)
         assertEquals("defaultNotificationFollowList", FollowListSlot.NOTIFICATION.prefKey)
         assertEquals("defaultAppRecommendationsFollowList", FollowListSlot.APP_RECOMMENDATIONS.prefKey)
-        assertEquals(31, FollowListSlot.entries.size)
+        assertEquals("defaultChessFollowList", FollowListSlot.CHESS.prefKey)
+        assertEquals(32, FollowListSlot.entries.size)
         assertEquals(
             "prefKeys must be unique",
-            31,
+            32,
             FollowListSlot.entries
                 .map { it.prefKey }
                 .toSet()

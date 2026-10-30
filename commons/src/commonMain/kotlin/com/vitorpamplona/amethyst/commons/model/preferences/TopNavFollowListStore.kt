@@ -80,6 +80,7 @@ enum class FollowListSlot(
     COMMUNITIES("defaultCommunitiesFollowList", TopFilter.AllFollows),
     FOLLOW_PACKS("defaultFollowPacksFollowList", TopFilter.Global),
     APP_RECOMMENDATIONS("defaultAppRecommendationsFollowList", TopFilter.Global),
+    CHESS("defaultChessFollowList", TopFilter.Global),
     ;
 
     val key: Preferences.Key<String> = stringPreferencesKey(prefKey)

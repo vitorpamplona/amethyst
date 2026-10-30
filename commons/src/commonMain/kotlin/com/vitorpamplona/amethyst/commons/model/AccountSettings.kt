@@ -200,6 +200,7 @@ class AccountSettings(
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultChessFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultRelayGroupsDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
@@ -812,6 +813,7 @@ class AccountSettings(
             defaultCommunitiesFollowList to TopFilter.AllFollows,
             defaultFollowPacksFollowList to TopFilter.Global,
             defaultAppRecommendationsFollowList to TopFilter.Global,
+            defaultChessFollowList to TopFilter.Global,
             defaultRelayGroupsDiscoveryFollowList to TopFilter.Mine,
         )
 
@@ -884,6 +886,7 @@ class AccountSettings(
             FollowListSlot.COMMUNITIES -> defaultCommunitiesFollowList
             FollowListSlot.FOLLOW_PACKS -> defaultFollowPacksFollowList
             FollowListSlot.APP_RECOMMENDATIONS -> defaultAppRecommendationsFollowList
+            FollowListSlot.CHESS -> defaultChessFollowList
         }
 
     fun syncedLocalSettings() =
@@ -1074,6 +1077,13 @@ class AccountSettings(
     fun changeDefaultNsitesFollowList(name: TopFilter) {
         if (defaultNsitesFollowList.value != name) {
             defaultNsitesFollowList.tryEmit(name)
+            saveAndSyncLater()
+        }
+    }
+
+    fun changeDefaultChessFollowList(name: TopFilter) {
+        if (defaultChessFollowList.value != name) {
+            defaultChessFollowList.tryEmit(name)
             saveAndSyncLater()
         }
     }

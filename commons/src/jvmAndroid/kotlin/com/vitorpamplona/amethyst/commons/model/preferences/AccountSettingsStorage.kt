@@ -264,6 +264,7 @@ class AccountSettingsStores(
                 FollowListSlot.COMMUNITIES to settings.defaultCommunitiesFollowList.value,
                 FollowListSlot.FOLLOW_PACKS to settings.defaultFollowPacksFollowList.value,
                 FollowListSlot.APP_RECOMMENDATIONS to settings.defaultAppRecommendationsFollowList.value,
+                FollowListSlot.CHESS to settings.defaultChessFollowList.value,
             ),
         )
     }
@@ -553,6 +554,7 @@ suspend fun AccountSettingsSource.toAccountSettings(): AccountSettings =
             defaultCommunitiesFollowList = MutableStateFlow(followListPrefs.communities),
             defaultFollowPacksFollowList = MutableStateFlow(followListPrefs.followPacks),
             defaultAppRecommendationsFollowList = MutableStateFlow(followListPrefs.appRecommendations),
+            defaultChessFollowList = MutableStateFlow(followListPrefs.chess),
             nwcWallets = MutableStateFlow(nwcWalletsResolved.first),
             clinkDebitWallets = MutableStateFlow(clinkDebitsResolved),
             // Prefer the new unified default; migrate from the legacy NWC default;
@@ -652,6 +654,7 @@ private data class FollowListPrefs(
     val communities: TopFilter,
     val followPacks: TopFilter,
     val appRecommendations: TopFilter,
+    val chess: TopFilter,
 )
 
 /**
@@ -693,6 +696,7 @@ private fun toFollowListPrefs(filters: Map<FollowListSlot, TopFilter>): FollowLi
         communities = filters.getValue(FollowListSlot.COMMUNITIES),
         followPacks = filters.getValue(FollowListSlot.FOLLOW_PACKS),
         appRecommendations = filters.getValue(FollowListSlot.APP_RECOMMENDATIONS),
+        chess = filters.getValue(FollowListSlot.CHESS),
     )
 
 private inline fun <reified T : Any> parseOrNull(value: String?): T? {

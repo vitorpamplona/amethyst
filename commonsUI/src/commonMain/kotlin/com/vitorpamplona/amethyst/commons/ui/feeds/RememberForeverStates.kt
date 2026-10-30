@@ -66,6 +66,8 @@ object ScrollStateKeys {
     const val POLLS_SCREEN = "PollsFeed"
     const val POLLS_OPEN = "PollsOpenFeed"
     const val POLLS_CLOSED = "PollsClosedFeed"
+    const val CHESS_MY_GAMES = "ChessMyGamesFeed"
+    const val CHESS_LOBBY = "ChessLobbyFeed"
     const val BADGES_SCREEN = "BadgesFeed"
     const val BROWSE_EMOJI_SETS_SCREEN = "BrowseEmojiSetsFeed"
     const val COMMUNITIES_LIST = "CommunitiesListFeed"
@@ -102,6 +104,7 @@ object PagerStateKeys {
     const val HOME_SCREEN = "PagerHome"
     const val DISCOVER_SCREEN = "PagerDiscover"
     const val POLLS_SCREEN = "PagerPolls"
+    const val CHESS_SCREEN = "PagerChess"
     const val GEOCACHES_SCREEN = "PagerGeocaches"
     const val NOTIFICATION_SCREEN = "PagerNotification"
 }

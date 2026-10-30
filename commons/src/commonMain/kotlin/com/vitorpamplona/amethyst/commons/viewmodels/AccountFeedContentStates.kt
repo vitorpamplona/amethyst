@@ -61,6 +61,8 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicPlaylistsFeedFilter
 import com.vitorpamplona.amethyst.commons.music.dal.MusicTracksFeedFilter
 import com.vitorpamplona.amethyst.commons.nests.dal.NestsFeedFilter
+import com.vitorpamplona.amethyst.commons.nip64Chess.dal.ChessLobbyFeedFilter
+import com.vitorpamplona.amethyst.commons.nip64Chess.dal.ChessMyGamesFeedFilter
 import com.vitorpamplona.amethyst.commons.notifications.CardFeedContentState
 import com.vitorpamplona.amethyst.commons.notifications.NotificationSummaryState
 import com.vitorpamplona.amethyst.commons.notifications.OpenPollsState
@@ -129,6 +131,8 @@ class AccountFeedContentStates(
 
     val picturesFeed = FeedContentState(PictureFeedFilter(account), scope, LocalCache)
     val workoutsFeed = FeedContentState(WorkoutFeedFilter(account), scope, LocalCache)
+    val chessLobbyFeed = FeedContentState(ChessLobbyFeedFilter(account), scope, LocalCache)
+    val chessMyGamesFeed = FeedContentState(ChessMyGamesFeedFilter(account), scope, LocalCache)
     val gitRepositoriesFeed = FeedContentState(GitRepositoriesFeedFilter(account), scope, LocalCache)
     val highlightsFeed = FeedContentState(HighlightsFeedFilter(account), scope, LocalCache)
     val relayGroupsDiscoveryFeed = FeedContentState(RelayGroupDiscoveryFeedFilter(account), scope, LocalCache)
@@ -479,6 +483,8 @@ class AccountFeedContentStates(
 
         picturesFeed.updateFeedWith(newNotes)
         workoutsFeed.updateFeedWith(newNotes)
+        chessLobbyFeed.updateFeedWith(newNotes)
+        chessMyGamesFeed.updateFeedWith(newNotes)
         gitRepositoriesFeed.updateFeedWith(newNotes)
         highlightsFeed.updateFeedWith(newNotes)
         relayGroupsDiscoveryFeed.updateFeedWith(newNotes)
@@ -547,6 +553,8 @@ class AccountFeedContentStates(
 
         picturesFeed.deleteFromFeed(newNotes)
         workoutsFeed.deleteFromFeed(newNotes)
+        chessLobbyFeed.deleteFromFeed(newNotes)
+        chessMyGamesFeed.deleteFromFeed(newNotes)
         gitRepositoriesFeed.deleteFromFeed(newNotes)
         highlightsFeed.deleteFromFeed(newNotes)
         relayGroupsDiscoveryFeed.deleteFromFeed(newNotes)
@@ -611,6 +619,8 @@ class AccountFeedContentStates(
 
         picturesFeed.trimToSize(maxItems)
         workoutsFeed.trimToSize(maxItems)
+        chessLobbyFeed.trimToSize(maxItems)
+        chessMyGamesFeed.trimToSize(maxItems)
         gitRepositoriesFeed.trimToSize(maxItems)
         highlightsFeed.trimToSize(maxItems)
         relayGroupsDiscoveryFeed.trimToSize(maxItems)

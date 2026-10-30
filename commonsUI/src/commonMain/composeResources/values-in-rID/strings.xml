@@ -1426,8 +1426,6 @@
     <string name="new_chess_game">Permainan Catur Baru</string>
     <string name="chess_loading_game">Memuat permainan…</string>
     <string name="chess_game_not_found">Permainan Tidak Ditemukan</string>
-    <string name="chess_game_waiting">Permainan ini mungkin sudah berakhir atau menunggu lawan.</string>
-    <string name="chess_game_id">ID Permainan: %1$s…</string>
     <string name="badge_and_n_others"> dan %1$d lainnya</string>
     <string name="remove_language">Hapus %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Mulai dengan feed yang bagus dengan mengikuti orang-orang yang sama seperti seseorang yang Anda percaya.</string>

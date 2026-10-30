@@ -24,15 +24,11 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -43,17 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
-import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessChallenge
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameViewer
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chess_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_color_black
 import com.vitorpamplona.amethyst.commons.resources.chess_color_white
-import com.vitorpamplona.amethyst.commons.resources.chess_decline
 import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_from
 import com.vitorpamplona.amethyst.commons.resources.chess_note_challenge_sent_to
 import com.vitorpamplona.amethyst.commons.resources.chess_note_game_ended
@@ -63,19 +54,15 @@ import com.vitorpamplona.amethyst.commons.resources.chess_note_termination
 import com.vitorpamplona.amethyst.commons.resources.chess_note_time
 import com.vitorpamplona.amethyst.commons.resources.chess_note_versus
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
-import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
-import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.ChessViewModelFactory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip64Chess.challenge.offer.LiveChessGameChallengeEvent
 import com.vitorpamplona.quartz.nip64Chess.end.LiveChessGameEndEvent
 import com.vitorpamplona.quartz.nip64Chess.game.ChessGameEvent
-import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
 /**
  * Render NIP-64 Chess Game event (Kind 64)
@@ -120,8 +107,8 @@ fun RenderChessGame(
 /**
  * Render Live Chess Challenge event (Kind 30064)
  *
- * Shows a challenge card with Accept/Decline actions for incoming challenges
- * or status for sent challenges
+ * Shows who challenged whom. Kind 30064 is not played by any client (Amethyst plays Jester's
+ * kind 30), so the card offers no way to accept it.
  */
 @Composable
 fun RenderLiveChessChallenge(
@@ -131,14 +118,6 @@ fun RenderLiveChessChallenge(
     nav: INav,
 ) {
     val event = (note.event as? LiveChessGameChallengeEvent) ?: return
-    val gameId = event.gameId()
-
-    // The lobby's instance, from the account's shared store: a card must not create a model per feed
-    val chessViewModel: ChessViewModel =
-        rememberAccountSharedViewModel(
-            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
-        )
 
     val isOpenChallenge = event.opponentPubkey() == null
     val isIncomingChallenge = event.opponentPubkey() == accountViewModel.account.userProfile().pubkeyHex
@@ -230,47 +209,6 @@ fun RenderLiveChessChallenge(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-
-            // Action buttons
-            if (isIncomingChallenge || isOpenChallenge) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    OutlinedButton(onClick = { /* TODO: Decline */ }) {
-                        Text(stringRes(Res.string.chess_decline))
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Button(
-                        onClick = {
-                            // Accept challenge and navigate to game
-                            val challengerPubkey = note.author?.pubkeyHex ?: return@Button
-
-                            // Create ChessChallenge from Note data
-                            val challenge =
-                                ChessChallenge(
-                                    eventId = note.idHex,
-                                    gameId = gameId,
-                                    challengerPubkey = challengerPubkey,
-                                    challengerDisplayName = note.author?.toBestDisplayName(),
-                                    challengerAvatarUrl = note.author?.profilePicture(),
-                                    opponentPubkey = event.opponentPubkey(),
-                                    challengerColor = event.playerColor() ?: ChessColor.WHITE,
-                                    createdAt = event.createdAt,
-                                )
-
-                            chessViewModel.acceptChallenge(challenge)
-
-                            // Navigate to game
-                            nav.nav(Route.ChessGame(gameId))
-                        },
-                    ) {
-                        Text(stringRes(Res.string.chess_accept))
-                    }
-                }
             }
         }
     }

@@ -2978,8 +2978,6 @@
     <string name="new_chess_game">Nová šachová hra</string>
     <string name="chess_loading_game">Načítání hry…</string>
     <string name="chess_game_not_found">Hra nenalezena</string>
-    <string name="chess_game_waiting">Tato hra mohla skončit nebo čeká na soupeře.</string>
-    <string name="chess_game_id">ID hry: %1$s…</string>
     <string name="badge_and_n_others"> a %1$d dalších</string>
     <string name="remove_language">Odebrat %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Začněte se skvělým feedem tím, že budete sledovat stejné lidi jako někdo, komu důvěřujete.</string>
@@ -8968,33 +8966,12 @@
     <string name="chess_result_in_progress">Probíhá</string>
     <string name="chess_result_game_drawn">Partie skončila remízou</string>
     <string name="chess_watching_spectator_mode">Sledujete hru – režim diváka</string>
-    <string name="chess_leave_game">Opustit hru</string>
     <string name="chess_waiting_for_opponent_accept">Čeká se, až soupeř přijme výzvu</string>
     <string name="chess_move_history">Historie tahů</string>
     <string name="chess_no_moves_yet">Zatím žádné tahy</string>
     <string name="chess_resign">Vzdát</string>
     <string name="chess_continue">Pokračovat</string>
     <string name="chess_game_over_result">Konec hry – %1$s</string>
-    <string name="chess_relay_settings_title">Nastavení šachových relayů</string>
-    <string name="chess_relay_active_title">Aktivní šachové relaye</string>
-    <string name="chess_relay_active_description">Šachy používají 3 vyhrazené relaye pro rychlé a spolehlivé dotazy</string>
-    <string name="chess_relay_inbox_title">Inbox relaye (%1$d)</string>
-    <string name="chess_relay_inbox_description">Odsud se načítají osobní výzvy</string>
-    <string name="chess_relay_inbox_empty">Nejsou nakonfigurovány žádné inbox relaye</string>
-    <string name="chess_relay_more">+%1$d další</string>
-    <string name="chess_relay_global_title">Globální relaye (%1$d)</string>
-    <string name="chess_relay_global_description">Odsud se načítají otevřené výzvy a veřejné hry</string>
-    <string name="chess_relay_global_empty">Nejsou nakonfigurovány žádné globální relaye – otevřené výzvy se nenačtou!</string>
-    <string name="chess_relay_outbox_title">Outbox relaye (%1$d)</string>
-    <string name="chess_relay_outbox_description">Sem se publikují vaše výzvy a tahy</string>
-    <string name="chess_relay_outbox_empty">Nejsou nakonfigurovány žádné outbox relaye</string>
-    <string name="chess_relay_stat_challenges">Výzvy</string>
-    <string name="chess_relay_stat_live_games">Živé hry</string>
-    <string name="chess_relay_preferred">preferovaný</string>
-    <string name="chess_relay_connected_description">Připojeno</string>
-    <string name="chess_relay_not_connected_description">Nepřipojeno</string>
-    <string name="chess_relay_connected">připojeno</string>
-    <string name="chess_relay_not_connected">nepřipojeno</string>
     <string name="namecoin_settings_explanation">Jména Namecoin (.bit, d/, id/) se překládají dotazem na blockchain Namecoin. Níže zvolte ElectrumX (lehký klient) nebo Namecoin Core RPC (vlastní plný uzel).</string>
     <string name="namecoin_testing_next_server">Testování dalšího serveru…</string>
     <string name="namecoin_resolution_title">Překlad jmen Namecoin</string>
@@ -9133,10 +9110,6 @@
     <string name="chess_move_navigator_counter">Tah %1$d / %2$d</string>
     <string name="chess_move_navigator_next">Další tah</string>
     <string name="chess_move_navigator_final">Konečná pozice</string>
-    <string name="chess_game_relays_title">Relaye šachové hry</string>
-    <string name="chess_game_relays_broadcast">Tahy se vysílají na tyto relaye:</string>
-    <string name="chess_game_relays_no_write">Nejsou nakonfigurovány žádné relaye pro zápis</string>
-    <string name="chess_game_relays_game_id">ID hry</string>
     <string name="bunker_heartbeat_connected">Bunker připojen</string>
     <string name="bunker_heartbeat_disconnected">Bunker odpojen</string>
     <string name="auth_approval_once">Jednou</string>
@@ -9170,37 +9143,11 @@
     <string name="chess_result_notation">Výsledek: %1$s</string>
     <string name="chess_round">Kolo %1$s</string>
     <string name="chess_your_turn">Jste na tahu</string>
-    <string name="chess_waiting">Čekání...</string>
-    <string name="chess_challenge_from">Výzva od %1$s</string>
-    <string name="chess_open_challenge_by">Otevřená výzva od %1$s</string>
-    <string name="chess_challenger_plays_white">Vyzyvatel hraje za bílé</string>
-    <string name="chess_challenger_plays_black">Vyzyvatel hraje za černé</string>
-    <string name="chess_challenge_to">Výzva pro %1$s</string>
-    <string name="chess_open_challenge_awaiting">Otevřená výzva (čeká na soupeře)</string>
-    <string name="chess_you_play_white">Hrajete za bílé</string>
-    <string name="chess_you_play_black">Hrajete za černé</string>
-    <string name="chess_watching_game">Sledování hry</string>
-    <plurals name="chess_moves_played">
-        <item quantity="one">%1$d odehraný tah</item>
-        <item quantity="few">%1$d odehrané tahy</item>
-        <item quantity="many">%1$d odehraných tahů</item>
-        <item quantity="other">%1$d odehraných tahů</item>
-    </plurals>
-    <string name="chess_players_versus">%1$s vs %2$s</string>
     <plurals name="chess_moves_count">
         <item quantity="one">%1$d tah</item>
         <item quantity="few">%1$d tahy</item>
         <item quantity="many">%1$d tahů</item>
         <item quantity="other">%1$d tahů</item>
-    </plurals>
-    <string name="chess_watch">Sledovat</string>
-    <string name="chess_result_won">Výhra</string>
-    <string name="chess_result_lost">Prohra</string>
-    <plurals name="chess_moves_with_result">
-        <item quantity="one">%1$d tah • %2$s</item>
-        <item quantity="few">%1$d tahy • %2$s</item>
-        <item quantity="many">%1$d tahů • %2$s</item>
-        <item quantity="other">%1$d tahů • %2$s</item>
     </plurals>
     <string name="signing_waiting_for_signer">Čekání na schválení podepisovatelem... (%1$ss)</string>
     <string name="signing_default_label">Podepisování</string>
@@ -9256,32 +9203,6 @@
     <string name="namecoin_resolution_invalid_identifier">Neplatný identifikátor Namecoin</string>
     <string name="namecoin_resolution_timeout">Vyhledávání vypršelo — servery mohou být pomalé, zkuste to znovu</string>
     <string name="namecoin_resolution_unknown_error">Neznámá chyba</string>
-    <plurals name="chess_sync_events_count">
-        <item quantity="one">%1$d událost</item>
-        <item quantity="few">%1$d události</item>
-        <item quantity="many">%1$d události</item>
-        <item quantity="other">%1$d událostí</item>
-    </plurals>
-    <string name="chess_sync_syncing_phase">Synchronizace: %1$s...</string>
-    <string name="chess_sync_synced">Synchronizováno</string>
-    <plurals name="chess_sync_relays_progress">
-        <item quantity="one">%1$d/%2$d relay</item>
-        <item quantity="few">%1$d/%2$d relaye</item>
-        <item quantity="many">%1$d/%2$d relaye</item>
-        <item quantity="other">%1$d/%2$d relayů</item>
-    </plurals>
-    <plurals name="chess_sync_challenges_count">
-        <item quantity="one">%1$d výzva</item>
-        <item quantity="few">%1$d výzvy</item>
-        <item quantity="many">%1$d výzvy</item>
-        <item quantity="other">%1$d výzev</item>
-    </plurals>
-    <plurals name="chess_sync_games_count">
-        <item quantity="one">%1$d hra</item>
-        <item quantity="few">%1$d hry</item>
-        <item quantity="many">%1$d hry</item>
-        <item quantity="other">%1$d her</item>
-    </plurals>
     <string name="chess_sync_tap_to_retry">Klepnutím zkusíte znovu</string>
     <string name="chess_game_parse_failed">PGN se nepodařilo zpracovat</string>
     <string name="chess_game_invalid">Neplatná šachová hra</string>
@@ -9290,18 +9211,8 @@
     <string name="article_author_description">Autor</string>
     <string name="article_reading_time_minutes">%1$s min čtení</string>
     <string name="geocache_new_precision_warning">⚠️ Nálezce potřebuje přesnost %1$s znaků nebo jemnější.</string>
-    <string name="chess_lobby_clear_all">Vymazat vše</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_empty_title">Žádné hry ani výzvy</string>
-    <string name="chess_lobby_empty_create_hint">Začněte vytvořením nové hry</string>
-    <string name="chess_lobby_empty_refresh_hint">Stažením dolů obnovíte</string>
     <string name="chess_lobby_section_your_games">Vaše hry</string>
-    <string name="chess_lobby_section_your_challenges">Vaše výzvy</string>
-    <string name="chess_lobby_section_watching">Sledované</string>
-    <string name="chess_lobby_section_incoming">Příchozí výzvy</string>
-    <string name="chess_lobby_section_open">Otevřené výzvy</string>
-    <string name="chess_lobby_section_live">Probíhající hry</string>
-    <string name="chess_lobby_section_finished">Dokončené hry</string>
     <string name="geohash_new_your_channels">Vaše kanály</string>
     <string name="geohash_new_enter_geohash">Zadejte geohash</string>
     <string name="geohash_new_enter_hint">Kanál sdílí každý ve stejné buňce geohashe.</string>
@@ -9339,13 +9250,6 @@
         <item quantity="many">%1$d relaye</item>
         <item quantity="other">%1$d relayů</item>
     </plurals>
-    <string name="chess_broadcast_broadcasting">Odesílání: %1$s</string>
-    <string name="chess_broadcast_sent">Odesláno: %1$s</string>
-    <string name="chess_broadcast_failed">Selhalo: %1$s</string>
-    <string name="chess_broadcast_waiting_opponent">Čekání na tah soupeře...</string>
-    <string name="chess_broadcast_syncing">Synchronizace stavu hry...</string>
-    <string name="chess_broadcast_desynced">Hra ztratila synchronizaci: %1$s</string>
-    <string name="chess_broadcast_tap_to_resync">Klepnutím znovu synchronizujete</string>
     <string name="podcast_episode_subtitle_season_episode">S%1$s · E%2$s</string>
     <string name="podcast_episode_subtitle_episode">Ep %1$s</string>
     <string name="podcast_episode_subtitle_season">Série %1$s</string>

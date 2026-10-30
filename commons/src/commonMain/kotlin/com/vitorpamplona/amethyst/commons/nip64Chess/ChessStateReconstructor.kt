@@ -24,7 +24,9 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.utils.Log
 
 /**
@@ -80,11 +82,17 @@ object ChessStateReconstructor {
 
         Log.d("chessdebug") { "[Reconstructor] startEventId=${startEventId.take(8)}, challenger=${challengerPubkey.take(8)}, challengerColor=$challengerColor, challengedPubkey=${challengedPubkey?.take(8)}" }
 
-        // In Jester, we determine opponent from the p-tag or from move events
-        // For open challenges, we need to find who made the first move
+        // In Jester, we determine opponent from the p-tag or from move events.
+        // For open challenges, the seat goes to whoever moved in it first; relays deliver in
+        // any order, so "first" is the earliest timestamp, ties broken by id.
+        // A jesterui direct challenge names no `p`; it is filed under its opponent's private
+        // reference instead, so only a mover whose reference matches can take that seat.
+        val privateRefs = startEvent.eTags().filter { it != JesterProtocol.START_POSITION_HASH }.toSet()
         val opponentFromMoves =
             events.moves
-                .firstOrNull { it.pubKey != challengerPubkey }
+                .filter { it.pubKey != challengerPubkey }
+                .filter { challengedPubkey != null || privateRefs.isEmpty() || jesterPrivateStartRef(it.pubKey) in privateRefs }
+                .minWithOrNull(compareBy<JesterEvent>({ it.createdAt }, { it.id }))
                 ?.pubKey
 
         val actualOpponent = challengedPubkey ?: opponentFromMoves
@@ -125,11 +133,13 @@ object ChessStateReconstructor {
         // Check if game is pending (no moves yet AND viewer is the challenger)
         // If viewer accepted someone else's challenge, the game is NOT pending
         val isChallenger = viewerPubkey == startEvent.pubKey
-        val isPendingChallenge = events.moves.isEmpty() && isChallenger
+        val isPendingChallenge = isChallenger && events.moves.none { it.pubKey == challengerPubkey || it.pubKey == actualOpponent }
 
         // Step 2: Create engine and apply moves from the longest history
         val engine = ChessEngine()
-        val latestMove = events.latestMove()
+        // Only the two players move: anyone else's event on this game is ignored.
+        val playerMoves = events.moves.filter { it.pubKey == challengerPubkey || it.pubKey == actualOpponent }
+        val latestMove = playerMoves.maxWithOrNull(compareBy<JesterEvent>({ it.history().size }, { it.createdAt }))
         val history = latestMove?.history() ?: emptyList()
 
         Log.d("chessdebug") { "[Reconstructor] latestMove=${latestMove?.id?.take(8)}, historySize=${history.size}, isPendingChallenge=$isPendingChallenge" }
@@ -220,6 +230,7 @@ object ChessStateReconstructor {
                 appliedMoveNumbers = appliedMoveNumbers,
                 challengeCreatedAt = startEvent.createdAt,
                 timeControl = null, // Not supported in Jester
+                lastMoveAt = latestMove?.createdAt,
             )
 
         Log.d("chessdebug") { "[Reconstructor] Result: status=$gameStatus, appliedMoves=${appliedMoveNumbers.size}, isDesynced=$isDesynced, headEvent=${headEventId.take(8)}" }
@@ -315,6 +326,8 @@ data class ReconstructedGameState(
     val appliedMoveNumbers: Set<Int>,
     val challengeCreatedAt: Long,
     val timeControl: String?,
+    /** When the newest move was published; null before the first one. */
+    val lastMoveAt: Long? = null,
 ) {
     /** Legacy alias for startEventId */
     @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))
@@ -332,4 +345,13 @@ data class ReconstructedGameState(
     fun hasOpponentDrawOffer(playerPubkey: String): Boolean = pendingDrawOffer != null && pendingDrawOffer != playerPubkey
 
     fun hasOurDrawOffer(playerPubkey: String): Boolean = pendingDrawOffer == playerPubkey
+}
+
+/** Whether a game is still being played. */
+sealed class GameStatus {
+    data object InProgress : GameStatus()
+
+    data class Finished(
+        val result: GameResult,
+    ) : GameStatus()
 }

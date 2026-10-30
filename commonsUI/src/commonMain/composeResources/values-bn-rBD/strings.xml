@@ -1441,8 +1441,6 @@
     <string name="new_chess_game">নতুন দাবা খেলা</string>
     <string name="chess_loading_game">খেলা লোড হচ্ছে…</string>
     <string name="chess_game_not_found">খেলা পাওয়া যায়নি</string>
-    <string name="chess_game_waiting">এই খেলাটি শেষ হয়ে গেছে অথবা প্রতিপক্ষের জন্য অপেক্ষা করছে।</string>
-    <string name="chess_game_id">গেম আইডি: %1$s…</string>
     <string name="badge_and_n_others"> এবং আরো %1$d জন</string>
     <string name="remove_language">%1$s সরান</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">আপনার বিশ্বাসযোগ্য কারো মতো একই মানুষদের অনুসরণ করে একটি দুর্দান্ত ফিড দিয়ে শুরু করুন।</string>

@@ -35,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameCard
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.draft
@@ -645,7 +646,7 @@ fun RenderLiveChessDrawOffer(
     }
 }
 
-/** A Jester (kind 30) chess event: a game start with the starter's colour, or a move with its board. */
+/** A Jester (kind 30) chess event: a game start as its game's card, or a move with its board. */
 @Composable
 fun RenderJesterChess(
     baseNote: Note,
@@ -654,6 +655,10 @@ fun RenderJesterChess(
 ) {
     val event = baseNote.event as? JesterEvent ?: return
     val isStart = remember(event) { event.isStartEvent() }
+    if (isStart) {
+        ChessGameCard(baseNote, accountViewModel, nav)
+        return
+    }
     val move = remember(event) { event.move() }
     val fen = remember(event) { event.fen() }
     val opponent = remember(event) { event.opponentPubkey() }

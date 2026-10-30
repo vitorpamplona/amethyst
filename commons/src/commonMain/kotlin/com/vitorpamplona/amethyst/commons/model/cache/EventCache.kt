@@ -1666,6 +1666,17 @@ open class EventCache :
                 event.tagsWithoutCitations().mapNotNull { checkGetOrCreateNote(it) }
             }
 
+            is JesterEvent -> {
+                // A Jester move points at its game's start event first, then at the move it
+                // follows. Linking only the start makes a game's start note hold every move as a
+                // reply, which is what the chess board reads its game from.
+                if (event.isMoveEvent()) {
+                    listOfNotNull(event.startEventId()?.let { checkGetOrCreateNote(it) })
+                } else {
+                    emptyList()
+                }
+            }
+
             is ChatEvent -> {
                 // Amethyst's own kind:9 replies carry the parent as a NIP-18
                 // `q` tag (see ChatEvent.replyingTo), but the broader Marmot

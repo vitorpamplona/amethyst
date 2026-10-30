@@ -1449,8 +1449,6 @@
     <string name="new_chess_game">Yeni Satranç Oyunu</string>
     <string name="chess_loading_game">Oyun yükleniyor…</string>
     <string name="chess_game_not_found">Oyun Bulunamadı</string>
-    <string name="chess_game_waiting">Bu oyun sona ermiş olabilir veya rakip bekleniyor.</string>
-    <string name="chess_game_id">Oyun Kimliği: %1$s…</string>
     <string name="badge_and_n_others"> ve %1$d diğerleri</string>
     <string name="remove_language">%1$s dilini kaldır</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Güvendiğiniz biriyle aynı kişileri takip ederek harika bir akışla başlayın.</string>
