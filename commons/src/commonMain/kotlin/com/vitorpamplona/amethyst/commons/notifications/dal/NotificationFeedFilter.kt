@@ -104,7 +104,6 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 class NotificationFeedFilter(
@@ -115,7 +114,7 @@ class NotificationFeedFilter(
     // Lazy so the eagerly-collected topNavFilter pipeline is only built when
     // the split UI actually opens this filter.
     private val overrideFollowLists: StateFlow<IFeedTopNavFilter>? by lazy {
-        modeOverride?.let { account.topNavFilterFlow(MutableStateFlow(it)) }
+        modeOverride?.let { account.pinnedNotificationFollowLists(it) }
     }
 
     companion object {
