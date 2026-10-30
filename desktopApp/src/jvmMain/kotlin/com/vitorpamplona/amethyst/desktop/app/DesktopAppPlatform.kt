@@ -167,6 +167,21 @@ class DesktopAppPlatform(
         InlineNappletPane(host, manifest, instanceId, onStatus, modifier)
     }
 
+    @Composable
+    override fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = nappletHost ?: return
+        InlineNappletPane(host, "webxdc:$poster:${app.instance(postId)}", instanceId, onStatus, modifier) {
+            host.openInlineWebxdc(app, postId, poster, instanceId)
+        }
+    }
+
     override val hasGeocacheMap: Boolean get() = true
 
     @Composable

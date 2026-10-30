@@ -295,6 +295,20 @@ interface AppPlatform {
         modifier: Modifier,
     ) {}
 
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId],
+     * where [runsNappletsInline]: offline at its own origin, the same storage its window has.
+     */
+    @Composable
+    fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
     fun rememberManifestIconModel(
@@ -394,6 +408,16 @@ fun InlineNappletSurface(
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier = Modifier,
 ) = LocalAppPlatform.current.InlineNappletSurface(manifest, instanceId, onStatus, modifier)
+
+@Composable
+fun InlineWebxdcSurface(
+    app: WebxdcApp,
+    postId: HexKey,
+    poster: HexKey,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineWebxdcSurface(app, postId, poster, instanceId, onStatus, modifier)
 
 /** Where a napplet running inside a note is. */
 enum class InlineNappletStatus {

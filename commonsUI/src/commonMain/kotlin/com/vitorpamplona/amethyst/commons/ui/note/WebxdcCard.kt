@@ -46,7 +46,9 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.webxdc_card_kind
 import com.vitorpamplona.amethyst.commons.resources.webxdc_start
 import com.vitorpamplona.amethyst.commons.resources.webxdc_unverified
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineWebxdcSurface
 import com.vitorpamplona.amethyst.commons.ui.platform.rememberAppLauncher
+import com.vitorpamplona.amethyst.commons.ui.platform.runsNappletsInline
 import com.vitorpamplona.amethyst.commons.util.countToHumanReadableBytes
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip19Bech32.Nip19Parser
@@ -86,6 +88,7 @@ fun WebxdcCard(
                 .ifEmpty { null }
         }
     val start = if (launcher.opensNapplets && postId != null && poster != null) ({ launcher.openWebxdc(app, postId, poster) }) else null
+    val inline = runsNappletsInline
 
     Column(
         modifier =
@@ -129,6 +132,18 @@ fun WebxdcCard(
             start?.let {
                 Spacer(Modifier.width(8.dp))
                 FilledTonalButton(onClick = it) { Text(stringResource(Res.string.webxdc_start)) }
+            }
+        }
+
+        // Played right here in the note, where the platform can; the window is a tap away.
+        if (start != null && inline && postId != null && poster != null) {
+            InlineNappletStage(
+                coordinate = remember(app, postId, poster) { "webxdc:$poster:${app.instance(postId)}" },
+                title = title,
+                icon = app.image,
+                onOpen = start,
+            ) { instanceId, onStatus, modifier ->
+                InlineWebxdcSurface(app, postId, poster, instanceId, onStatus, modifier)
             }
         }
     }

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
@@ -111,6 +112,8 @@ class NappletHostService : Service() {
         // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
         val webViewProfile: String?,
         val declaredDomains: List<String>,
+        // Set for a webxdc app: its archive and who runs it.
+        val webxdc: WebxdcLaunch? = null,
     ) {
         // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
         // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
@@ -304,7 +307,9 @@ class NappletHostService : Service() {
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
         val pathList = data.getStringArrayList(NappletHostContract.EXTRA_PATHS) ?: return null
         val hashList = data.getStringArrayList(NappletHostContract.EXTRA_HASHES) ?: return null
-        if (pathList.size != hashList.size || pathList.isEmpty()) return null
+        val webxdc = NappletHostContract.webxdcOf(data)
+        // A webxdc app's one file is its archive, which comes as its own extra.
+        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null)) return null
         val author = data.getString(NappletHostContract.EXTRA_AUTHOR).orEmpty()
         val launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
         if (author.isEmpty() || launchToken.isEmpty()) return null
@@ -329,6 +334,7 @@ class NappletHostService : Service() {
                 themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
                 webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
                 declaredDomains = declaredDomains,
+                webxdc = webxdc,
             )
         return tab
     }
@@ -435,6 +441,7 @@ class NappletHostService : Service() {
                 tab.profile,
                 tab.declaredDomains,
                 imeProxy = true,
+                webxdc = tab.webxdc,
             )
 
         hardenWebView(wv, tab)

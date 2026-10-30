@@ -210,6 +210,26 @@ class DesktopNappletHost(
         }
     }
 
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId]:
+     * the same offline origin, and so the same storage, its window has.
+     */
+    fun openInlineWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+    ): Result<CefNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
+        val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName()).inline(instanceId)
+        return runCatching {
+            CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView()).also { session ->
+                inlineSessions.update { it + session }
+                session.start()
+            }
+        }
+    }
+
     fun closeInline(session: CefNappletSession) {
         inlineSessions.update { it - session }
         session.close()

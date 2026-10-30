@@ -150,6 +150,22 @@ object NappletLauncher {
             .getOrNull()
             ?.let { buildLaunchParams(context, it.inline(instanceId)) }
 
+    /**
+     * The launch parameters for running the webxdc [app] posted in [postId] by [poster] inside its
+     * note as instance [instanceId], or null when nobody is logged in.
+     */
+    fun buildInlineWebxdcParams(
+        context: Context,
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+    ): Bundle? {
+        val account = Amethyst.instance.sessionManager.loggedInAccount() ?: return null
+        val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName())
+        return buildLaunchParams(context, launch.inline(instanceId))
+    }
+
     /** The launch parameters for a NIP-5A nSite, or null when the event is refused. */
     fun buildSiteLaunchParams(
         context: Context,

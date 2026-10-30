@@ -275,6 +275,23 @@ object AndroidAppPlatform : AppPlatform {
     }
 
     @Composable
+    override fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val context = LocalContext.current
+            InlineNappletView(app.url to postId, instanceId, onStatus, modifier) {
+                NappletLauncher.buildInlineWebxdcParams(context, app, postId, poster, instanceId)
+            }
+        }
+    }
+
+    @Composable
     override fun PrefetchNappletFiles(
         author: String,
         identifier: String,

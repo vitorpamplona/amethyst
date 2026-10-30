@@ -54,6 +54,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.changedToDownIgnoreConsumed
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -131,12 +135,10 @@ object InlineNappletPosters {
 @OptIn(ExperimentalUuidApi::class)
 private fun newId() = Uuid.random().toString()
 
-/**
- * Where a napplet runs inside its note: a poster with Run here until the user starts it, then the
- * app itself under a bar the page can't draw over (what runs, Open, Stop). It may use what the user
- * already granted it; anything that needs the user is refused and shown as a request to Open it,
- * where the question can be asked. Scrolling the note away stops it.
- */
+/** Draws one run of an app inside a note: the platform's surface for instance `instanceId`. */
+internal typealias InlineSurface = @Composable (instanceId: String, onStatus: (InlineNappletStatus) -> Unit, modifier: Modifier) -> Unit
+
+/** [InlineNappletStage] for a NIP-5D napplet. */
 @Composable
 internal fun InlineNappletStage(
     manifest: NappletManifest,
@@ -144,6 +146,24 @@ internal fun InlineNappletStage(
     title: String,
     icon: String?,
     onOpen: () -> Unit,
+) = InlineNappletStage(coordinate, title, icon, onOpen) { instanceId, onStatus, modifier ->
+    InlineNappletSurface(manifest, instanceId, onStatus, modifier)
+}
+
+/**
+ * Where an app runs inside its note: a poster with Run here until the user starts it, then the
+ * app itself ([surface]) under a bar the page can't draw over (what runs, Open, Stop). A napplet may
+ * use what the user already granted it; anything that needs the user is refused and shown as a
+ * request to Open it, where the question can be asked. Scrolling the note away stops it.
+ * [coordinate] keys the last frame kept as its poster.
+ */
+@Composable
+internal fun InlineNappletStage(
+    coordinate: String,
+    title: String,
+    icon: String?,
+    onOpen: () -> Unit,
+    surface: InlineSurface,
 ) {
     val card = remember { newId() }
     val live by InlineNappletRuns.live.collectAsState()
@@ -163,7 +183,7 @@ internal fun InlineNappletStage(
         }
         Box(Modifier.fillMaxWidth().aspectRatio(STAGE_RATIO), contentAlignment = Alignment.Center) {
             if (running) {
-                LiveRun(manifest, title, onOpen = {
+                LiveRun(surface, title, onOpen = {
                     InlineNappletRuns.stop(card)
                     onOpen()
                 })
@@ -203,7 +223,7 @@ private fun LiveBar(
 
 @Composable
 private fun LiveRun(
-    manifest: NappletManifest,
+    surface: InlineSurface,
     title: String,
     onOpen: () -> Unit,
 ) {
@@ -214,12 +234,12 @@ private fun LiveRun(
     val asked by remember(instanceId) { NappletInlineAsks.shared.asked(instanceId) }.collectAsState(false)
     DisposableEffect(instanceId) { onDispose { NappletInlineAsks.shared.forget(instanceId) } }
 
-    InlineNappletSurface(manifest, instanceId, onStatus = { status = it }, modifier = Modifier.fillMaxSize())
+    surface(instanceId, { status = it }, Modifier.fillMaxSize().swallowTaps())
 
     when (status) {
         // Opaque, so it also covers the surface before the page's first frame.
         InlineNappletStatus.LOADING ->
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().swallowTaps().background(MaterialTheme.colorScheme.surfaceContainer), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(Modifier.size(32.dp))
             }
         InlineNappletStatus.FAILED ->
@@ -278,3 +298,22 @@ private fun Poster(
         }
     }
 }
+
+/**
+ * A tap on a running app is the app's, whether it reached the page or not (it is still loading,
+ * say): it must never open the note around it. Presses and releases are consumed in the
+ * [PointerEventPass.Initial] pass, before the note's click detector looks at them, so the note
+ * neither opens nor takes the keyboard (Space would then open it); the surface below forwards
+ * them to the page all the same. Movement is left alone, so the feed still scrolls.
+ */
+private fun Modifier.swallowTaps(): Modifier =
+    pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                event.changes.forEach {
+                    if (it.changedToDownIgnoreConsumed() || it.changedToUpIgnoreConsumed()) it.consume()
+                }
+            }
+        }
+    }

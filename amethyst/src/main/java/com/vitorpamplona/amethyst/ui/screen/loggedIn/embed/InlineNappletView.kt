@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
 import android.os.Build
+import android.os.Bundle
 import androidx.annotation.RequiresApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -59,19 +60,36 @@ fun InlineNappletView(
     modifier: Modifier,
 ) {
     val context = LocalContext.current
+    InlineNappletView(manifest, instanceId, onStatus, modifier) { NappletLauncher.buildInlineLaunchParams(context, manifest, instanceId) }
+}
+
+/**
+ * [InlineNappletView] for any app a note runs: [launchParams] builds its sandbox launch (null when
+ * refused), once per [key].
+ */
+@RequiresApi(Build.VERSION_CODES.R)
+@Composable
+fun InlineNappletView(
+    key: Any,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    launchParams: () -> Bundle?,
+) {
+    val context = LocalContext.current
     val background = MaterialTheme.colorScheme.background.toArgb()
     val status = rememberUpdatedState(onStatus)
 
     val controller =
-        remember(manifest, instanceId) {
-            NappletLauncher.buildInlineLaunchParams(context, manifest, instanceId)?.let { params ->
+        remember(key, instanceId) {
+            launchParams()?.let { params ->
                 params.putInt(NappletHostContract.EXTRA_BG_COLOR, background)
                 EmbeddedNostrAppController(context.applicationContext, params)
             }
         }
 
     if (controller == null) {
-        LaunchedEffect(manifest, instanceId) { status.value(InlineNappletStatus.FAILED) }
+        LaunchedEffect(key, instanceId) { status.value(InlineNappletStatus.FAILED) }
         return
     }
 

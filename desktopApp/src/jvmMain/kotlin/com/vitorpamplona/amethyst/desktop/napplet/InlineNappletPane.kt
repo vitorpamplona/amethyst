@@ -73,12 +73,27 @@ fun InlineNappletPane(
     instanceId: String,
     onStatus: (InlineNappletStatus) -> Unit,
     modifier: Modifier,
+) = InlineNappletPane(host, favoriteCoordinateOf(manifest as Event), instanceId, onStatus, modifier) { host.openInline(manifest, instanceId) }
+
+/**
+ * [InlineNappletPane] for any app a note runs: [open] starts its off-screen session, and the last
+ * frame is kept as the poster under [posterKey].
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun InlineNappletPane(
+    host: DesktopNappletHost,
+    posterKey: String,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier,
+    open: () -> Result<CefNappletSession>,
 ) {
     val status by rememberUpdatedState(onStatus)
     var session by remember { mutableStateOf<CefNappletSession?>(null) }
 
-    DisposableEffect(host, manifest, instanceId) {
-        val opened = host.openInline(manifest, instanceId).getOrNull()
+    DisposableEffect(host, posterKey, instanceId) {
+        val opened = open().getOrNull()
         session = opened
         if (opened == null) status(InlineNappletStatus.FAILED)
         onDispose {
@@ -86,7 +101,7 @@ fun InlineNappletPane(
                 opened.offscreen
                     ?.frame
                     ?.value
-                    ?.let { InlineNappletPosters.put(favoriteCoordinateOf(manifest as Event), it) }
+                    ?.let { InlineNappletPosters.put(posterKey, it) }
                 host.closeInline(opened)
             }
             session = null
