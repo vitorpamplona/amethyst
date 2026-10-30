@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
@@ -123,6 +124,8 @@ import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.SignerConsent
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
+import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
+import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
 import androidx.compose.material3.Icon as VectorIcon
 
 /**
@@ -156,9 +159,14 @@ private fun NappletWindow(
         title = session.launch.title,
         icon = IconResources.adaptedBitmapPainter,
     ) {
+        // macOS: the title bar turns transparent over the toolbar, as on the main window.
+        frameScope?.applyNativeWindowChrome()
+
         val state by session.state.collectAsState()
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            Column(Modifier.fillMaxSize()) {
+            // The toolbar starts below the traffic lights; full screen has no title bar.
+            val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
+            Column(Modifier.fillMaxSize().padding(top = titleBar)) {
                 // The trusted chrome, drawn by Amethyst above the page, which can't draw over it.
                 SandboxToolbar(session, host, onAccessInfo = { showAccess = true })
                 HorizontalDivider()
