@@ -74,8 +74,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
-import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoSession
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
@@ -391,7 +391,7 @@ fun DesktopVideoPlayer(
             if (errorReason != null) {
                 var chromiumFailed by remember(url) { mutableStateOf(false) }
                 // What the native engine can't decode (WebM on macOS) may still play in Chromium.
-                if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumVideoSession.canTry(url)) {
+                if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumMediaSession.canTry(url)) {
                     ChromiumVideoPane(
                         chromium,
                         url,
@@ -488,10 +488,10 @@ fun DesktopVideoPlayer(
 
 /**
  * A video [ChromiumVideoRoute] sends to Chromium: never opened by [GlobalMediaPlayer], so a feed of
- * WebM on macOS no longer waits on each one to fail. The card shows its poster until it plays: the
- * one in the middle of a feed that plays videos on its own, or one the user pressed play on. A
- * playing feed card pauses when another takes the middle, and leaving the screen closes its page.
- * Chromium's own controls drive it once it plays.
+ * WebM on macOS no longer waits on each one to fail. The card opens its page paused once it has
+ * been on screen a moment, and plays when it takes the middle of a feed that plays videos on its
+ * own, or when the user presses play. A playing feed card pauses when another takes the middle, and
+ * leaving the screen closes its page. Chromium's own controls drive it once it is open.
  */
 @Composable
 private fun ChromiumRoutedVideo(
@@ -525,10 +525,25 @@ private fun ChromiumRoutedVideo(
     val tracksVisibility = autoPlayWhenVisible || pauseWhenHidden
     val (visibilityModifier, isWinner) =
         if (tracksVisibility) rememberVideoVisibilityWinner(url) else Modifier to remember { mutableStateOf(true) }
-    // A feed card starts once it first takes the middle, and keeps its page while on screen.
-    var started by remember(url) { mutableStateOf(false) }
-    if (!started && loaded && (chosen || (autoPlayWhenVisible && isWinner.value))) started = true
-    val playing = chosen || !tracksVisibility || isWinner.value
+    val playing = loaded && (chosen || (autoPlayWhenVisible && isWinner.value))
+
+    // The page opens paused once the card has stayed on screen a moment (so a fling past it opens
+    // nothing), as the feed opens native engines ahead: play then only has to resume it. It stays
+    // open while the card is on screen.
+    var onScreen by remember { mutableStateOf(false) }
+    var prepared by remember(url) { mutableStateOf(false) }
+    LaunchedEffect(loaded, onScreen) {
+        if (loaded && onScreen && !prepared) {
+            delay(CARD_ENGINE_DELAY_MS)
+            prepared = true
+        }
+    }
+    if (playing) prepared = true
+    val onScreenModifier =
+        Modifier.onGloballyPositioned { coordinates ->
+            val shown = coordinates.boundsInWindow()
+            onScreen = coordinates.isAttached && shown.width > 0f && shown.height > 0f
+        }
 
     val targetRatio =
         measured
@@ -539,7 +554,7 @@ private fun ChromiumRoutedVideo(
             ?: (16f / 9f)
     val ratio by animateFloatAsState(targetValue = targetRatio, animationSpec = tween(durationMillis = 200), label = "videoShape")
 
-    BoxWithConstraints(modifier = modifier.then(visibilityModifier), contentAlignment = Alignment.TopCenter) {
+    BoxWithConstraints(modifier = modifier.then(visibilityModifier).then(onScreenModifier), contentAlignment = Alignment.TopCenter) {
         val desiredHeight = maxWidth / ratio
         val height = if (constraints.hasBoundedHeight) minOf(desiredHeight, maxHeight) else desiredHeight
         val width = (height * ratio).coerceIn(minOf(MinControlsWidth, maxWidth), maxWidth)
@@ -554,7 +569,7 @@ private fun ChromiumRoutedVideo(
         ) {
             when {
                 failed -> PlaybackErrorMessage(url = url, reason = stringRes(Res.string.error_video_playback_failed))
-                started ->
+                prepared ->
                     ChromiumVideoPane(
                         engine,
                         url,

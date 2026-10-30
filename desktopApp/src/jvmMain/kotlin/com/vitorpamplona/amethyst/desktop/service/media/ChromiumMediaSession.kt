@@ -65,8 +65,9 @@ import java.util.concurrent.TimeUnit
 import javax.swing.SwingUtilities
 
 /**
- * A video the native engine could not decode, played by the app's Chromium instead: a page with a
- * `<video>` in an off-screen browser, whose frames [view] hands to the note like an in-note napplet's.
+ * A video or audio file the native engines can't decode, played by the app's Chromium instead: a
+ * page with a `<video>` (or, for [audioOnly], an `<audio>`) in an off-screen browser. A video's
+ * frames [view] hands to the note like an in-note napplet's; [clock] reports where either is.
  *
  * Chromium decodes VP8, VP9, AV1, Opus, Vorbis, FLAC and MP3 (no H.264, HEVC or AAC), which covers
  * what AVFoundation on macOS can't play: WebM. The page and the video are served from an internal
@@ -74,12 +75,23 @@ import javax.swing.SwingUtilities
  * (Tor or not) and land in the same disk cache as the native engine's; Chromium itself never reaches
  * the network for it.
  */
-class ChromiumVideoSession(
+class ChromiumMediaSession(
     private val engine: DesktopCefEngine,
     private val url: String,
     /** Whether the video starts without sound, as the app's own player would. */
     private val muted: Boolean,
+    private val audioOnly: Boolean = false,
+    /** Where it starts, in milliseconds. */
+    private val startMillis: Long = 0L,
 ) {
+    data class Clock(
+        val currentMillis: Long = 0L,
+        val durationMillis: Long = 0L,
+        val paused: Boolean = true,
+        val waiting: Boolean = true,
+        val ended: Boolean = false,
+    )
+
     sealed interface State {
         data object Loading : State
 
@@ -100,6 +112,9 @@ class ChromiumVideoSession(
     /** The video's width over its height, once Chromium has read it. */
     val ratio: StateFlow<Float?> = mutableRatio.asStateFlow()
 
+    private val mutableClock = MutableStateFlow(Clock())
+    val clock: StateFlow<Clock> = mutableClock.asStateFlow()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lifecycle = Any()
     private var client: CefClient? = null
@@ -117,7 +132,7 @@ class ChromiumVideoSession(
                 synchronized(lifecycle) {
                     if (closed) return@launch
                     val client = app.createClient()
-                    this@ChromiumVideoSession.client = client
+                    this@ChromiumMediaSession.client = client
                     installHandlers(client)
                     browser =
                         OffscreenCefBrowser(client, PAGE_URL, null, FRAME_RATE, view).also {
@@ -199,6 +214,7 @@ class ChromiumVideoSession(
                 ): Boolean {
                     when {
                         message.startsWith(PLAYING) -> mutableState.value = State.Playing
+                        message.startsWith(CLOCK) -> parseClock(message.removePrefix(CLOCK))?.let { mutableClock.value = it }
                         message.startsWith(SIZE) -> {
                             val (w, h) =
                                 message
@@ -225,8 +241,33 @@ class ChromiumVideoSession(
      * the screen. The first click already gave the page the user's go-ahead, so it may play again.
      */
     fun setPlaying(playing: Boolean) {
+        wantsPlaying = playing
         val browser = synchronized(lifecycle) { browser } ?: return
-        browser.executeJavaScript(if (playing) "document.getElementById('v').play().catch(()=>{});" else "document.getElementById('v').pause();", PAGE_URL, 0)
+        browser.executeJavaScript("window.setWanted($playing);", PAGE_URL, 0)
+    }
+
+    // Whether the video should play once the page has it; the page reads it when it is served.
+    @Volatile private var wantsPlaying = true
+
+    private fun parseClock(fields: String): Clock? {
+        val parts = fields.trim().split(' ')
+        if (parts.size < 5) return null
+        val current = parts[0].toDoubleOrNull() ?: return null
+        val duration = parts[1].toDoubleOrNull()?.takeIf { it.isFinite() } ?: 0.0
+        return Clock((current * 1000).toLong(), (duration * 1000).toLong(), parts[2] == "1", parts[3] == "1", parts[4] == "1")
+    }
+
+    /** Moves to [millis] from the start. */
+    fun seekTo(millis: Long) = run("v.currentTime=${millis / 1000.0};")
+
+    /** [volume] from 0 to 1. */
+    fun setVolume(volume: Float) = run("v.volume=${volume.coerceIn(0f, 1f)};v.muted=false;")
+
+    fun setRate(rate: Float) = run("v.playbackRate=$rate;")
+
+    private fun run(script: String) {
+        val browser = synchronized(lifecycle) { browser } ?: return
+        browser.executeJavaScript("(function(){const v=document.getElementById('v');$script})();", PAGE_URL, 0)
     }
 
     private fun clickToStart() {
@@ -246,7 +287,7 @@ class ChromiumVideoSession(
                 request: CefRequest,
             ): CefResourceHandler =
                 when (request.url) {
-                    PAGE_URL -> PageHandler(page(muted))
+                    PAGE_URL -> PageHandler(page(muted, wantsPlaying, if (audioOnly) "audio" else "video", startMillis))
                     MEDIA_URL -> RelayedMediaHandler()
                     else -> PageHandler(null)
                 }
@@ -443,12 +484,13 @@ class ChromiumVideoSession(
     }
 
     companion object {
-        private const val TAG = "ChromiumVideoSession"
+        private const val TAG = "ChromiumMediaSession"
         private const val FRAME_RATE = 30
         private const val MIN_CHUNK = 64 * 1024
         private const val PLAYING = "amethyst-video-playing"
         private const val FAILED = "amethyst-video-failed"
         private const val SIZE = "amethyst-video-size"
+        private const val CLOCK = "amethyst-media-clock"
 
         private val ORIGIN = "https://video.${NappletWebContract.HOST}"
         private val PAGE_URL = "$ORIGIN/"
@@ -473,9 +515,16 @@ class ChromiumVideoSession(
 
         /**
          * A black page with the video and Chromium's own controls. A transparent layer over it takes
-         * the first click (see clickToStart), starts the video with or without sound, and goes away.
+         * the first click (see clickToStart), sets the sound, starts the video if it is [wanted] by
+         * then, and goes away. A page opened ahead of time ([wanted] false) buffers and shows its
+         * first frame until setWanted(true).
          */
-        private fun page(muted: Boolean): ByteArray =
+        private fun page(
+            muted: Boolean,
+            wanted: Boolean,
+            tag: String,
+            startMillis: Long,
+        ): ByteArray =
             """
             <!doctype html><meta charset="utf-8">
             <style>
@@ -483,18 +532,36 @@ class ChromiumVideoSession(
               video{width:100%;height:100%;object-fit:contain;display:block}
               #start{position:fixed;inset:0;z-index:1}
             </style>
-            <video id="v" controls playsinline preload="auto" src="/media"></video>
+            <$tag id="v" controls playsinline preload="auto" src="/media"></$tag>
             <div id="start"></div>
             <script>
               const v = document.getElementById('v');
               const start = document.getElementById('start');
               v.addEventListener('playing', () => console.log('$PLAYING'));
-              v.addEventListener('loadedmetadata', () => console.log('$SIZE ' + v.videoWidth + ' ' + v.videoHeight));
+              v.addEventListener('loadedmetadata', () => {
+                if ($startMillis > 0) v.currentTime = ${startMillis / 1000.0};
+                console.log('$SIZE ' + (v.videoWidth || 0) + ' ' + (v.videoHeight || 0));
+              });
+              let waiting = true;
+              const clock = () => console.log('$CLOCK ' + v.currentTime + ' ' + v.duration + ' ' + (v.paused ? 1 : 0) + ' ' + (waiting ? 1 : 0) + ' ' + (v.ended ? 1 : 0));
+              v.addEventListener('waiting', () => { waiting = true; clock(); });
+              v.addEventListener('playing', () => { waiting = false; clock(); });
+              v.addEventListener('canplay', () => { waiting = false; clock(); });
+              ['timeupdate', 'durationchange', 'pause', 'play', 'ended', 'seeked'].forEach(e => v.addEventListener(e, clock));
               v.addEventListener('error', () => console.log('$FAILED ' + (v.error ? v.error.code + ' ' + v.error.message : '')));
+              let wanted = $wanted;
+              let activated = false;
+              const go = () => v.play().catch(e => { v.muted = true; v.play().catch(() => {}); });
+              window.setWanted = (w) => {
+                wanted = w;
+                if (!activated) return;
+                if (w) go(); else v.pause();
+              };
               start.addEventListener('click', () => {
                 start.remove();
+                activated = true;
                 v.muted = $muted;
-                v.play().catch(e => { v.muted = true; v.play().catch(() => {}); });
+                if (wanted) go();
               });
             </script>
             """.trimIndent().toByteArray()

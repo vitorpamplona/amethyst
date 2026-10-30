@@ -46,7 +46,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopCefEngine
-import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoSession
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import java.awt.event.MouseEvent
 import kotlin.math.roundToInt
 
@@ -54,7 +54,7 @@ import kotlin.math.roundToInt
 val LocalChromiumVideoEngine = staticCompositionLocalOf<DesktopCefEngine?> { null }
 
 /**
- * Plays [url] in the app's Chromium ([ChromiumVideoSession]) and draws its frames here, with
+ * Plays [url] in the app's Chromium ([ChromiumMediaSession]) and draws its frames here, with
  * Chromium's own video controls, which get the pointer. [onFailed] reports a video Chromium can't
  * play either. Leaving the composition closes the page and stops the video.
  */
@@ -71,7 +71,7 @@ fun ChromiumVideoPane(
 ) {
     val failed by rememberUpdatedState(onFailed)
     val started by rememberUpdatedState(onPlaying)
-    val session = remember(engine, url) { ChromiumVideoSession(engine, url, muted) }
+    val session = remember(engine, url) { ChromiumMediaSession(engine, url, muted) }
     DisposableEffect(session) {
         session.open()
         onDispose { session.close() }
@@ -80,9 +80,9 @@ fun ChromiumVideoPane(
     val state by session.state.collectAsState()
     LaunchedEffect(state) {
         when (state) {
-            is ChromiumVideoSession.State.Failed -> failed()
-            ChromiumVideoSession.State.Playing -> started()
-            ChromiumVideoSession.State.Loading -> {}
+            is ChromiumMediaSession.State.Failed -> failed()
+            ChromiumMediaSession.State.Playing -> started()
+            ChromiumMediaSession.State.Loading -> {}
         }
     }
     val ratio by session.ratio.collectAsState()

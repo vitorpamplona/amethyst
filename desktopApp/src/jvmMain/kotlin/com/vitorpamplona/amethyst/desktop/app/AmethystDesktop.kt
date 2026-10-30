@@ -209,6 +209,8 @@ fun main(args: Array<String>) {
 
     // Napplets (NIP-5D) run in a sandboxed Chromium, started the first time one opens.
     val nappletHost = DesktopNappletHost(modules)
+    // Audio the audio engine can't decode (WebM, Ogg) plays in the same Chromium.
+    GlobalMediaPlayer.chromiumEngine = nappletHost.engine
 
     // A crash or a kill comes through here; a quit has shut Chromium down already (below).
     Runtime.getRuntime().addShutdownHook(

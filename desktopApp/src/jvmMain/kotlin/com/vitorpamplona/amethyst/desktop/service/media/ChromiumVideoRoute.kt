@@ -27,7 +27,8 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Which videos skip the native engine and play in Chromium ([ChromiumVideoSession]) from the start.
+ * Which videos and audio files skip the native engines and play in Chromium ([ChromiumMediaSession])
+ * from the start.
  *
  * The native engine takes several seconds to give up on a video it can't decode (on macOS the
  * player library polls for a frame size for 5 s before it reports the error), and a feed of such
@@ -36,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap
  *   decodes neither.
  * - Any video the native engine failed on here and Chromium then played. Those are remembered on
  *   disk, so a failure is paid once per video, not once per scroll.
+ * - Audio in WebM or Ogg, on every OS ([prefersChromiumAudio]): the audio engine decodes no Opus.
  */
 object ChromiumVideoRoute {
     private const val TAG = "ChromiumVideoRoute"
@@ -45,6 +47,12 @@ object ChromiumVideoRoute {
 
     private val CHROMIUM_TYPES = setOf("video/webm", "audio/webm", "video/ogg", "audio/ogg")
     private val CHROMIUM_EXTENSIONS = setOf("webm", "ogv")
+
+    // The audio engine (Rodio) has no Opus decoder on any OS, and WebM and Ogg audio are mostly Opus.
+    private val CHROMIUM_AUDIO_TYPES = setOf("audio/webm", "audio/ogg", "audio/opus", "video/webm")
+    private val CHROMIUM_AUDIO_EXTENSIONS = setOf("webm", "weba", "ogg", "oga", "opus")
+
+    private val declaredAudio = ConcurrentHashMap.newKeySet<String>()
 
     private val declared = ConcurrentHashMap.newKeySet<String>()
 
@@ -58,8 +66,15 @@ object ChromiumVideoRoute {
 
     /** Whether [url] goes to Chromium without trying the native engine first. */
     fun prefersChromium(url: String): Boolean {
-        if (!ChromiumVideoSession.canTry(url)) return false
+        if (!ChromiumMediaSession.canTry(url)) return false
         if (PlatformInfo.isMacOS && (url in declared || extensionOf(url) in CHROMIUM_EXTENSIONS)) return true
+        return synchronized(learned) { url in learned }
+    }
+
+    /** Whether the audio [url] plays in Chromium rather than the audio engine, on every OS. */
+    fun prefersChromiumAudio(url: String): Boolean {
+        if (!ChromiumMediaSession.canTry(url)) return false
+        if (url in declaredAudio || extensionOf(url) in CHROMIUM_AUDIO_EXTENSIONS) return true
         return synchronized(learned) { url in learned }
     }
 
@@ -68,7 +83,9 @@ object ChromiumVideoRoute {
         url: String,
         mimeType: String?,
     ) {
-        if (mimeType?.substringBefore(';')?.trim()?.lowercase() in CHROMIUM_TYPES) declared.add(url)
+        val type = mimeType?.substringBefore(';')?.trim()?.lowercase() ?: return
+        if (type in CHROMIUM_TYPES) declared.add(url)
+        if (type in CHROMIUM_AUDIO_TYPES) declaredAudio.add(url)
     }
 
     /** The native engine failed on [url] and Chromium played it: send it to Chromium from now on. */

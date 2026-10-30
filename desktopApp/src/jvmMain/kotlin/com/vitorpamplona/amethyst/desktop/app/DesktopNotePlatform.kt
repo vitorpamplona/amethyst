@@ -212,6 +212,8 @@ object DesktopNotePlatform : NotePlatform {
                 // an MP4-family one that doesn't say (`.mp4`, `video/mp4`) has its track list read,
                 // because Blossom serves AAC uploads that way and the video engine can't open them
                 // ("Failed to retrieve video size").
+                // A WebM the note declares goes to Chromium, whatever its URL looks like.
+                ChromiumVideoRoute.declare(url, video?.mimeType)
                 val tracks = if (video != null && !isLive) rememberMediaTracks(url, video.mimeType, accountViewModel) else MediaTracks.UNKNOWN
                 val isAudio =
                     video != null && !isLive &&
@@ -233,8 +235,6 @@ object DesktopNotePlatform : NotePlatform {
                     CapturedVideoStill(url, video?.artworkUri, isLive, accountViewModel, ratio, content.blurhash, content.thumbhash, shape, content.description)
                     return
                 }
-                // A WebM the note declares goes to Chromium on macOS, whatever its URL looks like.
-                ChromiumVideoRoute.declare(url, video?.mimeType)
                 DesktopVideoPlayer(
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),
