@@ -48,6 +48,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -92,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.resources.poll_unable_to_vote
 import com.vitorpamplona.amethyst.commons.resources.read_only_user
 import com.vitorpamplona.amethyst.commons.resources.zaps
 import com.vitorpamplona.amethyst.commons.service.ZapPaymentHandler
+import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.components.toasts.StringToastMsg
@@ -261,19 +263,25 @@ fun ZapPollNote(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val pollViewModel: PollNoteViewModel = rememberViewModel(key = "PollNoteViewModel${baseNote.idHex}") { PollNoteViewModel() }
+    // A store per card: in the screen's store, every poll scrolled past kept its model (holding the
+    // note and the account) until the screen was popped, which for Home is never.
+    key(baseNote.idHex) {
+        ScopedViewModelStore {
+            val pollViewModel: PollNoteViewModel = rememberViewModel(key = "PollNoteViewModel${baseNote.idHex}") { PollNoteViewModel() }
 
-    pollViewModel.init(accountViewModel.account)
-    pollViewModel.load(baseNote)
+            pollViewModel.init(accountViewModel.account)
+            pollViewModel.load(baseNote)
 
-    ZapPollNote(
-        baseNote = baseNote,
-        pollViewModel = pollViewModel,
-        canPreview = canPreview,
-        backgroundColor = backgroundColor,
-        accountViewModel = accountViewModel,
-        nav = nav,
-    )
+            ZapPollNote(
+                baseNote = baseNote,
+                pollViewModel = pollViewModel,
+                canPreview = canPreview,
+                backgroundColor = backgroundColor,
+                accountViewModel = accountViewModel,
+                nav = nav,
+            )
+        }
+    }
 }
 
 @Composable

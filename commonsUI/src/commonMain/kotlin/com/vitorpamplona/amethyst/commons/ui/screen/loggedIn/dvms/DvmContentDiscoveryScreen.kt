@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.service.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.ReusableZapButton
+import com.vitorpamplona.amethyst.commons.ui.components.ScopedViewModelStore
 import com.vitorpamplona.amethyst.commons.ui.components.ZapButtonConfig
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.FeedEmpty
@@ -266,17 +268,23 @@ fun PrepareViewContentDiscoveryModels(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val resultFeedViewModel: DvmContentDiscoveryFeedViewModel =
-        rememberViewModel(
-            key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
-            factory = DvmContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
-        )
+    // Every refresh is a new request id: a store per request clears the previous request's feed
+    // model, which the screen's own store would otherwise keep, still collecting, until it is popped.
+    key(dvmRequestId) {
+        ScopedViewModelStore {
+            val resultFeedViewModel: DvmContentDiscoveryFeedViewModel =
+                rememberViewModel(
+                    key = "NostrNIP90ContentDiscoveryFeedViewModel${dvm.pubkeyHex}$dvmRequestId",
+                    factory = DvmContentDiscoveryFeedViewModel.Factory(accountViewModel.account, dvmKey = dvm.pubkeyHex, requestId = dvmRequestId),
+                )
 
-    LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
-        resultFeedViewModel.invalidateData()
+            LaunchedEffect(key1 = dvmRequestId, latestResponse.id) {
+                resultFeedViewModel.invalidateData()
+            }
+
+            RenderNostrDvmContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
+        }
     }
-
-    RenderNostrDvmContentDiscoveryScreen(resultFeedViewModel, onRefresh, accountViewModel, nav)
 }
 
 @Composable

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.feeds
 
+import androidx.collection.LruCache
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.pager.PagerState
@@ -29,7 +30,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.saveable.rememberSaveable
 import kotlin.math.roundToInt
 
-private val savedScrollStates = mutableMapOf<String, ScrollState>()
+// Bounded: a few keys are per note (a community's or follow pack's pager), so a plain map would
+// keep one entry for every one ever opened.
+private val savedScrollStates = LruCache<String, ScrollState>(200)
 
 private data class ScrollState(
     val index: Int,
@@ -124,7 +127,7 @@ fun rememberForeverLazyGridState(
         onDispose {
             val lastIndex = scrollState.firstVisibleItemIndex
             val lastOffset = scrollState.firstVisibleItemScrollOffset
-            savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
+            savedScrollStates.put(key, ScrollState(lastIndex, lastOffset.toFloat()))
         }
     }
     return scrollState
@@ -151,7 +154,7 @@ fun rememberForeverLazyListState(
         onDispose {
             val lastIndex = scrollState.firstVisibleItemIndex
             val lastOffset = scrollState.firstVisibleItemScrollOffset
-            savedScrollStates[key] = ScrollState(lastIndex, lastOffset.toFloat())
+            savedScrollStates.put(key, ScrollState(lastIndex, lastOffset.toFloat()))
         }
     }
     return scrollState
@@ -195,7 +198,7 @@ fun rememberForeverPagerState(
         onDispose {
             val lastIndex = scrollState.currentPage
             val lastOffset = scrollState.currentPageOffsetFraction
-            savedScrollStates[key] = ScrollState(lastIndex, lastOffset)
+            savedScrollStates.put(key, ScrollState(lastIndex, lastOffset))
         }
     }
 
