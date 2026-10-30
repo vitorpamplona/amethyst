@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletNotification
+import com.vitorpamplona.amethyst.commons.napplet.OutboxEvent
+import com.vitorpamplona.amethyst.commons.napplet.OutboxRelayPlan
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * The broker's reply to a [NappletRequest]. Crucially, **no variant ever carries private
@@ -59,6 +62,40 @@ sealed interface NappletResponse {
 
     /** `relay.subscribe` was authorized; the host now streams `relay.event`/`relay.eose` pushes. */
     data object Subscribed : NappletResponse
+
+    /** `outbox.getEvent`: the event, or null with an [error] (`"not found"`, …). */
+    data class OutboxFound(
+        val found: OutboxEvent?,
+        val incomplete: Boolean,
+        val error: String? = null,
+    ) : NappletResponse
+
+    /** `outbox.query`: deduplicated events, [incomplete] when some relay lists or relays failed. */
+    data class OutboxEvents(
+        val events: List<OutboxEvent>,
+        val incomplete: Boolean,
+    ) : NappletResponse
+
+    /**
+     * `outbox.publish`: the [event] the shell signed and where it went. [ok] is false, with an
+     * [error], when no relay took it or a required inbox could not be resolved.
+     */
+    data class OutboxPublished(
+        val ok: Boolean,
+        val event: Event?,
+        val relays: Map<String, Boolean>,
+        val error: String? = null,
+    ) : NappletResponse
+
+    /** `outbox.resolveRelays`. */
+    data class OutboxPlan(
+        val plan: OutboxRelayPlan,
+    ) : NappletResponse
+
+    /** `outbox.subscribe` was authorized on these [relays]; the host streams `outbox.event` pushes. */
+    data class OutboxSubscribed(
+        val relays: Set<NormalizedRelayUrl>,
+    ) : NappletResponse
 
     /** Result of a storage read; [value] is null when the key is absent. */
     data class StorageValue(

@@ -91,12 +91,13 @@ class NappletLiveSubscriptions<K : Any>(
 
         // Encrypted events that arrived while nobody was looking at the page, still encrypted: they are
         // decrypted and delivered when it is attended again. Touched only by the delivery coroutine.
-        val heldEncrypted = ArrayDeque<Event>()
+        val heldEncrypted = ArrayDeque<Delivery.RelayEvent>()
     }
 
     private sealed interface Delivery {
         data class RelayEvent(
             val event: Event,
+            val relay: NormalizedRelayUrl,
         ) : Delivery
 
         data object Eose : Delivery
@@ -113,6 +114,10 @@ class NappletLiveSubscriptions<K : Any>(
      * Opens [owner]'s live relay subscription [nappletSubId], streaming `relay.event`/`relay.eose`/
      * `relay.closed` envelopes to [push] as events arrive. Replaces any existing subscription [owner] has
      * under the same id. With no account/relays/filters it pushes a single empty EOSE to close it.
+     *
+     * An [outbox] subscription (NAP-OUTBOX) reads [relays], the ones the broker routed it to, and
+     * streams `outbox.event` (with the relay each event came from) and `outbox.closed` instead; it has
+     * no end-of-stored-events message.
      */
     fun open(
         owner: K,
@@ -120,12 +125,14 @@ class NappletLiveSubscriptions<K : Any>(
         filters: List<Filter>,
         account: Account?,
         arrivedAt: Long,
+        relays: Set<NormalizedRelayUrl>? = null,
+        outbox: Boolean = false,
         push: (String) -> Unit,
     ): Unit =
         synchronized(lock) {
             // Closed after this request arrived, or its surface is gone: the page doesn't want it.
             if (owner in gone || (closedAt[Key(owner, nappletSubId)] ?: Long.MIN_VALUE) > arrivedAt) return
-            openLocked(owner, nappletSubId, filters, account, push)
+            openLocked(owner, nappletSubId, filters, account, relays, outbox, push)
         }
 
     private fun openLocked(
@@ -133,13 +140,20 @@ class NappletLiveSubscriptions<K : Any>(
         nappletSubId: String,
         filters: List<Filter>,
         account: Account?,
+        routedRelays: Set<NormalizedRelayUrl>?,
+        outbox: Boolean,
         push: (String) -> Unit,
     ) {
-        val relays = account?.homeRelays?.flow?.value ?: emptySet()
+        val relays = routedRelays ?: account?.homeRelays?.flow?.value ?: emptySet()
         if (account == null || filters.isEmpty() || relays.isEmpty()) {
-            push(NappletProtocolJson.encodeRelayEose(nappletSubId))
+            push(if (outbox) NappletProtocolJson.encodeOutboxClosed(nappletSubId, "no relays") else NappletProtocolJson.encodeRelayEose(nappletSubId))
             return
         }
+
+        fun eventPush(
+            event: Event,
+            relay: NormalizedRelayUrl,
+        ) = if (outbox) NappletProtocolJson.encodeOutboxEvent(nappletSubId, event, listOf(relay.url)) else NappletProtocolJson.encodeRelayEvent(nappletSubId, event)
 
         val key = Key(owner, nappletSubId)
         liveSubs.remove(key)?.let(::stop)
@@ -162,21 +176,29 @@ class NappletLiveSubscriptions<K : Any>(
                             if (NappletRelayCleartext.isEncrypted(event) && !attendance.isAttended(owner)) {
                                 // Don't decrypt for a page nobody is watching: keep it (bounded) for later.
                                 if (sub.heldEncrypted.size >= MAX_HELD_ENCRYPTED) sub.heldEncrypted.removeFirst()
-                                sub.heldEncrypted.addLast(event)
+                                sub.heldEncrypted.addLast(delivery)
                             } else {
                                 NappletRelayCleartext.forDelivery(event, account.signer)?.let {
-                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                    push(eventPush(it, delivery.relay))
                                 }
                             }
                         }
                         Delivery.Attended ->
                             while (sub.heldEncrypted.isNotEmpty() && attendance.isAttended(owner)) {
-                                NappletRelayCleartext.forDelivery(sub.heldEncrypted.removeFirst(), account.signer)?.let {
-                                    push(NappletProtocolJson.encodeRelayEvent(nappletSubId, it))
+                                val held = sub.heldEncrypted.removeFirst()
+                                NappletRelayCleartext.forDelivery(held.event, account.signer)?.let {
+                                    push(eventPush(it, held.relay))
                                 }
                             }
-                        Delivery.Eose -> push(NappletProtocolJson.encodeRelayEose(nappletSubId))
-                        is Delivery.Closed -> push(NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason))
+                        Delivery.Eose -> if (!outbox) push(NappletProtocolJson.encodeRelayEose(nappletSubId))
+                        is Delivery.Closed ->
+                            push(
+                                if (outbox) {
+                                    NappletProtocolJson.encodeOutboxClosed(nappletSubId, delivery.reason)
+                                } else {
+                                    NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason)
+                                },
+                            )
                     }
                 }
             }
@@ -189,7 +211,7 @@ class NappletLiveSubscriptions<K : Any>(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    sub.deliveries.trySend(Delivery.RelayEvent(event))
+                    sub.deliveries.trySend(Delivery.RelayEvent(event, relay))
                 }
 
                 // A subscription fans out to several relays; collapse their EOSEs into the single

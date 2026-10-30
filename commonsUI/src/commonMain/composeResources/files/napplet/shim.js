@@ -47,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, actions = {}, identityHandlers = [], themeHandlers = [];
+  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -72,6 +72,17 @@
       pending[id] = { resolve: resolve, reject: reject };
     });
   }
+  // NAP-OUTBOX results carry their own outcome (`ok`, `error`, `incomplete`) for the napplet to read,
+  // so they resolve with the whole reply instead of rejecting on a failure.
+  function callResult(type, fields){
+    return new Promise(function(resolve){
+      var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k];
+      var id = send(env);
+      pending[id] = { resolve: resolve, reject: function(err){ resolve(err.napplet || { error: String(err && err.message || err) }); } };
+    });
+  }
+  // The named fields of a reply that are present, so an absent one is absent, not undefined.
+  function pick(m, keys){ var out = {}; keys.forEach(function(k){ if (m[k] !== undefined) out[k] = m[k]; }); return out; }
   // Fire-and-forget (no .result awaited), used for subscribe/unsubscribe.
   function post(type, fields){ var env = { type: type }; if (fields) for (var k in fields) env[k] = fields[k]; send(env); }
   function onIncoming(raw){
@@ -83,6 +94,12 @@
       if (msg.type === 'relay.event') { if (sub.onEvent) sub.onEvent(msg.result); }
       else if (msg.type === 'relay.eose') { if (sub.onEose) sub.onEose(); }
       else { delete subs[msg.subId]; if (sub.onClosed) sub.onClosed(msg.reason); }
+      return;
+    }
+    if (msg.type === 'outbox.event' || msg.type === 'outbox.closed') {
+      var osub = outboxSubs[msg.subId]; if (!osub) return;
+      if (msg.type === 'outbox.event') osub.event.slice().forEach(function(cb){ try { cb(msg.result); } catch (_) {} });
+      else { delete outboxSubs[msg.subId]; osub.closed.slice().forEach(function(cb){ try { cb(msg.reason); } catch (_) {} }); }
       return;
     }
     // keys.action push: the shell triggers a registered keyboard/command action.
@@ -177,6 +194,36 @@
         if (options && options.relay) env.relay = options.relay;
         post('relay.subscribe', env);
         return { close: function(){ delete subs[subId]; post('relay.close', { subId: subId }); } };
+      }
+    },
+    // NAP-OUTBOX: the shell finds each author's relays (NIP-65), reads and deduplicates, and fans a
+    // publish out to the user's write relays and the inboxes named. Results are NAP-OUTBOX's objects.
+    outbox: {
+      getEvent: function(eventId, options){
+        return callResult('outbox.getEvent', { eventId: eventId, options: options }).then(function(m){ return pick(m, ['result', 'incomplete', 'error']); });
+      },
+      query: function(filters, options){
+        return callResult('outbox.query', { filters: filters, options: options }).then(function(m){ var r = pick(m, ['events', 'incomplete', 'error']); r.events = r.events || []; return r; });
+      },
+      // A live stream: on('event', cb) gets each RelayEventResult, on('closed', cb) the end; close() stops it.
+      subscribe: function(filters, options){
+        var subId = 'o' + (seq++);
+        var sub = { event: [], closed: [] };
+        outboxSubs[subId] = sub;
+        post('outbox.subscribe', { subId: subId, filters: filters, options: options });
+        var handle = {
+          on: function(name, cb){ if (typeof cb === 'function' && sub[name]) sub[name].push(cb); return handle; },
+          close: function(){ if (!outboxSubs[subId]) return; delete outboxSubs[subId]; post('outbox.close', { subId: subId }); }
+        };
+        return handle;
+      },
+      publish: function(template, options){
+        return callResult('outbox.publish', { event: template, options: options }).then(function(m){
+          var r = pick(m, ['event', 'eventId', 'relays', 'error']); r.ok = m.ok === true; return r;
+        });
+      },
+      resolveRelays: function(target){
+        return callResult('outbox.resolveRelays', { target: target }).then(function(m){ return m.plan || { relays: [], source: 'policy' }; });
       }
     },
     storage: {

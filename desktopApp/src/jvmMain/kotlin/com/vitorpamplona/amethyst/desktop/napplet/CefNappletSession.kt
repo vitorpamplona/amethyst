@@ -487,7 +487,7 @@ class CefNappletSession(
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
-                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, ::send)
+                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, ::send)
                 is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId, arrivedAt)
                 // The inc bus is not offered on desktop (INC is not a supported NAP domain).
                 else -> {}

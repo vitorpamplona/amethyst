@@ -79,6 +79,13 @@ enum class NappletCapability {
 
     /** `inc` — a topic pub/sub bus between napplets/services (`inc.emit`/`inc.event`). */
     INC,
+
+    /**
+     * `outbox` — NIP-65 aware reads and writes: the shell finds each author's relays, queries them,
+     * deduplicates, and publishes shell-signed events to the user's write relays and to the inboxes
+     * the napplet names (NAP-OUTBOX).
+     */
+    OUTBOX,
     ;
 
     /**
@@ -131,11 +138,12 @@ enum class NappletCapability {
                 "storage" -> STORAGE
                 "resource" -> RESOURCE
                 "theme" -> THEME
+                "outbox" -> OUTBOX
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox")
     }
 }
 

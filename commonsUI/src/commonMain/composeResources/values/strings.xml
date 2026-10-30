@@ -4850,6 +4850,8 @@
     <string name="napplet_cap_identity_desc">Read your public key</string>
     <string name="napplet_cap_inc">Messaging</string>
     <string name="napplet_cap_inc_desc">Exchange messages with other napplets</string>
+    <string name="napplet_cap_outbox">Outbox</string>
+    <string name="napplet_cap_outbox_desc">Read people's posts from their own relays, and sign &amp; publish your events</string>
     <string name="napplet_cap_keys">Keyboard actions</string>
     <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
     <string name="napplet_cap_notify">Notifications</string>
@@ -4924,6 +4926,7 @@
     <string name="napplet_consent_publish_encrypted">This nApplet wants to send an encrypted event as you.</string>
     <string name="napplet_consent_publish_preview">This nApplet wants to sign and publish a kind %1$d event as you:</string>
     <string name="napplet_consent_query">This nApplet wants to read events from your relays.</string>
+    <string name="napplet_consent_outbox_read">This nApplet wants to read events from the relays of the people it asks about.</string>
     <string name="napplet_consent_resource">This nApplet wants to fetch a web resource.</string>
     <string name="napplet_consent_sign">This site wants to sign a kind %1$d event with your Nostr key.</string>
     <string name="napplet_consent_storage">This nApplet wants to use its private storage.</string>

@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.protocol
 
+import com.vitorpamplona.amethyst.commons.napplet.OutboxEvent
+import com.vitorpamplona.amethyst.commons.napplet.OutboxRelayPlan
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.int
@@ -35,6 +39,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
@@ -101,6 +106,38 @@ object NappletProtocolJson {
                 put("event", json.parseToJsonElement(event.toJson()))
             }
         }.toString()
+
+    /** An `outbox.event` push: the NAP-RELAY `RelayEventResult`, with the relays the event came from. */
+    fun encodeOutboxEvent(
+        subId: String,
+        event: Event,
+        relayHints: List<String>,
+    ): String =
+        buildJsonObject {
+            put("type", "outbox.event")
+            put("subId", subId)
+            put("result", relayEventResult(OutboxEvent(event, relayHints)))
+        }.toString()
+
+    /** An `outbox.closed` push: the shell ended the outbox subscription [subId]. */
+    fun encodeOutboxClosed(
+        subId: String,
+        reason: String?,
+    ): String =
+        buildJsonObject {
+            put("type", "outbox.closed")
+            put("subId", subId)
+            reason?.let { put("reason", it) }
+        }.toString()
+
+    /** NAP-RELAY's `RelayEventResult`: the event, and a sidecar naming where it was seen. */
+    private fun relayEventResult(found: OutboxEvent) =
+        buildJsonObject {
+            put("event", json.parseToJsonElement(found.event.toJson()))
+            if (found.relayHints.isNotEmpty()) {
+                putJsonObject("sidecar") { putJsonArray("relayHints") { found.relayHints.forEach { add(it) } } }
+            }
+        }
 
     /** A `relay.eose` push: signals end-of-stored-events for the subscription [subId]. */
     fun encodeRelayEose(subId: String): String =
@@ -180,6 +217,40 @@ object NappletProtocolJson {
                 )
             }
             "relay.query" -> NappletRequest.QueryEvents(decodeFilterList(o))
+            "outbox.getEvent" -> {
+                val options = o.options()
+                NappletRequest.OutboxGetEvent(o.req("eventId"), options?.str("author"), options?.strList("relays").orEmpty(), options?.long("timeoutMs"))
+            }
+            "outbox.query" -> {
+                val options = o.options()
+                NappletRequest.OutboxQuery(
+                    decodeFilterList(o),
+                    options?.strList("authors").orEmpty(),
+                    options?.strList("relays").orEmpty(),
+                    options?.get("limit")?.jsonPrimitive?.int,
+                    options?.long("timeoutMs"),
+                )
+            }
+            "outbox.subscribe" -> {
+                val options = o.options()
+                NappletRequest.OutboxSubscribe(decodeFilterList(o), options?.strList("authors").orEmpty(), options?.strList("relays").orEmpty())
+            }
+            "outbox.publish" -> {
+                val t = o.eventTemplate()
+                val options = o.options()
+                NappletRequest.OutboxPublish(
+                    NappletRequest.Publish(kind = t.kindOf(), tags = decodeTags(t), content = t.str("content") ?: ""),
+                    toOutbox = options?.get("toOutbox")?.jsonPrimitive?.booleanOrNull ?: true,
+                    toInboxes = options?.strList("toInboxes").orEmpty(),
+                    relays = options?.strList("relays").orEmpty(),
+                )
+            }
+            "outbox.resolveRelays" -> {
+                val target = o["target"]?.jsonObject
+                val authors = (target?.strList("authors").orEmpty() + listOfNotNull(target?.str("pubkey"))).distinct()
+                // An author's own relays are where they write; "read" asks for their inboxes.
+                NappletRequest.OutboxResolveRelays(authors, write = target?.str("direction") != "read")
+            }
             "relay.subscribe" -> NappletRequest.Subscribe(decodeFilterList(o))
             "nostr.signEvent" -> {
                 // NIP-07 signEvent: sign-only, honoring the app-supplied created_at (fallback: now).
@@ -253,6 +324,7 @@ object NappletProtocolJson {
         requestType: String,
         response: NappletResponse,
     ): String {
+        if (requestType.startsWith("outbox.")) outboxFailure(requestType, response)?.let { return it }
         if (requestType in setOf("resource.info", "resource.bytes", "resource.bytesMany")) {
             val failure =
                 when (response) {
@@ -412,6 +484,34 @@ object NappletProtocolJson {
                 is NappletResponse.Subscribed -> {
                     put("ok", true)
                 }
+                is NappletResponse.OutboxSubscribed -> {
+                    put("ok", true)
+                }
+                is NappletResponse.OutboxFound -> {
+                    response.found?.let { put("result", relayEventResult(it)) }
+                    if (response.incomplete) put("incomplete", true)
+                    response.error?.let { put("error", it) }
+                }
+                is NappletResponse.OutboxEvents -> {
+                    putJsonArray("events") { response.events.forEach { add(relayEventResult(it)) } }
+                    if (response.incomplete) put("incomplete", true)
+                }
+                is NappletResponse.OutboxPublished -> {
+                    put("ok", response.ok)
+                    response.event?.let {
+                        put("event", json.parseToJsonElement(it.toJson()))
+                        put("eventId", it.id)
+                    }
+                    putJsonObject("relays") { response.relays.forEach { (url, accepted) -> put(url, accepted) } }
+                    response.error?.let { put("error", it) }
+                }
+                is NappletResponse.OutboxPlan -> {
+                    putJsonObject("plan") {
+                        putJsonArray("relays") { response.plan.relays.forEach { add(it) } }
+                        put("source", response.plan.source.wire)
+                        if (response.plan.missingAuthors.isNotEmpty()) putJsonArray("missingAuthors") { response.plan.missingAuthors.forEach { add(it) } }
+                    }
+                }
                 is NappletResponse.Denied -> {
                     put("ok", false)
                     put("error", "denied")
@@ -432,11 +532,46 @@ object NappletProtocolJson {
         }.toString()
     }
 
+    /**
+     * An outbox request refused or failed, in NAP-OUTBOX's own result shape (`error` plus the fields
+     * the result always has), or null for any other response.
+     */
+    private fun outboxFailure(
+        requestType: String,
+        response: NappletResponse,
+    ): String? {
+        val error =
+            when (response) {
+                is NappletResponse.Denied -> "policy denied"
+                is NappletResponse.Unsupported -> "policy denied"
+                is NappletResponse.Failed -> response.reason
+                else -> return null
+            }
+        return buildJsonObject {
+            put("type", "$requestType.result")
+            when (requestType) {
+                "outbox.query" -> putJsonArray("events") {}
+                "outbox.publish" -> put("ok", false)
+                "outbox.resolveRelays" ->
+                    putJsonObject("plan") {
+                        putJsonArray("relays") {}
+                        put("source", OutboxRelayPlan.Source.POLICY.wire)
+                    }
+            }
+            put("error", error)
+        }.toString()
+    }
+
     /** Parses every Nostr filter from a `filters` array (each entry) or a single `filter` object. */
     fun decodeFilterList(envelopeJson: String): List<Filter> = decodeFilterList(json.parseToJsonElement(envelopeJson).jsonObject)
 
     private fun decodeFilterList(o: JsonObject): List<Filter> {
-        o["filters"]?.jsonArray?.let { arr -> return arr.map { decodeFilterObject(it.jsonObject) } }
+        when (val filters = o["filters"]) {
+            is JsonArray -> return filters.map { decodeFilterObject(it.jsonObject) }
+            // NAP-OUTBOX takes one filter or a list in the same field.
+            is JsonObject -> return listOf(decodeFilterObject(filters))
+            else -> {}
+        }
         o["filter"]?.jsonObject?.let { return listOf(decodeFilterObject(it)) }
         return emptyList()
     }
@@ -469,6 +604,10 @@ object NappletProtocolJson {
     }
 
     private fun JsonObject.str(key: String): String? = this[key]?.jsonPrimitive?.content
+
+    private fun JsonObject.long(key: String): Long? = this[key]?.jsonPrimitive?.longOrNull
+
+    private fun JsonObject.options(): JsonObject? = this["options"] as? JsonObject
 
     private fun JsonObject.req(key: String): String = getValue(key).jsonPrimitive.content
 

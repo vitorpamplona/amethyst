@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
 /**
  * The host-agnostic orchestration brain: turns one raw applet envelope into an [Outcome] a platform
@@ -44,10 +45,16 @@ object NappletRequestRouter {
             val response: NappletResponse? = null,
         ) : Outcome
 
-        /** Open a live relay subscription; the host streams `relay.event`/`relay.eose`/`relay.closed` by [subId]. */
+        /**
+         * Open a live relay subscription; the host streams `relay.event`/`relay.eose`/`relay.closed` by
+         * [subId], or, for an [outbox] one, `outbox.event`/`outbox.closed` on the [relays] the broker chose.
+         * Null [relays] means the account's own.
+         */
         data class OpenSubscription(
             val subId: String,
             val filters: List<Filter>,
+            val relays: Set<NormalizedRelayUrl>? = null,
+            val outbox: Boolean = false,
         ) : Outcome
 
         /** Stop the live subscription [subId] (fire-and-forget; no reply). */
@@ -87,7 +94,7 @@ object NappletRequestRouter {
 
         // Fire-and-forget edge ops that never reach the broker.
         when (requestType) {
-            "relay.close" -> {
+            "relay.close", "outbox.close" -> {
                 val subId = runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()
                 return if (subId != null) Outcome.CloseSubscription(subId) else Outcome.Ignore
             }
@@ -134,6 +141,17 @@ object NappletRequestRouter {
             } else {
                 // Not authorized → close it immediately with an empty EOSE.
                 Outcome.Push(listOf(NappletProtocolJson.encodeRelayEose(subId)))
+            }
+        }
+
+        if (requestType == "outbox.subscribe") {
+            val subId =
+                runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()
+                    ?: return Outcome.Ignore
+            return if (response is NappletResponse.OutboxSubscribed) {
+                Outcome.OpenSubscription(subId, runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList()), response.relays, outbox = true)
+            } else {
+                Outcome.Push(listOf(NappletProtocolJson.encodeOutboxClosed(subId, "policy denied")))
             }
         }
 
