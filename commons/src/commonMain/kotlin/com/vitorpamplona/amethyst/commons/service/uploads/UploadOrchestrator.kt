@@ -100,7 +100,7 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
-    ): UploadingState.UploadingFinalState = uploader.upload(this, uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingState.UploadingFinalState = settle(uploader.upload(this, uri, mimeType, alt, contentWarningReason, compressionQuality, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner))
 
     suspend fun uploadEncrypted(
         uri: MediaUri,
@@ -117,7 +117,17 @@ class UploadOrchestrator {
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
-    ): UploadingState.UploadingFinalState = uploader.uploadEncrypted(this, uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner)
+    ): UploadingState.UploadingFinalState = settle(uploader.uploadEncrypted(this, uri, mimeType, alt, contentWarningReason, compressionQuality, encrypt, server, account, useH265, stripMetadata, onStrippingFailed, convertGifToMp4, forcedSigner))
+
+    /**
+     * Shows [state] in [progressState] when the uploader returned it without reporting it (Android's
+     * Blossom path does, for a failure it catches), so the bar does not stay on Uploading and
+     * [MultiOrchestrator] sees the error.
+     */
+    private fun settle(state: UploadingState.UploadingFinalState): UploadingState.UploadingFinalState {
+        if (progressState.value !== state) updateState(if (state is UploadingState.Finished) 1.0 else 0.0, state)
+        return state
+    }
 
     sealed class OrchestratorResult {
         class ServerResult(

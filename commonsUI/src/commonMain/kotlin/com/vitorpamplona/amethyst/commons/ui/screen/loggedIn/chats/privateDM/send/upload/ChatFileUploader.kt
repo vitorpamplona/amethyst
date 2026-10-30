@@ -53,14 +53,13 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         if (viewState.encryptFiles) {
-            val cipher = AESGCM()
-
             val results =
                 orchestrator.uploadEncrypted(
                     viewState.caption,
                     viewState.contentWarningReason,
                     CompressorQuality.fromSlider(viewState.mediaQualitySlider),
-                    cipher,
+                    // A fresh key and nonce per file: an AESGCM seals only one message.
+                    { AESGCM() },
                     viewState.selectedServer,
                     account,
                     uploader,
@@ -70,10 +69,10 @@ class ChatFileUploader(
 
             if (results.allGood) {
                 val list =
-                    results.successful.mapNotNull { state ->
-                        val uploaded = state.result
+                    results.successful.mapNotNull { upload ->
+                        val uploaded = upload.finished.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, cipher)
+                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
                         } else {
                             null
                         }
@@ -83,7 +82,7 @@ class ChatFileUploader(
                 viewState.reset()
             } else {
                 val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                val allAvifMetadata = results.errors.all { it.errorResource == Res.string.avif_metadata_strip_failed }
+                val allAvifMetadata = results.errors.isNotEmpty() && results.errors.all { it.errorResource == Res.string.avif_metadata_strip_failed }
 
                 if (allAvifMetadata) {
                     // AVIF strip refusal is a pre-encryption check — "retry without encryption" wouldn't help.
@@ -105,6 +104,12 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.finishUpload()
     }
 
+    /**
+     * Uploads the picked files in plaintext. Files that already went up encrypted (an encrypted
+     * attempt that partly failed, then a retry without encryption) are not sent again: they are
+     * handed to [onceUploaded] with their ciphers, and only the rest go up in plaintext. Only a
+     * NIP-17 chat can encrypt, so a plaintext-only chat never has any.
+     */
     suspend fun justUploadNIP17Unencrypted(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
@@ -125,9 +130,19 @@ class ChatFileUploader(
                 uploader,
                 stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
+                keepEncrypted = true,
             )
 
         if (results.allGood) {
+            val sealed =
+                results.keptEncrypted.mapNotNull { upload ->
+                    val uploaded = upload.finished.result
+                    if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
+                    } else {
+                        null
+                    }
+                }
             val list =
                 results.successful.mapNotNull { state ->
                     val uploaded = state.result
@@ -138,7 +153,7 @@ class ChatFileUploader(
                     }
                 }
 
-            onceUploaded(list)
+            onceUploaded(sealed + list)
             viewState.reset()
         } else {
             val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
