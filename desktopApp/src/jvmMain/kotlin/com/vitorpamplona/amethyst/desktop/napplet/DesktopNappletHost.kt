@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumMediaSession
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -282,6 +283,8 @@ class DesktopNappletHost(
     fun shutdown() {
         sessions.value.forEach(::close)
         inlineSessions.value.forEach(::closeInline)
+        // Videos and audio that play in Chromium (they aren't napplets, but share its engine).
+        ChromiumMediaSession.closeAll()
         runtime.engine.shutdown()
     }
 

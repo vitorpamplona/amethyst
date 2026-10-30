@@ -61,6 +61,7 @@ import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import java.io.InputStream
 import java.net.Proxy
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import javax.swing.SwingUtilities
 
@@ -129,6 +130,7 @@ class ChromiumMediaSession(
         // Nothing lays an audio page out: without a size of its own it is 1 x 1 pixels, and the
         // click that lets it play with sound would land outside it (see clickToStart).
         if (audioOnly) view.resize(AUDIO_PAGE_SIZE, AUDIO_PAGE_SIZE, 1.0)
+        open += this
         scope.launch {
             try {
                 val app = engine.app()
@@ -358,6 +360,7 @@ class ChromiumMediaSession(
         private var chunkOffset = 0
         private var ended = false
         private var cancelled = false
+        private var reading = false
         private var range: String? = null
         private var delivered = 0L
 
@@ -437,6 +440,13 @@ class ChromiumMediaSession(
                     cancel()
                     return false
                 }
+                // Asked again before the last read came back: one stream can't take two reads at once.
+                if (reading) {
+                    Log.i(TAG) { "media ${range ?: "whole"} asked again mid-read after $delivered bytes" }
+                    bytesRead.set(0)
+                    return true
+                }
+                reading = true
             }
             // Nothing read ahead: read the next chunk off this thread, and have Chromium ask again.
             scope.launch {
@@ -444,6 +454,7 @@ class ChromiumMediaSession(
                 val read = runCatching { body?.read(buffer) ?: -1 }
                 val n = read.getOrDefault(-1)
                 synchronized(this@RelayedMediaHandler) {
+                    reading = false
                     if (n <= 0) {
                         if (!cancelled) {
                             val expected = response?.body?.contentLength() ?: -1L
@@ -465,6 +476,7 @@ class ChromiumMediaSession(
 
         override fun cancel() {
             synchronized(this) {
+                if (!cancelled && !ended) Log.i(TAG) { "media ${range ?: "whole"} cancelled by Chromium after $delivered bytes" }
                 cancelled = true
                 ended = true
                 chunk = null
@@ -480,6 +492,7 @@ class ChromiumMediaSession(
         synchronized(lifecycle) {
             if (closed) return
             closed = true
+            open -= this
             client = this.client
             browser = this.browser
             this.client = null
@@ -515,6 +528,16 @@ class ChromiumMediaSession(
 
     companion object {
         private const val TAG = "ChromiumMediaSession"
+
+        private val open = ConcurrentHashMap.newKeySet<ChromiumMediaSession>()
+
+        /**
+         * Closes every page still playing. Chromium must not shut down under an open one: macOS
+         * later runs a cleanup of that page's on the main thread, on memory Chromium has freed,
+         * and the app crashes as it quits.
+         */
+        fun closeAll() = open.toList().forEach { it.close() }
+
         private const val FRAME_RATE = 30
         private const val MIN_CHUNK = 64 * 1024
         private const val PLAYING = "amethyst-video-playing"
