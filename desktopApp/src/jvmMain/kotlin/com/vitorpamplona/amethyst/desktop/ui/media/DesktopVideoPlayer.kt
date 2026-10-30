@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoSession
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
@@ -377,7 +378,14 @@ fun DesktopVideoPlayer(
             }
 
             if (errorReason != null) {
-                PlaybackErrorMessage(url = url, reason = errorReason)
+                val chromium = LocalChromiumVideoEngine.current
+                var chromiumFailed by remember(url) { mutableStateOf(false) }
+                // What the native engine can't decode (WebM on macOS) may still play in Chromium.
+                if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumVideoSession.canTry(url)) {
+                    ChromiumVideoPane(chromium, url, muted = GlobalMediaPlayer.defaultMuted, onFailed = { chromiumFailed = true }, modifier = Modifier.fillMaxSize())
+                } else {
+                    PlaybackErrorMessage(url = url, reason = errorReason)
+                }
             } else if (activePlayer != null) {
                 VideoSurface(playerState = activePlayer, url = url, modifier = Modifier.fillMaxSize())
                 // The surface is black until the engine has decoded a frame: the thumbnail stays over
@@ -498,6 +506,9 @@ private const val ENGINE_FRAME_WAIT_MS = 10_000L
 
 /** Below this the top, middle and bottom rows of [VideoControls] overflow. */
 private val MinControlsWidth = 280.dp
+
+// GlobalMediaPlayer's prefix for a download that failed, which Chromium would fail at too.
+private const val NETWORK_ERROR = "Network:"
 
 // Longer than the navigation's push and pop transitions (the default 300 ms tween).
 private const val SCREEN_TRANSITION_MS = 400L

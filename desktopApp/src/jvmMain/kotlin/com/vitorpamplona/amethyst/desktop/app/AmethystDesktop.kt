@@ -94,6 +94,7 @@ import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPubl
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
 import com.vitorpamplona.amethyst.desktop.ui.media.GlobalFullscreenOverlay
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalAwtWindow
+import com.vitorpamplona.amethyst.desktop.ui.media.LocalChromiumVideoEngine
 import com.vitorpamplona.amethyst.desktop.ui.media.LocalIsImmersiveFullscreen
 import com.vitorpamplona.amethyst.desktop.ui.media.NowPlayingBar
 import com.vitorpamplona.quartz.utils.Log
@@ -323,6 +324,7 @@ fun main(args: Array<String>) {
                                 LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
                                 // The lightbox and the video player go full screen through the AWT window.
                                 LocalAwtWindow provides window,
+                                LocalChromiumVideoEngine provides nappletHost.engine,
                                 LocalIsImmersiveFullscreen provides immersiveFullscreen,
                                 LocalDrawerMetrics provides DesktopDrawerMetrics,
                                 // Throws when no app can open a link, as on Android, so a wallet
