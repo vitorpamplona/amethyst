@@ -104,6 +104,51 @@ The engine imports 14 WASI calls (files, `proc_exit`) and 10 page functions (`dr
   would not fit in one artifact. Splitting the WAD into a Blossom blob fetched through
   `resource.bytes` hits the 10 MiB `RESOURCE_MAX_BYTES` cap and a base64 hop over IPC.
 
+## Running doom.wasm without a WebView
+
+A spike measured whether a native card could run the napplet's `doom.wasm` on a WebAssembly
+runtime instead of a WebView: one 35 Hz game tic, with every runtime's frames checked against V8's.
+The benchmark itself (a Kotlin twin of the page's WASI and `doom` imports, run on
+[Chicory](https://github.com/dylibso/chicory) and [Chasm](https://github.com/CharlieTap/chasm))
+was removed once it had answered the question; it is in commit `6ad203fc` if it is ever needed
+again.
+
+### Results
+
+Doom shareware `doom1.wad` (v1.9). Intel Xeon @ 2.1 GHz, 4 vCPU cloud VM; OpenJDK 21 (HotSpot);
+Kotlin 2.4.21; Node 22 (V8 12.4); Chasm 2.3.0; Chicory 1.7.5. Milliseconds per tic; the budget is
+28.57 ms.
+
+| Runtime | load + start | mean | p50 | p95 | p99 | max | over budget | vs V8 |
+|---|---|---|---|---|---|---|---|---|
+| V8 (Node), the WebView path | 0.05 s | 0.45 | 0.40 | 0.66 | 0.82 | 4.1 | 0% | 1× |
+| Chicory, compiled to JVM bytecode | 1.8 s | 3.03 | 2.75 | 5.61 | 6.61 | 26.0 | 0% | 6.7× |
+| Chasm, JVM | 1.1 s | 14.53 | 12.59 | 22.38 | 24.06 | 28.9 | 0.1% | 32× |
+| Chasm, Kotlin/Native (linuxX64) | 0.14 s | 20.16 | 18.18 | 31.95 | 34.33 | 46.6 | 12.2% | 45× |
+| Chicory, interpreter | 1.5 s | 116.41 | 106.0 | 170.2 | 181.6 | 210.9 | 100% | 259× |
+
+Rows are the tics after the first 350 (JIT warm-up excluded). Freedoom Phase 1 gives the same
+picture, a little heavier: V8 0.60, Chicory compiled 3.59, Chasm JVM 17.59 (4.4% over budget),
+Chicory interpreter 138.6.
+
+### What it says
+
+- **Desktop can play it natively today.** Chicory's compiler runs a tic in 3 ms, a tenth of the
+  budget, with the module compiled when it loads (1.5 s on this VM). It works on any `.wasm` that
+  arrives at runtime, so a game from the feed stays content.
+- **Interpreters are marginal.** Chasm averages 15 ms on the JVM and 20 ms as native code, with a
+  long enough tail that 12% of native tics miss the budget on this machine. A device with a faster
+  core than this cloud VM could hold 35 fps, a slower one would not; Chasm on Kotlin/Native is the
+  only runtime here that reaches iOS. Chicory's interpreter is about 4× too slow.
+- **Android is unmeasured.** There is no device or KVM emulator in this environment. Android runs
+  ART rather than HotSpot, Chicory's runtime compiler emits JVM bytecode that ART cannot load (its
+  Android path converts to DEX and is experimental), and compiling the wasm into the APK at build
+  time would ship the GPL engine inside Amethyst. The WebView napplet, at V8 speed, remains the
+  known-good path there.
+
+Next step: run `commonMain` (Chasm) and Chicory's interpreter on a mid-range Android phone, for
+example from an instrumented test, before choosing a runtime for a native card.
+
 ## Licensing
 
 - doomgeneric: GPL-2.0 (`build/doomgeneric/LICENSE`). The built `index.html` links it, so the
