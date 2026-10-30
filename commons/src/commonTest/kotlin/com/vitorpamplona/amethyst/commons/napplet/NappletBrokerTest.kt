@@ -47,6 +47,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -1013,5 +1014,71 @@ class NappletBrokerTest {
             assertEquals(1, opPrompt.calls)
             broker.handle(applet, NappletRequest.Nip44Decrypt(bob.pubKey, bob.nip44Encrypt("b", signer.pubKey)), allDeclared)
             assertEquals(2, opPrompt.calls)
+        }
+
+    private val inlineApplet = applet.copy(inline = true, instanceId = "card-1")
+
+    @Test
+    fun anAppInsideANoteNeverAsksTheUser() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ALWAYS)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val broker = NappletBroker(signer = signer, ledger = ledger, consentPrompt = prompt, inlineAsks = asks)
+
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(0, prompt.calls)
+            // Nothing is held against the app: opening it asks as usual.
+            assertEquals(PermissionDecision.ASK, ledger.decide(applet, NappletCapability.IDENTITY))
+            assertTrue(asks.asked("card-1").first())
+            assertEquals(false, asks.asked("card-2").first())
+
+            assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(applet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(1, prompt.calls)
+        }
+
+    @Test
+    fun anAppInsideANoteKeepsWhatTheUserGranted() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val prompt = ScriptedPrompt(GrantState.DENY)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            ledger.record(applet, NappletCapability.IDENTITY, GrantState.ALLOW_ALWAYS)
+            val broker = NappletBroker(signer = signer, ledger = ledger, consentPrompt = prompt, inlineAsks = asks)
+
+            assertEquals(NappletResponse.PublicKey(signer.pubKey), broker.handle(inlineApplet, NappletRequest.GetPublicKey, allDeclared))
+            assertEquals(0, prompt.calls)
+            assertEquals(false, asks.asked("card-1").first())
+        }
+
+    @Test
+    fun anAppInsideANoteNeitherConnectsNorSignsWithoutTheUser() =
+        runTest {
+            val asks = NappletInlineAsks()
+            val connect = ScriptedConnectPrompt(AppConnectResult.Connected(AppSignerPolicy.REASONABLE))
+            val opPrompt = ScriptedSignerPrompt(SignerOpGrant.AllowOnce)
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            val broker =
+                NappletBroker(
+                    signer = signer,
+                    ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()),
+                    consentPrompt = ScriptedPrompt(GrantState.ALLOW_ONCE),
+                    relay = RecordingRelay(),
+                    signerLedger = signerLedger,
+                    nostrConnectPrompt = connect,
+                    signerConsentPrompt = opPrompt,
+                    inlineAsks = asks,
+                )
+            val sign = NappletRequest.SignEvent(kind = 1, tags = emptyArray(), content = "hi", createdAt = 1)
+
+            // Not connected yet: the first-connect dialog would show.
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, sign, allDeclared))
+            assertEquals(0, connect.calls)
+
+            // Connected, but every signature asks the user: still nothing shows.
+            signerLedger.setPolicy("napplet:${signer.pubKey}:${applet.coordinate}", AppSignerPolicy.PARANOID)
+            assertIs<NappletResponse.Denied>(broker.handle(inlineApplet, sign, allDeclared))
+            assertEquals(0, opPrompt.calls)
+            assertTrue(asks.asked("card-1").first())
         }
 }

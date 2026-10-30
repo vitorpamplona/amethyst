@@ -58,6 +58,12 @@ class NappletLaunch(
     /** Exact NAP domain names the prelude projects onto `window.napplet`; absence is the availability signal. */
     val declaredDomains: List<String> = declared.map { it.name.lowercase() }.distinct()
 
+    /**
+     * This launch, run inside a note as its own instance [instanceId]: it keeps what the user granted
+     * the app, and its questions wait for the user to open it ([NappletIdentity.inline]).
+     */
+    fun inline(instanceId: String): NappletLaunch = NappletLaunch(identity.copy(inline = true, instanceId = instanceId), profile, declared, requires, title, paths, servers)
+
     companion object {
         /**
          * A NIP-5D napplet from its [manifest], refused unless it is signed by [authorPubKey] (when

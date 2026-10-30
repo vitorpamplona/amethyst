@@ -143,6 +143,11 @@
     <string name="nsite_source">Source:</string>
     <string name="nsite_servers">Servers:</string>
     <string name="nsite_open">Open</string>
+    <string name="napplet_inline_run">Run here</string>
+    <string name="napplet_inline_running">Running in this note</string>
+    <string name="napplet_inline_stop">Stop</string>
+    <string name="napplet_inline_needs_you">%1$s wants to ask you something. Open it to answer.</string>
+    <string name="napplet_inline_failed">%1$s didn’t start here.</string>
 
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Use direct URL</string>

@@ -276,6 +276,24 @@ interface AppPlatform {
         servers: List<String>,
     ) {}
 
+    /** Whether [InlineNappletSurface] runs a napplet inside a note here. */
+    val runsNappletsInline: Boolean get() = false
+
+    /**
+     * Runs [manifest] inside a note as its own instance [instanceId], filling [modifier], in the
+     * platform's sandbox. It may use what the user already granted the app and never asks anything
+     * ([com.vitorpamplona.amethyst.commons.napplet.NappletIdentity.inline]). The page gets taps and
+     * keys; the feed keeps the scroll. It runs while it is composed and on screen, and ends when it
+     * leaves the composition. [onStatus] follows its loading.
+     */
+    @Composable
+    fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {}
+
     /** The icon a napplet manifest by [author] / [identifier] declares, if cached. */
     @Composable
     fun rememberManifestIconModel(
@@ -364,6 +382,29 @@ fun PrefetchNappletFiles(
     paths: List<PathTag>,
     servers: List<String>,
 ) = LocalAppPlatform.current.PrefetchNappletFiles(author, identifier, paths, servers)
+
+val runsNappletsInline: Boolean
+    @Composable get() = LocalAppPlatform.current.runsNappletsInline
+
+@Composable
+fun InlineNappletSurface(
+    manifest: NappletManifest,
+    instanceId: String,
+    onStatus: (InlineNappletStatus) -> Unit,
+    modifier: Modifier = Modifier,
+) = LocalAppPlatform.current.InlineNappletSurface(manifest, instanceId, onStatus, modifier)
+
+/** Where a napplet running inside a note is. */
+enum class InlineNappletStatus {
+    /** Fetching and verifying its files, or starting its page. */
+    LOADING,
+
+    /** Its page has painted. */
+    SHOWING,
+
+    /** It could not start here: no server had its files, or the sandbox did not come up. */
+    FAILED,
+}
 
 @Composable
 fun rememberManifestIconModel(

@@ -86,6 +86,8 @@ class NappletBroker(
     private val recentEncryptions: NappletRecentEncryptions? = null,
     // Wall-clock source (ms) for the post-cancel re-prompt cooldown; injectable for tests.
     private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
+    // Where a request that needed the user, from an app running inside a note, is recorded instead.
+    private val inlineAsks: NappletInlineAsks = NappletInlineAsks.shared,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -205,10 +207,20 @@ class NappletBroker(
                     PermissionDecision.ASK -> {}
                 }
             }
+            if (identity.inline) return@withLock refuseInline(identity)
             val grant = consentPrompt.request(identity, capability, request)
             ledger.record(identity, capability, effectiveGrant(capability, grant))
             grant.allowsExecution
         }
+
+    /**
+     * An app running inside a note asked for something only the user can give. Nothing is asked
+     * and nothing is recorded against the app: the note offers to open it, where it can ask again.
+     */
+    private fun refuseInline(identity: NappletIdentity): Boolean {
+        inlineAsks.record(identity)
+        return false
+    }
 
     /** Downgrades a grant to one-shot when the capability forbids persisting that scope (e.g. payments). */
     private fun effectiveGrant(
@@ -430,6 +442,7 @@ class NappletBroker(
             }
 
             val prompt = nostrConnectPrompt ?: return@withLock true
+            if (identity.inline) return@withLock refuseInline(identity)
             when (val result = prompt.request(identity, declared)) {
                 is AppConnectResult.Connected -> {
                     cancelledUntil.remove(identity.coordinate)
@@ -495,6 +508,7 @@ class NappletBroker(
                         return@withLock true
                     }
                     val prompt = signerConsentPrompt ?: return@withLock true
+                    if (identity.inline) return@withLock refuseInline(identity)
                     val grant = prompt.request(identity, op, request)
                     // Record the GRANT's own op, never the requested one: the dialog may hand back a
                     // narrower op ("only from this counterparty"), and a stored grant must never be

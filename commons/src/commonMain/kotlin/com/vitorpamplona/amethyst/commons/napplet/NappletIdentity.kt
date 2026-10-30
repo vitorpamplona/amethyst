@@ -49,6 +49,12 @@ data class NappletIdentity(
     /** Signed manifest kind/id, supplied by the trusted launcher, never by a NAP request. */
     val manifestKind: Int? = null,
     val manifestEventId: HexKey? = null,
+    /**
+     * Runs inside a note in the feed, set by the trusted launcher. It may use what the user already
+     * granted, but the broker never asks the user anything on its behalf: a question waits until
+     * the user opens the app (see [NappletInlineAsks]).
+     */
+    val inline: Boolean = false,
 ) {
     /** The ledger key: coordinate only, never the [aggregateHash], so grants survive updates. */
     val coordinate: String = "$authorPubKey:$identifier"
