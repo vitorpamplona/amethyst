@@ -85,6 +85,8 @@ suspend fun buildSignerConsentInfo(
         when (request) {
             is NappletRequest.Publish -> Triple(request.kind, request.tags, request.content)
             is NappletRequest.SignEvent -> Triple(request.kind, request.tags, request.content)
+            // Encrypted on its way out; the user judges the event it becomes, in plain text.
+            is NappletRequest.PublishEncrypted -> Triple(request.kind, request.tags, request.content)
             else -> Triple(null, null, null)
         }
     // A seal's content is ciphertext and it carries no tags; if this broker just encrypted it, show
