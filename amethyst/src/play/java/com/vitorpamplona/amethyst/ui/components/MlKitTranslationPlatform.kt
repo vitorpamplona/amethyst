@@ -29,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferences
+import com.vitorpamplona.amethyst.commons.state.ModelDownloads
 import com.vitorpamplona.amethyst.commons.ui.components.TranslationConfig
 import com.vitorpamplona.amethyst.commons.ui.components.TranslationPlatform
 import com.vitorpamplona.amethyst.commons.ui.theme.MaxWidthPaddingTop5dp
@@ -66,6 +68,14 @@ object MlKitTranslationPlatform : TranslationPlatform {
     ): String? = cachedMlKitTranslation(content, accountViewModel)
 
     override val downloadsModels: Boolean = true
+
+    override fun onLanguageBlocked(
+        language: String,
+        accountViewModel: AccountViewModel,
+    ) = LanguageTranslatorService.onLanguageBlocked(
+        language,
+        accountViewModel.account.settings.syncedSettings.languages.translateTo.value,
+    )
 }
 
 val FlavorTranslationPlatform: TranslationPlatform = MlKitTranslationPlatform
@@ -81,7 +91,7 @@ private fun MlKitTranslatable(
     val languages = accountViewModel.account.settings.syncedSettings.languages
     val translateTo by languages.translateTo.collectAsStateWithLifecycle()
     val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
-    val allowModelDownload by accountViewModel.settings.downloadTranslationModels.collectAsStateWithLifecycle()
+    val modelDownloads by accountViewModel.settings.translationModelDownloads.collectAsStateWithLifecycle()
     val languagePreferences by languages.languagePreferences.collectAsStateWithLifecycle()
 
     val translatedTextState =
@@ -92,14 +102,14 @@ private fun MlKitTranslatable(
             )
         }
 
-    LaunchedEffect(content, translateTo, dontTranslateFrom, allowModelDownload) {
+    LaunchedEffect(content, translateTo, dontTranslateFrom, modelDownloads) {
         try {
             // ML Kit's first-touch class init reads a Properties file out of the play-services AAR
             // via ZipFile/RandomAccessFile, which trips StrictMode if it runs on the UI dispatcher
             // that LaunchedEffect uses by default.
             translatedTextState.value =
                 withContext(Dispatchers.IO) {
-                    translateAndCache(content, translateTo, dontTranslateFrom, allowModelDownload)
+                    translateAndCache(content, translateTo, dontTranslateFrom, modelDownloads, languages)
                 }
         } catch (e: CancellationException) {
             throw e
@@ -135,7 +145,7 @@ private fun rememberMlKitTranslation(
     val languages = accountViewModel.account.settings.syncedSettings.languages
     val translateTo by languages.translateTo.collectAsStateWithLifecycle()
     val dontTranslateFrom by languages.dontTranslateFrom.collectAsStateWithLifecycle()
-    val allowModelDownload by accountViewModel.settings.downloadTranslationModels.collectAsStateWithLifecycle()
+    val modelDownloads by accountViewModel.settings.translationModelDownloads.collectAsStateWithLifecycle()
 
     val state =
         remember(content, translateTo, dontTranslateFrom) {
@@ -145,11 +155,11 @@ private fun rememberMlKitTranslation(
             )
         }
 
-    LaunchedEffect(content, translateTo, dontTranslateFrom, allowModelDownload) {
+    LaunchedEffect(content, translateTo, dontTranslateFrom, modelDownloads) {
         try {
             state.value =
                 withContext(Dispatchers.IO) {
-                    translateAndCache(content, translateTo, dontTranslateFrom, allowModelDownload)
+                    translateAndCache(content, translateTo, dontTranslateFrom, modelDownloads, languages)
                 }
         } catch (e: CancellationException) {
             throw e
@@ -209,14 +219,15 @@ private suspend fun translateAndCache(
     content: String,
     translateTo: String,
     dontTranslateFrom: Set<String>,
-    allowModelDownload: Boolean,
+    modelDownloads: ModelDownloads,
+    languages: AccountLanguagePreferences,
 ): TranslationConfig {
     TranslationsCache.get(content, translateTo, dontTranslateFrom)?.let { return it }
 
     val noOp = TranslationConfig(content, null, null)
     val raw =
         try {
-            LanguageTranslatorService.autoTranslate(content, dontTranslateFrom, translateTo, allowModelDownload).await()
+            LanguageTranslatorService.autoTranslate(content, dontTranslateFrom, translateTo, modelDownloads, languages).await()
         } catch (e: CancellationException) {
             // If our coroutine is the cancelled one, propagate; otherwise it's ML Kit signalling
             // "no translation needed" — cache the no-op and return it.

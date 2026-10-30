@@ -22,7 +22,10 @@ package com.vitorpamplona.amethyst
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.google.android.gms.tasks.Tasks
+import com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferences
+import com.vitorpamplona.amethyst.commons.state.ModelDownloads
 import com.vitorpamplona.amethyst.service.lang.LanguageTranslatorService
+import kotlinx.coroutines.flow.MutableStateFlow
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -35,7 +38,14 @@ class TranslationsTest {
         text: String,
         translateTo: String,
     ): String? {
-        val task = LanguageTranslatorService.autoTranslate(text, emptySet(), translateTo, allowModelDownload = true)
+        val task =
+            LanguageTranslatorService.autoTranslate(
+                text,
+                emptySet(),
+                translateTo,
+                ModelDownloads.ANY_NETWORK,
+                AccountLanguagePreferences(MutableStateFlow(emptySet()), MutableStateFlow(emptyMap()), MutableStateFlow(translateTo)),
+            )
         return Tasks.await(task).result
     }
 

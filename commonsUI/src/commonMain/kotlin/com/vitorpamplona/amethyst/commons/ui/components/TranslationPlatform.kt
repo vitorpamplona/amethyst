@@ -69,6 +69,15 @@ interface TranslationPlatform {
      */
     val downloadsModels: Boolean get() = false
 
+    /**
+     * The user just added [language] to the account's "Don't translate from" list, so the
+     * platform can drop what it stored for translating from it. No-op for [None].
+     */
+    fun onLanguageBlocked(
+        language: String,
+        accountViewModel: AccountViewModel,
+    ) {}
+
     /** No translator: the content is always its own translation. */
     object None : TranslationPlatform {
         @Composable

@@ -183,6 +183,15 @@ enum class ConnectivityType(
     ALWAYS(null, 0),
     WIFI_ONLY(true, 1),
     NEVER(false, 2),
+    ;
+
+    /** Whether this choice lets the download run on the current connection. */
+    fun allows(isOnMobileOrMeteredConnection: Boolean): Boolean =
+        when (this) {
+            WIFI_ONLY -> !isOnMobileOrMeteredConnection
+            NEVER -> false
+            ALWAYS -> true
+        }
 }
 
 enum class FeatureSetType(

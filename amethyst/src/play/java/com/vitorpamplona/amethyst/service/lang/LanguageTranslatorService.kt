@@ -24,6 +24,7 @@ import android.util.LruCache
 import androidx.compose.runtime.Immutable
 import com.google.android.gms.tasks.Task
 import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.common.model.DownloadConditions
 import com.google.mlkit.common.model.RemoteModelManager
 import com.google.mlkit.nl.languageid.LanguageIdentification
 import com.google.mlkit.nl.languageid.LanguageIdentificationOptions
@@ -32,11 +33,12 @@ import com.google.mlkit.nl.translate.TranslateRemoteModel
 import com.google.mlkit.nl.translate.Translation
 import com.google.mlkit.nl.translate.Translator
 import com.google.mlkit.nl.translate.TranslatorOptions
+import com.vitorpamplona.amethyst.commons.model.AccountLanguagePreferences
+import com.vitorpamplona.amethyst.commons.state.ModelDownloads
 import com.vitorpamplona.quartz.utils.Log
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import kotlin.concurrent.Volatile
 
 @Immutable
 data class ResultOrError(
@@ -46,11 +48,12 @@ data class ResultOrError(
 )
 
 /**
- * The translation needs a model that isn't on the device, and the download settings don't allow
- * fetching it now (e.g. "Wi-Fi only" on mobile data). Not a "no translation needed" result, so
- * callers must not cache it: the same text translates once the download is allowed.
+ * The translation needs a model that can't be used now: it isn't on the device and the download
+ * settings don't allow fetching it (e.g. "Wi-Fi only" on mobile data), or the user blocked its
+ * language while the request was in flight. Not a "no translation needed" result, so callers must
+ * not cache it: the same text translates once the model is allowed.
  */
-class TranslationModelNotDownloadedException : Exception("Translation model not downloaded and downloads are not allowed now")
+class TranslationModelUnavailableException : Exception("Translation model unavailable under the current settings")
 
 object LanguageTranslatorService {
     private const val TAG = "LanguageTranslatorService"
@@ -67,6 +70,9 @@ object LanguageTranslatorService {
     private val languageIdentification = LanguageIdentification.getClient(identificationOptions)
 
     private val modelManager by lazy { RemoteModelManager.getInstance() }
+
+    private val anyNetwork = DownloadConditions.Builder().build()
+    private val unmeteredOnly = DownloadConditions.Builder().requireWifi().build()
 
     // Translator codes, as TranslationLanguages.toTranslatorCode returns them. Keyed by the pair
     // rather than TranslatorOptions so the translators that use a model can be found and closed
@@ -102,53 +108,46 @@ object LanguageTranslatorService {
         val text: String,
         val translateTo: String,
         val dontTranslateFrom: Set<String>,
-        val allowModelDownload: Boolean,
+        val downloads: ModelDownloads,
     )
 
     // Coalesces concurrent translation requests for the same (content, settings) — the same note
     // shown in N composables (reposts, notifications) only fires one ML Kit pipeline.
     private val inFlight = ConcurrentHashMap<InFlightKey, Task<ResultOrError>>()
 
-    /**
-     * The language settings of the last request, and the translator codes whose models are not
-     * wanted under them: the "Don't translate from" languages, except the target and English
-     * (built in, can't be deleted).
-     */
-    private class LanguageSettings(
-        val dontTranslateFrom: Set<String>,
-        val translateTo: String,
-    ) {
-        val unwantedModels: Set<String> =
-            TranslationLanguages.toTranslatorCodes(dontTranslateFrom) -
-                setOfNotNull(TranslationLanguages.toTranslatorCode(translateTo), TranslateLanguage.ENGLISH)
+    // Language identification by text. A note that can't translate yet (its model isn't allowed to
+    // download) isn't cached by the caller, so without this every scroll back re-identifies it.
+    private val detectedLanguages = LruCache<String, String>(500)
 
-        fun isSame(
-            dontTranslateFrom: Set<String>,
-            translateTo: String,
-        ) = this.translateTo == translateTo && this.dontTranslateFrom == dontTranslateFrom
-    }
+    // Whether each translator code's model is on the device, as this process last saw it. Every
+    // download and delete goes through this service, so it only needs one disk check per language.
+    private val modelOnDevice = ConcurrentHashMap<String, Boolean>()
 
-    @Volatile
-    private var languageSettings: LanguageSettings? = null
+    // Models being deleted, so the requests that finish together delete each one once.
+    private val deleting = ConcurrentHashMap.newKeySet<String>()
 
     fun clear() {
         translators.evictAll()
         inFlight.clear()
+        detectedLanguages.evictAll()
         TranslationsCache.clear()
     }
 
     fun identifyLanguage(text: String): Task<String> = languageIdentification.identifyLanguage(text)
 
     /**
-     * Translates [text] from [source] to [target]. When [allowModelDownload] is false, only
-     * translates if both models are already on the device, and fails with
-     * [TranslationModelNotDownloadedException] otherwise.
+     * Translates [text] from [source] to [target]. [downloads] says whether a missing model may be
+     * fetched now; when it may not, the task fails with [TranslationModelUnavailableException].
+     * [languages] is the account's live language settings: the request may outlive the settings it
+     * was made with, so it rechecks them before and after a download, and drops a model whose
+     * language was blocked meanwhile.
      */
     fun translate(
         text: String,
         source: String,
         target: String,
-        allowModelDownload: Boolean,
+        downloads: ModelDownloads,
+        languages: AccountLanguagePreferences,
     ): Task<ResultOrError> {
         val sourceLangCode = TranslationLanguages.toTranslatorCode(source)
         val targetLangCode = TranslationLanguages.toTranslatorCode(target)
@@ -158,19 +157,27 @@ object LanguageTranslatorService {
         }
 
         val pair = LanguagePair(sourceLangCode, targetLangCode)
-        val modelsReady = if (allowModelDownload) Tasks.forResult(true) else areModelsDownloaded(pair)
 
-        return modelsReady.onSuccessTask(executorService) { ready ->
-            if (ready != true) throw TranslationModelNotDownloadedException()
+        return areModelsOnDevice(pair).onSuccessTask(executorService) { onDevice ->
+            if (onDevice != true) {
+                if (downloads == ModelDownloads.NONE || isUnwanted(pair, languages)) {
+                    throw TranslationModelUnavailableException()
+                }
+            }
 
             val translator = translators[pair]
+            val conditions = if (downloads == ModelDownloads.UNMETERED_ONLY) unmeteredOnly else anyNetwork
 
-            translator.downloadModelIfNeeded().onSuccessTask(executorService) {
-                // The user may have blocked the language while its model was downloading, and an
-                // ML Kit download can't be cancelled: drop the model it just stored.
-                if (languageSettings?.unwantedModels?.contains(sourceLangCode) == true) {
-                    deleteModel(sourceLangCode)
-                    return@onSuccessTask Tasks.forCanceled<ResultOrError>()
+            translator.downloadModelIfNeeded(conditions).onSuccessTask(executorService) {
+                modelOnDevice[pair.source] = true
+                modelOnDevice[pair.target] = true
+
+                // The user may have blocked a language while its model was downloading, and an
+                // ML Kit download can't be cancelled: drop what it just stored.
+                if (isUnwanted(pair, languages)) {
+                    deleteUnwanted(pair.source, languages)
+                    deleteUnwanted(pair.target, languages)
+                    throw TranslationModelUnavailableException()
                 }
 
                 val dict = TranslationDictionary.build(text)
@@ -184,18 +191,23 @@ object LanguageTranslatorService {
         }
     }
 
+    /**
+     * Translates [text] when [dontTranslateFrom] and [translateTo], the settings the caller caches
+     * the result under, ask for it. [languages] is where those settings live, read again around
+     * the model download.
+     */
     fun autoTranslate(
         text: String,
         dontTranslateFrom: Set<String>,
         translateTo: String,
-        allowModelDownload: Boolean,
+        downloads: ModelDownloads,
+        languages: AccountLanguagePreferences,
     ): Task<ResultOrError> {
-        updateLanguageSettings(dontTranslateFrom, translateTo)
         if (!TranslationDictionary.isWorthTranslating(text)) return Tasks.forCanceled()
-        return dedupe(InFlightKey(text, translateTo, dontTranslateFrom, allowModelDownload)) {
-            identifyLanguage(text).onSuccessTask(executorService) { detected ->
+        return dedupe(InFlightKey(text, translateTo, dontTranslateFrom, downloads)) {
+            detectLanguage(text).onSuccessTask(executorService) { detected ->
                 if (TranslationLanguages.shouldTranslate(detected, dontTranslateFrom, translateTo)) {
-                    translate(text, detected, translateTo, allowModelDownload)
+                    translate(text, detected, translateTo, downloads, languages)
                 } else {
                     Tasks.forCanceled()
                 }
@@ -203,50 +215,66 @@ object LanguageTranslatorService {
         }
     }
 
-    private fun areModelsDownloaded(pair: LanguagePair): Task<Boolean> {
-        val source = isModelDownloaded(pair.source)
-        val target = isModelDownloaded(pair.target)
+    /**
+     * The user just added [language] to "Don't translate from": deletes its model unless it is the
+     * account's target or English (built in). In-flight requests that download it afterwards drop
+     * it again through their own check.
+     */
+    fun onLanguageBlocked(
+        language: String,
+        translateTo: String,
+    ) {
+        val code = TranslationLanguages.toTranslatorCode(language) ?: return
+        if (code == TranslateLanguage.ENGLISH || code == TranslationLanguages.toTranslatorCode(translateTo)) return
+        executorService.execute { deleteModel(code) }
+    }
+
+    private fun detectLanguage(text: String): Task<String> {
+        detectedLanguages.get(text)?.let { return Tasks.forResult(it) }
+        return identifyLanguage(text).addOnSuccessListener(executorService) { detectedLanguages.put(text, it) }
+    }
+
+    /** Whether the live settings no longer want this pair: either language blocked and not the target. */
+    private fun isUnwanted(
+        pair: LanguagePair,
+        languages: AccountLanguagePreferences,
+    ): Boolean = isUnwanted(pair.source, languages) || isUnwanted(pair.target, languages)
+
+    private fun isUnwanted(
+        code: String,
+        languages: AccountLanguagePreferences,
+    ): Boolean {
+        if (code == TranslateLanguage.ENGLISH) return false
+        if (code == TranslationLanguages.toTranslatorCode(languages.translateTo.value)) return false
+        return TranslationLanguages.blocks(languages.dontTranslateFrom.value, code)
+    }
+
+    private fun deleteUnwanted(
+        code: String,
+        languages: AccountLanguagePreferences,
+    ) {
+        if (isUnwanted(code, languages)) deleteModel(code)
+    }
+
+    private fun areModelsOnDevice(pair: LanguagePair): Task<Boolean> {
+        val source = isModelOnDevice(pair.source)
+        val target = isModelOnDevice(pair.target)
         return Tasks.whenAll(source, target).continueWith(executorService) {
             source.isSuccessful && source.result == true && target.isSuccessful && target.result == true
         }
     }
 
-    private fun isModelDownloaded(code: String): Task<Boolean> =
-        if (code == TranslateLanguage.ENGLISH) {
-            Tasks.forResult(true)
-        } else {
-            modelManager.isModelDownloaded(TranslateRemoteModel.Builder(code).build())
-        }
-
-    /**
-     * Records the settings of this request and, when they changed, deletes the models of the
-     * languages they block. That also removes models stored before the alias fix, when a blocked
-     * language spelled differently (`he`/`iw`, `nb`/`no`) still reached the download.
-     */
-    private fun updateLanguageSettings(
-        dontTranslateFrom: Set<String>,
-        translateTo: String,
-    ) {
-        if (languageSettings?.isSame(dontTranslateFrom, translateTo) == true) return
-
-        val settings = LanguageSettings(dontTranslateFrom, translateTo)
-        languageSettings = settings
-        if (settings.unwantedModels.isEmpty()) return
-
-        modelManager
-            .getDownloadedModels(TranslateRemoteModel::class.java)
-            .addOnSuccessListener(executorService) { models ->
-                // Settings changed again while listing: the newer call does its own pass.
-                if (languageSettings !== settings) return@addOnSuccessListener
-                models.forEach { model ->
-                    if (model.language in settings.unwantedModels) deleteModel(model.language)
-                }
-            }.addOnFailureListener(executorService) { e ->
-                Log.w(TAG, "Could not list the downloaded translation models", e)
-            }
+    private fun isModelOnDevice(code: String): Task<Boolean> {
+        if (code == TranslateLanguage.ENGLISH) return Tasks.forResult(true)
+        modelOnDevice[code]?.let { return Tasks.forResult(it) }
+        return modelManager
+            .isModelDownloaded(TranslateRemoteModel.Builder(code).build())
+            .addOnSuccessListener(executorService) { modelOnDevice.putIfAbsent(code, it) }
     }
 
     private fun deleteModel(code: String) {
+        if (!deleting.add(code)) return
+
         // Close the translators that hold the model before deleting its files.
         translators.snapshot().keys.forEach { pair ->
             if (pair.source == code || pair.target == code) translators.remove(pair)
@@ -254,8 +282,17 @@ object LanguageTranslatorService {
 
         modelManager
             .deleteDownloadedModel(TranslateRemoteModel.Builder(code).build())
-            .addOnSuccessListener(executorService) { Log.d(TAG) { "Deleted the translation model of blocked language $code" } }
-            .addOnFailureListener(executorService) { e -> Log.w(TAG, "Could not delete the translation model of $code", e) }
+            .addOnCompleteListener(executorService) { task ->
+                deleting.remove(code)
+                if (task.isSuccessful) {
+                    modelOnDevice[code] = false
+                    Log.d(TAG) { "Deleted the translation model of blocked language $code" }
+                } else {
+                    // Unknown state: check the disk again next time.
+                    modelOnDevice.remove(code)
+                    Log.w(TAG, "Could not delete the translation model of $code", task.exception)
+                }
+            }
     }
 
     private inline fun dedupe(

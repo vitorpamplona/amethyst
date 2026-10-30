@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.service.lang
 
 import com.google.mlkit.nl.translate.TranslateLanguage
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Matches the language codes the app compares to the ones ML Kit's translator loads models for.
@@ -33,11 +34,20 @@ import com.google.mlkit.nl.translate.TranslateLanguage
  * string comparison let a blocked language through to the model download.
  */
 object TranslationLanguages {
+    // No model for the tag. ConcurrentHashMap can't hold null.
+    private const val NO_MODEL = ""
+
+    // Runs for every rendered note, and fromLanguageTag builds its 59-language list on each call.
+    // The tags seen are the few dozen the identifier and the settings produce, so this stays small.
+    private val translatorCodes = ConcurrentHashMap<String, String>()
+
     /**
      * The translator's code for [tag], or null when it has no model for it: `und`, romanized tags
      * such as `zh-Latn`, and languages ML Kit doesn't translate.
      */
-    fun toTranslatorCode(tag: String): String? =
+    fun toTranslatorCode(tag: String): String? = translatorCodes.getOrPut(tag) { resolve(tag) ?: NO_MODEL }.ifEmpty { null }
+
+    private fun resolve(tag: String): String? =
         if (tag.equals("fil", ignoreCase = true)) {
             TranslateLanguage.TAGALOG
         } else {
@@ -56,9 +66,12 @@ object TranslationLanguages {
         val source = toTranslatorCode(detected) ?: return false
         val target = toTranslatorCode(translateTo) ?: return false
         if (source == target) return false
-        return dontTranslateFrom.none { toTranslatorCode(it) == source }
+        return !blocks(dontTranslateFrom, source)
     }
 
-    /** The translator codes of [languages], dropping the ones it has no model for. */
-    fun toTranslatorCodes(languages: Set<String>): Set<String> = languages.mapNotNullTo(HashSet()) { toTranslatorCode(it) }
+    /** Whether [dontTranslateFrom] lists the language of translator code [code], in any spelling. */
+    fun blocks(
+        dontTranslateFrom: Set<String>,
+        code: String,
+    ): Boolean = dontTranslateFrom.any { toTranslatorCode(it) == code }
 }

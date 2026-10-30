@@ -79,7 +79,18 @@ class TranslationLanguagesTest {
     }
 
     @Test
-    fun `translator codes of a language list`() {
-        assertEquals(setOf("he", "no"), TranslationLanguages.toTranslatorCodes(setOf("iw", "he", "nb", "und")))
+    fun `a language list blocks a code in any spelling`() {
+        assertTrue(TranslationLanguages.blocks(setOf("iw"), "he"))
+        assertTrue(TranslationLanguages.blocks(setOf("nb"), "no"))
+        assertFalse(TranslationLanguages.blocks(setOf("und", "zh-Latn"), "zh"))
+        assertFalse(TranslationLanguages.blocks(emptySet(), "en"))
+    }
+
+    @Test
+    fun `repeated lookups return the same codes`() {
+        repeat(3) {
+            assertEquals("he", TranslationLanguages.toTranslatorCode("iw"))
+            assertNull(TranslationLanguages.toTranslatorCode("und"))
+        }
     }
 }
