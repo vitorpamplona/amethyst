@@ -35,6 +35,8 @@
   @media (orientation: landscape) {
     body.touch #touch { position: fixed; left: 0; right: 0; bottom: 0; pointer-events: none; --b: min(58px, 15vh); }
     body.touch #touch button { pointer-events: auto; background: rgba(40, 40, 40, .55); }
+    /* The whole pad takes the finger, its empty corners too: they are the diagonals. */
+    body.touch #touch .pad { pointer-events: auto; }
     body.touch .mid { position: fixed; top: 8px; left: 50%; transform: translateX(-50%); flex-direction: row; }
   }
   #touch button.down { background: rgba(179, 36, 27, .7); }
@@ -94,7 +96,8 @@
     <div class="mod-row"><input type="file" id="mod-file" accept=".wad,.WAD"></div>
     <ul id="mod-list"></ul>
   </details>
-  <p class="help touch-help">Use the on-screen controls: the pad moves, FIRE shoots, USE opens doors.
+  <p class="help touch-help">Use the on-screen controls: slide a finger around the pad to move (its corners
+    move and turn at once), FIRE shoots, USE opens doors.
     MENU, ENTER and YES drive the menus; a keyboard or gamepad works too.</p>
   <p class="help key-help">Arrows move &middot; <kbd>Ctrl</kbd> fire &middot; <kbd>Space</kbd> open &middot; <kbd>Shift</kbd> run &middot;
     <kbd>Alt</kbd>/<kbd>,</kbd><kbd>.</kbd> strafe &middot; <kbd>1</kbd>&ndash;<kbd>7</kbd>, <kbd>[</kbd><kbd>]</kbd> weapons &middot;
@@ -769,8 +772,74 @@
     sendKey(false, key);
   });
 
-  // On-screen controls. Each button holds its key while a pointer is down on it; RUN latches.
-  for (const button of document.querySelectorAll('#touch button')) {
+  // The pad is one control, not nine buttons: a finger held on it moves wherever it slides, with no
+  // need to lift it between directions. Its row picks forward/back and its column the turn, so a
+  // corner is both (run forward while turning); past the pad's edge it keeps the nearest direction.
+  // USE, in the middle, is pressed only by a finger that lands there; one sliding through the
+  // middle just stops moving.
+  const pad = document.querySelector('.pad');
+  const padButton = {};
+  for (const b of pad.querySelectorAll('button')) padButton[Number(b.dataset.key)] = b;
+  const padFingers = new Map();
+  const touchPadHeld = new Set();
+  function padCell(e) {
+    const r = pad.getBoundingClientRect();
+    const at = (v, start, size) => Math.min(2, Math.max(0, Math.floor((v - start) / (size / 3))));
+    return { col: at(e.clientX, r.left, r.width), row: at(e.clientY, r.top, r.height) };
+  }
+  function padKeysFor(finger) {
+    const { col, row } = finger.cell;
+    const keys = [];
+    if (row === 0) keys.push(KEY.UP); else if (row === 2) keys.push(KEY.DOWN);
+    if (col === 0) keys.push(KEY.LEFT); else if (col === 2) keys.push(KEY.RIGHT);
+    if (!keys.length && finger.use) keys.push(KEY.USE);
+    return keys;
+  }
+  function padSync() {
+    const want = new Set();
+    for (const finger of padFingers.values()) for (const key of padKeysFor(finger)) want.add(key);
+    for (const key of [...touchPadHeld]) {
+      if (want.has(key)) continue;
+      touchPadHeld.delete(key);
+      if (padButton[key]) padButton[key].classList.remove('down');
+      sendKey(false, key);
+    }
+    for (const key of want) {
+      if (touchPadHeld.has(key)) continue;
+      touchPadHeld.add(key);
+      if (padButton[key]) padButton[key].classList.add('down');
+      sendKey(true, key);
+    }
+  }
+  pad.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    pad.setPointerCapture && pad.setPointerCapture(e.pointerId);
+    const cell = padCell(e);
+    padFingers.set(e.pointerId, { cell, use: cell.col === 1 && cell.row === 1 });
+    padSync();
+  });
+  pad.addEventListener('pointermove', e => {
+    const finger = padFingers.get(e.pointerId);
+    if (!finger) return;
+    e.preventDefault();
+    const cell = padCell(e);
+    if (cell.col === finger.cell.col && cell.row === finger.cell.row) return;
+    finger.cell = cell;
+    // Once it has moved off USE, the finger is a movement finger.
+    if (cell.col !== 1 || cell.row !== 1) finger.use = false;
+    padSync();
+  });
+  const padLift = e => {
+    if (!padFingers.delete(e.pointerId)) return;
+    e.preventDefault();
+    padSync();
+  };
+  pad.addEventListener('pointerup', padLift);
+  pad.addEventListener('pointercancel', padLift);
+  pad.addEventListener('lostpointercapture', padLift);
+
+  // The other controls: each button holds its key while a pointer is down on it; RUN latches.
+  for (const button of document.querySelectorAll('#touch button:not(.pad button)')) {
     const key = Number(button.dataset.key);
     const toggle = button.hasAttribute('data-toggle');
     let held = false;

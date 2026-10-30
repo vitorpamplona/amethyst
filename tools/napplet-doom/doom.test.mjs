@@ -125,6 +125,49 @@ test('the keyboard starts a game, and the view moves when the player turns', asy
   });
 });
 
+test('one finger slides around the pad: directions change without lifting, corners are diagonals', async () => {
+  await play(async ({ page, frame, start, newGame, pixels, consoleErrors }) => {
+    await start();
+    await newGame();
+    await frame.evaluate(() => document.body.classList.add('touch'));
+    await page.waitForTimeout(300);
+    const box = await frame.locator('.pad').boundingBox();
+    const cell = (col, row) => [box.x + box.width * (col + 0.5) / 3, box.y + box.height * (row + 0.5) / 3];
+    const held = () => frame.evaluate(() => [...document.querySelectorAll('.pad button.down')].map(b => b.textContent).sort().join(''));
+    const slideTo = async (col, row) => { await page.mouse.move(...cell(col, row), { steps: 4 }); await page.waitForTimeout(150); };
+
+    await page.mouse.move(...cell(1, 0));
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    assert.equal(await held(), '\u25B2', 'forward');
+    const before = await pixels();
+    await slideTo(2, 0);
+    assert.equal(await held(), '\u25B2\u25B6', 'the corner moves forward and turns');
+    await slideTo(2, 1);
+    assert.equal(await held(), '\u25B6', 'turning only, the same finger');
+    await page.waitForTimeout(400);
+    assert.ok(changed(before, await pixels()) > 200, 'the view turned while the finger slid');
+    await slideTo(1, 1);
+    assert.equal(await held(), '', 'sliding through the middle stops, and never presses USE');
+    // Off the pad, down past its bottom-left corner, still on the screen.
+    await page.mouse.move(box.x - 4, box.y + box.height + 4, { steps: 4 });
+    await page.waitForTimeout(150);
+    assert.equal(await held(), '\u25BC\u25C0', 'past the corner keeps the nearest directions');
+    await page.mouse.up();
+    await page.waitForTimeout(150);
+    assert.equal(await held(), '', 'lifting the finger lets go');
+
+    // A finger that lands on USE presses it.
+    await page.mouse.move(...cell(1, 1));
+    await page.mouse.down();
+    await page.waitForTimeout(150);
+    assert.equal(await held(), 'USE');
+    await page.mouse.up();
+    assert.equal((await frame.evaluate(() => window.doomStatus.phase)), 'running');
+    assert.deepEqual(consoleErrors, []);
+  });
+});
+
 test('a save game lands in napplet storage and loads back on the next launch', async () => {
   let saved;
   await play(async ({ page, frame, key, start, newGame }) => {
