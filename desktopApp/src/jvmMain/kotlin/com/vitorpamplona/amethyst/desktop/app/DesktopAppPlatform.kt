@@ -137,11 +137,13 @@ class DesktopAppPlatform(
 
     @Composable
     override fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
         paths: List<PathTag>,
         servers: List<String>,
     ) {
         val host = nappletHost ?: return
-        LaunchedEffect(host, paths, servers) { runCatchingCancellable { host.prefetch(paths, servers) } }
+        LaunchedEffect(host, author, identifier, paths, servers) { runCatchingCancellable { host.prefetch(author, identifier, paths, servers) } }
     }
 
     override val hasGeocacheMap: Boolean get() = true

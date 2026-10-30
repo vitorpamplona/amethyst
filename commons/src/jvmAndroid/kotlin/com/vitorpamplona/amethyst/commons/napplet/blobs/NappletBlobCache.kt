@@ -39,10 +39,21 @@ import java.io.IOException
  *
  * Every [put] re-hashes the bytes and only stores them if they match the key, so the store can only
  * ever hold correct content; a caller may still re-verify on read (the resolver does).
+ *
+ * Files are kept per site and per account ([forSite]): one shared cache would tell a site which files
+ * this device already holds (no request reaches its server, the page loads instantly), so a site
+ * could learn what else was opened, or link two accounts on one device. [trimToSize] covers them all.
  */
-class NappletBlobCache(
+class NappletBlobCache private constructor(
     private val dir: File,
+    // The cache's top folder, which trimming walks whichever site's cache it is called on.
+    private val root: File,
 ) {
+    constructor(dir: File) : this(dir, dir)
+
+    /** The files [partition] (see [partitionOf]) may see: its own, never another site's or account's. */
+    fun forSite(partition: String): NappletBlobCache = NappletBlobCache(File(root, sha256(partition.encodeToByteArray()).toHexKey().take(PARTITION_NAME_LENGTH)), root)
+
     fun has(sha256: String): Boolean = fileFor(sha256)?.isFile == true
 
     fun get(sha256: String): ByteArray? = file(sha256)?.let { runCatching { it.readBytes() }.getOrNull() }
@@ -101,14 +112,19 @@ class NappletBlobCache(
         }
     }
 
-    /** Best-effort eviction: if the store exceeds [maxBytes], delete the least recently used blobs until under it. */
+    /**
+     * Best-effort eviction across every site's files: if they exceed [maxBytes], delete the least
+     * recently used until under it.
+     */
     fun trimToSize(maxBytes: Long) {
         runCatching {
             val files =
-                dir
-                    .listFiles()
-                    ?.filter { it.isFile && !isStaleTemp(it) && !it.name.contains(TEMP_MARKER) }
-                    ?.map { Triple(it, it.length(), it.lastModified()) } ?: return
+                root
+                    .walkTopDown()
+                    .maxDepth(2)
+                    .filter { it.isFile && !isStaleTemp(it) && !it.name.contains(TEMP_MARKER) }
+                    .map { Triple(it, it.length(), it.lastModified()) }
+                    .toList()
             var total = files.sumOf { it.second }
             if (total <= maxBytes) return
             files.sortedBy { it.third }.forEach { (f, length, _) ->
@@ -140,6 +156,18 @@ class NappletBlobCache(
         const val DEFAULT_MAX_BYTES = 256L * 1024 * 1024
         private const val TOUCH_INTERVAL_MS = 60L * 60 * 1000
         private const val STALE_TEMP_MS = 60L * 60 * 1000
+        private const val PARTITION_NAME_LENGTH = 32
+
+        /**
+         * The cache partition of a site ([author], [identifier], as a launch's identity names it) seen
+         * by [account] (any stable per-account name). A card's prefetch and the launch compute the same.
+         */
+        fun partitionOf(
+            account: String,
+            author: String,
+            identifier: String,
+        ): String = "$account|$author:$identifier"
+
         private const val TEMP_MARKER = ".tmp."
 
         /** The shared cache directory, identical across processes since they share the app's cacheDir. */

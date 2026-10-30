@@ -176,12 +176,17 @@ class DesktopNappletHost(
      * Never in the clear while Tor is on and not running yet: the launch waits for it instead.
      */
     suspend fun prefetch(
+        author: String,
+        identifier: String,
         paths: List<PathTag>,
         servers: List<String>,
     ) {
+        val account = modules.sessionManager.loggedInAccount() ?: return
         val torPort = modules.torManager.activePortOrNull.value
         if (torPort == null && torEnabled()) return
-        NappletBlobPrefetcher.prefetch(paths, servers, modules.filesDir, torPort ?: -1)
+        // The partition its window will use: the account opening it, and the site.
+        val partition = NappletBlobCache.partitionOf(account.pubKey, author, identifier)
+        NappletBlobPrefetcher.prefetch(paths, servers, modules.filesDir, torPort ?: -1, partition)
     }
 
     /** The app's colors, for `theme.get` and the `theme.changed` push. */

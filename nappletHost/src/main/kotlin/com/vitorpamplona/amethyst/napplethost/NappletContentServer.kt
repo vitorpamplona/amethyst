@@ -49,6 +49,9 @@ class NappletContentServer(
     servers: List<String>,
     proxyPort: Int,
     cacheDir: File,
+    // This site's cache partition (NappletBlobCache.partitionOf): files cached for other sites or
+    // accounts are fetched again, so the site can't tell what else this device opened.
+    cachePartition: String,
     shellHtmlBytes: ByteArray,
     shimJs: String,
     // The applet's own per-applet origin (a distinct napplet.local subdomain). The shell is on
@@ -65,7 +68,7 @@ class NappletContentServer(
     // host has a native keyboard and leaves this false.
     imeProxy: Boolean = false,
 ) {
-    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)), NappletBlobHttp.client(proxyPort), paths, servers)
+    private val blobs = NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(cachePartition), NappletBlobHttp.client(proxyPort), paths, servers)
 
     private val server = NappletSiteServer(blobs, shellHtmlBytes, shimJs, appOrigin, profile, declaredDomains, imeProxy)
 

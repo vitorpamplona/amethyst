@@ -154,7 +154,7 @@ private fun NappletManifestCard(
     val coordinate = remember(event) { favoriteCoordinateOf(event as Event) }
     val launcher = rememberAppLauncher()
     val icon = rememberNappletIconModel(coordinate)
-    PrefetchNappletFiles(info.artifactFiles, info.servers)
+    PrefetchNappletFiles((event as Event).pubKey, identifier.orEmpty(), info.artifactFiles, info.servers)
 
     StaticWebsiteCard(
         title = info.title,
@@ -176,7 +176,7 @@ private fun SiteCard(event: Event) {
     val info = remember(event) { SiteCardInfo.of(event) } ?: return
     val coordinate = remember(event) { favoriteCoordinateOf(event) }
     val launcher = rememberAppLauncher()
-    PrefetchNappletFiles(info.paths, info.servers)
+    PrefetchNappletFiles(event.pubKey, info.identifier.orEmpty(), info.paths, info.servers)
 
     StaticWebsiteCard(
         title = info.title,

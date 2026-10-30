@@ -126,6 +126,32 @@ class NappletBlobStoreTest {
         }
 
     @Test
+    fun aSiteCannotSeeWhatAnotherSiteCached() =
+        runBlocking {
+            // Site Y lists a file of site X. Had the device opened X, a shared cache would answer Y
+            // without a request: Y's server would learn this device has seen X.
+            val file = "<p>shared lib</p>".encodeToByteArray()
+            served[hashOf(file)] = file
+            val paths = listOf(PathTag("/index.html", hashOf(file)))
+
+            fun site(partition: String) = NappletBlobStore(cache.forSite(partition), OkHttpClient(), paths, listOf(serverUrl))
+
+            assertNotNull(site(NappletBlobCache.partitionOf("alice", "x", "")).find("/"))
+            assertEquals(1, requests.get())
+            assertNotNull(site(NappletBlobCache.partitionOf("alice", "y", "")).find("/"))
+            assertEquals(2, requests.get(), "another site fetches its own copy")
+            assertNotNull(site(NappletBlobCache.partitionOf("bob", "x", "")).find("/"))
+            assertEquals(3, requests.get(), "so does the same site for another account")
+            assertNotNull(site(NappletBlobCache.partitionOf("alice", "x", "")).find("/"))
+            assertEquals(3, requests.get(), "the site itself still gets its cached copy")
+
+            // Trimming covers every site's files.
+            cache.trimToSize(0)
+            assertNotNull(site(NappletBlobCache.partitionOf("alice", "x", "")).find("/"))
+            assertEquals(4, requests.get())
+        }
+
+    @Test
     fun aWriteThatDiedLeavesNoTempFileBehind() {
         val stale = File(dir, "aa.tmp.1").apply { writeBytes(ByteArray(10)) }
         assertTrue(stale.setLastModified(System.currentTimeMillis() - 2 * 60 * 60 * 1000))

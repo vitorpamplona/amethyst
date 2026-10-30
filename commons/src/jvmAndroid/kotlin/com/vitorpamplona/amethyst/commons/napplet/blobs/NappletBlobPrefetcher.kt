@@ -58,11 +58,13 @@ object NappletBlobPrefetcher {
         servers: List<String>,
         cacheDir: File,
         proxyPort: Int,
+        // The site's cache partition: NappletBlobCache.partitionOf, as its launch computes it.
+        partition: String,
     ) {
         if (paths.isEmpty() || servers.isEmpty()) return
 
         withContext(Dispatchers.IO) {
-            val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir))
+            val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(partition)
             val client = NappletBlobHttp.client(proxyPort)
             val gate = Semaphore(MAX_PARALLEL)
 

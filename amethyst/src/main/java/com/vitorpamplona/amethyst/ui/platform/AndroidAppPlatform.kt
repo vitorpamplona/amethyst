@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -52,6 +53,7 @@ import com.vitorpamplona.amethyst.debugState
 import com.vitorpamplona.amethyst.favorites.FavoriteAppLauncher
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
+import com.vitorpamplona.amethyst.napplet.NappletWebViewProfiles
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
@@ -257,6 +259,8 @@ object AndroidAppPlatform : AppPlatform {
 
     @Composable
     override fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
         paths: List<PathTag>,
         servers: List<String>,
     ) {
@@ -267,7 +271,9 @@ object AndroidAppPlatform : AppPlatform {
             withContext(Dispatchers.IO) {
                 val torPort = Amethyst.instance.torManager.activePortOrNull.value
                 if (torPort == null && Amethyst.instance.torPrefs.torType.value != TorType.OFF) return@withContext
-                runCatchingCancellable { NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort ?: -1) }
+                // The partition its launch will use: the per-account WebView profile and the site.
+                val partition = NappletBlobCache.partitionOf(NappletWebViewProfiles.current().orEmpty(), author, identifier)
+                runCatchingCancellable { NappletBlobPrefetcher.prefetch(paths, servers, context.cacheDir, torPort ?: -1, partition) }
             }
         }
     }

@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -427,6 +428,7 @@ class NappletHostService : Service() {
                 tab.servers,
                 effectiveProxy,
                 cacheDir,
+                NappletBlobCache.partitionOf(tab.webViewProfile.orEmpty(), tab.author, tab.identifier),
                 shellHtml,
                 shimJs,
                 appOrigin,

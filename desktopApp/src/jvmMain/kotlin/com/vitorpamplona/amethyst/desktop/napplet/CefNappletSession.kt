@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
@@ -217,7 +218,13 @@ class CefNappletSession(
                 mutableState.value = State.Loading
                 server =
                     NappletSiteServer(
-                        blobs = NappletBlobStore(runtime.blobCache, runtime.httpClient(blobsUseTor), launch.paths, launch.servers),
+                        blobs =
+                            NappletBlobStore(
+                                runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
+                                runtime.httpClient(blobsUseTor),
+                                launch.paths,
+                                launch.servers,
+                            ),
                         shellHtml = NappletWebResources.shellHtml(),
                         shimJs = NappletWebResources.shimJs().decodeToString(),
                         appOrigin = appOrigin,

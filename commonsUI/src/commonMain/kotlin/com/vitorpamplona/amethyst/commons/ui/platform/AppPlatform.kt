@@ -270,6 +270,8 @@ interface AppPlatform {
      */
     @Composable
     fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
         paths: List<PathTag>,
         servers: List<String>,
     ) {}
@@ -354,11 +356,14 @@ fun rememberConcordImageModel(
 @Composable
 fun rememberNappletIconModel(coordinate: String): String? = LocalAppPlatform.current.rememberNappletIconModel(coordinate)
 
+/** Prefetches the files of the site [author] / [identifier] (as its launch names it, `""` for a root). */
 @Composable
 fun PrefetchNappletFiles(
+    author: String,
+    identifier: String,
     paths: List<PathTag>,
     servers: List<String>,
-) = LocalAppPlatform.current.PrefetchNappletFiles(paths, servers)
+) = LocalAppPlatform.current.PrefetchNappletFiles(author, identifier, paths, servers)
 
 @Composable
 fun rememberManifestIconModel(
