@@ -863,6 +863,7 @@ object GlobalMediaPlayer {
         closeChromiumAudio()
         val volume = if (current.isMuted) 0 else current.volume
         _audioState.value = MediaPlaybackState(url = url, type = MediaType.AUDIO, isBuffering = true, volume = volume, isMuted = current.isMuted)
+        Log.i(TAG) { "Playing audio $url in Chromium" }
         val opened = ChromiumMediaSession(engine, url, muted = false, audioOnly = true, startMillis = startMillis ?: 0L)
         chromiumAudio = opened
         opened.setPlaying(true)

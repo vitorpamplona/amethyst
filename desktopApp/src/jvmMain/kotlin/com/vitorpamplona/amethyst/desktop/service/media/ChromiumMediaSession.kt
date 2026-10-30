@@ -126,6 +126,9 @@ class ChromiumMediaSession(
     private var pendingTeardown: (() -> Unit)? = null
 
     fun open() {
+        // Nothing lays an audio page out: without a size of its own it is 1 x 1 pixels, and the
+        // click that lets it play with sound would land outside it (see clickToStart).
+        if (audioOnly) view.resize(AUDIO_PAGE_SIZE, AUDIO_PAGE_SIZE, 1.0)
         scope.launch {
             try {
                 val app = engine.app()
@@ -213,7 +216,11 @@ class ChromiumMediaSession(
                     line: Int,
                 ): Boolean {
                     when {
-                        message.startsWith(PLAYING) -> mutableState.value = State.Playing
+                        message.startsWith(PLAYING) -> {
+                            if (mutableState.value != State.Playing) Log.i(TAG) { "Chromium plays $url" }
+                            mutableState.value = State.Playing
+                        }
+                        message.startsWith(MUTED_FALLBACK) -> Log.w(TAG) { "Chromium would not play $url with sound; playing it muted" }
                         message.startsWith(CLOCK) -> parseClock(message.removePrefix(CLOCK))?.let { mutableClock.value = it }
                         message.startsWith(SIZE) -> {
                             val (w, h) =
@@ -491,6 +498,8 @@ class ChromiumMediaSession(
         private const val FAILED = "amethyst-video-failed"
         private const val SIZE = "amethyst-video-size"
         private const val CLOCK = "amethyst-media-clock"
+        private const val MUTED_FALLBACK = "amethyst-media-muted"
+        private const val AUDIO_PAGE_SIZE = 32
 
         private val ORIGIN = "https://video.${NappletWebContract.HOST}"
         private val PAGE_URL = "$ORIGIN/"
@@ -551,7 +560,7 @@ class ChromiumMediaSession(
               v.addEventListener('error', () => console.log('$FAILED ' + (v.error ? v.error.code + ' ' + v.error.message : '')));
               let wanted = $wanted;
               let activated = false;
-              const go = () => v.play().catch(e => { v.muted = true; v.play().catch(() => {}); });
+              const go = () => v.play().catch(e => { console.log('$MUTED_FALLBACK ' + e.name); v.muted = true; v.play().catch(() => {}); });
               window.setWanted = (w) => {
                 wanted = w;
                 if (!activated) return;
