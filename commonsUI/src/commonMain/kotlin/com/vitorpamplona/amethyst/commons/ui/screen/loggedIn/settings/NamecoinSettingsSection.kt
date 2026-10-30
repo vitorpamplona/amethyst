@@ -131,6 +131,7 @@ import com.vitorpamplona.amethyst.commons.resources.namecoin_testing_next_server
 import com.vitorpamplona.amethyst.commons.resources.namecoin_tls_info
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.deviceDescription
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.DEFAULT_ELECTRUMX_SERVERS
@@ -1281,7 +1282,7 @@ private fun FallbacksSection(
                 label = stringRes(Res.string.namecoin_fallback_custom_label),
                 description =
                     if (settings.hasCustomServers) {
-                        stringRes(Res.string.namecoin_fallback_custom_description, settings.customServers.size)
+                        pluralStringRes(Res.plurals.namecoin_fallback_custom_description, settings.customServers.size, settings.customServers.size)
                     } else {
                         stringRes(Res.string.namecoin_fallback_custom_none)
                     },
