@@ -250,4 +250,57 @@ class MultiOrchestratorEncryptedTest {
             assertEquals(2, uploader.sent.size)
             assertNull(plain.errors.firstOrNull())
         }
+
+    @Test
+    fun aRetryWithAnotherCaptionStillReusesTheFiles() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg"))
+            files.encrypted(uploader)
+
+            uploader.failing = emptySet()
+            val retry = files.uploadEncrypted("fixed typo", "spoilers", CompressorQuality.UNCOMPRESSED, { AESGCM() }, server, account, uploader)
+
+            assertTrue(retry.allGood)
+            assertEquals(listOf("/tmp/a.jpg", "/tmp/b.jpg"), uploader.sent.toList())
+        }
+
+    @Test
+    fun aSecondPlaintextRetryStillKeepsTheEncryptedFiles() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg", "/tmp/c.jpg"))
+            val first = files.encrypted(uploader)
+
+            uploader.failing = setOf("/tmp/c.jpg")
+            assertFalse(files.upload(null, null, CompressorQuality.UNCOMPRESSED, server, account, uploader, keepEncrypted = true).allGood)
+
+            uploader.failing = emptySet()
+            val again = files.upload(null, null, CompressorQuality.UNCOMPRESSED, server, account, uploader, keepEncrypted = true)
+
+            assertTrue(again.allGood)
+            assertSame(first.successful.single().cipher, again.keptEncrypted.single().cipher)
+            // b went up in plaintext on the first retry and again on the second: plain uploads are not reused.
+            assertEquals(listOf("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/b.jpg", "/tmp/c.jpg"), uploader.sent.toList().let { listOf(it[0], it[1]) + it.drop(2).sorted() })
+        }
+
+    @Test
+    fun aFileWhoseBarWasResetIsStillReused() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg"))
+            files.encrypted(uploader)
+            files.get(0).orchestrator.updateState(0.0, UploadingState.Ready)
+
+            uploader.failing = emptySet()
+            val retry = files.encrypted(uploader)
+
+            assertTrue(retry.allGood)
+            assertEquals(2, uploader.sent.size)
+            assertTrue(
+                files
+                    .get(0)
+                    .orchestrator.progressState.value is UploadingState.Finished,
+            )
+        }
 }

@@ -98,23 +98,23 @@ class ChatFileUploader(
                 }
             }
         } else {
-            justUploadNIP17Unencrypted(viewState, onError, uploader, onStrippingFailed, onceUploaded = onceUploaded)
+            justUploadNIP17Unencrypted(viewState, onError, uploader, onStrippingFailed, onceUploaded)
         }
 
         viewState.mediaUploadTracker.finishUpload()
     }
 
     /**
-     * Uploads the picked files in plaintext. With [keepEncrypted] (a retry after a partly failed
-     * encrypted upload), the files that already went up encrypted are not sent again: they are
-     * handed to [onceUploaded] with their ciphers, and only the rest go up in plaintext.
+     * Uploads the picked files in plaintext. Files that already went up encrypted (an encrypted
+     * attempt that partly failed, then a retry without encryption) are not sent again: they are
+     * handed to [onceUploaded] with their ciphers, and only the rest go up in plaintext. Only a
+     * NIP-17 chat can encrypt, so a plaintext-only chat never has any.
      */
     suspend fun justUploadNIP17Unencrypted(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean = { true },
-        keepEncrypted: Boolean = false,
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
@@ -130,7 +130,7 @@ class ChatFileUploader(
                 uploader,
                 stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
-                keepEncrypted = keepEncrypted,
+                keepEncrypted = true,
             )
 
         if (results.allGood) {

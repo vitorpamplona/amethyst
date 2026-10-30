@@ -20,7 +20,16 @@
  */
 package com.vitorpamplona.amethyst.commons.service.uploads
 
+import kotlin.concurrent.Volatile
+
 class SelectedMediaProcessing(
     val media: SelectedMedia,
     val orchestrator: UploadOrchestrator = UploadOrchestrator(),
-)
+) {
+    /**
+     * The encrypted blob [MultiOrchestrator.uploadEncrypted] last sent for this file, with its cipher,
+     * kept so a retry reuses it instead of sealing the file again. Dropped when the file is sent again.
+     */
+    @Volatile
+    internal var sentEncrypted: MultiOrchestrator.SentEncrypted? = null
+}
