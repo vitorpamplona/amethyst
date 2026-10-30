@@ -14,8 +14,9 @@ const { chromium } = process.env.PLAYWRIGHT_MODULE ? await import(process.env.PL
 const root = new URL('../../', import.meta.url);
 const shim = await readFile(new URL('commonsUI/src/commonMain/composeResources/files/napplet/shim.js', root), 'utf8');
 const shell = await readFile(new URL('commonsUI/src/commonMain/composeResources/files/napplet/shell.html', root), 'utf8');
-const contract = await readFile(new URL('commonsUI/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/napplet/NappletWebContract.kt', root), 'utf8');
+const contract = await readFile(new URL('commons/src/commonMain/kotlin/com/vitorpamplona/amethyst/commons/napplet/NappletWebContract.kt', root), 'utf8');
 const appCsp = contract.match(/const val APP_CSP: String =([\s\S]*?)\n\n/)[1].match(/"[^"]*"/g).map(s => JSON.parse(s)).join('');
+const webrtcGuard = contract.match(/const val WEBRTC_GUARD_JS: String =([\s\S]*?)\n\n/)[1].match(/"[^"]*"/g).map(s => JSON.parse(s)).join('');
 const shellCsp = contract.match(/fun shellCsp[^=]*=([\s\S]*?)\n\n/)[1].match(/"[^"]*"/g).map(s => JSON.parse(s)).join('').replace('$frameSource', "'self'");
 const artifact = await readFile(process.env.DOOM_HTML || new URL('build/index.html', import.meta.url));
 const screens = new URL('build/screens/', import.meta.url);
@@ -23,7 +24,7 @@ await mkdir(screens, { recursive: true });
 
 // NappletWebContract.injectPrelude for the locked NIP-5D posture.
 function injectPrelude(html, domains) {
-  const prelude = `<meta http-equiv="Content-Security-Policy" content="${appCsp}">` +
+  const prelude = `<meta http-equiv="Content-Security-Policy" content="${appCsp}"><script>${webrtcGuard}</script>` +
     '<style>html,body{overscroll-behavior:none !important}</style>' +
     '<script>window.__nappletNip07=false;</script>' +
     `<script>window.__nappletDomains=${JSON.stringify(domains)};${shim}</script>`;
