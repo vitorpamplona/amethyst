@@ -19,7 +19,10 @@ humans, agents, and interop tests. `geode` is a standalone JVM Nostr relay (Ktor
 relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
 `relayBench` (head-to-head relay benchmark — boots geode, strfry and other
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
-NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `nestsClient` runs
+NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`). `fantasyConsole` is a
+headless, stdlib-only runtime for 128x128 fantasy-console carts (`.p8.png`): its own Lua
+interpreter with 16:16 numbers, graphics, sound and cart formats, kept free of app code so it
+can become a library (`fantasyConsole/README.md`). `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
