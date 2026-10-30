@@ -524,6 +524,8 @@ class NappletHostActivity : ComponentActivity() {
         // binder and would pin this Activity (and its WebView) for the life of the `:napplet` process.
         releaseFromBroker()
         WebViewProxyPolicy.release(this)
+        // Its own HTTP client: threads and keep-alive connections that would outlive the screen.
+        if (this::contentServer.isInitialized) contentServer.close()
         // unbind is in runCatching: if the index never resolved we never bound the broker.
         runCatching { unbindService(brokerConnection) }
         keyActions.clear()

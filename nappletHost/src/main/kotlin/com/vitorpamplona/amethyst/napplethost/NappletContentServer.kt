@@ -28,8 +28,11 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.runBlocking
+import java.io.ByteArrayInputStream
 import java.io.File
+import java.io.IOException
 
 /**
  * The WebView side of the shared [NappletSiteServer]: serves the trusted shell and the launch's
@@ -85,13 +88,21 @@ class NappletContentServer(
         // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
         val acceptsHtml = request.requestHeaders["Accept"]?.contains(NappletSiteServer.MIME_HTML, ignoreCase = true) == true
         val response = runBlocking { server.serve(request.method, request.url.toString(), acceptsHtml) } ?: return null
+        // The file may be trimmed away before it opens; an exception here would crash the WebView.
+        val body =
+            try {
+                response.open()
+            } catch (e: IOException) {
+                Log.w("NappletContentServer", "Could not open ${request.url}", e)
+                return WebResourceResponse("text/plain", "utf-8", 502, "Bad Gateway", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+            }
         return WebResourceResponse(
             response.mime,
             response.charset,
             response.status,
             response.reason,
             response.headers,
-            response.open(),
+            body,
         )
     }
 }

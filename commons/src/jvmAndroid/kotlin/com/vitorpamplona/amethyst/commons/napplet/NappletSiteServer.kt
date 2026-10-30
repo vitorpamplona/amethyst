@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.quartz.utils.Log
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import java.io.InputStream
 
 /**
@@ -112,10 +114,20 @@ class NappletSiteServer(
         acceptsHtml: Boolean,
     ): Response? {
         if (!method.equals("GET", ignoreCase = true)) return null
-        if (url == NappletWebContract.SHELL_URL) return shell()
-        if (url == appOrigin || url.startsWith("$appOrigin/")) return appResource(url, acceptsHtml)
-        // A napplet has no network (its CSP is connect-src 'none'); a site is a normal web app.
-        return if (profile.allowsOffOrigin) null else notFound()
+        return try {
+            when {
+                url == NappletWebContract.SHELL_URL -> shell()
+                url == appOrigin || url.startsWith("$appOrigin/") -> appResource(url, acceptsHtml)
+                // A napplet has no network (its CSP is connect-src 'none'); a site is a normal web app.
+                profile.allowsOffOrigin -> null
+                else -> notFound()
+            }
+        } catch (e: IOException) {
+            // A cached file trimmed away between finding and reading it: an error for this request,
+            // never an exception on the browser's thread (one there takes the whole WebView down).
+            Log.w(TAG, "Could not read $url", e)
+            unavailable()
+        }
     }
 
     private suspend fun shell(): Response {
@@ -143,10 +155,14 @@ class NappletSiteServer(
 
         // A document navigation to a path the event doesn't list falls back to the page itself, so
         // client-side routes survive deep links and reloads; a missing script or image stays a 404.
+        // A listed file no server returned is an error, not the home page in its place.
         val blob =
             blobs.find(requestPath)
-                ?: (if (acceptsHtml && requestPath != "/") blobs.find("/") else null)
-                ?: return notFound()
+                ?: when {
+                    blobs.lookup(requestPath) != null -> return unavailable()
+                    acceptsHtml && requestPath != "/" -> blobs.find("/")
+                    else -> null
+                } ?: return notFound()
 
         val (mime, charset) = splitContentType(blob.contentType)
         // A locked napplet gets the strict app CSP; a site sets its own.
@@ -166,7 +182,12 @@ class NappletSiteServer(
         // to keep.
         private val NO_STORE = mapOf("Cache-Control" to "no-store")
 
+        private const val TAG = "NappletSiteServer"
+
         fun notFound(): Response = Response(404, "Not Found", "text/plain", "utf-8", emptyMap(), ByteArray(0))
+
+        /** A file the event lists that couldn't be fetched or read. */
+        fun unavailable(): Response = Response(502, "Bad Gateway", "text/plain", "utf-8", emptyMap(), ByteArray(0))
 
         /** Splits a content type into its MIME type and charset (UTF-8 for text-like types). */
         fun splitContentType(contentType: String): Pair<String, String?> {

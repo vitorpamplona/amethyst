@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 
 /**
  * A content-addressed, on-disk cache for verified Blossom blobs, shared across the app's processes.
@@ -79,13 +81,23 @@ class NappletBlobCache(
     ) {
         val target = fileFor(sha256) ?: return
         if (target.isFile) return
-        runCatching {
-            dir.mkdirs()
-            val tmp = File(dir, "$sha256.tmp.${System.nanoTime()}")
-            tmp.writeBytes(bytes)
-            if (!tmp.renameTo(target)) {
-                tmp.deleteOrWarn("NappletBlobCache", "leftover temp file")
+        if (!dir.isDirectory && !dir.mkdirs()) {
+            Log.w("NappletBlobCache") { "Cannot create $dir" }
+            return
+        }
+        val tmp = File(dir, "$sha256$TEMP_MARKER${System.nanoTime()}")
+        try {
+            // Synced before the rename: reads never re-hash, so a file under a hash's name must be
+            // whole even after a power loss.
+            FileOutputStream(tmp).use { out ->
+                out.write(bytes)
+                out.fd.sync()
             }
+            if (!tmp.renameTo(target)) tmp.deleteOrWarn("NappletBlobCache", "leftover temp file")
+        } catch (e: IOException) {
+            // A full disk, most likely: the partial file goes, the blob is simply not cached.
+            Log.w("NappletBlobCache", "Could not cache $sha256", e)
+            tmp.deleteOrWarn("NappletBlobCache", "partial temp file")
         }
     }
 
@@ -95,7 +107,7 @@ class NappletBlobCache(
             val files =
                 dir
                     .listFiles()
-                    ?.filter { it.isFile && !it.name.contains(".tmp.") }
+                    ?.filter { it.isFile && !isStaleTemp(it) && !it.name.contains(TEMP_MARKER) }
                     ?.map { Triple(it, it.length(), it.lastModified()) } ?: return
             var total = files.sumOf { it.second }
             if (total <= maxBytes) return
@@ -109,6 +121,16 @@ class NappletBlobCache(
     }
 
     /**
+     * A temp file a crashed or killed write left behind: one being written now is younger than this,
+     * so it stays. Deleted here, as trimming walks the directory anyway.
+     */
+    private fun isStaleTemp(file: File): Boolean {
+        if (!file.name.contains(TEMP_MARKER) || System.currentTimeMillis() - file.lastModified() < STALE_TEMP_MS) return false
+        file.deleteOrWarn("NappletBlobCache", "stale temp file")
+        return true
+    }
+
+    /**
      * The blob's file, or null when [sha256] is not one. The name comes from a site's manifest, so it is
      * checked here too: a `../` in it would otherwise read and write outside the cache directory.
      */
@@ -117,6 +139,8 @@ class NappletBlobCache(
     companion object {
         const val DEFAULT_MAX_BYTES = 256L * 1024 * 1024
         private const val TOUCH_INTERVAL_MS = 60L * 60 * 1000
+        private const val STALE_TEMP_MS = 60L * 60 * 1000
+        private const val TEMP_MARKER = ".tmp."
 
         /** The shared cache directory, identical across processes since they share the app's cacheDir. */
         fun dirFor(cacheDir: File) = File(cacheDir, "napplet-blobs")

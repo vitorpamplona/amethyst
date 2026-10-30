@@ -27,11 +27,14 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.guessStaticContentT
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.normalizeStaticPath
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
@@ -66,14 +69,21 @@ class NappletBlobStore(
         fun readBytes(): ByteArray = bytes ?: requireNotNull(file).readBytes()
     }
 
-    // canonical path ("index.html", "assets/app.js") -> its tag.
-    private val byPath: Map<String, PathTag> = paths.associateBy { it.path.removePrefix("./").removePrefix("/") }
+    // canonical path ("index.html", "assets/app.js") -> its tag. The first tag for a path wins, as in
+    // quartz's resolver, so both read a duplicated path the same way.
+    private val byPath: Map<String, PathTag> =
+        HashMap<String, PathTag>(paths.size).apply {
+            paths.forEach { putIfAbsent(it.path.removePrefix("./").removePrefix("/"), it) }
+        }
 
     // A blob being downloaded: concurrent requests for it wait for the one download.
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<ByteArray?>>()
 
-    /** The tag that serves [requestPath], as quartz's resolver matches it (`/` is `index.html`). */
-    fun lookup(requestPath: String): PathTag? = byPath[normalizeStaticPath(requestPath)]
+    /**
+     * The tag that serves [requestPath], as quartz's resolver matches it (`/` is `index.html`). Browsers
+     * send paths percent-encoded (`/my%20file.js`), while the event lists them as written.
+     */
+    fun lookup(requestPath: String): PathTag? = byPath[normalizeStaticPath(decodePath(requestPath.substringBefore('?').substringBefore('#')))]
 
     /** Whether [requestPath] is cached already or can be fetched now, without reading it. */
     suspend fun isAvailable(requestPath: String): Boolean {
@@ -103,21 +113,27 @@ class NappletBlobStore(
         val mine = CompletableDeferred<ByteArray?>()
         val running = inFlight.putIfAbsent(hash, mine)
         if (running != null) return running.await()
-        try {
+        // Other requests wait on this download, so it finishes even if the request that started it
+        // goes away: the verified bytes are cached and handed to the waiters inside the block, since
+        // withContext drops its result on the way back to a cancelled caller. A failure is a miss
+        // for all of them, never an exception that reaches the browser's thread.
+        return withContext(NonCancellable + Dispatchers.IO) {
             val bytes =
-                withContext(Dispatchers.IO) {
+                try {
                     StaticSiteResolver.candidateUrls(servers, hash).firstNotNullOfOrNull { url ->
                         NappletBlobHttp.download(client, url)?.takeIf { StaticSiteResolver.verify(it, hash) }
                     }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Downloading $hash failed", e)
+                    null
                 }
-            if (bytes != null) cache.putVerified(hash, bytes)
-            mine.complete(bytes)
-            return bytes
-        } catch (e: Throwable) {
-            mine.completeExceptionally(e)
-            throw e
-        } finally {
-            inFlight.remove(hash, mine)
+            try {
+                if (bytes != null) cache.putVerified(hash, bytes)
+            } finally {
+                mine.complete(bytes)
+                inFlight.remove(hash, mine)
+            }
+            bytes
         }
     }
 
@@ -162,6 +178,31 @@ class NappletBlobStore(
 
         // Enough for every signature quartz's sniffer knows.
         private const val SNIFF_BYTES = 64
+
+        private const val TAG = "NappletBlobStore"
+
+        /**
+         * Decodes a URL path's percent escapes as UTF-8. `+` stays a plus: that rule is for query
+         * strings. A malformed escape leaves the path as it came.
+         */
+        fun decodePath(path: String): String {
+            if ('%' !in path) return path
+            val out = ByteArrayOutputStream(path.length)
+            var i = 0
+            while (i < path.length) {
+                val c = path[i]
+                if (c == '%') {
+                    if (i + 2 >= path.length) return path
+                    val value = path.substring(i + 1, i + 3).toIntOrNull(16) ?: return path
+                    out.write(value)
+                    i += 3
+                } else {
+                    out.write(c.toString().toByteArray(Charsets.UTF_8))
+                    i++
+                }
+            }
+            return out.toByteArray().decodeToString()
+        }
 
         /** The sha256 a Blossom URL names: its last segment, without an extension. */
         fun blobHashOf(url: String): String =

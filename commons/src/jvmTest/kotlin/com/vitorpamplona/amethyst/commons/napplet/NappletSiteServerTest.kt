@@ -80,6 +80,35 @@ class NappletSiteServerTest {
     }
 
     @Test
+    fun encodedPathsReachTheirFiles() =
+        runBlocking {
+            // Browsers send paths percent-encoded; the event lists them as written. A plus is a plus.
+            val server = server(HostProfile.WEBSITE, listOf(file("/my file.js", "SPACE"), file("/café.js", "ACCENT"), file("/a+b.js", "PLUS")))
+            assertEquals("SPACE", server.serve("GET", "$origin/my%20file.js", acceptsHtml = false)?.readBody()?.decodeToString())
+            assertEquals("ACCENT", server.serve("GET", "$origin/caf%C3%A9.js", acceptsHtml = false)?.readBody()?.decodeToString())
+            assertEquals("PLUS", server.serve("GET", "$origin/a+b.js", acceptsHtml = false)?.readBody()?.decodeToString())
+            assertEquals(404, server.serve("GET", "$origin/my%2", acceptsHtml = false)?.status)
+        }
+
+    @Test
+    fun aListedPageNoServerHasIsAnErrorNotTheHomePage() =
+        runBlocking {
+            val missing = "<p>about</p>".encodeToByteArray()
+            val server = server(HostProfile.WEBSITE, listOf(file("/index.html", "<p>HOME</p>"), PathTag("/about.html", sha256(missing).toHexKey())))
+            assertEquals(502, server.serve("GET", "$origin/about.html", acceptsHtml = true)?.status)
+            // A client-side route the event doesn't list still gets the page.
+            assertContains(server.serve("GET", "$origin/some/route", acceptsHtml = true)!!.readBody().decodeToString(), "HOME")
+        }
+
+    @Test
+    fun aDuplicatedPathServesItsFirstTag() =
+        runBlocking {
+            // As quartz's resolver reads it, so both agree on what the site is.
+            val server = server(HostProfile.WEBSITE, listOf(file("/x.js", "FIRST"), file("/x.js", "SECOND")))
+            assertEquals("FIRST", server.serve("GET", "$origin/x.js", acceptsHtml = false)?.readBody()?.decodeToString())
+        }
+
+    @Test
     fun aSiteShellFramesItsOwnOrigin() =
         runBlocking {
             val shell = assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true))

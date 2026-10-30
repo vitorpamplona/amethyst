@@ -29,6 +29,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import java.io.File
@@ -41,6 +43,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -48,6 +51,9 @@ import kotlin.test.assertTrue
 
 class NappletBlobStoreTest {
     private val served = ConcurrentHashMap<String, ByteArray>()
+
+    @Volatile
+    private var delayMs = 0L
     private val requests = AtomicInteger()
 
     // Serves a blob by hash; "chunked" sends it with no Content-Length, as some servers do.
@@ -55,6 +61,7 @@ class NappletBlobStoreTest {
         HttpServer.create(InetSocketAddress(InetAddress.getLoopbackAddress(), 0), 0).apply {
             createContext("/") { exchange ->
                 requests.incrementAndGet()
+                Thread.sleep(delayMs)
                 val name = exchange.requestURI.path.trimStart('/')
                 val body = served[name]
                 if (body == null) {
@@ -100,6 +107,33 @@ class NappletBlobStoreTest {
             assertEquals(NappletBlobStore.CACHE_SERVER, second.server)
             assertEquals(1, requests.get())
         }
+
+    @Test
+    fun aWaitingRequestStillGetsTheFileWhenTheFirstGivesUp() =
+        runBlocking {
+            val page = "<p>shared</p>".encodeToByteArray()
+            served[hashOf(page)] = page
+            delayMs = 500
+            val store = store(listOf(PathTag("/index.html", hashOf(page))))
+            val first = launch(Dispatchers.Default) { store.find("/") }
+            delay(100)
+            val second = async(Dispatchers.Default) { store.find("/") }
+            delay(50)
+            first.cancel()
+            assertContentEquals(page, assertNotNull(second.await()).readBytes())
+            assertTrue(cache.has(hashOf(page)), "the download was kept")
+            assertEquals(1, requests.get())
+        }
+
+    @Test
+    fun aWriteThatDiedLeavesNoTempFileBehind() {
+        val stale = File(dir, "aa.tmp.1").apply { writeBytes(ByteArray(10)) }
+        assertTrue(stale.setLastModified(System.currentTimeMillis() - 2 * 60 * 60 * 1000))
+        val writing = File(dir, "bb.tmp.2").apply { writeBytes(ByteArray(10)) }
+        cache.trimToSize(Long.MAX_VALUE)
+        assertFalse(stale.exists(), "an hour-old temp file is cleaned up")
+        assertTrue(writing.exists(), "one being written now is left alone")
+    }
 
     @Test
     fun bytesThatDoNotMatchTheirHashAreNeitherServedNorCached() =
