@@ -267,6 +267,7 @@ class UploadOrchestratorTest {
             contentType: String,
             serverBaseUrl: String,
             authHeader: String?,
+            onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)?,
         ): BlossomUploadResult {
             lastUploadedFile = file
             lastUploadedBytes = file.readBytes()

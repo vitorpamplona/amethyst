@@ -140,6 +140,11 @@ class AndroidMediaUploader(
             newState: UploadingState,
         ) = progress.updateState(newProgress, newState)
 
+        fun uploadProgress(
+            from: Double,
+            to: Double,
+        ) = progress.uploadProgress(from, to)
+
         private suspend fun uploadNIP96(
             fileUri: Uri,
             contentType: String?,
@@ -165,8 +170,9 @@ class AndroidMediaUploader(
                         serverBaseUrl = serverBaseUrl,
                         okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                         onProgress = { percent: Float ->
-                            updateState(0.2 + (0.2 * percent), UploadingState.Uploading)
+                            updateState(0.4 + (0.2 * percent), UploadingState.Uploading)
                         },
+                        onUploadProgress = uploadProgress(from = 0.2, to = 0.4),
                         httpAuth =
                             if (forcedSigner != null) {
                                 { url, method, body -> forcedSigner.sign(HTTPAuthorizationEvent.build(url, method, body)) }
@@ -194,25 +200,26 @@ class AndroidMediaUploader(
         /**
          * Tries [selected], then the rest of the servers the picker offered (see
          * [blossomUploadOrder]) until one stores the blob. Every server gets the same blob, so they
-         * share one signed upload token: the signer is asked once, and a signer that refused, timed
-         * out or is read-only stops the fallback instead of prompting again per server. Attempts
+         * share one hash, one set of preview hashes and one signed upload token: the file is read
+         * and the signer is asked once, and a signer that refused, timed out or is read-only stops
+         * the fallback instead of prompting again per server. Attempts
          * don't publish their errors; when every server fails, the error shown is the selected
          * server's, the one the user chose and will recognize.
          */
         private suspend fun uploadBlossomWithFallback(
             selected: ServerName,
             account: Account,
-            uploadTo: suspend (serverBaseUrl: String, auth: SharedUploadAuth) -> UploadingFinalState,
+            uploadTo: suspend (serverBaseUrl: String, shared: SharedUpload) -> UploadingFinalState,
         ): UploadingFinalState {
             val order = blossomUploadOrder(selected, account.blossomServers.hostNameFlow.value)
-            val auth = SharedUploadAuth()
+            val shared = SharedUpload()
             var firstError: UploadingState.Error? = null
             for (server in order) {
-                when (val result = uploadTo(server.baseUrl, auth)) {
+                when (val result = uploadTo(server.baseUrl, shared)) {
                     is UploadingState.Finished -> return result
                     is UploadingState.Error -> {
                         if (firstError == null) firstError = result
-                        if (auth.signerFailed) return result.also { updateState(0.0, it) }
+                        if (shared.signerFailed) return result.also { updateState(0.0, it) }
                         Log.w("UploadOrchestrator", "Upload to ${server.baseUrl} failed, trying the next server")
                     }
                 }
@@ -246,12 +253,15 @@ class AndroidMediaUploader(
         }
 
         /**
-         * The upload token for one blob, signed at most once and reused by every server tried.
-         * A signer that returned no token is asked again on the next server; only a token or a
-         * signer failure is kept.
+         * What every server tried for one blob shares: its [BlossomUploader.PreparedBlob], read
+         * once, and the upload token, signed at most once. A signer that returned no token is asked
+         * again on the next server; only a token or a signer failure is kept.
          */
-        private class SharedUploadAuth {
+        private class SharedUpload {
             private var outcome: Result<BlossomAuthorizationEvent>? = null
+            private var prepared: BlossomUploader.PreparedBlob? = null
+
+            fun blob(prepare: () -> BlossomUploader.PreparedBlob): BlossomUploader.PreparedBlob = prepared ?: prepare().also { prepared = it }
 
             var signerFailed = false
                 private set
@@ -280,7 +290,7 @@ class AndroidMediaUploader(
             account: Account,
             forcedSigner: NostrSigner?,
             context: Context,
-            sharedAuth: SharedUploadAuth,
+            shared: SharedUpload,
             buzzWorkspace: Boolean = false,
         ): UploadingFinalState {
             updateState(0.2, UploadingState.Uploading)
@@ -289,12 +299,12 @@ class AndroidMediaUploader(
             // Buzz workspace, whose relay checks the imeta `x` against the blob it stored.
             val useMedia = !buzzWorkspace && forcedSigner == null && account.settings.optimizeMediaOnUpload.value
             return try {
+                val blob = shared.blob { BlossomUploader().prepare(fileUri, contentType, context) }
                 val result =
                     BlossomUploader()
                         .upload(
                             uri = fileUri,
                             contentType = contentType,
-                            size = size,
                             alt = alt,
                             sensitiveContent = contentWarningReason,
                             serverBaseUrl = serverBaseUrl,
@@ -305,7 +315,7 @@ class AndroidMediaUploader(
                             // `server` tag, and upload-token replay is not the threat scoping
                             // guards against (delete tokens are — those stay scoped).
                             httpAuth = { hash, size, alt ->
-                                sharedAuth.get {
+                                shared.get {
                                     when {
                                         // Buzz's strict mode demands exactly one `server` tag naming the
                                         // workspace and a token that expires within 60s of signing.
@@ -329,6 +339,8 @@ class AndroidMediaUploader(
                             },
                             context = context,
                             useMediaEndpoint = useMedia,
+                            onProgress = uploadProgress(from = 0.2, to = 0.6),
+                            prepared = blob,
                         )
 
                 val finalState =
@@ -344,6 +356,13 @@ class AndroidMediaUploader(
                             okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
                             originalHash = originalHash,
                             originalContentType = contentTypeForResult,
+                            // A Blossom URL names its blob by hash, so the server must serve exactly
+                            // the blob its descriptor reports.
+                            expectedHash = result.sha256,
+                            // /upload stores the exact bytes: a descriptor naming the hash we sent
+                            // confirms them, so only that the server serves them is left to check.
+                            // /media may have transformed them, so that one is downloaded.
+                            sent = blob.takeIf { !useMedia && result.sha256.equals(it.hash, ignoreCase = true) },
                         )
                     }
 
@@ -402,9 +421,11 @@ class AndroidMediaUploader(
             if (targets.isEmpty()) return
 
             val contentType = result.type ?: "application/octet-stream"
+            // One token serves every target: upload tokens are not server-scoped (see uploadBlossom)
+            // and last an hour, so a remote signer is asked once instead of once per server.
+            val auth = account.createBlossomUploadAuth(hash, result.size ?: 0L, "Mirror $hash").toAuthorizationHeader()
             targets.forEach { target ->
                 try {
-                    val auth = account.createBlossomUploadAuth(hash, result.size ?: 0L, "Mirror $hash").toAuthorizationHeader()
                     BlossomClient(Amethyst.instance.roleBasedHttpClientBuilder.okHttpClientForUploads(target))
                         .mirrorOrUpload(sourceUrl, hash, contentType, target, auth)
                 } catch (e: Exception) {
@@ -435,12 +456,23 @@ class AndroidMediaUploader(
             return finish(UploadOrchestrator.OrchestratorResult.ServerResult(fileHeader, url, uploadResult.magnet, hash, originalContentType, originalHash))
         }
 
+        /**
+         * Confirms the server serves the upload and builds its header from what it serves.
+         *
+         * When the server reported storing exactly the bytes sent ([sent]: a Blossom `/upload`
+         * whose descriptor names the hash computed before sending), a `HEAD` request is enough:
+         * the hash and size are already known, and downloading the whole file back would double the
+         * data the upload costs. Otherwise, or when the server has no `HEAD`, the file is downloaded
+         * and hashed, and must hash to [expectedHash] when one is given.
+         */
         private suspend fun verifyHeader(
             uploadResult: MediaUploadResult,
             localContentType: String?,
             originalContentType: String?,
             originalHash: String?,
             okHttpClient: (String) -> OkHttpClient,
+            expectedHash: String? = null,
+            sent: BlossomUploader.PreparedBlob? = null,
         ): UploadingFinalState {
             val url = uploadResult.url
             if (url.isNullOrBlank()) {
@@ -449,6 +481,26 @@ class AndroidMediaUploader(
 
             updateState(0.6, UploadingState.Downloading)
 
+            if (sent != null) {
+                when (val check = ImageDownloader().waitUntilServed(url, okHttpClient)) {
+                    null -> {
+                        return error(UploadError.COULD_NOT_DOWNLOAD_FROM_SERVER)
+                    }
+
+                    is ImageDownloader.ServedCheck.Served -> {
+                        if (check.size != null && check.size != sent.size) {
+                            Log.w("UploadOrchestrator") { "$url serves ${check.size} bytes, not the uploaded ${sent.size}" }
+                            return error(UploadError.SERVER_RETURNED_DIFFERENT_FILE, BlossomServerUrl.domain(url))
+                        }
+                        return finishVerified(uploadResult, url, sent.hash, sent.size, localContentType ?: check.contentType, originalContentType, originalHash)
+                    }
+
+                    ImageDownloader.ServedCheck.HeadNotSupported -> {
+                        Unit
+                    }
+                }
+            }
+
             // Use streaming verification for memory efficiency with large files
             val verification =
                 ImageDownloader().waitAndVerifyStream(url, okHttpClient)
@@ -456,13 +508,29 @@ class AndroidMediaUploader(
 
             updateState(0.8, UploadingState.Hashing)
 
-            // Create FileHeader with hash from streaming verification
-            // Note: We skip blurhash/dimensions since we already have them from upload
+            if (expectedHash != null && !verification.hash.equals(expectedHash, ignoreCase = true)) {
+                Log.w("UploadOrchestrator") { "$url serves ${verification.hash}, not the uploaded $expectedHash" }
+                return error(UploadError.SERVER_RETURNED_DIFFERENT_FILE, BlossomServerUrl.domain(url))
+            }
+
+            return finishVerified(uploadResult, url, verification.hash, verification.size, localContentType ?: verification.contentType, originalContentType, originalHash)
+        }
+
+        private fun finishVerified(
+            uploadResult: MediaUploadResult,
+            url: String,
+            hash: String,
+            size: Long,
+            localContentType: String?,
+            originalContentType: String?,
+            originalHash: String?,
+        ): UploadingFinalState {
+            // Blurhash and dimensions come from the upload result, which already merged the local ones.
             val fileHeader =
                 FileHeader(
-                    mimeType = uploadResult.type ?: localContentType ?: verification.contentType,
-                    hash = verification.hash,
-                    size = verification.size.toInt(),
+                    mimeType = uploadResult.type ?: localContentType,
+                    hash = hash,
+                    size = size.toInt(),
                     dim = uploadResult.dimension,
                     blurHash = uploadResult.blurHash,
                 )
@@ -579,14 +647,14 @@ class AndroidMediaUploader(
                 return when (server.type) {
                     ServerType.NIP96 -> uploadNIP96(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context)
                     ServerType.Blossom ->
-                        uploadBlossomWithFallback(server, account) { baseUrl, auth ->
-                            uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context, auth)
+                        uploadBlossomWithFallback(server, account) { baseUrl, shared ->
+                            uploadBlossom(finalUri, compressed.contentType, compressed.size, alt, contentWarningReason, baseUrl, null, null, account, forcedSigner, context, shared)
                         }
                     // Private to the workspace: never retried on, or mirrored to, a public server.
                     ServerType.BuzzWorkspace -> {
                         val clean = sanitizeForBuzzWorkspace(finalUri, compressed.contentType, context)
                         try {
-                            uploadBlossom(clean?.uri ?: finalUri, compressed.contentType, clean?.size ?: compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context, SharedUploadAuth(), buzzWorkspace = true)
+                            uploadBlossom(clean?.uri ?: finalUri, compressed.contentType, clean?.size ?: compressed.size, alt, contentWarningReason, server.baseUrl, null, null, account, forcedSigner, context, SharedUpload(), buzzWorkspace = true)
                                 .also { if (it is UploadingState.Error) updateState(0.0, it) }
                         } finally {
                             clean?.file?.let { file ->
@@ -631,8 +699,17 @@ class AndroidMediaUploader(
 
             if (compressed.uri != finalUri) deleteTempUri(compressed.uri, uri)
 
-            val encrypted = EncryptFiles().encryptFile(context, finalUri, encrypt)
-            deleteTempUri(finalUri, uri)
+            val encrypted =
+                try {
+                    EncryptFiles().encryptFile(context, finalUri, encrypt)
+                } catch (_: OutOfMemoryError) {
+                    // The cipher takes the whole file as one array, next to its ciphertext. A file too
+                    // big for that fails one large allocation, which is freed as this unwinds: report
+                    // it instead of crashing the app.
+                    return error(UploadError.FILE_TOO_LARGE_TO_ENCRYPT)
+                } finally {
+                    deleteTempUri(finalUri, uri)
+                }
 
             try {
                 return when (server.type) {
@@ -640,12 +717,12 @@ class AndroidMediaUploader(
                     // The same encrypted file goes to every server tried, so its key, nonce and
                     // hash stay valid whichever one ends up holding it.
                     ServerType.Blossom ->
-                        uploadBlossomWithFallback(server, account) { baseUrl, auth ->
-                            uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, auth)
+                        uploadBlossomWithFallback(server, account) { baseUrl, shared ->
+                            uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, shared)
                         }
 
                     ServerType.BuzzWorkspace ->
-                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, SharedUploadAuth(), buzzWorkspace = true)
+                        uploadBlossom(encrypted.uri, encrypted.contentType, encrypted.size, alt, contentWarningReason, server.baseUrl, compressed.contentType, encrypted.originalHash, account, forcedSigner, context, SharedUpload(), buzzWorkspace = true)
                             .also { if (it is UploadingState.Error) updateState(0.0, it) }
                 }
             } finally {

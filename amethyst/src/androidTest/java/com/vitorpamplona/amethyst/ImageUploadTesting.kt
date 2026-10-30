@@ -106,11 +106,10 @@ class ImageUploadTesting {
     private suspend fun testBlossom(server: ServerName) {
         val paylod = getBitmap()
         val initialHash = sha256(paylod).toHexKey()
-        val inputStream = paylod.inputStream()
         val result =
             BlossomUploader()
                 .upload(
-                    inputStream = inputStream,
+                    openStream = { paylod.inputStream() },
                     hash = initialHash,
                     length = paylod.size.toLong(),
                     baseFileName = "filename.png",
@@ -147,11 +146,10 @@ class ImageUploadTesting {
                 ) { client }
 
         val payload = getBitmap()
-        val inputStream = payload.inputStream()
         val result =
             Nip96Uploader()
                 .upload(
-                    inputStream = inputStream,
+                    openStream = { payload.inputStream() },
                     length = payload.size.toLong(),
                     contentType = "image/png",
                     alt = null,

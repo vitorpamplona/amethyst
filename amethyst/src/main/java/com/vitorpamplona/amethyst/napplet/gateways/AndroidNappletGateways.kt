@@ -187,7 +187,7 @@ class AndroidNappletGateways(
         val result =
             runCatchingCancellable {
                 BlossomUploader().upload(
-                    inputStream = ByteArrayInputStream(bytes),
+                    openStream = { ByteArrayInputStream(bytes) },
                     hash = hash,
                     length = bytes.size.toLong(),
                     baseFileName = filename,

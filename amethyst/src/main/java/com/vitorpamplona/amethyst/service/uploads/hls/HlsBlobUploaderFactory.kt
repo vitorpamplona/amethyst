@@ -84,7 +84,6 @@ object HlsBlobUploaderFactory {
             BlossomUploader().upload(
                 uri = file.toUri(),
                 contentType = contentType,
-                size = file.length(),
                 alt = null,
                 sensitiveContent = null,
                 serverBaseUrl = serverBaseUrl,

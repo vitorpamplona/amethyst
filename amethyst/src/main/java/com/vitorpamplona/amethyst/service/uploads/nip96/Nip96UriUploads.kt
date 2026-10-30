@@ -33,15 +33,31 @@ import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import okhttp3.OkHttpClient
+import java.io.IOException
 
 /** Android's extension lookup, ahead of the shared client's own table. */
 fun androidExtensionFor(mimeType: String): String? = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
 
-private fun ContentResolver.querySize(uri: Uri) =
-    query(uri, null, null, null, null)?.use {
-        it.moveToFirst()
-        val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-        it.getLong(sizeIndex)
+/** The provider's size for [uri], or null when it has no row, no SIZE column or no value in it. */
+private fun ContentResolver.querySize(uri: Uri): Long? =
+    runCatching {
+        query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use {
+            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
+            if (sizeIndex >= 0 && it.moveToFirst() && !it.isNull(sizeIndex)) it.getLong(sizeIndex) else null
+        }
+    }.getOrNull()
+
+/** Reads [uri] to its end to count its bytes, for a provider that does not report a size. */
+private fun ContentResolver.countBytes(uri: Uri): Long? =
+    openInputStream(uri)?.use { stream ->
+        val buffer = ByteArray(64 * 1024)
+        var total = 0L
+        while (true) {
+            val read = stream.read(buffer)
+            if (read < 0) break
+            total += read
+        }
+        total
     }
 
 private fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
@@ -58,6 +74,7 @@ suspend fun Nip96Uploader.upload(
     onProgress: (percentage: Float) -> Unit,
     httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
     context: Context,
+    onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
 ): MediaUploadResult =
     upload(
         uri,
@@ -70,6 +87,7 @@ suspend fun Nip96Uploader.upload(
         onProgress,
         httpAuth,
         context,
+        onUploadProgress,
     )
 
 /**
@@ -87,29 +105,25 @@ suspend fun Nip96Uploader.upload(
     onProgress: (percentage: Float) -> Unit,
     httpAuth: suspend (String, String, ByteArray?) -> HTTPAuthorizationEvent?,
     context: Context,
+    onUploadProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
 ): MediaUploadResult {
     val contentResolver = context.contentResolver
     val myContentType = contentType ?: contentResolver.getType(uri)
-    val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: 0
+    // The body declares this length up front, so it must be exact: a wrong one fails the upload.
+    val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: contentResolver.countBytes(uri) ?: 0
 
     val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
-    val imageInputStream = contentResolver.openInputStream(uri)
-
-    checkNotNull(imageInputStream) { "Can't open the image input stream" }
-
-    return imageInputStream
-        .use { stream ->
-            upload(
-                inputStream = stream,
-                length = length,
-                contentType = myContentType,
-                alt = alt,
-                sensitiveContent = sensitiveContent,
-                server = server,
-                okHttpClient = okHttpClient,
-                onProgress = onProgress,
-                httpAuth = httpAuth,
-                extensionFor = ::androidExtensionFor,
-            )
-        }.mergeLocalMetadata(localMetadata)
+    return upload(
+        openStream = { contentResolver.openInputStream(uri) ?: throw IOException("Can't open the image input stream") },
+        length = length,
+        contentType = myContentType,
+        alt = alt,
+        sensitiveContent = sensitiveContent,
+        server = server,
+        okHttpClient = okHttpClient,
+        onProgress = onProgress,
+        httpAuth = httpAuth,
+        extensionFor = ::androidExtensionFor,
+        onUploadProgress = onUploadProgress,
+    ).mergeLocalMetadata(localMetadata)
 }
