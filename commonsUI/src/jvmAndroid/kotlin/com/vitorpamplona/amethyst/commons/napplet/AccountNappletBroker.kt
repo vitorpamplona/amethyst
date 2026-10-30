@@ -97,7 +97,7 @@ fun buildAccountNappletBroker(
         signerLedger = signerLedger,
         nostrConnectPrompt =
             NostrConnectPrompt { app, declared ->
-                prompts.connect(app, buildConnectInfo(browserIcons, app, declared))
+                prompts.connect(app, buildConnectInfo(browserIcons, app, declared, account))
             },
         signerConsentPrompt =
             NostrSignerConsentPrompt { app, op, request ->

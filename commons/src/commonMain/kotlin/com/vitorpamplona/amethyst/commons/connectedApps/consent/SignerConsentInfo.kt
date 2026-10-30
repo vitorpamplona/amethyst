@@ -97,11 +97,12 @@ typealias PendingConsent = ConsentQueue.Request<SignerConsentInfo, SignerOpGrant
 
 /**
  * The requests to show together: those for the account of the oldest one. A sheet signs for one
- * account, so requests for another wait for the next sheet.
+ * account, so requests for another wait for the next sheet. Requests that name no account group
+ * together; empty only when nothing is waiting.
  */
 fun List<PendingConsent>.oldestAccountGroup(): List<PendingConsent> {
-    val account = firstOrNull()?.info?.accountPubKey ?: return emptyList()
-    return filter { it.info.accountPubKey == account }
+    val oldest = firstOrNull() ?: return emptyList()
+    return filter { it.info.accountPubKey == oldest.info.accountPubKey }
 }
 
 /** Everything the "Connect to Nostr" dialog needs to render. */

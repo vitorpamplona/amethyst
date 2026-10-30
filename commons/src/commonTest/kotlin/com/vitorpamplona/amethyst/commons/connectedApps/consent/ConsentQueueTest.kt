@@ -120,6 +120,25 @@ class ConsentQueueTest {
         }
 
     @Test
+    fun requestsThatNameNoAccountAreStillShown() =
+        runTest {
+            val queue = ConsentQueue<SignerConsentInfo, SignerOpGrant>(unanswered = SignerOpGrant.DenyOnce)
+            val unnamed = SignerConsentInfo("App", "a:app", NostrSignerOp.SignKind(1), "Sign a note", "hi")
+            val answers = List(2) { async { queue.ask(unnamed) } }
+            async { queue.ask(signing("alice")) }
+            yield()
+            assertEquals(
+                2,
+                queue.pending.value
+                    .oldestAccountGroup()
+                    .size,
+                "the oldest requests, with no account, form the sheet",
+            )
+            queue.pending.value.forEach { it.dismiss() }
+            answers.forEach { assertEquals(SignerOpGrant.DenyOnce, it.await()) }
+        }
+
+    @Test
     fun aBatchNeverMixesAccounts() =
         runTest {
             val queue = ConsentQueue<SignerConsentInfo, SignerOpGrant>(unanswered = SignerOpGrant.DenyOnce)

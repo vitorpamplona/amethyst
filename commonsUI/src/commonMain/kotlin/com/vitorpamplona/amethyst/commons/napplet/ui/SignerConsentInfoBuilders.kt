@@ -149,6 +149,10 @@ suspend fun buildSignerConsentInfo(
         rememberedOpLabel = op.label(),
         changeSummary = change?.text,
         changeIsWarning = change?.warning ?: false,
+        // Which identity signs: the broker's account, not necessarily the one the app shows now.
+        accountName = account?.userProfile()?.toBestDisplayName(),
+        accountPicture = account?.userProfile()?.profilePicture(),
+        accountPubKey = account?.pubKey,
     )
 }
 
@@ -208,6 +212,8 @@ suspend fun buildConnectInfo(
     browserIcons: BrowserIconRegistry,
     identity: NappletIdentity,
     declared: Set<NappletCapability> = emptySet(),
+    // The account the app connects to, shown so the user knows which identity they hand over.
+    account: Account? = null,
 ): SignerConnectInfo {
     val untitled = loadStringRes(Res.string.napplet_fallback_title, identity.authorPubKey.take(8))
     val (title, iconUrl) =
@@ -235,6 +241,9 @@ suspend fun buildConnectInfo(
         coordinate = identity.coordinate,
         domain = domain,
         iconUrl = iconUrl,
+        accountName = account?.userProfile()?.toBestDisplayName(),
+        accountPicture = account?.userProfile()?.profilePicture(),
+        accountPubKey = account?.pubKey,
         requestedPermissions = preGranted,
     )
 }
