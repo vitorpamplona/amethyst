@@ -76,6 +76,8 @@ kotlin {
                 api(project(":commons"))
                 api(libs.quartz)
                 implementation(libs.marmot)
+                // The cart player's screen and controls (CartPlayer).
+                implementation(libs.kiko.compose)
                 implementation(libs.cordn)
                 // Imported directly; see the same line in commons/build.gradle.kts.
                 implementation(libs.crypto)

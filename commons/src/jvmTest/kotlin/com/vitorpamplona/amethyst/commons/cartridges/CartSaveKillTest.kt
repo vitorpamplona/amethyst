@@ -21,10 +21,8 @@
 package com.vitorpamplona.amethyst.commons.cartridges
 
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.kiko.cart.Cart
+import com.vitorpamplona.kiko.player.KikoPlayer
 import com.vitorpamplona.kiko.runtime.ConsoleHost
-import com.vitorpamplona.kiko.runtime.FantasyConsole
-import kotlinx.coroutines.runBlocking
 import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -38,7 +36,7 @@ import java.util.concurrent.TimeUnit
 /**
  * Saves outlive a killed app: a separate JVM plays a game that saves, is killed with SIGKILL
  * (no shutdown hooks, no flush), and the next one must read the save back through `dget`.
- * How soon a save is written is [CartSavesTest]'s, on virtual time: here a kill waits for the
+ * How soon a save is written is kiko-player's own test, on virtual time: here a kill waits for the
  * write to reach the disk, so a busy machine cannot make the test flaky.
  */
 class CartSaveKillTest {
@@ -126,7 +124,7 @@ class CartSaveKillTest {
     }
 }
 
-/** A game that saves, run the way the player runs it: [CartSaves] over the app's DataStore file. */
+/** A game that saves, run the way the app runs it: a [KikoPlayer] over the app's DataStore file. */
 object CartSaveKillChild {
     private val CARTS =
         mapOf(
@@ -158,26 +156,23 @@ object CartSaveKillChild {
     @JvmStatic
     fun main(args: Array<String>) {
         val stores = AppPreferenceStores(rootFilesDir = { args[0].toPath() })
-        val saves = CartSaves(stores.cartSaveStore())
-        runBlocking { saves.load() }
         val host =
             object : ConsoleHost {
                 override fun log(message: String) {
                     println(message)
                     System.out.flush()
                 }
-
-                override fun loadCartData(id: String) = saves.get(id)
-
-                override fun saveCartData(
-                    id: String,
-                    values: IntArray,
-                ) = saves.save(id, values)
             }
-        val console = FantasyConsole(Cart(ByteArray(Cart.ROM_SIZE), CARTS.getValue(args[1]).trimIndent()), host)
-        while (true) {
-            console.step()
-            Thread.sleep(1000L / 30)
-        }
+        val code = CARTS.getValue(args[1]).trimIndent()
+        val player =
+            KikoPlayer(
+                source = { "__lua__\n$code\n".encodeToByteArray() },
+                saves = stores.cartSaveStore(),
+                host = host,
+                openAudio = { null },
+            )
+        player.resume()
+        // The game's thread is a daemon: this one keeps the process up until the test kills it.
+        while (true) Thread.sleep(1000)
     }
 }

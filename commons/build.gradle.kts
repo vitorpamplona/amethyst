@@ -69,8 +69,10 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.quartz)
-                // The headless cart runtime that plays 128x128 fantasy-console carts in notes.
-                implementation(libs.kiko)
+                // The headless cart runtime that plays 128x128 fantasy-console carts in notes:
+                // kiko-player runs one in real time and brings kiko itself. `api` because
+                // CartPlayerViewModel hands its KikoPlayer to the screen in commonsUI.
+                api(libs.kiko.player)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)
