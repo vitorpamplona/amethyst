@@ -148,7 +148,11 @@ object VideoThumbnailCache {
                 synchronized(memory) { memory[url] = poster }
                 failedAt.remove(url)
             } else {
-                failedAt[url] = System.currentTimeMillis()
+                val now = System.currentTimeMillis()
+                // Only a later success removed an entry: drop the ones past their retry window so
+                // every failed URL of a long session doesn't stay.
+                failedAt.values.removeIf { now - it >= FAILURE_RETRY_MS }
+                failedAt[url] = now
             }
             mine.complete(poster)
             return poster
