@@ -26,8 +26,12 @@ import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 /** When Home invites the user to turn on web of trust. */
 object WebOfTrustNudgeRules {
-    /** Below this many follows a provider has too little to map a circle from. */
-    const val MIN_FOLLOWS = 10
+    /**
+     * Follows, not counting the user, a provider needs to map a circle from. One is enough: the
+     * provider walks out from there, so following one well-connected person already places the
+     * user in the network.
+     */
+    const val MIN_FOLLOWS = 1
 
     /** How long "Not now" hides the card. */
     const val SNOOZE_SECONDS = 30L * 24 * 60 * 60

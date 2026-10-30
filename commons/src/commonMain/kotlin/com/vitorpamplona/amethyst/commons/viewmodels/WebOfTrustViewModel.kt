@@ -115,6 +115,17 @@ class WebOfTrustViewModel(
     private val _setup = MutableStateFlow<WebOfTrustSetup>(WebOfTrustSetup.Idle)
     val setup: StateFlow<WebOfTrustSetup> = _setup.asStateFlow()
 
+    /**
+     * The guided provider this view model last signed the user up with, until [acknowledge]: what
+     * a screen shows its "done" state from, once [setup] is back to Idle.
+     */
+    private val _completed = MutableStateFlow<String?>(null)
+    val completed: StateFlow<String?> = _completed.asStateFlow()
+
+    fun acknowledge() {
+        _completed.value = null
+    }
+
     /** Whether hand-written rows go to the encrypted part of the kind 10040 (a fallback option). */
     private val _isPrivate = MutableStateFlow(false)
     val isPrivate: StateFlow<Boolean> = _isPrivate.asStateFlow()
@@ -144,6 +155,7 @@ class WebOfTrustViewModel(
                     _setup.value = WebOfTrustSetup.Saving(onboarding.id)
                     account.setTrustProviderRows(registration.rows, isPrivate = false)
                     onboarding.networkRelay?.let { adoptNetworkRelay(it) }
+                    _completed.value = onboarding.id
                     WebOfTrustSetup.Idle
                 } catch (e: CancellationException) {
                     throw e

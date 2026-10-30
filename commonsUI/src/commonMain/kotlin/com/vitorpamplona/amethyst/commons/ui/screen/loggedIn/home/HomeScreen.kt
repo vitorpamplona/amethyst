@@ -100,7 +100,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderEph
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderGeohashBubble
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.home.live.RenderLiveActivityBubble
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.BackupKeysNudge
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.keyBackup.rememberShowBackupKeysNudge
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wotNudge.WebOfTrustNudge
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wotNudge.rememberWebOfTrustNudge
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.DividerThickness
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
@@ -110,6 +112,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustViewModel
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.launch
@@ -310,16 +313,6 @@ private fun HomePages(
                         .align(Alignment.TopCenter)
                         .padding(top = paddingValues.calculateTopPadding()),
             ) {
-                BackupKeysNudge(
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-
-                WebOfTrustNudge(
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-
                 HomeAlgoFeedStatusBanner(
                     accountViewModel = accountViewModel,
                     nav = nav,
@@ -407,9 +400,9 @@ fun HomeFeeds(
                 nav = nav,
                 routeForLastRead = routeForLastRead,
                 onLoaded = { FeedLoaded(it, listState, routeForLastRead, liveSection, accountViewModel, nav) },
-                onEmpty = { WithBackupConflicts(accountViewModel, nav) { HomeFeedEmpty(onRefresh) } },
-                onError = { WithBackupConflicts(accountViewModel, nav) { FeedError(it, onRefresh) } },
-                onLoading = { WithBackupConflicts(accountViewModel, nav) { LoadingFeed() } },
+                onEmpty = { WithHomeCards(accountViewModel, nav) { HomeFeedEmpty(onRefresh) } },
+                onError = { WithHomeCards(accountViewModel, nav) { FeedError(it, onRefresh) } },
+                onLoading = { WithHomeCards(accountViewModel, nav) { LoadingFeed() } },
             )
         }
     }
@@ -449,8 +442,11 @@ fun FeedLoaded(
     // while the feed sits at the top would be inserted just above the screen. Only then (not
     // when the user has scrolled down) bring them into view.
     val hasConflicts = backupConflicts.isNotEmpty()
+    val showBackupNudge = rememberShowBackupKeysNudge(accountViewModel)
+    val webOfTrustNudge = rememberWebOfTrustNudge(accountViewModel)
+    val hasNudges = showBackupNudge || webOfTrustNudge != null
     val atTop by remember(listState) { derivedStateOf { listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0 } }
-    val cardsAppearedAtTop = remember(hasConflicts) { hasConflicts && atTop }
+    val cardsAppearedAtTop = remember(hasConflicts, hasNudges) { (hasConflicts || hasNudges) && atTop }
     LaunchedEffect(cardsAppearedAtTop) {
         if (cardsAppearedAtTop) listState.scrollToItem(0)
     }
@@ -459,8 +455,13 @@ fun FeedLoaded(
         contentPadding = rememberFeedContentPadding(FeedPadding),
         state = listState,
     ) {
-        // Only while a conflict is open, so the list's first item (and with it how the
-        // scroll position anchors when new posts arrive) is unchanged the rest of the time.
+        // The cards are items only while they show, so the list's first item (and with it how
+        // the scroll position anchors when new posts arrive) is unchanged the rest of the time.
+        if (hasNudges) {
+            item(key = "homeNudges", contentType = "homeNudges") {
+                HomeNudges(showBackupNudge, webOfTrustNudge, accountViewModel, nav)
+            }
+        }
         if (hasConflicts) {
             item(key = "backupConflicts", contentType = "backupConflicts") {
                 BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel::acceptExternalBackupVersion)
@@ -546,30 +547,44 @@ fun HomeFeedEmptyPreview() {
     )
 }
 
+/** The cards Home shows before its first post: back up your keys, then the circle card. */
+@Composable
+private fun HomeNudges(
+    showBackupNudge: Boolean,
+    webOfTrustNudge: WebOfTrustViewModel?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Column {
+        if (showBackupNudge) BackupKeysNudge(accountViewModel, nav)
+        if (webOfTrustNudge != null) WebOfTrustNudge(webOfTrustNudge, accountViewModel, nav)
+    }
+}
+
 /**
- * The backup-conflict cards above a feed that has no posts to show yet, so an empty or
- * still-loading Home doesn't hide the question. They get at most half the screen and scroll
+ * The cards of [FeedLoaded]'s first items (nudges, backup conflicts) above a feed that has no
+ * posts to show yet: empty, loading or failed, so it doesn't hide them. A new account's feed is
+ * empty, and that is when the nudges matter most. They get at most half the screen and scroll
  * there if there are many.
  */
 @Composable
-private fun WithBackupConflicts(
+private fun WithHomeCards(
     accountViewModel: AccountViewModel,
     nav: INav,
     content: @Composable () -> Unit,
 ) {
     val backupConflicts by accountViewModel.account.settings.backupConflicts
         .collectAsStateWithLifecycle()
-    if (backupConflicts.isEmpty()) {
+    val showBackupNudge = rememberShowBackupKeysNudge(accountViewModel)
+    val webOfTrustNudge = rememberWebOfTrustNudge(accountViewModel)
+    if (backupConflicts.isEmpty() && !showBackupNudge && webOfTrustNudge == null) {
         content()
         return
     }
     val padding = rememberFeedContentPadding(FeedPadding)
     val layoutDirection = LocalLayoutDirection.current
     Column(Modifier.fillMaxSize()) {
-        BackupConflictCards(
-            backupConflicts,
-            nav,
-            onAccept = accountViewModel::acceptExternalBackupVersion,
+        Column(
             Modifier
                 .weight(1f, fill = false)
                 .verticalScroll(rememberScrollState())
@@ -578,7 +593,12 @@ private fun WithBackupConflicts(
                     top = padding.calculateTopPadding(),
                     end = padding.calculateEndPadding(layoutDirection),
                 ),
-        )
+        ) {
+            HomeNudges(showBackupNudge, webOfTrustNudge, accountViewModel, nav)
+            if (backupConflicts.isNotEmpty()) {
+                BackupConflictCards(backupConflicts, nav, onAccept = accountViewModel::acceptExternalBackupVersion)
+            }
+        }
         Box(Modifier.weight(1f)) { content() }
     }
 }

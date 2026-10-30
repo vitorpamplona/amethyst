@@ -55,70 +55,53 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Home's invitation to turn on web of trust: the circle card ([CircleRingsCard]) for an account
- * with enough follows and no trust provider, until the user activates it or puts it away.
- * Activation runs the same guided sign-up as the Web of Trust settings.
+ * Whether Home shows its invitation to turn on web of trust, and the view model running it: the
+ * circle card ([WebOfTrustNudge]) is offered to an account that can sign, follows someone and has
+ * no trust provider, and stays through a sign-up started from it until the user puts it away.
+ * Null when it does not show, so the feed only adds a row for it when there is one.
  */
 @Composable
+fun rememberWebOfTrustNudge(accountViewModel: AccountViewModel): WebOfTrustViewModel? {
+    val account = accountViewModel.account
+    // Signing up needs a signer, and a front end that can reach the provider's API.
+    if (!account.isWriteable() || accountViewModel.host.trustProviderHttp === TrustProviderHttp.Unsupported) return null
+
+    val viewModel: WebOfTrustViewModel =
+        rememberViewModel(key = "wot-nudge-${account.signer.pubKey}", factory = WebOfTrustViewModel.Factory(account, accountViewModel.host.trustProviderHttp, accountViewModel.nip05ClientBuilder()))
+    val provider by account.trustProviderList.liveUserRankProvider.collectAsStateWithLifecycle()
+    val follows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
+    val hiddenUntil by account.settings.webOfTrustNudgeHiddenUntil.collectAsStateWithLifecycle()
+    val setup by viewModel.setup.collectAsStateWithLifecycle()
+    val completed by viewModel.completed.collectAsStateWithLifecycle()
+
+    // A new account's follow list holds the user itself.
+    val followCount = follows.authors.count { it != account.signer.pubKey }
+    val offered = WebOfTrustNudgeRules.shouldOffer(followCount, provider != null, hiddenUntil, TimeUtils.now())
+    return if (offered || setup != WebOfTrustSetup.Idle || completed != null) viewModel else null
+}
+
+/** The circle card for [viewModel] from [rememberWebOfTrustNudge]. */
+@Composable
 fun WebOfTrustNudge(
+    viewModel: WebOfTrustViewModel,
     accountViewModel: AccountViewModel,
     nav: INav,
     modifier: Modifier = Modifier,
 ) {
     val account = accountViewModel.account
-    // Signing up needs a signer, and a front end that can reach the provider's API.
-    if (!account.isWriteable() || accountViewModel.host.trustProviderHttp === TrustProviderHttp.Unsupported) return
-
-    val provider by account.trustProviderList.liveUserRankProvider.collectAsStateWithLifecycle()
     val follows by account.kind3FollowList.flow.collectAsStateWithLifecycle()
-    val hiddenUntil by account.settings.webOfTrustNudgeHiddenUntil.collectAsStateWithLifecycle()
-
-    // Set on Activate, so the card stays through the sign-up and its acknowledgement even after
-    // the provider is saved (which ends the offer).
-    var started by rememberSaveable(account.signer.pubKey) { mutableStateOf(false) }
-
-    val offered = WebOfTrustNudgeRules.shouldOffer(follows.authors.size, provider != null, hiddenUntil, TimeUtils.now())
-    if (!offered && !started) return
-
-    WebOfTrustNudgeCard(
-        accountViewModel = accountViewModel,
-        nav = nav,
-        follows = follows.authors,
-        hasProvider = provider != null,
-        started = started,
-        onStart = { started = true },
-        onHide = { until ->
-            started = false
-            account.settings.hideWebOfTrustNudgeUntil(until)
-        },
-        modifier = modifier,
-    )
-}
-
-@Composable
-private fun WebOfTrustNudgeCard(
-    accountViewModel: AccountViewModel,
-    nav: INav,
-    follows: Set<HexKey>,
-    hasProvider: Boolean,
-    started: Boolean,
-    onStart: () -> Unit,
-    onHide: (Long) -> Unit,
-    modifier: Modifier,
-) {
-    val account = accountViewModel.account
-    val viewModel: WebOfTrustViewModel =
-        rememberViewModel(key = "wot-nudge-${account.signer.pubKey}", factory = WebOfTrustViewModel.Factory(account, accountViewModel.host.trustProviderHttp, accountViewModel.nip05ClientBuilder()))
     val setup by viewModel.setup.collectAsStateWithLifecycle()
+    val completed by viewModel.completed.collectAsStateWithLifecycle()
+    val others = remember(follows) { follows.authors - account.signer.pubKey }
 
     // Faces with a picture first, and the follows-of-follows estimate: both read the whole cache.
-    val sample by produceState(CircleSample.EMPTY, follows) {
+    val sample by produceState(CircleSample.EMPTY, others) {
         value =
             withContext(Dispatchers.Default) {
-                val withPicture = follows.filter { account.cache.getUserIfExists(it)?.profilePicture() != null }
+                val withPicture = others.filter { account.cache.getUserIfExists(it)?.profilePicture() != null }
                 CircleSample(
-                    faces = (withPicture + follows).distinct().take(6),
-                    extended = account.followsOfFollowsCount(follows),
+                    faces = (withPicture + others).distinct().take(6),
+                    extended = account.followsOfFollowsCount(others),
                 )
             }
     }
@@ -138,26 +121,28 @@ private fun WebOfTrustNudgeCard(
         when (val current = setup) {
             is WebOfTrustSetup.Running, is WebOfTrustSetup.Saving -> CircleActivation.Working(setupStepText(current).orEmpty())
             is WebOfTrustSetup.Failed -> CircleActivation.Failed(setupErrorText(current, selected.name))
-            WebOfTrustSetup.Idle -> if (started && hasProvider) CircleActivation.Activated else CircleActivation.Offer
+            WebOfTrustSetup.Idle -> if (completed != null) CircleActivation.Activated else CircleActivation.Offer
         }
     val working = activation is CircleActivation.Working
 
+    val hide = { until: Long ->
+        viewModel.acknowledge()
+        account.settings.hideWebOfTrustNudgeUntil(until)
+    }
+
     CircleRingsCard(
-        self = { size -> UserPicture(account.signer.pubKey, size, accountViewModel = accountViewModel, nav = nav) },
+        self = userFace(account.signer.pubKey, accountViewModel, nav),
         faces = sample.faces.map { key -> userFace(key, accountViewModel, nav) },
-        followCount = follows.size,
+        followCount = others.size,
         extendedCount = sample.extended,
         providers = providers,
         selected = selected,
         onSelect = { selectedId = it.id },
         activation = activation,
-        onActivate = {
-            onStart()
-            viewModel.setUp(onboarding)
-        },
-        onNotNow = { onHide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
-        // The sign-up runs in this card's view model: closing it mid-way would cancel it.
-        onDismiss = { if (!working) onHide(WebOfTrustNudgeRules.FOREVER) },
+        onActivate = { viewModel.setUp(onboarding) },
+        onNotNow = { hide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
+        // The sign-up runs in the view model: putting the card away mid-way would hide its progress.
+        onDismiss = { if (!working) hide(WebOfTrustNudgeRules.FOREVER) },
         modifier = modifier,
     )
 }
