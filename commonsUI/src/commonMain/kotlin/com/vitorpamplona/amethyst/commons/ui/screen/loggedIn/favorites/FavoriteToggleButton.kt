@@ -36,6 +36,8 @@ import com.vitorpamplona.amethyst.commons.resources.favorite_app_remove
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * A star toggle that pins/unpins an nsite or napplet (a [FavoriteApp.NostrApp]) by its addressable
@@ -48,9 +50,12 @@ fun FavoriteToggleButton(
     iconUrl: String? = null,
 ) {
     val favoriteApps = LocalAppServices.current.favoriteApps
-    val apps by favoriteApps.favorites.collectAsStateWithLifecycle()
     val id = "nostr:$coordinate"
-    val isFavorite = remember(apps, id) { apps.any { it.id == id } }
+    // Only this card's answer: a change to the favorites recomposes the card it is about, not every
+    // napplet and site card on screen.
+    val isFavorite by remember(favoriteApps, id) {
+        favoriteApps.favorites.map { apps -> apps.any { it.id == id } }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = favoriteApps.favorites.value.any { it.id == id })
 
     IconButton(
         onClick = {

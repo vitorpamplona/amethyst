@@ -123,7 +123,7 @@ class CefNappletSessionTest {
         }
     private val serverUrl = "http://127.0.0.1:${server.address.port}"
     private val sessions = mutableListOf<CefNappletSession>()
-    private var frame: JFrame? = null
+    private val frames = mutableListOf<JFrame>()
 
     companion object {
         private const val BURST = 100
@@ -139,7 +139,7 @@ class CefNappletSessionTest {
     @After
     fun tearDown() {
         sessions.forEach { it.close() }
-        SwingUtilities.invokeAndWait { frame?.dispose() }
+        SwingUtilities.invokeAndWait { frames.forEach { it.dispose() } }
         server.stop(0)
         scope.cancel()
         tmp.deleteRecursively()
@@ -231,7 +231,7 @@ class CefNappletSessionTest {
         assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
         // A windowed CEF browser is created when its component is first shown.
         SwingUtilities.invokeAndWait {
-            frame =
+            frames +=
                 JFrame("napplet").apply {
                     contentPane.add(state.component, BorderLayout.CENTER)
                     setBounds(0, 0, 960, 640)
@@ -504,5 +504,36 @@ class CefNappletSessionTest {
                 runtime.engine.router.route = DesktopSocksRouter.Route.Blocked
                 turn.close()
             }
+        }
+
+    @Test
+    fun zoomingOneWindowLeavesTheOthersAlone() =
+        runBlocking {
+            val runtime = cefRuntime()
+            // Each napplet keeps reporting how wide its page is laid out: zoomed in, it gets narrower.
+            val probe =
+                """
+                <!doctype html><html><body><script>
+                setInterval(function () { window.napplet.storage.setItem('width', String(window.innerWidth)); }, 200);
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val first = RecordingStorage()
+            val second = RecordingStorage()
+            val zoomed = session(probe, first, runtime)
+            show(zoomed)
+            show(session(probe + " ".encodeToByteArray(), second, runtime))
+
+            suspend fun widthOf(storage: RecordingStorage) =
+                withTimeout(60_000) {
+                    while (storage.values["width"] == null) delay(100)
+                    storage.values.getValue("width").toInt()
+                }
+            val before = widthOf(first)
+            val otherBefore = widthOf(second)
+
+            zoomed.setZoom(200)
+            withTimeout(30_000) { while (first.values.getValue("width").toInt() > before * 2 / 3) delay(100) }
+            delay(1_000)
+            assertEquals(otherBefore, second.values.getValue("width").toInt(), "the other window kept its size")
         }
 }

@@ -75,7 +75,6 @@ import java.awt.Component
 import java.io.InputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.ln
 
 /**
  * One open napplet or nSite window: its Chromium browser, the trusted shell it loads, and the bridge
@@ -350,6 +349,7 @@ class CefNappletSession(
                     canGoForward: Boolean,
                 ) {
                     mutablePage.update { it.copy(isLoading = isLoading, canGoBack = canGoBack, canGoForward = canGoForward) }
+                    if (!isLoading && mutablePage.value.zoomPercent != 100) applyZoom()
                 }
 
                 // A missing blob, a verify miss or a request the posture refused, so a site's author can
@@ -515,9 +515,21 @@ class CefNappletSession(
     /** Page zoom as a percentage of normal size, like Android's text zoom. */
     fun setZoom(percent: Int) {
         val clamped = percent.coerceIn(MIN_ZOOM, MAX_ZOOM)
-        // Chromium's zoom level is a power of 1.2: level 0 is 100%.
-        browser?.zoomLevel = ln(clamped / 100.0) / ln(1.2)
         mutablePage.update { it.copy(zoomPercent = clamped) }
+        applyZoom()
+    }
+
+    /**
+     * Chromium keeps one zoom level per host, and every window's shell is on `napplet.local`: setting
+     * it zoomed every window. CSS zoom on the shell's frame scales this window's page alone (the frame
+     * keeps filling the window; the page lays out narrower at a higher density), and is set again
+     * whenever the shell loads.
+     */
+    private fun applyZoom() {
+        val factor = mutablePage.value.zoomPercent / 100.0
+        // Read back at once: a window behind another isn't laid out on its own, so the page wouldn't see
+        // its new size until the window came forward.
+        browser?.executeJavaScript("var f=document.getElementById('app');f.style.zoom='$factor';f.getBoundingClientRect();", NappletWebContract.SHELL_URL, 0)
     }
 
     private fun withId(

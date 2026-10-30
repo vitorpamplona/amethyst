@@ -21,6 +21,11 @@
 package com.vitorpamplona.amethyst.commons.napplet.blobs
 
 import com.vitorpamplona.quartz.utils.Log
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import okhttp3.Call
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.net.InetSocketAddress
@@ -55,30 +60,54 @@ object NappletBlobHttp {
     fun download(
         client: OkHttpClient,
         url: String,
+    ): ByteArray? = read(client.newCall(request(url)), url)
+
+    /**
+     * [download], stopped when the caller is cancelled: a card scrolled off screen doesn't keep up to
+     * [MAX_BLOB_BYTES] coming in on a connection nobody will use. The call is cancelled, which ends a
+     * blocking read that coroutine cancellation alone can't reach.
+     */
+    suspend fun downloadCancellable(
+        client: OkHttpClient,
+        url: String,
+    ): ByteArray? =
+        coroutineScope {
+            val call = client.newCall(request(url))
+            val reading = async(Dispatchers.IO) { read(call, url) }
+            try {
+                reading.await()
+            } catch (e: CancellationException) {
+                call.cancel()
+                throw e
+            }
+        }
+
+    private fun request(url: String) =
+        Request
+            .Builder()
+            .url(url)
+            .get()
+            .build()
+
+    private fun read(
+        call: Call,
+        url: String,
     ): ByteArray? =
         try {
-            client
-                .newCall(
-                    Request
-                        .Builder()
-                        .url(url)
-                        .get()
-                        .build(),
-                ).execute()
-                .use { r ->
-                    val declared = r.body.contentLength()
-                    if (!r.isSuccessful || declared > MAX_BLOB_BYTES) {
-                        null
-                    } else {
-                        // A server that sends no length is still held to the cap: buffer one byte past
-                        // it and refuse anything that fills it. (Okio, not InputStream.readNBytes, which
-                        // Android only has from API 33.)
-                        val source = r.body.source()
-                        if (source.request(MAX_BLOB_BYTES + 1)) null else source.buffer.readByteArray()
-                    }
+            call.execute().use { r ->
+                val declared = r.body.contentLength()
+                if (!r.isSuccessful || declared > MAX_BLOB_BYTES) {
+                    null
+                } else {
+                    // A server that sends no length is still held to the cap: buffer one byte past
+                    // it and refuse anything that fills it. (Okio, not InputStream.readNBytes, which
+                    // Android only has from API 33.)
+                    val source = r.body.source()
+                    if (source.request(MAX_BLOB_BYTES + 1)) null else source.buffer.readByteArray()
                 }
+            }
         } catch (e: Exception) {
-            Log.w("NappletBlobHttp", "Blob fetch failed for $url", e)
+            if (!call.isCanceled()) Log.w("NappletBlobHttp", "Blob fetch failed for $url", e)
             null
         }
 }

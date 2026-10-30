@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -149,6 +150,20 @@ class NappletBlobStoreTest {
             cache.trimToSize(0)
             assertNotNull(site(NappletBlobCache.partitionOf("alice", "x", "")).find("/"))
             assertEquals(4, requests.get())
+        }
+
+    @Test
+    fun aCardThatScrollsAwayStopsItsDownload() =
+        runBlocking {
+            // A slow server: the request would hold its connection for seconds.
+            val page = "<p>slow</p>".encodeToByteArray()
+            served[hashOf(page)] = page
+            delayMs = 5_000
+            val download = launch(Dispatchers.Default) { NappletBlobHttp.downloadCancellable(OkHttpClient(), "$serverUrl/${hashOf(page)}") }
+            delay(200)
+            val started = System.nanoTime()
+            download.cancelAndJoin()
+            assertTrue((System.nanoTime() - started) / 1_000_000 < 2_000, "cancelling ends the call instead of waiting it out")
         }
 
     @Test
