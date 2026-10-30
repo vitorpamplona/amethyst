@@ -43,6 +43,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.ContextMenu
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -313,6 +314,9 @@ class NappletBrowserActivity : ComponentActivity() {
                 brokerMessenger = null
             }
         }
+
+    // The chrome sees touches first, so a swipe down on its handle opens it over the page.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean = chrome?.dispatchTouchEvent(ev) { super.dispatchTouchEvent(it) } ?: super.dispatchTouchEvent(ev)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

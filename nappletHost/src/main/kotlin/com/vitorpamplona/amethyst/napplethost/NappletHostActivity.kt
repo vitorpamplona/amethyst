@@ -36,6 +36,7 @@ import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
@@ -284,6 +285,9 @@ class NappletHostActivity : ComponentActivity() {
             HostProfile.fromName(other.getStringExtra(NappletHostContract.EXTRA_HOST_PROFILE)) == profile &&
             other.getStringExtra(NappletHostContract.EXTRA_WEBVIEW_PROFILE) == webViewProfile &&
             other.getBooleanExtra(NappletHostContract.EXTRA_USE_TOR, true) == useTor
+
+    // The chrome sees touches first, so a swipe down on its handle opens it over the page.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean = chrome?.dispatchTouchEvent(ev) { super.dispatchTouchEvent(it) } ?: super.dispatchTouchEvent(ev)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
