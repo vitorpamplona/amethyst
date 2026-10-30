@@ -16,13 +16,22 @@ keyless `:napplet` process, the desktop's Chromium with its SOCKS router.
   beyond the prefetch the card already did.
 - **One at a time** (`InlineNappletRuns`): starting a napplet stops the one running elsewhere, and
   a note leaving the composition (scrolled away, another screen) stops its own.
-- **A trusted bar** above the page: "Running in this note", Open (full screen or window) and Stop.
-  The page can't draw over it, so it can't pose as the note or the app around it.
+- **Nothing over the page.** A running app is the page itself in a primary-colored border. Stop is
+  on the card's header beside its Open (`InlineStopButton`), and the "wants to ask you" notice sits
+  below the page: on Android the page is another process's surface, which may draw above anything
+  Amethyst puts over it. Opening the app full screen or in a window is the card's own Open, which
+  stops the note's run first (`InlineNappletRuns.stopApp`). A bar above the page ("Running in this
+  note", Open, Stop) and an Open on the notice made three Opens for one action, and the bar said
+  what the user could already see.
 - **No questions in the feed.** The run's identity is marked `inline` by the trusted launcher
   (`NappletLaunch.inline(instanceId)`). The broker keeps every grant the user already gave the
   app, but where it would show a dialog (capability, first connect, signature) it refuses and
   records the ask in `NappletInlineAsks`; nothing is held against the app. The note then shows
   "… wants to ask you something. Open it to answer."
+- **Desktop bridge names** are per session. Chromium keeps one message router per query-function
+  name for every browser in a renderer, and every shell shares one renderer: with one shared name,
+  a window opened while the note's run was closing joined that run's router, the close removed
+  it, and the window's page reached no one. Its question was never asked.
 - **Scroll stays with the feed**: on Android the surface does not claim vertical drags (unlike the
   favorite tabs); on the desktop the wheel scrolls the page only after it was clicked.
 

@@ -26,7 +26,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,7 +59,6 @@ import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -69,9 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_failed
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_needs_you
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_run
-import com.vitorpamplona.amethyst.commons.resources.napplet_inline_running
 import com.vitorpamplona.amethyst.commons.resources.napplet_inline_stop
-import com.vitorpamplona.amethyst.commons.resources.nsite_open
 import com.vitorpamplona.amethyst.commons.resources.retry
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletSurface
@@ -82,6 +78,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import org.jetbrains.compose.resources.stringResource
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -96,34 +93,38 @@ private const val STAGE_RATIO = 4f / 3f
  * never runs more than one app.
  */
 object InlineNappletRuns {
-    private val mutableLive = MutableStateFlow<String?>(null)
+    /** A run: the stage [card] showing the app [app] (a stage's coordinate). */
+    class Run(
+        val card: String,
+        val app: String,
+    )
 
-    /** The card running now, if any. */
-    val live: StateFlow<String?> = mutableLive.asStateFlow()
+    private val mutableLive = MutableStateFlow<Run?>(null)
 
-    // The app the live card runs, for stopApp. Read and written on the UI thread only.
-    private var liveApp: String? = null
+    /** The run now, if any. */
+    val live: StateFlow<Run?> = mutableLive.asStateFlow()
 
     fun start(
         card: String,
         app: String,
     ) {
-        liveApp = app
-        mutableLive.value = card
+        mutableLive.value = Run(card, app)
     }
 
     fun stop(card: String) {
-        mutableLive.compareAndSet(card, null)
+        mutableLive.update { if (it?.card == card) null else it }
     }
 
     /**
-     * Stops whichever note runs [app] (a stage's coordinate): it is about to open in a window, and two
-     * runs of one app share its storage and would write over each other's state.
+     * Stops whichever note runs [app]: it is about to open in a window, and two runs of one app share
+     * its storage and would write over each other's state; or the user stopped it from its card.
      */
     fun stopApp(app: String) {
-        val card = mutableLive.value ?: return
-        if (liveApp == app) stop(card)
+        mutableLive.update { if (it?.app == app) null else it }
     }
+
+    /** Whether [app] runs in a note now. */
+    fun runs(app: String): Flow<Boolean> = mutableLive.map { it?.app == app }.distinctUntilChanged()
 }
 
 /**
@@ -166,79 +167,59 @@ internal fun InlineNappletStage(
     coordinate: String,
     title: String,
     icon: String?,
-    onOpen: () -> Unit,
-) = InlineNappletStage(coordinate, title, icon, onOpen) { instanceId, onStatus, modifier ->
+) = InlineNappletStage(coordinate, title, icon) { instanceId, onStatus, modifier ->
     InlineNappletSurface(manifest, instanceId, onStatus, modifier)
 }
 
 /**
  * Where an app runs inside its note: a poster with Run here until the user starts it, then the
- * app itself ([surface]) under a bar the page can't draw over (what runs, Open, Stop). A napplet may
- * use what the user already granted it; anything that needs the user is refused and shown as a
- * request to Open it, where the question can be asked. Scrolling the note away stops it.
- * [coordinate] keys the last frame kept as its poster.
+ * app itself ([surface]) under a bar the page can't draw over (what runs, Stop). A napplet may use
+ * what the user already granted it; anything that needs the user is refused and shown as a request
+ * to open it with the card's own Open, which stops this run first ([InlineNappletRuns.stopApp]) and
+ * where the question can be asked. Scrolling the note away stops it. [coordinate] keys the last
+ * frame kept as its poster.
  */
 @Composable
 internal fun InlineNappletStage(
     coordinate: String,
     title: String,
     icon: String?,
-    onOpen: () -> Unit,
     surface: InlineSurface,
 ) {
     val card = remember { newId() }
     val live by InlineNappletRuns.live.collectAsState()
-    val running = live == card
+    val running = live?.card == card
     DisposableEffect(card) { onDispose { InlineNappletRuns.stop(card) } }
 
+    // Retry starts a fresh instance: the one that failed is gone.
+    var attempt by remember { mutableIntStateOf(0) }
+    val instanceId = remember(running, attempt) { newId() }
+
+    // Nothing of Amethyst's lies over the page: on Android it is another process's surface, which
+    // may draw above anything here. Stop is on the card ([InlineStopButton]), the notice below.
     val border = if (running) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     Column(Modifier.fillMaxWidth().clip(StageShape).border(1.dp, border, StageShape)) {
-        if (running) {
-            LiveBar(
-                onOpen = {
-                    InlineNappletRuns.stop(card)
-                    onOpen()
-                },
-                onStop = { InlineNappletRuns.stop(card) },
-            )
-        }
         Box(Modifier.fillMaxWidth().aspectRatio(STAGE_RATIO), contentAlignment = Alignment.Center) {
             if (running) {
-                LiveRun(surface, title, onOpen = {
-                    InlineNappletRuns.stop(card)
-                    onOpen()
-                })
+                LiveRun(surface, title, instanceId, onRetry = { attempt++ })
             } else {
                 Poster(coordinate, title, icon, onRun = { InlineNappletRuns.start(card, coordinate) })
             }
         }
+        if (running) AskNotice(title, instanceId)
     }
 }
 
-/** Drawn by Amethyst above the page, so the page can't pose as the note or the app around it. */
+/**
+ * Stops the note's run of the app [coordinate], for the card's header; nothing while it isn't
+ * running there.
+ */
 @Composable
-private fun LiveBar(
-    onOpen: () -> Unit,
-    onStop: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(start = 12.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(MaterialSymbols.Shield, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            stringResource(Res.string.napplet_inline_running),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onOpen) { Text(stringResource(Res.string.nsite_open)) }
-        IconButton(onClick = onStop) {
-            Icon(MaterialSymbols.Stop, contentDescription = stringResource(Res.string.napplet_inline_stop), modifier = Modifier.size(20.dp))
-        }
+internal fun InlineStopButton(coordinate: String) {
+    val running by remember(coordinate) { InlineNappletRuns.runs(coordinate) }.collectAsState(false)
+    if (!running) return
+    IconButton(onClick = { InlineNappletRuns.stopApp(coordinate) }) {
+        Icon(MaterialSymbols.Stop, contentDescription = stringResource(Res.string.napplet_inline_stop), modifier = Modifier.size(20.dp))
     }
 }
 
@@ -246,14 +227,10 @@ private fun LiveBar(
 private fun LiveRun(
     surface: InlineSurface,
     title: String,
-    onOpen: () -> Unit,
+    instanceId: String,
+    onRetry: () -> Unit,
 ) {
-    // Retry starts a fresh instance: the one that failed is gone.
-    var attempt by remember { mutableIntStateOf(0) }
-    val instanceId = remember(attempt) { newId() }
     var status by remember(instanceId) { mutableStateOf(InlineNappletStatus.LOADING) }
-    val asked by remember(instanceId) { NappletInlineAsks.shared.asked(instanceId) }.collectAsState(false)
-    DisposableEffect(instanceId) { onDispose { NappletInlineAsks.shared.forget(instanceId) } }
 
     surface(instanceId, { status = it }, Modifier.fillMaxSize().swallowTaps())
 
@@ -274,27 +251,27 @@ private fun LiveRun(
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                 )
-                TextButton(onClick = { attempt++ }) { Text(stringResource(Res.string.retry)) }
+                TextButton(onClick = onRetry) { Text(stringResource(Res.string.retry)) }
             }
         InlineNappletStatus.SHOWING -> {}
     }
+}
 
-    if (asked) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            Row(
-                Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(Res.string.napplet_inline_needs_you, title),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onOpen) { Text(stringResource(Res.string.nsite_open)) }
-            }
-        }
-    }
+/** The run [instanceId] wanted the user; the card's own Open, above, is where it can ask. */
+@Composable
+private fun AskNotice(
+    title: String,
+    instanceId: String,
+) {
+    val asked by remember(instanceId) { NappletInlineAsks.shared.asked(instanceId) }.collectAsState(false)
+    DisposableEffect(instanceId) { onDispose { NappletInlineAsks.shared.forget(instanceId) } }
+    if (!asked) return
+    Text(
+        stringResource(Res.string.napplet_inline_needs_you, title),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSecondaryContainer,
+        modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.secondaryContainer).padding(horizontal = 12.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

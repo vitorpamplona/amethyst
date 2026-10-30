@@ -56,6 +56,7 @@ import com.vitorpamplona.quartz.utils.LogSink
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -201,6 +202,7 @@ class CefNappletSessionTest {
         storage: NappletStorage,
         runtime: DesktopNappletRuntime,
         servedBytes: ByteArray = html,
+        offscreen: OffscreenNappletView? = null,
     ): CefNappletSession {
         val hash = sha256(html).toHexKey()
         blobs[hash] = servedBytes
@@ -222,7 +224,7 @@ class CefNappletSessionTest {
                 paths = listOf(PathTag("/index.html", hash)),
                 servers = listOf(serverUrl),
             )
-        return CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime).also { sessions += it }
+        return CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime, offscreen = offscreen).also { sessions += it }
     }
 
     @Test
@@ -266,10 +268,13 @@ class CefNappletSessionTest {
                 (async function () {
                   // Chromium injects the bridge's query function into every frame, this one too.
                   // Calling it directly must reach nothing.
-                  try {
-                    window.__amethystNappletQuery({ request: JSON.stringify({ type: 'storage.set', id: 'x1', key: 'smuggled', value: '1' }),
-                      persistent: false, onSuccess: function () {}, onFailure: function () {} });
-                  } catch (e) {}
+                  Object.getOwnPropertyNames(window).filter(function (n) { return n.indexOf('__amethystNappletQuery') === 0; }).forEach(function (n) {
+                    try {
+                      window[n]({ request: JSON.stringify({ type: 'storage.set', id: 'x1', key: 'smuggled', value: '1' }),
+                        persistent: false, onSuccess: function () {}, onFailure: function () {} });
+                    } catch (e) {}
+                  });
+                  window.napplet.storage.setItem('found', String(Object.getOwnPropertyNames(window).some(function (n) { return n.indexOf('__amethystNappletQuery_') === 0; })));
                   // CSP connect-src 'none': this must never leave the page.
                   try { await fetch('$serverUrl/leak'); } catch (e) {}
                   await window.napplet.storage.setItem('ok', 'yes');
@@ -283,7 +288,58 @@ class CefNappletSessionTest {
             withTimeout(60_000) { while (storage.values["roundtrip"] == null) delay(100) }
             assertEquals("yes", storage.values["roundtrip"], "a reply carried the value back to the napplet")
             assertFalse(storage.values.containsKey("smuggled"), "the iframe's own call to the bridge was refused")
+            assertEquals("true", storage.values["found"], "the iframe did find the query function to try it")
             assertFalse("/leak" in requested, "the napplet's fetch never reached the network")
+        }
+
+    @Test
+    fun closingOneNappletLeavesTheOthersBridgeWorking() =
+        runBlocking {
+            val runtime = cefRuntime()
+
+            // Writes `early` on load and `late` a while after: the second write tells whether the
+            // page could still reach the broker after another session went away.
+            fun probe(name: String) =
+                """
+                <!doctype html><html><body><script>
+                window.napplet.storage.setItem('early', '$name');
+                setTimeout(function () { window.napplet.storage.setItem('late', '$name'); }, 6000);
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+
+            val keptStorage = RecordingStorage()
+            val kept = session(probe("kept"), keptStorage, runtime).also { show(it) }
+            // The one that closes runs inside a note, as when its window is opened from the feed.
+            val closingStorage = RecordingStorage()
+            val closing =
+                session(probe("closing"), closingStorage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) }).also {
+                    it.start()
+                    withTimeout(600_000) { it.state.first { state -> state is CefNappletSession.State.Showing } }
+                }
+            withTimeout(60_000) { while (keptStorage.values["early"] == null || closingStorage.values["early"] == null) delay(100) }
+
+            // A note's run ends (the user opened its window, or scrolled away) while another runs on.
+            closing.close()
+            withTimeout(60_000) { while (keptStorage.values["late"] == null) delay(100) }
+            assertEquals("kept", keptStorage.values["late"], "the page still open lost its bridge when another closed")
+
+            // Opening a note's app in a window: the window starts while the note's run is closing.
+            val noteStorage = RecordingStorage()
+            val note =
+                session(probe("note"), noteStorage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) }).also {
+                    it.start()
+                    withTimeout(600_000) { it.state.first { state -> state is CefNappletSession.State.Showing } }
+                }
+            withTimeout(60_000) { while (noteStorage.values["early"] == null) delay(100) }
+            val windowStorage = RecordingStorage()
+            val window = session(probe("window"), windowStorage, runtime)
+            val opening = async { show(window) }
+            withTimeout(60_000) { window.state.first { it is CefNappletSession.State.Loading || it is CefNappletSession.State.Showing } }
+            note.close()
+            opening.await()
+            withTimeout(60_000) { while (windowStorage.values["early"] == null) delay(100) }
+            assertEquals("window", windowStorage.values["early"], "the window opened as the note's run closed reaches the broker")
+            kept.close()
         }
 
     @Test
