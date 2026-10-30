@@ -670,6 +670,8 @@ class ChatNewMessageViewModel :
                         onError ?: accountViewModel.toastManager::toast,
                         uploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                        // The files that did go up encrypted are sent as they are.
+                        keepEncrypted = true,
                     ) {
                         uploadsWaitingToBeSent += it
                         draftTag.newVersion()
@@ -684,6 +686,8 @@ class ChatNewMessageViewModel :
                         onError ?: accountViewModel.toastManager::toast,
                         uploader,
                         onStrippingFailed = strippingFailureConfirmation::awaitConfirmation,
+                        // The files that did go up encrypted are sent as they are.
+                        keepEncrypted = true,
                     ) {
                         ChatFileSender(sendRoom, account).sendNIP17(it)
                         draftTag.newVersion()

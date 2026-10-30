@@ -30,22 +30,52 @@ import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class MultiOrchestratorEncryptedTest {
     /**
      * Encrypts the file's path as its bytes, once, the way the platform uploaders do, and serves the
-     * ciphertext at the returned URL. Fails the paths in [failing]; runs [during] before encrypting.
+     * blob at the returned URL. Fails the paths in [failing] the way Android's Blossom path does: it
+     * returns the error without reporting it. Runs [during] before uploading.
      */
-    private class EncryptingUploader(
-        val failing: Set<String> = emptySet(),
+    private class FakeUploader(
+        var failing: Set<String> = emptySet(),
         val during: (MediaUri) -> Unit = {},
     ) : MediaUploader {
         val blobs = ConcurrentHashMap<String, ByteArray>()
+        val sent = ConcurrentLinkedQueue<String>()
+
+        private fun send(
+            progress: UploadOrchestrator,
+            uri: MediaUri,
+            mimeType: String?,
+            bytes: (ByteArray) -> ByteArray,
+        ): UploadingState.UploadingFinalState {
+            during(uri)
+            progress.updateState(0.5, UploadingState.Uploading)
+            if (uri.toString() in failing) return UploadingState.Error(UploadError.FAILED_TO_UPLOAD_MEDIA, arrayOf("refused"))
+            val blob = bytes(uri.toString().encodeToByteArray())
+            val url = "https://blossom.example$uri"
+            blobs[url] = blob
+            sent += uri.toString()
+            return progress.finish(
+                UploadOrchestrator.OrchestratorResult.ServerResult(
+                    FileHeader(mimeType, blob.size.toString(), blob.size, null, null),
+                    url,
+                    null,
+                    null,
+                    mimeType,
+                    null,
+                ),
+            )
+        }
 
         override suspend fun upload(
             progress: UploadOrchestrator,
@@ -61,7 +91,7 @@ class MultiOrchestratorEncryptedTest {
             onStrippingFailed: suspend () -> Boolean,
             convertGifToMp4: Boolean,
             forcedSigner: NostrSigner?,
-        ): UploadingState.UploadingFinalState = error("not used")
+        ): UploadingState.UploadingFinalState = send(progress, uri, mimeType) { it }
 
         override suspend fun uploadEncrypted(
             progress: UploadOrchestrator,
@@ -78,23 +108,7 @@ class MultiOrchestratorEncryptedTest {
             onStrippingFailed: suspend () -> Boolean,
             convertGifToMp4: Boolean,
             forcedSigner: NostrSigner?,
-        ): UploadingState.UploadingFinalState {
-            during(uri)
-            if (uri.toString() in failing) return progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, "refused")
-            val encrypted = encrypt.encrypt(uri.toString().encodeToByteArray())
-            val url = "https://blossom.example$uri"
-            blobs[url] = encrypted
-            return progress.finish(
-                UploadOrchestrator.OrchestratorResult.ServerResult(
-                    FileHeader(mimeType, encrypted.size.toString(), encrypted.size, null, null),
-                    url,
-                    null,
-                    null,
-                    mimeType,
-                    null,
-                ),
-            )
-        }
+        ): UploadingState.UploadingFinalState = send(progress, uri, mimeType) { encrypt.encrypt(it) }
 
         override suspend fun compressIfNeeded(
             progress: UploadOrchestrator,
@@ -111,26 +125,25 @@ class MultiOrchestratorEncryptedTest {
         ): FileHeader? = null
     }
 
+    private val server = ServerName("test", "https://blossom.example")
+    private val account = mockk<Account>()
+
     private fun files(vararg paths: String) = MultiOrchestrator(paths.map { SelectedMedia(StringMediaUri(it), "image/jpeg") })
 
-    private suspend fun MultiOrchestrator.uploadAll(uploader: MediaUploader) =
-        uploadEncrypted(
-            alt = null,
-            contentWarningReason = null,
-            mediaQuality = CompressorQuality.UNCOMPRESSED,
-            newCipher = { AESGCM() },
-            server = ServerName("test", "https://blossom.example"),
-            account = mockk(),
-            uploader = uploader,
-        )
+    private suspend fun MultiOrchestrator.encrypted(
+        uploader: MediaUploader,
+        quality: CompressorQuality = CompressorQuality.UNCOMPRESSED,
+    ) = uploadEncrypted(null, null, quality, { AESGCM() }, server, account, uploader)
 
-    private val MultiOrchestrator.EncryptedUpload<AESGCM>.url get() = (finished.result as UploadOrchestrator.OrchestratorResult.ServerResult).url
+    private val MultiOrchestrator.EncryptedUpload.url get() = (finished.result as UploadOrchestrator.OrchestratorResult.ServerResult).url
+
+    private val UploadingState.Finished.url get() = (result as UploadOrchestrator.OrchestratorResult.ServerResult).url
 
     @Test
     fun everyFileDecryptsUnderTheCipherPairedWithIt() =
         runTest {
-            val uploader = EncryptingUploader()
-            val result = files("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg").uploadAll(uploader)
+            val uploader = FakeUploader()
+            val result = files("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg").encrypted(uploader)
 
             assertTrue(result.allGood, "errors: ${result.errors}")
             assertEquals(3, result.successful.size)
@@ -148,15 +161,20 @@ class MultiOrchestratorEncryptedTest {
         }
 
     @Test
-    fun aFailedFileIsReportedAndTheOthersKeepTheirCiphers() =
+    fun aFailureTheUploaderDidNotReportIsStillAnError() =
         runTest {
-            val uploader = EncryptingUploader(failing = setOf("/tmp/b.jpg"))
-            val result = files("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg").uploadAll(uploader)
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg")
+            val result = files.encrypted(FakeUploader(failing = setOf("/tmp/b.jpg")))
 
             assertFalse(result.allGood)
-            assertEquals(1, result.errors.size)
-            assertEquals(listOf("https://blossom.example/tmp/a.jpg", "https://blossom.example/tmp/c.jpg"), result.successful.map { it.url })
-            result.successful.forEach { it.cipher.decrypt(uploader.blobs.getValue(it.url)) }
+            assertEquals(listOf(UploadError.FAILED_TO_UPLOAD_MEDIA), result.errors.map { it.error })
+            assertEquals(listOf("https://blossom.example/tmp/a.jpg"), result.successful.map { it.url })
+            // The bar no longer stays on Uploading.
+            assertTrue(
+                files
+                    .get(1)
+                    .orchestrator.progressState.value is UploadingState.Error,
+            )
         }
 
     @Test
@@ -164,9 +182,72 @@ class MultiOrchestratorEncryptedTest {
         runTest {
             val files = files("/tmp/a.jpg", "/tmp/b.jpg")
             val b = files.get(1)
-            val result = files.uploadAll(EncryptingUploader(during = { if (it == b.media.uri) files.remove(b) }))
+            val result = files.encrypted(FakeUploader(during = { if (it == b.media.uri) files.remove(b) }))
 
             assertTrue(result.allGood)
             assertEquals(listOf("https://blossom.example/tmp/a.jpg"), result.successful.map { it.url })
+        }
+
+    @Test
+    fun anEncryptedRetrySendsOnlyTheFilesThatFailed() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg", "/tmp/c.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg"))
+            val first = files.encrypted(uploader)
+            assertFalse(first.allGood)
+
+            uploader.failing = emptySet()
+            val retry = files.encrypted(uploader)
+
+            assertTrue(retry.allGood)
+            assertEquals(listOf("/tmp/a.jpg", "/tmp/c.jpg", "/tmp/b.jpg"), uploader.sent.toList().let { it.take(2).sorted() + it.drop(2) })
+            assertEquals(listOf("a", "b", "c"), retry.successful.map { it.url.substringAfterLast('/').take(1) })
+            // The kept files carry the very cipher that sealed their blob.
+            first.successful.forEach { kept -> assertSame(kept.cipher, retry.successful.single { it.url == kept.url }.cipher) }
+            retry.successful.forEach { it.cipher.decrypt(uploader.blobs.getValue(it.url)) }
+        }
+
+    @Test
+    fun aRetryUnderOtherSettingsSendsEverythingAgain() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg"))
+            files.encrypted(uploader)
+
+            uploader.failing = emptySet()
+            files.encrypted(uploader, CompressorQuality.HIGH)
+
+            assertEquals(3, uploader.sent.size)
+        }
+
+    @Test
+    fun aPlaintextRetryKeepsTheFilesThatWentUpEncrypted() =
+        runTest {
+            val files = files("/tmp/a.jpg", "/tmp/b.jpg")
+            val uploader = FakeUploader(failing = setOf("/tmp/b.jpg"))
+            val first = files.encrypted(uploader)
+
+            uploader.failing = emptySet()
+            val retry = files.upload(null, null, CompressorQuality.UNCOMPRESSED, server, account, uploader, keepEncrypted = true)
+
+            assertTrue(retry.allGood)
+            assertEquals(listOf("https://blossom.example/tmp/b.jpg"), retry.successful.map { it.url })
+            assertSame(first.successful.single().cipher, retry.keptEncrypted.single().cipher)
+            assertEquals(listOf("/tmp/a.jpg", "/tmp/b.jpg"), uploader.sent.toList())
+            assertContentEquals("/tmp/b.jpg".encodeToByteArray(), uploader.blobs.getValue("https://blossom.example/tmp/b.jpg"))
+        }
+
+    @Test
+    fun aPlaintextUploadSendsEverythingUnlessAskedToKeep() =
+        runTest {
+            val files = files("/tmp/a.jpg")
+            val uploader = FakeUploader()
+            files.encrypted(uploader)
+            val plain = files.upload(null, null, CompressorQuality.UNCOMPRESSED, server, account, uploader)
+
+            assertTrue(plain.keptEncrypted.isEmpty())
+            assertEquals(1, plain.successful.size)
+            assertEquals(2, uploader.sent.size)
+            assertNull(plain.errors.firstOrNull())
         }
 }

@@ -82,7 +82,7 @@ class ChatFileUploader(
                 viewState.reset()
             } else {
                 val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
-                val allAvifMetadata = results.errors.all { it.errorResource == Res.string.avif_metadata_strip_failed }
+                val allAvifMetadata = results.errors.isNotEmpty() && results.errors.all { it.errorResource == Res.string.avif_metadata_strip_failed }
 
                 if (allAvifMetadata) {
                     // AVIF strip refusal is a pre-encryption check — "retry without encryption" wouldn't help.
@@ -98,17 +98,23 @@ class ChatFileUploader(
                 }
             }
         } else {
-            justUploadNIP17Unencrypted(viewState, onError, uploader, onStrippingFailed, onceUploaded)
+            justUploadNIP17Unencrypted(viewState, onError, uploader, onStrippingFailed, onceUploaded = onceUploaded)
         }
 
         viewState.mediaUploadTracker.finishUpload()
     }
 
+    /**
+     * Uploads the picked files in plaintext. With [keepEncrypted] (a retry after a partly failed
+     * encrypted upload), the files that already went up encrypted are not sent again: they are
+     * handed to [onceUploaded] with their ciphers, and only the rest go up in plaintext.
+     */
     suspend fun justUploadNIP17Unencrypted(
         viewState: ChatFileUploadState,
         onError: (title: String, message: String) -> Unit,
         uploader: MediaUploader,
         onStrippingFailed: suspend () -> Boolean = { true },
+        keepEncrypted: Boolean = false,
         onceUploaded: suspend (List<SuccessfulUploads>) -> Unit,
     ) {
         val orchestrator = viewState.multiOrchestrator ?: return
@@ -124,9 +130,19 @@ class ChatFileUploader(
                 uploader,
                 stripMetadata = viewState.stripMetadata,
                 onStrippingFailed = onStrippingFailed,
+                keepEncrypted = keepEncrypted,
             )
 
         if (results.allGood) {
+            val sealed =
+                results.keptEncrypted.mapNotNull { upload ->
+                    val uploaded = upload.finished.result
+                    if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
+                        SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
+                    } else {
+                        null
+                    }
+                }
             val list =
                 results.successful.mapNotNull { state ->
                     val uploaded = state.result
@@ -137,7 +153,7 @@ class ChatFileUploader(
                     }
                 }
 
-            onceUploaded(list)
+            onceUploaded(sealed + list)
             viewState.reset()
         } else {
             val errorMessages = results.errors.map { loadStringRes(it.errorResource, *it.params) }.distinct()
