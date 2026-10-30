@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.util.extractFilename
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
@@ -232,6 +233,8 @@ object DesktopNotePlatform : NotePlatform {
                     CapturedVideoStill(url, video?.artworkUri, isLive, accountViewModel, ratio, content.blurhash, content.thumbhash, shape, content.description)
                     return
                 }
+                // A WebM the note declares goes to Chromium on macOS, whatever its URL looks like.
+                ChromiumVideoRoute.declare(url, video?.mimeType)
                 DesktopVideoPlayer(
                     url = url,
                     modifier = Modifier.fillMaxWidth().heightIn(max = MaxInlineMediaHeight),

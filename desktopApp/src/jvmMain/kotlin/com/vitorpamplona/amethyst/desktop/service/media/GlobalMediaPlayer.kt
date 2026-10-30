@@ -510,7 +510,7 @@ object GlobalMediaPlayer {
         warmRequests.values
             .reversed()
             .flatMap { list -> list.nearest(playing) }
-            .filter { it != playing && !MediaHttp.isEncrypted(it) && cardEngines.values.none { card -> card.url == it } }
+            .filter { it != playing && !MediaHttp.isEncrypted(it) && !ChromiumVideoRoute.prefersChromium(it) && cardEngines.values.none { card -> card.url == it } }
             .distinct()
             .take(MAX_WARM_ENGINES)
 
@@ -671,7 +671,7 @@ object GlobalMediaPlayer {
         owner: Any,
         url: String,
     ) {
-        if (shutDown || MediaHttp.isEncrypted(url)) return
+        if (shutDown || MediaHttp.isEncrypted(url) || ChromiumVideoRoute.prefersChromium(url)) return
         var stale: VideoPlayerState? = null
         val needsOpen =
             synchronized(initLock) {

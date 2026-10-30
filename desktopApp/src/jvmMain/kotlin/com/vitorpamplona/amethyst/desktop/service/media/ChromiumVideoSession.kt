@@ -95,6 +95,11 @@ class ChromiumVideoSession(
     private val mutableState = MutableStateFlow<State>(State.Loading)
     val state: StateFlow<State> = mutableState.asStateFlow()
 
+    private val mutableRatio = MutableStateFlow<Float?>(null)
+
+    /** The video's width over its height, once Chromium has read it. */
+    val ratio: StateFlow<Float?> = mutableRatio.asStateFlow()
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val lifecycle = Any()
     private var client: CefClient? = null
@@ -194,6 +199,15 @@ class ChromiumVideoSession(
                 ): Boolean {
                     when {
                         message.startsWith(PLAYING) -> mutableState.value = State.Playing
+                        message.startsWith(SIZE) -> {
+                            val (w, h) =
+                                message
+                                    .removePrefix(SIZE)
+                                    .trim()
+                                    .split(' ')
+                                    .map { it.toIntOrNull() ?: 0 } + listOf(0, 0)
+                            if (w > 0 && h > 0) mutableRatio.value = w.toFloat() / h
+                        }
                         message.startsWith(FAILED) -> {
                             val reason = message.removePrefix(FAILED).trim()
                             Log.w(TAG) { "Chromium can't play $url either: $reason" }
@@ -204,6 +218,15 @@ class ChromiumVideoSession(
                 }
             },
         )
+    }
+
+    /**
+     * Pauses or resumes the video, as a feed does with the card that leaves or takes the middle of
+     * the screen. The first click already gave the page the user's go-ahead, so it may play again.
+     */
+    fun setPlaying(playing: Boolean) {
+        val browser = synchronized(lifecycle) { browser } ?: return
+        browser.executeJavaScript(if (playing) "document.getElementById('v').play().catch(()=>{});" else "document.getElementById('v').pause();", PAGE_URL, 0)
     }
 
     private fun clickToStart() {
@@ -425,6 +448,7 @@ class ChromiumVideoSession(
         private const val MIN_CHUNK = 64 * 1024
         private const val PLAYING = "amethyst-video-playing"
         private const val FAILED = "amethyst-video-failed"
+        private const val SIZE = "amethyst-video-size"
 
         private val ORIGIN = "https://video.${NappletWebContract.HOST}"
         private val PAGE_URL = "$ORIGIN/"
@@ -465,6 +489,7 @@ class ChromiumVideoSession(
               const v = document.getElementById('v');
               const start = document.getElementById('start');
               v.addEventListener('playing', () => console.log('$PLAYING'));
+              v.addEventListener('loadedmetadata', () => console.log('$SIZE ' + v.videoWidth + ' ' + v.videoHeight));
               v.addEventListener('error', () => console.log('$FAILED ' + (v.error ? v.error.code + ' ' + v.error.message : '')));
               start.addEventListener('click', () => {
                 start.remove();

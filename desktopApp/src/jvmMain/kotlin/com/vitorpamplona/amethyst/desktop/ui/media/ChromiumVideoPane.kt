@@ -65,8 +65,12 @@ fun ChromiumVideoPane(
     muted: Boolean,
     onFailed: () -> Unit,
     modifier: Modifier = Modifier,
+    playing: Boolean = true,
+    onPlaying: () -> Unit = {},
+    onRatio: (Float) -> Unit = {},
 ) {
     val failed by rememberUpdatedState(onFailed)
+    val started by rememberUpdatedState(onPlaying)
     val session = remember(engine, url) { ChromiumVideoSession(engine, url, muted) }
     DisposableEffect(session) {
         session.open()
@@ -75,8 +79,15 @@ fun ChromiumVideoPane(
 
     val state by session.state.collectAsState()
     LaunchedEffect(state) {
-        if (state is ChromiumVideoSession.State.Failed) failed()
+        when (state) {
+            is ChromiumVideoSession.State.Failed -> failed()
+            ChromiumVideoSession.State.Playing -> started()
+            ChromiumVideoSession.State.Loading -> {}
+        }
     }
+    val ratio by session.ratio.collectAsState()
+    LaunchedEffect(ratio) { ratio?.let(onRatio) }
+    LaunchedEffect(session, playing) { session.setPlaying(playing) }
 
     val view = session.view
     // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
