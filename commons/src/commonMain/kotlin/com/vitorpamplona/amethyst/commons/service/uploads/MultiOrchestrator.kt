@@ -114,11 +114,30 @@ class MultiOrchestrator(
         return computeFinalResults()
     }
 
-    suspend fun uploadEncrypted(
+    /** A file [uploadEncrypted] sent, with the cipher that sealed it: the receiver needs that cipher's key and nonce. */
+    @Stable
+    class EncryptedUpload<C : SymmetricCipher>(
+        val finished: UploadingState.Finished,
+        val cipher: C,
+    )
+
+    @Stable
+    class EncryptedResult<C : SymmetricCipher>(
+        val allGood: Boolean,
+        val successful: List<EncryptedUpload<C>>,
+        val errors: List<UploadingState.Error>,
+    )
+
+    /**
+     * Uploads every file encrypted under its own cipher from [newCipher]. One cipher cannot seal two
+     * files: its nonce is fixed, so a second file under the same key and nonce would leak the XOR of
+     * both plaintexts (and AESGCM throws on its second encrypt).
+     */
+    suspend fun <C : SymmetricCipher> uploadEncrypted(
         alt: String?,
         contentWarningReason: String?,
         mediaQuality: CompressorQuality,
-        cipher: SymmetricCipher,
+        newCipher: () -> C,
         server: ServerName,
         account: Account,
         uploader: MediaUploader,
@@ -127,10 +146,11 @@ class MultiOrchestrator(
         onStrippingFailed: suspend () -> Boolean = { true },
         convertGifToMp4: Boolean = false,
         forcedSigner: NostrSigner? = null,
-    ): Result {
+    ): EncryptedResult<C> {
+        val items = list.map { it to newCipher() }
         coroutineScope {
             val jobs =
-                list.map { item ->
+                items.map { (item, cipher) ->
                     launch(Dispatchers.IO) {
                         item.orchestrator.uploadEncrypted(
                             item.media.uri,
@@ -153,7 +173,13 @@ class MultiOrchestrator(
             jobs.joinAll()
         }
 
-        return computeFinalResults()
+        val successful =
+            items.mapNotNull { (item, cipher) ->
+                (item.orchestrator.progressState.value as? UploadingState.Finished)?.let { EncryptedUpload(it, cipher) }
+            }
+        val errors = items.mapNotNull { (item, _) -> item.orchestrator.progressState.value as? UploadingState.Error }
+
+        return EncryptedResult(successful.size == items.size, successful, errors)
     }
 
     private fun computeFinalResults(): Result {

@@ -53,14 +53,13 @@ class ChatFileUploader(
         viewState.mediaUploadTracker.startUpload(orchestrator.hasNonMedia())
 
         if (viewState.encryptFiles) {
-            val cipher = AESGCM()
-
             val results =
                 orchestrator.uploadEncrypted(
                     viewState.caption,
                     viewState.contentWarningReason,
                     CompressorQuality.fromSlider(viewState.mediaQualitySlider),
-                    cipher,
+                    // A fresh key and nonce per file: an AESGCM seals only one message.
+                    { AESGCM() },
                     viewState.selectedServer,
                     account,
                     uploader,
@@ -70,10 +69,10 @@ class ChatFileUploader(
 
             if (results.allGood) {
                 val list =
-                    results.successful.mapNotNull { state ->
-                        val uploaded = state.result
+                    results.successful.mapNotNull { upload ->
+                        val uploaded = upload.finished.result
                         if (uploaded is UploadOrchestrator.OrchestratorResult.ServerResult) {
-                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, cipher)
+                            SuccessfulUploads(uploaded, viewState.caption, viewState.contentWarningReason, upload.cipher)
                         } else {
                             null
                         }
