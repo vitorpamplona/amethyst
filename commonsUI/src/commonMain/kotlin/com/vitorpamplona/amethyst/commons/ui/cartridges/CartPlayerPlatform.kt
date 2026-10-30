@@ -36,7 +36,3 @@ expect fun Modifier.claimSystemGestures(): Modifier
  */
 @Composable
 expect fun CartWindowMode(fullScreen: Boolean)
-
-/** Whether a physical keyboard is attached, so the keyboard hint is worth showing. */
-@Composable
-expect fun rememberHasHardwareKeyboard(): Boolean

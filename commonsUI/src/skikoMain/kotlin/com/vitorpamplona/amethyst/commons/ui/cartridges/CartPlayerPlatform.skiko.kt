@@ -29,6 +29,3 @@ actual fun Modifier.claimSystemGestures(): Modifier = this
 
 @Composable
 actual fun CartWindowMode(fullScreen: Boolean) {}
-
-@Composable
-actual fun rememberHasHardwareKeyboard(): Boolean = true

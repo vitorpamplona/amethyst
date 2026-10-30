@@ -20,13 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.cartridges
 
-import android.content.res.Configuration
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
@@ -61,10 +59,4 @@ actual fun CartWindowMode(fullScreen: Boolean) {
             if (fullScreen) controller?.show(WindowInsetsCompat.Type.systemBars())
         }
     }
-}
-
-@Composable
-actual fun rememberHasHardwareKeyboard(): Boolean {
-    val config = LocalConfiguration.current
-    return config.keyboard != Configuration.KEYBOARD_NOKEYS && config.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_YES
 }

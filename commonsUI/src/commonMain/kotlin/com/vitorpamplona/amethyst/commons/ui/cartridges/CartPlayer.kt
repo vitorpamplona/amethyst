@@ -97,7 +97,6 @@ import com.vitorpamplona.amethyst.commons.resources.cart_button_x_description
 import com.vitorpamplona.amethyst.commons.resources.cart_dpad_description
 import com.vitorpamplona.amethyst.commons.resources.cart_game_ended
 import com.vitorpamplona.amethyst.commons.resources.cart_game_error
-import com.vitorpamplona.amethyst.commons.resources.cart_keyboard_hint
 import com.vitorpamplona.amethyst.commons.resources.cart_loading
 import com.vitorpamplona.amethyst.commons.resources.cart_not_a_cart
 import com.vitorpamplona.amethyst.commons.resources.cart_pause_menu
@@ -167,7 +166,6 @@ fun CartPlayer(
     val tickIfPressed = { before: Int, now: Int -> if (now and before.inv() != 0) haptics.performHapticFeedback(HapticFeedbackType.VirtualKey) }
     val back = { if (!viewModel.openPauseMenu()) onClose() }
     PlatformBackHandler(onBack = back)
-    val hasKeyboard = rememberHasHardwareKeyboard()
 
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -243,7 +241,7 @@ fun CartPlayer(
                         controls(Modifier)
                         actions()
                     }
-                    if (hasKeyboard) Hint(stringRes(Res.string.cart_keyboard_hint), Modifier.padding(16.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
             }
         }
