@@ -72,6 +72,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** How many recently-serviced request ids to persist for cross-restart replay dedup. */
@@ -134,6 +136,13 @@ class Nip46SignerState(
 ) {
     /** Relays contributed by pasted `nostrconnect://` offers this session, unioned with the inbox set. */
     private val extraRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
+
+    /**
+     * One [refreshExtraRelaysFromStore] at a time. Each reads the store, then writes: unserialized,
+     * the launch's load can read before a pairing saves its app and write after the pairing's own
+     * load, taking the app's relay back out of the listener and losing the app's next request.
+     */
+    private val extraRelaysRefresh = Mutex()
 
     /** The relays the running listener is subscribed on; empty while it is stopped or restarting. */
     private val subscribedRelays = MutableStateFlow<Set<NormalizedRelayUrl>>(emptySet())
@@ -400,16 +409,17 @@ class Nip46SignerState(
     }
 
     /** Recomputes [extraRelays] from the persisted client store — the source of truth for nostrconnect relays. */
-    private suspend fun refreshExtraRelaysFromStore() {
-        extraRelays.value =
-            clientStore
-                .all()
-                .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signer.pubKey) }
-                .values
-                .flatMap { it.relays }
-                .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
-                .toSet()
-    }
+    private suspend fun refreshExtraRelaysFromStore() =
+        extraRelaysRefresh.withLock {
+            extraRelays.value =
+                clientStore
+                    .all()
+                    .filterKeys { Nip46PermissionAuthorizer.belongsTo(it, signer.pubKey) }
+                    .values
+                    .flatMap { it.relays }
+                    .mapNotNull { RelayUrlNormalizer.normalizeOrNull(it) }
+                    .toSet()
+        }
 
     /**
      * Forgets a connected client (the user's "Forget" action): revokes its grant, drops its stored
