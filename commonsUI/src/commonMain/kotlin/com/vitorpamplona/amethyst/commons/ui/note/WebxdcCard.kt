@@ -57,20 +57,22 @@ import com.vitorpamplona.quartz.nip19Bech32.entities.NEvent
 import org.jetbrains.compose.resources.stringResource
 
 /**
- * A webxdc app attached to a post ([postUri], the post's `nostr:` URI): its name and size, and
+ * A webxdc app attached to a post ([postUri], the post's `nostr:` URI, written by [author] when the
+ * note knows better than the URI): its name and size, and
  * **Start**, which hands it to the platform's sandbox. The card runs nothing itself. Where there is
  * no sandbox, or the post can't be told apart, it is a link to the file, as any other attachment.
  */
 @Composable
-fun WebxdcCard(
+fun WebxdcPostCard(
     app: WebxdcApp,
     postUri: String?,
+    author: HexKey?,
 ) {
     val post = remember(postUri) { postOf(postUri) }
-    WebxdcCard(app, post?.first, post?.second)
+    WebxdcCard(app, post?.first, author ?: post?.second)
 }
 
-/** [WebxdcCard] for a post whose id and author are at hand (a kind-1063 file event). */
+/** The app card for a post whose id and author are at hand (a kind-1063 file event). */
 @Composable
 fun WebxdcCard(
     app: WebxdcApp,
@@ -87,7 +89,17 @@ fun WebxdcCard(
                 .joinToString(" · ")
                 .ifEmpty { null }
         }
-    val start = if (launcher.opensNapplets && postId != null && poster != null) ({ launcher.openWebxdc(app, postId, poster) }) else null
+    val stageKey = remember(app, postId, poster) { if (postId != null && poster != null) app.stageKey(poster, postId) else null }
+    val start =
+        if (launcher.opensNapplets && postId != null && poster != null && stageKey != null) {
+            {
+                // One run of an app at a time: the note's would write over the window's state.
+                InlineNappletRuns.stopApp(stageKey)
+                launcher.openWebxdc(app, postId, poster)
+            }
+        } else {
+            null
+        }
     val inline = runsNappletsInline
 
     Column(
@@ -136,9 +148,9 @@ fun WebxdcCard(
         }
 
         // Played right here in the note, where the platform can; the window is a tap away.
-        if (start != null && inline && postId != null && poster != null) {
+        if (start != null && inline && postId != null && poster != null && stageKey != null) {
             InlineNappletStage(
-                coordinate = remember(app, postId, poster) { "webxdc:$poster:${app.instance(postId)}" },
+                coordinate = stageKey,
                 title = title,
                 icon = app.image,
                 onOpen = start,

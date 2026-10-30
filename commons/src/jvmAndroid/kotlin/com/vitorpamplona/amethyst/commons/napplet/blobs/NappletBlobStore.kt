@@ -79,12 +79,12 @@ class NappletBlobStore(
     // A blob being downloaded: concurrent requests for it wait for the one download.
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<ByteArray?>>()
 
+    override fun isListed(requestPath: String): Boolean = lookup(requestPath) != null
+
     /**
      * The tag that serves [requestPath], as quartz's resolver matches it (`/` is `index.html`). Browsers
      * send paths percent-encoded (`/my%20file.js`), while the event lists them as written.
      */
-    override fun isListed(requestPath: String): Boolean = lookup(requestPath) != null
-
     fun lookup(requestPath: String): PathTag? = byPath[normalizeStaticPath(decodePath(requestPath.substringBefore('?').substringBefore('#')))]
 
     /** Whether [requestPath] is cached already or can be fetched now, without reading it. */
@@ -161,18 +161,6 @@ class NappletBlobStore(
                 buffer.copyOf(read)
             }
         }.getOrDefault(ByteArray(0))
-
-    /**
-     * Releases [client]'s threads and connections and cancels any fetch in flight. Only for a client
-     * this store's owner built for it alone; never call it on the app's shared client.
-     */
-    fun closeClient() {
-        runCatching {
-            client.dispatcher.cancelAll()
-            client.dispatcher.executorService.shutdown()
-            client.connectionPool.evictAll()
-        }
-    }
 
     companion object {
         /** Marker "server" for a blob served from the local cache. */

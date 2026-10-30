@@ -50,24 +50,56 @@ object WebxdcRuntime {
     private val BODY =
         """
         if (window.webxdc) return;
-        var updates = [], loaded = false, waiting = [], listener = null, db = null;
+        var updates = [], loaded = false, waiting = [], listener = null, db = null, channel = null;
         function last() { return updates.length ? updates[updates.length - 1].serial : 0; }
+        function bySerial(a, b) { return a.serial - b.serial; }
         function ready() { loaded = true; var w = waiting; waiting = []; w.forEach(function (f) { try { f(); } catch (e) { console.error(e); } }); }
         function whenLoaded(f) { if (loaded) f(); else waiting.push(f); }
+        function tell(fresh) {
+          var max = fresh.length ? fresh[fresh.length - 1].serial : last();
+          fresh.forEach(function (u) { if (listener) { try { listener(view(u, max)); } catch (e) { console.error(e); } } });
+        }
+        // Another document of this app (the note's run and a window share one origin) may have added
+        // updates: read whatever is past ours, in order.
+        var syncing = false, again = false;
+        function sync() {
+          if (!db) return;
+          if (syncing) { again = true; return; }
+          syncing = true;
+          function done() { syncing = false; if (again) { again = false; sync(); } }
+          try {
+            var r = db.transaction('updates', 'readonly').objectStore('updates').getAll(IDBKeyRange.lowerBound(last(), true));
+            r.onsuccess = function () {
+              var fresh = (r.result || []).sort(bySerial).filter(function (u) { return u.serial > last(); });
+              fresh.forEach(function (u) { updates.push(u); });
+              tell(fresh);
+              done();
+            };
+            r.onerror = done;
+          } catch (e) { done(); }
+        }
         try {
           var req = indexedDB.open('__amethyst_webxdc__', 1);
           req.onupgradeneeded = function () { req.result.createObjectStore('updates', { keyPath: 'serial' }); };
           req.onsuccess = function () {
             db = req.result;
             var all = db.transaction('updates', 'readonly').objectStore('updates').getAll();
-            all.onsuccess = function () { updates = (all.result || []).sort(function (a, b) { return a.serial - b.serial; }); ready(); };
+            all.onsuccess = function () { updates = (all.result || []).sort(bySerial); ready(); };
             all.onerror = ready;
+            if (typeof BroadcastChannel === 'function') { channel = new BroadcastChannel('__amethyst_webxdc__'); channel.onmessage = sync; }
           };
           req.onerror = ready;
         } catch (e) { ready(); }
-        function save(u) {
-          if (!db) return;
-          try { db.transaction('updates', 'readwrite').objectStore('updates').put(u); } catch (e) { console.warn('webxdc: update not saved', e); }
+        // The serial is taken inside the write: two documents of one app never take the same one.
+        function append(u) {
+          if (!db) { u.serial = last() + 1; updates.push(u); tell([u]); return; }
+          try {
+            var tx = db.transaction('updates', 'readwrite'), store = tx.objectStore('updates');
+            var top = store.openCursor(null, 'prev');
+            top.onsuccess = function () { u.serial = (top.result ? top.result.key : 0) + 1; store.add(u); };
+            tx.oncomplete = function () { sync(); if (channel) channel.postMessage(1); };
+            tx.onerror = function () { console.warn('webxdc: update not saved', tx.error); };
+          } catch (e) { console.warn('webxdc: update not saved', e); }
         }
         function view(u, max) { var o = { max_serial: max }; for (var k in u) o[k] = u[k]; return o; }
         function lonelyChannel() {
@@ -88,15 +120,10 @@ object WebxdcRuntime {
           sendUpdate: function (update, descr) {
             var json = JSON.stringify(update && update.payload === undefined ? null : update.payload);
             if (json === undefined) json = 'null';
-            if (json.length > MAX) { console.warn('webxdc: update larger than sendUpdateMaxSize dropped'); return; }
+            if (new TextEncoder().encode(json).length > MAX) { console.warn('webxdc: update larger than sendUpdateMaxSize dropped'); return; }
             var u = { payload: JSON.parse(json) };
             ['info', 'document', 'summary', 'href'].forEach(function (k) { if (update && update[k] != null) u[k] = String(update[k]); });
-            whenLoaded(function () {
-              u.serial = last() + 1;
-              updates.push(u);
-              save(u);
-              if (listener) { try { listener(view(u, u.serial)); } catch (e) { console.error(e); } }
-            });
+            whenLoaded(function () { append(u); });
           },
           setUpdateListener: function (cb, serial) {
             listener = cb;
@@ -123,6 +150,7 @@ object WebxdcRuntime {
               if (filter.multiple) input.multiple = true;
               input.style.display = 'none';
               input.addEventListener('change', function () { resolve(Array.prototype.slice.call(input.files || [])); input.remove(); });
+              input.addEventListener('cancel', function () { resolve([]); input.remove(); });
               (document.body || document.documentElement).appendChild(input);
               input.click();
             });

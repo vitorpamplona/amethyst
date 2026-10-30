@@ -107,6 +107,8 @@ class NappletContentServer(
      * opened-then-closed napplet/nSite tab would leak OkHttp threads and keep-alive connections.
      */
     fun close() {
+        // First, so a webxdc download stops at its next read instead of moving to the next server.
+        server.close()
         runCatching {
             client.dispatcher.cancelAll()
             client.dispatcher.executorService.shutdown()

@@ -43,6 +43,20 @@ class NappletWebContractShellTest {
     }
 
     @Test
+    fun aSiteNamedLikeAWebxdcAppNeverGetsItsOrigin() {
+        // A site's d tag is free text: one spelling a webxdc instance must not share the app's storage.
+        val identifier = NappletLaunch.WEBXDC_IDENTIFIER_PREFIX + "chess"
+        assertNotEquals(
+            NappletWebContract.appId(author, identifier, profile = HostProfile.WEBSITE),
+            NappletWebContract.appId(author, identifier, profile = HostProfile.WEBXDC),
+        )
+        assertNotEquals(
+            NappletWebContract.appId(author, identifier, partition = author, profile = HostProfile.WEBSITE),
+            NappletWebContract.appId(author, identifier, partition = author, profile = HostProfile.WEBXDC),
+        )
+    }
+
+    @Test
     fun aPartitionGivesEachAccountItsOwnOrigin() {
         val alice = NappletWebContract.appId(author, "blog", partition = "alice")
         val bob = NappletWebContract.appId(author, "blog", partition = "bob")

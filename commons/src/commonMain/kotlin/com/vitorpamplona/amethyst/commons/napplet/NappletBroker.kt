@@ -303,14 +303,17 @@ class NappletBroker(
 
             is NappletRequest.OutboxQuery -> {
                 val gateway = outbox ?: return NappletResponse.Unsupported("outbox.query")
+                if (request.filters.size > NappletOutboxGateway.MAX_FILTERS) return NappletResponse.Failed("too many filters")
                 val read = gateway.query(request.filters, request.authors, request.relays, request.timeoutMs)
-                val limit = request.limit ?: request.filters.mapNotNull { it.limit }.maxOrNull()
-                NappletResponse.OutboxEvents(limit?.let { read.events.take(it) } ?: read.events, read.incomplete)
+                // Never more than a read returns, and never a negative count.
+                val limit = (request.limit ?: request.filters.mapNotNull { it.limit }.maxOrNull() ?: NappletOutboxGateway.MAX_RESULTS).coerceIn(0, NappletOutboxGateway.MAX_RESULTS)
+                NappletResponse.OutboxEvents(read.events.take(limit), read.incomplete)
             }
 
             // Like relay.subscribe, the broker only authorizes and picks the relays; the host streams.
             is NappletRequest.OutboxSubscribe -> {
                 val gateway = outbox ?: return NappletResponse.Unsupported("outbox.subscribe")
+                if (request.filters.size > NappletOutboxGateway.MAX_FILTERS) return NappletResponse.Failed("too many filters")
                 NappletResponse.OutboxSubscribed(gateway.subscriptionRelays(request.filters, request.authors, request.relays))
             }
 

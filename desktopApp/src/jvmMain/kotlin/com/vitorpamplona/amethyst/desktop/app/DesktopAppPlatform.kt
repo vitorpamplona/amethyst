@@ -177,7 +177,7 @@ class DesktopAppPlatform(
         modifier: Modifier,
     ) {
         val host = nappletHost ?: return
-        InlineNappletPane(host, "webxdc:$poster:${app.instance(postId)}", instanceId, onStatus, modifier) {
+        InlineNappletPane(host, app.stageKey(poster, postId), instanceId, onStatus, modifier) {
             host.openInlineWebxdc(app, postId, poster, instanceId)
         }
     }

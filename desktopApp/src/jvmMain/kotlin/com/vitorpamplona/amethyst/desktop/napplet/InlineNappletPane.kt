@@ -20,14 +20,12 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,17 +33,19 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusTarget
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
@@ -98,27 +98,34 @@ fun InlineNappletPane(
         if (opened == null) status(InlineNappletStatus.FAILED)
         onDispose {
             if (opened != null) {
-                opened.offscreen
-                    ?.frame
-                    ?.value
-                    ?.let { InlineNappletPosters.put(posterKey, it) }
+                val last = opened.offscreen?.keepLastFrame()
+                // A session the host already closed belonged to an account that left: its screen is
+                // never a poster for the next one.
+                if (last != null && !opened.isClosed) InlineNappletPosters.put(posterKey, last)
                 host.closeInline(opened)
             }
             session = null
         }
     }
 
-    val current = session ?: return
-    val view = current.offscreen ?: return
+    val current = session
+    val view = current?.offscreen
+    if (current == null || view == null) {
+        // Without a page, the box still takes the note's taps (modifier swallows them).
+        Box(modifier)
+        return
+    }
     val state by current.state.collectAsState()
-    val frame by view.frame.collectAsState()
+    // Read only where it is drawn, so a new frame redraws the box instead of recomposing the pane.
+    val frame = view.frame.collectAsState()
+    val painted by remember(frame) { derivedStateOf { frame.value != null } }
     val cursor by view.cursor.collectAsState()
 
-    LaunchedEffect(state, frame != null) {
+    LaunchedEffect(state, painted) {
         status(
             when {
                 state is CefNappletSession.State.Failed -> InlineNappletStatus.FAILED
-                state is CefNappletSession.State.Showing && frame != null -> InlineNappletStatus.SHOWING
+                state is CefNappletSession.State.Showing && painted -> InlineNappletStatus.SHOWING
                 else -> InlineNappletStatus.LOADING
             },
         )
@@ -131,7 +138,7 @@ fun InlineNappletPane(
     Box(
         modifier
             .onSizeChanged { view.resize((it.width / density).roundToInt(), (it.height / density).roundToInt(), density.toDouble()) }
-            // Before focusable(): key events reach the focused node and what wraps it, not what it wraps.
+            // Before focusTarget(): key events reach the focused node and what wraps it, not what it wraps.
             .onKeyEvent { event ->
                 val native = event.nativeKeyEvent as? KeyEvent ?: return@onKeyEvent false
                 view.key(native)
@@ -140,7 +147,10 @@ fun InlineNappletPane(
             .onFocusChanged {
                 focused = it.isFocused
                 view.focus(it.isFocused)
-            }.focusable()
+            }
+            // Not focusable(): that pins the note in the feed while focused, so a clicked game would
+            // play on, unseen, after its note scrolled away.
+            .focusTarget()
             .pointerHoverIcon(PointerIcon(cursor))
             .pointerInput(view, density) {
                 awaitPointerEventScope {
@@ -171,8 +181,8 @@ fun InlineNappletPane(
                         }
                     }
                 }
+            }.drawBehind {
+                frame.value?.let { drawImage(it, dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())) }
             },
-    ) {
-        frame?.let { Image(it, contentDescription = null, contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize()) }
-    }
+    )
 }

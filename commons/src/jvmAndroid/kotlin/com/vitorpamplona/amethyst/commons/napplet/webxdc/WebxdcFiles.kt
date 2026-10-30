@@ -43,47 +43,54 @@ import java.util.concurrent.TimeUnit
 /**
  * Unpacked webxdc archives on disk, one directory each under [root]: `<sha256>/` for an archive the
  * post names by hash, `u<sha256 of its URL>/` for one it doesn't. A directory is only ever there
- * whole: it is unpacked beside it and renamed into place, so a crash mid-way leaves nothing served.
+ * whole: it is unpacked beside it under a name of its own and renamed into place, so a crash or a
+ * second launch mid-way never leaves a partial one served.
  */
 class WebxdcBundles(
-    private val root: File,
+    root: File,
 ) {
-    private val locks = ConcurrentHashMap<String, Mutex>()
+    private val root = root.absoluteFile
 
     /**
      * The unpacked archive at [url] (sha256 [hash] when known), downloaded through [client] from it
-     * or from [servers] when it isn't here yet. Null when no copy could be had or it isn't a webxdc
-     * app (no `index.html`).
+     * or from [servers] when it isn't here yet. Null when no copy could be had, it isn't a webxdc
+     * app (no `index.html`), or [cancelled] said to stop.
      */
     suspend fun open(
         url: String,
         hash: HexKey?,
         servers: List<String>,
         client: OkHttpClient,
+        cancelled: () -> Boolean = { false },
     ): File? =
         withContext(Dispatchers.IO) {
             val key = hash?.lowercase() ?: ("u" + sha256(url.encodeToByteArray()).toHexKey())
             val dir = File(root, key)
             if (File(dir, COMPLETE).isFile) return@withContext dir
-            locks.getOrPut(key) { Mutex() }.withLock {
+            // Process-wide: every launch of one archive (a note's and a window's) shares its files.
+            locks.getOrPut(dir.path) { Mutex() }.withLock {
                 if (File(dir, COMPLETE).isFile) return@withLock dir
                 if (!root.isDirectory && !root.mkdirs()) {
                     Log.w(TAG) { "Could not create $root" }
                     return@withLock null
                 }
-                val archive = File(root, "$key.download")
-                val staging = File(root, "$key.unpacking")
+                val archive = File.createTempFile("$key.", ".download", root)
+                val staging = File.createTempFile("$key.", ".unpacking", root)
                 try {
-                    staging.deleteRecursively()
+                    if (!staging.delete() || !staging.mkdirs()) return@withLock null
                     val candidates = listOf(url) + (hash?.let { StaticSiteResolver.candidateUrls(servers, it) } ?: emptyList())
-                    if (WebxdcArchive.download(client, candidates, hash, archive) == null) return@withLock null
-                    if (!staging.mkdirs() || !WebxdcArchive.unpack(archive, staging)) return@withLock null
+                    if (WebxdcArchive.download(client, candidates, hash, archive, cancelled) == null) return@withLock null
+                    if (!WebxdcArchive.unpack(archive, staging)) return@withLock null
                     if (!File(staging, INDEX).isFile) {
                         Log.w(TAG) { "$url has no $INDEX" }
                         return@withLock null
                     }
-                    if (!File(staging, COMPLETE).createNewFile()) return@withLock null
-                    if (dir.exists()) dir.deleteRecursively()
+                    // An archive may ship a file by the marker's name; the marker is ours alone.
+                    val marker = File(staging, COMPLETE)
+                    if (marker.exists() && !marker.deleteRecursively()) return@withLock null
+                    if (!marker.createNewFile()) return@withLock null
+                    // Only an unfinished copy can be here: a finished one returned above.
+                    if (dir.exists() && !dir.deleteRecursively()) Log.w(TAG) { "Could not clear $dir" }
                     if (!staging.renameTo(dir)) {
                         Log.w(TAG) { "Could not move $staging into place" }
                         return@withLock null
@@ -91,7 +98,7 @@ class WebxdcBundles(
                     dir
                 } finally {
                     if (archive.exists() && !archive.delete()) Log.w(TAG) { "Could not delete $archive" }
-                    if (staging.exists()) staging.deleteRecursively()
+                    if (staging.exists() && !staging.deleteRecursively()) Log.w(TAG) { "Could not delete $staging" }
                 }
             }
         }
@@ -101,6 +108,9 @@ class WebxdcBundles(
         const val COMPLETE = ".amethyst-complete"
         const val INDEX = "index.html"
         private const val TAG = "WebxdcBundles"
+
+        // By archive directory, for every WebxdcBundles in the process.
+        private val locks = ConcurrentHashMap<String, Mutex>()
 
         fun dirFor(cacheDir: File) = File(cacheDir, "webxdc-apps")
     }
@@ -120,14 +130,41 @@ class WebxdcFiles(
 ) : NappletFiles {
     private val runtime = runtimeJs.encodeToByteArray()
 
-    // The unpacked archive, once had: every request after the first is a file lookup.
+    // The unpacked archive (and its canonical path), once had: every request after the first is a
+    // file lookup.
     @Volatile
-    private var dir: File? = null
+    private var dir: Pair<File, String>? = null
     private val opening = Mutex()
 
-    private suspend fun dir(): File? {
+    // A miss is remembered: a page's every request would otherwise download the whole archive again.
+    // Retry builds a new launch.
+    @Volatile
+    private var failed = false
+
+    @Volatile
+    private var closed = false
+
+    private suspend fun dir(): Pair<File, String>? {
         dir?.let { return it }
-        return opening.withLock { dir ?: bundles.open(url, hash, servers, client)?.also { dir = it } }
+        if (failed || closed) return null
+        return opening.withLock {
+            dir ?: if (failed || closed) {
+                null
+            } else {
+                val opened = bundles.open(url, hash, servers, client) { closed }
+                if (opened == null) {
+                    if (!closed) failed = true
+                    null
+                } else {
+                    val canonical = opened.canonicalFile
+                    (canonical to canonical.path + File.separator).also { dir = it }
+                }
+            }
+        }
+    }
+
+    override fun close() {
+        closed = true
     }
 
     override suspend fun isAvailable(requestPath: String): Boolean = find(requestPath) != null
@@ -135,10 +172,10 @@ class WebxdcFiles(
     override suspend fun find(requestPath: String): NappletBlobStore.Blob? {
         val path = normalizeStaticPath(NappletBlobStore.decodePath(requestPath.substringBefore('?').substringBefore('#')))
         if (path == RUNTIME_PATH) return NappletBlobStore.Blob("/$RUNTIME_PATH", "", "text/javascript", null, runtime)
-        val root = dir() ?: return null
+        val (root, rootPrefix) = dir() ?: return null
         val relative = WebxdcArchive.entryPath(path) ?: return null
         val file = File(root, relative).canonicalFile
-        if (!file.path.startsWith(root.canonicalPath + File.separator) || !file.isFile || file.name == WebxdcBundles.COMPLETE) return null
+        if (!file.path.startsWith(rootPrefix) || !file.isFile || relative == WebxdcBundles.COMPLETE) return null
         val byExtension = guessStaticContentType(relative)
         val type = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(head(file)) ?: byExtension else byExtension
         return NappletBlobStore.Blob("/$relative", hash.orEmpty(), type, file, null)

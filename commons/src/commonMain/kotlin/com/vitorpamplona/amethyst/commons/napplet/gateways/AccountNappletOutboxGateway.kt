@@ -22,7 +22,6 @@ package com.vitorpamplona.amethyst.commons.napplet.gateways
 
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletOutboxGateway
-import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.amethyst.commons.napplet.OutboxDelivery
 import com.vitorpamplona.amethyst.commons.napplet.OutboxEvent
 import com.vitorpamplona.amethyst.commons.napplet.OutboxRead
@@ -46,8 +45,12 @@ import kotlinx.coroutines.withTimeoutOrNull
  * NAP-OUTBOX for a logged-in [account]: reads go to each author's NIP-65 write relays, as the app's
  * own feeds do; a publish goes to the user's write relays, the read relays of the authors the napplet
  * names, and the relays it asks for once checked. Missing relay lists are fetched from the user's
- * indexer relays. Every event is verified before it is returned, and an encrypted one is handed over
- * as NAP-RELAY does ([NappletRelayCleartext]).
+ * indexer relays. Every event is verified before it is returned and handed over as signed.
+ *
+ * Unlike NAP-RELAY, nothing is decrypted here: the napplet chooses where its reads go, so a read that
+ * decrypted the user's messages could send them anywhere in its next filter. The cache's unwrapped
+ * direct messages (rumors, which carry no signature) never verify, so they never leave either. A
+ * napplet that needs a plaintext asks the signer, where the user decides.
  */
 class AccountNappletOutboxGateway(
     private val account: Account,
@@ -73,7 +76,7 @@ class AccountNappletOutboxGateway(
         timeoutMs: Long?,
     ): OutboxRead {
         account.cache.getNoteIfExists(eventId)?.event?.let { cached ->
-            return OutboxRead(listOfNotNull(deliver(cached, emptyList())))
+            if (cached.verify()) return OutboxRead(listOf(OutboxEvent(cached, emptyList())))
         }
         val deadline = Deadline(timeoutMs)
         val route = routing(deadline.forRelayLists()).route(listOfNotNull(author), write = true)
@@ -93,11 +96,18 @@ class AccountNappletOutboxGateway(
         val relays = route.relays + NappletOutboxRouting.checkedHints(relayHints)
         val fromRelays = read(relays, filters, deadline, route.missing.isNotEmpty())
         val seen = fromRelays.events.mapTo(HashSet()) { it.event.id }
+        // Newest first and cut to what a read returns before anything is verified: a broad filter can
+        // match much of the cache.
         val fromCache =
             filters
-                .flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }
-                .filter { seen.add(it.id) }
-                .mapNotNull { deliver(it, emptyList()) }
+                .flatMap { filter ->
+                    account.cache
+                        .filter(filter)
+                        .mapNotNull { it.event }
+                        .sortedByDescending { it.createdAt }
+                        .take(filter.limit?.coerceIn(0, NappletOutboxGateway.MAX_RESULTS) ?: NappletOutboxGateway.MAX_RESULTS)
+                }.filter { seen.add(it.id) && it.verify() }
+                .map { OutboxEvent(it, emptyList()) }
         return OutboxRead((fromRelays.events + fromCache).sortedByDescending { it.event.createdAt }, fromRelays.incomplete)
     }
 
@@ -154,23 +164,21 @@ class AccountNappletOutboxGateway(
                     client.fetchAllWithHooks(relays.associateWith { filters }, idleTimeoutMs = left) { relay, event ->
                         val known = found[event.id]
                         if (known != null) {
-                            if (relay.url !in known.second) known.second += relay.url
+                            // Only a relay with the very event it verified counts as having it: a junk
+                            // signature on a known id would put any relay on its hints.
+                            if (known.first.sig == event.sig && relay.url !in known.second) known.second += relay.url
                         } else if (event.verify()) {
                             found[event.id] = event to mutableListOf(relay.url)
                         }
-                        true
+                        // Kept here, not in the fetch's own result.
+                        false
                     }
                 }
             }.getOrNull()
-        val events = found.values.mapNotNull { (event, hints) -> deliver(event, hints) }
+        val events = found.values.map { (event, hints) -> OutboxEvent(event, hints) }
         val incomplete = missingLists || result == null || result.stalled.isNotEmpty() || result.dead.isNotEmpty()
         return OutboxRead(events, incomplete)
     }
-
-    private suspend fun deliver(
-        event: Event,
-        hints: List<String>,
-    ): OutboxEvent? = NappletRelayCleartext.forDelivery(event, account.signer)?.let { OutboxEvent(it, hints) }
 
     /** Fetches the kind 10002 lists of [authors] from the indexer relays into the cache, for at most [budgetMs]. */
     private suspend fun fetchRelayLists(
@@ -186,7 +194,7 @@ class AccountNappletOutboxGateway(
             withTimeoutOrNull(budgetMs) {
                 client.fetchAllWithHooks(indexers.associateWith { listOf(filter) }, idleTimeoutMs = budgetMs) { relay, event ->
                     account.cache.justConsume(event, relay, wasVerified = false)
-                    true
+                    false
                 }
             }
         }

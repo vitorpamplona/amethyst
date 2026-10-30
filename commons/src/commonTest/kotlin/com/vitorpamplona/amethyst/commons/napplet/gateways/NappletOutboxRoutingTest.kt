@@ -108,6 +108,23 @@ class NappletOutboxRoutingTest {
             val route = routing(lists).route(authors + "not-a-key", write = true)
             assertEquals(NappletOutboxRouting.MAX_RELAYS, route.relays.size)
             assertTrue(lists.fetched.isEmpty())
+            // Everyone the route leaves out is reported, so the read says it's incomplete: the first
+            // 30 authors get a relay each, the next 70 none, the last 100 are past the cap.
+            val reached = authors.take(NappletOutboxRouting.MAX_RELAYS)
+            assertEquals((authors - reached.toSet() + "not-a-key").toSet(), route.missing.toSet())
+            reached.forEach { author -> assertTrue(lists.write.getValue(author).first() in route.relays) }
+        }
+
+    @Test
+    fun aDeliveryReachesEveryRecipientBeforeAnyGetsASecondRelay() =
+        runTest {
+            val lists = Lists()
+            val recipients = (0 until 20).map { it.toString(16).padStart(64, '0') }
+            recipients.forEach { author -> lists.read[author] = (1..3).map { relay("wss://r$it-${author.takeLast(4)}.example.com") } }
+
+            val route = routing(lists).route(recipients, write = false)
+            assertTrue(route.missing.isEmpty())
+            recipients.forEach { author -> assertTrue(lists.read.getValue(author).first() in route.relays) }
         }
 
     @Test

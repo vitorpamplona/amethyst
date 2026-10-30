@@ -302,7 +302,8 @@ class NappletRequestRouterTest {
             val publish = routeOutbox("""{"type":"outbox.publish","id":"p1","event":{"kind":1,"content":"x","tags":[]}}""", answer = GrantState.DENY)
             assertIs<NappletRequestRouter.Outcome.Reply>(publish)
             assertEquals(false, json(publish.payload)["ok"]!!.jsonPrimitive.boolean)
-            assertEquals("policy denied", json(publish.payload)["error"]!!.jsonPrimitive.content)
+            // NAP-OUTBOX's word for a refused publish.
+            assertEquals("publish denied", json(publish.payload)["error"]!!.jsonPrimitive.content)
 
             val query = routeOutbox("""{"type":"outbox.query","id":"q1","filters":[{"kinds":[1]}]}""", answer = GrantState.DENY)
             assertIs<NappletRequestRouter.Outcome.Reply>(query)

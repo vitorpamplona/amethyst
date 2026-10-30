@@ -121,6 +121,11 @@ object NappletRequestRouter {
 
         val request =
             runCatching { NappletProtocolJson.decodeRequest(payload) }.getOrElse {
+                // A subscription that can't open ends at once: its handle waits for outbox.closed.
+                if (requestType == "outbox.subscribe") {
+                    val subId = runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull() ?: return Outcome.Ignore
+                    return Outcome.Push(listOf(NappletProtocolJson.encodeOutboxClosed(subId, "invalid filter")))
+                }
                 return if (runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
                     val failure = if (requestType.startsWith("resource.")) NappletResponse.ResourceFailure("invalid-request", "Malformed resource request.") else NappletResponse.Failed("Malformed request.")
                     Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, failure), failure)
@@ -151,7 +156,8 @@ object NappletRequestRouter {
             return if (response is NappletResponse.OutboxSubscribed) {
                 Outcome.OpenSubscription(subId, runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList()), response.relays, outbox = true)
             } else {
-                Outcome.Push(listOf(NappletProtocolJson.encodeOutboxClosed(subId, "policy denied")))
+                val reason = (response as? NappletResponse.Failed)?.reason ?: "policy denied"
+                Outcome.Push(listOf(NappletProtocolJson.encodeOutboxClosed(subId, reason)))
             }
         }
 

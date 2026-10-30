@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
@@ -157,6 +158,12 @@ class NappletLiveSubscriptions<K : Any>(
 
         val key = Key(owner, nappletSubId)
         liveSubs.remove(key)?.let(::stop)
+        // Each outbox subscription can reach dozens of relays the napplet picked: a page can't keep
+        // opening them.
+        if (outbox && liveSubs.keys.count { it.owner == owner } >= MAX_OUTBOX_SUBS) {
+            push(NappletProtocolJson.encodeOutboxClosed(nappletSubId, "too many subscriptions"))
+            return
+        }
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
         // can't collide with the subscription it's replacing.
         val sub =
@@ -168,12 +175,22 @@ class NappletLiveSubscriptions<K : Any>(
         liveSubs[key] = sub
         sub.deliveryJob =
             scope.launch {
+                // Outbox events seen already: each relay sends its own copy, and only the first is news.
+                val seen = if (outbox) LinkedHashSet<String>() else null
                 for (delivery in sub.deliveries) {
                     if (liveSubs[key] !== sub) break
                     when (delivery) {
                         is Delivery.RelayEvent -> {
                             val event = delivery.event
-                            if (NappletRelayCleartext.isEncrypted(event) && !attendance.isAttended(owner)) {
+                            if (seen != null) {
+                                // NAP-OUTBOX hands over events as signed, never decrypted (a decrypted one
+                                // no longer matches its signature), and only once they verify: the
+                                // relays may be ones the napplet named.
+                                if (event.id in seen || !event.verify()) continue
+                                seen += event.id
+                                if (seen.size > MAX_SEEN) seen.remove(seen.first())
+                                push(eventPush(event, delivery.relay))
+                            } else if (NappletRelayCleartext.isEncrypted(event) && !attendance.isAttended(owner)) {
                                 // Don't decrypt for a page nobody is watching: keep it (bounded) for later.
                                 if (sub.heldEncrypted.size >= MAX_HELD_ENCRYPTED) sub.heldEncrypted.removeFirst()
                                 sub.heldEncrypted.addLast(delivery)
@@ -192,16 +209,22 @@ class NappletLiveSubscriptions<K : Any>(
                             }
                         Delivery.Eose -> if (!outbox) push(NappletProtocolJson.encodeRelayEose(nappletSubId))
                         is Delivery.Closed ->
-                            push(
-                                if (outbox) {
-                                    NappletProtocolJson.encodeOutboxClosed(nappletSubId, delivery.reason)
-                                } else {
-                                    NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason)
-                                },
-                            )
+                            if (outbox) {
+                                // Every relay refused it: the napplet hears it ended, and it ends here too.
+                                push(NappletProtocolJson.encodeOutboxClosed(nappletSubId, delivery.reason))
+                                synchronized(lock) { liveSubs.remove(key, sub) }
+                                sub.deliveries.close()
+                                runCatching { sub.client.unsubscribe(sub.clientSubId) }
+                                break
+                            } else {
+                                push(NappletProtocolJson.encodeRelayClosed(nappletSubId, delivery.reason))
+                            }
                     }
                 }
             }
+
+        // The relays that closed this subscription: an outbox one ends only when all of them have.
+        val closedBy = ConcurrentHashMap.newKeySet<NormalizedRelayUrl>()
 
         val listener =
             object : SubscriptionListener {
@@ -228,7 +251,7 @@ class NappletLiveSubscriptions<K : Any>(
                     relay: NormalizedRelayUrl,
                     forFilters: List<Filter>?,
                 ) {
-                    sub.deliveries.trySend(Delivery.Closed(message))
+                    if (!outbox || (closedBy.add(relay) && closedBy.size >= relays.size)) sub.deliveries.trySend(Delivery.Closed(message))
                 }
             }
 
@@ -283,5 +306,11 @@ class NappletLiveSubscriptions<K : Any>(
     private companion object {
         // Per subscription: past this, the oldest held encrypted event is dropped.
         const val MAX_HELD_ENCRYPTED = 500
+
+        // Outbox subscriptions one surface may hold open at once.
+        const val MAX_OUTBOX_SUBS = 16
+
+        // Event ids an outbox subscription remembers to drop duplicates.
+        const val MAX_SEEN = 5_000
     }
 }

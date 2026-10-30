@@ -542,7 +542,8 @@ object NappletProtocolJson {
     ): String? {
         val error =
             when (response) {
-                is NappletResponse.Denied -> "policy denied"
+                // NAP-OUTBOX's own word for a refused publish.
+                is NappletResponse.Denied -> if (requestType == "outbox.publish") "publish denied" else "policy denied"
                 is NappletResponse.Unsupported -> "policy denied"
                 is NappletResponse.Failed -> response.reason
                 else -> return null

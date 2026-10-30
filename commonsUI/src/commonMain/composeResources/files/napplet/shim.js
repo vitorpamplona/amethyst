@@ -213,7 +213,7 @@
         post('outbox.subscribe', { subId: subId, filters: filters, options: options });
         var handle = {
           on: function(name, cb){ if (typeof cb === 'function' && sub[name]) sub[name].push(cb); return handle; },
-          close: function(){ if (!outboxSubs[subId]) return; delete outboxSubs[subId]; post('outbox.close', { subId: subId }); }
+          close: function(){ delete outboxSubs[subId]; post('outbox.close', { subId: subId }); }
         };
         return handle;
       },
@@ -223,7 +223,7 @@
         });
       },
       resolveRelays: function(target){
-        return callResult('outbox.resolveRelays', { target: target }).then(function(m){ return m.plan || { relays: [], source: 'policy' }; });
+        return callResult('outbox.resolveRelays', { target: target }).then(function(m){ if (m.plan) return m.plan; var r = { relays: [], source: 'policy' }; if (m.error) r.error = m.error; return r; });
       }
     },
     storage: {

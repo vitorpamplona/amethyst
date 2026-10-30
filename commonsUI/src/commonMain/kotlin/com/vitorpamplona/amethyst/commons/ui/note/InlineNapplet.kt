@@ -101,12 +101,28 @@ object InlineNappletRuns {
     /** The card running now, if any. */
     val live: StateFlow<String?> = mutableLive.asStateFlow()
 
-    fun start(card: String) {
+    // The app the live card runs, for stopApp. Read and written on the UI thread only.
+    private var liveApp: String? = null
+
+    fun start(
+        card: String,
+        app: String,
+    ) {
+        liveApp = app
         mutableLive.value = card
     }
 
     fun stop(card: String) {
         mutableLive.compareAndSet(card, null)
+    }
+
+    /**
+     * Stops whichever note runs [app] (a stage's coordinate): it is about to open in a window, and two
+     * runs of one app share its storage and would write over each other's state.
+     */
+    fun stopApp(app: String) {
+        val card = mutableLive.value ?: return
+        if (liveApp == app) stop(card)
     }
 }
 
@@ -126,6 +142,11 @@ object InlineNappletPosters {
         val current = frames.value
         val kept = if (current.size >= MAX && coordinate !in current) current.entries.drop(1).associate { it.key to it.value } else current - coordinate
         frames.value = kept + (coordinate to frame)
+    }
+
+    /** Forgets every frame: they showed one account's apps, and another is logged in now. */
+    fun clear() {
+        frames.value = emptyMap()
     }
 
     /** Follows the frame kept for [coordinate]: a run that just stopped saves it as it leaves. */
@@ -188,7 +209,7 @@ internal fun InlineNappletStage(
                     onOpen()
                 })
             } else {
-                Poster(coordinate, title, icon, onRun = { InlineNappletRuns.start(card) })
+                Poster(coordinate, title, icon, onRun = { InlineNappletRuns.start(card, coordinate) })
             }
         }
     }

@@ -78,6 +78,16 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
     private var popupShown = false
     private var popupBounds: Rectangle? = null
 
+    // Frames published lately, newest last (Chromium's UI thread). A bitmap's native pixels go when it
+    // is closed, not when it is collected, and a frame a second's worth of garbage-free painting
+    // would otherwise hold hundreds of megabytes until a collection. One replaced a few frames ago is
+    // closed on the AWT thread, where Compose draws, so it is never closed mid-draw.
+    private val published = ArrayDeque<Bitmap>()
+
+    // Set once the last frame became the note's poster: nothing is published or closed after it.
+    @Volatile
+    private var stopped = false
+
     // A key press whose character no typed event delivered (see [key]).
     private var untyped: KeyEvent? = null
 
@@ -92,6 +102,15 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         this.height = height.coerceAtLeast(1)
         this.scale = scale
         browser?.resize(this.width, this.height, scale)
+    }
+
+    /**
+     * Stops publishing frames and hands over the last one, which is never closed: it outlives the
+     * page as the note's poster.
+     */
+    fun keepLastFrame(): ImageBitmap? {
+        stopped = true
+        return mutableFrame.value
     }
 
     fun focus(focused: Boolean) {
@@ -218,7 +237,7 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
     }
 
     private fun publish() {
-        if (frameWidth == 0 || frameHeight == 0) return
+        if (stopped || frameWidth == 0 || frameHeight == 0) return
         val bounds = popupBounds
         val popup = popupPixels
         val composed =
@@ -238,6 +257,11 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
         }
         bitmap.setImmutable()
         mutableFrame.value = bitmap.asComposeImageBitmap()
+        published.addLast(bitmap)
+        while (published.size > LIVE_FRAMES) {
+            val old = published.removeFirst()
+            SwingUtilities.invokeLater { old.close() }
+        }
     }
 
     private fun blit(
@@ -258,6 +282,9 @@ class OffscreenNappletView : OffscreenCefBrowser.Listener {
 
     private companion object {
         const val TAG = "OffscreenNappletView"
+
+        // The frames kept open: the one shown, and the few before it a draw may still hold.
+        const val LIVE_FRAMES = 3
 
         // Every forwarded event needs a source; Chromium reads only its fields.
         val EVENT_SOURCE = Canvas()

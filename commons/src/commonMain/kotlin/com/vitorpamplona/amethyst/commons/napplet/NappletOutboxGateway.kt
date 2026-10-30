@@ -63,7 +63,7 @@ data class OutboxRelayPlan(
  * Bridges the broker to NIP-65 relay routing for the [NappletCapability.OUTBOX] capability: the
  * shell, never the napplet, finds each author's relays, reads them, and fans a publish out. Relay
  * hints a napplet passes are checked here (no private networks); an implementation verifies every
- * event before returning it. A `null` gateway makes the broker answer outbox requests with
+ * event before returning it, and hands it over as signed: never decrypted, never a rumor. A `null` gateway makes the broker answer outbox requests with
  * [com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse.Unsupported].
  */
 interface NappletOutboxGateway {
@@ -99,4 +99,12 @@ interface NappletOutboxGateway {
         authors: List<HexKey>,
         write: Boolean,
     ): OutboxRelayPlan
+
+    companion object {
+        /** The most events one read returns, whatever limit the napplet asks for. */
+        const val MAX_RESULTS = 500
+
+        /** The most filters one read or subscription may carry. */
+        const val MAX_FILTERS = 10
+    }
 }

@@ -24,9 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
-import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
@@ -180,7 +178,7 @@ class NappletLaunch(
                     WebxdcLaunch(
                         url = app.url,
                         hash = app.hash,
-                        selfAddr = selfPubKey.hexToByteArray().toNpub(),
+                        selfAddr = WebxdcApp.selfAddr(selfPubKey, poster, app.instance(postId)),
                         selfName = selfName,
                         isAppSender = poster == selfPubKey,
                     ),
@@ -207,7 +205,7 @@ class WebxdcLaunch(
     val url: String,
     /** The archive's sha256; null when the post gives none, and it runs as served. */
     val hash: HexKey?,
-    /** The user as the app sees them: their npub (NIP-DC), never trusted by the app for anything. */
+    /** The user as the app sees them: a pseudonym of its own ([WebxdcApp.selfAddr]), never their key. */
     val selfAddr: String,
     val selfName: String,
     /** Whether the user posted the app. */

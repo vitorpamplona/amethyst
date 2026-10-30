@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.util.withString
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
+import kotlin.concurrent.thread
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
@@ -426,7 +428,7 @@ class NappletHostService : Service() {
         // profile has otherwise been used), so the storage partition must be chosen before the
         // hardening/bridge setup and the loadUrl below.
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile))
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer =
             NappletContentServer(
@@ -466,6 +468,29 @@ class NappletHostService : Service() {
                 torPort = effectiveProxy,
                 onFailed = { reportRouteBlocked(tab) },
             ) { if (tab.webView === wv) wv.loadUrl(NappletWebContract.SHELL_URL) }
+        } else if (tab.webxdc != null) {
+            // A webxdc archive downloads on first use, inside the page's own request, where a failure
+            // is only a 404 in an empty frame. Fetch it first, as the activity does, so a miss shows
+            // the retry instead.
+            val server = tab.contentServer
+            pushLoadState(tab, isLoading = true)
+            thread(name = "webxdc-probe", isDaemon = true) {
+                val available = server?.isAvailable(NappletSiteServer.INDEX_PATH) == true
+                probeResults.post {
+                    if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post
+                    if (available) {
+                        wv.loadUrl(NappletWebContract.SHELL_URL)
+                    } else {
+                        // Dropped, so the client's retry builds the tab again, with a new download.
+                        (wv.parent as? ViewGroup)?.removeView(wv)
+                        wv.destroy()
+                        tab.webView = null
+                        tab.bridgeReplyProxy = null
+                        tab.loadFailed = true
+                        pushLoadState(tab, isLoading = false)
+                    }
+                }
+            }
         } else {
             wv.loadUrl(NappletWebContract.SHELL_URL)
         }
@@ -702,7 +727,7 @@ class NappletHostService : Service() {
         ): Boolean {
             val uri = request.url
             if (NappletWebContract.isInternalHost(uri.host)) return false
-            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+            if (tab.profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
                 runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             return true
@@ -846,6 +871,9 @@ class NappletHostService : Service() {
     }
 
     private val heldExpiry = Handler(Looper.getMainLooper())
+
+    // Where a webxdc tab's availability probe hands its answer back to the main thread.
+    private val probeResults = Handler(Looper.getMainLooper())
 
     /** Tells the broker whether [tab] is being looked at, which gates decrypting its relay reads. */
     private fun reportAttended(tab: NappletTab) {

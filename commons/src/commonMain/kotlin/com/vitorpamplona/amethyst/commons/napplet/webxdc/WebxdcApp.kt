@@ -21,7 +21,9 @@
 package com.vitorpamplona.amethyst.commons.napplet.webxdc
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 
 /**
  * A webxdc app (a `.xdc` zip of a sandboxed HTML5 app) attached to a post, as the NIP-DC draft
@@ -48,6 +50,12 @@ class WebxdcApp(
      * separate app").
      */
     fun instance(postId: HexKey): String = webxdcId?.takeIf { it.isNotBlank() } ?: postId
+
+    /** One run of [poster]'s app in post [postId], as the feed tracks it: its inline stage and poster frame. */
+    fun stageKey(
+        poster: HexKey,
+        postId: HexKey,
+    ): String = "webxdc:$poster:${instance(postId)}"
 
     companion object {
         const val MIME_TYPE = "application/x-webxdc"
@@ -93,6 +101,20 @@ class WebxdcApp(
                 .substringBefore('.')
                 .lowercase()
                 .takeIf(::isHash)
+
+        /**
+         * The `selfAddr` [pubKey] has in instance [instance] of [poster]'s app: a pseudonym, the same
+         * every time and for everyone who computes it, but a different one in every app. An app that
+         * leaked it would name no one; NIP-DC lets it be any value.
+         */
+        fun selfAddr(
+            pubKey: HexKey,
+            poster: HexKey,
+            instance: String,
+        ): String = sha256("$ADDR_SEED$poster:$instance:$pubKey".encodeToByteArray()).toHexKey().take(ADDR_LENGTH)
+
+        private const val ADDR_SEED = "webxdc-addr:"
+        private const val ADDR_LENGTH = 40
 
         private fun nameFromAlt(alt: String): String? =
             alt

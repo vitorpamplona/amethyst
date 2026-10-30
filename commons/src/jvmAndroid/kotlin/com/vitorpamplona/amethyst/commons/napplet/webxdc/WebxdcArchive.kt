@@ -51,16 +51,19 @@ object WebxdcArchive {
     /**
      * Downloads the first of [urls] that answers with an archive into [target], at most
      * [MAX_ARCHIVE_BYTES]. With an [expectedHash], anything else is refused; without one, the
-     * archive is taken as served. Returns the archive's sha256, or null when nothing usable came.
+     * archive is taken as served. Gives up as soon as [cancelled] says so. Returns the archive's
+     * sha256, or null when nothing usable came.
      */
     fun download(
         client: OkHttpClient,
         urls: List<String>,
         expectedHash: HexKey?,
         target: File,
+        cancelled: () -> Boolean = { false },
     ): HexKey? {
         for (url in urls.distinct()) {
-            val hash = downloadOne(client, url, target) ?: continue
+            if (cancelled()) break
+            val hash = downloadOne(client, url, target, cancelled) ?: continue
             if (expectedHash == null || hash == expectedHash.lowercase()) return hash
             Log.w(TAG) { "$url is not the archive the post names ($hash)" }
         }
@@ -72,6 +75,7 @@ object WebxdcArchive {
         client: OkHttpClient,
         url: String,
         target: File,
+        cancelled: () -> Boolean,
     ): HexKey? {
         val call: Call =
             client.newCall(
@@ -94,7 +98,7 @@ object WebxdcArchive {
                             if (read < 0) break
                             total += read
                             // A server that sends no length is held to the cap as it streams.
-                            if (total > MAX_ARCHIVE_BYTES) return null
+                            if (total > MAX_ARCHIVE_BYTES || cancelled()) return null
                             digest.update(buffer, 0, read)
                             output.write(buffer, 0, read)
                         }

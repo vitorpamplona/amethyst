@@ -169,7 +169,15 @@ private fun NappletManifestCard(
         requires = info.required,
         icon = icon,
         // The card itself never executes code: Open and Run here hand the napplet to the platform's sandbox.
-        onOpen = if (canOpen) ({ launcher.openNapplet(event) }) else null,
+        onOpen =
+            if (canOpen) {
+                {
+                    InlineNappletRuns.stopApp(coordinate)
+                    launcher.openNapplet(event)
+                }
+            } else {
+                null
+            },
         headerActions = { FavoriteToggleButton(coordinate, label, icon) },
         stage =
             if (canOpen && runsNappletsInline) {

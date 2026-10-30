@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.WebxdcSegment
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -90,5 +92,17 @@ class WebxdcAppTest {
         assertEquals(quakeHash, bad?.hash, "a malformed x falls back to the URL's hash")
         val alt = WebxdcApp.from("https://x.com/a.xdc") { if (it == "alt") "Webxdc app: MachStrike" else null }
         assertEquals("MachStrike", alt?.title)
+    }
+
+    @Test
+    fun selfAddrIsAPseudonymOfItsOwnInEveryApp() {
+        val me = "a1".repeat(32)
+        val poster = "b2".repeat(32)
+        val addr = WebxdcApp.selfAddr(me, poster, "chess")
+        assertEquals(addr, WebxdcApp.selfAddr(me, poster, "chess"))
+        assertNotEquals(addr, WebxdcApp.selfAddr(me, poster, "go"))
+        assertNotEquals(addr, WebxdcApp.selfAddr(me, "c3".repeat(32), "chess"))
+        assertNotEquals(addr, WebxdcApp.selfAddr("d4".repeat(32), poster, "chess"))
+        assertFalse(addr.contains(me.take(16)))
     }
 }

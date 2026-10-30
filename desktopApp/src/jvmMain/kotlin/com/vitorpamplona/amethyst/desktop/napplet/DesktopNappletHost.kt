@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
+import com.vitorpamplona.amethyst.commons.ui.note.InlineNappletPosters
 import com.vitorpamplona.amethyst.desktop.app.DesktopAppModules
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -113,6 +114,8 @@ class DesktopNappletHost(
                 .collect { pubKey ->
                     sessions.value.filter { it.accountPubKey != pubKey }.forEach(::close)
                     inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
+                    // The last frames shown were the old account's screens.
+                    InlineNappletPosters.clear()
                     synchronized(this@DesktopNappletHost) { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
         }
@@ -202,12 +205,7 @@ class DesktopNappletHost(
         instanceId: String,
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run napplets"))
-        return NappletLaunch.fromManifest(manifest).map { launch ->
-            CefNappletSession(launch.inline(instanceId), account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView()).also { session ->
-                inlineSessions.update { it + session }
-                session.start()
-            }
-        }
+        return NappletLaunch.fromManifest(manifest).map { launch -> startInline(launch.inline(instanceId), account) }
     }
 
     /**
@@ -222,12 +220,23 @@ class DesktopNappletHost(
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
         val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName()).inline(instanceId)
-        return runCatching {
-            CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView()).also { session ->
-                inlineSessions.update { it + session }
-                session.start()
-            }
+        return runCatching { startInline(launch, account) }
+    }
+
+    private fun startInline(
+        launch: NappletLaunch,
+        account: Account,
+    ): CefNappletSession {
+        val session = CefNappletSession(launch, account.pubKey, useTor = false, account, brokerFor(account), runtime, OffscreenNappletView())
+        inlineSessions.update { it + session }
+        // The account may have left between reading it and listing the session, after the switch
+        // closed what it found: this one would run on as someone who left.
+        if (modules.sessionManager.loggedInAccount()?.pubKey != account.pubKey) {
+            closeInline(session)
+            throw IllegalStateException("The account changed")
         }
+        session.start()
+        return session
     }
 
     fun closeInline(session: CefNappletSession) {

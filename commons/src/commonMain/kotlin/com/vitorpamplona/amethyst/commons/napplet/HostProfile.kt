@@ -82,6 +82,12 @@ enum class HostProfile {
      */
     val exposesNetwork: Boolean get() = this == WEBSITE
 
+    /**
+     * Hand a link the user clicks to the system browser. A webxdc app never leaves the device: a link
+     * carrying what it knows (its `selfAddr`, what was typed) would be its way out.
+     */
+    val opensLinks: Boolean get() = this != WEBXDC
+
     companion object {
         /** Reconstruct from the wire [name], defaulting to the locked [NAPPLET] posture on anything unknown. */
         fun fromName(name: String?): HostProfile = entries.firstOrNull { it.name == name } ?: NAPPLET

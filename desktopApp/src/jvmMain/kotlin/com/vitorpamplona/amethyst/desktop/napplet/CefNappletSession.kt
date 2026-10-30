@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
@@ -175,6 +176,7 @@ class CefNappletSession(
                 author = launch.identity.authorPubKey,
                 identifier = launch.identity.identifier,
                 partition = if (launch.profile.ownsOrigin) accountPubKey else null,
+                profile = launch.profile,
             ),
         )
 
@@ -183,6 +185,10 @@ class CefNappletSession(
     // Built once the route is known. Its client is the app's shared one, so it is never closed here.
     private lateinit var server: NappletSiteServer
 
+    // The server's files, for close(): a webxdc archive still downloading stops with the window.
+    @Volatile
+    private var files: NappletFiles? = null
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var client: CefClient? = null
     private var browser: CefBrowser? = null
@@ -190,6 +196,17 @@ class CefNappletSession(
 
     @Volatile
     private var closed = false
+
+    /** Whether [close] ran: the user stopped it, or the host did for an account that left. */
+    val isClosed: Boolean get() = closed
+
+    // Whether Chromium has made the browser it was asked for (it does so later, on its own thread).
+    // Guarded by lifecycle.
+    private var created = false
+
+    // A close that came before the browser was made: it runs once Chromium has made it. Guarded by
+    // lifecycle.
+    private var pendingTeardown: (() -> Unit)? = null
 
     // Guards closed against the browser's creation, so close() and start() can't interleave.
     private val lifecycle = Any()
@@ -226,26 +243,30 @@ class CefNappletSession(
                 }
                 mutableState.value = State.Loading
                 val webxdc = launch.webxdc
+                val blobs =
+                    if (webxdc != null) {
+                        WebxdcFiles(
+                            runtime.webxdcBundles,
+                            WebxdcFiles.downloadClient(runtime.httpClient(blobsUseTor)),
+                            webxdc.url,
+                            webxdc.hash,
+                            launch.servers,
+                            WebxdcRuntime.script(webxdc.selfAddr, webxdc.selfName, webxdc.isAppSender),
+                        )
+                    } else {
+                        NappletBlobStore(
+                            runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
+                            runtime.httpClient(blobsUseTor),
+                            launch.paths,
+                            launch.servers,
+                        )
+                    }
+                files = blobs
+                // Closed while the files were made: close() may have missed them.
+                if (closed) blobs.close()
                 server =
                     NappletSiteServer(
-                        blobs =
-                            if (webxdc != null) {
-                                WebxdcFiles(
-                                    runtime.webxdcBundles,
-                                    WebxdcFiles.downloadClient(runtime.httpClient(blobsUseTor)),
-                                    webxdc.url,
-                                    webxdc.hash,
-                                    launch.servers,
-                                    WebxdcRuntime.script(webxdc.selfAddr, webxdc.selfName, webxdc.isAppSender),
-                                )
-                            } else {
-                                NappletBlobStore(
-                                    runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
-                                    runtime.httpClient(blobsUseTor),
-                                    launch.paths,
-                                    launch.servers,
-                                )
-                            },
+                        blobs = blobs,
                         shellHtml = NappletWebResources.shellHtml(),
                         shimJs = NappletWebResources.shimJs().decodeToString(),
                         appOrigin = appOrigin,
@@ -337,7 +358,7 @@ class CefNappletSession(
                     if (isWebsite && !frame.isMain && frame.parent?.isMain == false && isWebLink(request.url)) return false
                     // The shell and the page's own frame never leave; a link the user clicked opens in
                     // the system browser, and only then.
-                    if (userGesture && isWebLink(request.url)) DesktopBrowser.open(request.url)
+                    if (launch.profile.opensLinks && userGesture && isWebLink(request.url)) DesktopBrowser.open(request.url)
                     return true
                 }
 
@@ -361,13 +382,24 @@ class CefNappletSession(
         )
         client.addLifeSpanHandler(
             object : CefLifeSpanHandlerAdapter() {
+                override fun onAfterCreated(browser: CefBrowser) {
+                    // Closing a browser Chromium hasn't made yet does nothing, and blocks every close
+                    // after it: a close that came first runs now, or the page would run on unseen.
+                    val teardown =
+                        synchronized(lifecycle) {
+                            created = true
+                            pendingTeardown.also { pendingTeardown = null }
+                        }
+                    teardown?.let { SwingUtilities.invokeLater(it) }
+                }
+
                 override fun onBeforePopup(
                     browser: CefBrowser,
                     frame: CefFrame,
                     targetUrl: String,
                     targetFrameName: String?,
                 ): Boolean {
-                    if (isWebLink(targetUrl)) DesktopBrowser.open(targetUrl)
+                    if (launch.profile.opensLinks && isWebLink(targetUrl)) DesktopBrowser.open(targetUrl)
                     return true
                 }
             },
@@ -607,6 +639,7 @@ class CefNappletSession(
         val client: CefClient?
         val browser: CefBrowser?
         val router: CefMessageRouter?
+        val made: Boolean
         synchronized(lifecycle) {
             if (closed) return
             closed = true
@@ -616,8 +649,10 @@ class CefNappletSession(
             this.client = null
             this.browser = null
             this.router = null
+            made = created
         }
         offscreen?.browser = null
+        files?.close()
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
@@ -640,6 +675,19 @@ class CefNappletSession(
                 client?.dispose()
             }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
             Unit
+        }
+        if (browser != null && !made) {
+            // Asked for, not made yet: onAfterCreated runs the teardown, unless it ran meanwhile.
+            val now =
+                synchronized(lifecycle) {
+                    if (created) {
+                        true
+                    } else {
+                        pendingTeardown = teardown
+                        false
+                    }
+                }
+            if (!now) return
         }
         if (SwingUtilities.isEventDispatchThread()) teardown() else SwingUtilities.invokeLater(teardown)
     }

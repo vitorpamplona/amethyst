@@ -57,15 +57,23 @@ object NappletWebContract {
      * persists across launches; different applets derive different subdomains, so their storage is
      * isolated from one another. A host whose browser keeps one storage jar for every account passes
      * that account as [partition], so each account gets its own origin.
+     *
+     * A webxdc app's seed starts with a name no site's can: a site's starts with a hex key, so a site
+     * whose `d` tag spells a webxdc instance (`webxdc:<id>`) still can't land on the app's origin and
+     * read what was typed into it, with the network the app never had.
      */
     fun appId(
         author: String,
         identifier: String,
         partition: String? = null,
+        profile: HostProfile = HostProfile.NAPPLET,
     ): String {
-        val seed = if (partition == null) "$author:$identifier" else "$partition:$author:$identifier"
+        val base = if (partition == null) "$author:$identifier" else "$partition:$author:$identifier"
+        val seed = if (profile == HostProfile.WEBXDC) "$WEBXDC_SEED_PREFIX$base" else base
         return "n" + sha256(seed.encodeToByteArray()).toHexKey().take(31)
     }
+
+    private const val WEBXDC_SEED_PREFIX = "webxdc/"
 
     /** A filled-in shell page and the Content-Security-Policy header it must be served with. */
     class ShellPage(

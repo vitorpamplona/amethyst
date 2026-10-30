@@ -360,7 +360,9 @@ class CefNappletSessionTest {
                 assertTrue(run1.contains("\"rtc\":\"undefined\""), run1)
                 assertTrue(run1.contains("\"replayed\":\"\""), run1)
                 assertTrue(run1.contains("\"after\":\"1@1\""), run1)
-                assertTrue(run1.contains("\"name\":\"Tester\"") && run1.contains("npub1"), run1)
+                // A pseudonym of its own in this app, never the user's key.
+                assertTrue(run1.contains("\"name\":\"Tester\"") && run1.contains("\"self\":\"${WebxdcApp.selfAddr(me, poster, "instance-1")}\""), run1)
+                assertFalse(run1.contains("npub1") || run1.contains(me), run1)
                 first.close()
 
                 // Opened again: the same origin, so its storage and its update log are still there.
@@ -373,6 +375,19 @@ class CefNappletSessionTest {
                 assertTrue(run2.contains("\"before\":\"v\""), run2)
                 assertTrue(run2.contains("\"replayed\":\"1@1\""), run2)
                 assertTrue(run2.contains("\"after\":\"1@1,2@2\""), run2)
+
+                // Two documents of the app at once (the note's run and a window): each takes its own
+                // serial, where both used to take the next one and the second write replaced the first.
+                show(open())
+                show(open())
+                val pair =
+                    withTimeout(60_000) {
+                        while (results.size < 2) delay(100)
+                        listOf(results.poll(), results.poll())
+                    }
+                val serials = pair.map { run -> Regex("@(\\d+)").findAll(run.substringAfter("\"after\":")).map { it.groupValues[1].toInt() }.toList() }
+                serials.forEach { assertEquals(it.distinct(), it, "no serial twice: $pair") }
+                assertEquals(setOf(1, 2, 3, 4), serials.flatten().toSet(), "both updates kept: $pair")
                 assertFalse(requested.contains("/leak"), "the app reached the network")
             } finally {
                 Log.sink = previousSink

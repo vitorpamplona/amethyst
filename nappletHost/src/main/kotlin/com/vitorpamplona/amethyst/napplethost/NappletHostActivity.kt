@@ -296,7 +296,7 @@ class NappletHostActivity : ComponentActivity() {
         fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
         val shellHtml = readContractAsset(NappletWebResources.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier, profile = profile))
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
@@ -719,7 +719,7 @@ class NappletHostActivity : ComponentActivity() {
             // An external link the user actually tapped is handed to the system browser. A user
             // gesture is required so a hostile site can't auto-redirect to spam-open the browser,
             // and only http(s) is honored so it can't fire arbitrary intent schemes.
-            if (request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
+            if (profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
                 runCatching {
                     startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }

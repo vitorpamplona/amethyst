@@ -26,6 +26,9 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.After
@@ -111,6 +114,54 @@ class WebxdcFilesTest {
             val files = files("$base/game.xdc", "ab".repeat(32))
             assertFalse(files.isAvailable("/"))
             assertNull(files.find("/index.html"))
+        }
+
+    @Test
+    fun twoLaunchesOfOneArchiveShareOneDownload() =
+        runBlocking {
+            // A note's run and a window's, each with its own bundles over the same directory.
+            val archive = zip("index.html" to "<p>game</p>")
+            served["/game.xdc"] = archive
+            val root = folder.newFolder()
+            val hash = sha256(archive).toHexKey()
+            val opened =
+                (1..2)
+                    .map { async(Dispatchers.IO) { WebxdcBundles(root).open("$base/game.xdc", hash, emptyList(), client) } }
+                    .awaitAll()
+            assertTrue(opened.all { it != null && it == opened.first() })
+            assertEquals(1, requests)
+            // Nothing half-made is left beside it.
+            assertEquals(listOf(hash), root.list()!!.toList())
+        }
+
+    @Test
+    fun aMissIsRememberedUntilRetry() =
+        runBlocking {
+            served["/game.xdc"] = zip("index.html" to "<p>swapped</p>")
+            val files = files("$base/game.xdc", "ab".repeat(32))
+            assertFalse(files.isAvailable("/"))
+            assertNull(files.find("/index.html"))
+            assertNull(files.find("/"))
+            assertEquals("a page's every request must not download it again", 1, requests)
+        }
+
+    @Test
+    fun aClosedLaunchDownloadsNothing() =
+        runBlocking {
+            served["/game.xdc"] = zip("index.html" to "<p>game</p>")
+            val files = files("$base/game.xdc", null)
+            files.close()
+            assertFalse(files.isAvailable("/"))
+            assertEquals(0, requests)
+        }
+
+    @Test
+    fun anArchiveShippingTheMarkerStillOpens() =
+        runBlocking {
+            served["/game.xdc"] = zip("index.html" to "<p>game</p>", WebxdcBundles.COMPLETE to "mine")
+            val files = files("$base/game.xdc", null)
+            assertTrue(files.isAvailable("/"))
+            assertNull(files.find("/" + WebxdcBundles.COMPLETE))
         }
 
     @Test

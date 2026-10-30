@@ -60,7 +60,9 @@ class NappletOutboxRouting(
     /**
      * The relays to read [authors] from ([write], their outboxes) or to deliver to them (their
      * inboxes); the [user] gets all of their own. An author without a known list is fetched once;
-     * still missing, it is reported. With no relay found for anyone, reads fall back to the user's
+     * still missing, it is reported, as is one that isn't a key, past [MAX_AUTHORS], or left without
+     * a relay by [MAX_RELAYS]: a read is then incomplete, and a delivery failed. Each author gets one
+     * relay before any gets a second. With no relay found for anyone, reads fall back to the user's
      * relays; deliveries never do, since a recipient who never said where they read can't be
      * reached by guessing.
      */
@@ -68,34 +70,49 @@ class NappletOutboxRouting(
         authors: List<HexKey>,
         write: Boolean,
     ): Route {
-        val wanted = authors.filter { it.length == 64 }.distinct().take(MAX_AUTHORS)
-        if (wanted.isEmpty()) return Route(if (write) fallback() else emptySet(), OutboxRelayPlan.Source.FALLBACK, emptyList())
+        val (keys, invalid) = authors.distinct().partition(::isKey)
+        val wanted = keys.take(MAX_AUTHORS)
+        val dropped = invalid + keys.drop(MAX_AUTHORS)
+        if (wanted.isEmpty()) return Route(if (write) fallback() else emptySet(), OutboxRelayPlan.Source.FALLBACK, dropped)
 
         val unknown = wanted.filter { it != user && relayListOf(it, write) == null }
         if (unknown.isNotEmpty()) fetchRelayLists(unknown)
 
         val relays = LinkedHashSet<NormalizedRelayUrl>()
-        val missing = mutableListOf<HexKey>()
+        val missing = dropped.toMutableList()
         // The user's own relays first, so the limit never cuts them.
         if (user != null && user in wanted) {
             val own = userRelays(write)
             if (own.isEmpty()) missing += user else relays += own
         }
-        for (author in wanted) {
-            if (author == user) continue
-            val list = relayListOf(author, write)
-            if (list.isNullOrEmpty()) {
-                missing += author
-            } else {
-                list.take(RELAYS_PER_AUTHOR).forEach { if (relays.size < MAX_RELAYS) relays += it }
+        val lists =
+            wanted.mapNotNull { author ->
+                if (author == user) return@mapNotNull null
+                val list = relayListOf(author, write)?.take(RELAYS_PER_AUTHOR)
+                if (list.isNullOrEmpty()) {
+                    missing += author
+                    null
+                } else {
+                    author to list
+                }
+            }
+        // Everyone's first relay, then everyone's next, until the limit.
+        val reached = HashSet<HexKey>()
+        for (round in 0 until RELAYS_PER_AUTHOR) {
+            for ((author, list) in lists) {
+                val relay = list.getOrNull(round) ?: continue
+                if (relay in relays || (relays.size < MAX_RELAYS && relays.add(relay))) reached += author
             }
         }
+        lists.forEach { (author, _) -> if (author !in reached) missing += author }
         return when {
             relays.isNotEmpty() -> Route(relays, OutboxRelayPlan.Source.NIP65, missing)
             write -> Route(fallback(), OutboxRelayPlan.Source.FALLBACK, missing)
             else -> Route(emptySet(), OutboxRelayPlan.Source.FALLBACK, missing)
         }
     }
+
+    private fun isKey(value: String): Boolean = value.length == 64 && value.all { it in '0'..'9' || it in 'a'..'f' }
 
     companion object {
         const val MAX_AUTHORS = 100

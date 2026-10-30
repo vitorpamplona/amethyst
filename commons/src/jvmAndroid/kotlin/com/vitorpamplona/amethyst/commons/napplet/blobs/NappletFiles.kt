@@ -36,4 +36,7 @@ interface NappletFiles {
      * error, never the home page in its place.
      */
     fun isListed(requestPath: String): Boolean
+
+    /** The launch ended: stop any download it started, so a closed app stops costing data. */
+    fun close() {}
 }
