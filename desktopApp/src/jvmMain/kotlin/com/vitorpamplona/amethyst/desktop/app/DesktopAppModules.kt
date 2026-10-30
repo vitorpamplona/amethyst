@@ -162,6 +162,7 @@ import okio.Path
 import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.io.IOException
+import java.util.concurrent.Executors
 
 /**
  * Everything the shared app needs from a desktop process, built once: the preference files, the
@@ -294,6 +295,9 @@ class DesktopAppModules(
             scope = applicationIOScope,
             dns = surgeDns,
             onionCache = onionLocationCache,
+            // Each open relay socket holds a dispatcher thread for its reader loop: make
+            // those virtual so hundreds of relays don't hold hundreds of platform threads.
+            dispatcherExecutor = Executors.newVirtualThreadPerTaskExecutor(),
         )
 
     val websocketBuilder =
