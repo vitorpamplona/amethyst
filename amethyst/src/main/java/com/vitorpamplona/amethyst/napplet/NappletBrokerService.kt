@@ -48,9 +48,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
+import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletFilePort
 import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletGateways
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
@@ -109,6 +111,23 @@ class NappletBrokerService : Service() {
     // Cancelling removes the job before it can emit a late terminal envelope to the sandbox.
     private val resourceRequests = ConcurrentHashMap<String, Job>()
 
+    // NAP-FS: what the user picked for each running surface, keyed by its launch token. Picks belong to
+    // that one surface, so they go when it gives its token back (or when this service ends).
+    private val files = ConcurrentHashMap<String, NappletFsSession>()
+    private val filePort by lazy { AndroidNappletFilePort(applicationContext) }
+
+    private fun filesFor(
+        launchToken: String?,
+        declared: Set<NappletCapability>,
+    ): NappletFsSession? {
+        if (launchToken == null || NappletCapability.FS !in declared) return null
+        return files.getOrPut(launchToken) { NappletFsSession(filePort) }
+    }
+
+    private fun dropFiles(launchToken: String) {
+        files.remove(launchToken)?.close()
+    }
+
     // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
     private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
 
@@ -159,6 +178,7 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stopAll()
+        files.keys.toList().forEach(::dropFiles)
         themeRecipients.clear()
         // Every applet/browser surface has unbound, so the "session" the user granted for is over.
         // The ledger and the broker cache are now app-wide singletons that outlive this service, so
@@ -206,6 +226,7 @@ class NappletBrokerService : Service() {
             msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
                 NappletLaunchRegistry.unregister(token)
                 identityWatch.stop(token)
+                dropFiles(token)
                 val prefix = "$token\u0000"
                 resourceRequests.keys.filter { it.startsWith(prefix) }.forEach { key -> resourceRequests.remove(key)?.cancel() }
             }
@@ -488,7 +509,7 @@ class NappletBrokerService : Service() {
                     reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed(NappletHeldRequests.EXPIRED)))
                     return@launch
                 }
-                when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload)) {
+                when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload, filesFor(launchToken, declared))) {
                     is NappletRequestRouter.Outcome.Ignore -> {}
                     is NappletRequestRouter.Outcome.Reply -> {
                         reply(replyTo, requestId, outcome.payload)

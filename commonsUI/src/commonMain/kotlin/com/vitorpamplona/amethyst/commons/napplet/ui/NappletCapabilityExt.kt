@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_fs
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_fs_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_inc
@@ -64,6 +66,7 @@ fun NappletCapability.symbol(): MaterialSymbol =
         NappletCapability.NOTIFY -> MaterialSymbols.Notifications
         NappletCapability.INC -> MaterialSymbols.SwapHoriz
         NappletCapability.OUTBOX -> MaterialSymbols.Public
+        NappletCapability.FS -> MaterialSymbols.Folder
     }
 
 /** Localized display name for a capability, shared by the consent dialog and the permissions screen. */
@@ -81,6 +84,7 @@ fun NappletCapability.labelRes(): StringResource =
         NappletCapability.NOTIFY -> Res.string.napplet_cap_notify
         NappletCapability.INC -> Res.string.napplet_cap_inc
         NappletCapability.OUTBOX -> Res.string.napplet_cap_outbox
+        NappletCapability.FS -> Res.string.napplet_cap_fs
     }
 
 /** Localized one-line description of what a capability lets a napplet do. */
@@ -98,4 +102,5 @@ fun NappletCapability.descriptionRes(): StringResource =
         NappletCapability.NOTIFY -> Res.string.napplet_cap_notify_desc
         NappletCapability.INC -> Res.string.napplet_cap_inc_desc
         NappletCapability.OUTBOX -> Res.string.napplet_cap_outbox_desc
+        NappletCapability.FS -> Res.string.napplet_cap_fs_desc
     }

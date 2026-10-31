@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.napplet.protocol
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsPickOptions
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 
@@ -411,4 +412,95 @@ sealed interface NappletRequest {
 
         override fun hashCode(): Int = 31 * (31 * contentType.hashCode() + filename.hashCode()) + bytes.contentHashCode()
     }
+
+    /**
+     * A NAP-FS request (`fs.*`). Its paths, options and bytes come from the napplet and are checked by
+     * [NappletFsSession][com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession], never trusted here.
+     */
+    sealed interface Fs : NappletRequest {
+        override val capability get() = NappletCapability.FS
+
+        /**
+         * Whether it asks the user to pick something. Picks are the only `fs` requests that grant
+         * access, so they are the ones consent gates; the rest act on what a pick already granted.
+         */
+        val picks: Boolean get() = false
+    }
+
+    /** Which NAP-FS picker a [FsPick] opens. [wire] is its operation name. */
+    enum class FsPickKind(
+        val wire: String,
+    ) {
+        FILE("pickFile"),
+        FILES("pickFiles"),
+        DIRECTORY("pickDirectory"),
+        SAVE_FILE("pickSaveFile"),
+    }
+
+    /** `fs.info` — visible roots and limits. */
+    data object FsInfo : Fs
+
+    /** `fs.pickFile` / `pickFiles` / `pickDirectory` / `pickSaveFile`. */
+    data class FsPick(
+        val kind: FsPickKind,
+        val options: NappletFsPickOptions = NappletFsPickOptions(),
+    ) : Fs {
+        override val picks get() = true
+    }
+
+    /** `fs.stat`. */
+    data class FsStat(
+        val path: String,
+    ) : Fs
+
+    /** `fs.list`. */
+    data class FsList(
+        val path: String,
+    ) : Fs
+
+    /** `fs.read`: [length] bytes (or the runtime's chunk) from [offset] (or 0). */
+    data class FsRead(
+        val path: String,
+        val offset: Long? = null,
+        val length: Long? = null,
+    ) : Fs
+
+    /**
+     * `fs.write`. [data] is the wire's base64 text, decoded (and rejected when not canonical) by the
+     * runtime; [mode] is the raw `FsWriteMode` (absent means `replace`).
+     */
+    data class FsWrite(
+        val path: String,
+        val data: String,
+        val mode: String? = null,
+        val offset: Long? = null,
+        val ifRevision: String? = null,
+        val ifAbsent: Boolean? = null,
+    ) : Fs
+
+    /** `fs.mkdir`. */
+    data class FsMkdir(
+        val path: String,
+    ) : Fs
+
+    /** `fs.remove`. */
+    data class FsRemove(
+        val path: String,
+    ) : Fs
+
+    /** `fs.move`. */
+    data class FsMove(
+        val fromPath: String,
+        val toPath: String,
+    ) : Fs
+
+    /** `fs.watch`. */
+    data class FsWatch(
+        val path: String,
+    ) : Fs
+
+    /** `fs.unwatch`. */
+    data class FsUnwatch(
+        val watchId: String,
+    ) : Fs
 }

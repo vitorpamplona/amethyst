@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
@@ -564,12 +565,17 @@ class CefNappletSession(
         override fun cancel() = response.cancel()
     }
 
+    // NAP-FS: the files the user picked for this window, gone when it closes. A napplet inside a note
+    // gets one too, but the broker never lets it open a picker.
+    private val fsSession: NappletFsSession? =
+        if (NappletCapability.FS in launch.declared) NappletFsSession(DesktopNappletFilePort()) else null
+
     private fun handle(payload: String) {
         if (closed) return
         val arrivedAt = runtime.liveSubscriptions.arrival()
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
-            when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload)) {
+            when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload, fsSession)) {
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
@@ -693,6 +699,7 @@ class CefNappletSession(
         }
         offscreen?.browser = null
         files?.close()
+        fsSession?.close()
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)

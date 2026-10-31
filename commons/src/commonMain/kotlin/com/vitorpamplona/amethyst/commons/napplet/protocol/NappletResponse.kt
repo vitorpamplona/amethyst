@@ -207,4 +207,64 @@ sealed interface NappletResponse {
     data class Failed(
         val reason: String,
     ) : NappletResponse
+
+    /** A NAP-FS `FsRoot`. */
+    data class FsRoot(
+        val path: String,
+        val name: String,
+        val permissions: List<String>,
+    )
+
+    /** A file as NAP-FS shows it: an `FsPickedEntry`, or the fields of `FsMetadata`. */
+    data class FsEntry(
+        val path: String,
+        val name: String,
+        val permissions: List<String>,
+        val size: Long? = null,
+        val kind: String = "file",
+    )
+
+    /** `fs.info`: the visible roots and the byte limits of one read and one write. */
+    data class FsInfoResult(
+        val roots: List<FsRoot>,
+        val maxReadBytes: Int,
+        val maxWriteBytes: Int,
+    ) : NappletResponse
+
+    /** A successful pick: the entries the user chose, as virtual paths. */
+    data class FsPicked(
+        val entries: List<FsEntry>,
+    ) : NappletResponse
+
+    /** `fs.stat`. */
+    data class FsMetadata(
+        val entry: FsEntry,
+    ) : NappletResponse
+
+    /** `fs.read`: [bytes] read from [offset]; [eof] when nothing follows them. */
+    data class FsReadResult(
+        val bytes: ByteArray,
+        val offset: Long,
+        val eof: Boolean,
+        val size: Long? = null,
+    ) : NappletResponse {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is FsReadResult) return false
+            return offset == other.offset && eof == other.eof && size == other.size && bytes.contentEquals(other.bytes)
+        }
+
+        override fun hashCode(): Int = 31 * (31 * (31 * offset.hashCode() + eof.hashCode()) + size.hashCode()) + bytes.contentHashCode()
+    }
+
+    /** `fs.write`: every byte landed; [size] is the file's size after it, when known. */
+    data class FsWritten(
+        val bytesWritten: Int,
+        val size: Long? = null,
+    ) : NappletResponse
+
+    /** A failed `fs.*` request, with its NAP-FS [error] code. */
+    data class FsFailure(
+        val error: String,
+    ) : NappletResponse
 }

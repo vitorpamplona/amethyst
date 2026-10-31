@@ -71,10 +71,18 @@ class NappletManifestPolicyTest {
 
     @Test
     fun outboxIsAnImplementedDomain() {
-        // The published Minesweeper and Game Boy Color napplets require outbox; the NES one also needs fs.
+        // The published Minesweeper and Game Boy Color napplets require outbox.
         assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).isLaunchable())
         assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox"), arrayOf("R", "relay"), arrayOf("R", "resource")).isLaunchable())
-        assertEquals(listOf("upload", "fs"), manifest(arrayOf("R", "outbox"), arrayOf("R", "upload"), arrayOf("R", "fs")).unsupportedRequired())
+        assertEquals(listOf("upload"), manifest(arrayOf("R", "outbox"), arrayOf("R", "upload"), arrayOf("R", "fs")).unsupportedRequired())
         assertEquals(listOf("identity", "outbox"), manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).exposedDomains())
+    }
+
+    @Test
+    fun fsIsAnImplementedDomain() {
+        // PhotoHop (the "Fotohop" root napplet) requires fs and can use keys, storage and theme.
+        val photoHop = manifest(arrayOf("R", "fs"), arrayOf("O", "keys"), arrayOf("O", "storage"), arrayOf("O", "theme"))
+        assertTrue(photoHop.isLaunchable())
+        assertEquals(listOf("fs", "storage", "theme"), photoHop.exposedDomains())
     }
 }

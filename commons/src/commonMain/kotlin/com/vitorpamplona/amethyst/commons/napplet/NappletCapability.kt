@@ -86,6 +86,13 @@ enum class NappletCapability {
      * the napplet names (NAP-OUTBOX).
      */
     OUTBOX,
+
+    /**
+     * `fs` — NAP-FS, the files the user picks for the napplet: it asks the shell to show the system
+     * picker, and reads or writes only what the user chose there ([com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession]).
+     * Consent covers asking to pick; the pick itself is the user's choice of what to share.
+     */
+    FS,
     ;
 
     /**
@@ -139,11 +146,12 @@ enum class NappletCapability {
                 "resource" -> RESOURCE
                 "theme" -> THEME
                 "outbox" -> OUTBOX
+                "fs" -> FS
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs")
     }
 }
 
