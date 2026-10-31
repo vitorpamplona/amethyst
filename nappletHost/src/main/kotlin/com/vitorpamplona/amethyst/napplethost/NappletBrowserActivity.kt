@@ -1591,7 +1591,9 @@ class NappletBrowserActivity : ComponentActivity() {
      * route is really applied.
      */
     private fun claimRoute(onReady: () -> Unit = {}) {
-        if (useTor && proxyPort <= 0) {
+        // On Tor without a guard against WebRTC (an old WebView), a page would learn the real address
+        // around the proxy: nothing loads, as when Tor's port is unknown.
+        if (useTor && (proxyPort <= 0 || !NappletWebRtcGuard.isSupported())) {
             showRouteBlocked()
             return
         }

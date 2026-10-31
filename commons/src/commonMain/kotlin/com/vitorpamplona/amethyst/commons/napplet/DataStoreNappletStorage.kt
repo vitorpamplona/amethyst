@@ -51,24 +51,33 @@ class DataStoreNappletStorage(
         coordinate: String,
         key: String,
         value: String,
+    ) = set(coordinate, key, value, quotaCoordinate = coordinate)
+
+    override suspend fun set(
+        coordinate: String,
+        key: String,
+        value: String,
+        quotaCoordinate: String,
     ) {
         dataStore.edit { preferences ->
             // One quota for the app's shared namespace and every instance namespace under it: each
             // launch has its own instance id (an inline Run makes a new one), so a quota per instance
-            // let an app write 512 KB more every time it was run, into a store held in memory.
-            val quotaPrefix = quotaPrefixOf(coordinate)
+            // let an app write 512 KB more every time it was run, into a store held in memory. Both
+            // prefixes end where the coordinate does, so no other app's namespace can match them.
+            val sharedPrefix = prefixOf(quotaCoordinate)
+            val instancePrefix = "${accountPubKey()}\u0000$quotaCoordinate$INSTANCE_MARK"
             val target = keyOf(coordinate, key)
             val currentBytes =
                 preferences
                     .asMap()
                     .entries
                     .asSequence()
-                    .filter { it.key.name.startsWith(quotaPrefix) }
+                    .filter { it.key.name.startsWith(sharedPrefix) || it.key.name.startsWith(instancePrefix) }
                     .sumOf { (storedKey, storedValue) ->
-                        storedKey.name
-                            .substringAfterLast('\u0000')
-                            .encodeToByteArray()
-                            .size +
+                        val name = storedKey.name
+                        // The key the app chose, after its namespace (an instance one carries its id).
+                        val appKey = if (name.startsWith(sharedPrefix)) name.removePrefix(sharedPrefix) else name.removePrefix(instancePrefix).substringAfter('\u0000')
+                        appKey.encodeToByteArray().size +
                             ((storedValue as? String)?.encodeToByteArray()?.size ?: 0)
                     }
             val replacedBytes = if (target in preferences) key.encodeToByteArray().size + (preferences[target]?.encodeToByteArray()?.size ?: 0) else 0
@@ -100,9 +109,6 @@ class DataStoreNappletStorage(
 
     /** Account first, then applet: isolates accounts from each other, and applets within an account. */
     private fun prefixOf(coordinate: String) = "${accountPubKey()}\u0000$coordinate\u0000"
-
-    /** What every namespace of one app version starts with: its shared one and all its instance ones. */
-    private fun quotaPrefixOf(coordinate: String) = "${accountPubKey()}\u0000${coordinate.substringBefore(INSTANCE_MARK)}"
 
     private fun keyOf(
         coordinate: String,

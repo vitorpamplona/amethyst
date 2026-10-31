@@ -86,6 +86,17 @@ interface NappletStorage {
         value: String,
     )
 
+    /**
+     * [set], charged to the quota of [quotaCoordinate]: the app's shared namespace, which its instance
+     * namespaces ([coordinate]) share one quota with. A store without quotas ignores it.
+     */
+    suspend fun set(
+        coordinate: String,
+        key: String,
+        value: String,
+        quotaCoordinate: String,
+    ) = set(coordinate, key, value)
+
     suspend fun remove(
         coordinate: String,
         key: String,

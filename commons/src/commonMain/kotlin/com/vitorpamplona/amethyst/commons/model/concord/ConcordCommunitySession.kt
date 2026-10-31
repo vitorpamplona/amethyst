@@ -28,7 +28,6 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordPinSource
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinVerifier
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
-import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -1036,7 +1035,7 @@ class ConcordCommunitySession(
             .sortedBy { ChannelChat.orderingMs(it) ?: (it.createdAt * 1000) }
 
     /**
-     * Holds [rumor] for [channelIdHex]; false when already held or too big to be an update. Keeps the
+     * Holds [rumor] for [channelIdHex]; false when already held. Keeps the
      * newest arrivals, at most [MAX_WEBXDC_PER_CHANNEL] of them and [MAX_WEBXDC_BYTES_PER_CHANNEL] in all:
      * any member can send these, and nothing reads them yet, so neither count nor size may grow unbounded.
      */
@@ -1044,8 +1043,8 @@ class ConcordCommunitySession(
         channelIdHex: HexKey,
         rumor: Event,
     ): Boolean {
+        // No cap per signal is needed: a wrap carries at most NIP-44's 64 KiB of plaintext.
         val size = webxdcWeight(rumor)
-        if (size > MAX_WEBXDC_SIGNAL_BYTES) return false
         val added =
             lock.withLock {
                 val held = webxdcByChannel.getOrPut(channelIdHex) { LinkedHashMap() }
@@ -1233,9 +1232,6 @@ class ConcordCommunitySession(
 
         /** WebXDC signals held per channel (the reference client scans its newest 2000 for peer signals). */
         const val MAX_WEBXDC_PER_CHANNEL = 2000
-
-        /** One signal: an update the app may send ([WebxdcRuntime.MAX_UPDATE_BYTES]) and its envelope. */
-        const val MAX_WEBXDC_SIGNAL_BYTES = WebxdcRuntime.MAX_UPDATE_BYTES * 2L
 
         /** All the signals held for one channel. */
         const val MAX_WEBXDC_BYTES_PER_CHANNEL = 4L * 1024 * 1024

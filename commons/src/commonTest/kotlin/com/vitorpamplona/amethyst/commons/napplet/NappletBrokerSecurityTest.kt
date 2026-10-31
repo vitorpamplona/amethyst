@@ -276,17 +276,28 @@ class NappletBrokerSecurityTest {
                 )
             val followList = NappletRequest.Publish(3, arrayOf(arrayOf("p", stranger.pubKey)), "")
 
-            repeat(10) { assertIs<NappletResponse.Denied>(broker.handle(applet, followList, setOf(NappletCapability.RELAY))) }
-            assertEquals(1, prompt.calls)
+            suspend fun ask() = assertIs<NappletResponse.Denied>(broker.handle(applet, followList, setOf(NappletCapability.RELAY)))
 
-            now += NappletBroker.DECLINE_BACKOFF_MS + 1
-            broker.handle(applet, followList, setOf(NappletCapability.RELAY))
+            // A single dismissal may be a slip: the user's retry right after still gets the dialog.
+            ask()
+            ask()
             assertEquals(2, prompt.calls)
 
-            // A second decline in a row waits twice as long.
-            now += NappletBroker.DECLINE_BACKOFF_MS + 1
-            broker.handle(applet, followList, setOf(NappletCapability.RELAY))
+            // Declined twice in a row: the app's next asks are dropped for a while.
+            repeat(10) { ask() }
             assertEquals(2, prompt.calls)
+
+            now += NappletBroker.DECLINE_BACKOFF_MS + 1
+            ask()
+            assertEquals(3, prompt.calls)
+
+            // A third decline in a row waits twice as long.
+            now += NappletBroker.DECLINE_BACKOFF_MS + 1
+            ask()
+            assertEquals(3, prompt.calls)
+            now += NappletBroker.DECLINE_BACKOFF_MS
+            ask()
+            assertEquals(4, prompt.calls)
         }
 
     @Test
@@ -338,5 +349,41 @@ class NappletBrokerSecurityTest {
             asks.awaitAll()
 
             assertEquals(10, refusedAtOnce)
+        }
+
+    // Reads ask whether they may decrypt for every encrypted event; they must not wait behind a consent
+    // dialog another app (or this one) has open.
+    @Test
+    fun anOpenSigningDialogDoesNotStallReadsThatDecrypt() =
+        runTest {
+            val dm = dmTo(stranger, user.pubKey, "the secret")
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy(signerCoordinate, AppSignerPolicy.REASONABLE)
+            signerLedger.setOpDecision(signerCoordinate, NostrSignerOp.Decrypt, NostrOpDecision.ALLOW)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_ALWAYS)
+            val dialogOpen = CompletableDeferred<Unit>()
+            val answer = CompletableDeferred<SignerOpGrant>()
+            val broker =
+                NappletBroker(
+                    signer = user,
+                    ledger = ledger,
+                    consentPrompt = NeverAsk,
+                    relay = FixedRelay(listOf(dm)),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt =
+                        NostrSignerConsentPrompt { _, _, _ ->
+                            dialogOpen.complete(Unit)
+                            answer.await()
+                        },
+                )
+            val followList = async { broker.handle(applet, NappletRequest.Publish(3, emptyArray(), ""), setOf(NappletCapability.RELAY)) }
+            dialogOpen.await()
+
+            val events = query(broker)
+
+            assertEquals(listOf("the secret"), events.map { it.content })
+            answer.complete(SignerOpGrant.DenyOnce)
+            followList.await()
         }
 }

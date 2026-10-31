@@ -105,6 +105,25 @@ class NappletBlobPrefetcherTest {
             assertTrue(stored < paths.size)
         }
 
+    // A server that answers every hash with junk costs as much as one that answers right: what came
+    // in counts against the budget whether or not it verified.
+    @Test
+    fun junkThatFailsItsHashStillSpendsTheBudget() =
+        runBlocking {
+            val paths =
+                List(NappletBlobPrefetcher.MAX_FILES_PER_CARD) {
+                    val hash = sha256(Random.nextBytes(32)).toHexKey()
+                    served[hash] = Random.nextBytes(3 * 1024 * 1024)
+                    PathTag("/f-$hash", hash)
+                }
+
+            NappletBlobPrefetcher.prefetchWith(paths, listOf(serverUrl), cache, OkHttpClient(), "site")
+
+            assertTrue(paths.none { cache.has(it.hash) })
+            assertTrue(requests.get() * 3L * 1024 * 1024 <= NappletBlobPrefetcher.MAX_CARD_BYTES + 5 * 3L * 1024 * 1024, "fetched ${requests.get()} junk files of 3 MB")
+            assertTrue(requests.get() < paths.size, "the budget stopped it: ${requests.get()} of ${paths.size}")
+        }
+
     @Test
     fun aFileTooBigForAPrefetchIsLeftForTheLaunch() =
         runBlocking {

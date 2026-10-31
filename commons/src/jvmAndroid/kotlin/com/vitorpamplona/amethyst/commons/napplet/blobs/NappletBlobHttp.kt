@@ -98,12 +98,18 @@ object NappletBlobHttp {
 
     private const val BLOB_CALL_TIMEOUT_SECONDS = 45L
 
+    /** What one fetch brought: the body ([bytes], null when refused or failed) and how much of it came in. */
+    class Download(
+        val bytes: ByteArray?,
+        val received: Long,
+    )
+
     /** Downloads [url], or null on error / when the body exceeds [MAX_BLOB_BYTES] (declared length). */
     fun download(
         client: OkHttpClient,
         url: String,
         maxBytes: Long = MAX_BLOB_BYTES,
-    ): ByteArray? = read(client.newCall(request(url)), url, maxBytes)
+    ): ByteArray? = read(client.newCall(request(url)), url, maxBytes).bytes
 
     /**
      * [download], stopped when the caller is cancelled: a card scrolled off screen doesn't keep up to
@@ -114,7 +120,17 @@ object NappletBlobHttp {
         client: OkHttpClient,
         url: String,
         maxBytes: Long = MAX_BLOB_BYTES,
-    ): ByteArray? =
+    ): ByteArray? = downloadCounted(client, url, maxBytes).bytes
+
+    /**
+     * [downloadCancellable], also saying how many bytes came in whatever the outcome: a budget that
+     * counted only bodies it kept would let a server send junk (or too much) for free.
+     */
+    suspend fun downloadCounted(
+        client: OkHttpClient,
+        url: String,
+        maxBytes: Long = MAX_BLOB_BYTES,
+    ): Download =
         coroutineScope {
             val call = client.newCall(request(url))
             val reading = async(Dispatchers.IO) { read(call, url, maxBytes) }
@@ -137,22 +153,30 @@ object NappletBlobHttp {
         call: Call,
         url: String,
         maxBytes: Long,
-    ): ByteArray? =
-        try {
+    ): Download {
+        var received = 0L
+        return try {
             call.execute().use { r ->
                 val declared = r.body.contentLength()
                 if (!r.isSuccessful || declared > maxBytes) {
-                    null
+                    Download(null, 0)
                 } else {
                     // A server that sends no length is still held to the cap: buffer one byte past
                     // it and refuse anything that fills it. (Okio, not InputStream.readNBytes, which
                     // Android only has from API 33.)
                     val source = r.body.source()
-                    if (source.request(maxBytes + 1)) null else source.buffer.readByteArray()
+                    val tooBig =
+                        try {
+                            source.request(maxBytes + 1)
+                        } finally {
+                            received = source.buffer.size
+                        }
+                    if (tooBig) Download(null, received) else Download(source.buffer.readByteArray(), received)
                 }
             }
         } catch (e: Exception) {
             if (!call.isCanceled()) Log.w("NappletBlobHttp", "Blob fetch failed for $url", e)
-            null
+            Download(null, received)
         }
+    }
 }

@@ -46,7 +46,7 @@ class NappletStorageQuotaTest {
             var refused = 0
             for (run in 1..6) {
                 val instance = app.copy(instanceId = "run-$run").instanceStorageCoordinate
-                if (runCatching { store.set(instance, "blob", chunk) }.isFailure) refused++
+                if (runCatching { store.set(instance, "blob", chunk, quotaCoordinate = app.storageCoordinate) }.isFailure) refused++
             }
 
             assertEquals("only two 200 KB writes fit in one 512 KB quota", 4, refused)
@@ -73,5 +73,21 @@ class NappletStorageQuotaTest {
             store.set("app", "k", big)
 
             assertEquals(big, store.get("app", "k"))
+        }
+
+    // An app whose namespace happens to start with another's (same author, a `d` tag that extends the
+    // other's, no artifact hash) must not spend that app's quota.
+    @Test
+    fun anAppWhoseNameExtendsAnothersHasItsOwnQuota() =
+        runBlocking {
+            val store = storage()
+            val game = NappletIdentity(authorPubKey = "cd".repeat(32), identifier = "game")
+            val other = NappletIdentity(authorPubKey = "cd".repeat(32), identifier = "game:x")
+            val nearlyFull = "x".repeat(DataStoreNappletStorage.MAX_STORAGE_BYTES - 1_000)
+            store.set(other.storageCoordinate, "k", nearlyFull, quotaCoordinate = other.storageCoordinate)
+
+            val ok = runCatching { store.set(game.storageCoordinate, "k", "y".repeat(10_000), quotaCoordinate = game.storageCoordinate) }
+
+            assertTrue("game's quota is its own: ${ok.exceptionOrNull()}", ok.isSuccess)
         }
 }

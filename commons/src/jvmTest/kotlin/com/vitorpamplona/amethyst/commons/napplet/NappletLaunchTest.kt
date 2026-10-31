@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
@@ -93,5 +94,19 @@ class NappletLaunchTest {
     fun aSiteWithoutFilesOrANappletAsASiteIsRefused() {
         assertTrue(NappletLaunch.fromSite(signer.sign(RootSiteEvent.build(emptyList()))).isFailure)
         assertTrue(NappletLaunch.fromSite(napplet()).isFailure)
+    }
+
+    // A note can embed an older signed version of an app the user trusts. Grants are per app, so every
+    // launch (inline or full screen, Android or desktop) must run the newest version the device has seen.
+    @Test
+    fun anOlderEmbeddedVersionLaunchesAsTheNewestKnown() {
+        val old = signer.sign<NamedNappletEvent>(NamedNappletEvent.build("versioned", artifact, "Old version", createdAt = 1_000))
+        val current = signer.sign<NamedNappletEvent>(NamedNappletEvent.build("versioned", "cd".repeat(32), "Current version", createdAt = 2_000))
+        LocalCache.justConsume(current, null, true)
+
+        val launch = NappletLaunch.fromManifest(old, old.pubKey, "versioned").getOrThrow()
+
+        assertEquals(current.id, launch.identity.manifestEventId)
+        assertEquals("cd".repeat(32), launch.identity.aggregateHash)
     }
 }

@@ -31,7 +31,7 @@ as of the review.
 | 17 | Low | Inline runs could open the picker; parked embedded tabs could pop share sheets | Refused | Android only |
 | 18 | Low | Any cart could read and overwrite any other cart's saves; the store grew without bound | Saves kept per cart (sha256 of its bytes); 1,024 ids in all | `CartSaveIsolationTest` |
 | 19 | Low | Webxdc bundles were never evicted (1 GB each, permanent on desktop) | Least recently opened go past 1 GB | `bundlesOpenedLongestAgoAreLetGoPastTheBudget` |
-| 20 | Low | Concord kind-3310 signals: 2,000 per channel from any member, no byte cap | 4 MB per channel; one signal at most twice an update's size | `aFloodOfBigSignalsIsBoundedInBytes` |
+| 20 | Low | Concord kind-3310 signals: 2,000 per channel from any member, no byte cap | 4 MB per channel (one signal is already bounded by NIP-44's 64 KiB) | `aFloodOfBigSignalsIsBoundedInBytes` |
 | 21 | Low | `selfAddr` was documented as a pseudonym that names no one | Docs corrected: anyone who knows the poster and instance can test known pubkeys | n/a |
 | 22 | Medium | Desktop `dns-prefetch`/`preconnect` outside CSP | `net.network_prediction_options = 2` | The engine starts with it; the effect is not measured |
 

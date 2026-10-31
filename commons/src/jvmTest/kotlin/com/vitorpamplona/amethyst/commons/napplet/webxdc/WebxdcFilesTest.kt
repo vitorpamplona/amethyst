@@ -194,6 +194,28 @@ class WebxdcFilesTest {
             assertTrue(root.walkTopDown().filter { it.isFile }.sumOf { it.length() } <= 250_000)
         }
 
+    // A launch still serving an app's files must not lose them because the user started another app.
+    @Test
+    fun aBundleALaunchStillServesIsNeverEvicted() =
+        runBlocking {
+            val root = folder.newFolder()
+            val bundles = WebxdcBundles(root, maxBytes = 150_000)
+            val running = zip("index.html" to "<p>running</p>", "data.bin" to "x".repeat(100_000))
+            served["/running.xdc"] = running
+            val runningDir = bundles.open("$base/running.xdc", sha256(running).toHexKey(), emptyList(), client, retain = true)!!
+            File(runningDir, WebxdcBundles.COMPLETE).setLastModified(1_000_000L)
+
+            val next = zip("index.html" to "<p>next</p>", "data.bin" to "y".repeat(100_000))
+            served["/next.xdc"] = next
+            assertNotNull(bundles.open("$base/next.xdc", sha256(next).toHexKey(), emptyList(), client))
+
+            assertTrue("the running app keeps its files", File(runningDir, "data.bin").isFile)
+
+            bundles.release(runningDir)
+            bundles.trimToSize(150_000)
+            assertFalse("once released it can go", runningDir.exists())
+        }
+
     @Test
     fun twoLaunchesOfOneArchiveShareOneDownload() =
         runBlocking {

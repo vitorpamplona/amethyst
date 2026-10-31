@@ -127,11 +127,18 @@ object NappletBlobPrefetcher {
                     .map { path ->
                         async {
                             gate.withPermit {
-                                if (cardBytes.get() >= MAX_CARD_BYTES || !windowHasRoom(now())) return@withPermit false
-                                val bytes = fetchOne(path.hash.lowercase(), servers, cache, client, partition)
-                                cardBytes.addAndGet(bytes)
-                                windowBytes.addAndGet(bytes)
-                                bytes > 0
+                                fetchOne(
+                                    path.hash.lowercase(),
+                                    servers,
+                                    cache,
+                                    client,
+                                    partition,
+                                    hasRoom = { cardBytes.get() < MAX_CARD_BYTES && windowHasRoom(now()) },
+                                    onReceived = { bytes ->
+                                        cardBytes.addAndGet(bytes)
+                                        windowBytes.addAndGet(bytes)
+                                    },
+                                )
                             }
                         }
                     }.awaitAll()
@@ -159,25 +166,34 @@ object NappletBlobPrefetcher {
         }
     }
 
-    /** The bytes it downloaded for [hash]: 0 when it was cached, being fetched, too big, or no server had it. */
+    /**
+     * Whether it stored [hash]. Every server it tries is a download the budget pays for: [hasRoom] is
+     * asked before each, and [onReceived] told what each brought in, kept or not, so a server that
+     * answers with junk or too much spends the budget like one that answers right.
+     */
     private suspend fun fetchOne(
         hash: String,
         servers: List<String>,
         cache: NappletBlobCache,
         client: OkHttpClient,
         partition: String,
-    ): Long {
+        hasRoom: () -> Boolean,
+        onReceived: (Long) -> Unit,
+    ): Boolean {
         val key = "$partition|$hash"
-        if (cache.has(hash) || !inFlight.add(key)) return 0
+        if (cache.has(hash) || !inFlight.add(key)) return false
         try {
             for (url in StaticSiteResolver.candidateUrls(servers, hash)) {
-                val bytes = NappletBlobHttp.downloadCancellable(client, url, MAX_PREFETCH_BLOB_BYTES) ?: continue
+                if (!hasRoom()) return false
+                val download = NappletBlobHttp.downloadCounted(client, url, MAX_PREFETCH_BLOB_BYTES)
+                onReceived(download.received)
+                val bytes = download.bytes ?: continue
                 if (StaticSiteResolver.verify(bytes, hash)) {
                     cache.putVerified(hash, bytes)
-                    return bytes.size.toLong()
+                    return true
                 }
             }
-            return 0
+            return false
         } finally {
             inFlight.remove(key)
         }

@@ -105,9 +105,13 @@ class NappletBroker(
     // In-memory session grants (AllowForSession): cleared when this broker instance is destroyed.
     // Keyed by "<coordinate>|<op.key>" via [sessionKey] — this broker instance is shared by every
     // applet and browser origin under the account, so an unkeyed op would let one app's session
-    // grant silently authorize the same op for all the others. Only accessed under
-    // signerConsentLock.
+    // grant silently authorize the same op for all the others. Guarded by [sessionLock], not the prompt
+    // lock: relay reads ask it for every encrypted event ([mayDecrypt]) and must not wait while a
+    // consent dialog is open.
     private val sessionAllows = mutableSetOf<String>()
+    private val sessionLock = Mutex()
+
+    private suspend fun hasSessionGrant(key: String): Boolean = sessionLock.withLock { key in sessionAllows }
 
     // Apps whose first-connect dialog the user just dismissed with Cancel, mapped to the wall-clock
     // instant (ms) their re-prompt suppression expires. Cancelling means "not now": for a brief
@@ -317,7 +321,8 @@ class NappletBroker(
                 if (request.filters.size > MAX_RELAY_FILTERS) return NappletResponse.Failed("too many filters")
                 // The gateway hands back events as relays and the cache hold them; what the app may read
                 // of their encrypted content is decided here, per counterparty, never by a prompt.
-                val readable = gateway.query(request.filters).mapNotNull { NappletRelayCleartext.forDelivery(it, signer) { peer -> mayDecrypt(identity, peer) } }
+                val mayDecrypt = decryptGate(identity)
+                val readable = gateway.query(request.filters).mapNotNull { NappletRelayCleartext.forDelivery(it, signer, mayDecrypt) }
                 NappletResponse.Events(readable.take(MAX_QUERY_RESULTS))
             }
 
@@ -381,7 +386,7 @@ class NappletBroker(
 
             is NappletRequest.StorageSet -> {
                 val store = storage ?: return NappletResponse.Unsupported("storage.setItem")
-                store.set(storageCoordinate(identity, request.scope), request.key, request.value)
+                store.set(storageCoordinate(identity, request.scope), request.key, request.value, quotaCoordinate = identity.storageCoordinate)
                 NappletResponse.Done
             }
 
@@ -480,17 +485,27 @@ class NappletBroker(
     ): Boolean {
         val sl = signerLedger ?: return false
         if (ledger.decide(identity, NappletCapability.RELAY) == PermissionDecision.DENY) return false
-        return signerConsentLock.withLock {
-            val coordinate = signerCoordinateFor(identity)
-            when {
-                sessionKey(coordinate, NostrSignerOp.Decrypt) in sessionAllows -> true
-                else ->
-                    when (sl.decide(coordinate, NostrSignerOp.Decrypt)) {
-                        NostrOpDecision.ALLOW -> true
-                        NostrOpDecision.DENY -> false
-                        NostrOpDecision.ASK -> isNarrowAllowed(sl, coordinate, NostrSignerOp.DecryptFrom(peer))
-                    }
-            }
+        val coordinate = signerCoordinateFor(identity)
+        if (hasSessionGrant(sessionKey(coordinate, NostrSignerOp.Decrypt))) return true
+        return when (sl.decide(coordinate, NostrSignerOp.Decrypt)) {
+            NostrOpDecision.ALLOW -> true
+            NostrOpDecision.DENY -> false
+            NostrOpDecision.ASK -> isNarrowAllowed(sl, coordinate, NostrSignerOp.DecryptFrom(peer))
+        }
+    }
+
+    /**
+     * [mayDecrypt] for one reader of [identity]'s events (a query, a live subscription), remembering
+     * each counterparty's answer for [DECRYPT_GATE_TTL_MS]: a page of 500 encrypted events from a
+     * handful of peers then reads the permission store a handful of times, not 500, and a revoked
+     * grant still stops decryption within seconds. One reader at a time: it is not thread-safe.
+     */
+    fun decryptGate(identity: NappletIdentity): suspend (HexKey) -> Boolean {
+        val answers = HashMap<HexKey, Pair<Boolean, Long>>()
+        return { peer ->
+            val now = nowMillis()
+            val cached = answers[peer]?.takeIf { now - it.second < DECRYPT_GATE_TTL_MS }
+            cached?.first ?: mayDecrypt(identity, peer).also { answers[peer] = it to now }
         }
     }
 
@@ -610,7 +625,7 @@ class NappletBroker(
 
             // Session grants win immediately without touching storage. Scoped to this applet: a
             // grant made for one app never authorizes another.
-            if (sessionKey(coordinate, op) in sessionAllows) {
+            if (hasSessionGrant(sessionKey(coordinate, op))) {
                 sl.updateLastUsed(coordinate)
                 return@withLock true
             }
@@ -637,7 +652,7 @@ class NappletBroker(
                     // wider than what the user actually tapped.
                     sl.record(coordinate, grant)
                     if (grant is SignerOpGrant.AllowForSession) {
-                        sessionAllows.add(sessionKey(coordinate, grant.op))
+                        sessionLock.withLock { sessionAllows.add(sessionKey(coordinate, grant.op)) }
                     }
                     if (grant.isAllowed) sl.updateLastUsed(coordinate)
                     grant.isAllowed
@@ -693,7 +708,9 @@ class NappletBroker(
                 declined.remove(key)
             } else {
                 val count = (declined[key]?.count ?: 0) + 1
-                val wait = (DECLINE_BACKOFF_MS shl (count - 1).coerceAtMost(8)).coerceAtMost(MAX_DECLINE_BACKOFF_MS)
+                // One dismissal may be a slip the user retries at once: that retry still gets its
+                // dialog. From the second decline in a row the app is asking again unwanted, and waits.
+                val wait = if (count < 2) 0L else (DECLINE_BACKOFF_MS shl (count - 2).coerceAtMost(8)).coerceAtMost(MAX_DECLINE_BACKOFF_MS)
                 declined[key] = Declined(count, nowMillis() + wait)
                 if (declined.size > MAX_DECLINED_REMEMBERED) declined.keys.firstOrNull()?.let { declined.remove(it) }
             }
@@ -711,7 +728,7 @@ class NappletBroker(
         coordinate: String,
         narrowOp: NostrSignerOp,
     ): Boolean =
-        sessionKey(coordinate, narrowOp) in sessionAllows ||
+        hasSessionGrant(sessionKey(coordinate, narrowOp)) ||
             sl.store.loadOpDecision(coordinate, narrowOp)?.let { sl.decide(coordinate, narrowOp) == NostrOpDecision.ALLOW } ?: false
 
     /**
@@ -751,7 +768,7 @@ class NappletBroker(
     suspend fun revokeSessionGrants(coordinate: String) {
         signerConsentLock.withLock {
             val prefix = "${signerCoordinateFor(coordinate)}|"
-            sessionAllows.removeAll { it.startsWith(prefix) }
+            sessionLock.withLock { sessionAllows.removeAll { it.startsWith(prefix) } }
             cancelledUntil.remove(coordinate)
         }
         declinedLock.withLock { declined.keys.removeAll { it.startsWith("$coordinate|") || it.startsWith("${signerCoordinateFor(coordinate)}|") } }
@@ -765,7 +782,10 @@ class NappletBroker(
          */
         private const val CANCEL_REPROMPT_COOLDOWN_MS = 3_000L
 
-        /** How long a declined prompt stays quiet the first time; each decline in a row doubles it. */
+        /**
+         * How long a prompt stays quiet after it was declined twice in a row; each further decline
+         * doubles it. A single decline never silences the next ask.
+         */
         const val DECLINE_BACKOFF_MS = 5_000L
         const val MAX_DECLINE_BACKOFF_MS = 5L * 60_000L
 
@@ -774,6 +794,9 @@ class NappletBroker(
          * (a hundred storage reads behind the one first prompt is ordinary), so this only bounds a flood.
          */
         const val MAX_WAITING_PROMPTS = 1_000
+
+        /** How long a [decryptGate] keeps an answer before asking the permission store again. */
+        const val DECRYPT_GATE_TTL_MS = 5_000L
         private const val MAX_DECLINED_REMEMBERED = 1_024
         private const val RESOURCE_MAX_BYTES = 10L * 1024L * 1024L
         private const val RESOURCE_MAX_URLS = 16

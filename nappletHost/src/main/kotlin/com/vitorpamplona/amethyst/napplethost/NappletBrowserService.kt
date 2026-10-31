@@ -522,7 +522,9 @@ class NappletBrowserService : Service() {
         WebViewProxyPolicy.observeRoute(tab) { usesTor ->
             if (tabs[tab.sessionId] === tab) sendToClient(tab, NappletBrowserContract.MSG_ROUTE) { putBoolean(NappletBrowserContract.KEY_USE_TOR, usesTor) }
         }
-        if (tab.useTor && tab.proxyPort <= 0) {
+        // On Tor without a guard against WebRTC (an old WebView), a page would learn the real address
+        // around the proxy: nothing loads, as when Tor's port is unknown.
+        if (tab.useTor && (tab.proxyPort <= 0 || !NappletWebRtcGuard.isSupported())) {
             reportRouteBlocked(tab)
             return
         }

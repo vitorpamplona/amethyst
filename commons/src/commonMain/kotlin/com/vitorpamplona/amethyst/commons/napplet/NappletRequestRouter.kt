@@ -148,7 +148,7 @@ object NappletRequestRouter {
                 Outcome.OpenSubscription(
                     subId,
                     runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList()),
-                    mayDecrypt = { peer -> broker.mayDecrypt(identity, peer) },
+                    mayDecrypt = broker.decryptGate(identity),
                 )
             } else {
                 // Not authorized → close it immediately with an empty EOSE.
