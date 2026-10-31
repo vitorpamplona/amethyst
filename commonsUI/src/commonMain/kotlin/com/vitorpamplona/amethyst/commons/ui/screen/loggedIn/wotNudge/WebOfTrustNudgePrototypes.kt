@@ -69,9 +69,9 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.web_of_trust
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activate
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_dismiss
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_eyebrow
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_action
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_hero_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_in_circle
@@ -309,7 +309,7 @@ private fun Bar(
 private fun Eyebrow() {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = MaterialTheme.colorScheme.primary, filled = true, modifier = Modifier.size(16.dp))
-        Text(stringRes(Res.string.web_of_trust), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+        Text(stringRes(Res.string.wot_nudge_eyebrow), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
     }
 }
 

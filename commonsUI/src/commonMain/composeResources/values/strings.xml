@@ -9185,10 +9185,11 @@
     <string name="wot_nudge_benefit_replies">Replies</string>
     <string name="wot_nudge_benefit_notifications">Notifications</string>
     <string name="wot_nudge_benefit_messages">Messages</string>
+    <string name="wot_nudge_eyebrow">New feature: Web of Trust</string>
     <string name="wot_nudge_via">via %1$s</string>
     <string name="wot_nudge_in_circle">in your circle</string>
     <string name="wot_nudge_on_top">Your circle on top</string>
-    <string name="wot_nudge_hero_body">Replies, notifications and DMs from your network rise to the top.</string>
+    <string name="wot_nudge_hero_body">Give priority to the people you know: replies, notifications and DMs from your network rise to the top.</string>
     <string name="wot_nudge_activate">Activate</string>
     <string name="wot_nudge_activated_title">Mapping your circle</string>
     <string name="wot_nudge_activated_body">%1$s works it out in the background, which can take a while. Once it's ready, your people move to the top on their own.</string>

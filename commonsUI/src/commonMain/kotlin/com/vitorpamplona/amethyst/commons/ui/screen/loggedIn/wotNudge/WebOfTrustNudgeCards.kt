@@ -83,7 +83,6 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.web_of_trust
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_status
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activated_title
@@ -91,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.wot_nudge_benefit_messages
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_benefit_notifications
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_benefit_replies
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_dismiss
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_eyebrow
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_action
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_title
@@ -344,7 +344,7 @@ fun CircleRingsCard(
     NudgeSurface(modifier, onDismiss, background = rememberCircleGlow()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Icon(MaterialSymbols.AutoAwesome, contentDescription = null, tint = scheme.primary, filled = true, modifier = Modifier.size(16.dp))
-            Text(stringRes(Res.string.web_of_trust), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = scheme.primary)
+            Text(stringRes(Res.string.wot_nudge_eyebrow), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = scheme.primary)
         }
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
