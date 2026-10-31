@@ -20,12 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,18 +32,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,58 +52,41 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessMaterial
-import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.chess_back_to_game
 import com.vitorpamplona.amethyst.commons.resources.chess_color_black
-import com.vitorpamplona.amethyst.commons.resources.chess_color_black_selected
 import com.vitorpamplona.amethyst.commons.resources.chess_color_white
-import com.vitorpamplona.amethyst.commons.resources.chess_color_white_selected
-import com.vitorpamplona.amethyst.commons.resources.chess_continue
 import com.vitorpamplona.amethyst.commons.resources.chess_create_game
-import com.vitorpamplona.amethyst.commons.resources.chess_live_better_luck
-import com.vitorpamplona.amethyst.commons.resources.chess_live_black_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_live_congratulations
-import com.vitorpamplona.amethyst.commons.resources.chess_live_defeat
-import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_exclaim
-import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_subtitle
-import com.vitorpamplona.amethyst.commons.resources.chess_live_game_over
-import com.vitorpamplona.amethyst.commons.resources.chess_live_victory
-import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
-import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_label
-import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_placeholder
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_invalid
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_label
+import com.vitorpamplona.amethyst.commons.resources.chess_play_as
+import com.vitorpamplona.amethyst.commons.resources.chess_random_color
 import com.vitorpamplona.amethyst.commons.resources.chess_resign
 import com.vitorpamplona.amethyst.commons.resources.chess_resign_confirm_text
 import com.vitorpamplona.amethyst.commons.resources.chess_resign_confirm_title
-import com.vitorpamplona.amethyst.commons.resources.chess_result_black_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
-import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_result_you_lost
-import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
-import com.vitorpamplona.amethyst.commons.resources.chess_your_color
 import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.GameResult
+import org.jetbrains.compose.resources.StringResource
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 /**
- * Dialog for creating a new chess game challenge
+ * The new-game dialog: pick a side (or let chance pick it), and optionally the one person who may
+ * take the other seat. With no opponent the game is an open seat anyone can take.
  *
- * @param onDismiss Callback when dialog is dismissed
- * @param onCreateGame Callback when game is created (opponent hex key or null for an open challenge, playerColor)
+ * @param onCreateGame gets the opponent's hex key (null for an open seat) and the creator's colour.
  */
 @Composable
 fun NewChessGameDialog(
@@ -118,20 +94,20 @@ fun NewChessGameDialog(
     onCreateGame: (opponentPubkey: String?, playerColor: Color) -> Unit,
 ) {
     var opponentPubkey by remember { mutableStateOf("") }
-    var selectedColor by remember { mutableStateOf(Color.WHITE) }
+    // null is "random", resolved when the game is created.
+    var selectedColor by remember { mutableStateOf<Color?>(Color.WHITE) }
     // npub, nprofile or hex; blank is an open challenge.
     val opponentHex = remember(opponentPubkey) { opponentPubkey.trim().ifBlank { null }?.let { decodePublicKeyAsHexOrNull(it) } }
+    val opponentInvalid = opponentPubkey.isNotBlank() && opponentHex == null
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
         ) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Text(
                     text = stringRes(Res.string.new_chess_game),
@@ -140,73 +116,89 @@ fun NewChessGameDialog(
                 )
 
                 Text(
-                    text = stringRes(Res.string.chess_new_game_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringRes(Res.string.chess_play_as),
+                    style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = opponentPubkey,
-                    onValueChange = { opponentPubkey = it },
-                    label = { Text(stringRes(Res.string.chess_opponent_npub_label)) },
-                    placeholder = { Text(stringRes(Res.string.chess_opponent_npub_placeholder)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                )
-
-                Text(
-                    text = stringRes(Res.string.chess_your_color),
-                    style = MaterialTheme.typography.labelMedium,
-                )
-
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedButton(
-                        onClick = { selectedColor = Color.WHITE },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            text = if (selectedColor == Color.WHITE) stringRes(Res.string.chess_color_white_selected) else stringRes(Res.string.chess_color_white),
-                            fontWeight = if (selectedColor == Color.WHITE) FontWeight.Bold else FontWeight.Normal,
-                        )
-                    }
-
-                    OutlinedButton(
-                        onClick = { selectedColor = Color.BLACK },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Text(
-                            text = if (selectedColor == Color.BLACK) stringRes(Res.string.chess_color_black_selected) else stringRes(Res.string.chess_color_black),
-                            fontWeight = if (selectedColor == Color.BLACK) FontWeight.Bold else FontWeight.Normal,
-                        )
-                    }
+                    SideTile(Color.WHITE, Res.string.chess_color_white, selectedColor == Color.WHITE) { selectedColor = Color.WHITE }
+                    SideTile(null, Res.string.chess_random_color, selectedColor == null) { selectedColor = null }
+                    SideTile(Color.BLACK, Res.string.chess_color_black, selectedColor == Color.BLACK) { selectedColor = Color.BLACK }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = opponentPubkey,
+                    onValueChange = { opponentPubkey = it },
+                    label = { Text(stringRes(Res.string.chess_opponent_label)) },
+                    placeholder = { Text("npub1\u2026") },
+                    supportingText = {
+                        Text(stringRes(if (opponentInvalid) Res.string.chess_opponent_invalid else Res.string.chess_opponent_hint))
+                    },
+                    isError = opponentInvalid,
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    OutlinedButton(onClick = onDismiss) {
+                    TextButton(onClick = onDismiss) {
                         Text(stringRes(Res.string.cancel))
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Button(
-                        enabled = opponentPubkey.isBlank() || opponentHex != null,
-                        onClick = { onCreateGame(opponentHex, selectedColor) },
+                        enabled = !opponentInvalid,
+                        onClick = { onCreateGame(opponentHex, selectedColor ?: listOf(Color.WHITE, Color.BLACK).random()) },
                     ) {
                         Text(stringRes(Res.string.chess_create_game))
                     }
                 }
             }
         }
+    }
+}
+
+/** One choice of side: its badge (both, staggered, for random) over its name, outlined when chosen. */
+@Composable
+private fun RowScope.SideTile(
+    color: Color?,
+    label: StringResource,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Column(
+        modifier =
+            Modifier
+                .weight(1f)
+                .clip(shape)
+                .background(if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                .border(2.dp, if (selected) MaterialTheme.colorScheme.primary else ComposeColor.Transparent, shape)
+                .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+                .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (color != null) {
+            ChessSideBadge(color, 44.dp)
+        } else {
+            Box(Modifier.size(44.dp)) {
+                ChessSideBadge(Color.WHITE, 26.dp, Modifier.align(Alignment.TopStart))
+                ChessSideBadge(Color.BLACK, 26.dp, Modifier.align(Alignment.BottomEnd))
+            }
+        }
+        Text(
+            text = stringRes(label),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -230,6 +222,7 @@ fun LiveChessGameScreen(
     player: @Composable RowScope.(pubkey: String?) -> Unit,
     modifier: Modifier = Modifier,
     canPlay: Boolean = true,
+    onExit: () -> Unit = {},
 ) {
     var flippedByUser by rememberSaveable(game.gameId) { mutableStateOf(false) }
     var viewPly by remember(game.gameId) { mutableStateOf<Int?>(null) }
@@ -331,13 +324,16 @@ fun LiveChessGameScreen(
             }
         }
 
-        val status = game.state.gameStatus
-        if (status is GameStatus.Finished && !finishedWhenOpened && !gameEndDismissed) {
-            GameEndOverlay(
-                result = status.result,
-                playerColor = myColor ?: Color.WHITE,
-                isSpectator = myColor == null,
-                onDismiss = { gameEndDismissed = true },
+        val outcome = game.outcome
+        if (outcome != null && !finishedWhenOpened && !gameEndDismissed) {
+            ChessGameEndCard(
+                outcome = outcome,
+                myColor = game.myColor.takeIf { !game.isOpenSeat },
+                // Keep the mated king in sight: over the board's upper half when it stands in the lower one.
+                atTop = replay.last.checkSquare?.let { (it[1] - '0' <= 4) != flipped } ?: false,
+                player = { color -> player(if (color == Color.WHITE) game.whitePubkey else game.blackPubkey) },
+                onReview = { gameEndDismissed = true },
+                onExit = onExit,
             )
         }
     }
@@ -376,203 +372,5 @@ private fun GameStatusLine(
         return
     }
 
-    val status = game.state.gameStatus as? GameStatus.Finished ?: return
-    val myColor = game.myColor.takeIf { !game.isOpenSeat }
-    val result = status.result
-    val won = (result == GameResult.WHITE_WINS && myColor == Color.WHITE) || (result == GameResult.BLACK_WINS && myColor == Color.BLACK)
-    val (text, color) =
-        when {
-            result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw) to MaterialTheme.colorScheme.secondary
-            myColor == null -> stringRes(if (result == GameResult.WHITE_WINS) Res.string.chess_result_white_wins else Res.string.chess_result_black_wins) to MaterialTheme.colorScheme.secondary
-            won -> stringRes(Res.string.chess_result_you_won) to ComposeColor(0xFF4CAF50)
-            else -> stringRes(Res.string.chess_result_you_lost) to MaterialTheme.colorScheme.error
-        }
-
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = color,
-        modifier = Modifier.padding(vertical = 8.dp),
-    )
+    game.outcome?.let { ChessResultBanner(it) }
 }
-
-/**
- * Game end celebration overlay
- */
-@Composable
-private fun GameEndOverlay(
-    result: GameResult,
-    playerColor: Color,
-    isSpectator: Boolean,
-    onDismiss: () -> Unit,
-) {
-    val playerWon =
-        when (result) {
-            GameResult.WHITE_WINS -> playerColor == Color.WHITE
-            GameResult.BLACK_WINS -> playerColor == Color.BLACK
-            GameResult.DRAW, GameResult.IN_PROGRESS -> false
-        }
-
-    val isDraw = result == GameResult.DRAW
-
-    // Determine display based on result
-    val (emoji, title, subtitle, backgroundColor) =
-        when {
-            isSpectator -> {
-                val winnerText =
-                    when (result) {
-                        GameResult.WHITE_WINS -> stringRes(Res.string.chess_live_white_wins)
-                        GameResult.BLACK_WINS -> stringRes(Res.string.chess_live_black_wins)
-                        GameResult.DRAW -> stringRes(Res.string.chess_live_draw_exclaim)
-                        GameResult.IN_PROGRESS -> stringRes(Res.string.chess_live_game_over)
-                    }
-                Quadruple("", stringRes(Res.string.chess_live_game_over), winnerText, MaterialTheme.colorScheme.surfaceVariant)
-            }
-
-            playerWon -> {
-                Quadruple(
-                    "",
-                    stringRes(Res.string.chess_live_victory),
-                    stringRes(Res.string.chess_live_congratulations),
-                    ComposeColor(0xFF4CAF50).copy(alpha = 0.95f),
-                )
-            }
-
-            isDraw -> {
-                Quadruple(
-                    "",
-                    stringRes(Res.string.chess_result_draw),
-                    stringRes(Res.string.chess_live_draw_subtitle),
-                    MaterialTheme.colorScheme.surfaceVariant,
-                )
-            }
-
-            else -> {
-                Quadruple(
-                    "",
-                    stringRes(Res.string.chess_live_defeat),
-                    stringRes(Res.string.chess_live_better_luck),
-                    ComposeColor(0xFFE57373).copy(alpha = 0.95f),
-                )
-            }
-        }
-
-    // Animated visibility
-    AnimatedVisibility(
-        visible = true,
-        enter = fadeIn(animationSpec = tween(300)) + scaleIn(animationSpec = tween(300)),
-    ) {
-        Box(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .background(ComposeColor.Black.copy(alpha = 0.7f))
-                    .clickable { onDismiss() },
-            contentAlignment = Alignment.Center,
-        ) {
-            Card(
-                modifier =
-                    Modifier
-                        .padding(32.dp)
-                        .clickable { /* prevent dismiss on card click */ },
-                shape = RoundedCornerShape(24.dp),
-                colors =
-                    CardDefaults.cardColors(
-                        containerColor = backgroundColor,
-                    ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-            ) {
-                Column(
-                    modifier =
-                        Modifier
-                            .padding(32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
-                    // Trophy/emoji based on result
-                    val displayEmoji =
-                        when {
-                            isSpectator -> "GG"
-                            playerWon -> "GG"
-                            isDraw -> "="
-                            else -> "GG"
-                        }
-
-                    Box(
-                        modifier =
-                            Modifier
-                                .size(80.dp)
-                                .background(
-                                    when {
-                                        isSpectator -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                                        playerWon -> ComposeColor(0xFFFFD700).copy(alpha = 0.3f)
-                                        isDraw -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                                        else -> MaterialTheme.colorScheme.error.copy(alpha = 0.2f)
-                                    },
-                                    CircleShape,
-                                ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = displayEmoji,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color =
-                                when {
-                                    isSpectator -> MaterialTheme.colorScheme.primary
-                                    playerWon -> ComposeColor(0xFFFFD700)
-                                    isDraw -> MaterialTheme.colorScheme.secondary
-                                    else -> MaterialTheme.colorScheme.error
-                                },
-                        )
-                    }
-
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color =
-                            when {
-                                isSpectator -> MaterialTheme.colorScheme.onSurfaceVariant
-                                playerWon -> ComposeColor.White
-                                isDraw -> MaterialTheme.colorScheme.onSurfaceVariant
-                                else -> ComposeColor.White
-                            },
-                    )
-
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color =
-                            when {
-                                isSpectator -> MaterialTheme.colorScheme.onSurfaceVariant
-                                playerWon -> ComposeColor.White.copy(alpha = 0.9f)
-                                isDraw -> MaterialTheme.colorScheme.onSurfaceVariant
-                                else -> ComposeColor.White.copy(alpha = 0.9f)
-                            },
-                        textAlign = TextAlign.Center,
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Button(
-                        onClick = onDismiss,
-                    ) {
-                        Text(stringRes(Res.string.chess_continue))
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Helper data class for quadruple values
- */
-private data class Quadruple<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D,
-)

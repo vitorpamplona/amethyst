@@ -94,10 +94,11 @@ private fun kingSquare(
 }
 
 /**
- * The squares a move touched, read off the boards before and after it: the mover's piece left one
+ * The squares a move touched, read off the boards before and after it (for any game the app
+ * draws, live or a NIP-64 record): the mover's piece left one
  * square and arrived on another. Castling moves two pieces; the king's squares are the move.
  */
-internal fun moveSquares(
+fun moveSquares(
     before: ChessPosition,
     after: ChessPosition,
 ): ChessMoveSquares? {

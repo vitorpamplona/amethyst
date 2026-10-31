@@ -20,11 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess.ui
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,25 +37,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
-import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessOutcome
 import com.vitorpamplona.amethyst.commons.nip64Chess.jesterGameEvents
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chess_color_black
-import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_black
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_white
 import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
-import com.vitorpamplona.amethyst.commons.resources.chess_result_black_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
-import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_result_you_lost
-import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
 import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -64,10 +61,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.KindTone
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.GameResult
-import com.vitorpamplona.quartz.nip64Chess.PieceType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -109,9 +103,15 @@ fun ChessGameCard(
 
     val status = chessStatus(snapshot)
 
+    val outcome = snapshot.outcome
+    val toMove =
+        snapshot.state.currentPosition.activeColor
+            .takeIf { outcome == null && !snapshot.isOpenSeat }
+
     KindCard(
         icon = MaterialSymbols.ChessKnight,
         title = stringRes(Res.string.route_chess),
+        subtitle = outcome?.let { terminationText(it.termination) },
         status = status?.first,
         statusTone = status?.second,
     ) {
@@ -122,10 +122,11 @@ fun ChessGameCard(
                 showCoordinates = false,
                 flipped = snapshot.myColor == Color.BLACK,
                 lastMove = snapshot.replay.last.lastMove,
+                checkSquare = snapshot.replay.last.checkSquare,
             )
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CardPlayer(Color.WHITE, snapshot.whitePubkey, accountViewModel, nav)
-                CardPlayer(Color.BLACK, snapshot.blackPubkey, accountViewModel, nav)
+                CardPlayer(Color.WHITE, snapshot.whitePubkey, outcome?.scoreOf(Color.WHITE), toMove == Color.WHITE, accountViewModel, nav)
+                CardPlayer(Color.BLACK, snapshot.blackPubkey, outcome?.scoreOf(Color.BLACK), toMove == Color.BLACK, accountViewModel, nav)
                 if (snapshot.isJoinable && accountViewModel.account.isWriteable()) {
                     Button(onClick = { nav.nav(Route.ChessGame(snapshot.gameId)) }) {
                         Text(stringRes(if (snapshot.myColor == Color.WHITE) Res.string.chess_join_as_white else Res.string.chess_join_as_black))
@@ -136,20 +137,27 @@ fun ChessGameCard(
     }
 }
 
-/** One side of the game: its king, then the player, or the open seat. */
+/** One side of the game: its king, the player (or the open seat), then its score once the game is over, or a dot on its turn. */
 @Composable
 private fun CardPlayer(
     color: Color,
     pubkey: String?,
+    score: String?,
+    isToMove: Boolean,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Image(
-            imageVector = ChessPiece(PieceType.KING, color).toImageVector(),
-            contentDescription = stringRes(if (color == Color.WHITE) Res.string.chess_color_white else Res.string.chess_color_black),
-            modifier = Modifier.size(20.dp),
-        )
+        score?.let {
+            Text(
+                text = it,
+                modifier = Modifier.width(14.dp),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = if (it == "1") FontWeight.Bold else FontWeight.Normal,
+                color = if (it == "1") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        ChessSideBadge(color, 20.dp)
         if (pubkey == null) {
             Text(
                 text = stringRes(Res.string.chess_open_seat),
@@ -164,35 +172,23 @@ private fun CardPlayer(
                 }
             }
         }
+        if (isToMove) Box(Modifier.size(8.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
     }
 }
 
-/** The chip a card needs: how the game ended, or that the user is to move. The board and the seats say the rest. */
+/** The chip a card needs: the result from the user's side, or that it is their move. The board and the seats say the rest. */
 @Composable
 private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone>? {
-    val status = game.state.gameStatus
+    val outcome = game.outcome
     return when {
-        status is GameStatus.Finished -> resultLabel(status.result, game.myColor.takeIf { !game.isOpenSeat })
+        outcome != null ->
+            outcomeTitle(outcome) to
+                when (outcome.perspective) {
+                    ChessOutcome.Perspective.WON -> KindTone.Positive
+                    ChessOutcome.Perspective.LOST -> KindTone.Negative
+                    else -> KindTone.Neutral
+                }
         game.isMyTurn && !game.isJoinable -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
         else -> null
-    }
-}
-
-@Composable
-private fun resultLabel(
-    result: GameResult,
-    myColor: Color?,
-): Pair<String, KindTone> {
-    val winner =
-        when (result) {
-            GameResult.WHITE_WINS -> Color.WHITE
-            GameResult.BLACK_WINS -> Color.BLACK
-            else -> null
-        }
-    return when {
-        winner == null -> stringRes(Res.string.chess_result_draw) to KindTone.Neutral
-        myColor == null -> stringRes(if (winner == Color.WHITE) Res.string.chess_result_white_wins else Res.string.chess_result_black_wins) to KindTone.Neutral
-        myColor == winner -> stringRes(Res.string.chess_result_you_won) to KindTone.Positive
-        else -> stringRes(Res.string.chess_result_you_lost) to KindTone.Negative
     }
 }

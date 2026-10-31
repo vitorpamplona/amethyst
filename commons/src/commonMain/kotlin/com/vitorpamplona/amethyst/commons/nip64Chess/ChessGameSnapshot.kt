@@ -26,6 +26,8 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
@@ -107,6 +109,30 @@ class ChessGameSnapshot(
 
     val lastActivityAt: Long get() = state.lastMoveAt ?: state.challengeCreatedAt
 
+    /** How the game ended for the viewer; null while it is being played. */
+    val outcome: ChessOutcome?
+        get() {
+            val result = (state.gameStatus as? GameStatus.Finished)?.result ?: return null
+            val winner =
+                when (result) {
+                    GameResult.WHITE_WINS -> Color.WHITE
+                    GameResult.BLACK_WINS -> Color.BLACK
+                    else -> null
+                }
+            val seat = myColor.takeIf { !isOpenSeat }
+            return ChessOutcome(
+                winner = winner,
+                perspective =
+                    when {
+                        winner == null -> ChessOutcome.Perspective.DRAW
+                        seat == null -> ChessOutcome.Perspective.SPECTATOR
+                        seat == winner -> ChessOutcome.Perspective.WON
+                        else -> ChessOutcome.Perspective.LOST
+                    },
+                termination = state.termination,
+            )
+        }
+
     /** True when [myColor] is a seat the viewer would take by moving, not one they hold. */
     val isJoinable: Boolean get() = isOpenSeat && myColor != null && !isWaitingForOpponent
 
@@ -144,4 +170,14 @@ class ChessGameSnapshot(
             return if (privateRefs.isEmpty()) start.opponentKeys().isEmpty() else jesterPrivateStartRef(viewerPubkey) in privateRefs
         }
     }
+}
+
+/** How a finished game came out: who won (null for a draw), from whose side it is seen, and how. */
+@Immutable
+data class ChessOutcome(
+    val winner: Color?,
+    val perspective: Perspective,
+    val termination: GameTermination?,
+) {
+    enum class Perspective { WON, LOST, DRAW, SPECTATOR }
 }

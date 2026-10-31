@@ -32,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -58,6 +59,7 @@ fun ChessBoard(
     showCoordinates: Boolean = true,
     flipped: Boolean = false,
     lastMove: ChessMoveSquares? = null,
+    checkSquare: String? = null,
 ) {
     val squareSize = boardSize / 8
 
@@ -75,6 +77,7 @@ fun ChessBoard(
                         isLight = (rank + file) % 2 != 0,
                         size = squareSize,
                         isLastMove = lastMove != null && (square == lastMove.from || square == lastMove.to),
+                        isCheck = square == checkSquare,
                         coordinate = if (showCoordinates && row == 7) ('a' + file).toString() else null,
                         rankLabel = if (showCoordinates && column == 0) (rank + 1).toString() else null,
                     )
@@ -90,6 +93,7 @@ private fun ChessSquare(
     isLight: Boolean,
     size: Dp,
     isLastMove: Boolean,
+    isCheck: Boolean,
     coordinate: String?,
     rankLabel: String? = null,
 ) {
@@ -101,6 +105,9 @@ private fun ChessSquare(
         contentAlignment = Alignment.Center,
     ) {
         if (isLastMove) Box(Modifier.fillMaxSize().background(BoardColors.LastMove))
+        if (isCheck) {
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(BoardColors.Check, BoardColors.Check.copy(alpha = 0.6f), Color.Transparent))))
+        }
 
         // Display piece using CBurnett ImageVector icons
         piece?.let {

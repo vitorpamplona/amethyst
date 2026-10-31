@@ -8393,15 +8393,11 @@
     <string name="kc_misc_longform_draft_title">Projekt artykułu</string>
     <string name="kc_misc_chess_accept_title">Zaakceptowano wyzwanie szachowe</string>
     <string name="kc_misc_chess_draw_offer_title">Zaproponowano remis</string>
-    <string name="kc_misc_chess_start_title">Rozpoczęto grę w szachy</string>
     <string name="kc_misc_chess_move_title">Ruch szachowy</string>
     <string name="kc_misc_chess_move">Przesuń: %1$s</string>
     <string name="kc_misc_chess_move_numbered">Przesuń %1$d: %2$s</string>
-    <string name="kc_misc_chess_color">Gra jako</string>
     <string name="kc_misc_chess_white">Białe</string>
     <string name="kc_misc_chess_black">Czarne</string>
-    <string name="kc_misc_chess_result">Wynik</string>
-    <string name="kc_misc_chess_termination">Zakończone przez</string>
     <string name="kc_misc_p2p_order">Zamówienie P2P</string>
     <string name="kc_misc_p2p_buy">Zakup bitcoina</string>
     <string name="kc_misc_p2p_sell">Sprzedaż bitcoinów</string>

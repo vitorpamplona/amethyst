@@ -24,6 +24,7 @@ import androidx.compose.runtime.Immutable
 import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
@@ -208,6 +209,19 @@ object ChessStateReconstructor {
                 }
             }
 
+        // How it ended: what the final move says, or, when it says nothing (jesterui), the board.
+        val termination =
+            when {
+                gameStatus !is GameStatus.Finished -> null
+                else ->
+                    latestMove?.termination()?.let { tag -> GameTermination.entries.firstOrNull { it.name.equals(tag, ignoreCase = true) } }
+                        ?: when {
+                            engine.isCheckmate() -> GameTermination.CHECKMATE
+                            engine.isStalemate() -> GameTermination.STALEMATE
+                            else -> null
+                        }
+            }
+
         // Get the head event ID (for linking next move)
         val headEventId = latestMove?.id ?: startEventId
 
@@ -231,6 +245,7 @@ object ChessStateReconstructor {
                 challengeCreatedAt = startEvent.createdAt,
                 timeControl = null, // Not supported in Jester
                 lastMoveAt = latestMove?.createdAt,
+                termination = termination,
             )
 
         Log.d("chessdebug") { "[Reconstructor] Result: status=$gameStatus, appliedMoves=${appliedMoveNumbers.size}, isDesynced=$isDesynced, headEvent=${headEventId.take(8)}" }
@@ -328,6 +343,8 @@ data class ReconstructedGameState(
     val timeControl: String?,
     /** When the newest move was published; null before the first one. */
     val lastMoveAt: Long? = null,
+    /** How a finished game ended, when the final move says so or the board shows it; null otherwise. */
+    val termination: GameTermination? = null,
 ) {
     /** Legacy alias for startEventId */
     @Deprecated("Use startEventId instead", ReplaceWith("startEventId"))

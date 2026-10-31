@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterContent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
@@ -134,6 +135,59 @@ class ChessGameSnapshotTest {
         assertFalse(state.isFinished)
         assertTrue(state.isMyTurn)
     }
+
+    @Test
+    fun `a mate is a win for the mating side, a loss for the other, and neither for a spectator`() {
+        val events = JesterGameEvents(start(alice, Color.WHITE), line(listOf("f3", "e5", "g4", "Qh4#")))
+
+        val black = ChessGameSnapshot.build(events, bob)!!.outcome!!
+        assertEquals(Color.BLACK, black.winner)
+        assertEquals(ChessOutcome.Perspective.WON, black.perspective)
+        assertEquals(GameTermination.CHECKMATE, black.termination)
+        assertEquals(ChessOutcome.Perspective.LOST, ChessGameSnapshot.build(events, alice)!!.outcome!!.perspective)
+        assertEquals(ChessOutcome.Perspective.SPECTATOR, ChessGameSnapshot.build(events, carol)!!.outcome!!.perspective)
+    }
+
+    @Test
+    fun `a game in progress has no outcome`() {
+        val events = JesterGameEvents(start(alice, Color.WHITE), line(listOf("e4", "e5")))
+        assertNull(ChessGameSnapshot.build(events, alice)!!.outcome)
+    }
+
+    @Test
+    fun `a resignation ends the game for the opponent, by resignation`() {
+        val moves = line(listOf("e4", "e5"))
+        val beforeResigning = ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), moves), bob)!!
+        val template = beforeResigning.resignTemplate()!!
+        val resign = JesterEvent("resign", bob, 3000, template.tags, template.content, "")
+
+        val events = JesterGameEvents(start(alice, Color.WHITE), moves + resign)
+        val white = ChessGameSnapshot.build(events, alice)!!.outcome!!
+        assertEquals(Color.WHITE, white.winner)
+        assertEquals(ChessOutcome.Perspective.WON, white.perspective)
+        assertEquals(GameTermination.RESIGNATION, white.termination)
+        assertEquals(ChessOutcome.Perspective.LOST, ChessGameSnapshot.build(events, bob)!!.outcome!!.perspective)
+    }
+
+    @Test
+    fun `a stalemate is a draw for everyone`() {
+        // Sam Loyd's ten-move stalemate: black, to move, has no legal move and is not in check.
+        val loyd = listOf("e3", "a5", "Qh5", "Ra6", "Qxa5", "h5", "h4", "Rah6", "Qxc7", "f6", "Qxd7+", "Kf7", "Qxb7", "Qd3", "Qxb8", "Qh7", "Qxc8", "Kg6", "Qe6")
+        val events = JesterGameEvents(start(alice, Color.WHITE), line(loyd))
+
+        for (viewer in listOf(alice, bob, carol)) {
+            val outcome = ChessGameSnapshot.build(events, viewer)!!.outcome!!
+            assertNull(outcome.winner)
+            assertEquals(ChessOutcome.Perspective.DRAW, outcome.perspective)
+            assertEquals(GameTermination.STALEMATE, outcome.termination)
+        }
+    }
+
+    /** [sans] played alternately by alice (white) and bob (black), each move on the one before. */
+    private fun line(sans: List<String>): List<JesterEvent> =
+        sans.indices.map { i ->
+            move("m$i", if (i % 2 == 0) alice else bob, if (i == 0) START else "m${i - 1}", sans.take(i + 1), createdAt = 2000L + i)
+        }
 
     private fun start(
         author: String,

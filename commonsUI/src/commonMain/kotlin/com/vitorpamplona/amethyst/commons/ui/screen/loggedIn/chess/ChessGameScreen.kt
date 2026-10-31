@@ -153,6 +153,7 @@ private fun ChessBoardContent(
         player = { pubkey -> ChessPlayer(pubkey, accountViewModel, nav) },
         modifier = modifier,
         canPlay = accountViewModel.account.isWriteable(),
+        onExit = { nav.popBack() },
     )
 }
 

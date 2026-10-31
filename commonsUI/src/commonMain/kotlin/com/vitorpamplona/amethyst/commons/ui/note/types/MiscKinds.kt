@@ -34,24 +34,24 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessReplay
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameCard
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.terminationText
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_move_by_black
+import com.vitorpamplona.amethyst.commons.resources.chess_move_by_white
 import com.vitorpamplona.amethyst.commons.resources.draft
 import com.vitorpamplona.amethyst.commons.resources.duration_hours
 import com.vitorpamplona.amethyst.commons.resources.duration_minutes
 import com.vitorpamplona.amethyst.commons.resources.duration_seconds
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_accept_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_black
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_color
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_draw_offer_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move_numbered
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_result
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_start_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_termination
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_white
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_posts
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_title
@@ -157,6 +157,7 @@ import com.vitorpamplona.quartz.nip31Alts.alt
 import com.vitorpamplona.quartz.nip32Labeling.LabelEvent
 import com.vitorpamplona.quartz.nip62RequestToVanish.RequestToVanishEvent
 import com.vitorpamplona.quartz.nip64Chess.ChessPosition
+import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.challenge.accept.LiveChessGameAcceptEvent
 import com.vitorpamplona.quartz.nip64Chess.draw.LiveChessDrawOfferEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
@@ -659,26 +660,33 @@ fun RenderJesterChess(
         ChessGameCard(baseNote, accountViewModel, nav)
         return
     }
-    val move = remember(event) { event.move() }
-    val fen = remember(event) { event.fen() }
-    val opponent = remember(event) { event.opponentPubkey() }
+    // The board after this move, replayed from its history so the move itself can be highlighted.
+    val history = remember(event) { event.history() }
+    val replay = remember(event) { ChessReplay.of(history) }
+    val replayed = replay.plies.size == history.size + 1
+    val ply = history.size
+    val san = event.move() ?: history.lastOrNull() ?: return
+    val moverIsWhite = ply % 2 == 1
+    val result = remember(event) { event.result() }
 
     KindCard(
         icon = MaterialSymbols.ChessKnight,
-        title =
-            when {
-                isStart -> stringRes(Res.string.kc_misc_chess_start_title)
-                move != null -> stringRes(Res.string.kc_misc_chess_move, move)
-                else -> stringRes(Res.string.kc_misc_chess_move_title)
-            },
+        title = stringRes(if (moverIsWhite) Res.string.chess_move_by_white else Res.string.chess_move_by_black, (ply + 1) / 2, san),
+        subtitle = terminationText(event.termination()?.let { tag -> GameTermination.entries.firstOrNull { it.name.equals(tag, ignoreCase = true) } }),
+        status = result?.replace("1/2", "½"),
+        statusTone = KindTone.Neutral,
     ) {
-        opponent?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
-        if (isStart) {
-            KindCardField(stringRes(Res.string.kc_misc_chess_color), chessColorLabel(event.playerColor()))
+        if (replayed) {
+            ChessBoard(
+                position = replay.last.position,
+                boardSize = 160.dp,
+                showCoordinates = false,
+                flipped = !moverIsWhite,
+                lastMove = replay.last.lastMove,
+                checkSquare = replay.last.checkSquare,
+            )
         } else {
-            KindCardField(stringRes(Res.string.kc_misc_chess_result), event.result())
-            KindCardField(stringRes(Res.string.kc_misc_chess_termination), event.termination()?.replace('_', ' '))
-            FenBoard(fen)
+            FenBoard(event.fen())
         }
     }
 }

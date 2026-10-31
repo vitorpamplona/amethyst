@@ -20,9 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Tab
@@ -35,15 +43,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.publishChessChallenge
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSideBadge
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.NewChessGameButton
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.NewChessGameDialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_lobby_section_your_games
 import com.vitorpamplona.amethyst.commons.resources.chess_lobby_tab_lobby
+import com.vitorpamplona.amethyst.commons.resources.chess_no_games_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_no_games_title
+import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.feeds.PagerStateKeys
 import com.vitorpamplona.amethyst.commons.ui.feeds.RefresheableBox
 import com.vitorpamplona.amethyst.commons.ui.feeds.RenderFeedContentState
@@ -59,6 +76,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.Ch
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.TabRowHeight
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip64Chess.Color
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.Dispatchers
@@ -155,6 +173,7 @@ private fun ChessPages(
                         listState = listState,
                         nav = nav,
                         routeForLastRead = tabs[page].scrollStateKey,
+                        onEmpty = { NoChessGames { showNewGameDialog = true } },
                     )
                 }
             }
@@ -172,6 +191,36 @@ private fun ChessPages(
                 }
             },
         )
+    }
+}
+
+/** An empty tab: the two sides, what the tab is for, and the way to start a game. */
+@Composable
+private fun NoChessGames(onNewGame: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ChessSideBadge(Color.WHITE, 64.dp)
+            ChessSideBadge(Color.BLACK, 64.dp)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = stringRes(Res.string.chess_no_games_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = stringRes(Res.string.chess_no_games_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = onNewGame) { Text(stringRes(Res.string.new_chess_game)) }
     }
 }
 
