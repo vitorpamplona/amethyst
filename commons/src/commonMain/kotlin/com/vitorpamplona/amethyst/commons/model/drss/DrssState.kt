@@ -261,8 +261,9 @@ class DrssState(
 
     /**
      * Saves where the user is in [episode], by drss's rules (see [DrssListenProgressAppDataEvent.next]),
-     * as a kind-30078 record. A kind-30054 record's completion and plays carry over; drss deletes
-     * those when it moves them, so Amethyst leaves them alone.
+     * as a kind-30078 record. A kind-30054 record's completion and plays merge in, even when a
+     * 30078 record was saved before it loaded; drss deletes those when it moves them, so Amethyst
+     * leaves them alone.
      */
     suspend fun saveProgress(
         episode: Address,
@@ -273,10 +274,11 @@ class DrssState(
         account: Account,
     ) {
         val note = progressNote(episode)
-        val earlier = progressOf(episode)
+        val current = recordAt(DrssListenProgressAppDataEvent.createAddress(me, episode), episode)
+        val legacy = recordAt(Address(DrssListenProgressEvent.KIND, me, episode.dTag), episode)
         val template =
             DrssListenProgressAppDataEvent.next(
-                earlier = earlier,
+                earlier = listOfNotNull(current, legacy),
                 episode = ATag(episode, null),
                 position = position,
                 durationInSeconds = durationInSeconds,
@@ -285,7 +287,7 @@ class DrssState(
                 createdAt = nextCreatedAt(note.event),
             )
         // The first 30078 save of an episode goes where its 30054 record was seen, as an edit would.
-        val seenOn = if (note.event == null && earlier is DrssListenProgressEvent) legacyProgressNote(episode) else note
+        val seenOn = if (current == null && legacy != null) legacyProgressNote(episode) else note
         publish(signer.sign(template), seenOn, account)
     }
 

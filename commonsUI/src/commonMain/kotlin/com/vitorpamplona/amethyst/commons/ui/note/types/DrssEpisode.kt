@@ -98,16 +98,14 @@ fun observeMyListening(
     val drss = accountViewModel.account.drss
     val flow =
         remember(episode.address) {
-            // The kind-30078 record, or the kind-30054 one drss has not moved yet.
+            // The kind-30078 record's own note, and the account-wide tick for the kind-30054 one
+            // drss has not moved yet: no card holds a note for an address that is almost always empty.
             merge(
                 drss
                     .progressNote(episode.address)
                     .flow()
                     .metadata.stateFlow,
-                drss
-                    .legacyProgressNote(episode.address)
-                    .flow()
-                    .metadata.stateFlow,
+                drss.progressVersion,
             ).map { drss.progressOf(episode.address) }
         }
     return flow.collectAsStateWithLifecycle(drss.progressOf(episode.address))
