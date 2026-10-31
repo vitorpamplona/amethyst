@@ -62,6 +62,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
 import com.vitorpamplona.amethyst.commons.browser.BrowserSitePermission
 import com.vitorpamplona.amethyst.commons.browser.DownloadCooldown
 import com.vitorpamplona.amethyst.commons.browser.OmniboxInput
+import com.vitorpamplona.amethyst.commons.napplet.BrowserOriginPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
@@ -417,6 +418,7 @@ class NappletBrowserService : Service() {
             NappletBrowserContract.MSG_SET_TOR -> {
                 val tab = tabFor(msg) ?: return true
                 tab.useTor = msg.data?.getBoolean(NappletBrowserContract.KEY_USE_TOR, false) ?: false
+                tab.webView?.let { NappletWebRtcGuard.sync(it, tab.useTor) }
                 refreshProxyPort(tab, msg)
                 // Reload only after the route actually applies — the override is async, so reloading
                 // immediately would re-fetch through the old route.
@@ -520,7 +522,9 @@ class NappletBrowserService : Service() {
         WebViewProxyPolicy.observeRoute(tab) { usesTor ->
             if (tabs[tab.sessionId] === tab) sendToClient(tab, NappletBrowserContract.MSG_ROUTE) { putBoolean(NappletBrowserContract.KEY_USE_TOR, usesTor) }
         }
-        if (tab.useTor && tab.proxyPort <= 0) {
+        // On Tor without a guard against WebRTC (an old WebView), a page would learn the real address
+        // around the proxy: nothing loads, as when Tor's port is unknown.
+        if (tab.useTor && (tab.proxyPort <= 0 || !NappletWebRtcGuard.isSupported())) {
             reportRouteBlocked(tab)
             return
         }
@@ -623,6 +627,7 @@ class NappletBrowserService : Service() {
         tab: BrowserTab?,
     ) {
         BrowserWebTools.applyBrowserSettings(wv)
+        if (tab != null) NappletWebRtcGuard.sync(wv, tab.useTor)
         wv.webViewClient = BrowserClient(tab)
         wv.webChromeClient = BrowserChromeClient(tab)
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
@@ -1119,7 +1124,8 @@ class NappletBrowserService : Service() {
         // colour only matters to a window with system bars, which an embedded tab doesn't own.
         when (envelope.stringOrNull("type")) {
             "browser.share" -> {
-                BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
+                // Only while the user is looking at this tab: a parked one can't pop share sheets.
+                if (tab.attended) BrowserWebTools.share(this, envelope.stringOrNull("title"), envelope.stringOrNull("text"), envelope.stringOrNull("url"))
                 return
             }
             "browser.themeColor" -> return
@@ -1153,6 +1159,12 @@ class NappletBrowserService : Service() {
                         putString(NappletIpc.KEY_PAYLOAD, outgoing)
                     }
             }
+        // A page on plain http could have had its script put there by anyone on the path, and a grant is kept
+        // per origin: only an origin whose transport can't be tampered with gets window.nostr.
+        if (!BrowserOriginPolicy.offersNostr(origin)) {
+            tab.bridge.failRequest(msg, "This page isn't secure (http): use its https address to sign in.")
+            return
+        }
 
         // Nobody is looking at this tab (it's parked, or the app is in the background): a sign / encrypt /
         // decrypt waits until they are, even when "allow always" would let it through without a prompt.

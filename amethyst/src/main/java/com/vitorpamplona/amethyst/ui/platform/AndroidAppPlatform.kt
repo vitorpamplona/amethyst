@@ -303,6 +303,9 @@ object AndroidAppPlatform : AppPlatform {
             // Off the main thread: context.cacheDir touches disk (ensurePrivateCacheDirExists), so reading
             // it on the composition dispatcher trips StrictMode. The prefetch itself is already IO-bound.
             withContext(Dispatchers.IO) {
+                // A card that scrolls by downloads nothing the user's media setting (never, or Wi-Fi
+                // only on a metered connection) wouldn't load for an image.
+                if (!Amethyst.instance.uiState.showImages()) return@withContext
                 val torPort = Amethyst.instance.torManager.activePortOrNull.value
                 if (torPort == null && Amethyst.instance.torPrefs.torType.value != TorType.OFF) return@withContext
                 // The partition its launch will use: the per-account WebView profile and the site.

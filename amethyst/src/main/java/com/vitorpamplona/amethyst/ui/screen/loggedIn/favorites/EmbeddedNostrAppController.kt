@@ -100,6 +100,12 @@ class EmbeddedNostrAppController(
     private var bound = false
 
     private var sandboxedSdkView: SandboxedSdkView? = null
+
+    /**
+     * Set for an app running inside a note: it never opens the picker or the camera. A run in the feed
+     * asks the user nothing (the broker refuses its prompts the same way); opening the app answers.
+     */
+    var refusesFileChooser: Boolean = false
     private var pendingAdapter: SandboxedUiAdapter? = null
 
     /**
@@ -496,6 +502,10 @@ class EmbeddedNostrAppController(
             NappletEmbedContract.MSG_FILE_CHOOSER_REQUEST -> {
                 val data = msg.data ?: return true
                 val requestId = data.getLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID)
+                if (refusesFileChooser) {
+                    send(NappletEmbedContract.MSG_FILE_CHOOSER_RESULT) { putLong(NappletEmbedContract.KEY_FILE_CHOOSER_ID, requestId) }
+                    return true
+                }
                 // The sandbox has no Activity to run a picker from, so the main process runs it here and
                 // ships the URIs back. The reply is sent on every outcome (a cancel included) — the page's
                 // file input stays busy until it hears something.

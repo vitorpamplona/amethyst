@@ -18,25 +18,24 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.napplet
+package com.vitorpamplona.amethyst.commons.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
-import org.junit.Assert.assertSame
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertSame
 
 class NappletRelayCleartextTest {
+    private val allowed: suspend (String) -> Boolean = { true }
+
     @Test
     fun plaintextPassesThroughWithoutDecrypting() =
         runTest {
             val event = event(content = "hello")
             val result =
-                NappletRelayCleartext.forDelivery(event, USER) { _, _ ->
-                    error("plaintext must not be decrypted")
-                }
+                NappletRelayCleartext.forDelivery(event, USER, { _, _ -> error("plaintext must not be decrypted") }, { error("plaintext needs no grant") })
 
             assertSame(event, result)
         }
@@ -46,11 +45,11 @@ class NappletRelayCleartextTest {
         runTest {
             val event = event(content = NIP04, tags = arrayOf(arrayOf("p", USER)))
             val result =
-                NappletRelayCleartext.forDelivery(event, USER) { ciphertext, peer ->
+                NappletRelayCleartext.forDelivery(event, USER, { ciphertext, peer ->
                     assertEquals(NIP04, ciphertext)
                     assertEquals(AUTHOR, peer)
                     "secret"
-                }
+                }, allowed)
 
             assertEquals("secret", result?.content)
             assertEquals(event.id, result?.id)
@@ -58,16 +57,48 @@ class NappletRelayCleartextTest {
         }
 
     @Test
-    fun outboundEncryptedEventUsesItsRecipientAsPeer() =
+    fun outboundDmUsesItsRecipientAsPeer() =
         runTest {
             val event = event(pubKey = USER, content = NIP04, tags = arrayOf(arrayOf("p", RECIPIENT)))
             val result =
-                NappletRelayCleartext.forDelivery(event, USER) { _, peer ->
+                NappletRelayCleartext.forDelivery(event, USER, { _, peer ->
                     assertEquals(RECIPIENT, peer)
                     "sent secret"
-                }
+                }, allowed)
 
             assertEquals("sent secret", result?.content)
+        }
+
+    @Test
+    fun withoutADecryptGrantEncryptedContentIsWithheldAndNeverDecrypted() =
+        runTest {
+            val event = event(content = NIP04, tags = arrayOf(arrayOf("p", USER)))
+            var askedFor: String? = null
+            val result =
+                NappletRelayCleartext.forDelivery(event, USER, { _, _ -> error("must not decrypt without a grant") }) { peer ->
+                    askedFor = peer
+                    false
+                }
+
+            assertNull(result)
+            assertEquals(AUTHOR, askedFor)
+        }
+
+    // The oracle: an app that may publish a reaction as the user puts someone else's ciphertext in its
+    // content and names the peer in its `p` tag, then reads the reaction back. The peer of an event the
+    // user wrote that isn't a DM is the user, never the tag the app wrote.
+    @Test
+    fun userAuthoredNonDmIgnoresItsPTagAndDecryptsOnlyAsSelf() =
+        runTest {
+            val reaction = event(pubKey = USER, kind = 7, content = NIP04, tags = arrayOf(arrayOf("p", RECIPIENT)))
+            var peerUsed: String? = null
+            NappletRelayCleartext.forDelivery(reaction, USER, { _, peer ->
+                peerUsed = peer
+                "self"
+            }, allowed)
+
+            assertEquals(USER, peerUsed)
+            assertEquals(USER, NappletRelayCleartext.peerOf(reaction, USER))
         }
 
     @Test
@@ -75,9 +106,7 @@ class NappletRelayCleartextTest {
         runTest {
             val event = event(content = NIP04, tags = arrayOf(arrayOf("p", RECIPIENT)))
             val result =
-                NappletRelayCleartext.forDelivery(event, USER) { _, _ ->
-                    error("unrelated ciphertext must not be offered to the signer")
-                }
+                NappletRelayCleartext.forDelivery(event, USER, { _, _ -> error("unrelated ciphertext must not be offered to the signer") }, allowed)
 
             assertNull(result)
         }
@@ -86,19 +115,17 @@ class NappletRelayCleartextTest {
     fun decryptionFailureWithholdsCiphertext() =
         runTest {
             val event = event(content = NIP04, tags = arrayOf(arrayOf("p", USER)))
-            val result =
-                NappletRelayCleartext.forDelivery(event, USER) { _, _ ->
-                    error("signer refused")
-                }
+            val result = NappletRelayCleartext.forDelivery(event, USER, { _, _ -> error("signer refused") }, allowed)
 
             assertNull(result)
         }
 
     private fun event(
         pubKey: String = AUTHOR,
+        kind: Int = 4,
         content: String,
         tags: Array<Array<String>> = emptyArray(),
-    ) = Event("id", pubKey, 1L, 4, tags, content, "sig")
+    ) = Event("id", pubKey, 1L, kind, tags, content, "sig")
 
     companion object {
         private const val USER = "user"

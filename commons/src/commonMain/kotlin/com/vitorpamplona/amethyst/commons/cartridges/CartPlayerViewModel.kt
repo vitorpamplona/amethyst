@@ -29,6 +29,7 @@ import com.vitorpamplona.kiko.player.KikoPlayerHost
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlin.concurrent.Volatile
 
 /**
  * Holds the [player] of one cart for the screen, so a rotation or a closed dialog keeps the game
@@ -40,7 +41,7 @@ class CartPlayerViewModel(
     private val url: String,
     private val expectedSha256: String?,
     private val httpClients: IRoleBasedHttpClientBuilder,
-    saveStore: CartSaveStore?,
+    private val saveStore: CartSaveStore?,
 ) : ViewModel() {
     private val host =
         object : KikoPlayerHost {
@@ -53,23 +54,80 @@ class CartPlayerViewModel(
             override fun loadCart(name: String): ByteArray? = null
         }
 
-    val player = KikoPlayer(source = ::download, saves = saveStore, host = host)
+    // The sha256 of the cart the player loaded: its saves are kept under it (see [CartSaveStore]).
+    @Volatile
+    private var cartHash: String? = null
+
+    private var current: KikoPlayer? = null
+
+    /**
+     * The player of this cart, made again if it was let go while the dialog was closed (see
+     * [LivePlayers]). Main thread only.
+     */
+    fun player(): KikoPlayer {
+        val player = current ?: KikoPlayer(source = ::download, saves = saveStore?.forCart { cartHash }, host = host).also { current = it }
+        live.touch(this)
+        return player
+    }
+
+    /** Ends the game and lets its memory go; [player] starts it again. Main thread only. */
+    fun release() {
+        current?.close()
+        current = null
+    }
 
     private suspend fun download(): ByteArray? {
         val bytes = httpClients.fetchMedia(url, MAX_CART_BYTES) ?: return null
-        if (expectedSha256 != null && !sha256(bytes).toHexKey().equals(expectedSha256, ignoreCase = true)) {
+        val hash = sha256(bytes).toHexKey()
+        if (expectedSha256 != null && !hash.equals(expectedSha256, ignoreCase = true)) {
             Log.w(TAG) { "The cart at $url does not match its hash" }
             return null
         }
+        cartHash = hash
         return bytes
     }
 
-    override fun onCleared() = player.close()
+    override fun onCleared() {
+        live.remove(this)
+        release()
+    }
 
     companion object {
         /** A cart PNG is tens of KiB; anything far past that is not one. */
         private const val MAX_CART_BYTES = 1 shl 20
 
+        /**
+         * Games kept paused at once. A closed dialog keeps its game where it was, but every game holds
+         * its whole Lua heap, frames and a thread: a feed of carts opened one after another must not
+         * keep them all. Past this, the least recently shown one is let go.
+         */
+        const val MAX_LIVE_PLAYERS = 2
+
+        private val live = LivePlayers<CartPlayerViewModel>(MAX_LIVE_PLAYERS) { it.release() }
+
         private const val TAG = "CartPlayer"
     }
+}
+
+/**
+ * The [max] most recently used of something that holds a lot, by use: [touch] marks one used and lets
+ * the least recently used go past [max] (calling [release] on it). Main thread only.
+ */
+class LivePlayers<T>(
+    private val max: Int,
+    private val release: (T) -> Unit,
+) {
+    private val order = ArrayDeque<T>()
+
+    fun touch(item: T) {
+        order.remove(item)
+        order.addLast(item)
+        while (order.size > max) release(order.removeFirst())
+    }
+
+    fun remove(item: T) {
+        order.remove(item)
+    }
+
+    val size: Int get() = order.size
 }

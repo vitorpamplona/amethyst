@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
@@ -69,15 +70,42 @@ class NappletLaunch(
 
     companion object {
         /**
+         * The later of two versions of one app's manifest, as a relay keeps the later of two replaceable
+         * events: the newer `created_at`, and on a tie the lower id (NIP-01). One that isn't an event
+         * loses.
+         */
+        fun newestKnown(manifest: NappletManifest): NappletManifest {
+            val address = (manifest as? AddressableEvent)?.address() ?: return manifest
+            val known = LocalCache.getAddressableNoteIfExists(address)?.event as? NappletManifest ?: return manifest
+            return newerOf(manifest, known)
+        }
+
+        fun newerOf(
+            a: NappletManifest,
+            b: NappletManifest,
+        ): NappletManifest {
+            val ea = a as? Event ?: return b
+            val eb = b as? Event ?: return a
+            return when {
+                ea.createdAt != eb.createdAt -> if (ea.createdAt > eb.createdAt) a else b
+                else -> if (ea.id <= eb.id) a else b
+            }
+        }
+
+        /**
          * A NIP-5D napplet from its [manifest], refused unless it is signed by [authorPubKey] (when
          * given) and named [identifier] (when given).
          */
         fun fromManifest(
-            manifest: NappletManifest,
+            embedded: NappletManifest,
             authorPubKey: HexKey? = null,
             identifier: String? = null,
         ): Result<NappletLaunch> =
             runCatching {
+                // Grants are kept per app, not per version, so a note that embeds an older signed
+                // version of an app the user trusts (one with a hole since fixed) would run it with
+                // today's grants. Every launch, inline or full screen, runs the newest version seen.
+                val manifest = newestKnown(embedded)
                 val event = manifest as? Event ?: error("Not a manifest event")
                 require(event.verify()) { "The manifest's signature does not verify" }
                 require(authorPubKey == null || event.pubKey == authorPubKey) { "The manifest is not by its author" }

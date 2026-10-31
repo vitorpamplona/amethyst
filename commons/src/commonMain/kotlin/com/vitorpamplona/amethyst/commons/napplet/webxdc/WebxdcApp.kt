@@ -103,9 +103,11 @@ class WebxdcApp(
                 .takeIf(::isHash)
 
         /**
-         * The `selfAddr` [pubKey] has in instance [instance] of [poster]'s app: a pseudonym, the same
-         * every time and for everyone who computes it, but a different one in every app. An app that
-         * leaked it would name no one; NIP-DC lets it be any value.
+         * The `selfAddr` [pubKey] has in instance [instance] of [poster]'s app: the same every time and
+         * for everyone who computes it, and a different one in every app, so two apps can't match their
+         * players by it. It is not a secret pseudonym: there is no secret in it, so anyone who knows
+         * [poster] and [instance] (the app's author does) can hash every pubkey they know and find whose
+         * it is. It is public by design, since other members compute it from an update's author.
          */
         fun selfAddr(
             pubKey: HexKey,

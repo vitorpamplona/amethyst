@@ -167,7 +167,7 @@ object CartSaveKillChild {
         val player =
             KikoPlayer(
                 source = { "__lua__\n$code\n".encodeToByteArray() },
-                saves = stores.cartSaveStore(),
+                saves = stores.cartSaveStore().forCart { "test-cart" },
                 host = host,
                 openAudio = { null },
             )

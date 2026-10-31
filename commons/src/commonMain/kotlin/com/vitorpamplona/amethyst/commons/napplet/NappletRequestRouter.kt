@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 
@@ -48,13 +49,15 @@ object NappletRequestRouter {
         /**
          * Open a live relay subscription; the host streams `relay.event`/`relay.eose`/`relay.closed` by
          * [subId], or, for an [outbox] one, `outbox.event`/`outbox.closed` on the [relays] the broker chose.
-         * Null [relays] means the account's own.
+         * Null [relays] means the account's own. [mayDecrypt] is the app's decrypt grant
+         * ([NappletBroker.mayDecrypt]): what the host asks before it decrypts an event it streams.
          */
         data class OpenSubscription(
             val subId: String,
             val filters: List<Filter>,
             val relays: Set<NormalizedRelayUrl>? = null,
             val outbox: Boolean = false,
+            val mayDecrypt: suspend (peer: HexKey) -> Boolean = { false },
         ) : Outcome
 
         /** Stop the live subscription [subId] (fire-and-forget; no reply). */
@@ -142,7 +145,11 @@ object NappletRequestRouter {
                 runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull()
                     ?: return Outcome.Ignore
             return if (response is NappletResponse.Subscribed) {
-                Outcome.OpenSubscription(subId, runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList()))
+                Outcome.OpenSubscription(
+                    subId,
+                    runCatching { NappletProtocolJson.decodeFilterList(payload) }.getOrDefault(emptyList()),
+                    mayDecrypt = broker.decryptGate(identity),
+                )
             } else {
                 // Not authorized → close it immediately with an empty EOSE.
                 Outcome.Push(listOf(NappletProtocolJson.encodeRelayEose(subId)))

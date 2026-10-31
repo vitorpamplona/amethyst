@@ -80,4 +80,15 @@ class NappletWebContractTest {
         assertContains(csp, "form-action 'none'")
         assertFalse(csp.contains("'self'"))
     }
+
+    // Every page is under napplet.local: a cookie one app kept there would reach every other app.
+    @Test
+    fun everyServedPageLosesCookiesBeforeItsOwnScripts() {
+        for (locked in listOf(true, false)) {
+            val page = NappletWebContract.injectPrelude("<script>document.cookie='x=1'</script>".encodeToByteArray(), "", emptyList(), locked).decodeToString()
+            val guard = page.indexOf(NappletWebContract.COOKIE_GUARD_JS)
+            assertTrue(guard in 0 until page.indexOf("document.cookie='x=1'"), "locked=$locked: $page")
+        }
+        assertContains(NappletWebContract.webxdcPrelude().decodeToString(), NappletWebContract.COOKIE_GUARD_JS)
+    }
 }

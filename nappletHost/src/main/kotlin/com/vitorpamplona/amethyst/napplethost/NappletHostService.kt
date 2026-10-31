@@ -417,7 +417,9 @@ class NappletHostService : Service() {
         // Fail closed: Tor is wanted but has no port yet. Nothing may be fetched — not the applet's blobs (the
         // content server would fetch them directly) and not its own traffic — so leave a blank placeholder and
         // tell the client, whose Retry sends the port once Tor is up.
-        if (tab.useTor && tab.proxyPort <= 0) {
+        // The same when WebRTC must be taken away and this WebView can't: its UDP would be a network the
+        // app must not have (a napplet, a webxdc app) or go around Tor.
+        if ((tab.useTor && tab.proxyPort <= 0) || (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor) && !NappletWebRtcGuard.isSupported())) {
             val blank = WebView(nightThemedContext(context, tab.themeType)).apply { setBackgroundColor(tab.bgColor) }
             tab.webView = blank
             reportRouteBlocked(tab)
@@ -429,7 +431,7 @@ class NappletHostService : Service() {
         // profile has otherwise been used), so the storage partition must be chosen before the
         // hardening/bridge setup and the loadUrl below.
         NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile), tab.profile)
         val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
         tab.contentServer =
             NappletContentServer(
@@ -560,6 +562,7 @@ class NappletHostService : Service() {
         wv.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         if (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor)) NappletWebRtcGuard.install(wv)
+        NappletWebRtcGuard.installCookieGuard(wv)
         wv.webViewClient = HostClient(tab)
         wv.webChromeClient = HostChromeClient(tab)
     }

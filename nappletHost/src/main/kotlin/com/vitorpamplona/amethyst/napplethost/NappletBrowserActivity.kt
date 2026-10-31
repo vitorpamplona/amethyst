@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillEvent
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.BrowserPillUi
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.ConsoleLine
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.PageDialogType
+import com.vitorpamplona.amethyst.commons.napplet.BrowserOriginPolicy
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletBridgeDocuments
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
@@ -424,6 +425,7 @@ class NappletBrowserActivity : ComponentActivity() {
             NappletWebViewProfile.apply(this, wv, webViewProfile)
         }
         BrowserWebTools.applyBrowserSettings(wv)
+        NappletWebRtcGuard.sync(wv, useTor)
         wv.webViewClient = BrowserClient()
         wv.webChromeClient = BrowserChromeClient()
         wv.setFindListener { active, total, _ -> chrome?.setFindResult(active, total) }
@@ -1009,6 +1011,7 @@ class NappletBrowserActivity : ComponentActivity() {
         val resolved = OmniboxInput.resolve(text, SearchEngines.byId(searchEngine).queryPrefix) ?: return
         if (resolved.forceTor && !useTor) {
             useTor = true
+            webView?.let { NappletWebRtcGuard.sync(it, true) }
             updateChromeState { copy(torOn = true, torForced = false) }
         }
         // An onion must not leave before the Tor route it just claimed is in place.
@@ -1066,6 +1069,12 @@ class NappletBrowserActivity : ComponentActivity() {
                         putString(NappletIpc.KEY_PAYLOAD, outgoing)
                     }
             }
+        // A page on plain http could have had its script put there by anyone on the path, and a grant is kept
+        // per origin: only an origin whose transport can't be tampered with gets window.nostr.
+        if (!BrowserOriginPolicy.offersNostr(origin)) {
+            bridge.failRequest(msg, "This page isn't secure (http): use its https address to sign in.")
+            return
+        }
 
         // In the background: a sign / encrypt / decrypt waits until the user is back on this window.
         if (!resumed && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
@@ -1437,6 +1446,10 @@ class NappletBrowserActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
         }
+        // The page now covers the address bar and everything else that says whose it is: name the site, as
+        // Chrome does, so a full-screen page can't pass itself off as Amethyst asking for the user's key.
+        val site = runCatching { currentUrl().toUri().host }.getOrNull()?.takeIf { it.isNotBlank() } ?: barTitle()
+        Toast.makeText(this, getString(CommonsR.string.browser_fullscreen_notice, site), Toast.LENGTH_LONG).show()
         syncBackState()
     }
 
@@ -1578,7 +1591,9 @@ class NappletBrowserActivity : ComponentActivity() {
      * route is really applied.
      */
     private fun claimRoute(onReady: () -> Unit = {}) {
-        if (useTor && proxyPort <= 0) {
+        // On Tor without a guard against WebRTC (an old WebView), a page would learn the real address
+        // around the proxy: nothing loads, as when Tor's port is unknown.
+        if (useTor && (proxyPort <= 0 || !NappletWebRtcGuard.isSupported())) {
             showRouteBlocked()
             return
         }
@@ -1597,6 +1612,7 @@ class NappletBrowserActivity : ComponentActivity() {
     /** Persists the per-host Tor choice in the main process and re-applies it to the live WebView. */
     private fun setNetworkMode(newUseTor: Boolean) {
         useTor = newUseTor
+        webView?.let { NappletWebRtcGuard.sync(it, useTor) }
         // Reload only once the new route is in effect, or the reload would go out the old way.
         claimRoute { webView?.reload() }
         updateChromeState { copy(torOn = useTor, torForced = !useTor && routedOverTor) }
@@ -1929,6 +1945,7 @@ class NappletBrowserActivity : ComponentActivity() {
         if (!isMainFrame || useTor || !OmniboxInput.isOnion(url)) return false
         if (proxyPort > 0) {
             useTor = true
+            NappletWebRtcGuard.sync(view, true)
             updateChromeState { copy(torOn = true, torForced = false) }
             claimRoute { if (webView === view) view.loadUrl(url) }
         } else {

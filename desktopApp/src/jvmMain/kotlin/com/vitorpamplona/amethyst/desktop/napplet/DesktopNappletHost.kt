@@ -256,7 +256,8 @@ class DesktopNappletHost(
 
     /**
      * Downloads a card's files into the blob cache while it is on screen, so Open starts at once.
-     * Never in the clear while Tor is on and not running yet: the launch waits for it instead.
+     * Never in the clear while Tor is on and not running yet (the launch waits for it instead), and
+     * not when the user's media setting keeps images from loading by themselves.
      */
     suspend fun prefetch(
         author: String,
@@ -265,6 +266,8 @@ class DesktopNappletHost(
         servers: List<String>,
     ) {
         val account = modules.sessionManager.loggedInAccount() ?: return
+        // A card that scrolls by downloads nothing the user's media setting wouldn't load for an image.
+        if (!modules.uiState.showImages()) return
         val torPort = modules.torManager.activePortOrNull.value
         if (torPort == null && torEnabled()) return
         // The partition its window will use: the account opening it, and the site.

@@ -85,7 +85,7 @@ fun InlineNappletView(
         remember(key, instanceId) {
             launchParams()?.let { params ->
                 params.putInt(NappletHostContract.EXTRA_BG_COLOR, background)
-                EmbeddedNostrAppController(context.applicationContext, params)
+                EmbeddedNostrAppController(context.applicationContext, params).apply { refusesFileChooser = true }
             }
         }
 
