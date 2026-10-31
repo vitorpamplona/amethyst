@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cart_button_o_description
 import com.vitorpamplona.amethyst.commons.resources.cart_button_x_description
+import com.vitorpamplona.amethyst.commons.resources.cart_could_not_load
 import com.vitorpamplona.amethyst.commons.resources.cart_dpad_description
 import com.vitorpamplona.amethyst.commons.resources.cart_game_ended
 import com.vitorpamplona.amethyst.commons.resources.cart_game_error
@@ -117,14 +118,16 @@ fun CartPlayer(
 @Composable
 private fun rememberCartLabels(): KikoLabels {
     val loading = stringRes(Res.string.cart_loading)
+    val noCart = stringRes(Res.string.cart_could_not_load)
     val notACart = stringRes(Res.string.cart_not_a_cart)
     val ended = stringRes(Res.string.cart_game_ended)
     val error = stringRes(Res.string.cart_game_error)
     val pad = stringRes(Res.string.cart_dpad_description)
     val buttons = stringRes(Res.string.cart_button_o_description) + ", " + stringRes(Res.string.cart_button_x_description)
-    return remember(loading, notACart, ended, error, pad, buttons) {
+    return remember(loading, noCart, notACart, ended, error, pad, buttons) {
         KikoLabels(
             loading = loading,
+            noCart = noCart,
             notACart = notACart,
             gameEnded = ended,
             gameError = error,

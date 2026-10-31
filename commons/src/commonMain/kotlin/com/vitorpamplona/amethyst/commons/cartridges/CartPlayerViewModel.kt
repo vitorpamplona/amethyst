@@ -25,7 +25,7 @@ import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.kiko.player.KikoPlayer
-import com.vitorpamplona.kiko.runtime.ConsoleHost
+import com.vitorpamplona.kiko.player.KikoPlayerHost
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -43,7 +43,7 @@ class CartPlayerViewModel(
     saveStore: CartSaveStore?,
 ) : ViewModel() {
     private val host =
-        object : ConsoleHost {
+        object : KikoPlayerHost {
             override fun log(message: String) = Log.d(TAG) { message }
 
             override fun utcOffsetSeconds(): Int = LocalClock.utcOffsetSeconds(TimeUtils.now()).toInt()

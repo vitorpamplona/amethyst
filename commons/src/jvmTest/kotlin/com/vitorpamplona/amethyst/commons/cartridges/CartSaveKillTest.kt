@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.cartridges
 
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.kiko.player.KikoPlayer
-import com.vitorpamplona.kiko.runtime.ConsoleHost
+import com.vitorpamplona.kiko.player.KikoPlayerHost
 import okio.Path.Companion.toPath
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -157,7 +157,7 @@ object CartSaveKillChild {
     fun main(args: Array<String>) {
         val stores = AppPreferenceStores(rootFilesDir = { args[0].toPath() })
         val host =
-            object : ConsoleHost {
+            object : KikoPlayerHost {
                 override fun log(message: String) {
                     println(message)
                     System.out.flush()

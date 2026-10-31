@@ -9142,7 +9142,8 @@
     <string name="cart_play">Play</string>
     <string name="cart_play_description">Play this game cartridge</string>
     <string name="cart_loading">Loading the game…</string>
-    <string name="cart_not_a_cart">This image is not a game cartridge, or it could not be downloaded.</string>
+    <string name="cart_not_a_cart">This image is not a game cartridge.</string>
+    <string name="cart_could_not_load">The game could not be downloaded.</string>
     <string name="cart_game_ended">The game ended.</string>
     <string name="cart_game_error">The game stopped with an error.</string>
     <string name="cart_dpad_description">Direction pad</string>

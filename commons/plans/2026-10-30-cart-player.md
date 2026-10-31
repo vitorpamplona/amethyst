@@ -38,7 +38,8 @@ Amethyst adds around them.
   the game's own thread between frames, so a tap shorter than a frame still counts. The game runs
   on its own thread, paced by the clock; it pauses when the dialog closes and resumes where it
   was. `blossom:` URIs are resolved through the BUD-10 finder, and a declared sha256 is checked
-  before the cart loads.
+  before the cart loads; a failed download and a file that is not a cart get different
+  messages.
 - **Saves** (kiko-player's save buffer over `CartSaveStore`, a `KikoSaveStore`): `cartdata` lands
   in the app's `cart_saves` DataStore as soon as the game saves (at most once a second for a game
   that saves every frame, plus once more when the player stops). Kept per install, by the game's
