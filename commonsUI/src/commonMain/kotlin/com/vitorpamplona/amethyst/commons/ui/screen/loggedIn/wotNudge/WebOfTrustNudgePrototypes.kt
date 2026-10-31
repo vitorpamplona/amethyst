@@ -70,8 +70,10 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.web_of_trust
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_activate
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_dismiss
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_first_action
+import com.vitorpamplona.amethyst.commons.resources.wot_nudge_hero_body
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_in_circle
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_not_now
 import com.vitorpamplona.amethyst.commons.resources.wot_nudge_on_top
@@ -104,7 +106,7 @@ class CircleNudge(
     val working get() = activation is CircleActivation.Working
 }
 
-/** Prototype A: the rings, the number, the button. No title, no paragraph. */
+/** Prototype A: the rings, the number, one sentence on what changes, and Activate. */
 @Composable
 fun CircleHeroCard(
     nudge: CircleNudge,
@@ -117,8 +119,14 @@ fun CircleHeroCard(
             CircleRings(nudge.self, nudge.faces.take(6), Modifier.size(120.dp), ringsSize = 120.dp)
             CircleCount(nudge.followCount, nudge.extendedCount, 44.sp)
         }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringRes(Res.string.wot_nudge_hero_body),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
         Spacer(Modifier.height(14.dp))
-        CircleAction(nudge, stringRes(Res.string.wot_nudge_first_action))
+        CircleAction(nudge, stringRes(Res.string.wot_nudge_activate))
     }
 }
 
