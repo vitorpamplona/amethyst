@@ -21,63 +21,16 @@
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.crypto.random.RandomInstance
-import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip01Core.core.JsonMapper
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
-import com.vitorpamplona.quartz.nip01Core.signers.eventTemplate
 import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterContent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
-import com.vitorpamplona.quartz.nip64Chess.jester.gameEventRef
-import com.vitorpamplona.quartz.nip64Chess.jester.jesterOpponent
-import com.vitorpamplona.quartz.utils.TimeUtils
 
 /**
- * The `e` reference jesterui files a direct challenge under: `sha256(sha256(pubkeyHex) +
- * START_POSITION_HASH)`, both hashes as lowercase hex strings. The challenged player finds their
- * challenges by asking for `#e` = this, which keeps them out of the public lobby.
- *
- * Protocol mechanism, so it belongs in quartz's `JesterProtocol`; it lives here until a quartz
- * release carries it.
+ * Signs and broadcasts a new challenge (quartz's [JesterEvent.buildChallenge]: an open seat when
+ * [opponentPubkey] is null, else a direct challenge only they can find). The game's id is the
+ * returned event's.
  */
-fun jesterPrivateStartRef(pubkey: HexKey): HexKey = sha256Hex(sha256Hex(pubkey) + JesterProtocol.START_POSITION_HASH)
-
-private fun sha256Hex(value: String): HexKey = sha256(value.encodeToByteArray()).toHexKey()
-
-/**
- * A Jester game start, the way jesterui writes one: an open challenge refers to the start
- * position, a direct one only to its opponent's [jesterPrivateStartRef], and also tags them so
- * clients that read `#p` notify them. The creator's colour rides in `playerColor`, which
- * jesterui ignores: it always seats the creator as white.
- */
-fun buildJesterChallenge(
-    playerColor: Color,
-    opponentPubkey: HexKey?,
-    createdAt: Long = TimeUtils.now(),
-): EventTemplate<JesterEvent> {
-    val content =
-        JesterContent(
-            kind = JesterProtocol.CONTENT_KIND_START,
-            history = emptyList(),
-            nonce = RandomInstance.bytes(4).toHexKey(),
-            playerColor = if (playerColor == Color.WHITE) "white" else "black",
-        )
-    return eventTemplate(JesterEvent.KIND, JsonMapper.toJson(content), createdAt) {
-        if (opponentPubkey == null) {
-            gameEventRef(JesterProtocol.START_POSITION_HASH)
-        } else {
-            gameEventRef(jesterPrivateStartRef(opponentPubkey))
-            jesterOpponent(opponentPubkey)
-        }
-    }
-}
-
-/** Signs and broadcasts a new challenge (see [buildJesterChallenge]); the game's id is the returned event's. */
 suspend fun Account.publishChessChallenge(
     playerColor: Color,
     opponentPubkey: HexKey?,
-): JesterEvent = signAndComputeBroadcast(buildJesterChallenge(playerColor, opponentPubkey))
+): JesterEvent = signAndComputeBroadcast(JesterEvent.buildChallenge(playerColor, opponentPubkey))

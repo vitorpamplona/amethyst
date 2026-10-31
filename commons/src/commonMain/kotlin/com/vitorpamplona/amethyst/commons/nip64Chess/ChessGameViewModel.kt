@@ -64,12 +64,26 @@ class ChessGameViewModel(
 
     private fun build(): ChessGameSnapshot? = startNote.jesterGameEvents()?.let { ChessGameSnapshot.build(it, viewer) }
 
-    /** Plays [from]-[to] (with an optional promotion letter on [to], like `e8q`) if it is the user's legal move. */
+    /**
+     * Plays [from]-[to] (with an optional promotion letter on [to], like `e8q`) if it is the
+     * user's legal move; with [offerDraw] the move also offers a draw.
+     */
     suspend fun move(
         from: String,
         to: String,
+        offerDraw: Boolean = false,
     ) {
-        game.value?.moveTemplate(from, to)?.let { account.signAndComputeBroadcast(it) }
+        game.value?.moveTemplate(from, to, offerDraw)?.let { account.signAndComputeBroadcast(it) }
+    }
+
+    /** Accepts the opponent's draw offer. */
+    suspend fun acceptDraw() {
+        game.value?.acceptDrawTemplate()?.let { account.signAndComputeBroadcast(it) }
+    }
+
+    /** Claims the game from an opponent who has stopped moving. */
+    suspend fun claimAbandonment() {
+        game.value?.claimAbandonmentTemplate()?.let { account.signAndComputeBroadcast(it) }
     }
 
     /** Ends the game in the opponent's favour. */

@@ -45,8 +45,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -63,11 +65,17 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessMaterial
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
+import com.vitorpamplona.amethyst.commons.resources.chess_accept_draw
 import com.vitorpamplona.amethyst.commons.resources.chess_back_to_game
+import com.vitorpamplona.amethyst.commons.resources.chess_claim_win
 import com.vitorpamplona.amethyst.commons.resources.chess_color_black
 import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_create_game
+import com.vitorpamplona.amethyst.commons.resources.chess_draw_offer_armed
+import com.vitorpamplona.amethyst.commons.resources.chess_draw_offer_sent
+import com.vitorpamplona.amethyst.commons.resources.chess_draw_offered_to_you
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_hint
+import com.vitorpamplona.amethyst.commons.resources.chess_opponent_inactive_days
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_invalid
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_label
 import com.vitorpamplona.amethyst.commons.resources.chess_play_as
@@ -76,9 +84,12 @@ import com.vitorpamplona.amethyst.commons.resources.chess_resign
 import com.vitorpamplona.amethyst.commons.resources.chess_resign_confirm_text
 import com.vitorpamplona.amethyst.commons.resources.chess_resign_confirm_title
 import com.vitorpamplona.amethyst.commons.resources.new_chess_game
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.StringResource
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -217,16 +228,20 @@ private fun RowScope.SideTile(
 @Composable
 fun LiveChessGameScreen(
     game: ChessGameSnapshot,
-    onMoveMade: (from: String, to: String) -> Unit,
+    onMoveMade: (from: String, to: String, offerDraw: Boolean) -> Unit,
     onResign: () -> Unit,
     player: @Composable RowScope.(pubkey: String?) -> Unit,
     modifier: Modifier = Modifier,
     canPlay: Boolean = true,
+    onAcceptDraw: () -> Unit = {},
+    onClaimAbandonment: () -> Unit = {},
     onExit: () -> Unit = {},
 ) {
     var flippedByUser by rememberSaveable(game.gameId) { mutableStateOf(false) }
     var viewPly by remember(game.gameId) { mutableStateOf<Int?>(null) }
     var confirmResign by remember { mutableStateOf(false) }
+    // Armed until the next move, which carries the offer.
+    var offerDraw by rememberSaveable(game.gameId) { mutableStateOf(false) }
 
     // Celebrate an ending seen live, not one the screen opened on.
     val finishedWhenOpened = remember(game.gameId) { game.isFinished }
@@ -270,7 +285,10 @@ fun LiveChessGameScreen(
             position = if (isLive) null else shown.position,
             lastMove = shown.lastMove,
             checkSquare = shown.checkSquare,
-            onMoveMade = { from, to, _ -> onMoveMade(from, to) },
+            onMoveMade = { from, to, _ ->
+                onMoveMade(from, to, offerDraw)
+                offerDraw = false
+            },
         )
     }
 
@@ -281,6 +299,10 @@ fun LiveChessGameScreen(
             onSelectPly = selectPly,
             onFlip = if (mySide == null) ({ flippedByUser = !flippedByUser }) else null,
             onResign = if (canResign) ({ confirmResign = true }) else null,
+            drawOfferArmed = offerDraw,
+            // An offer rides on a move, so it is open while the user still has one to make and
+            // none stands from either side.
+            onToggleDrawOffer = if (canPlay && game.isSeatedInLiveGame && game.drawOfferedBy == null) ({ offerDraw = it }) else null,
         )
     }
 
@@ -301,7 +323,7 @@ fun LiveChessGameScreen(
                     modifier = Modifier.width(320.dp).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    GameStatusLine(game, shownPly, lastPly, onBackToGame = { viewPly = null })
+                    GameStatusLine(game, shownPly, lastPly, canPlay, offerDraw, onBackToGame = { viewPly = null }, onAcceptDraw = onAcceptDraw, onClaimAbandonment = onClaimAbandonment)
                     ChessMoveTable(game.state.moveHistory, shownPly, selectPly, Modifier.weight(1f))
                     toolbar()
                 }
@@ -317,7 +339,7 @@ fun LiveChessGameScreen(
                 board(boardSize)
                 strip(bottomColor, Modifier.width(boardSize).padding(horizontal = 12.dp))
                 Column(Modifier.width(boardSize).padding(horizontal = 12.dp)) {
-                    GameStatusLine(game, shownPly, lastPly, onBackToGame = { viewPly = null })
+                    GameStatusLine(game, shownPly, lastPly, canPlay, offerDraw, onBackToGame = { viewPly = null }, onAcceptDraw = onAcceptDraw, onClaimAbandonment = onClaimAbandonment)
                     ChessMoveStrip(game.state.moveHistory, shownPly, selectPly)
                     toolbar()
                 }
@@ -357,20 +379,81 @@ fun LiveChessGameScreen(
 }
 
 /**
- * The one line the board and the dots cannot say: how the game ended, or, while an earlier move
- * is shown, the way back to the game. Nothing otherwise.
+ * The one line the board and the dots cannot say: how the game ended; a draw offer to accept, or
+ * the user's own one; a silent opponent's game to claim; or, while an earlier move is shown, the
+ * way back to the game. Nothing otherwise.
  */
 @Composable
 private fun GameStatusLine(
     game: ChessGameSnapshot,
     shownPly: Int,
     lastPly: Int,
+    canPlay: Boolean,
+    drawOfferArmed: Boolean,
     onBackToGame: () -> Unit,
+    onAcceptDraw: () -> Unit,
+    onClaimAbandonment: () -> Unit,
 ) {
     if (shownPly != lastPly) {
         TextButton(onClick = onBackToGame) { Text(stringRes(Res.string.chess_back_to_game)) }
         return
     }
 
-    game.outcome?.let { ChessResultBanner(it) }
+    game.outcome?.let {
+        ChessResultBanner(it)
+        return
+    }
+
+    val claimable by rememberClaimable(game)
+    when {
+        canPlay && game.canAcceptDraw ->
+            StatusAction(stringRes(Res.string.chess_draw_offered_to_you), stringRes(Res.string.chess_accept_draw), onAcceptDraw)
+        canPlay && claimable -> {
+            val days = ((TimeUtils.now() - (game.state.lastMoveAt ?: TimeUtils.now())) / 86_400L).toInt()
+            StatusAction(pluralStringRes(Res.plurals.chess_opponent_inactive_days, days, days), stringRes(Res.string.chess_claim_win), onClaimAbandonment)
+        }
+        drawOfferArmed -> StatusNote(stringRes(Res.string.chess_draw_offer_armed))
+        game.drawOfferedBy != null && game.drawOfferedBy == game.myColor -> StatusNote(stringRes(Res.string.chess_draw_offer_sent))
+    }
+}
+
+/** True once the viewer may claim the game from a silent opponent; flips by itself when that time comes. */
+@Composable
+private fun rememberClaimable(game: ChessGameSnapshot): State<Boolean> {
+    val claimableAt = game.abandonmentClaimableAt
+    return produceState(claimableAt != null && TimeUtils.now() >= claimableAt, claimableAt) {
+        if (claimableAt == null) {
+            value = false
+            return@produceState
+        }
+        val wait = claimableAt - TimeUtils.now()
+        if (wait > 0) delay(wait * 1000)
+        value = true
+    }
+}
+
+@Composable
+private fun StatusAction(
+    text: String,
+    action: String,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Button(onClick = onClick) { Text(action) }
+    }
+}
+
+@Composable
+private fun StatusNote(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(vertical = 8.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }

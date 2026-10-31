@@ -15,6 +15,9 @@
 #      spectator end with the same move list, every move legal.
 #   4. A direct challenge seats only the player it names: Carol cannot take it,
 #      Bob holds the black seat before moving.
+#   5. Draws: an offer rides on a move, the offerer cannot accept it, the other
+#      player can, and a move instead declines it. Nobody can claim a game whose
+#      opponent moved minutes ago.
 #
 # Usage: cli/tests/chess/chess-headless.sh [--no-build] [--port N] [--plies N]
 #
@@ -167,6 +170,23 @@ G4="$(alice chess challenge --opponent "$BOB" | jq -r .game_id)"
 check direct-bob-seat "$(bob chess show "$G4")" ".my_color == \"black\" and .black == \"$BOB\" and .plies == 0"
 check direct-carol-none "$(carol chess show "$G4")" '.my_color == null'
 refused direct-carol-refused not_a_player carol chess play "$G4" --timeout 5
+
+# --- 5. draws and claims --------------------------------------------------------
+step "draw offers"
+G5="$(alice chess challenge | jq -r .game_id)"
+alice chess move "$G5" e2 e4 >>"$LOG_FILE"
+bob chess move "$G5" e7 e5 --offer-draw >>"$LOG_FILE"
+check draw-offered "$(alice chess show "$G5")" '.draw_offered_by == "black" and .status == "in_progress"'
+refused draw-not-own no_draw_offer bob chess accept-draw "$G5"
+refused claim-too-early too_early bob chess claim "$G5"
+alice chess accept-draw "$G5" >>"$LOG_FILE"
+check draw-agreed "$(carol chess show "$G5")" '.status == "finished" and .result == "1/2-1/2" and .termination == "draw_agreement"' "seen by a spectator"
+
+G6="$(alice chess challenge | jq -r .game_id)"
+alice chess move "$G6" e2 e4 --offer-draw >>"$LOG_FILE"
+bob chess move "$G6" e7 e5 >>"$LOG_FILE"
+check draw-declined-by-moving "$(alice chess show "$G6")" '.draw_offered_by == null and .status == "in_progress"'
+refused draw-gone no_draw_offer bob chess accept-draw "$G6"
 
 print_summary
 ! grep -q $'\tfail\t' "$RESULTS_FILE"

@@ -30,7 +30,6 @@ import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 
 /**
@@ -133,6 +132,28 @@ class ChessGameSnapshot(
             )
         }
 
+    /** The side whose draw offer stands, until it is accepted or answered with a move. */
+    val drawOfferedBy: Color?
+        get() =
+            when (state.pendingDrawOffer) {
+                null -> null
+                whitePubkey -> Color.WHITE
+                blackPubkey -> Color.BLACK
+                else -> null
+            }
+
+    /** The viewer holds a seat across from a seated opponent in a game still being played. */
+    val isSeatedInLiveGame: Boolean get() = myColor != null && !isOpenSeat && !isFinished
+
+    /** The opponent offered a draw the viewer can accept (or decline by moving). */
+    val canAcceptDraw: Boolean get() = isSeatedInLiveGame && drawOfferedBy == myColor?.opposite()
+
+    /** When the viewer, waiting on their opponent, may claim the game; null when they are not waiting on anyone. */
+    val abandonmentClaimableAt: Long?
+        get() = if (isSeatedInLiveGame && !isMyTurn) state.lastMoveAt?.let { it + CHESS_ABANDONMENT_SECONDS } else null
+
+    fun canClaimAbandonment(now: Long): Boolean = abandonmentClaimableAt?.let { now >= it } == true
+
     /** True when [myColor] is a seat the viewer would take by moving, not one they hold. */
     val isJoinable: Boolean get() = isOpenSeat && myColor != null && !isWaitingForOpponent
 
@@ -165,10 +186,7 @@ class ChessGameSnapshot(
         private fun canTakeSeat(
             start: JesterEvent,
             viewerPubkey: HexKey,
-        ): Boolean {
-            val privateRefs = start.eTags().filter { it != JesterProtocol.START_POSITION_HASH }
-            return if (privateRefs.isEmpty()) start.opponentKeys().isEmpty() else jesterPrivateStartRef(viewerPubkey) in privateRefs
-        }
+        ): Boolean = start.isSeatOpenTo(viewerPubkey)
     }
 }
 

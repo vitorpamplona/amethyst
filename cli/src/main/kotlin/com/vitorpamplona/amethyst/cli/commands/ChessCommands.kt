@@ -27,9 +27,10 @@ import com.vitorpamplona.amethyst.cli.Output
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
+import com.vitorpamplona.amethyst.commons.nip64Chess.acceptDrawTemplate
 import com.vitorpamplona.amethyst.commons.nip64Chess.bot.ChessBots
-import com.vitorpamplona.amethyst.commons.nip64Chess.buildJesterChallenge
 import com.vitorpamplona.amethyst.commons.nip64Chess.chessGameFilters
+import com.vitorpamplona.amethyst.commons.nip64Chess.claimAbandonmentTemplate
 import com.vitorpamplona.amethyst.commons.nip64Chess.jesterGameEvents
 import com.vitorpamplona.amethyst.commons.nip64Chess.moveTemplate
 import com.vitorpamplona.amethyst.commons.nip64Chess.resignTemplate
@@ -38,6 +39,7 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlin.random.Random
@@ -52,8 +54,10 @@ object ChessCommands {
         """
         |amy chess challenge [--opponent USER] [--color white|black] [--relay URL …]
         |amy chess show GAME_ID [--relay URL …]
-        |amy chess move GAME_ID FROM TO            # squares, e.g. e2 e4; promote with e7 e8q
+        |amy chess move GAME_ID FROM TO [--offer-draw]   # squares, e.g. e2 e4; promote with e7 e8q
         |amy chess resign GAME_ID
+        |amy chess accept-draw GAME_ID              # accept the opponent's standing draw offer
+        |amy chess claim GAME_ID                    # claim a game whose opponent stopped moving
         |amy chess play GAME_ID [--engine random|minimax] [--depth N] [--seed N]
         |               [--max-plies N] [--think-ms MS] [--timeout SECS] [--poll-ms MS] [--relay URL …]
         """.trimMargin()
@@ -73,6 +77,8 @@ object ChessCommands {
                     "show" to { rest -> show(dataDir, rest) },
                     "move" to { rest -> move(dataDir, rest) },
                     "resign" to { rest -> resign(dataDir, rest) },
+                    "accept-draw" to { rest -> acceptDraw(dataDir, rest) },
+                    "claim" to { rest -> claim(dataDir, rest) },
                     "play" to { rest -> play(dataDir, rest) },
                 ),
         )
@@ -95,7 +101,7 @@ object ChessCommands {
         Context.open(dataDir).use { ctx ->
             ctx.prepare()
             val opponent = opponentInput?.let { ctx.requireUserHex(it) }
-            val signed = ctx.signer.sign(buildJesterChallenge(color, opponent))
+            val signed = ctx.signer.sign(JesterEvent.buildChallenge(color, opponent))
             val relays = ctx.outboxRelays() + extraRelays + (opponent?.let { inboxOf(ctx, it) } ?: emptySet())
             if (relays.isEmpty()) return Output.error("no_relays", "no outbox relays configured; pass --relay or run `amy relay add`")
             val ack = ctx.publish(signed, relays)
@@ -136,6 +142,7 @@ object ChessCommands {
         val gameId = args.positional(0, "GAME_ID")
         val from = args.positional(1, "FROM").lowercase()
         val to = args.positional(2, "TO").lowercase()
+        val offerDraw = args.bool("offer-draw")
         val extraRelays = RawEventSupport.relayFlag(args)
         args.rejectUnknown()
 
@@ -143,7 +150,7 @@ object ChessCommands {
             ctx.prepare()
             val loaded = load(ctx, gameId, extraRelays) ?: return Output.error("not_found", "game $gameId not found")
             if (!loaded.game.isMyTurn) return Output.error("not_your_turn", "it is not your move in $gameId")
-            val template = loaded.game.moveTemplate(from, to) ?: return Output.error("illegal_move", "$from$to is not a legal move")
+            val template = loaded.game.moveTemplate(from, to, offerDraw) ?: return Output.error("illegal_move", "$from$to is not a legal move")
             return publish(ctx, template, loaded, extraRelays)
         }
     }
@@ -161,6 +168,41 @@ object ChessCommands {
             ctx.prepare()
             val loaded = load(ctx, gameId, extraRelays) ?: return Output.error("not_found", "game $gameId not found")
             val template = loaded.game.resignTemplate() ?: return Output.error("not_a_player", "you hold no seat in an ongoing $gameId")
+            return publish(ctx, template, loaded, extraRelays)
+        }
+    }
+
+    private suspend fun acceptDraw(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gameId = args.positional(0, "GAME_ID")
+        val extraRelays = RawEventSupport.relayFlag(args)
+        args.rejectUnknown()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val loaded = load(ctx, gameId, extraRelays) ?: return Output.error("not_found", "game $gameId not found")
+            val template = loaded.game.acceptDrawTemplate() ?: return Output.error("no_draw_offer", "your opponent has no standing draw offer in $gameId")
+            return publish(ctx, template, loaded, extraRelays)
+        }
+    }
+
+    private suspend fun claim(
+        dataDir: DataDir,
+        rest: Array<String>,
+    ): Int {
+        val args = Args(rest)
+        val gameId = args.positional(0, "GAME_ID")
+        val extraRelays = RawEventSupport.relayFlag(args)
+        args.rejectUnknown()
+
+        Context.open(dataDir).use { ctx ->
+            ctx.prepare()
+            val loaded = load(ctx, gameId, extraRelays) ?: return Output.error("not_found", "game $gameId not found")
+            val at = loaded.game.abandonmentClaimableAt ?: return Output.error("not_waiting", "you are not waiting on an opponent in $gameId")
+            val template = loaded.game.claimAbandonmentTemplate() ?: return Output.error("too_early", "your opponent can still move until $at")
             return publish(ctx, template, loaded, extraRelays)
         }
     }
@@ -283,6 +325,12 @@ object ChessCommands {
                     else -> "in_progress"
                 },
             "result" to (status as? GameStatus.Finished)?.result?.notation,
+            "termination" to
+                game.state.termination
+                    ?.name
+                    ?.lowercase(),
+            "draw_offered_by" to game.drawOfferedBy?.name?.lowercase(),
+            "claimable_at" to game.abandonmentClaimableAt,
             "to_move" to
                 game.state.currentPosition.activeColor.name
                     .lowercase(),

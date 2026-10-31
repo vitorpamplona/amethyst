@@ -39,6 +39,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalIconToggleButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -46,6 +47,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
@@ -56,6 +59,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_final
 import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_next
 import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_previous
 import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_start
+import com.vitorpamplona.amethyst.commons.resources.chess_offer_draw
 import com.vitorpamplona.amethyst.commons.resources.chess_resign
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessPiece
@@ -216,6 +220,8 @@ fun ChessGameToolbar(
     onFlip: (() -> Unit)?,
     onResign: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    drawOfferArmed: Boolean = false,
+    onToggleDrawOffer: ((Boolean) -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { onSelectPly(0) }, enabled = shownPly > 0) {
@@ -234,6 +240,17 @@ fun ChessGameToolbar(
         if (onFlip != null) {
             IconButton(onClick = onFlip) {
                 Icon(MaterialSymbols.SwapVert, stringRes(Res.string.chess_flip_board))
+            }
+        }
+        if (onToggleDrawOffer != null) {
+            // ½ is how chess writes a draw; the toggle arms an offer that rides on the next move.
+            val label = stringRes(Res.string.chess_offer_draw)
+            FilledTonalIconToggleButton(
+                checked = drawOfferArmed,
+                onCheckedChange = onToggleDrawOffer,
+                modifier = Modifier.semantics { contentDescription = label },
+            ) {
+                Text("½", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             }
         }
         if (onResign != null) {

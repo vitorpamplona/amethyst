@@ -148,11 +148,13 @@ private fun ChessBoardContent(
 ) {
     LiveChessGameScreen(
         game = game,
-        onMoveMade = { from, to -> accountViewModel.launchSigner { viewModel.move(from, to) } },
+        onMoveMade = { from, to, offerDraw -> accountViewModel.launchSigner { viewModel.move(from, to, offerDraw) } },
         onResign = { accountViewModel.launchSigner { viewModel.resign() } },
         player = { pubkey -> ChessPlayer(pubkey, accountViewModel, nav) },
         modifier = modifier,
         canPlay = accountViewModel.account.isWriteable(),
+        onAcceptDraw = { accountViewModel.launchSigner { viewModel.acceptDraw() } },
+        onClaimAbandonment = { accountViewModel.launchSigner { viewModel.claimAbandonment() } },
         onExit = { nav.popBack() },
     )
 }

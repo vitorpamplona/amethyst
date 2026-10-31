@@ -232,7 +232,7 @@ class ChessInteropBugTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove),
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -264,7 +264,7 @@ class ChessInteropBugTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove),
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -296,7 +296,7 @@ class ChessInteropBugTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove),
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -614,6 +614,24 @@ class ChessInteropBugTest {
     // ==========================================================================
     // HELPERS
     // ==========================================================================
+
+    /** [last] and the moves before it, one per ply of its history, by the two players in turn: a whole game as relays deliver it. */
+    private fun withEarlierMoves(last: JesterEvent): List<JesterEvent> {
+        val history = last.history()
+        val earlier = if (last.move() == null) history.size else history.size - 1
+        return (1..earlier).map { n ->
+            createMoveEvent(
+                id = "move-%03d".format(n),
+                pubKey = if (n % 2 == 1) whitePubkey else blackPubkey,
+                startEventId = startEventId,
+                headEventId = if (n == 1) startEventId else "move-%03d".format(n - 1),
+                move = history[n - 1],
+                fen = "",
+                history = history.take(n),
+                opponentPubkey = if (n % 2 == 1) blackPubkey else whitePubkey,
+            )
+        } + last
+    }
 
     private fun createMoveEvent(
         id: String,

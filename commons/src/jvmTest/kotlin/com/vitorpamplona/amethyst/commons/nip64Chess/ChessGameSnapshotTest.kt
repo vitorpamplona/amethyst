@@ -22,11 +22,9 @@ package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterContent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -38,36 +36,6 @@ class ChessGameSnapshotTest {
     private val alice = "a".repeat(64)
     private val bob = "b".repeat(64)
     private val carol = "c".repeat(64)
-
-    // fiatjaf's key; the expected value is jesterui's jesterPrivateStartGameRef, computed with
-    // sha256(utf8(sha256hex(pubkey) + START_REF)) outside this codebase.
-    @Test
-    fun `private start ref matches jesterui`() {
-        assertEquals(
-            "7d06e03b044bdc9200caa570d117ed40ca06d35c7308264e6870266c9663b5c4",
-            jesterPrivateStartRef("3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"),
-        )
-    }
-
-    @Test
-    fun `open challenge refers to the start position and tags nobody`() {
-        val template = buildJesterChallenge(Color.WHITE, null, createdAt = 1000)
-        assertEquals(listOf(listOf("e", JesterProtocol.START_POSITION_HASH)), template.tags.map { it.toList() })
-
-        val content = Json { ignoreUnknownKeys = true }.decodeFromString<JesterContent>(template.content)
-        assertEquals(JesterProtocol.CONTENT_KIND_START, content.kind)
-        assertTrue(content.history.isEmpty())
-        assertTrue(content.nonce!!.matches(Regex("[0-9a-f]{8}")), "jesterui's nonce is 4 random bytes as hex")
-    }
-
-    @Test
-    fun `direct challenge is filed under the opponent's private ref, not the public lobby`() {
-        val template = buildJesterChallenge(Color.BLACK, bob, createdAt = 1000)
-        assertEquals(
-            listOf(listOf("e", jesterPrivateStartRef(bob)), listOf("p", bob)),
-            template.tags.map { it.toList() },
-        )
-    }
 
     @Test
     fun `anyone can take the empty seat of an open challenge`() {
@@ -93,7 +61,7 @@ class ChessGameSnapshotTest {
 
     @Test
     fun `a jesterui direct challenge seats only the player it was filed for`() {
-        val start = start(alice, Color.WHITE, tags = arrayOf(arrayOf("e", jesterPrivateStartRef(bob))))
+        val start = start(alice, Color.WHITE, tags = arrayOf(arrayOf("e", JesterProtocol.privateStartRef(bob))))
         val events = JesterGameEvents(start, emptyList())
 
         assertEquals(Color.BLACK, ChessGameSnapshot.build(events, bob)!!.myColor)
@@ -102,7 +70,7 @@ class ChessGameSnapshotTest {
 
     @Test
     fun `an outsider's move in a direct challenge does not take the seat`() {
-        val start = start(alice, Color.WHITE, tags = arrayOf(arrayOf("e", jesterPrivateStartRef(bob))))
+        val start = start(alice, Color.WHITE, tags = arrayOf(arrayOf("e", JesterProtocol.privateStartRef(bob))))
         val e4 = move("m1", alice, START, listOf("e4"), createdAt = 2000)
         val carolE5 = move("m2c", carol, "m1", listOf("e4", "e5"), createdAt = 2001)
         val bobC5 = move("m2b", bob, "m1", listOf("e4", "c5"), createdAt = 2002)
@@ -202,6 +170,54 @@ class ChessGameSnapshotTest {
         assertEquals(GameTermination.RESIGNATION, resignation.termination)
 
         assertNull(start(alice, Color.WHITE).ending())
+    }
+
+    @Test
+    fun `a draw offered with a move is the other player's to accept`() {
+        val e4 = line(listOf("e4"))
+        val offerTemplate = ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), e4), bob)!!.moveTemplate("e7", "e5", offerDraw = true)!!
+        val e5 = JesterEvent("m1", bob, 2001, offerTemplate.tags, offerTemplate.content, "")
+        val events = JesterGameEvents(start(alice, Color.WHITE), e4 + e5)
+
+        val forAlice = ChessGameSnapshot.build(events, alice)!!
+        assertEquals(Color.BLACK, forAlice.drawOfferedBy)
+        assertTrue(forAlice.canAcceptDraw)
+        assertFalse(ChessGameSnapshot.build(events, bob)!!.canAcceptDraw, "the offer is not the offerer's to accept")
+        assertNull(ChessGameSnapshot.build(events, bob)!!.acceptDrawTemplate())
+
+        val accept = forAlice.acceptDrawTemplate()!!.let { JesterEvent("d", alice, 2002, it.tags, it.content, "") }
+        val drawn = ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), e4 + e5 + accept), bob)!!.outcome!!
+        assertEquals(ChessOutcome.Perspective.DRAW, drawn.perspective)
+        assertEquals(GameTermination.DRAW_AGREEMENT, drawn.termination)
+    }
+
+    @Test
+    fun `an unanswered draw offer lapses with the next move`() {
+        val e4 = line(listOf("e4"))
+        val offer = ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), e4), bob)!!.moveTemplate("e7", "e5", offerDraw = true)!!
+        val e5 = JesterEvent("m1", bob, 2001, offer.tags, offer.content, "")
+        val nf3 = move("m2", alice, "m1", listOf("e4", "e5", "Nf3"), createdAt = 2002)
+
+        assertNull(ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), e4 + e5 + nf3), alice)!!.drawOfferedBy)
+    }
+
+    @Test
+    fun `the waiting player can claim a game the other abandoned`() {
+        // Alice is to move and goes silent after 1. e4 e5.
+        val moves = line(listOf("e4", "e5"))
+        val events = JesterGameEvents(start(alice, Color.WHITE), moves)
+        val forBob = ChessGameSnapshot.build(events, bob)!!
+
+        assertEquals(2001 + CHESS_ABANDONMENT_SECONDS, forBob.abandonmentClaimableAt)
+        assertNull(forBob.claimAbandonmentTemplate(now = 2001 + 3_600), "too early")
+        assertNull(ChessGameSnapshot.build(events, alice)!!.claimAbandonmentTemplate(now = 2001 + CHESS_ABANDONMENT_SECONDS), "the player to move cannot claim")
+
+        val claim = forBob.claimAbandonmentTemplate(now = 2001 + CHESS_ABANDONMENT_SECONDS)!!.let { JesterEvent("a", bob, it.createdAt, it.tags, it.content, "") }
+        val ended = JesterGameEvents(start(alice, Color.WHITE), moves + claim)
+        val won = ChessGameSnapshot.build(ended, bob)!!.outcome!!
+        assertEquals(ChessOutcome.Perspective.WON, won.perspective)
+        assertEquals(GameTermination.ABANDONMENT, won.termination)
+        assertEquals(ChessOutcome.Perspective.LOST, ChessGameSnapshot.build(ended, alice)!!.outcome!!.perspective)
     }
 
     /** [sans] played alternately by alice (white) and bob (black), each move on the one before. */

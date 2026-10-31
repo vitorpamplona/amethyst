@@ -25,258 +25,117 @@ import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.GameTermination
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Deterministic chess state reconstruction from Jester protocol events.
+ * Turns a Jester game's events into the state the board shows.
  *
- * This is the single source of truth for converting a collection of Jester events
- * into a consistent game state. Both Android and Desktop platforms must use this
- * algorithm to ensure identical state from the same events.
- *
- * Jester Protocol Reconstruction:
- * 1. Find start event (content.kind=0) → establishes startEventId, challenger color, players
- * 2. Find move with longest history → this is the current state
- * 3. Replay moves from history to build engine state
- * 4. Check for result/termination in latest move → mark finished if present
- *
- * Key Jester differences:
- * - No separate accept event (acceptance is implicit)
- * - Full move history in every move event
- * - Can reconstruct from any single move (has complete history)
- * - startEventId is the game identifier (event ID of start event)
- *
- * Guarantees:
- * - Same events always produce same state (deterministic)
- * - Uses longest history for authoritative state
- * - Invalid moves are skipped without error
+ * Which moves count, who holds each seat and which move-less ending stands is quartz's
+ * [JesterGameEvents.mainLine], so every client reads a game the same way. This adds what needs a
+ * chess engine: the line is replayed and stops at the first illegal move, a mate or stalemate the
+ * board shows ends a game whose final move did not say so (jesterui), and a final move that claims
+ * a mate or stalemate the board does not show is not believed.
  */
 object ChessStateReconstructor {
     /**
-     * Reconstruct game state from a collection of Jester events.
-     *
      * @param events The collected Jester events for a single game
      * @param viewerPubkey The pubkey of the user viewing the game (determines perspective)
-     * @return ReconstructionResult or error if reconstruction fails
+     * @param abandonmentAfterSeconds How long a player may stay silent before their opponent's
+     *   abandonment claim counts (see [CHESS_ABANDONMENT_SECONDS])
      */
     fun reconstruct(
         events: JesterGameEvents,
         viewerPubkey: String,
+        abandonmentAfterSeconds: Long = CHESS_ABANDONMENT_SECONDS,
     ): ReconstructionResult {
-        Log.d("chessdebug") { "[Reconstructor] reconstruct() called: viewerPubkey=${viewerPubkey.take(8)}, startEvent=${events.startEvent?.id?.take(8)}, moveCount=${events.moves.size}" }
+        val startEvent = events.startEvent ?: return ReconstructionResult.Error("No start event found")
+        val line = events.mainLine(abandonmentAfterSeconds) ?: return ReconstructionResult.Error("No start event found")
+        val whitePubkey = line.white
+        val blackPubkey = line.black
 
-        // Step 1: Get start event (required for player info)
-        val startEvent =
-            events.startEvent
-                ?: run {
-                    Log.d("chessdebug", "[Reconstructor] ERROR: No start event found")
-                    return ReconstructionResult.Error("No start event found")
-                }
-
-        val startEventId = startEvent.id
-        val challengerPubkey = startEvent.pubKey
-        val challengerColor = startEvent.playerColor() ?: Color.WHITE
-        val challengedPubkey = startEvent.opponentPubkey()
-
-        Log.d("chessdebug") { "[Reconstructor] startEventId=${startEventId.take(8)}, challenger=${challengerPubkey.take(8)}, challengerColor=$challengerColor, challengedPubkey=${challengedPubkey?.take(8)}" }
-
-        // In Jester, we determine opponent from the p-tag or from move events.
-        // For open challenges, the seat goes to whoever moved in it first; relays deliver in
-        // any order, so "first" is the earliest timestamp, ties broken by id.
-        // A jesterui direct challenge names no `p`; it is filed under its opponent's private
-        // reference instead, so only a mover whose reference matches can take that seat.
-        val privateRefs = startEvent.eTags().filter { it != JesterProtocol.START_POSITION_HASH }.toSet()
-        val opponentFromMoves =
-            events.moves
-                .filter { it.pubKey != challengerPubkey }
-                .filter { challengedPubkey != null || privateRefs.isEmpty() || jesterPrivateStartRef(it.pubKey) in privateRefs }
-                .minWithOrNull(compareBy<JesterEvent>({ it.createdAt }, { it.id }))
-                ?.pubKey
-
-        val actualOpponent = challengedPubkey ?: opponentFromMoves
-        Log.d("chessdebug") { "[Reconstructor] opponentFromMoves=${opponentFromMoves?.take(8)}, actualOpponent=${actualOpponent?.take(8)}" }
-
-        // Determine players based on challenger's color choice
-        val (whitePubkey, blackPubkey) =
-            if (challengerColor == Color.WHITE) {
-                challengerPubkey to actualOpponent
-            } else {
-                actualOpponent to challengerPubkey
-            }
-
-        // Determine viewer's role
         val viewerRole =
             when (viewerPubkey) {
                 whitePubkey -> ViewerRole.WHITE_PLAYER
                 blackPubkey -> ViewerRole.BLACK_PLAYER
                 else -> ViewerRole.SPECTATOR
             }
-
-        val playerColor =
-            when (viewerRole) {
-                ViewerRole.WHITE_PLAYER -> Color.WHITE
-                ViewerRole.BLACK_PLAYER -> Color.BLACK
-                ViewerRole.SPECTATOR -> Color.WHITE // Spectators see from white's perspective
-            }
-
+        val playerColor = if (viewerRole == ViewerRole.BLACK_PLAYER) Color.BLACK else Color.WHITE
         val opponentPubkey =
             when (viewerRole) {
                 ViewerRole.WHITE_PLAYER -> blackPubkey ?: ""
-                ViewerRole.BLACK_PLAYER -> whitePubkey ?: ""
-                ViewerRole.SPECTATOR -> blackPubkey ?: "" // For spectators, "opponent" is black
+                else -> whitePubkey ?: ""
             }
 
-        Log.d("chessdebug") { "[Reconstructor] white=${whitePubkey?.take(8)}, black=${blackPubkey?.take(8)}, viewerRole=$viewerRole, playerColor=$playerColor" }
-
-        // Check if game is pending (no moves yet AND viewer is the challenger)
-        // If viewer accepted someone else's challenge, the game is NOT pending
-        val isChallenger = viewerPubkey == startEvent.pubKey
-        val isPendingChallenge = isChallenger && events.moves.none { it.pubKey == challengerPubkey || it.pubKey == actualOpponent }
-
-        // Step 2: Create engine and apply moves from the longest history
+        // Replay the line; an illegal move ends it where it stood.
         val engine = ChessEngine()
-        // Only the two players move: anyone else's event on this game is ignored.
-        val playerMoves = events.moves.filter { it.pubKey == challengerPubkey || it.pubKey == actualOpponent }
-        val latestMove = playerMoves.maxWithOrNull(compareBy<JesterEvent>({ it.history().size }, { it.createdAt }))
-        val history = latestMove?.history() ?: emptyList()
-
-        Log.d("chessdebug") { "[Reconstructor] latestMove=${latestMove?.id?.take(8)}, historySize=${history.size}, isPendingChallenge=$isPendingChallenge" }
-        if (history.isNotEmpty()) {
-            Log.d("chessdebug") { "[Reconstructor] history: ${history.joinToString(" ")}" }
-        }
-
-        // Track applied moves
         val appliedMoveNumbers = mutableSetOf<Int>()
         var isDesynced = false
-
-        // Apply moves from history
-        for ((index, san) in history.withIndex()) {
-            val moveNumber = index + 1
-            val result = engine.makeMove(san)
-            if (result.success) {
-                appliedMoveNumbers.add(moveNumber)
+        for ((index, san) in line.history.withIndex()) {
+            if (engine.makeMove(san).success) {
+                appliedMoveNumbers.add(index + 1)
             } else {
-                // Move failed - game might be desynced
                 isDesynced = true
-                Log.d("chessdebug") { "[Reconstructor] DESYNC: move #$moveNumber '$san' failed: ${result.error}" }
-                // Try to recover by loading the FEN from latest move if available
-                latestMove?.fen()?.let { fen ->
-                    Log.d("chessdebug") { "[Reconstructor] Recovering with FEN: $fen" }
-                    engine.loadFen(fen)
-                }
+                Log.d("chessdebug") { "[Reconstructor] move #${index + 1} '$san' does not replay; the game stops before it" }
                 break
             }
         }
+        val playedMoves = line.moves.take(appliedMoveNumbers.size)
+        val lastPlayed = playedMoves.lastOrNull()
 
-        // Verify final position matches if we have FEN
-        latestMove?.fen()?.let { expectedFen ->
-            val currentFen = engine.getFen()
-            if (!fenPositionsMatch(currentFen, expectedFen)) {
-                isDesynced = true
-                Log.d("chessdebug") { "[Reconstructor] FEN MISMATCH: current=$currentFen, expected=$expectedFen" }
-                engine.loadFen(expectedFen)
+        val ending = line.ending?.takeIf { end -> !isDesynced && (end.move() == null || end == lastPlayed) }
+        val claimedTermination = ending?.termination()?.let { tag -> GameTermination.entries.firstOrNull { it.name.equals(tag, ignoreCase = true) } }
+        // A final move may claim a mate or stalemate; only the board can confirm one.
+        val believedEnding =
+            ending?.takeIf {
+                when (claimedTermination) {
+                    GameTermination.CHECKMATE -> engine.isCheckmate()
+                    GameTermination.STALEMATE -> engine.isStalemate()
+                    else -> true
+                }
             }
-        }
 
-        // Step 3: Check game end status
-        val gameResult = latestMove?.result()
         val gameStatus =
             when {
-                gameResult != null -> {
-                    val result = parseGameResult(gameResult)
-                    Log.d("chessdebug") { "[Reconstructor] Game finished from result tag: $gameResult -> $result" }
-                    GameStatus.Finished(result)
-                }
-
-                engine.isCheckmate() -> {
-                    val winner = engine.getSideToMove().opposite()
-                    Log.d("chessdebug") { "[Reconstructor] Checkmate detected, winner=$winner" }
-                    GameStatus.Finished(
-                        if (winner == Color.WHITE) GameResult.WHITE_WINS else GameResult.BLACK_WINS,
-                    )
-                }
-
-                engine.isStalemate() -> {
-                    Log.d("chessdebug", "[Reconstructor] Stalemate detected")
-                    GameStatus.Finished(GameResult.DRAW)
-                }
-
-                else -> {
-                    GameStatus.InProgress
-                }
+                believedEnding?.result() != null -> GameStatus.Finished(parseGameResult(believedEnding.result()))
+                engine.isCheckmate() -> GameStatus.Finished(if (engine.getSideToMove() == Color.WHITE) GameResult.BLACK_WINS else GameResult.WHITE_WINS)
+                engine.isStalemate() -> GameStatus.Finished(GameResult.DRAW)
+                else -> GameStatus.InProgress
             }
 
-        // How it ended: what the final move says, or, when it says nothing (jesterui), the board.
+        // How it ended: what the ending says, or, when it says nothing (jesterui), the board.
         val termination =
             when {
                 gameStatus !is GameStatus.Finished -> null
-                else ->
-                    latestMove?.termination()?.let { tag -> GameTermination.entries.firstOrNull { it.name.equals(tag, ignoreCase = true) } }
-                        ?: when {
-                            engine.isCheckmate() -> GameTermination.CHECKMATE
-                            engine.isStalemate() -> GameTermination.STALEMATE
-                            else -> null
-                        }
+                believedEnding != null && claimedTermination != null -> claimedTermination
+                engine.isCheckmate() -> GameTermination.CHECKMATE
+                engine.isStalemate() -> GameTermination.STALEMATE
+                else -> null
             }
 
-        // Get the head event ID (for linking next move)
-        val headEventId = latestMove?.id ?: startEventId
-
-        // Build the reconstructed state
         val state =
             ReconstructedGameState(
-                startEventId = startEventId,
-                headEventId = headEventId,
+                startEventId = startEvent.id,
+                headEventId = lastPlayed?.id ?: startEvent.id,
                 whitePubkey = whitePubkey,
                 blackPubkey = blackPubkey,
                 viewerRole = viewerRole,
                 playerColor = playerColor,
                 opponentPubkey = opponentPubkey,
-                isPendingChallenge = isPendingChallenge,
+                isPendingChallenge = viewerPubkey == startEvent.pubKey && playedMoves.isEmpty(),
                 currentPosition = engine.getPosition(),
                 moveHistory = engine.getMoveHistory(),
                 gameStatus = gameStatus,
                 isDesynced = isDesynced,
-                pendingDrawOffer = null, // Jester doesn't have explicit draw offers
+                pendingDrawOffer = if (gameStatus is GameStatus.Finished || isDesynced) null else line.drawOfferedBy?.let { if (it == Color.WHITE) whitePubkey else blackPubkey },
                 appliedMoveNumbers = appliedMoveNumbers,
                 challengeCreatedAt = startEvent.createdAt,
-                timeControl = null, // Not supported in Jester
-                lastMoveAt = latestMove?.createdAt,
+                timeControl = null,
+                lastMoveAt = lastPlayed?.createdAt,
                 termination = termination,
             )
 
-        Log.d("chessdebug") { "[Reconstructor] Result: status=$gameStatus, appliedMoves=${appliedMoveNumbers.size}, isDesynced=$isDesynced, headEvent=${headEventId.take(8)}" }
-
         return ReconstructionResult.Success(state, engine)
-    }
-
-    /**
-     * Compare FEN positions, ignoring halfmove clock and fullmove number.
-     * This provides a more lenient comparison that focuses on the actual board state.
-     */
-    private fun fenPositionsMatch(
-        fen1: String,
-        fen2: String,
-    ): Boolean {
-        // FEN format: position activeColor castling enPassant halfmove fullmove
-        // Compare only first 4 parts (position, activeColor, castling, enPassant)
-        val parts1 = fen1.split(" ")
-        val parts2 = fen2.split(" ")
-
-        if (parts1.size < 4 || parts2.size < 4) {
-            return fen1 == fen2 // Fallback to exact match
-        }
-
-        return parts1[0] == parts2[0] &&
-            // Board position
-            parts1[1] == parts2[1] &&
-            // Active color
-            parts1[2] == parts2[2] &&
-            // Castling rights
-            parts1[3] == parts2[3] // En passant
     }
 
     private fun parseGameResult(result: String?): GameResult =
@@ -337,6 +196,7 @@ data class ReconstructedGameState(
     val moveHistory: List<String>,
     val gameStatus: GameStatus,
     val isDesynced: Boolean,
+    /** The player whose draw offer stands, until it is accepted or answered with a move. */
     val pendingDrawOffer: String?,
     val appliedMoveNumbers: Set<Int>,
     val challengeCreatedAt: Long,

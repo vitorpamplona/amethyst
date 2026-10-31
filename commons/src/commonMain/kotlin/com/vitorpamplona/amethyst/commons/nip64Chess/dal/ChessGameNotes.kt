@@ -22,8 +22,8 @@ package com.vitorpamplona.amethyst.commons.nip64Chess.dal
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
-import com.vitorpamplona.amethyst.commons.nip64Chess.jesterPrivateStartRef
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 
 /** The game start note [this] Jester note belongs to: itself for a start, the note it replies to for a move. */
 fun Note.chessGameStartNote(): Note? {
@@ -49,6 +49,6 @@ fun Note.isChessGameOf(pubkey: String): Boolean {
     val start = event as? JesterEvent ?: return false
     return start.pubKey == pubkey ||
         pubkey in start.opponentKeys() ||
-        jesterPrivateStartRef(pubkey) in start.eTags() ||
+        JesterProtocol.privateStartRef(pubkey) in start.eTags() ||
         replies.any { it.author?.pubkeyHex == pubkey }
 }

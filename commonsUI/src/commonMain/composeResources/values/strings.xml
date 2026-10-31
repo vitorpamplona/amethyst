@@ -8756,6 +8756,17 @@
     <string name="chess_opponent_label">Opponent</string>
     <string name="chess_opponent_hint">An npub, or leave empty so anyone can take the seat</string>
     <string name="chess_opponent_invalid">That is not an npub</string>
+    <string name="chess_offer_draw">Offer a draw with your next move</string>
+    <string name="chess_draw_offer_armed">Your next move offers a draw.</string>
+    <string name="chess_draw_offer_sent">You offered a draw.</string>
+    <string name="chess_draw_offered_to_you">Your opponent offers a draw. Move to decline.</string>
+    <string name="chess_accept_draw">Accept draw</string>
+    <string name="chess_draw_offered">Draw offered</string>
+    <string name="chess_claim_win">Claim win</string>
+    <plurals name="chess_opponent_inactive_days">
+        <item quantity="one">Your opponent hasn't moved in %1$d day.</item>
+        <item quantity="other">Your opponent hasn't moved in %1$d days.</item>
+    </plurals>
     <string name="chess_move_by_white">%1$d. %2$s</string>
     <string name="chess_move_by_black">%1$d… %2$s</string>
     <string name="geohash_new_your_channels">Your channels</string>

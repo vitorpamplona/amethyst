@@ -23,7 +23,6 @@ package com.vitorpamplona.amethyst.commons.relayClient.chess
 import androidx.compose.runtime.Stable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.cache.ICacheProvider
-import com.vitorpamplona.amethyst.commons.nip64Chess.jesterPrivateStartRef
 import com.vitorpamplona.amethyst.commons.relayClient.AccountScopedQuery
 import com.vitorpamplona.amethyst.commons.relayClient.composeSubscriptionManagers.ComposeSubscriptionManager
 import com.vitorpamplona.amethyst.commons.relayClient.eoseManagers.PerUniqueIdEoseManager
@@ -35,6 +34,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.pool.RelayBasedFilter
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 
 /**
  * The lobby's account-scoped part: the user's own games, and the moves of the games on screen
@@ -121,7 +121,7 @@ class ChessLobbyGamesSubAssembler(
                                 purpose = SubPurpose.GAMES,
                                 purposeDetail = "Chess challenges to me",
                                 kinds = listOf(JesterEvent.KIND),
-                                tags = mapOf("e" to listOf(jesterPrivateStartRef(me))),
+                                tags = mapOf("e" to listOf(JesterProtocol.privateStartRef(me))),
                                 limit = 100,
                                 since = since?.get(it)?.time,
                             ),

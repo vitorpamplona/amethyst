@@ -35,13 +35,19 @@ The game is the data: a Jester start note in `LocalCache`. Every move is linked 
 - **Publishing**: `account.signAndComputeBroadcast`, consumed into LocalCache like any event.
   `BroadcastRelayPlanner` adds the relays the game's start was seen on, where a jesterui opponent
   listens.
-- **Rules** (`ChessStateReconstructor`): only the two seated players' moves count. An open seat
-  goes to the earliest mover; on a jesterui direct challenge, only to the player whose private ref
-  matches.
+- **Rules**: quartz's `JesterGameEvents.mainLine()` decides which moves count (the player to
+  move, extending the line by one), who holds each seat, and which move-less ending stands.
+  `ChessStateReconstructor` replays that line with the engine, stops at an illegal move, and only
+  believes a claimed mate or stalemate the board shows.
+- **Draws and abandonment**: an offer rides on the offerer's move (`draw_offered`, the ½ toggle);
+  the other player accepts with a draw-agreement end or declines by moving. The waiting player may
+  claim a game after `CHESS_ABANDONMENT_SECONDS` (three days) of silence from the player to move.
 
 No connection, sync or broadcast status is shown: chess behaves like every other feed.
 
 ## Next
 
-Protocol gaps (resign/draw messages, colour field names, chain validation, notifications) are in
-quartz's `quartz/plans/2026-10-30-jester-chess-gaps.md`, waiting on a decision.
+What remains of the protocol gaps (notifications, chat, the `#l` end label, retiring 30064–30068)
+is in quartz's `quartz/plans/2026-10-30-jester-chess-gaps.md`. This code needs a quartz release
+that carries `mainLine()` and `buildChallenge()` (after 2.10.1); until then build with
+`-PquartzDir=../quartz`.

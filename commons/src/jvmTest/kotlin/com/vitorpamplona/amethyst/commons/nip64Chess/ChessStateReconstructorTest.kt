@@ -53,9 +53,9 @@ import kotlin.test.assertTrue
  */
 class ChessStateReconstructorTest {
     // Test pubkeys
-    private val whitePubkey = "white_pubkey_abc123"
-    private val blackPubkey = "black_pubkey_def456"
-    private val spectatorPubkey = "spectator_pubkey_xyz789"
+    private val whitePubkey = "a".repeat(64)
+    private val blackPubkey = "b".repeat(64)
+    private val spectatorPubkey = "c".repeat(64)
     private val startEventId = "start-event-001"
 
     // ==========================================================================
@@ -330,7 +330,7 @@ class ChessStateReconstructorTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove), // Only need latest move with full history
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -370,7 +370,7 @@ class ChessStateReconstructorTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(resignationMove),
+                moves = withEarlierMoves(resignationMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -403,7 +403,7 @@ class ChessStateReconstructorTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove),
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -540,7 +540,7 @@ class ChessStateReconstructorTest {
         val events =
             JesterGameEvents(
                 startEvent = createStartEvent(startEventId, whitePubkey, Color.WHITE, blackPubkey),
-                moves = listOf(finalMove),
+                moves = withEarlierMoves(finalMove),
             )
 
         val result = ChessStateReconstructor.reconstruct(events, whitePubkey)
@@ -749,6 +749,24 @@ class ChessStateReconstructorTest {
             content = content,
             sig = "sig-start",
         )
+    }
+
+    /** [last] and the moves before it, one per ply of its history, by the two players in turn: a whole game as relays deliver it. */
+    private fun withEarlierMoves(last: JesterEvent): List<JesterEvent> {
+        val history = last.history()
+        val earlier = if (last.move() == null) history.size else history.size - 1
+        return (1..earlier).map { n ->
+            createMoveEvent(
+                id = "move-%03d".format(n),
+                pubKey = if (n % 2 == 1) whitePubkey else blackPubkey,
+                startEventId = startEventId,
+                headEventId = if (n == 1) startEventId else "move-%03d".format(n - 1),
+                move = history[n - 1],
+                fen = "",
+                history = history.take(n),
+                opponentPubkey = if (n % 2 == 1) blackPubkey else whitePubkey,
+            )
+        } + last
     }
 
     private fun createMoveEvent(

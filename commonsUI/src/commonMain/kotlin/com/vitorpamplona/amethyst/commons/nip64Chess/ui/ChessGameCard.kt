@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessOutcome
 import com.vitorpamplona.amethyst.commons.nip64Chess.jesterGameEvents
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_claim_win
+import com.vitorpamplona.amethyst.commons.resources.chess_draw_offered
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_black
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_white
 import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
@@ -62,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -176,12 +179,14 @@ internal fun CardPlayer(
     }
 }
 
-/** The chip a card needs: the result from the user's side, or that it is their move. The board and the seats say the rest. */
+/** The chip a card needs: the result from the user's side, a draw offer to answer, a game to claim, or that it is their move. The board and the seats say the rest. */
 @Composable
 private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone>? {
     val outcome = game.outcome
     return when {
         outcome != null -> outcomeChip(outcome)
+        game.canAcceptDraw -> stringRes(Res.string.chess_draw_offered) to KindTone.Primary
+        game.canClaimAbandonment(TimeUtils.now()) -> stringRes(Res.string.chess_claim_win) to KindTone.Warning
         game.isMyTurn && !game.isJoinable -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
         else -> null
     }
