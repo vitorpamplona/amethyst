@@ -312,7 +312,9 @@ class NappletHostActivity : ComponentActivity() {
             return
         }
 
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+        // A napplet or webxdc app (or a site on Tor) must lose WebRTC in every frame; a WebView that can't
+        // do that would hand it a network around the proxy, so it doesn't run here at all.
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) || (NappletWebRtcGuard.isNeeded(profile, useTor) && !NappletWebRtcGuard.isSupported())) {
             Toast.makeText(this, getString(R.string.napplet_webview_too_old), Toast.LENGTH_LONG).show()
             finish()
             return
@@ -326,7 +328,7 @@ class NappletHostActivity : ComponentActivity() {
         fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
         val shellHtml = readContractAsset(NappletWebResources.SHELL_HTML_PATH)
         val shim = readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString()
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier, profile = profile))
+        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(author, identifier, profile = profile), profile)
         // "Open web" for a site makes everything direct — both its blob fetches (here) and its live
         // web traffic (the WebView proxy, below). Tor (the default) routes both through the SOCKS port.
         val effectiveProxy = if (useTor) proxyPort else -1
@@ -665,6 +667,7 @@ class NappletHostActivity : ComponentActivity() {
         webView.overScrollMode = View.OVER_SCROLL_NEVER
         WebView.setWebContentsDebuggingEnabled(false)
         if (NappletWebRtcGuard.isNeeded(profile, useTor)) NappletWebRtcGuard.install(webView)
+        NappletWebRtcGuard.installCookieGuard(webView)
         webView.webViewClient = NappletWebViewClient()
         webView.webChromeClient = NappletWebChromeClient()
     }

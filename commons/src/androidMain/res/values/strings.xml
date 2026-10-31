@@ -20,6 +20,8 @@
     <string name="browser_share_chooser">Share</string>
 
     <string name="browser_site_data_cleared">Site data cleared</string>
+    <!-- Shown when a page in the in-app browser goes full screen, hiding the address bar: names the site, so a page can't pass itself off as the app. -->
+    <string name="browser_fullscreen_notice">%1$s is full screen. Swipe from an edge, or press Back, to exit.</string>
 
     <!-- Site permissions (camera / microphone / location) -->
     <string name="browser_permission_camera">Use your camera</string>

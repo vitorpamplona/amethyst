@@ -188,6 +188,7 @@ class CefNappletSession(
                 partition = if (launch.profile.ownsOrigin) accountPubKey else null,
                 profile = launch.profile,
             ),
+            launch.profile,
         )
 
     private val blobsUseTor: Boolean get() = if (isWebsite) useTor else runtime.nappletBlobsUseTor()

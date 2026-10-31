@@ -29,6 +29,7 @@ import android.provider.MediaStore
 import android.webkit.MimeTypeMap
 import android.webkit.WebChromeClient.FileChooserParams
 import com.vitorpamplona.amethyst.commons.browser.FileChooserAccept
+import com.vitorpamplona.amethyst.commons.napplet.NappletPickedFiles
 import java.io.File
 import com.vitorpamplona.amethyst.commons.R as CommonsR
 
@@ -204,7 +205,9 @@ object NappletFileChooser {
             picked
                 ?.filter { uri ->
                     val own = request.captures.firstOrNull { it.uri == uri }
-                    own == null || own.file.length() > 0
+                    // The page reads the file with this app's permissions: nothing of the app's own.
+                    NappletPickedFiles.mayHandToPage(uri.scheme, uri.authority, own != null) { isOwnAuthority(context, it) } &&
+                        (own == null || own.file.length() > 0)
                 }?.toTypedArray()
                 ?.takeIf { it.isNotEmpty() }
 
@@ -231,6 +234,14 @@ object NappletFileChooser {
 
         return usable ?: captured?.let { arrayOf(it.uri) }
     }
+
+    /** Whether [authority] is a provider of this app (any of its processes), exported or not. */
+    private fun isOwnAuthority(
+        context: Context,
+        authority: String,
+    ): Boolean =
+        authority.startsWith(context.packageName) ||
+            runCatching { context.packageManager.resolveContentProvider(authority, 0)?.packageName == context.packageName }.getOrDefault(true)
 
     /**
      * One camera option per medium the page accepts, each with its own output file. Media with no
