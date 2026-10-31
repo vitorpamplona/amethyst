@@ -130,19 +130,21 @@ fun WebOfTrustNudge(
         account.settings.hideWebOfTrustNudgeUntil(until)
     }
 
-    CircleRingsCard(
-        self = userFace(account.signer.pubKey, accountViewModel, nav),
-        faces = sample.faces.map { key -> userFace(key, accountViewModel, nav) },
-        followCount = others.size,
-        extendedCount = sample.extended,
-        providers = providers,
-        selected = selected,
-        onSelect = { selectedId = it.id },
-        activation = activation,
-        onActivate = { viewModel.setUp(onboarding) },
-        onNotNow = { hide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
-        // The sign-up runs in the view model: putting the card away mid-way would hide its progress.
-        onDismiss = { if (!working) hide(WebOfTrustNudgeRules.FOREVER) },
+    CircleHeroCard(
+        CircleNudge(
+            self = userFace(account.signer.pubKey, accountViewModel, nav),
+            faces = sample.faces.map { key -> userFace(key, accountViewModel, nav) },
+            followCount = others.size,
+            extendedCount = sample.extended,
+            providers = providers,
+            selected = selected,
+            activation = activation,
+            onSelect = { selectedId = it.id },
+            onActivate = { viewModel.setUp(onboarding) },
+            onNotNow = { hide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
+            // The sign-up runs in the view model: putting the card away mid-way would hide its progress.
+            onDismiss = { if (!working) hide(WebOfTrustNudgeRules.FOREVER) },
+        ),
         modifier = modifier,
     )
 }
