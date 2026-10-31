@@ -8732,8 +8732,6 @@
     <string name="article_reading_time_minutes">%1$s min read</string>
     <string name="geocache_new_precision_warning">⚠️ %1$s characters or finer is what a finder needs.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Your Games</string>
-    <string name="chess_lobby_tab_lobby">Lobby</string>
     <string name="chess_join_as_white">Join as White</string>
     <string name="chess_join_as_black">Join as Black</string>
     <string name="chess_open_seat">Open seat</string>
@@ -8751,6 +8749,9 @@
     <string name="chess_back_to_games">Back to games</string>
     <string name="chess_no_games_title">No games yet</string>
     <string name="chess_no_games_hint">Challenge a friend, or open a seat anyone can take.</string>
+    <string name="chess_no_games_here">No games here</string>
+    <string name="chess_no_games_here_hint">Nobody on this list is playing. Every open challenge shows under Global.</string>
+    <string name="chess_browse_open_games">Browse open games</string>
     <string name="chess_random_color">Random</string>
     <string name="chess_play_as">Play as</string>
     <string name="chess_opponent_label">Opponent</string>

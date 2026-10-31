@@ -8580,7 +8580,6 @@
     <string name="article_reading_time_minutes">Olvasási idő: %1$s perc</string>
     <string name="geocache_new_precision_warning">⚠️ A megtalálóknak %1$s karakteres vagy pontosabb helymeghatározásra van szükségük.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Saját játékok</string>
     <string name="geohash_new_your_channels">Saját csatornák</string>
     <string name="geohash_new_enter_geohash">Adjon meg egy geohash-t</string>
     <string name="geohash_new_enter_hint">Mindenki, aki ugyanabban a geohash-cellában van, ugyanazt a csatornát használja.</string>

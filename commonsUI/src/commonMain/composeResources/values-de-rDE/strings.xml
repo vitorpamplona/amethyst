@@ -8622,7 +8622,6 @@
     <string name="article_reading_time_minutes">%1$s Min. Lesezeit</string>
     <string name="geocache_new_precision_warning">⚠️ Ein Finder braucht %1$s Zeichen oder feiner.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Deine Partien</string>
     <string name="geohash_new_your_channels">Deine Kanäle</string>
     <string name="geohash_new_enter_geohash">Geohash eingeben</string>
     <string name="geohash_new_enter_hint">Alle in derselben Geohash-Zelle teilen sich den Kanal.</string>

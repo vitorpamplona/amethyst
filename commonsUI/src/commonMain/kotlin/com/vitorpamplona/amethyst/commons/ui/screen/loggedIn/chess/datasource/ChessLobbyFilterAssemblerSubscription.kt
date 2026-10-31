@@ -26,6 +26,7 @@ import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.feeds.FeedState
+import com.vitorpamplona.amethyst.commons.nip64Chess.dal.chessGamesMissingTheirStart
 import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessLobbyGamesQueryState
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.topNavFeedQueryState
@@ -40,8 +41,9 @@ import kotlinx.coroutines.flow.map
 private const val WATCHED_GAMES = 100
 
 /**
- * The lobby's REQs while it is on screen: the games of the list picked in the top bar, the
- * user's own games, and the moves of the games both tabs list.
+ * The chess screen's REQs while it is on screen: the games of the list picked in the top bar, the
+ * user's own games (and the challenges of theirs that never arrived), and the moves of the games
+ * it lists.
  */
 @Composable
 fun ChessLobbyFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
@@ -56,11 +58,13 @@ fun ChessLobbyFilterAssemblerSubscription(accountViewModel: AccountViewModel) {
         }
     LifecycleAwareKeyDataSourceSubscription(topNav, accountViewModel.dataSources().chess)
 
-    val lobby by remember(accountViewModel) { gameIds(accountViewModel.feedStates.chessLobbyFeed) }.collectAsStateWithLifecycle(emptyList())
-    val mine by remember(accountViewModel) { gameIds(accountViewModel.feedStates.chessMyGamesFeed) }.collectAsStateWithLifecycle(emptyList())
+    val listed by remember(accountViewModel) { gameIds(accountViewModel.feedStates.chessLobbyFeed) }.collectAsStateWithLifecycle(emptyList())
+    val missingStarts by remember(accountViewModel) {
+        chessGamesMissingTheirStart(accountViewModel.account.userProfile().pubkeyHex)
+    }.collectAsStateWithLifecycle(emptySet())
 
-    val watched = remember(lobby, mine) { (mine + lobby).take(WATCHED_GAMES).toSet() }
-    val games = remember(accountViewModel.account, watched) { ChessLobbyGamesQueryState(accountViewModel.account, watched) }
+    val watched = remember(listed) { listed.take(WATCHED_GAMES).toSet() }
+    val games = remember(accountViewModel.account, watched, missingStarts) { ChessLobbyGamesQueryState(accountViewModel.account, watched, missingStarts) }
     LifecycleAwareKeyDataSourceSubscription(games, accountViewModel.dataSources().chessLobbyGames)
 }
 

@@ -8580,7 +8580,6 @@
     <string name="article_reading_time_minutes">%1$s min lezen</string>
     <string name="geocache_new_precision_warning">⚠️ %1$s tekens of nauwkeuriger is wat een vinder nodig heeft.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Jouw partijen</string>
     <string name="geohash_new_your_channels">Jouw kanalen</string>
     <string name="geohash_new_enter_geohash">Voer een geohash in</string>
     <string name="geohash_new_enter_hint">Iedereen in dezelfde geohash-cel deelt het kanaal.</string>

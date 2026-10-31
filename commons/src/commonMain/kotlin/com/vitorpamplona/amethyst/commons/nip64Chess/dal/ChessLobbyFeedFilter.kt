@@ -28,9 +28,11 @@ import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 
 /**
- * The chess lobby: games whose challenger or players match the list picked in the top bar. Open
- * challenges, live games and finished ones are all here, newest activity first; each card says
- * which it is.
+ * The chess screen's one feed, for the list picked in the top bar. "Mine" is the user's games:
+ * the ones they started, were challenged to (by `p` or jesterui's private reference) or moved in,
+ * the way Relay Groups reads "Mine" as the groups one is in rather than the events one wrote. Any
+ * other list is a lobby: games whose challenger or players are on it. Open challenges, live games
+ * and finished ones are all here, newest activity first; each card says which it is.
  */
 class ChessLobbyFeedFilter(
     val account: Account,
@@ -44,14 +46,23 @@ class ChessLobbyFeedFilter(
     override fun showHiddenKey(): Boolean = followList() is TopFilter.MuteList
 
     override fun feed(): List<Note> {
-        val params = buildFilterParams()
-        val games = LocalCache.notes.filterIntoSet { _, note -> note.isChessGameStart() && matches(note, params) }
+        val matches = matcher()
+        val games = LocalCache.notes.filterIntoSet { _, note -> note.isChessGameStart() && matches(note) }
         return sort(games)
     }
 
     override fun applyFilter(newItems: Set<Note>): Set<Note> {
+        val matches = matcher()
+        return newItems.mapNotNullTo(HashSet()) { it.chessGameStartNote()?.takeIf { start -> start.isChessGameStart() && matches(start) } }
+    }
+
+    private fun matcher(): (Note) -> Boolean {
+        if (followList() is TopFilter.Mine) {
+            val me = account.userProfile().pubkeyHex
+            return { start -> start.isChessGameOf(me) && start.author?.let { !account.isHidden(it) } ?: true }
+        }
         val params = buildFilterParams()
-        return newItems.mapNotNullTo(HashSet()) { it.chessGameStartNote()?.takeIf { start -> start.isChessGameStart() && matches(start, params) } }
+        return { start -> matches(start, params) }
     }
 
     private fun matches(

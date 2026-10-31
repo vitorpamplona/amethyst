@@ -8551,7 +8551,6 @@
     <string name="article_reading_time_minutes">%1$s मिनुट पठन</string>
     <string name="geocache_new_precision_warning">सावधान। %1$s अक्षर अथवा सूक्ष्मतर ही एक खोजक को चाहिए।</string>
     <string name="zap_button_label">⚡ज्साप</string>
-    <string name="chess_lobby_section_your_games">आपके खेल</string>
     <string name="geohash_new_your_channels">आपके प्रणालियाँ</string>
     <string name="geohash_new_enter_geohash">भूभागसूचक प्रविष्ट करें</string>
     <string name="geohash_new_near_me">मेरे निकट</string>

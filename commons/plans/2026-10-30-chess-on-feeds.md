@@ -17,15 +17,19 @@ same three relays through a custom broadcaster.
 The game is the data: a Jester start note in `LocalCache`. Every move is linked to it as a reply
 (`computeReplyTo`), so a game is `startNote` plus `startNote.replies`.
 
-- **Lobby** (`ChessLobbyScreen`): two tabs, like Polls. *Your Games* (`ChessMyGamesFeedFilter`)
-  and *Lobby* (`ChessLobbyFeedFilter`), both `FeedContentState`s over start notes, newest
-  activity first. The lobby follows the top-bar list (`defaultChessFollowList`, `FollowListSlot.CHESS`,
-  `liveChessFollowListsPerRelay`):
+- **Lobby** (`ChessLobbyScreen`): one feed (`ChessLobbyFeedFilter`, a `FeedContentState` over
+  start notes, newest activity first) for the top-bar list (`defaultChessFollowList`,
+  `FollowListSlot.CHESS`, `liveChessFollowListsPerRelay`). "Mine", the default, is the user's games
+  (`isChessGameOf`: started, challenged to by `p` or private ref, or moved in), the way Relay
+  Groups reads "Mine" as the groups one is in; any other list is a lobby of its people's games,
+  Global every open challenge. An empty "Mine" offers Browse open games (switches to Global).
   - `ChessFilterAssembler` (a `TopNavFeedFilterAssembler`) asks chosen authors for their kind 30,
     and Global or one relay for Jester starts only (`#e` START_REF), since kind 30 is shared with
     NKBIP-03;
   - `ChessLobbyGamesFilterAssembler` asks for the user's own games (outbox `authors`; inbox `#p`
-    and jesterui's private challenge ref) and streams the moves of the listed games (`#e`).
+    and jesterui's private challenge ref), streams the moves of the listed games (`#e`), and fetches
+    by id the challenges of the user's games that never arrived (`chessGamesMissingTheirStart`: a
+    game joined from Global keeps its challenge's author off every other list).
 - **Card**: a start note renders as `ChessGameCard` in any feed: players, status (your turn, whose
   turn, result), board, and Accept on a seat the user can take. Its click goes to `Route.ChessGame`.
 - **Board** (`ChessGameScreen`): `ChessGameViewModel` rebuilds a `ChessGameSnapshot` from the

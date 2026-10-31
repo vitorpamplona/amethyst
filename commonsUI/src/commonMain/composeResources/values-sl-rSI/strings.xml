@@ -9134,7 +9134,6 @@
     <string name="article_reading_time_minutes">%1$s min branja</string>
     <string name="geocache_new_precision_warning">⚠️ Iskalec potrebuje %1$s znakov ali natančneje.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Tvoje igre</string>
     <string name="geohash_new_your_channels">Tvoji kanali</string>
     <string name="geohash_new_enter_geohash">Vnesi geohash</string>
     <string name="geohash_new_enter_hint">Vsi v isti celici geohash si delijo kanal.</string>

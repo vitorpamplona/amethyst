@@ -200,7 +200,7 @@ class AccountSettings(
     val defaultCommunitiesFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.AllFollows),
     val defaultFollowPacksFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
     val defaultAppRecommendationsFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
-    val defaultChessFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Global),
+    val defaultChessFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val defaultRelayGroupsDiscoveryFollowList: MutableStateFlow<TopFilter> = MutableStateFlow(TopFilter.Mine),
     val nwcWallets: MutableStateFlow<List<NwcWalletEntryNorm>> = MutableStateFlow(emptyList()),
     val clinkDebitWallets: MutableStateFlow<List<ClinkDebitWalletEntryNorm>> = MutableStateFlow(emptyList()),
@@ -813,7 +813,7 @@ class AccountSettings(
             defaultCommunitiesFollowList to TopFilter.AllFollows,
             defaultFollowPacksFollowList to TopFilter.Global,
             defaultAppRecommendationsFollowList to TopFilter.Global,
-            defaultChessFollowList to TopFilter.Global,
+            defaultChessFollowList to TopFilter.Mine,
             defaultRelayGroupsDiscoveryFollowList to TopFilter.Mine,
         )
 

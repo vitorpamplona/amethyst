@@ -22,8 +22,13 @@ package com.vitorpamplona.amethyst.commons.nip64Chess.dal
 
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 
 /** The game start note [this] Jester note belongs to: itself for a start, the note it replies to for a move. */
 fun Note.chessGameStartNote(): Note? {
@@ -51,4 +56,32 @@ fun Note.isChessGameOf(pubkey: String): Boolean {
         pubkey in start.opponentKeys() ||
         JesterProtocol.privateStartRef(pubkey) in start.eTags() ||
         replies.any { it.author?.pubkeyHex == pubkey }
+}
+
+/**
+ * The start ids of the user's games whose challenge is not in the cache: moves by the user, or
+ * naming them, arrived, but the challenge they answer did not. That happens when the challenger is
+ * on no list the screen asked for (an open seat taken from Global, then the top bar changed to
+ * Mine). The lobby fetches these by id. Emits the current set on collection, then on every change.
+ */
+fun chessGamesMissingTheirStart(me: HexKey): Flow<Set<HexKey>> =
+    flow {
+        val missing = HashSet<HexKey>()
+        LocalCache.notes.forEach { _, note -> note.unloadedChessStartOf(me)?.let(missing::add) }
+        emit(missing.toSet())
+        LocalCache.getEventStream().newEventBundles.collect { bundle ->
+            var changed = false
+            bundle.forEach { note ->
+                if (missing.remove(note.idHex)) changed = true
+                note.unloadedChessStartOf(me)?.let { if (missing.add(it)) changed = true }
+            }
+            if (changed) emit(missing.toSet())
+        }
+    }.flowOn(Dispatchers.Default)
+
+private fun Note.unloadedChessStartOf(me: HexKey): HexKey? {
+    val move = event as? JesterEvent ?: return null
+    if (!move.isMoveEvent() || (move.pubKey != me && me !in move.opponentKeys())) return null
+    val startId = move.startEventId() ?: return null
+    return startId.takeIf { LocalCache.getNoteIfExists(it)?.event == null }
 }

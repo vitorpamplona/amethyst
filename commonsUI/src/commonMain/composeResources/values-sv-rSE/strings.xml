@@ -8620,7 +8620,6 @@
     <string name="article_reading_time_minutes">%1$s min läsning</string>
     <string name="geocache_new_precision_warning">⚠️ %1$s tecken eller finare är vad en hittare behöver.</string>
     <string name="zap_button_label">⚡Zappa</string>
-    <string name="chess_lobby_section_your_games">Dina partier</string>
     <string name="geohash_new_your_channels">Dina kanaler</string>
     <string name="geohash_new_enter_geohash">Ange en geohash</string>
     <string name="geohash_new_enter_hint">Alla i samma geohash-cell delar kanalen.</string>

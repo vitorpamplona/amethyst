@@ -37,21 +37,23 @@ import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 
 /**
- * The lobby's account-scoped part: the user's own games, and the moves of the games on screen
- * ([watchedGames], the start ids the lobby lists).
+ * The lobby's account-scoped part: the user's own games, the moves of the games on screen
+ * ([watchedGames], the start ids the lobby lists), and the challenges of the user's games that
+ * never arrived ([missingStarts]).
  */
 @Stable
 class ChessLobbyGamesQueryState(
     override val account: Account,
     val watchedGames: Set<HexKey>,
+    val missingStarts: Set<HexKey> = emptySet(),
 ) : AccountScopedQuery
 
 /**
- * What the lobby needs besides the top-bar list ([ChessFilterAssembler]):
+ * What the chess screen needs besides the top-bar list ([ChessFilterAssembler]):
  *
  * - the user's games, whatever the top bar has picked: what they started or moved in (their
  *   outbox), and what challenges them (their inbox), by `p` tag and by the private reference
- *   jesterui files direct challenges under;
+ *   jesterui files direct challenges under, plus the challenges of their games that never arrived;
  * - the moves of the listed games, from the relays each game was seen on and the user's own, so
  *   a card can say whose turn it is. The REQ stays open while the lobby is, so moves stream in.
  */
@@ -128,7 +130,39 @@ class ChessLobbyGamesSubAssembler(
                     )
                 }
 
-        return authored + challenged + watchedMoves(key, outbox + inbox)
+        return authored + challenged + watchedMoves(key, outbox + inbox) + missingStarts(key, outbox + inbox)
+    }
+
+    // A game's challenge is wherever its moves were seen, or on the user's own relays.
+    private fun missingStarts(
+        key: ChessLobbyGamesQueryState,
+        myRelays: Set<NormalizedRelayUrl>,
+    ): List<RelayBasedFilter> {
+        if (key.missingStarts.isEmpty()) return emptyList()
+
+        val startsPerRelay = mutableMapOf<NormalizedRelayUrl, MutableSet<HexKey>>()
+        key.missingStarts.forEach { startId ->
+            val seenOn =
+                cache
+                    .getNoteIfExists(startId)
+                    ?.replies
+                    ?.flatMapTo(HashSet()) { it.relays }
+                    .orEmpty()
+            (seenOn + myRelays).forEach { relay -> startsPerRelay.getOrPut(relay) { mutableSetOf() }.add(startId) }
+        }
+
+        return startsPerRelay.map { (relay, ids) ->
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.GAMES,
+                        purposeDetail = "Challenges of my chess games",
+                        ids = ids.sorted(),
+                        kinds = listOf(JesterEvent.KIND),
+                    ),
+            )
+        }
     }
 
     // No `since`: a game that just came on screen needs its moves from before the last EOSE too.

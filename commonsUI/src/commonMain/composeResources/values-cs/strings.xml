@@ -9176,7 +9176,6 @@
     <string name="article_reading_time_minutes">%1$s min čtení</string>
     <string name="geocache_new_precision_warning">⚠️ Nálezce potřebuje přesnost %1$s znaků nebo jemnější.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Vaše hry</string>
     <string name="geohash_new_your_channels">Vaše kanály</string>
     <string name="geohash_new_enter_geohash">Zadejte geohash</string>
     <string name="geohash_new_enter_hint">Kanál sdílí každý ve stejné buňce geohashe.</string>

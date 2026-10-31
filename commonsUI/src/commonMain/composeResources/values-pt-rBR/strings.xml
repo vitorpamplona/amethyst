@@ -8620,7 +8620,6 @@
     <string name="article_reading_time_minutes">%1$s min de leitura</string>
     <string name="geocache_new_precision_warning">⚠️ Quem procurar precisa de %1$s caracteres ou mais de precisão.</string>
     <string name="zap_button_label">⚡Zap</string>
-    <string name="chess_lobby_section_your_games">Seus jogos</string>
     <string name="geohash_new_your_channels">Seus canais</string>
     <string name="geohash_new_enter_geohash">Digite um geohash</string>
     <string name="geohash_new_enter_hint">Todos na mesma célula de geohash compartilham o canal.</string>
