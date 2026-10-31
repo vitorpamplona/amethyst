@@ -61,8 +61,8 @@ import com.vitorpamplona.amethyst.commons.model.observables.CreatedAtComparator
 import com.vitorpamplona.amethyst.commons.model.privateChatLastReadRoute
 import com.vitorpamplona.amethyst.commons.model.rooms.reactionsOfAuthorLike
 import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
+import com.vitorpamplona.amethyst.commons.model.unwrapToNote
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
-import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
@@ -72,7 +72,6 @@ import com.vitorpamplona.amethyst.commons.notices.NoWalletFound
 import com.vitorpamplona.amethyst.commons.notices.NoteActionNotice
 import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.amethyst.commons.notices.PowPublishFailed
-import com.vitorpamplona.amethyst.commons.notices.SignerNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNotice
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeResolver
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
@@ -96,6 +95,8 @@ import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCacheAsync
 import com.vitorpamplona.amethyst.commons.util.logSignerErrors
 import com.vitorpamplona.amethyst.commons.util.logTime
+import com.vitorpamplona.amethyst.commons.util.logUnusableData
+import com.vitorpamplona.amethyst.commons.util.notifySignerErrors
 import com.vitorpamplona.amethyst.commons.util.showAmount
 import com.vitorpamplona.amethyst.commons.util.showAmountInteger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountFeedContentStates
@@ -127,7 +128,6 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthenticator
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
-import com.vitorpamplona.quartz.nip01Core.signers.SignerExceptions
 import com.vitorpamplona.quartz.nip01Core.tags.people.PubKeyReferenceTag
 import com.vitorpamplona.quartz.nip01Core.tags.people.isTaggedUser
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
@@ -164,8 +164,6 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip57Zaps.zapraiser.zapraiserAmount
-import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
-import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
 import com.vitorpamplona.quartz.nip60Cashu.token.CashuToken
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
@@ -232,11 +230,7 @@ open class BaseAccountViewModel(
     val host: AccountViewModelHost,
     val notices: UserNoticeSink,
     val noticeResolver: UserNoticeResolver,
-    // Becomes viewModelScope; the default is lifecycle's own. Tests on a mocked Account pass one
-    // with an exception handler: every feed this class starts eagerly fails on such an Account, on
-    // IO, and the failure would otherwise land on whichever runTest runs next in that JVM.
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
-) : ViewModel(scope),
+) : ViewModel(),
     Dao {
     // A dead outbox relay would hold every post's banner until it times out, then flag it.
     val broadcastTracker =
@@ -1681,47 +1675,7 @@ open class BaseAccountViewModel(
      * outlive [viewModelScope] can still surface the same messages. Public because [launchSigner]
      * is inline.
      */
-    suspend fun reportSignerErrors(action: suspend () -> Unit) {
-        try {
-            action()
-        } catch (e: CancellationException) {
-            // MUST stay ahead of the IllegalStateException arm below: java.util.concurrent
-            // .CancellationException extends IllegalStateException, so without this every cancelled
-            // signer coroutine — a superseded debounce, a scope torn down mid-sign — would be
-            // swallowed there and shown to the user as a "signer" toast reading
-            // "JobCancellationException: StandaloneCoroutine was cancelled". Cancellation is not a
-            // signer failure and must propagate for structured concurrency to work.
-            throw e
-        } catch (_: SignerExceptions.ReadOnlyException) {
-            notices.notify(SignerNotice.ReadOnly)
-        } catch (_: SignerExceptions.UnauthorizedDecryptionException) {
-            notices.notify(SignerNotice.UnauthorizedDecryption)
-        } catch (_: SignerExceptions.SignerNotFoundException) {
-            notices.notify(SignerNotice.SignerNotFound)
-        } catch (e: SignerExceptions.TimedOutException) {
-            Log.w("AccountViewModel", "TimedOutException", e)
-        } catch (e: SignerExceptions.NothingToDecrypt) {
-            Log.w("AccountViewModel", "NothingToDecrypt", e)
-        } catch (e: SignerExceptions.CouldNotPerformException) {
-            Log.w("AccountViewModel", "CouldNotPerformException", e)
-        } catch (e: SignerExceptions.ManuallyUnauthorizedException) {
-            Log.w("AccountViewModel", "ManuallyUnauthorizedException", e)
-        } catch (e: SignerExceptions.AutomaticallyUnauthorizedException) {
-            Log.w("AccountViewModel", "AutomaticallyUnauthorizedException", e)
-        } catch (e: SignerExceptions.RunningOnBackgroundWithoutAutomaticPermissionException) {
-            Log.w("AccountViewModel", "TimedOutRunningOnBackgroundWithoutAutomaticPermissionExceptionException", e)
-        } catch (e: SignerExceptions) {
-            // Any other refusal (e.g. a bunker without the method): the signer's answer, not a crash.
-            Log.w("AccountViewModel", "SignerExceptions", e)
-        } catch (e: IllegalStateException) {
-            notices.notify(SignerNotice.Failed(e))
-        } catch (e: IllegalArgumentException) {
-            // Data the action could not use (malformed JSON, a bad key or tag from a relay or
-            // another app): viewModelScope has no handler, so letting it escape kills the app.
-            Log.w("AccountViewModel", "Action failed on data it could not use", e)
-            notices.notify(ActionFailed(e))
-        }
-    }
+    suspend fun reportSignerErrors(action: suspend () -> Unit) = notifySignerErrors(notices, action)
 
     fun approveCommunityPost(
         post: Note,
@@ -2251,13 +2205,9 @@ open class BaseAccountViewModel(
 
     fun runOnIO(runOnIO: suspend () -> Unit) =
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                runOnIO()
-            } catch (e: IllegalArgumentException) {
-                // Like [reportSignerErrors]: bad input from a relay or another app (a NIP-55 signer's
-                // reply arrives here) is not a crash.
-                Log.w("AccountViewModel", "Background task failed on data it could not use", e)
-            }
+            // Like [reportSignerErrors]: bad input from a relay or another app (a NIP-55 signer's
+            // reply arrives here) is not a crash.
+            logUnusableData("AccountViewModel") { runOnIO() }
         }
 
     fun checkGetOrCreateUser(key: HexKey): User? = LocalCache.checkGetOrCreateUser(key)
@@ -2985,91 +2935,13 @@ open class BaseAccountViewModel(
         }
     }
 
-    private suspend fun unwrapGiftWrap(event: GiftWrapEvent): Note? {
-        val cacheInnerEventId = event.innerEventId
-        return if (cacheInnerEventId != null) {
-            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
-            if (existingNoteEvent != null) {
-                unwrapIfNeeded(existingNoteEvent)
-            } else {
-                val newEvent = event.unwrapOrNull(account.signer) ?: return null
-
-                // clear the encrypted payload to save memory
-                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-                LocalCache.justConsume(newEvent, null, false)
-
-                unwrapIfNeeded(newEvent)
-            }
-        } else {
-            val newEvent = event.unwrapThrowing(account.signer)
-            // clear the encrypted payload to save memory
-            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
-
-            if (existingNoteEvent != null) {
-                unwrapIfNeeded(existingNoteEvent)
-            } else {
-                LocalCache.justConsume(newEvent, null, false)
-                unwrapIfNeeded(newEvent)
-            }
-        }
-    }
-
-    private suspend fun unwrapSeal(event: SealEvent): Note? {
-        val cacheInnerEventId = event.innerEventId
-        return if (cacheInnerEventId != null) {
-            val existingNoteEvent = LocalCache.getNoteIfExists(cacheInnerEventId)?.event
-            if (existingNoteEvent != null) {
-                unwrapIfNeeded(existingNoteEvent)
-            } else {
-                val newEvent = event.unsealThrowing(account.signer)
-                // clear the encrypted payload to save memory
-                LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-                // this is not verifiable
-                LocalCache.justConsume(newEvent, null, true)
-                unwrapIfNeeded(newEvent)
-            }
-        } else {
-            val newEvent = event.unsealThrowing(account.signer)
-            // clear the encrypted payload to save memory
-            LocalCache.getOrCreateNote(event.id).event = event.copyNoContent()
-
-            val existingNoteEvent = LocalCache.getNoteIfExists(newEvent.id)?.event
-            if (existingNoteEvent != null) {
-                unwrapIfNeeded(existingNoteEvent)
-            } else {
-                // this is not verifiable
-                LocalCache.justConsume(newEvent, null, true)
-                unwrapIfNeeded(newEvent)
-            }
-        }
-    }
-
-    private suspend fun unwrapIfNeeded(event: Event): Note? =
-        when (event) {
-            is GiftWrapEvent -> unwrapGiftWrap(event)
-            is SealEvent -> unwrapSeal(event)
-            else -> LocalCache.getNoteIfExists(event.id)
-        }
-
     fun unwrapIfNeeded(
         note: Note?,
         onReady: (Note) -> Unit = {},
     ) = launchSigner {
         val noteEvent = note?.event
         if (noteEvent != null) {
-            val resultingNote =
-                try {
-                    unwrapIfNeeded(noteEvent)
-                } catch (e: IllegalArgumentException) {
-                    // The wrap or seal opened to something that is not an event (empty content, or
-                    // a sender's broken JSON): nothing to show, like the indexer's own unwrap.
-                    Log.w("AccountViewModel", "Could not parse the content of ${noteEvent.kind}:${noteEvent.id}", e)
-                    null
-                }
+            val resultingNote = unwrapToNote(noteEvent, account.signer)
             if (resultingNote != null && resultingNote != note) {
                 onReady(resultingNote)
             }
