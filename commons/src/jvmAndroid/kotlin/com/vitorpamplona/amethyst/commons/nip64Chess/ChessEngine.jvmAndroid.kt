@@ -56,7 +56,7 @@ actual class ChessEngine {
     actual fun makeMove(san: String): MoveResult =
         try {
             val normalized = normalizeSan(san)
-            if (board.doMove(normalized)) {
+            if (doLegalSanMove(normalized)) {
                 // Store the normalized SAN, not the original
                 sanHistory.add(normalized)
                 MoveResult(
@@ -76,6 +76,19 @@ actual class ChessEngine {
                 error = e.message ?: "Unknown error making move $san",
             )
         }
+
+    /**
+     * Plays [san] only if it is a legal move here. chesslib's `doMove(String)` parses the SAN and
+     * applies it without checking legality, so after 1. e4 it lets Black's e-pawn jump to e4 and
+     * take White's pawn. Every move received from a relay goes through here, so the parsed move
+     * is checked against the legal moves and taken back when it is not one of them.
+     */
+    private fun doLegalSanMove(san: String): Boolean {
+        val legal = board.legalMoves()
+        if (!board.doMove(san)) return false
+        val applied = board.undoMove() ?: return false
+        return applied in legal && board.doMove(applied)
+    }
 
     /**
      * Normalize SAN notation for interoperability with different chess clients.
@@ -156,7 +169,7 @@ actual class ChessEngine {
 
     actual fun isLegalMove(san: String): Boolean =
         try {
-            if (board.doMove(san)) {
+            if (doLegalSanMove(normalizeSan(san))) {
                 board.undoMove()
                 true
             } else {
