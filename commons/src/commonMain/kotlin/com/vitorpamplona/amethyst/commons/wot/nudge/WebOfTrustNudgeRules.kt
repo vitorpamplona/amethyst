@@ -20,10 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.wot.nudge
 
-import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
-
 /** When Home invites the user to turn on web of trust. */
 object WebOfTrustNudgeRules {
     /**
@@ -39,25 +35,16 @@ object WebOfTrustNudgeRules {
     /** "Hidden until" for a card the user closed: for good. */
     const val FOREVER = Long.MAX_VALUE
 
+    /**
+     * The people in a circle once the provider has computed it, on average. The card promises
+     * this size rather than counting: the follows' own follow lists are not loaded on the device.
+     */
+    const val TYPICAL_CIRCLE = 13_000
+
     fun shouldOffer(
         followCount: Int,
         hasProvider: Boolean,
         hiddenUntil: Long,
         now: Long,
     ): Boolean = !hasProvider && followCount >= MIN_FOLLOWS && now >= hiddenUntil
-}
-
-/**
- * How many people the user's follows follow, leaving out the user and their own follows, from
- * the follow lists already in the cache. A lower bound: a follow whose list has not loaded adds
- * nobody. Zero when none has loaded.
- */
-fun Account.followsOfFollowsCount(follows: Set<HexKey> = kind3FollowList.flow.value.authors): Int {
-    val me = signer.pubKey
-    val seen = HashSet<HexKey>()
-    follows.forEach { follow ->
-        val list = cache.getAddressableNoteIfExists(ContactListEvent.createAddress(follow))?.event as? ContactListEvent
-        list?.unverifiedFollowKeySet()?.forEach { if (it != me && it !in follows) seen.add(it) }
-    }
-    return seen.size
 }

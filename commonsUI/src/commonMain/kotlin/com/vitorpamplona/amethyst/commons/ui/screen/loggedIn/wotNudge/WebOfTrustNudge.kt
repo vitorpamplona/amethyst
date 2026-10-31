@@ -46,16 +46,11 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustViewModel
 import com.vitorpamplona.amethyst.commons.wot.nudge.WebOfTrustNudgeRules
-import com.vitorpamplona.amethyst.commons.wot.nudge.followsOfFollowsCount
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.withContext
 
 /**
@@ -98,24 +93,12 @@ fun WebOfTrustNudge(
     val completed by viewModel.completed.collectAsStateWithLifecycle()
     val others = remember(follows) { follows.authors - account.signer.pubKey }
 
-    // Faces with a picture first, and the follows-of-follows estimate: both read the whole cache.
-    val sample by produceState(CircleSample.EMPTY, others) {
-        suspend fun count() =
+    // Faces with a picture first: reads every follow in the cache.
+    val faces by produceState(emptyList<HexKey>(), others) {
+        value =
             withContext(Dispatchers.Default) {
                 val withPicture = others.filter { account.cache.getUserIfExists(it)?.profilePicture() != null }
-                CircleSample(
-                    faces = (withPicture + others).distinct().take(6),
-                    extended = account.followsOfFollowsCount(others),
-                )
-            }
-        value = count()
-        // The follows' own lists keep arriving after the card shows: each one grows the circle.
-        account.cache.live.newEventBundles
-            .filter { bundle -> bundle.any { note -> (note.event as? ContactListEvent)?.pubKey in others } }
-            .conflate()
-            .collect {
-                value = count()
-                delay(RECOUNT_MS)
+                (withPicture + others).distinct().take(6)
             }
     }
 
@@ -146,9 +129,10 @@ fun WebOfTrustNudge(
     CircleHeroCard(
         CircleNudge(
             self = userFace(account.signer.pubKey, accountViewModel, nav),
-            faces = sample.faces.map { key -> userFace(key, accountViewModel, nav) },
+            faces = faces.map { key -> userFace(key, accountViewModel, nav) },
             followCount = others.size,
-            extendedCount = sample.extended,
+            // The circle the provider will compute, on average: nothing here counts it.
+            extendedCount = maxOf(WebOfTrustNudgeRules.TYPICAL_CIRCLE, others.size) - others.size,
             providers = providers,
             selected = selected,
             activation = activation,
@@ -167,18 +151,6 @@ private fun userFace(
     accountViewModel: AccountViewModel,
     nav: INav,
 ): NudgeFace = { size -> UserPicture(key, size, accountViewModel = accountViewModel, nav = nav) }
-
-/** At most one recount of the circle per this many milliseconds: it walks every follow's list. */
-private const val RECOUNT_MS = 2_000L
-
-private class CircleSample(
-    val faces: List<HexKey>,
-    val extended: Int,
-) {
-    companion object {
-        val EMPTY = CircleSample(emptyList(), 0)
-    }
-}
 
 /** The provider's own account picture when it has one, else a plain tile. */
 @Composable
