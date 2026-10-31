@@ -183,6 +183,27 @@ class ChessGameSnapshotTest {
         }
     }
 
+    @Test
+    fun `an event ends its game when it carries a result or mates`() {
+        val mate = line(listOf("f3", "e5", "g4", "Qh4#"))
+        assertNull(mate[2].ending(), "a move that leaves the game going ends nothing")
+
+        // jesterui's mate: no result field, only the # on the move.
+        val jesteruiMate = mate[3].ending()!!
+        assertEquals(Color.BLACK, jesteruiMate.winner)
+        assertEquals(Color.BLACK, jesteruiMate.authorColor)
+        assertEquals(GameTermination.CHECKMATE, jesteruiMate.termination)
+
+        val moves = line(listOf("e4", "e5"))
+        val template = ChessGameSnapshot.build(JesterGameEvents(start(alice, Color.WHITE), moves), alice)!!.resignTemplate()!!
+        val resignation = JesterEvent("resign", alice, 3000, template.tags, template.content, "").ending()!!
+        assertEquals(Color.BLACK, resignation.winner)
+        assertEquals(Color.WHITE, resignation.authorColor, "white resigned, on its own move")
+        assertEquals(GameTermination.RESIGNATION, resignation.termination)
+
+        assertNull(start(alice, Color.WHITE).ending())
+    }
+
     /** [sans] played alternately by alice (white) and bob (black), each move on the one before. */
     private fun line(sans: List<String>): List<JesterEvent> =
         sans.indices.map { i ->

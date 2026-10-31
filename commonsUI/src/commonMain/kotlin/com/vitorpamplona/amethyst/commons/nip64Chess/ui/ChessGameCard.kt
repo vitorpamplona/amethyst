@@ -137,9 +137,9 @@ fun ChessGameCard(
     }
 }
 
-/** One side of the game: its king, the player (or the open seat), then its score once the game is over, or a dot on its turn. */
+/** One side of the game: its score once the game is over, its badge, the player (or the open seat), and a dot on its turn. */
 @Composable
-private fun CardPlayer(
+internal fun CardPlayer(
     color: Color,
     pubkey: String?,
     score: String?,
@@ -181,14 +181,18 @@ private fun CardPlayer(
 private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone>? {
     val outcome = game.outcome
     return when {
-        outcome != null ->
-            outcomeTitle(outcome) to
-                when (outcome.perspective) {
-                    ChessOutcome.Perspective.WON -> KindTone.Positive
-                    ChessOutcome.Perspective.LOST -> KindTone.Negative
-                    else -> KindTone.Neutral
-                }
+        outcome != null -> outcomeChip(outcome)
         game.isMyTurn && !game.isJoinable -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
         else -> null
     }
 }
+
+/** A result as a card's chip: the user's win green, their loss red, anything else neutral. */
+@Composable
+internal fun outcomeChip(outcome: ChessOutcome): Pair<String, KindTone> =
+    outcomeTitle(outcome) to
+        when (outcome.perspective) {
+            ChessOutcome.Perspective.WON -> KindTone.Positive
+            ChessOutcome.Perspective.LOST -> KindTone.Negative
+            else -> KindTone.Neutral
+        }

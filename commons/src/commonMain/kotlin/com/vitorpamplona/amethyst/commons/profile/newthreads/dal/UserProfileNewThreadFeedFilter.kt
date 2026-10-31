@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.nip64Chess.ending
 import com.vitorpamplona.quartz.experimental.agora.FundraiserEvent
 import com.vitorpamplona.quartz.experimental.attestations.attestation.AttestationEvent
 import com.vitorpamplona.quartz.experimental.attestations.proficiency.AttestorProficiencyEvent
@@ -54,6 +55,7 @@ import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip35Torrents.TorrentEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nip99Classifieds.ClassifiedsEvent
@@ -87,43 +89,52 @@ class UserProfileNewThreadFeedFilter(
 
     fun acceptableEvent(it: Note): Boolean =
         it.author == user &&
-            (
-                it.event is TextNoteEvent ||
-                    it.event is CommentEvent ||
-                    it.event is ClassifiedsEvent ||
-                    it.event is FundraiserEvent ||
-                    it.event is EbookEvent ||
-                    it.event is MagazineEvent ||
-                    it.event is MagazineIssueEvent ||
-                    it.event is BirdexEvent ||
-                    it.event is BirdDetectionEvent ||
-                    it.event.isRenderableRepost() ||
-                    it.event is LongFormContentEvent ||
-                    it.event is WikiArticleEvent ||
-                    it.event is NipTextEvent ||
-                    it.event is ZapPollEvent ||
-                    it.event is PollEvent ||
-                    it.event is HighlightEvent ||
-                    it.event is InteractiveStoryPrologueEvent ||
-                    (it.event as? AudioTrackEvent)?.hasPlayableAudio() == true ||
-                    it.event is MusicTrackEvent ||
-                    it.event is MusicPlaylistEvent ||
-                    it.event is PodcastEpisodeEvent ||
-                    it.event is PodcastMetadataEvent ||
-                    it.event is AudioHeaderEvent ||
-                    it.event is VoiceEvent ||
-                    it.event is TorrentEvent ||
-                    it.event is AttestationEvent ||
-                    it.event is AttestationRequestEvent ||
-                    it.event is AttestorRecommendationEvent ||
-                    it.event is AttestorProficiencyEvent ||
-                    it.event is PublicationIndexEvent ||
-                    // Mirrors the Home filter: a rating with nothing to point at cannot be
-                    // rendered, so it would be an empty row on the author's own profile.
-                    (it.event as? EntityRatingEvent)?.hasTarget() == true
-            ) &&
-            it.isNewThread() &&
+            (isNewThreadPost(it) || isGameEnding(it)) &&
             account.isAcceptable(it)
+
+    /**
+     * The move or resignation with which the user ended a chess game. It is a reply in its game's
+     * thread, so it would fail [isNewThreadPost], but on a profile it stands for the whole game.
+     */
+    private fun isGameEnding(it: Note): Boolean = (it.event as? JesterEvent)?.ending() != null
+
+    private fun isNewThreadPost(it: Note): Boolean =
+        (
+            it.event is TextNoteEvent ||
+                it.event is CommentEvent ||
+                it.event is ClassifiedsEvent ||
+                it.event is FundraiserEvent ||
+                it.event is EbookEvent ||
+                it.event is MagazineEvent ||
+                it.event is MagazineIssueEvent ||
+                it.event is BirdexEvent ||
+                it.event is BirdDetectionEvent ||
+                it.event.isRenderableRepost() ||
+                it.event is LongFormContentEvent ||
+                it.event is WikiArticleEvent ||
+                it.event is NipTextEvent ||
+                it.event is ZapPollEvent ||
+                it.event is PollEvent ||
+                it.event is HighlightEvent ||
+                it.event is InteractiveStoryPrologueEvent ||
+                (it.event as? AudioTrackEvent)?.hasPlayableAudio() == true ||
+                it.event is MusicTrackEvent ||
+                it.event is MusicPlaylistEvent ||
+                it.event is PodcastEpisodeEvent ||
+                it.event is PodcastMetadataEvent ||
+                it.event is AudioHeaderEvent ||
+                it.event is VoiceEvent ||
+                it.event is TorrentEvent ||
+                it.event is AttestationEvent ||
+                it.event is AttestationRequestEvent ||
+                it.event is AttestorRecommendationEvent ||
+                it.event is AttestorProficiencyEvent ||
+                it.event is PublicationIndexEvent ||
+                // Mirrors the Home filter: a rating with nothing to point at cannot be
+                // rendered, so it would be an empty row on the author's own profile.
+                (it.event as? EntityRatingEvent)?.hasTarget() == true
+        ) &&
+            it.isNewThread()
 
     override fun sort(items: Set<Note>): List<Note> = items.sortedByDefaultFeedOrder()
 
