@@ -77,7 +77,7 @@ fun ChessPlayerStrip(
     player: @Composable RowScope.() -> Unit,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth().height(44.dp),
+        modifier = modifier.fillMaxWidth().height(36.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {

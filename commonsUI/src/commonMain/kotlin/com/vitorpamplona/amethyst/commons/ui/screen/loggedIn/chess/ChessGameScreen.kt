@@ -178,7 +178,7 @@ private fun ChessPlayer(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.clickable { nav.nav(Route.Profile(pubkey)) },
         ) {
-            ClickableUserPicture(baseUser = user, size = 32.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
+            ClickableUserPicture(baseUser = user, size = 24.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
             UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
         }
     }

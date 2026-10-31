@@ -159,7 +159,7 @@ private fun CardPlayer(
         } else {
             LoadUser(pubkey) { user ->
                 if (user != null) {
-                    ClickableUserPicture(baseUser = user, size = 24.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
+                    ClickableUserPicture(baseUser = user, size = 20.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
                     UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
                 }
             }

@@ -294,7 +294,7 @@ fun LiveChessGameScreen(
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val wide = maxWidth >= 720.dp && maxWidth > maxHeight
         if (wide) {
-            val boardSize = min(maxHeight - 44.dp * 2 - 32.dp, maxWidth - 400.dp).coerceIn(200.dp, 760.dp)
+            val boardSize = min(maxHeight - 36.dp * 2 - 32.dp, maxWidth - 400.dp).coerceIn(200.dp, 760.dp)
             Row(
                 modifier = Modifier.fillMaxSize().padding(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
