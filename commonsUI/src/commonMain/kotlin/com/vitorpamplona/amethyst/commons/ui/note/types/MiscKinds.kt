@@ -20,6 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,24 +36,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessOutcome
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessReplay
+import com.vitorpamplona.amethyst.commons.nip64Chess.ending
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.CardPlayer
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBoard
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessGameCard
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.outcomeChip
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.outcomeTitle
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.scoreOf
+import com.vitorpamplona.amethyst.commons.nip64Chess.ui.terminationText
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_move_by_black
+import com.vitorpamplona.amethyst.commons.resources.chess_move_by_white
 import com.vitorpamplona.amethyst.commons.resources.draft
 import com.vitorpamplona.amethyst.commons.resources.duration_hours
 import com.vitorpamplona.amethyst.commons.resources.duration_minutes
 import com.vitorpamplona.amethyst.commons.resources.duration_seconds
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_accept_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_black
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_color
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_draw_offer_title
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move_numbered
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_move_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_result
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_start_title
-import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_termination
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_chess_white
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_posts
 import com.vitorpamplona.amethyst.commons.resources.kc_misc_deletion_title
@@ -645,7 +656,11 @@ fun RenderLiveChessDrawOffer(
     }
 }
 
-/** A Jester (kind 30) chess event: a game start with the starter's colour, or a move with its board. */
+/**
+ * A Jester (kind 30) chess event: a game start as its game's card, or a move with its board and
+ * the two players. A move that ends the game also says how, the score, and the result from the
+ * user's side; that is what a profile shows for each game its owner ended.
+ */
 @Composable
 fun RenderJesterChess(
     baseNote: Note,
@@ -654,26 +669,92 @@ fun RenderJesterChess(
 ) {
     val event = baseNote.event as? JesterEvent ?: return
     val isStart = remember(event) { event.isStartEvent() }
-    val move = remember(event) { event.move() }
-    val fen = remember(event) { event.fen() }
-    val opponent = remember(event) { event.opponentPubkey() }
+    if (isStart) {
+        ChessGameCard(baseNote, accountViewModel, nav)
+        return
+    }
+    // The board after this move, replayed from its history so the move itself can be highlighted.
+    val history = remember(event) { event.history() }
+    val replay = remember(event) { ChessReplay.of(history) }
+    val replayed = replay.plies.size == history.size + 1
+    val ply = history.size
+    val san = event.move()
+    val ending = remember(event) { event.ending() }
+    val authorColor = ending?.authorColor ?: if (ply % 2 == 1) ChessColor.WHITE else ChessColor.BLACK
+    // Our moves and nostr.blue's tag the opponent; jesterui's do not, so fall back to the challenger.
+    val opponent =
+        remember(event) {
+            event.opponentPubkey()
+                ?: event
+                    .startEventId()
+                    ?.let { LocalCache.getNoteIfExists(it) }
+                    ?.author
+                    ?.pubkeyHex
+                    ?.takeIf { it != event.pubKey }
+        }
+    val viewer = accountViewModel.account.userProfile().pubkeyHex
+    val outcome =
+        ending?.let {
+            val viewerColor =
+                when (viewer) {
+                    event.pubKey -> authorColor
+                    opponent -> authorColor.opposite()
+                    else -> null
+                }
+            ChessOutcome(
+                winner = it.winner,
+                perspective =
+                    when {
+                        it.winner == null -> ChessOutcome.Perspective.DRAW
+                        viewerColor == null -> ChessOutcome.Perspective.SPECTATOR
+                        viewerColor == it.winner -> ChessOutcome.Perspective.WON
+                        else -> ChessOutcome.Perspective.LOST
+                    },
+                termination = it.termination,
+            )
+        }
+    // A player sees their own result; anyone else the score.
+    val chip =
+        outcome?.let {
+            if (it.perspective == ChessOutcome.Perspective.SPECTATOR) {
+                (event.result()?.replace("1/2", "½") ?: if (it.winner == ChessColor.WHITE) "1-0" else "0-1") to KindTone.Neutral
+            } else {
+                outcomeChip(it)
+            }
+        }
 
     KindCard(
         icon = MaterialSymbols.ChessKnight,
         title =
-            when {
-                isStart -> stringRes(Res.string.kc_misc_chess_start_title)
-                move != null -> stringRes(Res.string.kc_misc_chess_move, move)
-                else -> stringRes(Res.string.kc_misc_chess_move_title)
+            if (san != null) {
+                stringRes(if (authorColor == ChessColor.WHITE) Res.string.chess_move_by_white else Res.string.chess_move_by_black, (ply + 1) / 2, san)
+            } else {
+                // An ending without a move, such as a resignation, is named by its result.
+                outcome?.let { outcomeTitle(it.copy(perspective = ChessOutcome.Perspective.SPECTATOR)) } ?: return
             },
+        subtitle = terminationText(outcome?.termination),
+        status = chip?.first,
+        statusTone = chip?.second,
     ) {
-        opponent?.let { KindCardUsers(listOf(it), accountViewModel, nav) }
-        if (isStart) {
-            KindCardField(stringRes(Res.string.kc_misc_chess_color), chessColorLabel(event.playerColor()))
-        } else {
-            KindCardField(stringRes(Res.string.kc_misc_chess_result), event.result())
-            KindCardField(stringRes(Res.string.kc_misc_chess_termination), event.termination()?.replace('_', ' '))
-            FenBoard(fen)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (replayed) {
+                ChessBoard(
+                    position = replay.last.position,
+                    boardSize = 128.dp,
+                    showCoordinates = false,
+                    flipped = authorColor == ChessColor.BLACK,
+                    lastMove = replay.last.lastMove,
+                    checkSquare = replay.last.checkSquare,
+                )
+            } else {
+                FenBoard(event.fen())
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val white = if (authorColor == ChessColor.WHITE) event.pubKey else opponent
+                val black = if (authorColor == ChessColor.BLACK) event.pubKey else opponent
+                CardPlayer(ChessColor.WHITE, white, outcome?.scoreOf(ChessColor.WHITE), false, accountViewModel, nav)
+                CardPlayer(ChessColor.BLACK, black, outcome?.scoreOf(ChessColor.BLACK), false, accountViewModel, nav)
+            }
         }
     }
 }

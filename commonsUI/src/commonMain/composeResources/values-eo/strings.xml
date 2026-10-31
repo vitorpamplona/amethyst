@@ -1451,13 +1451,9 @@
     <string name="poll_submit">Sendi</string>
     <string name="poll_view_results">Vidi rezultojn</string>
     <string name="restart">Rekomenci</string>
-    <string name="chess_accept">Akcepti</string>
-    <string name="chess_decline">Rifuzi</string>
     <string name="new_chess_game">Nova Ŝaka Ludo</string>
     <string name="chess_loading_game">Ŝargante ludon…</string>
     <string name="chess_game_not_found">Ludo Ne Trovita</string>
-    <string name="chess_game_waiting">Ĉi tiu ludo eble finiĝis aŭ atendas kontraŭulon.</string>
-    <string name="chess_game_id">Luda ID: %1$s…</string>
     <string name="badge_and_n_others"> kaj %1$d aliaj</string>
     <string name="remove_language">Forigi %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Komencu per bonega fluo sekvante la samajn homojn kiel iu en kiu vi fidas.</string>

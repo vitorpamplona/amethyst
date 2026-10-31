@@ -1450,13 +1450,9 @@
     <string name="poll_submit">إرسال</string>
     <string name="poll_view_results">عرض النتائج</string>
     <string name="restart">إعادة التشغيل</string>
-    <string name="chess_accept">قبول</string>
-    <string name="chess_decline">رفض</string>
     <string name="new_chess_game">لعبة شطرنج جديدة</string>
     <string name="chess_loading_game">جارٍ تحميل اللعبة…</string>
     <string name="chess_game_not_found">اللعبة غير موجودة</string>
-    <string name="chess_game_waiting">ربما انتهت هذه اللعبة أو تنتظر الخصم.</string>
-    <string name="chess_game_id">معرّف اللعبة: %1$s…</string>
     <string name="badge_and_n_others"> و%1$d آخرين</string>
     <string name="remove_language">إزالة %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">ابدأ بتغذية رائعة بمتابعة نفس الأشخاص الذين يتابعهم شخص تثق به.</string>

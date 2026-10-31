@@ -42,6 +42,7 @@ import com.vitorpamplona.quartz.nip53LiveActivities.meetingSpaces.MeetingSpaceEv
 import com.vitorpamplona.quartz.nip53LiveActivities.streaming.LiveActivitiesEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip65RelayList.AdvertisedRelayListEvent
 import com.vitorpamplona.quartz.nip78AppData.AppSpecificDataEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
@@ -286,6 +287,12 @@ class BroadcastRelayPlanner(
 
         if (event is PollEvent) {
             relayList.addAll(event.relays())
+        }
+
+        // A chess game is played on the relays it was found on: an opponent on jesterui, say,
+        // listens only to its own relay set, so its moves have to reach those relays too.
+        if (event is JesterEvent) {
+            event.startEventId()?.let { gameId -> cache.getNoteIfExists(gameId)?.relays?.let(relayList::addAll) }
         }
 
         if (event is MeetingSpaceEvent) {

@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.public_chats
 import com.vitorpamplona.amethyst.commons.resources.relay_groups_title
 import com.vitorpamplona.amethyst.commons.resources.route_calendar_collections
 import com.vitorpamplona.amethyst.commons.resources.route_calendars
+import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.route_discover
 import com.vitorpamplona.amethyst.commons.resources.route_geocache_hunts
 import com.vitorpamplona.amethyst.commons.resources.route_geocaches
@@ -457,6 +458,13 @@ val NavBarCatalog: Map<NavBarItem, NavBarItemDef> =
                 icon = MaterialSymbols.Hiking,
                 resolveRoute = { Route.Geocaches(GeocacheTab.HUNTS) },
             ),
+        NavBarItem.CHESS to
+            NavBarItemDef(
+                id = NavBarItem.CHESS,
+                labelRes = Res.string.route_chess,
+                icon = MaterialSymbols.ChessKnight,
+                resolveRoute = { Route.Chess },
+            ),
         NavBarItem.BADGES to
             NavBarItemDef(
                 id = NavBarItem.BADGES,
@@ -563,6 +571,7 @@ val BottomBarCategories: List<NavBarCategory> =
                 NavBarItem.MUSIC_TRACKS,
                 NavBarItem.MUSIC_PLAYLISTS,
                 NavBarItem.POLLS,
+                NavBarItem.CHESS,
                 NavBarItem.PRODUCTS,
                 NavBarItem.GEOCACHES,
                 NavBarItem.GEOCACHE_HUNTS,

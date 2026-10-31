@@ -85,9 +85,6 @@ class DesktopNavigator {
     /** The Settings screen's categories, built inside the shell where its links and platform live. */
     var settingsCatalog by mutableStateOf<List<SettingsCategory>>(emptyList())
 
-    /** Debug builds list the chess row under Create, as the drawer does. */
-    var isDebugBuild by mutableStateOf(false)
-
     // The last shortcut run and when it last fired, to tell a held key's auto-repeat from a press.
     internal var lastShortcut: Key? = null
     internal var lastShortcutAtMillis = 0L
@@ -242,15 +239,13 @@ fun FrameWindowScope.DesktopMenuBar(
             val hidden by remember(accountViewModel) { accountViewModel.hiddenDrawerItemsFlow() }.collectAsState()
             val destinations = navigator.destinations
             val settings = navigator.settingsCatalog
-            val isDebug = navigator.isDebugBuild
-            remember(accountViewModel, hidden, destinations, settings, isDebug, navigator) {
+            remember(accountViewModel, hidden, destinations, settings, navigator) {
                 drawerMenus(
                     sections = DrawerSectionsNavigateFirst,
                     hidden = hidden,
                     settings = settings,
                     canOpen = { route -> destinations?.has(route) ?: true },
                     resolveRoute = { def -> def.resolveRoute(accountViewModel) },
-                    showChess = isDebug,
                     actions = navigator.menuActions(onQuit),
                 )
             }

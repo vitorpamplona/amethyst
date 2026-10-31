@@ -527,7 +527,7 @@ fun NavDestinations.sharedDestinations(
     composableFromEndArgs<Route.Geohash> { GeoHashScreen(it, accountViewModel, nav) }
     composableFromEndArgs<Route.Url> { UrlScreen(it, accountViewModel, nav) }
     composableFromEndArgs<Route.RelayFeed> { RelayFeedScreen(it, accountViewModel, nav) }
-    composableFromEndArgs<Route.ChessGame> { ChessGameScreen(it.gameId, accountViewModel, nav) }
+    composableFromEndArgs<Route.ChessGame>(capWidth = false) { ChessGameScreen(it.gameId, accountViewModel, nav) }
     composableFromEndArgs<Route.RelayInfo> { RelayInformationScreen(it.url, accountViewModel, nav) }
     composableFromEndArgs<Route.BackupConflictReview> { BackupConflictReviewScreen(it.slot, accountViewModel, nav) }
     composableFromEndArgs<Route.RelayManagement> { RelayManagementScreen(it.url, accountViewModel, nav) }

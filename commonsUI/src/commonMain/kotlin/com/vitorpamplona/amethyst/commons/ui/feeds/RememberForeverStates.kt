@@ -66,6 +66,7 @@ object ScrollStateKeys {
     const val POLLS_SCREEN = "PollsFeed"
     const val POLLS_OPEN = "PollsOpenFeed"
     const val POLLS_CLOSED = "PollsClosedFeed"
+    const val CHESS_LOBBY = "ChessLobbyFeed"
     const val BADGES_SCREEN = "BadgesFeed"
     const val BROWSE_EMOJI_SETS_SCREEN = "BrowseEmojiSetsFeed"
     const val COMMUNITIES_LIST = "CommunitiesListFeed"

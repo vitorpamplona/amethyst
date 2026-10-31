@@ -1435,13 +1435,9 @@
     <string name="poll_submit">Yuborish</string>
     <string name="poll_view_results">Natijalarni ko'rish</string>
     <string name="restart">Qayta boshlash</string>
-    <string name="chess_accept">Qabul qilish</string>
-    <string name="chess_decline">Rad etish</string>
     <string name="new_chess_game">Yangi shaxmat o'yini</string>
     <string name="chess_loading_game">O'yin yuklanmoqda…</string>
     <string name="chess_game_not_found">O'yin topilmadi</string>
-    <string name="chess_game_waiting">Bu o'yin tugagan bo'lishi mumkin yoki raqibni kutmoqda.</string>
-    <string name="chess_game_id">O'yin ID: %1$s…</string>
     <string name="badge_and_n_others"> va yana %1$d kishi</string>
     <string name="remove_language">%1$s ni olib tashlash</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Ishonchli odamingiz kuzatayotgan kishilarni kuzatib, ajoyib lenta bilan boshlang.</string>

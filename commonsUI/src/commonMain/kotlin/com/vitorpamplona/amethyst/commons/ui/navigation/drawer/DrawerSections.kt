@@ -110,6 +110,7 @@ private val DrawerFeedsItems: List<NavBarItem> =
         NavBarItem.MUSIC_TRACKS,
         NavBarItem.MUSIC_PLAYLISTS,
         NavBarItem.POLLS,
+        NavBarItem.CHESS,
         NavBarItem.PRODUCTS,
         NavBarItem.GEOCACHES,
         NavBarItem.GEOCACHE_HUNTS,

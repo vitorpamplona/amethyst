@@ -134,6 +134,7 @@ internal object PrefKeys {
     const val DEFAULT_COMMUNITIES_FOLLOW_LIST = "defaultCommunitiesFollowList"
     const val DEFAULT_FOLLOW_PACKS_FOLLOW_LIST = "defaultFollowPacksFollowList"
     const val DEFAULT_APP_RECOMMENDATIONS_FOLLOW_LIST = "defaultAppRecommendationsFollowList"
+    const val DEFAULT_CHESS_FOLLOW_LIST = "defaultChessFollowList"
     const val ZAP_PAYMENT_REQUEST_SERVER = "zapPaymentServer" // legacy, kept for migration
     const val NWC_WALLETS = "nwcWallets"
     const val DEFAULT_NWC_WALLET_ID = "defaultNwcWalletId" // legacy, migrated into DEFAULT_PAYMENT_SOURCE_ID

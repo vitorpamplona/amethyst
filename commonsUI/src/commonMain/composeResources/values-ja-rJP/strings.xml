@@ -1438,13 +1438,9 @@
     <string name="poll_submit">送信</string>
     <string name="poll_view_results">結果を表示</string>
     <string name="restart">再起動</string>
-    <string name="chess_accept">承諾</string>
-    <string name="chess_decline">拒否</string>
     <string name="new_chess_game">新しいチェスゲーム</string>
     <string name="chess_loading_game">ゲームを読み込み中…</string>
     <string name="chess_game_not_found">ゲームが見つかりません</string>
-    <string name="chess_game_waiting">このゲームは終了したか、対戦相手を待っている可能性があります。</string>
-    <string name="chess_game_id">ゲーム ID: %1$s…</string>
     <string name="badge_and_n_others"> および他 %1$d 名</string>
     <string name="remove_language">%1$s を削除</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">信頼できる人と同じ人をフォローして、素晴らしいフィードから始めましょう。</string>

@@ -48,6 +48,8 @@ import com.vitorpamplona.amethyst.commons.relayClient.calendars.CalendarsFilterA
 import com.vitorpamplona.amethyst.commons.relayClient.channel.ChannelFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.channel.relayGroup.RelayGroupOpenThreadsFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessGameFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.chess.ChessLobbyGamesFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.CommunityFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.communities.list.CommunitiesListFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.discover.DiscoveryFilterAssembler
@@ -196,6 +198,8 @@ class RelaySubscriptionsCoordinator(
     val followPacks = FollowPackFeedFilterAssembler(client)
     val followPacksList = FollowPacksFilterAssembler(client)
     val chess = ChessFilterAssembler(client)
+    val chessLobbyGames = ChessLobbyGamesFilterAssembler(cache, client)
+    val chessGame = ChessGameFilterAssembler(cache, client)
 
     val polls = PollsFilterAssembler(client)
 
@@ -313,6 +317,8 @@ class RelaySubscriptionsCoordinator(
             relayFeed,
             relayInfoNip66,
             chess,
+            chessLobbyGames,
+            chessGame,
             nwc,
             onchainZaps,
             cashuMintDirectory,

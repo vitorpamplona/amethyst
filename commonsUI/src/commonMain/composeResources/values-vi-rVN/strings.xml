@@ -1426,13 +1426,9 @@
     <string name="poll_submit">Gửi</string>
     <string name="poll_view_results">Xem kết quả</string>
     <string name="restart">Khởi động lại</string>
-    <string name="chess_accept">Chấp nhận</string>
-    <string name="chess_decline">Từ chối</string>
     <string name="new_chess_game">Trò chơi cờ vua mới</string>
     <string name="chess_loading_game">Đang tải trò chơi…</string>
     <string name="chess_game_not_found">Không tìm thấy trò chơi</string>
-    <string name="chess_game_waiting">Trò chơi này có thể đã kết thúc hoặc đang chờ đối thủ.</string>
-    <string name="chess_game_id">ID trò chơi: %1$s…</string>
     <string name="badge_and_n_others"> và %1$d người khác</string>
     <string name="remove_language">Xóa %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Bắt đầu với nguồn tin tuyệt vời bằng cách theo dõi những người giống như người bạn tin tưởng.</string>

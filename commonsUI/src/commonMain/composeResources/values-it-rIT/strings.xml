@@ -1417,13 +1417,9 @@
     <string name="poll_submit">Invia</string>
     <string name="poll_view_results">Visualizza risultati</string>
     <string name="restart">Riavvia</string>
-    <string name="chess_accept">Accetta</string>
-    <string name="chess_decline">Rifiuta</string>
     <string name="new_chess_game">Nuova partita a scacchi</string>
     <string name="chess_loading_game">Caricamento partita…</string>
     <string name="chess_game_not_found">Partita non trovata</string>
-    <string name="chess_game_waiting">Questa partita potrebbe essere terminata o è in attesa dell'avversario.</string>
-    <string name="chess_game_id">ID partita: %1$s…</string>
     <string name="badge_and_n_others"> e altri %1$d</string>
     <string name="remove_language">Rimuovi %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Inizia con un ottimo feed seguendo le stesse persone di qualcuno di cui ti fidi.</string>

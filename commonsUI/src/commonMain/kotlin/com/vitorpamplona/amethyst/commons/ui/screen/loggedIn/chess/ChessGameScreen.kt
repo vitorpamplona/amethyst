@@ -20,83 +20,52 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.LifecycleStartEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessBroadcastStatus
-import com.vitorpamplona.amethyst.commons.nip64Chess.ChessViewModel
-import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessBroadcastBanner
-import com.vitorpamplona.amethyst.commons.nip64Chess.ui.ChessSyncBanner
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
-import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
-import com.vitorpamplona.amethyst.commons.resources.chess_game_id
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
-import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_broadcast
-import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_game_id
-import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_no_write
-import com.vitorpamplona.amethyst.commons.resources.chess_game_relays_title
-import com.vitorpamplona.amethyst.commons.resources.chess_game_waiting
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
-import com.vitorpamplona.amethyst.commons.resources.connected
-import com.vitorpamplona.amethyst.commons.resources.go_back
-import com.vitorpamplona.amethyst.commons.resources.relay_settings
-import com.vitorpamplona.amethyst.commons.resources.relay_status_disconnected
-import com.vitorpamplona.amethyst.commons.ui.components.rememberAccountSharedViewModel
-import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
+import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
+import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessSubscription
+import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessGameFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
-import com.vitorpamplona.amethyst.commons.ui.theme.Height4dpModifier
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
 /**
- * Wrapper screen for live chess game
- *
- * Connects ChessViewModel to LiveChessGameScreen UI component
- *
- * @param gameId Unique game identifier
- * @param accountViewModel Account view model
- * @param nav Navigation interface
+ * The board of one game. The game streams in over its own REQ for as long as the screen is open,
+ * and every move, the user's or the opponent's, redraws it from LocalCache.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,171 +74,56 @@ fun ChessGameScreen(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    // Shared with the lobby through the account's store, cleared on account switch
-    val chessViewModel: ChessViewModel =
-        rememberAccountSharedViewModel(
-            key = "ChessViewModel-${accountViewModel.account.userProfile().pubkeyHex}",
-            factory = ChessViewModelFactory(accountViewModel.account, LocalAppServices.current.appStores),
+    val viewModel: ChessGameViewModel =
+        rememberViewModel(
+            key = gameId + "ChessGameViewModel",
+            factory = ChessGameViewModel.Factory(gameId, accountViewModel.account),
         )
 
-    val activeGames by chessViewModel.activeGames.collectAsState()
-    val spectatingGames by chessViewModel.spectatingGames.collectAsState()
-    val error by chessViewModel.error.collectAsState()
-    val broadcastStatus by chessViewModel.broadcastStatus.collectAsState()
-    val syncStatus by chessViewModel.syncStatus.collectAsState()
-    // Observe state version to force recomposition when game state changes internally
-    val stateVersion by chessViewModel.stateVersion.collectAsState()
-    var isLoading by remember { mutableStateOf(true) }
-    var loadAttempted by remember { mutableStateOf(false) }
-    var showRelaySettings by remember { mutableStateOf(false) }
+    ChessGameFilterAssemblerSubscription(viewModel.startNote, accountViewModel)
 
-    // Always read directly from maps for auto-refresh support
-    // stateVersion changes force recomposition, then we get latest from maps
-    val gameState = activeGames[gameId] ?: spectatingGames[gameId]
-
-    // Get relay information
-    val outboxRelays by accountViewModel.account.outboxRelays.flow
-        .collectAsState()
-    val writeRelays =
-        remember(outboxRelays) {
-            outboxRelays.map { it.toString() }
-        }
-
-    // Subscribe to chess events when game screen is visible
-    // This is critical - without it, no new events will arrive from relays
-    ChessSubscription(chessViewModel, accountViewModel)
-
-    // Handle initial game loading
-    // Once game is in maps, gameState above will always have the latest
-    LaunchedEffect(gameId, gameState) {
-        if (gameState != null) {
-            // Game found in maps - done loading
-            isLoading = false
-            loadAttempted = true
-        } else if (!loadAttempted) {
-            // Check if this game was accepted locally (prevents incorrect spectator detection)
-            val wasAccepted = chessViewModel.wasAccepted(gameId)
-
-            // Brief delay to allow acceptChallenge coroutine to complete
-            // This handles the race condition where navigation happens before
-            // the game state is fully propagated to StateFlow collectors
-            kotlinx.coroutines.delay(150)
-
-            // Check again after delay - game may have been added by acceptChallenge
-            val stateAfterDelay = chessViewModel.getGameState(gameId)
-            if (stateAfterDelay != null) {
-                isLoading = false
-                loadAttempted = true
-            } else if (wasAccepted) {
-                // Game was accepted but not yet in StateFlow - keep waiting, don't fetch from relays
-                // The state will propagate and trigger this LaunchedEffect again
-                isLoading = true
-            } else {
-                // Game not found locally and not accepted, try to load from relays
-                loadAttempted = true
-                chessViewModel.loadGame(gameId)
-                isLoading = false
-            }
-        }
-    }
-
-    // Poll while the board is visible and the app is in the foreground, focused on this game only
-    LifecycleStartEffect(chessViewModel) {
-        chessViewModel.holdPolling()
-        onStopOrDispose {
-            chessViewModel.releasePolling()
-        }
-    }
-
-    DisposableEffect(gameId) {
-        chessViewModel.setFocusedGame(gameId) // Focus on just this game
-        onDispose {
-            // Don't clear focus here - let lobby handle it when we navigate back
-        }
-    }
-
-    // Extract human-readable game name
-    val defaultGameName = stringRes(Res.string.chess_game_default_name)
-    val gameName =
-        remember(gameId) {
-            ChessGameNameGenerator.extractDisplayName(gameId) ?: defaultGameName
-        }
+    val game by viewModel.game.collectAsStateWithLifecycle()
+    val startMetadata by viewModel.startNote
+        .flow()
+        .metadata.stateFlow
+        .collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
-            Column {
-                TopAppBar(
-                    title = { Text(gameName) },
-                    navigationIcon = {
-                        IconButton(onClick = { nav.popBack() }) {
-                            Icon(
-                                symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                                contentDescription = stringRes(Res.string.back),
-                            )
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = { showRelaySettings = true }) {
-                            Icon(
-                                symbol = MaterialSymbols.Settings,
-                                contentDescription = stringRes(Res.string.relay_settings),
-                            )
-                        }
-                    },
-                )
-
-                // Sync status banner
-                ChessSyncBanner(
-                    status = syncStatus,
-                    onRetry = { chessViewModel.forceRefresh() },
-                )
-
-                // Broadcast status banner (shows when publishing moves)
-                ChessBroadcastBanner(
-                    status = broadcastStatus,
-                    onTap = {
-                        when (broadcastStatus) {
-                            is ChessBroadcastStatus.Failed -> {
-                                // Could implement retry logic here
-                            }
-
-                            is ChessBroadcastStatus.Desynced -> {
-                                chessViewModel.forceRefresh()
-                            }
-
-                            else -> { }
-                        }
-                    },
-                )
-            }
+            TopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = { nav.popBack() }) {
+                        Icon(
+                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
+                            contentDescription = stringRes(Res.string.back),
+                        )
+                    }
+                },
+            )
         },
     ) { paddingValues ->
+        val current = game
         when {
-            isLoading -> {
-                // Loading state
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues),
-                    contentAlignment = Alignment.Center,
-                ) {
+            current != null -> {
+                ChessBoardContent(current, viewModel, accountViewModel, nav, Modifier.padding(paddingValues))
+            }
+
+            // The start event is still on its way.
+            startMetadata.note.event == null -> {
+                Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(Modifier.height(16.dp))
                         Text(stringRes(Res.string.chess_loading_game))
                     }
                 }
             }
 
-            gameState == null -> {
-                // Game not found - show error with back button
+            // Loaded, but not a Jester game start.
+            else -> {
                 Column(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(paddingValues)
-                            .padding(16.dp),
+                    modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -278,222 +132,57 @@ fun ChessGameScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Show specific error if available
-                    Text(
-                        text = error ?: stringRes(Res.string.chess_game_waiting),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringRes(Res.string.chess_game_id, gameId.take(16)),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    Button(onClick = {
-                        chessViewModel.removeGame(gameId)
-                        nav.popBack()
-                    }) {
-                        Icon(
-                            symbol = MaterialSymbols.AutoMirrored.ArrowBack,
-                            contentDescription = stringRes(Res.string.back),
-                            modifier = Modifier.padding(end = 8.dp),
-                        )
-                        Text(stringRes(Res.string.go_back))
-                    }
                 }
-            }
-
-            else -> {
-                // Resolve opponent display name and avatar
-                val opponentUser =
-                    remember(gameState.opponentPubkey) {
-                        LocalCache.checkGetOrCreateUser(gameState.opponentPubkey)
-                    }
-                val opponentDisplayName =
-                    remember(gameState.opponentPubkey) {
-                        opponentUser?.toBestDisplayName() ?: gameState.opponentPubkey.take(8)
-                    }
-                val opponentAvatarUrl =
-                    remember(gameState.opponentPubkey) {
-                        opponentUser?.profilePicture()
-                    }
-
-                // Resolve player display name and avatar
-                val playerUser =
-                    remember(gameState.playerPubkey) {
-                        LocalCache.checkGetOrCreateUser(gameState.playerPubkey)
-                    }
-                val playerDisplayName =
-                    remember(gameState.playerPubkey) {
-                        playerUser?.toBestDisplayName() ?: gameState.playerPubkey.take(8)
-                    }
-                val playerAvatarUrl =
-                    remember(gameState.playerPubkey) {
-                        playerUser?.profilePicture()
-                    }
-
-                // Determine white/black pubkeys, names and avatars based on player color
-                val isPlayerWhite = gameState.playerColor == com.vitorpamplona.quartz.nip64Chess.Color.WHITE
-                val whitePubkey = if (isPlayerWhite) gameState.playerPubkey else gameState.opponentPubkey
-                val blackPubkey = if (isPlayerWhite) gameState.opponentPubkey else gameState.playerPubkey
-                val whiteDisplayName = if (isPlayerWhite) playerDisplayName else opponentDisplayName
-                val blackDisplayName = if (isPlayerWhite) opponentDisplayName else playerDisplayName
-                val whiteAvatarUrl = if (isPlayerWhite) playerAvatarUrl else opponentAvatarUrl
-                val blackAvatarUrl = if (isPlayerWhite) opponentAvatarUrl else playerAvatarUrl
-
-                // Determine spectator status:
-                // 1. If game was accepted locally, user is definitely NOT a spectator
-                // 2. Otherwise, check which map the game is in
-                val wasAccepted = chessViewModel.wasAccepted(gameId)
-                val isSpectating = !wasAccepted && spectatingGames.containsKey(gameId)
-
-                // Show game with proper padding for status bar
-                // Use state-observing version for automatic refresh on polling updates
-                LiveChessGameScreen(
-                    modifier = Modifier.padding(paddingValues),
-                    gameState = gameState,
-                    opponentName = opponentDisplayName,
-                    onMoveMade = { from, to, _ ->
-                        chessViewModel.publishMove(gameId, from, to)
-                    },
-                    onResign = { chessViewModel.resign(gameId) },
-                    isSpectatorOverride = isSpectating,
-                    onGameEndDismiss = { chessViewModel.dismissGame(gameId) },
-                    onLeaveSpectating =
-                        if (isSpectating) {
-                            {
-                                chessViewModel.stopSpectating(gameId)
-                                nav.popBack()
-                            }
-                        } else {
-                            null
-                        },
-                    whiteName = whiteDisplayName,
-                    whiteHex = whitePubkey,
-                    whiteAvatarUrl = whiteAvatarUrl,
-                    blackName = blackDisplayName,
-                    blackHex = blackPubkey,
-                    blackAvatarUrl = blackAvatarUrl,
-                    onPlayerClick = { pubkeyHex -> nav.nav(Route.Profile(pubkeyHex)) },
-                )
             }
         }
     }
+}
 
-    // Relay settings bottom sheet
-    if (showRelaySettings) {
-        ModalBottomSheet(
-            onDismissRequest = { showRelaySettings = false },
-            sheetState = rememberModalSheetState(),
+@Composable
+private fun ChessBoardContent(
+    game: ChessGameSnapshot,
+    viewModel: ChessGameViewModel,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+    modifier: Modifier,
+) {
+    LiveChessGameScreen(
+        game = game,
+        onMoveMade = { from, to, offerDraw -> accountViewModel.launchSigner { viewModel.move(from, to, offerDraw) } },
+        onResign = { accountViewModel.launchSigner { viewModel.resign() } },
+        player = { pubkey -> ChessPlayer(pubkey, accountViewModel, nav) },
+        modifier = modifier,
+        canPlay = accountViewModel.account.isWriteable(),
+        onAcceptDraw = { accountViewModel.launchSigner { viewModel.acceptDraw() } },
+        onClaimAbandonment = { accountViewModel.launchSigner { viewModel.claimAbandonment() } },
+        onExit = { nav.popBack() },
+    )
+}
+
+/** A player beside the board: avatar and name, opening their profile; or the seat nobody has taken. */
+@Composable
+private fun ChessPlayer(
+    pubkey: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (pubkey == null) {
+        Text(
+            text = stringRes(Res.string.chess_open_seat),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    LoadUser(pubkey) { user ->
+        if (user == null) return@LoadUser
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.clickable { nav.nav(Route.Profile(pubkey)) },
         ) {
-            RelaySettingsSheet(
-                writeRelays = writeRelays,
-                gameId = gameId,
-            )
+            ClickableUserPicture(baseUser = user, size = 24.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
+            UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
         }
-    }
-}
-
-/**
- * Bottom sheet showing relay settings for the chess game
- */
-@Composable
-private fun RelaySettingsSheet(
-    writeRelays: List<String>,
-    gameId: String,
-) {
-    Column(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-    ) {
-        Text(
-            text = stringRes(Res.string.chess_game_relays_title),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = stringRes(Res.string.chess_game_relays_broadcast),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (writeRelays.isEmpty()) {
-            Text(
-                text = stringRes(Res.string.chess_game_relays_no_write),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.error,
-            )
-        } else {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(writeRelays) { relay ->
-                    RelayItem(relayUrl = relay, isConnected = true)
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        HorizontalDivider()
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = stringRes(Res.string.chess_game_relays_game_id),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-        )
-
-        Spacer(modifier = Height4dpModifier)
-
-        Text(
-            text = gameId,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        Spacer(modifier = Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun RelayItem(
-    relayUrl: String,
-    isConnected: Boolean,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Icon(
-            symbol = if (isConnected) MaterialSymbols.CheckCircle else MaterialSymbols.Circle,
-            contentDescription = if (isConnected) stringRes(Res.string.connected) else stringRes(Res.string.relay_status_disconnected),
-            tint = if (isConnected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(16.dp),
-        )
-
-        Text(
-            text = relayUrl.removePrefix("wss://").removePrefix("ws://"),
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
     }
 }

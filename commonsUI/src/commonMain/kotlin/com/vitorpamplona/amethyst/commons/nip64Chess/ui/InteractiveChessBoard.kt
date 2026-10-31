@@ -24,11 +24,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -40,32 +43,51 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessEngine
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessMoveSquares
 import com.vitorpamplona.quartz.nip64Chess.ChessPiece
+import com.vitorpamplona.quartz.nip64Chess.ChessPosition
 import com.vitorpamplona.quartz.nip64Chess.PieceType
+import kotlin.math.roundToInt
 import com.vitorpamplona.quartz.nip64Chess.Color as ChessColor
 
+/** Lichess's board palette, so the board reads the way most players already know it. */
+internal object BoardColors {
+    val Light = Color(0xFFF0D9B5)
+    val Dark = Color(0xFFB58863)
+    val LastMove = Color(0x699BC700)
+    val Selected = Color(0x8014551E)
+    val Target = Color(0x8014551E)
+    val Check = Color(0xFFFF0000)
+}
+
 /**
- * Interactive chess board that allows piece selection and moves
+ * A chess board the user moves on: tap a piece then its target, or drag it there.
  *
- * @param engine Chess engine for move validation and legal moves
- * @param modifier Modifier for the board
- * @param boardSize Total size of the board in dp
- * @param flipped If true, renders from black's perspective (rank 1 at top)
- * @param playerColor The color the player is playing as (only allows moving these pieces)
- * @param isSpectator If true, disables all interaction (spectator/watch mode)
- * @param onMoveMade Callback when a valid move is made, receives (from, to, san)
- *                   NOTE: This callback should make the actual move - this component only validates
+ * It draws [position] (by default the live one in [engine]), the [lastMove]'s two squares and a
+ * king in check, and asks [engine] for legal moves. It never moves a piece itself: [onMoveMade]
+ * gets `from` and `to` (with a promotion letter, like `e8q`) and must publish the move; the board
+ * redraws when the next position arrives.
+ *
+ * @param flipped Black's view, rank 1 at the top.
+ * @param playerColor The only colour the user may move; null lets either side move.
+ * @param isSpectator No input at all: not the user's turn, a spectator, or a past position.
  */
 @Composable
 fun InteractiveChessBoard(
@@ -73,197 +95,216 @@ fun InteractiveChessBoard(
     modifier: Modifier = Modifier,
     boardSize: Dp = 400.dp,
     flipped: Boolean = false,
-    playerColor: ChessColor? = null, // null = allow both (for local play)
+    playerColor: ChessColor? = null,
     isSpectator: Boolean = false,
-    positionVersion: Int = 0, // External trigger for position refresh (e.g. moveHistory.size)
+    positionVersion: Int = 0,
+    position: ChessPosition? = null,
+    lastMove: ChessMoveSquares? = null,
+    checkSquare: String? = null,
     onMoveMade: (from: String, to: String, san: String) -> Unit = { _, _, _ -> },
 ) {
-    // Track local move count + external version to trigger recomposition when board changes
-    var localMoveCount by remember { mutableStateOf(0) }
-    // Two independent counters are two keys, not a sum: a re-synced history
-    // that resets positionVersion while localMoveCount persists must not land
-    // on the same key and serve a stale position.
-    val position = remember(engine, localMoveCount, positionVersion) { engine.getPosition() }
-    val sideToMove = remember(engine, localMoveCount, positionVersion) { engine.getSideToMove() }
-    var selectedSquare by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var legalMoves by remember { mutableStateOf<List<String>>(emptyList()) }
+    val livePosition = remember(engine, positionVersion) { engine.getPosition() }
+    val shown = position ?: livePosition
+    val sideToMove = livePosition.activeColor
+    val canInteract = position == null && !isSpectator && (playerColor == null || sideToMove == playerColor)
 
-    // Pawn promotion state
+    var selected by remember { mutableStateOf<String?>(null) }
+    var targets by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var dragFrom by remember { mutableStateOf<String?>(null) }
+    var dragAt by remember { mutableStateOf<Offset?>(null) }
     var pendingPromotion by remember { mutableStateOf<PendingPromotion?>(null) }
 
-    // Clear stale selection when position changes externally (e.g. opponent move)
-    LaunchedEffect(positionVersion) {
-        selectedSquare = null
-        legalMoves = emptyList()
+    // A new position (the opponent moved, or the user's move landed) drops whatever was half-done.
+    LaunchedEffect(positionVersion, position, canInteract) {
+        selected = null
+        targets = emptySet()
+        dragFrom = null
+        dragAt = null
         pendingPromotion = null
     }
 
-    // Can only interact if not spectating and it's your turn (or playerColor is null for local play)
-    val canInteract = !isSpectator && (playerColor == null || sideToMove == playerColor)
-
     val squareSize = boardSize / 8
+    val density = LocalDensity.current.density
+    val currentOnMoveMade by rememberUpdatedState(onMoveMade)
 
-    // Rank iteration order based on perspective
-    val rankRange = if (flipped) (0..7) else (7 downTo 0)
-    val fileRange = if (flipped) (7 downTo 0) else (0..7)
+    fun clearSelection() {
+        selected = null
+        targets = emptySet()
+    }
 
-    Box(modifier = modifier.size(boardSize)) {
+    fun select(square: String) {
+        selected = square
+        targets = engine.getLegalMovesFrom(square).toSet()
+    }
+
+    fun ownPieceAt(square: String): Boolean {
+        val piece = livePosition[square] ?: return false
+        return piece.color == (playerColor ?: sideToMove)
+    }
+
+    fun play(
+        from: String,
+        to: String,
+    ) {
+        val piece = livePosition[from]
+        val toRank = to[1] - '1'
+        clearSelection()
+        if (piece?.type == PieceType.PAWN && (toRank == 7 || toRank == 0)) {
+            pendingPromotion = PendingPromotion(from, to, piece.color)
+        } else {
+            currentOnMoveMade(from, to, "")
+        }
+    }
+
+    fun squareAt(offset: Offset): String? {
+        val side = squareSize.value * density
+        val column = (offset.x / side).toInt()
+        val row = (offset.y / side).toInt()
+        if (column !in 0..7 || row !in 0..7) return null
+        val file = if (flipped) 7 - column else column
+        val rank = if (flipped) row else 7 - row
+        return fileRankToSquare(file, rank)
+    }
+
+    Box(
+        modifier =
+            modifier
+                .size(boardSize)
+                .pointerInput(canInteract, flipped, livePosition, boardSize) {
+                    if (!canInteract) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        val pressed = squareAt(down.position) ?: return@awaitEachGesture
+                        if (pendingPromotion != null) return@awaitEachGesture
+
+                        val wasSelected = selected
+                        if (wasSelected != null && pressed in targets) {
+                            play(wasSelected, pressed)
+                            return@awaitEachGesture
+                        }
+                        if (!ownPieceAt(pressed)) {
+                            clearSelection()
+                            return@awaitEachGesture
+                        }
+                        if (wasSelected != pressed) select(pressed)
+
+                        // Follow the finger; it becomes a drag once it leaves the touch slop.
+                        var dragging = false
+                        var last = down.position
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                            last = change.position
+                            if (!dragging && (last - down.position).getDistance() > viewConfiguration.touchSlop) {
+                                dragging = true
+                                dragFrom = pressed
+                            }
+                            if (dragging) {
+                                dragAt = last
+                                change.consume()
+                            }
+                            if (!change.pressed) break
+                        }
+
+                        if (dragging) {
+                            val target = squareAt(last)
+                            dragFrom = null
+                            dragAt = null
+                            if (target != null && target in targets) play(pressed, target)
+                        } else if (wasSelected == pressed) {
+                            // A second tap on the selected piece puts it down.
+                            clearSelection()
+                        }
+                    }
+                },
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            for (rank in rankRange) {
+            for (row in 0..7) {
                 Row {
-                    for (file in fileRange) {
-                        val piece = position.pieceAt(file, rank)
-                        val isLightSquare = (rank + file) % 2 == 0
+                    for (column in 0..7) {
+                        val file = if (flipped) 7 - column else column
+                        val rank = if (flipped) row else 7 - row
                         val square = fileRankToSquare(file, rank)
-                        val isSelected = selectedSquare == (file to rank)
-                        val isLegalMove = legalMoves.contains(square)
-
-                        val showCoord = if (flipped) rank == 7 else rank == 0
-                        val showRankLabel = if (flipped) file == 7 else file == 0
-
-                        InteractiveChessSquare(
-                            piece = piece,
-                            isLight = isLightSquare,
+                        BoardSquare(
+                            piece = shown.pieceAt(file, rank).takeIf { square != dragFrom },
+                            isLight = (rank + file) % 2 != 0,
                             size = squareSize,
-                            isSelected = isSelected,
-                            isLegalMove = isLegalMove,
-                            showCoordinate = showCoord,
-                            showRankLabel = showRankLabel,
-                            file = file,
-                            rank = rank,
-                            onClick = {
-                                if (!canInteract || pendingPromotion != null) return@InteractiveChessSquare
-
-                                if (selectedSquare != null) {
-                                    // Attempt to make move - validate first, don't actually make it
-                                    val from = fileRankToSquare(selectedSquare!!.first, selectedSquare!!.second)
-                                    val to = square
-
-                                    if (legalMoves.contains(to)) {
-                                        // Check if this is a pawn promotion move
-                                        val fromRank = selectedSquare!!.second
-                                        val toRank = rank
-                                        val movingPiece = position.pieceAt(selectedSquare!!.first, fromRank)
-                                        val isPromotion =
-                                            movingPiece?.type == PieceType.PAWN &&
-                                                (toRank == 7 || toRank == 0)
-
-                                        if (isPromotion) {
-                                            // Show promotion dialog
-                                            pendingPromotion =
-                                                PendingPromotion(
-                                                    from = from,
-                                                    to = to,
-                                                    file = file,
-                                                    rank = toRank,
-                                                    color = sideToMove,
-                                                )
-                                        } else {
-                                            // Valid move - callback will make the actual move
-                                            selectedSquare = null
-                                            legalMoves = emptyList()
-                                            // Pass empty san - callback will get it from makeMove result
-                                            onMoveMade(from, to, "")
-                                            localMoveCount++ // Trigger recomposition after move is made
-                                        }
-                                    } else {
-                                        // Not a legal move target - try selecting this square instead
-                                        val validColor = playerColor ?: sideToMove
-                                        if (piece != null && piece.color == validColor) {
-                                            selectedSquare = file to rank
-                                            legalMoves = engine.getLegalMovesFrom(square)
-                                        } else {
-                                            selectedSquare = null
-                                            legalMoves = emptyList()
-                                        }
-                                    }
-                                } else {
-                                    // Select piece - only allow selecting player's pieces
-                                    val validColor = playerColor ?: sideToMove
-                                    if (piece != null && piece.color == validColor) {
-                                        selectedSquare = file to rank
-                                        legalMoves = engine.getLegalMovesFrom(square)
-                                    }
-                                }
-                            },
+                            isLastMove = lastMove != null && (square == lastMove.from || square == lastMove.to),
+                            isSelected = square == selected,
+                            isTarget = square in targets,
+                            isCheck = square == checkSquare,
+                            rankLabel = if (column == 0) (rank + 1).toString() else null,
+                            fileLabel = if (row == 7) ('a' + file).toString() else null,
                         )
                     }
                 }
             }
         }
 
-        // Promotion dialog overlay
+        // The dragged piece rides under the finger, centred on it.
+        val from = dragFrom
+        val at = dragAt
+        if (from != null && at != null) {
+            livePosition[from]?.let { piece ->
+                Image(
+                    imageVector = piece.toImageVector(),
+                    contentDescription = null,
+                    modifier =
+                        Modifier
+                            .size(squareSize)
+                            .offset { IntOffset((at.x - squareSize.toPx() / 2).roundToInt(), (at.y - squareSize.toPx() / 2).roundToInt()) },
+                )
+            }
+        }
+
         pendingPromotion?.let { promo ->
             PromotionPicker(
                 color = promo.color,
                 squareSize = squareSize,
                 onPieceSelected = { pieceType ->
-                    // Make the move with promotion
-                    val promotionSuffix =
+                    val suffix =
                         when (pieceType) {
-                            PieceType.QUEEN -> "q"
                             PieceType.ROOK -> "r"
                             PieceType.BISHOP -> "b"
                             PieceType.KNIGHT -> "n"
                             else -> "q"
                         }
-                    selectedSquare = null
-                    legalMoves = emptyList()
                     pendingPromotion = null
-                    // Include promotion in the 'to' square for the callback
-                    onMoveMade(promo.from, promo.to + promotionSuffix, "")
-                    localMoveCount++
+                    currentOnMoveMade(promo.from, promo.to + suffix, "")
                 },
-                onDismiss = {
-                    pendingPromotion = null
-                    selectedSquare = null
-                    legalMoves = emptyList()
-                },
+                onDismiss = { pendingPromotion = null },
             )
         }
     }
 }
 
-/**
- * Single interactive chess square
- */
+/** One square: its colour, the highlights on it, its piece and, on the edges, its coordinate. */
 @Composable
-private fun InteractiveChessSquare(
-    piece: com.vitorpamplona.quartz.nip64Chess.ChessPiece?,
+private fun BoardSquare(
+    piece: ChessPiece?,
     isLight: Boolean,
     size: Dp,
+    isLastMove: Boolean,
     isSelected: Boolean,
-    isLegalMove: Boolean,
-    showCoordinate: Boolean,
-    showRankLabel: Boolean,
-    file: Int,
-    rank: Int,
-    onClick: () -> Unit,
+    isTarget: Boolean,
+    isCheck: Boolean,
+    rankLabel: String?,
+    fileLabel: String?,
 ) {
-    val backgroundColor =
-        when {
-            isSelected -> Color(0xFF7FA650)
-            isLegalMove -> Color(0xFFAAC75B).copy(alpha = 0.6f)
-            isLight -> Color(0xFFF0D9B5)
-            else -> Color(0xFFB58863)
-        }
-
     Box(
-        modifier =
-            Modifier
-                .size(size)
-                .background(backgroundColor)
-                .clickable { onClick() }
-                .let {
-                    if (isSelected) {
-                        it.border(2.dp, Color(0xFF4A7536))
-                    } else {
-                        it
-                    }
-                },
+        modifier = Modifier.size(size).background(if (isLight) BoardColors.Light else BoardColors.Dark),
         contentAlignment = Alignment.Center,
     ) {
-        // Display piece using CBurnett ImageVector icons
+        if (isLastMove) Box(Modifier.fillMaxSize().background(BoardColors.LastMove))
+        if (isSelected) Box(Modifier.fillMaxSize().background(BoardColors.Selected))
+        if (isCheck) {
+            Box(
+                Modifier.fillMaxSize().background(
+                    Brush.radialGradient(listOf(BoardColors.Check, BoardColors.Check.copy(alpha = 0.6f), Color.Transparent)),
+                ),
+            )
+        }
+
         piece?.let {
             Image(
                 imageVector = it.toImageVector(),
@@ -272,51 +313,20 @@ private fun InteractiveChessSquare(
             )
         }
 
-        // Show legal move indicator
-        if (isLegalMove && piece == null) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(size * 0.25f)
-                        .background(Color(0xFF7FA650), CircleShape)
-                        .alpha(0.5f),
-            )
-        } else if (isLegalMove && piece != null) {
-            // Capture indicator - ring around piece
-            Box(
-                modifier =
-                    Modifier
-                        .size(size * 0.8f)
-                        .border(3.dp, Color(0xFF7FA650).copy(alpha = 0.5f), CircleShape),
-            )
+        if (isTarget) {
+            if (piece == null) {
+                Box(Modifier.size(size * 0.3f).background(BoardColors.Target, CircleShape))
+            } else {
+                Box(Modifier.fillMaxSize().border(size * 0.08f, BoardColors.Target, CircleShape))
+            }
         }
 
-        // Show rank label (1-8) on left file
-        if (showRankLabel) {
-            Text(
-                text = (rank + 1).toString(),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isLight) Color(0xFFB58863) else Color(0xFFF0D9B5),
-                modifier =
-                    Modifier
-                        .align(Alignment.TopStart)
-                        .padding(2.dp),
-            )
+        val labelColor = if (isLight) BoardColors.Dark else BoardColors.Light
+        rankLabel?.let {
+            Text(it, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = labelColor, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
         }
-
-        // Show file coordinate (a-h) on bottom rank
-        if (showCoordinate) {
-            Text(
-                text = ('a' + file).toString(),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isLight) Color(0xFFB58863) else Color(0xFFF0D9B5),
-                modifier =
-                    Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(2.dp),
-            )
+        fileLabel?.let {
+            Text(it, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = labelColor, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
         }
     }
 }
@@ -332,7 +342,7 @@ private fun fileRankToSquare(
 /**
  * Extension function to convert ChessPiece to CBurnett ImageVector
  */
-private fun ChessPiece.toImageVector(): ImageVector {
+internal fun ChessPiece.toImageVector(): ImageVector {
     val white = color == ChessColor.WHITE
     return when (type) {
         PieceType.KING -> if (white) ChessPieceVectors.WhiteKing else ChessPieceVectors.BlackKing
@@ -350,8 +360,6 @@ private fun ChessPiece.toImageVector(): ImageVector {
 private data class PendingPromotion(
     val from: String,
     val to: String,
-    val file: Int,
-    val rank: Int,
     val color: ChessColor,
 )
 

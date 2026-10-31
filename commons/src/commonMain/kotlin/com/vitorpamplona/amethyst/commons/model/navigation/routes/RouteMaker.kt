@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.minichatRouteFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.nip28PublicChats.PublicChatChannel
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupChannel
+import com.vitorpamplona.amethyst.commons.nip64Chess.gameId
 import com.vitorpamplona.amethyst.commons.viewmodels.BaseAccountViewModel
 import com.vitorpamplona.quartz.buzz.notifications.MemberAddedNotificationEvent
 import com.vitorpamplona.quartz.experimental.ephemChat.chat.EphemeralChatEvent
@@ -65,6 +66,7 @@ import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.HasInnerEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.seals.SealEvent
 import com.vitorpamplona.quartz.nip59Giftwrap.wraps.GiftWrapEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip68Picture.PictureEvent
 import com.vitorpamplona.quartz.nip71Video.VideoNormalEvent
 import com.vitorpamplona.quartz.nip71Video.VideoShortEvent
@@ -213,6 +215,10 @@ fun routeForInner(
     loggedIn: Account,
 ): Route? =
     when (noteEvent) {
+        is JesterEvent -> {
+            Route.ChessGame(noteEvent.gameId() ?: noteEvent.id)
+        }
+
         is AppDefinitionEvent -> {
             if (noteEvent.includeKind(5300)) {
                 Route.ContentDiscovery(noteEvent.id)

@@ -1451,13 +1451,9 @@
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
     <string name="restart">Opnieuw starten</string>
-    <string name="chess_accept">Accepteren</string>
-    <string name="chess_decline">Weigeren</string>
     <string name="new_chess_game">Nieuw schaakspel</string>
     <string name="chess_loading_game">Spel laden…</string>
     <string name="chess_game_not_found">Spel niet gevonden</string>
-    <string name="chess_game_waiting">Dit spel is mogelijk beëindigd of wacht op een tegenstander.</string>
-    <string name="chess_game_id">Spel-ID: %1$s…</string>
     <string name="badge_and_n_others"> en %1$d anderen</string>
     <string name="remove_language">%1$s verwijderen</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Begin met een goede feed door dezelfde mensen te volgen als iemand die je vertrouwt.</string>

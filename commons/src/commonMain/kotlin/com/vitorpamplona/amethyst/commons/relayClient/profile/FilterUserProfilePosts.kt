@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
 import com.vitorpamplona.quartz.nip88Polls.poll.PollEvent
 import com.vitorpamplona.quartz.nipA0VoiceMessages.VoiceEvent
@@ -104,6 +105,11 @@ val UserProfileAppKinds =
         GitRepositoryEvent.KIND,
     )
 
+// The user's Jester chess events (kind 30), for the games they ended. Relays cannot filter on
+// the content, so this takes their latest moves and the profile keeps only the endings. Never
+// bare kind 30 without an author: NKBIP-03 shares the kind.
+val UserProfileChessKinds = listOf(JesterProtocol.KIND)
+
 fun filterUserProfilePosts(
     cache: ICacheProvider,
     user: User,
@@ -145,6 +151,17 @@ fun filterUserProfilePosts(
                         kinds = UserProfileAppKinds,
                         authors = listOf(user.pubkeyHex),
                         limit = 50,
+                        since = since?.get(relay)?.time,
+                    ),
+            ),
+            RelayBasedFilter(
+                relay = relay,
+                filter =
+                    ExplainedFilter(
+                        purpose = SubPurpose.USER_PROFILE,
+                        kinds = UserProfileChessKinds,
+                        authors = listOf(user.pubkeyHex),
+                        limit = 100,
                         since = since?.get(relay)?.time,
                     ),
             ),

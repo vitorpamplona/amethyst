@@ -92,6 +92,16 @@ public class Drive {
             case "click" -> click(i(s, 1), i(s, 2), InputEvent.BUTTON1_DOWN_MASK, 1);
             case "dclick" -> click(i(s, 1), i(s, 2), InputEvent.BUTTON1_DOWN_MASK, 2);
             case "rclick" -> click(i(s, 1), i(s, 2), InputEvent.BUTTON3_DOWN_MASK, 1);
+            case "down" -> {
+                // down <x> <y>: press the left button there and hold it, to drag with move + up
+                robot.mouseMove(i(s, 1), i(s, 2));
+                robot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+            }
+            case "up" -> {
+                // up <x> <y>: release the held left button there
+                robot.mouseMove(i(s, 1), i(s, 2));
+                robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+            }
             case "scroll" -> {
                 // scroll <x> <y> <notches>: positive scrolls down
                 robot.mouseMove(i(s, 1), i(s, 2));

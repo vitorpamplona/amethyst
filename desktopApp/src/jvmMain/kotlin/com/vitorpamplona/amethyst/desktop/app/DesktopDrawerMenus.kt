@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.new_post
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
-import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.screen_search_title
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.NavBarCatalog
@@ -91,7 +90,6 @@ internal fun drawerMenus(
     settings: List<SettingsCategory>,
     canOpen: (Route) -> Boolean,
     resolveRoute: (NavBarItemDef) -> Route,
-    showChess: Boolean,
     actions: DrawerMenuActions,
 ): List<MenuEntry.Submenu> =
     sections.mapNotNull { section ->
@@ -111,7 +109,7 @@ internal fun drawerMenus(
         val entries =
             when (section.id) {
                 DrawerSectionId.NAVIGATE -> items + MenuEntry.Separator + MenuEntry.Action(Res.string.screen_search_title, Command.SEARCH) { actions.run(Command.SEARCH) }
-                DrawerSectionId.CREATE -> createEntries(canOpen, showChess, actions) + items
+                DrawerSectionId.CREATE -> createEntries(canOpen, actions) + items
                 DrawerSectionId.SYSTEM -> systemEntries(settings, actions) + MenuEntry.Separator + items
                 else -> items
             }.trimSeparators()
@@ -119,16 +117,14 @@ internal fun drawerMenus(
         if (entries.none { it !is MenuEntry.Separator }) null else MenuEntry.Submenu(section.titleRes, entries)
     }
 
-/** New Post, then the drawer's Create rows: HLS upload where this front end has it, chess on debug builds. */
+/** New Post, then the drawer's Create rows: HLS upload where this front end has it. */
 private fun createEntries(
     canOpen: (Route) -> Boolean,
-    showChess: Boolean,
     actions: DrawerMenuActions,
 ): List<MenuEntry> =
     buildList {
         add(MenuEntry.Action(Res.string.new_post, Command.NEW_POST) { actions.run(Command.NEW_POST) })
         if (canOpen(Route.NewHlsVideo)) add(MenuEntry.Action(Res.string.share_hls_video) { actions.open(Route.NewHlsVideo) })
-        if (showChess) add(MenuEntry.Action(Res.string.route_chess) { actions.open(Route.Chess) })
     }
 
 /** The drawer's Relays row, then each settings category as a submenu of its screens. */

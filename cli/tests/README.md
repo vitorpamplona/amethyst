@@ -5,7 +5,7 @@ embedded relay (`amy serve`, i.e. **geode**, the relay this repo ships), live
 public servers, or no relay at all, depending on the suite. No suite depends on
 an external relay binary or a Rust toolchain for its relay: every relay-backed
 harness boots geode from the `amy` binary it already built, so the relay under
-test is the same server code that runs in production. Eleven directories:
+test is the same server code that runs in production. Twelve directories:
 
 ```
 cli/tests/
@@ -16,6 +16,9 @@ cli/tests/
 │   └── blossom-live.sh
 ├── cache/                 # local-store-as-cache semantics (profile show
 │   └── cache-headless.sh  #   cache/refresh, store stat) vs embedded `amy serve`
+├── chess/                 # Jester chess: scripted mate, refused moves, bot vs
+│   ├── chess-headless.sh  #   bot, direct challenge vs embedded `amy serve`
+│   └── chess-ui.sh        # bots vs the desktop app on a local relay (watch/play)
 ├── clink/                 # CLINK pointer decode — local-only, no relay
 │   └── clink-headless.sh
 ├── dm/                    # NIP-17 DM interop (amy ↔ amy) vs embedded `amy serve`

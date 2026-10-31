@@ -21,10 +21,13 @@
 package com.vitorpamplona.amethyst.commons.nip64Chess.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -37,12 +40,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.nip64Chess.ChessReplay
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_game_invalid
 import com.vitorpamplona.amethyst.commons.resources.chess_game_parse_failed
 import com.vitorpamplona.amethyst.commons.resources.chess_game_pgn_content
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
+import com.vitorpamplona.quartz.nip64Chess.ChessGame
+import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.GameResult
 import com.vitorpamplona.quartz.nip64Chess.PGNParser
 
 /**
@@ -85,43 +97,87 @@ fun ChessGameViewer(
 }
 
 /**
- * Displays a successfully parsed chess game
+ * A NIP-64 game record: the players beside the board with their scores, the board (on the final
+ * position, the move that led to it highlighted), the moves, and the same controls as the live
+ * board to step through them or turn it around.
  */
 @Composable
 private fun ChessGameDisplay(
-    game: com.vitorpamplona.quartz.nip64Chess.ChessGame,
+    game: ChessGame,
     modifier: Modifier = Modifier,
     playerContent: (@Composable (String) -> Unit)? = null,
 ) {
-    var currentMoveIndex by remember { mutableStateOf(0) }
+    // Replayed by the engine rather than taken from the parser's positions, which lose castling;
+    // the replay also knows each move's squares and the king in check. It stops at a move that
+    // does not replay, and so does the list.
+    val replay = remember(game) { ChessReplay.of(game.moves.map { it.san }) }
+    val sans = remember(replay) { game.moves.take(replay.last.ply).map { it.san } }
+    var ply by remember(game) { mutableStateOf(sans.size) }
+    var flipped by remember(game) { mutableStateOf(false) }
+    val shown = replay.at(ply)
+    val bottom = if (flipped) Color.BLACK else Color.WHITE
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Game metadata header
-            PGNMetadata(game = game, playerContent = playerContent)
-
-            // Chess board
-            ChessBoard(
-                position = game.positionAt(currentMoveIndex),
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f),
-                boardSize = 320.dp,
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val heading = listOfNotNull(game.event, game.site, game.date).filter { it.isNotBlank() && '?' !in it }
+        if (heading.isNotEmpty()) {
+            Text(
+                text = heading.joinToString("  ·  "),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
+        RecordPlayer(game, bottom.opposite(), playerContent)
+        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            ChessBoard(position = shown.position, boardSize = minOf(maxWidth, 480.dp), flipped = flipped, lastMove = shown.lastMove, checkSquare = shown.checkSquare)
+        }
+        RecordPlayer(game, bottom, playerContent)
+        ChessMoveStrip(sans, ply, { ply = it.coerceIn(0, sans.size) })
+        ChessGameToolbar(
+            shownPly = ply,
+            lastPly = sans.size,
+            onSelectPly = { ply = it.coerceIn(0, sans.size) },
+            onFlip = { flipped = !flipped },
+            onResign = null,
+        )
+    }
+}
 
-            // Move navigation
-            MoveNavigator(
-                currentMove = currentMoveIndex,
-                totalMoves = game.moves.size,
-                onMoveChange = { currentMoveIndex = it },
+/** One side of a record: its king, the player, and its score once the record has a result. */
+@Composable
+private fun RecordPlayer(
+    game: ChessGame,
+    color: Color,
+    playerContent: (@Composable (String) -> Unit)?,
+) {
+    val name = if (color == Color.WHITE) game.white else game.black
+    // A Nostr record names players by key; a classic PGN by name.
+    val pubkey = remember(name) { name?.let { decodePublicKeyAsHexOrNull(it) } }
+    val score =
+        when (game.result) {
+            GameResult.WHITE_WINS -> if (color == Color.WHITE) "1" else "0"
+            GameResult.BLACK_WINS -> if (color == Color.BLACK) "1" else "0"
+            GameResult.DRAW -> "½"
+            GameResult.IN_PROGRESS -> null
+        }
+    Row(
+        modifier = Modifier.fillMaxWidth().height(36.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        ChessSideBadge(color, 20.dp)
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            when {
+                name == null || name == "?" -> Text(stringRes(if (color == Color.WHITE) Res.string.chess_color_white else Res.string.chess_color_black), style = MaterialTheme.typography.bodyMedium)
+                pubkey != null && playerContent != null -> playerContent(pubkey)
+                else -> Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        score?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = if (it == "1") FontWeight.Bold else FontWeight.Normal,
+                color = if (it == "1") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

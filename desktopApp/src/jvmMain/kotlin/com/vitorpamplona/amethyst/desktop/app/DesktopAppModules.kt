@@ -120,6 +120,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
@@ -148,8 +149,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -182,6 +185,11 @@ class DesktopAppModules(
     private val startupKey: String? = null,
     /** A display name to sign up a new account with at start (`AMETHYST_SIGNUP`). See [startupSignUp]. */
     private val startupSignUpName: String? = null,
+    /**
+     * Relays to add as the startup account's local relays (`AMETHYST_LOCAL_RELAYS`, comma-separated),
+     * so a test run reads and writes on a relay it started itself, like `amy serve`. See [addStartupLocalRelays].
+     */
+    private val startupLocalRelays: List<String> = emptyList(),
 ) {
     val appAgent = "Amethyst-Desktop/$appVersion"
 
@@ -678,6 +686,24 @@ class DesktopAppModules(
     }
 
     /**
+     * Adds [startupLocalRelays] to the local relays of the first account that logs in. Local relays
+     * are part of the account's outbox, inbox and Global, so the app then sees and reaches whatever
+     * lives on them without anything published to public relays.
+     */
+    private fun addStartupLocalRelays() {
+        val relays = startupLocalRelays.mapNotNull { it.normalizeRelayUrlOrNull() }
+        if (relays.size != startupLocalRelays.size) {
+            Log.w("DesktopAppModules") { "Ignoring unparsable local relays in ${startupLocalRelays.joinToString()}" }
+        }
+        if (relays.isEmpty()) return
+        applicationIOScope.launch {
+            val account = sessionManager.accountContent.mapNotNull { (it as? AccountState.LoggedIn)?.account }.first()
+            account.saveLocalRelayList((account.localRelayList.flow.value + relays).toList())
+            Log.i("DesktopAppModules") { "Local relays of ${account.pubKey.take(8)}: ${account.localRelayList.flow.value.joinToString { it.url }}" }
+        }
+    }
+
+    /**
      * Saves every loaded account's settings now, as [flushUiPrefs] does the UI's: a last-read marker
      * or a setting changed in the last second before quitting is still in the account's debounce.
      * Bounded, so a stuck keychain cannot hold up the exit.
@@ -785,6 +811,8 @@ class DesktopAppModules(
                 else -> openKeysAndLogIn()
             }
         }
+
+        if (startupLocalRelays.isNotEmpty()) addStartupLocalRelays()
 
         calendarReminders.start()
 

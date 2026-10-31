@@ -314,6 +314,10 @@ contract.
   `relay_errors`).
 - **Groups:** `not_member` (you aren't in the group / group unknown),
   `target_not_member` (the *other* user isn't).
+- **Chess:** `not_your_turn` (a move by a player out of turn, by a
+  spectator, or after the game ended), `illegal_move`, `not_a_player` (you
+  hold no seat, and cannot take one, in that game), `no_draw_offer` (nothing
+  to accept), `not_waiting` / `too_early` (no game to claim, or not yet).
 - **Cashu:** `no_wallet`, `no_mint`, `insufficient_funds`,
   `mint_unreachable`, `mint_http_<status>`, `mint_proofs_spent`,
   `mint_quote_gone`, `nutzap_locked_to_wrong_key`, `invoice_failed`.

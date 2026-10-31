@@ -1434,13 +1434,9 @@
     <string name="poll_submit">Pošalji</string>
     <string name="poll_view_results">Pogledaj rezultate</string>
     <string name="restart">Ponovo pokreni</string>
-    <string name="chess_accept">Prihvati</string>
-    <string name="chess_decline">Odbij</string>
     <string name="new_chess_game">Nova partija šaha</string>
     <string name="chess_loading_game">Učitavanje partije…</string>
     <string name="chess_game_not_found">Partija nije pronađena</string>
-    <string name="chess_game_waiting">Ova partija je možda završena ili čeka protivnika.</string>
-    <string name="chess_game_id">ID partije: %1$s…</string>
     <string name="badge_and_n_others"> i još %1$d</string>
     <string name="remove_language">Ukloni %1$s</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">Počnite sa odličnim feedom prateći iste ljude kao neko kome verujete.</string>

@@ -20,41 +20,17 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess
 
-import com.vitorpamplona.amethyst.commons.util.KmpLock
-import com.vitorpamplona.amethyst.commons.util.withLock
+import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip64Chess.Color
+import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 
 /**
- * Global registry of accepted game IDs.
- *
- * This singleton ensures that accepted game state is shared across all ViewModel instances.
- * Without this, different ViewModels (e.g., lobby vs game screen) would have separate
- * acceptedGameIds sets, causing the game screen to incorrectly load as spectator.
+ * Signs and broadcasts a new challenge (quartz's [JesterEvent.buildChallenge]: an open seat when
+ * [opponentPubkey] is null, else a direct challenge only they can find). The game's id is the
+ * returned event's.
  */
-object AcceptedGamesRegistry {
-    private val acceptedGameIds = mutableSetOf<String>()
-    private val lock = KmpLock()
-
-    fun markAsAccepted(gameId: String) {
-        lock.withLock {
-            acceptedGameIds.add(gameId)
-        }
-    }
-
-    fun wasAccepted(gameId: String): Boolean =
-        lock.withLock {
-            acceptedGameIds.contains(gameId)
-        }
-
-    fun clear() {
-        lock.withLock {
-            acceptedGameIds.clear()
-        }
-    }
-
-    /** Remove old entries - call periodically to prevent memory leak */
-    fun clearOldEntries(keepGameIds: Set<String>) {
-        lock.withLock {
-            acceptedGameIds.retainAll(keepGameIds)
-        }
-    }
-}
+suspend fun Account.publishChessChallenge(
+    playerColor: Color,
+    opponentPubkey: HexKey?,
+): JesterEvent = signAndComputeBroadcast(JesterEvent.buildChallenge(playerColor, opponentPubkey))

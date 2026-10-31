@@ -121,7 +121,6 @@ import com.vitorpamplona.amethyst.commons.resources.profile_banner
 import com.vitorpamplona.amethyst.commons.resources.profile_image
 import com.vitorpamplona.amethyst.commons.resources.relay_setup
 import com.vitorpamplona.amethyst.commons.resources.relays
-import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.resources.share_hls_video
 import com.vitorpamplona.amethyst.commons.resources.show_npub_as_a_qr_code
 import com.vitorpamplona.amethyst.commons.resources.status_update
@@ -743,10 +742,6 @@ fun ListContent(
 @Composable
 private fun canShowHlsUploadRow(): Boolean = canOpen(Route.NewHlsVideo)
 
-/** The chess row is a debug-build extra. */
-@Composable
-private fun canShowChessRow(): Boolean = LocalAppPlatform.current.isDebugBuild
-
 /**
  * The Create section's rows — composer entry points, none of which is a catalog destination. They
  * open as plain pushes rather than through [INav.navDrawer]: those screens host no bottom bar, and
@@ -765,31 +760,19 @@ private fun CreateRows(nav: INav) {
             },
         )
     }
-
-    if (canShowChessRow()) {
-        IconRow(
-            title = Res.string.route_chess,
-            icon = MaterialSymbols.ChessKnight,
-            tint = MaterialTheme.colorScheme.onBackground,
-            onClick = {
-                nav.closeDrawer()
-                nav.nav(Route.Chess)
-            },
-        )
-    }
 }
 
 /**
  * Whether the section's fixed rows — the ones [CatalogSection]'s `when (section.id)` branch draws on
  * top of the catalog — actually show in this build. Each is gated (HLS upload on the front end
- * having the screen, chess on a debug build), and a heading over zero rows is noise: an
+ * having the screen), and a heading over zero rows is noise: an
  * all-gated-off section renders nothing, the same rule as one with no visible catalog rows. Gates
  * are read from the same predicates [CreateRows] uses, so the heading and its rows can't drift.
  */
 @Composable
 private fun DrawerSection.hasVisibleFixedRows(): Boolean =
     when (id) {
-        DrawerSectionId.CREATE -> canShowHlsUploadRow() || canShowChessRow()
+        DrawerSectionId.CREATE -> canShowHlsUploadRow()
         else -> hasFixedRows
     }
 

@@ -69,12 +69,11 @@ that change over time (it collects their flow).
 A **filter assembler** is a `ComposeSubscriptionManager` that groups **sub-assemblers**; each
 sub-assembler is an EOSE manager that turns the current keys into relay filters. They are
 not pure: they own subscriptions on the `INostrClient` and per-relay EOSE cursors. Real shape
-(`chess/ChessFilterAssembler.kt`):
+(`chess/ChessGameFilterAssembler.kt`):
 
 ```kotlin
-class ChessFilterAssembler(client: INostrClient) : ComposeSubscriptionManager<ChessQueryState>() {
-    private val subAssembler = ChessFeedFilterSubAssembler(client, ::allKeys)
-    val group = listOf(subAssembler)
+class ChessGameFilterAssembler(cache: ICacheProvider, client: INostrClient) : ComposeSubscriptionManager<ChessGameQueryState>() {
+    val group = listOf(ChessGameSubAssembler(cache, client, ::allKeys))
     override fun invalidateKeys() = invalidateFilters()
     override fun invalidateFilters() = group.forEach { it.invalidateFilters() }
     override fun destroy() = group.forEach { it.destroy() }

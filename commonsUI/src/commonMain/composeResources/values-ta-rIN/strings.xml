@@ -1437,13 +1437,9 @@
     <string name="poll_submit">சமர்ப்பி</string>
     <string name="poll_view_results">முடிவுகளைக் காண்</string>
     <string name="restart">மறுதொடக்கம்</string>
-    <string name="chess_accept">ஏற்கவும்</string>
-    <string name="chess_decline">மறுக்கவும்</string>
     <string name="new_chess_game">புதிய சதுரங்க விளையாட்டு</string>
     <string name="chess_loading_game">விளையாட்டை ஏற்றுகிறது…</string>
     <string name="chess_game_not_found">விளையாட்டு கண்டுபிடிக்கப்படவில்லை</string>
-    <string name="chess_game_waiting">இந்த விளையாட்டு முடிந்திருக்கலாம் அல்லது எதிரியுக்காக காத்திருக்கிறது.</string>
-    <string name="chess_game_id">விளையாட்டு ID: %1$s…</string>
     <string name="badge_and_n_others"> மற்றும் %1$d பேர்</string>
     <string name="remove_language">%1$s-ஐ அகற்று</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">நீங்கள் நம்பும் ஒருவரைப் போலவே அதே நபர்களை follow செய்வதன் மூலம் சிறந்த ஊட்டத்தைத் தொடங்குங்கள்.</string>

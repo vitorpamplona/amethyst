@@ -313,21 +313,27 @@ object ChessPieceVectors {
                     fill = SolidColor(Color.Black),
                     stroke = null,
                 ) {
-                    // Circles at the top
-                    moveTo(6f, 12f)
-                    arcTo(2.75f, 2.75f, 0f, true, true, 6f, 12.01f)
+                    // Circles at the top, r = 2.75 around (6,12) (14,9) (22.5,8) (31,9) (39,12):
+                    // each drawn as two half arcs from its left edge, so the centre is where it says.
+                    moveTo(3.25f, 12f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 8.75f, 12f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 3.25f, 12f)
                     close()
-                    moveTo(14f, 9f)
-                    arcTo(2.75f, 2.75f, 0f, true, true, 14f, 9.01f)
+                    moveTo(11.25f, 9f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 16.75f, 9f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 11.25f, 9f)
                     close()
-                    moveTo(22.5f, 8f)
-                    arcTo(2.75f, 2.75f, 0f, true, true, 22.5f, 8.01f)
+                    moveTo(19.75f, 8f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 25.25f, 8f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 19.75f, 8f)
                     close()
-                    moveTo(31f, 9f)
-                    arcTo(2.75f, 2.75f, 0f, true, true, 31f, 9.01f)
+                    moveTo(28.25f, 9f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 33.75f, 9f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 28.25f, 9f)
                     close()
-                    moveTo(39f, 12f)
-                    arcTo(2.75f, 2.75f, 0f, true, true, 39f, 12.01f)
+                    moveTo(36.25f, 12f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 41.75f, 12f)
+                    arcTo(2.75f, 2.75f, 0f, false, true, 36.25f, 12f)
                     close()
                 }
                 // Crown body

@@ -44,6 +44,7 @@ Join steps with a quoted `";"` to run them in one JVM (each JVM start costs abou
 |---|---|
 | `shot <file.png> [x y w h]` | Screenshot of the whole screen, or a region (zoom in on a detail) |
 | `click x y`, `dclick x y`, `rclick x y`, `move x y` | Mouse, in screen pixels (= window pixels: no WM, so the window is undecorated) |
+| `down x y`, `up x y` | Press and hold the left button, release it: a drag is `down`, a few `move`s, `up` |
 | `type <text...>` | Pastes the text through the clipboard + Ctrl+V. Works for any character and layout |
 | `key <chord...>` | `enter`, `tab`, `escape`, `ctrl+k`, `ctrl+shift+n`, `f5`, `down`, `pagedown`, ... |
 | `scroll x y n` | Mouse wheel at (x, y); positive `n` scrolls down |
@@ -85,6 +86,11 @@ opens the saved account, or the login screen. A key that does not parse logs
 The options only set `AMETHYST_LOGIN` / `AMETHYST_SIGNUP`, which the app reads itself, so the same
 variables work on a plain `./gradlew :desktopApp:run` (from the environment: `-Damethyst.login=`
 also works there, but shows in `ps`, so keep it to public keys).
+
+`AMETHYST_LOCAL_RELAYS=ws://127.0.0.1:7798[,…]` adds relays to the startup account's local relays,
+which count as its outbox, inbox and Global. With an account whose relay list names only that relay
+(set up with `amy`), a run reads and writes on a relay you started (`amy serve`) and nothing reaches
+public relays. `cli/tests/chess/chess-ui.sh` sets this up for chess: bots playing each other or you.
 
 - **Read-only, preferred:** log in with any public `npub` (the one above is jack's). That loads real
   feeds, profiles and notifications and cannot sign or publish anything.

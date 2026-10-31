@@ -1428,13 +1428,9 @@
     <string name="poll_submit">제출</string>
     <string name="poll_view_results">결과 보기</string>
     <string name="restart">재시작</string>
-    <string name="chess_accept">수락</string>
-    <string name="chess_decline">거절</string>
     <string name="new_chess_game">새 체스 게임</string>
     <string name="chess_loading_game">게임 로딩 중…</string>
     <string name="chess_game_not_found">게임을 찾을 수 없습니다</string>
-    <string name="chess_game_waiting">이 게임은 종료되었거나 상대방을 기다리고 있습니다.</string>
-    <string name="chess_game_id">게임 ID: %1$s…</string>
     <string name="badge_and_n_others"> 외 %1$d명</string>
     <string name="remove_language">%1$s 제거</string>
     <string name="start_with_a_great_feed_by_following_the_same_people_as_someone_you_trust">신뢰하는 사람과 같은 사람들을 팔로우하여 훌륭한 피드로 시작하세요.</string>

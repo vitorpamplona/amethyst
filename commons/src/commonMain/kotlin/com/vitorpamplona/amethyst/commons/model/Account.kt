@@ -1414,6 +1414,9 @@ class Account(
     // per-relay outbox loader.
     val liveAppRecommendationsFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultAppRecommendationsFollowList)
 
+    val liveChessFollowLists: StateFlow<IFeedTopNavFilter> = selectedTopNavFilterFlow(settings.defaultChessFollowList)
+    val liveChessFollowListsPerRelay = OutboxLoaderState(liveChessFollowLists, cache, scope).flow
+
     override fun isWriteable(): Boolean = settings.isWriteable()
 
     suspend fun updateWarnReports(warnReports: Boolean): Boolean {
