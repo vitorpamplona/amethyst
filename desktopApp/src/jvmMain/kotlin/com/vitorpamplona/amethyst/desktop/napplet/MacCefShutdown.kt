@@ -20,11 +20,6 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
-import com.sun.jna.Callback
-import com.sun.jna.Library
-import com.sun.jna.Native
-import com.sun.jna.NativeLibrary
-import com.sun.jna.Pointer
 import org.cef.CefApp
 import org.cef.CefApp.CefAppState
 
@@ -50,40 +45,12 @@ internal object MacCefShutdown {
         if (CefApp.getState() >= CefAppState.SHUTTING_DOWN) return
         val nativeShutdown = CefApp::class.java.getDeclaredMethod("N_Shutdown").apply { isAccessible = true }
         val setState = CefApp::class.java.getDeclaredMethod("setState", CefAppState::class.java).apply { isAccessible = true }
-        onMainThread { nativeShutdown.invoke(app) }
+        MacMainThread.run { nativeShutdown.invoke(app) }
         setState.invoke(null, CefAppState.TERMINATED)
     }
 
     private fun openClients(app: CefApp): Int {
         val clients = CefApp::class.java.getDeclaredField("clients_").apply { isAccessible = true }
         return synchronized(app) { (clients.get(app) as Collection<*>).size }
-    }
-
-    @Suppress("FunctionName")
-    private interface LibSystem : Library {
-        fun dispatch_sync_f(
-            queue: Pointer,
-            context: Pointer?,
-            work: DispatchFunction,
-        )
-    }
-
-    private interface DispatchFunction : Callback {
-        fun invoke(context: Pointer?)
-    }
-
-    /** Runs [block] on the AppKit main thread and waits for it. Never call it from the AWT thread. */
-    private fun onMainThread(block: () -> Unit) {
-        val system = Native.load("System", LibSystem::class.java)
-        val mainQueue = NativeLibrary.getInstance("System").getGlobalVariableAddress("_dispatch_main_q")
-        var result: Result<Unit>? = null
-        val work =
-            object : DispatchFunction {
-                override fun invoke(context: Pointer?) {
-                    result = runCatching(block)
-                }
-            }
-        system.dispatch_sync_f(mainQueue, null, work)
-        (result ?: error("The main thread did not run Chromium's shutdown")).getOrThrow()
     }
 }

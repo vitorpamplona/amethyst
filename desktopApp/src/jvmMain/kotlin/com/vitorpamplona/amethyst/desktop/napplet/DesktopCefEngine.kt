@@ -142,6 +142,8 @@ class DesktopCefEngine(
             )
             builder.install()
             removeNotificationHelper()
+            // Before build(), which loads it from this thread while the user may be clicking.
+            if (OS.isMacintosh()) MacMainThread.loadJcef(installDir)
             val app = builder.build()
             // JCEF initializes Chromium with the first client, and the context comes up after that. No
             // window may load before the policies are in, so a throwaway client starts it and the
