@@ -27,7 +27,7 @@ NOSTR_REMOTE=$(git remote -v | awk '/nostr:\/\//     {print $1; exit}')  # may b
 
 | | **GitHub path** (`gh`) | **nostr path** (`ngit`) |
 |--|--|--|
-| Needs | a GitHub remote + `gh auth status` | a `nostr://` remote + `ngit` ≥ 2.5.0 |
+| Needs | a GitHub remote + `gh auth status` | a `nostr://` remote + `ngit` ≥ 3.0 (`ngit --version`; `ngit update --check`) |
 | PR lives on | GitHub only | nostr + GitHub + GRASP (fans out) |
 | Use when | Default. Simplest, no alignment gate. | The PR must be reviewable over nostr (gitworkshop), or you're revising/merging an existing **proposal** (`pr/feat/*`). |
 
@@ -58,7 +58,7 @@ the maintainer merges with `gh pr merge <n> --merge` (or `--squash`) once `gh pr
 
 # nostr path (`ngit`)
 
-**Mental model:** a proposal is a *linear patch series off `main`*, published as nostr events. A "revision" is a new version of that proposal. Merging applies the series to `main` and publishes a merged-status event. There is **no** PR number; `ngit pr merge` makes a plain merge commit (amend it to a readable message).
+**Mental model:** a proposal is a *linear patch series off `main`*, published as nostr events. A "revision" is a new version of that proposal. Merging applies the series to `main` and publishes a merged-status event. There is **no** PR number: a proposal is named by its event id, and a unique hex prefix of it works. `ngit pr merge` makes a plain (no-ff) merge commit.
 
 ## The three-mains alignment gate (the thing that breaks everything)
 
@@ -77,7 +77,8 @@ nostr=$(git ls-remote "$NOSTR_REMOTE" -h refs/heads/main | awk '{print $1}')  \
 local=$(git rev-parse main)"
 # all present heads equal → proceed.
 # local behind GitHub?  git merge --ff-only "$GH_REMOTE/main"  (or "$NOSTR_REMOTE/main" if that's all you have)
-# nostr behind local?   git push "$NOSTR_REMOTE" main   (clean fast-forward only)
+# nostr behind GitHub?  ngit sync --trust-server   (moves nostr state up to GitHub; clean fast-forwards only)
+#                       or, with local main == GitHub main: git push "$NOSTR_REMOTE" main
 ```
 
 With **only** the nostr remote: align local `main` to `$NOSTR_REMOTE/main`; GitHub is handled by fan-out. If GitHub diverged from nostr (`out of sync with nostr` on push), that's a maintainer `ngit sync --ref-name refs/heads/main --force` situation — **stop and ask the human**, never run a forced sync unprompted.
@@ -94,11 +95,12 @@ With **only** the nostr remote: align local `main` to `$NOSTR_REMOTE/main`; GitH
 
 ```bash
 ngit pr list                                   # open + draft
-ngit pr list --status open,draft,closed,merged,applied
-ngit pr view <FULL-hex-event-id | nevent>      # FULL id, not the short prefix
+ngit pr list --status open,draft,closed,applied
+ngit pr view <id | unique-hex-prefix | nevent> --comments
+ngit pr checkout <id>                          # local tracking branch for someone else's proposal
 ```
 
-In `git branch -r`, proposals show as `<nostr-remote>/pr/feat/<slug>(<short-id>)` — the `(...)` is an ngit annotation; the real ref is `pr/feat/<slug>`. Status `applied` == merged.
+Status `applied` == merged. ngit 3 no longer fetches other people's proposals as branches: `ngit pr checkout <id>` fetches one (as `pr/<slug>(<short-id>)`; the `(...)` is an ngit annotation, the real ref is `pr/<slug>`). `git config nostr.auto-pr-branches true` restores the old fetch-everything behaviour for a checkout.
 
 ## Create
 
@@ -108,7 +110,7 @@ Push a `pr/`-prefixed branch (linear, off the aligned `main`):
 git push -o 'title=My title' -o 'description=line1\n\nline2' -u "$NOSTR_REMOTE" pr/feat/<slug>
 ```
 
-Cover letter, labels: `ngit send --help`.
+Your own proposal: amend or rebase, then `git push --force "$NOSTR_REMOTE" pr/feat/<slug>` publishes the new version. Longer descriptions (real newlines): `ngit send main --subject … --description "$(cat pr.md)"` instead of a `pr/` push, never both. Labels, target branch, stacks: `ngit send --help`, <https://ngit.dev/pull-requests>.
 
 ## Revise (publish a new version)
 
@@ -124,10 +126,9 @@ git cherry-pick <your-new-commits…>    # yours on top   (or: git rebase main)
 bash .git-hooks/pre-push
 
 # 3. publish as a new version, linked to the proposal:
-ngit send --in-reply-to <proposal-nevent> \
+ngit send main --in-reply-to <proposal-id> \
   --subject "<keep or update title>" \
-  --description "<what changed>" \
-  -d main                              # commits in main..HEAD
+  --description "<what changed>"       # commits in main..HEAD
 ```
 
 `--in-reply-to` threads it under the same proposal on gitworkshop. **No `--force`** once the base equals the nostr `main`. Verify: `git ls-remote "$NOSTR_REMOTE" | grep <short-id>` shows `refs/pr/<full-id>/head` at your new tip.
@@ -139,19 +140,10 @@ The merge is **local**; the merged-status event publishes on the subsequent push
 ```bash
 # 1. ALIGN (mandatory) — all present mains equal.
 git checkout main
-ngit pr merge <FULL-hex-event-id> -d        # local merge commit; marks proposal "applied" (--squash to squash)
+ngit pr merge <proposal-id>             # local no-ff merge commit "Merge #<8-hex>: <title>"; no squash option in ngit 3
+git log --merges --oneline "$NOSTR_REMOTE/main"..HEAD   # one merge only; a nested `Merge #…` means rebase the PR first
 
-# 2. amend the generic merge message to something readable:
-git commit --amend -F - <<'MSG'
-Merge PR: <title>
-
-Merges nostr proposal <short-id> into main:
-- <commit summaries>
-
-<your own attribution trailer, if any>
-MSG
-
-# 3. the build gate on the merged tree (no GitHub PR checks run on this path), then sanity-check and publish (background — slow):
+# 2. the build gate on the merged tree (no GitHub PR checks run on this path), then sanity-check and publish (background — slow):
 bash .git-hooks/pre-push
 [ -n "$GH_REMOTE" ] && { git merge-base --is-ancestor "$GH_REMOTE/main" HEAD && echo "clean FF push" || echo "github moved; realign"; }
 git push "$NOSTR_REMOTE" main
@@ -161,16 +153,16 @@ Confirm: `ngit pr list --status applied` shows it, and `git fetch "$GH_REMOTE"` 
 
 ## Cleanup
 
-Delete throwaway branches pushed to the nostr remote with `git push "$NOSTR_REMOTE" --delete <branch>` (per-GRASP "non-existent ref" warnings are harmless fan-out). Delete the local `pr/feat/<slug>(...)` branches ngit creates and your work branch.
+Delete throwaway branches pushed to the nostr remote with `git push "$NOSTR_REMOTE" --delete <branch>` (per-GRASP "non-existent ref" warnings are harmless fan-out). Delete the local `pr/…` branches `ngit pr checkout` made and your work branch.
 
 ## Failure modes
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | `proposal builds on a commit N ahead of 'origin/main'` | base ≠ stale nostr `main` | realign `main`, rebase series, resend (no `--force`) |
-| `! [remote rejected] main … out of sync with nostr` | GitHub main diverged from nostr | maintainer `ngit sync … --force` — **ask the human** |
+| `! [remote rejected] main … out of sync with nostr` | GitHub main moved past nostr | clean fast-forward: `ngit sync --trust-server`; diverged: maintainer `ngit sync --ref-name main --force` — **ask the human** |
 | push "succeeds" but nothing on gitworkshop | pushed a plain branch, not a proposal | use the `pr/` prefix or `ngit send --in-reply-to` |
-| `ngit pr view`/`merge` "failed to parse event id" | used the short prefix | pass the **full** hex id or `nevent` |
+| `ngit pr view`/`merge` lists several matches | the hex prefix is ambiguous | pass a longer prefix, the full id or the `nevent` |
 | push hangs / times out at 2 min | normal GRASP fan-out latency | run in background; verify via `git ls-remote` |
 | `main` CI red after a merge: `lint` fails in `compile…KotlinMetadata` | a JVM-only API in shared code, merged without the build gate | fix forward on a branch; run `PREPUSH_KMP_METADATA=1 bash .git-hooks/pre-push` before the next merge |
 | PR CI `lint-android` red with `UnsafeOptInUsageError` | a media3 `@UnstableApi` call without an opt-in; it compiles and passes every test | `@OptIn(UnstableApi::class)` with `import androidx.annotation.OptIn` (Kotlin's `OptIn` does not satisfy lint); the hook's lint step catches it before the push |
