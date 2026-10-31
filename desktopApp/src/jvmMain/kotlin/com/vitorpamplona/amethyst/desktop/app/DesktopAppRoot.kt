@@ -185,7 +185,6 @@ class DesktopAppRoot(
             navigator.accountViewModel = accountViewModel
             navigator.destinations = destinations
             navigator.settingsCatalog = settingsCatalog
-            navigator.isDebugBuild = platform.isDebugBuild
             onDispose {
                 if (navigator.nav === nav) {
                     navigator.nav = null

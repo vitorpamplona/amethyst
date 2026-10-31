@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.badges.datasource.B
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.datasource.CalendarsFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.concord.datasource.ConcordChannelSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.rooms.datasource.ChatroomListFilterAssemblerSubscription
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessLobbyFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.communities.list.datasource.CommunitiesListFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.datasource.DiscoveryFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.emojipacks.browse.datasource.BrowseEmojiSetsFilterAssemblerSubscription
@@ -111,6 +112,8 @@ private fun PreloadFor(
         NavBarItem.GIT_REPOSITORIES -> GitRepositoriesFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.HIGHLIGHTS -> HighlightsFilterAssemblerSubscription(accountViewModel)
+
+        NavBarItem.CHESS -> ChessLobbyFilterAssemblerSubscription(accountViewModel)
 
         NavBarItem.SOFTWARE_APPS -> SoftwareAppsFilterAssemblerSubscription(accountViewModel)
 

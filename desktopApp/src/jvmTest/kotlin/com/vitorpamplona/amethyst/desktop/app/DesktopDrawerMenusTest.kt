@@ -77,14 +77,12 @@ class DesktopDrawerMenusTest {
     private fun menus(
         hidden: Set<NavBarItem> = emptySet(),
         canOpen: (Route) -> Boolean = { true },
-        showChess: Boolean = false,
     ) = drawerMenus(
         sections = DrawerSections,
         hidden = hidden,
         settings = settings,
         canOpen = canOpen,
         resolveRoute = { def -> Route.Profile(def.id.name) },
-        showChess = showChess,
         actions = actions,
     )
 
@@ -137,12 +135,16 @@ class DesktopDrawerMenusTest {
     }
 
     @Test
-    fun createLeadsWithNewPostAndAddsChessOnDebugBuilds() {
+    fun createLeadsWithNewPost() {
         val create = menus(canOpen = { it != Route.NewHlsVideo }).of(DrawerSectionId.CREATE)!!
         assertEquals(listOf(Command.NEW_POST), create.actions().map { it.command })
+    }
 
-        val debug = menus(canOpen = { it != Route.NewHlsVideo }, showChess = true).of(DrawerSectionId.CREATE)!!
-        assertEquals(Res.string.route_chess, debug.actions().last().label)
+    @Test
+    fun chessIsAFeedNotACreateRow() {
+        val feeds = menus().of(DrawerSectionId.FEEDS)!!
+        assertTrue(feeds.actions().any { it.label == Res.string.route_chess })
+        assertTrue(menus().of(DrawerSectionId.CREATE)!!.actions().none { it.label == Res.string.route_chess })
     }
 
     @Test
