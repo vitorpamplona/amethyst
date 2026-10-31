@@ -47,7 +47,17 @@ object NappletWebContract {
      * here: their verified, self-contained `/index.html` is assigned through `srcdoc` and therefore
      * executes with an opaque origin in an `allow-scripts`-only sandbox.
      */
-    fun appOrigin(appId: String): String = "https://$appId.$HOST"
+    fun appOrigin(
+        appId: String,
+        profile: HostProfile = HostProfile.WEBSITE,
+    ): String = if (profile == HostProfile.WEBXDC) "https://$appId.$WEBXDC_HOST" else "https://$appId.$HOST"
+
+    /**
+     * Where webxdc apps live, one subdomain each: a name of their own, so a host can take WebRTC from
+     * every frame of every webxdc app (a browser extension's match pattern can name a domain, not a
+     * kind of app) and leave it to nSites, whose network is theirs.
+     */
+    const val WEBXDC_HOST = "xdc.$HOST"
 
     /**
      * Stable, unique, DNS-label-safe id for an applet's sandbox origin: a sha256 of
@@ -239,7 +249,7 @@ object NappletWebContract {
      * there: a frame the app makes of its own pages keeps its real, same-origin parent. `parent` is
      * replaceable; `top` is not, and stays the shell.
      */
-    fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS$WEBXDC_PARENT_JS</script>".encodeToByteArray()
+    fun webxdcPrelude(): ByteArray = "<!doctype html><html><head><script>$WEBRTC_GUARD_JS$COOKIE_GUARD_JS$WEBXDC_PARENT_JS</script>".encodeToByteArray()
 
     private const val WEBXDC_PARENT_JS: String =
         "(function(){try{void window.parent.document;}catch(e){" +
@@ -260,6 +270,20 @@ object NappletWebContract {
         "(function(){var n=['RTCPeerConnection','webkitRTCPeerConnection','RTCDataChannel'," +
             "'RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
             "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:true,configurable:true});}catch(e){}}})();"
+
+    /**
+     * Takes cookies away from the frame it runs in, before any page script. Every app here lives under
+     * one site, `napplet.local` (`.local` is not a public suffix), so a cookie an app sets on that
+     * domain would reach every other app, account and route on the device: a tracking id one nSite
+     * plants over Tor and another reads on the open web, or what a sealed webxdc app hands an nSite to
+     * carry out. The host never sends `Set-Cookie`, and requests to other sites are third-party (their
+     * cookies blocked), so scripts are the only writer: `document.cookie` reads empty and drops writes,
+     * and `cookieStore` is gone. localStorage and IndexedDB are per origin and stay.
+     */
+    const val COOKIE_GUARD_JS: String =
+        "(function(){try{Object.defineProperty(Document.prototype,'cookie',{get:function(){return '';},set:function(){},configurable:false});}catch(e){}" +
+            "try{Object.defineProperty(window,'cookieStore',{value:undefined,writable:false,configurable:false});}catch(e){}" +
+            "try{if(window.CookieStore){Object.defineProperty(window,'CookieStore',{value:undefined,writable:false,configurable:false});}}catch(e){}})();"
 
     /**
      * Injects host-owned policy and the runtime prelude before any authored element in `head`.
@@ -287,12 +311,13 @@ object NappletWebContract {
         injectNip07: Boolean = false,
         imeProxy: Boolean = false,
     ): ByteArray {
-        // A locked napplet also loses WebRTC in its own frame; the hosts cover the frames it makes.
+        // A locked napplet also loses WebRTC in its own frame; the hosts cover the frames it makes. Every
+        // page here is under napplet.local, so none keeps a cookie the other apps would see.
         val policy =
             if (locked) {
-                "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\"><script>$WEBRTC_GUARD_JS</script>"
+                "<meta http-equiv=\"Content-Security-Policy\" content=\"$APP_CSP\"><script>$WEBRTC_GUARD_JS$COOKIE_GUARD_JS</script>"
             } else {
-                ""
+                "<script>$COOKIE_GUARD_JS</script>"
             }
         val style = "<style>html,body{overscroll-behavior:none !important}</style>"
         val flags =

@@ -386,6 +386,10 @@ class CefNappletSessionTest {
                       try { await fetch('$serverUrl/leak'); r.net = 'open'; } catch (e) { r.net = 'blocked'; }
                       try { await fetch('/js/data.json').then(function (x) { return x.json(); }).then(function (j) { r.own = j.ok; }); } catch (e) { r.own = 'blocked'; }
                       r.rtc = typeof RTCPeerConnection;
+                      // A frame the app makes itself gets a fresh window: WebRTC must be gone there too.
+                      try { var f = document.createElement('iframe'); document.body.appendChild(f); r.frameRtc = typeof f.contentWindow.RTCPeerConnection; } catch (e) { r.frameRtc = 'error'; }
+                      // Every app lives under napplet.local: a cookie on that domain would reach all the others.
+                      try { document.cookie = 'xdcprobe=1; domain=napplet.local; max-age=3600; secure; samesite=none'; r.cookie = document.cookie; } catch (e) { r.cookie = 'error'; }
                       var got = [];
                       await window.webxdc.setUpdateListener(function (u) { got.push(u.payload.n + '@' + u.serial); }, 0);
                       r.replayed = got.join(',');
@@ -414,6 +418,8 @@ class CefNappletSessionTest {
                 assertTrue(run1.contains("\"net\":\"blocked\""), run1)
                 assertTrue(run1.contains("\"own\":true"), "its own files load: $run1")
                 assertTrue(run1.contains("\"rtc\":\"undefined\""), run1)
+                assertTrue(run1.contains("\"frameRtc\":\"undefined\""), "a frame the app makes has no WebRTC either: $run1")
+                assertFalse(run1.contains("xdcprobe"), "an app can't keep a cookie the other apps would see: $run1")
                 assertTrue(run1.contains("\"replayed\":\"\""), run1)
                 assertTrue(run1.contains("\"after\":\"1@1\""), run1)
                 // A pseudonym of its own in this app, never the user's key.

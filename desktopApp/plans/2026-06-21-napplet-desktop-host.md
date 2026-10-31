@@ -34,7 +34,7 @@ loaders). **Reused byte-for-byte** — they embody the envelope/push contract. D
 | Concern | Android (today) | Desktop (to build) |
 |---|---|---|
 | **Web engine** | Android `WebView` (Chromium) | **KCEF/JCEF** (Chromium Embedded for the JVM). Gives the same CSP, opaque-origin iframe, and custom-scheme interception we rely on. Compose's experimental WebView is too limited. |
-| **Isolation** | separate `:napplet` OS process (no keys) | The CEF **renderer is already sandboxed**; combine with the same CSP (`connect-src 'none'`) + no-`allow-same-origin` iframe. For parity with Android's process model, evaluate running CEF in a **child JVM process**; at minimum rely on the renderer sandbox + CSP. |
+| **Isolation** | separate `:napplet` OS process (no keys) | ~~The CEF renderer is already sandboxed~~ (wrong: JCEF runs Chromium with `no_sandbox`, see Isolation below); combine with the same CSP (`connect-src 'none'`) + no-`allow-same-origin` iframe. For parity with Android's process model, evaluate running CEF in a **child JVM process**; at minimum rely on the renderer sandbox + CSP. |
 | **Resource serving** | `WebViewClient.shouldInterceptRequest` → shell + verified blobs | a CEF **custom scheme handler** that serves `https://napplet.local/__shell__` + `/app/*` from `StaticSiteResolver` with the identical CSP headers. |
 | **Transport** | `Messenger` across processes | in-process: a direct bridge (CEF JS-query ↔ broker). If child-process: stdio/socket carrying the **same JSON envelopes**. Either way, the payloads are `NappletProtocolJson`. |
 | **Live subscriptions** | `INostrClient.subscribe` + push over Messenger | same `INostrClient.subscribe`; push `relay.event/eose/closed` over the desktop transport. |
@@ -107,8 +107,14 @@ with the favorite star and a prefetch of its files while on screen); Open goes t
   (`profile.cookie_controls_mode`). Permission prompts (camera, microphone, location) are denied.
   The profile is `jcef-cache/Default`: a napplet's opaque srcdoc keeps nothing there, an nSite's
   localStorage, IndexedDB and cookies persist under its own origin.
-- **Isolation:** renderer sandbox + the shared CSPs + opaque-origin srcdoc, in process. No child
-  JVM: the trust boundary is the bridge check below.
+- **Isolation:** the shared CSPs + opaque-origin srcdoc, in process. No child JVM: the trust
+  boundary is the bridge check below. **There is no renderer sandbox:** JCEF hard-codes
+  `no_sandbox = true` and exposes no setting to change it, so a Chromium renderer exploit (an
+  nSite, a webxdc app, a video played through `ChromiumMediaSession`) runs as the user in the
+  process family that holds the keys. The 2026-10-31 security review rates this Critical; the fix
+  is the child process this plan deferred (Chromium in a process with no account and no keys, as
+  on Android) or OS-level confinement of `jcef_helper` (bubblewrap / Flatpak portal on Linux,
+  `sandbox-exec` on macOS). See `commons/plans/2026-10-31-embed-security-review.md`.
 - **Serving:** shared with Android: `NappletSiteServer` (commons) decides every response and the
   session only translates it for Chromium. A napplet gets only `SHELL_URL` (shell CSP header); every
   other request is cancelled before it leaves (data:, blob: and about:srcdoc stay local).

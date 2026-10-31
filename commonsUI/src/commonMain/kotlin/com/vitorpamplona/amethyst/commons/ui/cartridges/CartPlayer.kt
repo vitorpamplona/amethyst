@@ -92,7 +92,8 @@ fun CartPlayer(
         rememberViewModel(key = "cart:$url") {
             CartPlayerViewModel(url, sha256, accountViewModel.httpClientBuilder, appStores.cartSaveStore())
         }
-    val player = viewModel.player
+    // Made again when it was let go to keep only the latest few games in memory.
+    val player = remember(viewModel) { viewModel.player() }
     PlatformBackHandler(onBack = { if (!player.openPauseMenu()) onClose() })
 
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {

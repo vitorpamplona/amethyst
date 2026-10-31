@@ -29,6 +29,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -42,6 +43,22 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object NappletBlobPrefetcher {
     private const val MAX_PARALLEL = 5
+
+    // A card runs because it scrolled by, not because the user asked, and its manifest is a
+    // stranger's: it may list any number of files and servers. So a card warms only the start of a
+    // site (its entry document first) and stops past a byte budget; a file too big for a prefetch is
+    // fetched when the site is opened. All cards share one download gate and one budget per window,
+    // so a note quoting a dozen sites costs no more than one.
+    const val MAX_FILES_PER_CARD = 16
+    const val MAX_SERVERS = 4
+    const val MAX_PREFETCH_BLOB_BYTES = 4L * 1024 * 1024
+    const val MAX_CARD_BYTES = 8L * 1024 * 1024
+    const val MAX_WINDOW_BYTES = 64L * 1024 * 1024
+    private const val WINDOW_MS = 10L * 60 * 1000
+
+    private val gate = Semaphore(MAX_PARALLEL)
+    private val windowStart = AtomicLong(0)
+    private val windowBytes = AtomicLong(0)
 
     // Clearnet and the current Tor port, with room for a change of port mid-launch.
     private const val MAX_CLIENTS = 3
@@ -71,30 +88,67 @@ object NappletBlobPrefetcher {
         // The site's cache partition: NappletBlobCache.partitionOf, as its launch computes it.
         partition: String,
     ) {
-        if (paths.isEmpty() || servers.isEmpty()) return
+        val allowed = prefetchServers(servers)
+        if (paths.isEmpty() || allowed.isEmpty()) return
 
         withContext(Dispatchers.IO) {
             val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(partition)
-            val client = clients.getOrPut(proxyPort) { NappletBlobHttp.client(proxyPort) }
+            val client = clients.getOrPut(proxyPort) { NappletBlobHttp.client(proxyPort, publicOnly = true) }
             // Tor's port changes when it restarts (desktop picks one each time): keep the client of
             // the route in use, not one per port ever seen.
             if (clients.size > MAX_CLIENTS) clients.keys.removeIf { it != proxyPort }
-            val gate = Semaphore(MAX_PARALLEL)
-
-            // Fetch the entry document(s) first so first paint is fastest, then the rest in parallel
-            // (bounded), instead of strictly sequentially.
-            val downloaded =
-                coroutineScope {
-                    paths
-                        .sortedByDescending { it.path == "/" || it.path == "/index.html" }
-                        .map { path ->
-                            async {
-                                gate.withPermit { fetchOne(path.hash.lowercase(), servers, cache, client, partition) }
-                            }
-                        }.awaitAll()
-                }
-            if (downloaded.any { it }) trimNowAndThen(cache)
+            if (prefetchWith(paths, allowed, cache, client, partition)) trimNowAndThen(cache)
         }
+    }
+
+    /** The servers a card may prefetch from: https only (a stranger's note says where), and only the first few. */
+    internal fun prefetchServers(servers: List<String>): List<String> = servers.filter { it.toHttpUrlOrNull()?.scheme == "https" }.take(MAX_SERVERS)
+
+    /** The files a card warms: the entry document first, then the rest in manifest order, at most [MAX_FILES_PER_CARD]. */
+    internal fun plan(paths: List<PathTag>): List<PathTag> =
+        paths
+            .sortedByDescending { it.path == "/" || it.path == "/index.html" }
+            .distinctBy { it.hash.lowercase() }
+            .take(MAX_FILES_PER_CARD)
+
+    /** Whether it downloaded anything. Stops once the card's or the window's byte budget is spent. */
+    internal suspend fun prefetchWith(
+        paths: List<PathTag>,
+        servers: List<String>,
+        cache: NappletBlobCache,
+        client: OkHttpClient,
+        partition: String,
+        now: () -> Long = System::currentTimeMillis,
+    ): Boolean {
+        val cardBytes = AtomicLong(0)
+        val downloaded =
+            coroutineScope {
+                plan(paths)
+                    .map { path ->
+                        async {
+                            gate.withPermit {
+                                if (cardBytes.get() >= MAX_CARD_BYTES || !windowHasRoom(now())) return@withPermit false
+                                val bytes = fetchOne(path.hash.lowercase(), servers, cache, client, partition)
+                                cardBytes.addAndGet(bytes)
+                                windowBytes.addAndGet(bytes)
+                                bytes > 0
+                            }
+                        }
+                    }.awaitAll()
+            }
+        return downloaded.any { it }
+    }
+
+    private fun windowHasRoom(now: Long): Boolean {
+        val start = windowStart.get()
+        if (now - start >= WINDOW_MS && windowStart.compareAndSet(start, now)) windowBytes.set(0)
+        return windowBytes.get() < MAX_WINDOW_BYTES
+    }
+
+    /** Forgets the window's spending (tests). */
+    internal fun resetBudget() {
+        windowStart.set(0)
+        windowBytes.set(0)
     }
 
     private fun trimNowAndThen(cache: NappletBlobCache) {
@@ -105,25 +159,25 @@ object NappletBlobPrefetcher {
         }
     }
 
-    /** Whether it downloaded [hash] (false when it was cached, being fetched, or no server had it). */
+    /** The bytes it downloaded for [hash]: 0 when it was cached, being fetched, too big, or no server had it. */
     private suspend fun fetchOne(
         hash: String,
         servers: List<String>,
         cache: NappletBlobCache,
         client: OkHttpClient,
         partition: String,
-    ): Boolean {
+    ): Long {
         val key = "$partition|$hash"
-        if (cache.has(hash) || !inFlight.add(key)) return false
+        if (cache.has(hash) || !inFlight.add(key)) return 0
         try {
             for (url in StaticSiteResolver.candidateUrls(servers, hash)) {
-                val bytes = NappletBlobHttp.downloadCancellable(client, url) ?: continue
+                val bytes = NappletBlobHttp.downloadCancellable(client, url, MAX_PREFETCH_BLOB_BYTES) ?: continue
                 if (StaticSiteResolver.verify(bytes, hash)) {
                     cache.putVerified(hash, bytes)
-                    return true
+                    return bytes.size.toLong()
                 }
             }
-            return false
+            return 0
         } finally {
             inFlight.remove(key)
         }

@@ -21,12 +21,13 @@
 package com.vitorpamplona.amethyst.commons.napplet.gateways
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.napplet.NappletRelayCleartext
+import com.vitorpamplona.amethyst.commons.napplet.NappletOutboxGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletWalletGateway
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.fetchAll
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip47WalletConnect.rpc.NwcErrorResponse
@@ -51,7 +52,14 @@ class AccountNappletRelayGateway(
         return relays.map { it.url }
     }
 
-    /** Bounded live relay fetch (EOSE/timeout) for all [filters], merged with the local cache, newest-first. */
+    /**
+     * Bounded live relay fetch (EOSE/timeout) for all [filters], merged with the local cache, newest-first,
+     * as relays signed them: what the app may read of encrypted content is the broker's call
+     * ([com.vitorpamplona.amethyst.commons.napplet.NappletBroker.mayDecrypt]).
+     *
+     * Only events whose signature verifies leave: the cache also holds what never was on a relay, the
+     * unsigned rumors unwrapped from the user's NIP-17 gift wraps, and those are private messages.
+     */
     override suspend fun query(filters: List<Filter>): List<Event> {
         if (filters.isEmpty()) return emptyList()
         val relays = account.homeRelays.flow.value
@@ -64,17 +72,28 @@ class AccountNappletRelayGateway(
                 }.getOrDefault(emptyList())
             }
         val fromCache = filters.flatMap { filter -> account.cache.filter(filter).mapNotNull { it.event } }
-        val merged =
-            (fromRelays + fromCache)
-                .distinctBy { it.id }
-                .sortedByDescending { it.createdAt }
-        val limit = filters.mapNotNull { it.limit }.maxOrNull()
-        val limited = limit?.let { merged.take(it) } ?: merged
-        return limited.mapNotNull { NappletRelayCleartext.forDelivery(it, account.signer) }
+        return merged(fromRelays + fromCache, filters)
     }
 
-    private companion object {
-        val QUERY_TIMEOUT = 8.seconds
+    companion object {
+        /** Newest-first, one copy of each, only signed events, at most the filters' limit (and never past [MAX_RESULTS]). */
+        fun merged(
+            events: List<Event>,
+            filters: List<Filter>,
+        ): List<Event> {
+            val limit = (filters.mapNotNull { it.limit }.maxOrNull() ?: MAX_RESULTS).coerceIn(0, MAX_RESULTS)
+            return events
+                .distinctBy { it.id }
+                .sortedByDescending { it.createdAt }
+                .asSequence()
+                .filter { it.verify() }
+                .take(limit)
+                .toList()
+        }
+
+        const val MAX_RESULTS = NappletOutboxGateway.MAX_RESULTS
+
+        private val QUERY_TIMEOUT = 8.seconds
     }
 }
 

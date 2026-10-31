@@ -69,6 +69,23 @@ class NappletLaunch(
 
     companion object {
         /**
+         * The later of two versions of one app's manifest, as a relay keeps the later of two replaceable
+         * events: the newer `created_at`, and on a tie the lower id (NIP-01). One that isn't an event
+         * loses.
+         */
+        fun newerOf(
+            a: NappletManifest,
+            b: NappletManifest,
+        ): NappletManifest {
+            val ea = a as? Event ?: return b
+            val eb = b as? Event ?: return a
+            return when {
+                ea.createdAt != eb.createdAt -> if (ea.createdAt > eb.createdAt) a else b
+                else -> if (ea.id <= eb.id) a else b
+            }
+        }
+
+        /**
          * A NIP-5D napplet from its [manifest], refused unless it is signed by [authorPubKey] (when
          * given) and named [identifier] (when given).
          */

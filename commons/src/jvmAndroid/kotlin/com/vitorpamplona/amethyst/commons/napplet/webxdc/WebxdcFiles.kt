@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit
  */
 class WebxdcBundles(
     root: File,
+    private val maxBytes: Long = DEFAULT_MAX_BYTES,
 ) {
     private val root = root.absoluteFile
 
@@ -71,7 +72,7 @@ class WebxdcBundles(
         withContext(Dispatchers.IO) {
             val key = hash?.lowercase() ?: ("u" + sha256(url.encodeToByteArray()).toHexKey())
             val dir = File(root, key)
-            if (File(dir, COMPLETE).isFile) return@withContext dir
+            if (File(dir, COMPLETE).isFile) return@withContext dir.also(::markUsed)
             // Process-wide: every launch of one archive (a note's and a window's) shares its files.
             locks.getOrPut(dir.path) { Mutex() }.withLock {
                 if (File(dir, COMPLETE).isFile) return@withLock dir
@@ -100,6 +101,7 @@ class WebxdcBundles(
                         Log.w(TAG) { "Could not move $staging into place" }
                         return@withLock null
                     }
+                    trimToSize(maxBytes, keep = dir)
                     dir
                 } finally {
                     if (archive.exists() && !archive.delete()) Log.w(TAG) { "Could not delete $archive" }
@@ -108,7 +110,41 @@ class WebxdcBundles(
             }
         }
 
+    /** The marker's time is when the bundle was last opened: [trimToSize] lets the oldest go first. */
+    private fun markUsed(dir: File) {
+        if (!File(dir, COMPLETE).setLastModified(System.currentTimeMillis())) Log.d(TAG) { "Could not mark $dir used" }
+    }
+
+    /**
+     * Deletes the bundles opened longest ago until all of them fit in [maxBytes], never [keep]. Each
+     * app the user starts can unpack to [WebxdcArchive]'s cap, and on desktop this folder isn't a cache
+     * the system trims.
+     */
+    fun trimToSize(
+        maxBytes: Long,
+        keep: File? = null,
+    ) {
+        val bundles =
+            root
+                .listFiles()
+                .orEmpty()
+                .filter { File(it, COMPLETE).isFile }
+                .map { Triple(it, File(it, COMPLETE).lastModified(), sizeOf(it)) }
+                .sortedBy { it.second }
+        var total = bundles.sumOf { it.third }
+        for ((dir, _, size) in bundles) {
+            if (total <= maxBytes) break
+            if (dir == keep) continue
+            if (dir.deleteRecursively()) total -= size else Log.w(TAG) { "Could not delete $dir" }
+        }
+    }
+
+    private fun sizeOf(dir: File): Long = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+
     companion object {
+        /** All the unpacked apps together, before the ones opened longest ago are deleted. */
+        const val DEFAULT_MAX_BYTES = 1024L * 1024 * 1024
+
         /** Written last into a finished unpack; a directory without it is never served. */
         const val COMPLETE = ".amethyst-complete"
         const val INDEX = "index.html"

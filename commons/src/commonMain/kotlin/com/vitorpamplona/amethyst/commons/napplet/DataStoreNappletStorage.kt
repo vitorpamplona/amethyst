@@ -53,22 +53,25 @@ class DataStoreNappletStorage(
         value: String,
     ) {
         dataStore.edit { preferences ->
-            val prefix = prefixOf(coordinate)
+            // One quota for the app's shared namespace and every instance namespace under it: each
+            // launch has its own instance id (an inline Run makes a new one), so a quota per instance
+            // let an app write 512 KB more every time it was run, into a store held in memory.
+            val quotaPrefix = quotaPrefixOf(coordinate)
             val target = keyOf(coordinate, key)
             val currentBytes =
                 preferences
                     .asMap()
                     .entries
                     .asSequence()
-                    .filter { it.key.name.startsWith(prefix) }
+                    .filter { it.key.name.startsWith(quotaPrefix) }
                     .sumOf { (storedKey, storedValue) ->
                         storedKey.name
-                            .removePrefix(prefix)
+                            .substringAfterLast('\u0000')
                             .encodeToByteArray()
                             .size +
                             ((storedValue as? String)?.encodeToByteArray()?.size ?: 0)
                     }
-            val replacedBytes = key.encodeToByteArray().size + (preferences[target]?.encodeToByteArray()?.size ?: 0)
+            val replacedBytes = if (target in preferences) key.encodeToByteArray().size + (preferences[target]?.encodeToByteArray()?.size ?: 0) else 0
             val proposedBytes = currentBytes - replacedBytes + key.encodeToByteArray().size + value.encodeToByteArray().size
             require(proposedBytes <= MAX_STORAGE_BYTES) { "Napplet storage quota exceeded." }
             preferences[target] = value
@@ -98,6 +101,9 @@ class DataStoreNappletStorage(
     /** Account first, then applet: isolates accounts from each other, and applets within an account. */
     private fun prefixOf(coordinate: String) = "${accountPubKey()}\u0000$coordinate\u0000"
 
+    /** What every namespace of one app version starts with: its shared one and all its instance ones. */
+    private fun quotaPrefixOf(coordinate: String) = "${accountPubKey()}\u0000${coordinate.substringBefore(INSTANCE_MARK)}"
+
     private fun keyOf(
         coordinate: String,
         key: String,
@@ -106,5 +112,8 @@ class DataStoreNappletStorage(
     companion object {
         /** NAP-STORAGE's recommended per-napplet UTF-8 quota. */
         const val MAX_STORAGE_BYTES = 512 * 1024
+
+        /** How [NappletIdentity.instanceStorageCoordinate] extends the shared one. */
+        const val INSTANCE_MARK = ":instance:"
     }
 }

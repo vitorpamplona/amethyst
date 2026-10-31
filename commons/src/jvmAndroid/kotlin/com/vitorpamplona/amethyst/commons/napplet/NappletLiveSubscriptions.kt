@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.verify
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.SubscriptionListener
@@ -76,7 +77,7 @@ class NappletLiveSubscriptions<K : Any>(
     // whose surface went away, so nothing opens for them after [closeAllFor] (held weakly).
     private val lock = Any()
     private val arrivals = AtomicLong(0)
-    private val closedAt = HashMap<Key<K>, Long>()
+    private val closedAt = LinkedHashMap<Key<K>, Long>()
     private val gone: MutableSet<K> = Collections.newSetFromMap(WeakHashMap())
 
     /** Stamps a request as it arrives, before anything about it suspends; pass it to [open] and [close]. */
@@ -128,12 +129,13 @@ class NappletLiveSubscriptions<K : Any>(
         arrivedAt: Long,
         relays: Set<NormalizedRelayUrl>? = null,
         outbox: Boolean = false,
+        mayDecrypt: suspend (peer: HexKey) -> Boolean = { false },
         push: (String) -> Unit,
     ): Unit =
         synchronized(lock) {
             // Closed after this request arrived, or its surface is gone: the page doesn't want it.
             if (owner in gone || (closedAt[Key(owner, nappletSubId)] ?: Long.MIN_VALUE) > arrivedAt) return
-            openLocked(owner, nappletSubId, filters, account, relays, outbox, push)
+            openLocked(owner, nappletSubId, filters, account, relays, outbox, mayDecrypt, push)
         }
 
     private fun openLocked(
@@ -143,6 +145,7 @@ class NappletLiveSubscriptions<K : Any>(
         account: Account?,
         routedRelays: Set<NormalizedRelayUrl>?,
         outbox: Boolean,
+        mayDecrypt: suspend (peer: HexKey) -> Boolean,
         push: (String) -> Unit,
     ) {
         val relays = routedRelays ?: account?.homeRelays?.flow?.value ?: emptySet()
@@ -162,6 +165,12 @@ class NappletLiveSubscriptions<K : Any>(
         // opening them.
         if (outbox && liveSubs.keys.count { it.owner == owner } >= MAX_OUTBOX_SUBS) {
             push(NappletProtocolJson.encodeOutboxClosed(nappletSubId, "too many subscriptions"))
+            return
+        }
+        // Every relay subscription is a REQ on the user's own relay connections: a page that opened
+        // thousands would push those relays past their limits and starve the app's own feeds.
+        if (!outbox && liveSubs.keys.count { it.owner == owner } >= MAX_RELAY_SUBS) {
+            push(NappletProtocolJson.encodeRelayClosed(nappletSubId, "too many subscriptions"))
             return
         }
         // liveSeq guarantees a unique client subId, so a rapid re-open of the same applet subId
@@ -195,7 +204,7 @@ class NappletLiveSubscriptions<K : Any>(
                                 if (sub.heldEncrypted.size >= MAX_HELD_ENCRYPTED) sub.heldEncrypted.removeFirst()
                                 sub.heldEncrypted.addLast(delivery)
                             } else {
-                                NappletRelayCleartext.forDelivery(event, account.signer)?.let {
+                                NappletRelayCleartext.forDelivery(event, account.signer, mayDecrypt)?.let {
                                     push(eventPush(it, delivery.relay))
                                 }
                             }
@@ -203,7 +212,7 @@ class NappletLiveSubscriptions<K : Any>(
                         Delivery.Attended ->
                             while (sub.heldEncrypted.isNotEmpty() && attendance.isAttended(owner)) {
                                 val held = sub.heldEncrypted.removeFirst()
-                                NappletRelayCleartext.forDelivery(held.event, account.signer)?.let {
+                                NappletRelayCleartext.forDelivery(held.event, account.signer, mayDecrypt)?.let {
                                     push(eventPush(it, held.relay))
                                 }
                             }
@@ -274,7 +283,15 @@ class NappletLiveSubscriptions<K : Any>(
     ): Unit =
         synchronized(lock) {
             val key = Key(owner, nappletSubId)
-            closedAt[key] = maxOf(closedAt[key] ?: Long.MIN_VALUE, arrivedAt)
+            closedAt[key] = maxOf(closedAt.remove(key) ?: Long.MIN_VALUE, arrivedAt)
+            // Remembered only to beat a subscribe still waiting on consent: past the cap the oldest go,
+            // so a page closing ids it never opened can't grow this without bound.
+            if (closedAt.size > MAX_CLOSED_REMEMBERED) {
+                closedAt.keys.iterator().let {
+                    it.next()
+                    it.remove()
+                }
+            }
             liveSubs.remove(key)?.let(::stop)
         }
 
@@ -309,6 +326,12 @@ class NappletLiveSubscriptions<K : Any>(
 
         // Outbox subscriptions one surface may hold open at once.
         const val MAX_OUTBOX_SUBS = 16
+
+        // Relay subscriptions one surface may hold open at once.
+        const val MAX_RELAY_SUBS = 64
+
+        // Closed subscription ids remembered (see [closedAt]).
+        const val MAX_CLOSED_REMEMBERED = 1_024
 
         // Event ids an outbox subscription remembers to drop duplicates.
         const val MAX_SEEN = 5_000

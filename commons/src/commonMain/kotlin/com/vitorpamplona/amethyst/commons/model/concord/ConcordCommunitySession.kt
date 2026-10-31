@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.actions.ConcordPinSource
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinVerifier
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinning
 import com.vitorpamplona.amethyst.commons.actions.ConcordPrivateChannels
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.amethyst.commons.util.KmpLock
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.quartz.concord.cord02Community.ConcordCommunityListEntry
@@ -1011,6 +1012,9 @@ class ConcordCommunitySession(
     // Channel id -> its WebXDC signals by rumor id, in arrival order, bounded per channel.
     private val webxdcByChannel = HashMap<HexKey, LinkedHashMap<HexKey, Event>>()
 
+    // What the held signals of each channel weigh, so any member's flood is bounded in bytes, not only in count.
+    private val webxdcBytesByChannel = HashMap<HexKey, Long>()
+
     private val _webxdcRevision = MutableStateFlow(0L)
 
     /** Bumps whenever a new WebXDC signal is held — what a WebXDC host re-reads [webxdcSignals] on. */
@@ -1031,16 +1035,27 @@ class ConcordCommunitySession(
             .filterNot { ConcordDisappearing.isExpired(it, now) }
             .sortedBy { ChannelChat.orderingMs(it) ?: (it.createdAt * 1000) }
 
-    /** Holds [rumor] for [channelIdHex]; false when already held. Keeps the newest [MAX_WEBXDC_PER_CHANNEL] arrivals. */
+    /**
+     * Holds [rumor] for [channelIdHex]; false when already held or too big to be an update. Keeps the
+     * newest arrivals, at most [MAX_WEBXDC_PER_CHANNEL] of them and [MAX_WEBXDC_BYTES_PER_CHANNEL] in all:
+     * any member can send these, and nothing reads them yet, so neither count nor size may grow unbounded.
+     */
     private fun holdWebxdc(
         channelIdHex: HexKey,
         rumor: Event,
     ): Boolean {
+        val size = webxdcWeight(rumor)
+        if (size > MAX_WEBXDC_SIGNAL_BYTES) return false
         val added =
             lock.withLock {
                 val held = webxdcByChannel.getOrPut(channelIdHex) { LinkedHashMap() }
                 if (held.put(rumor.id, rumor) != null) return@withLock false
-                while (held.size > MAX_WEBXDC_PER_CHANNEL) held.remove(held.keys.first())
+                var bytes = (webxdcBytesByChannel[channelIdHex] ?: 0L) + size
+                while (held.size > MAX_WEBXDC_PER_CHANNEL || bytes > MAX_WEBXDC_BYTES_PER_CHANNEL) {
+                    val oldest = held.keys.first()
+                    bytes -= held.remove(oldest)?.let(::webxdcWeight) ?: 0L
+                }
+                webxdcBytesByChannel[channelIdHex] = bytes
                 true
             }
         if (added) _webxdcRevision.update { it + 1 }
@@ -1218,6 +1233,15 @@ class ConcordCommunitySession(
 
         /** WebXDC signals held per channel (the reference client scans its newest 2000 for peer signals). */
         const val MAX_WEBXDC_PER_CHANNEL = 2000
+
+        /** One signal: an update the app may send ([WebxdcRuntime.MAX_UPDATE_BYTES]) and its envelope. */
+        const val MAX_WEBXDC_SIGNAL_BYTES = WebxdcRuntime.MAX_UPDATE_BYTES * 2L
+
+        /** All the signals held for one channel. */
+        const val MAX_WEBXDC_BYTES_PER_CHANNEL = 4L * 1024 * 1024
+
+        /** What a held signal costs: its content and tags, in characters. */
+        internal fun webxdcWeight(rumor: Event): Long = rumor.content.length.toLong() + rumor.tags.sumOf { tag -> tag.sumOf { it.length.toLong() } }
 
         /** Chat wraps each channel's buffer keeps (most recently delivered) for pins, jump-to-context and re-projection. */
         const val MAX_CHANNEL_WRAPS = 2000

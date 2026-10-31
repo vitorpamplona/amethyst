@@ -171,15 +171,20 @@ class DesktopCefEngine(
 
     /**
      * Writes the napplet guard, fresh on every start, and returns its folder: an extension whose content
-     * script ([NappletWebContract.WEBRTC_GUARD_JS]) runs at document start in the shell and every frame
-     * under it, the napplet's srcdoc and any frame it makes, which no script of the page itself can
-     * reach. nSites, on their own origins, keep WebRTC: their traffic is theirs to route.
+     * scripts run at document start in every frame, the ones a page makes included, which no script of
+     * the page itself can reach:
+     * - [NappletWebContract.WEBRTC_GUARD_JS] in the shell and everything under it (the napplet's srcdoc)
+     *   and in every webxdc app's frames ([NappletWebContract.WEBXDC_HOST]): neither may have a network.
+     *   nSites, on their own origins, keep WebRTC: their traffic is theirs to route.
+     * - [NappletWebContract.COOKIE_GUARD_JS] everywhere under napplet.local, which is one site for every
+     *   app, account and route here.
      */
     private fun installGuard(): File {
         val dir = File(cacheRoot, GUARD_DIR)
         if (!dir.isDirectory && !dir.mkdirs()) throw IllegalStateException("Cannot create $dir")
         File(dir, "manifest.json").writeText(GUARD_MANIFEST)
         File(dir, "guard.js").writeText(NappletWebContract.WEBRTC_GUARD_JS)
+        File(dir, "cookies.js").writeText(NappletWebContract.COOKIE_GUARD_JS)
         return dir
     }
 
@@ -237,11 +242,14 @@ class DesktopCefEngine(
          * - Third-party cookies are blocked, as Android's WebView does by default: one profile serves
          *   every account and both routes here, so a cookie an embed or API sets must not follow the
          *   user from one account, or from the open web, to another.
+         * - Network prediction is off (2 = never): `<link rel=dns-prefetch|preconnect>` is outside CSP,
+         *   and a page with no network could spell what it read into a hostname and have it resolved.
          */
         val CHROMIUM_PREFERENCES: Map<String, Any> =
             mapOf(
                 "webrtc.ip_handling_policy" to "disable_non_proxied_udp",
                 "profile.cookie_controls_mode" to 1,
+                "net.network_prediction_options" to 2,
             )
 
         private const val GUARD_DIR = "napplet-guard"
@@ -255,8 +263,16 @@ class DesktopCefEngine(
               "name": "Amethyst napplet guard",
               "version": "1.0",
               "content_scripts": [{
-                "matches": ["${NappletWebContract.ORIGIN}/*"],
+                "matches": ["${NappletWebContract.ORIGIN}/*", "https://*.${NappletWebContract.WEBXDC_HOST}/*"],
                 "js": ["guard.js"],
+                "all_frames": true,
+                "match_about_blank": true,
+                "match_origin_as_fallback": true,
+                "run_at": "document_start",
+                "world": "MAIN"
+              }, {
+                "matches": ["${NappletWebContract.ORIGIN}/*", "https://*.${NappletWebContract.HOST}/*"],
+                "js": ["cookies.js"],
                 "all_frames": true,
                 "match_about_blank": true,
                 "match_origin_as_fallback": true,

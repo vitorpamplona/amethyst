@@ -188,6 +188,7 @@ class CefNappletSession(
                 partition = if (launch.profile.ownsOrigin) accountPubKey else null,
                 profile = launch.profile,
             ),
+            launch.profile,
         )
 
     private val blobsUseTor: Boolean get() = if (isWebsite) useTor else runtime.nappletBlobsUseTor()
@@ -568,7 +569,7 @@ class CefNappletSession(
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach(::send)
                 is NappletRequestRouter.Outcome.OpenSubscription ->
-                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, ::send)
+                    runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt, ::send)
                 is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId, arrivedAt)
                 // The inc bus is not offered on desktop (INC is not a supported NAP domain).
                 else -> {}
