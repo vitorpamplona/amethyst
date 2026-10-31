@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletStorageScope
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.sync.Mutex
@@ -288,7 +289,11 @@ class NappletBroker(
 
             is NappletRequest.QueryEvents -> {
                 val gateway = relay ?: return NappletResponse.Unsupported("relay.query")
-                NappletResponse.Events(gateway.query(request.filters))
+                if (request.filters.size > MAX_RELAY_FILTERS) return NappletResponse.Failed("too many filters")
+                // The gateway hands back events as relays and the cache hold them; what the app may read
+                // of their encrypted content is decided here, per counterparty, never by a prompt.
+                val readable = gateway.query(request.filters).mapNotNull { NappletRelayCleartext.forDelivery(it, signer) { peer -> mayDecrypt(identity, peer) } }
+                NappletResponse.Events(readable.take(MAX_QUERY_RESULTS))
             }
 
             // The broker only authorizes the subscription (consent + declaration); the host opens the
@@ -340,6 +345,7 @@ class NappletBroker(
 
             is NappletRequest.Subscribe -> {
                 relay ?: return NappletResponse.Unsupported("relay.subscribe")
+                if (request.filters.size > MAX_RELAY_FILTERS) return NappletResponse.Failed("too many filters")
                 NappletResponse.Subscribed
             }
 
@@ -434,6 +440,34 @@ class NappletBroker(
                 NappletResponse.Uploaded(res.url, res.sha256, res.size, res.mimeType)
             }
         }
+
+    /**
+     * Whether [identity] may read content encrypted between the user and [peer] — what a relay read
+     * ([NappletRelayCleartext]) asks before it decrypts an event for the app. Never prompts: a relay
+     * read is not a decrypt request the user can see, so only a grant the user already gave counts —
+     * the broad decrypt grant (standing, for this session, or a FULL_TRUST policy) or the narrow one
+     * for [peer]. A standing denial of the broad grant, or of the app's relay access, wins. Under
+     * REASONABLE and PARANOID, where decryption always asks, encrypted events are withheld.
+     */
+    suspend fun mayDecrypt(
+        identity: NappletIdentity,
+        peer: HexKey,
+    ): Boolean {
+        val sl = signerLedger ?: return false
+        if (ledger.decide(identity, NappletCapability.RELAY) == PermissionDecision.DENY) return false
+        return signerConsentLock.withLock {
+            val coordinate = signerCoordinateFor(identity)
+            when {
+                sessionKey(coordinate, NostrSignerOp.Decrypt) in sessionAllows -> true
+                else ->
+                    when (sl.decide(coordinate, NostrSignerOp.Decrypt)) {
+                        NostrOpDecision.ALLOW -> true
+                        NostrOpDecision.DENY -> false
+                        NostrOpDecision.ASK -> isNarrowAllowed(sl, coordinate, NostrSignerOp.DecryptFrom(peer))
+                    }
+            }
+        }
+    }
 
     /**
      * Signs a napplet-supplied template **as the active user** and publishes it. The applet never
@@ -640,5 +674,11 @@ class NappletBroker(
         private const val CANCEL_REPROMPT_COOLDOWN_MS = 3_000L
         private const val RESOURCE_MAX_BYTES = 10L * 1024L * 1024L
         private const val RESOURCE_MAX_URLS = 16
+
+        /** The most filters one `relay.query` or `relay.subscribe` may carry, as for outbox reads. */
+        const val MAX_RELAY_FILTERS = NappletOutboxGateway.MAX_FILTERS
+
+        /** The most events one `relay.query` returns. */
+        const val MAX_QUERY_RESULTS = NappletOutboxGateway.MAX_RESULTS
     }
 }

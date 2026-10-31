@@ -27,26 +27,37 @@ import com.vitorpamplona.quartz.nip04Dm.crypto.EncryptedInfo
 import com.vitorpamplona.quartz.nip04Dm.messages.EncryptedDmEvent
 import com.vitorpamplona.quartz.nip44Encryption.Nip44v2
 
-/** NAP-RELAY read boundary: encrypted event content is decrypted or withheld, never exposed. */
+/**
+ * NAP-RELAY read boundary: encrypted event content is decrypted or withheld, never exposed.
+ *
+ * Decrypting is reading the user's private messages, so it happens only when [mayDecrypt] says the
+ * app holds a decrypt grant for that counterparty (the broker's [NappletBroker.mayDecrypt]: a
+ * standing or session grant, never a prompt). Without one the event is withheld, as it is when the
+ * signer can't decrypt it.
+ *
+ * The counterparty is never taken from a tag the app could have written: an app that can publish
+ * a reaction as the user could put any ciphertext in it, name any peer in its `p` tag, and read the
+ * event back decrypted. So an event the user wrote is decrypted against its recipient only when it
+ * is a NIP-04 DM; any other is the user's own self-encrypted content (private lists, drafts),
+ * decrypted against the user.
+ */
 object NappletRelayCleartext {
     suspend fun forDelivery(
         event: Event,
         signer: NostrSigner,
-    ): Event? = forDelivery(event, signer.pubKey, signer::decrypt)
+        mayDecrypt: suspend (peer: HexKey) -> Boolean,
+    ): Event? = forDelivery(event, signer.pubKey, signer::decrypt, mayDecrypt)
 
     suspend fun forDelivery(
         event: Event,
         userPubKey: HexKey,
         decrypt: suspend (String, HexKey) -> String,
+        mayDecrypt: suspend (peer: HexKey) -> Boolean,
     ): Event? {
         if (!isEncrypted(event)) return event
 
-        val peer =
-            when {
-                event.pubKey == userPubKey -> event.recipientPubKey()
-                event.isAddressedTo(userPubKey) -> event.pubKey
-                else -> null
-            } ?: return null
+        val peer = peerOf(event, userPubKey) ?: return null
+        if (!mayDecrypt(peer)) return null
         val cleartext = runCatching { decrypt(event.content, peer) }.getOrNull() ?: return null
 
         // NAP-RELAY defines a decrypted read projection. Retain the relay event's identity and
@@ -54,6 +65,17 @@ object NappletRelayCleartext {
         // must never be republished as a signed event after its content projection has changed.
         return Event(event.id, event.pubKey, event.createdAt, event.kind, event.tags, cleartext, event.sig)
     }
+
+    /** Whose key the content of [event] is encrypted with, from the user's side; null when it isn't the user's to read. */
+    fun peerOf(
+        event: Event,
+        userPubKey: HexKey,
+    ): HexKey? =
+        when {
+            event.pubKey == userPubKey -> if (event.kind == EncryptedDmEvent.KIND) event.recipientPubKey() else userPubKey
+            event.isAddressedTo(userPubKey) -> event.pubKey
+            else -> null
+        }
 
     fun isEncrypted(event: Event): Boolean =
         event is EncryptedDmEvent ||
