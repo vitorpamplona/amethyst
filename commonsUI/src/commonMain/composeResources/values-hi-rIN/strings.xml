@@ -8355,14 +8355,11 @@
     <string name="chess_color_white_selected">श्वेत चयनित</string>
     <string name="chess_color_black_selected">कृष्ण चयनित</string>
     <string name="chess_create_game">खेल बनाएँ</string>
-    <string name="chess_turn_white">श्वेत का चाल</string>
-    <string name="chess_turn_black">कृष्ण का चाल</string>
     <string name="chess_result_draw">समस्तर</string>
     <string name="chess_result_you_won">आप जीते।</string>
     <string name="chess_result_you_lost">आप हारे</string>
     <string name="chess_result_white_wins">श्वेत विजयी</string>
     <string name="chess_result_black_wins">कृष्ण विजयी</string>
-    <string name="chess_waiting_for_opponent_accept">प्रतिपक्ष चुनौती स्वीकारने की प्रतीक्षा में</string>
     <string name="chess_resign">निवृत्ति</string>
     <string name="chess_continue">चलते रहें</string>
     <string name="namecoin_testing_next_server">अगले सेवासंगणक का परीक्षण…</string>
@@ -8507,10 +8504,6 @@
     <string name="chess_result_notation">परिणाम। %1$s</string>
     <string name="chess_round">चरण %1$s</string>
     <string name="chess_your_turn">आपकी बारी</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d चाल</item>
-        <item quantity="other">%1$d चालें</item>
-    </plurals>
     <string name="signing_waiting_for_signer">हस्ताक्षरकर्ता अनुमति की प्रतीक्षा में... (%1$s से॰)</string>
     <string name="signing_default_label">हस्ताक्षरण</string>
     <string name="signing_progress">%1$s (%3$s में से %2$s)</string>
@@ -8596,7 +8589,6 @@
     <string name="agent_work_toast_file_failed">कार्य अभिलेखन असफल। जाँच करें यदि आप यहाँ पत्र प्रकाशित कर सकते हैं</string>
     <string name="agent_work_source_gated">द्वारयुक्त</string>
     <string name="agent_work_source_direct">सीधा</string>
-    <string name="chess_game_default_name">चतुरंग खेल</string>
     <string name="profile_broadcast_updating">अद्यतन मध्य %1$s...</string>
     <string name="profile_broadcast_updated">अद्यतनकृत %1$s</string>
     <string name="profile_broadcast_failed">अद्यतन असफल %1$s</string>

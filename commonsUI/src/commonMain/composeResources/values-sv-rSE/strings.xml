@@ -8397,14 +8397,11 @@
     <string name="chess_color_white_selected">✓ Vit</string>
     <string name="chess_color_black_selected">✓ Svart</string>
     <string name="chess_create_game">Skapa parti</string>
-    <string name="chess_turn_white">Vit vid draget</string>
-    <string name="chess_turn_black">Svart vid draget</string>
     <string name="chess_result_draw">Remi</string>
     <string name="chess_result_you_won">Du vann!</string>
     <string name="chess_result_you_lost">Du förlorade</string>
     <string name="chess_result_white_wins">Vit vinner</string>
     <string name="chess_result_black_wins">Svart vinner</string>
-    <string name="chess_waiting_for_opponent_accept">Väntar på att motståndaren accepterar utmaningen</string>
     <string name="chess_resign">Ge upp</string>
     <string name="chess_continue">Fortsätt</string>
     <string name="namecoin_settings_explanation">Namecoin-namn (.bit, d/, id/) slås upp genom att fråga Namecoin-blockkedjan. Välj ElectrumX (lättklient) eller Namecoin Core RPC (din egen fullständiga nod) nedan.</string>
@@ -8574,10 +8571,6 @@
     <string name="chess_result_notation">Resultat: %1$s</string>
     <string name="chess_round">Rond %1$s</string>
     <string name="chess_your_turn">Din tur</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d drag</item>
-        <item quantity="other">%1$d drag</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Väntar på godkännande från signatären... (%1$ss)</string>
     <string name="signing_default_label">Signerar</string>
     <string name="signing_progress">%1$s (%2$s av %3$s)</string>
@@ -8669,7 +8662,6 @@
     <string name="agent_work_toast_file_failed">Kunde inte skapa uppgiften — kontrollera att du kan posta här</string>
     <string name="agent_work_source_gated">med godkännande</string>
     <string name="agent_work_source_direct">direkt</string>
-    <string name="chess_game_default_name">Schackparti</string>
     <string name="profile_broadcast_updating">Uppdaterar %1$s...</string>
     <string name="profile_broadcast_updated">Uppdaterade %1$s</string>
     <string name="profile_broadcast_failed">Kunde inte uppdatera %1$s</string>
@@ -8729,8 +8721,6 @@
     <string name="ots_settings_active_explorer">Aktiv utforskare</string>
     <string name="ots_settings_known_explorers">Kända kompatibla utforskare</string>
     <string name="ots_settings_mempool_hint">Alla Mempool-kompatibla REST-API:er stöds (t.ex. självhostad mempool.space).</string>
-    <string name="chess_live_open_challenge">Öppen utmaning</string>
-    <string name="chess_live_opponents_turn">Motståndarens tur</string>
     <string name="chess_live_white_wins">Vit vinner!</string>
     <string name="chess_live_black_wins">Svart vinner!</string>
     <string name="chess_live_draw_exclaim">Remi!</string>

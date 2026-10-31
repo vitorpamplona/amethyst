@@ -8907,14 +8907,11 @@
     <string name="chess_color_white_selected">✓ Bele</string>
     <string name="chess_color_black_selected">✓ Črne</string>
     <string name="chess_create_game">Ustvari igro</string>
-    <string name="chess_turn_white">Na vrsti so bele</string>
-    <string name="chess_turn_black">Na vrsti so črne</string>
     <string name="chess_result_draw">Neodločeno</string>
     <string name="chess_result_you_won">Zmagal/a si!</string>
     <string name="chess_result_you_lost">Izgubil/a si</string>
     <string name="chess_result_white_wins">Bele zmagajo</string>
     <string name="chess_result_black_wins">Črne zmagajo</string>
-    <string name="chess_waiting_for_opponent_accept">Čakam, da nasprotnik sprejme izziv</string>
     <string name="chess_resign">Predaj se</string>
     <string name="chess_continue">Nadaljuj</string>
     <string name="namecoin_settings_explanation">Imena Namecoin (.bit, d/, id/) se razrešujejo s poizvedovanjem po verigi blokov Namecoin. Spodaj izberi ElectrumX (lahki odjemalec) ali Namecoin Core RPC (svoje polno vozlišče).</string>
@@ -9088,12 +9085,6 @@
     <string name="chess_result_notation">Rezultat: %1$s</string>
     <string name="chess_round">Krog %1$s</string>
     <string name="chess_your_turn">Na vrsti si</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d poteza</item>
-        <item quantity="two">%1$d potezi</item>
-        <item quantity="few">%1$d poteze</item>
-        <item quantity="other">%1$d potez</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Čakam na odobritev podpisnika... (%1$ss)</string>
     <string name="signing_default_label">Podpisovanje</string>
     <string name="signing_progress">%1$s (%2$s od %3$s)</string>
@@ -9185,7 +9176,6 @@
     <string name="agent_work_toast_file_failed">Naloge ni bilo mogoče vložiti — preveri, ali lahko tu objavljaš</string>
     <string name="agent_work_source_gated">z odobritvijo</string>
     <string name="agent_work_source_direct">neposredno</string>
-    <string name="chess_game_default_name">Šahovska igra</string>
     <string name="profile_broadcast_updating">Posodabljam %1$s...</string>
     <string name="profile_broadcast_updated">Posodobljeno: %1$s</string>
     <string name="profile_broadcast_failed">Posodobitev %1$s ni uspela</string>
@@ -9247,8 +9237,6 @@
     <string name="ots_settings_active_explorer">Dejavni raziskovalec</string>
     <string name="ots_settings_known_explorers">Znani združljivi raziskovalci</string>
     <string name="ots_settings_mempool_hint">Podprt je vsak REST API, združljiv z Mempool (npr. samostojno gostjen mempool.space).</string>
-    <string name="chess_live_open_challenge">Odprti izziv</string>
-    <string name="chess_live_opponents_turn">Na vrsti je nasprotnik</string>
     <string name="chess_live_white_wins">Bele zmagajo!</string>
     <string name="chess_live_black_wins">Črne zmagajo!</string>
     <string name="chess_live_draw_exclaim">Neodločeno!</string>

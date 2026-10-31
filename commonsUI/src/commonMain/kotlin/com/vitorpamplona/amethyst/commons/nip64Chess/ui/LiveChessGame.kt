@@ -78,7 +78,6 @@ import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_color_white_selected
 import com.vitorpamplona.amethyst.commons.resources.chess_continue
 import com.vitorpamplona.amethyst.commons.resources.chess_create_game
-import com.vitorpamplona.amethyst.commons.resources.chess_join_by_moving
 import com.vitorpamplona.amethyst.commons.resources.chess_live_better_luck
 import com.vitorpamplona.amethyst.commons.resources.chess_live_black_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_live_congratulations
@@ -86,10 +85,8 @@ import com.vitorpamplona.amethyst.commons.resources.chess_live_defeat
 import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_exclaim
 import com.vitorpamplona.amethyst.commons.resources.chess_live_draw_subtitle
 import com.vitorpamplona.amethyst.commons.resources.chess_live_game_over
-import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
 import com.vitorpamplona.amethyst.commons.resources.chess_live_victory
 import com.vitorpamplona.amethyst.commons.resources.chess_live_white_wins
-import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_counter
 import com.vitorpamplona.amethyst.commons.resources.chess_new_game_subtitle
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_label
 import com.vitorpamplona.amethyst.commons.resources.chess_opponent_npub_placeholder
@@ -101,11 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
 import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_result_you_lost
 import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
-import com.vitorpamplona.amethyst.commons.resources.chess_turn_black
-import com.vitorpamplona.amethyst.commons.resources.chess_turn_white
-import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_your_color
-import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
 import com.vitorpamplona.amethyst.commons.resources.new_chess_game
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
@@ -218,12 +211,13 @@ fun NewChessGameDialog(
 }
 
 /**
- * The board screen's body: the opponent above the board, the user below it, then where the game
- * stands, the moves, and the controls. On a wide window the moves and controls sit beside the
- * board instead.
+ * The board screen's body: the opponent above the board, the user below it, then the result once
+ * there is one, the moves, and the controls. On a wide window the moves and controls sit beside
+ * the board instead.
  *
- * Everything comes from [game], a snapshot rebuilt from the game's events; the only state kept
- * here is how the user is looking at it: flipped or not, and which past move is on the board.
+ * A player always sees the board from their own side, with their opponent at the top; only a
+ * spectator can flip it. Everything comes from [game], a snapshot rebuilt from the game's events;
+ * the only state kept here is how a spectator turned the board and which past move is shown.
  * [onMoveMade] must publish the move; the board redraws when the next snapshot arrives with it.
  * [player] draws one player's avatar and name, or the open seat when its pubkey is null.
  * Without [canPlay] (a read-only login) the board only shows the game.
@@ -253,7 +247,9 @@ fun LiveChessGameScreen(
     val material = remember(shown) { ChessMaterial.of(shown.position) }
     val myColor = game.myColor
 
-    val flipped = (myColor == Color.BLACK) != flippedByUser
+    // The user's side: the seat they hold, or the one they can take by moving. A read-only login takes none.
+    val mySide = myColor?.takeIf { canPlay || !game.isJoinable }
+    val flipped = if (mySide != null) mySide == Color.BLACK else flippedByUser
     val bottomColor = if (flipped) Color.BLACK else Color.WHITE
     val canResign = canPlay && myColor != null && !game.isOpenSeat && !game.isFinished
     val selectPly: (Int) -> Unit = { ply -> viewPly = ply.coerceIn(0, lastPly).takeIf { it != lastPly } }
@@ -290,7 +286,7 @@ fun LiveChessGameScreen(
             shownPly = shownPly,
             lastPly = lastPly,
             onSelectPly = selectPly,
-            onFlip = { flippedByUser = !flippedByUser },
+            onFlip = if (mySide == null) ({ flippedByUser = !flippedByUser }) else null,
             onResign = if (canResign) ({ confirmResign = true }) else null,
         )
     }
@@ -312,7 +308,7 @@ fun LiveChessGameScreen(
                     modifier = Modifier.width(320.dp).fillMaxHeight(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    GameStatusLine(game, canPlay, shownPly, lastPly, onBackToGame = { viewPly = null })
+                    GameStatusLine(game, shownPly, lastPly, onBackToGame = { viewPly = null })
                     ChessMoveTable(game.state.moveHistory, shownPly, selectPly, Modifier.weight(1f))
                     toolbar()
                 }
@@ -328,7 +324,7 @@ fun LiveChessGameScreen(
                 board(boardSize)
                 strip(bottomColor, Modifier.width(boardSize).padding(horizontal = 12.dp))
                 Column(Modifier.width(boardSize).padding(horizontal = 12.dp)) {
-                    GameStatusLine(game, canPlay, shownPly, lastPly, onBackToGame = { viewPly = null })
+                    GameStatusLine(game, shownPly, lastPly, onBackToGame = { viewPly = null })
                     ChessMoveStrip(game.state.moveHistory, shownPly, selectPly)
                     toolbar()
                 }
@@ -365,58 +361,37 @@ fun LiveChessGameScreen(
 }
 
 /**
- * One line on where the game stands for the user: whose move, how it ended, or, while looking at
- * an earlier move, which one, with a way back.
+ * The one line the board and the dots cannot say: how the game ended, or, while an earlier move
+ * is shown, the way back to the game. Nothing otherwise.
  */
 @Composable
 private fun GameStatusLine(
     game: ChessGameSnapshot,
-    canPlay: Boolean,
     shownPly: Int,
     lastPly: Int,
     onBackToGame: () -> Unit,
 ) {
     if (shownPly != lastPly) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = stringRes(Res.string.chess_move_navigator_counter, shownPly, lastPly),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(onClick = onBackToGame) { Text(stringRes(Res.string.chess_back_to_game)) }
-        }
+        TextButton(onClick = onBackToGame) { Text(stringRes(Res.string.chess_back_to_game)) }
         return
     }
 
-    val myColor = game.myColor
-    val status = game.state.gameStatus
+    val status = game.state.gameStatus as? GameStatus.Finished ?: return
+    val myColor = game.myColor.takeIf { !game.isOpenSeat }
+    val result = status.result
+    val won = (result == GameResult.WHITE_WINS && myColor == Color.WHITE) || (result == GameResult.BLACK_WINS && myColor == Color.BLACK)
     val (text, color) =
         when {
-            status is GameStatus.Finished -> {
-                val result = status.result
-                val won = (result == GameResult.WHITE_WINS && myColor == Color.WHITE) || (result == GameResult.BLACK_WINS && myColor == Color.BLACK)
-                when {
-                    result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw) to MaterialTheme.colorScheme.secondary
-                    myColor == null || game.isOpenSeat -> stringRes(if (result == GameResult.WHITE_WINS) Res.string.chess_result_white_wins else Res.string.chess_result_black_wins) to MaterialTheme.colorScheme.secondary
-                    won -> stringRes(Res.string.chess_result_you_won) to ComposeColor(0xFF4CAF50)
-                    else -> stringRes(Res.string.chess_result_you_lost) to MaterialTheme.colorScheme.error
-                }
-            }
-
-            game.isWaitingForOpponent -> stringRes(Res.string.chess_waiting_for_opponent_accept) to MaterialTheme.colorScheme.onSurfaceVariant
-            game.isJoinable && game.isMyTurn && canPlay -> stringRes(Res.string.chess_join_by_moving) to MaterialTheme.colorScheme.primary
-            game.isJoinable -> stringRes(if (game.state.currentPosition.activeColor == Color.WHITE) Res.string.chess_turn_white else Res.string.chess_turn_black) to MaterialTheme.colorScheme.onSurfaceVariant
-            game.isMyTurn -> stringRes(Res.string.chess_your_turn) to MaterialTheme.colorScheme.primary
-            myColor != null && !game.isOpenSeat -> stringRes(Res.string.chess_live_opponents_turn) to MaterialTheme.colorScheme.onSurfaceVariant
-            game.state.currentPosition.activeColor == Color.WHITE -> stringRes(Res.string.chess_turn_white) to MaterialTheme.colorScheme.onSurfaceVariant
-            else -> stringRes(Res.string.chess_turn_black) to MaterialTheme.colorScheme.onSurfaceVariant
+            result == GameResult.DRAW -> stringRes(Res.string.chess_result_draw) to MaterialTheme.colorScheme.secondary
+            myColor == null -> stringRes(if (result == GameResult.WHITE_WINS) Res.string.chess_result_white_wins else Res.string.chess_result_black_wins) to MaterialTheme.colorScheme.secondary
+            won -> stringRes(Res.string.chess_result_you_won) to ComposeColor(0xFF4CAF50)
+            else -> stringRes(Res.string.chess_result_you_lost) to MaterialTheme.colorScheme.error
         }
 
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = if (game.isMyTurn || game.isFinished) FontWeight.Bold else FontWeight.Normal,
+        fontWeight = FontWeight.Bold,
         color = color,
         modifier = Modifier.padding(vertical = 8.dp),
     )

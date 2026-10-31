@@ -8509,14 +8509,11 @@
     <string name="chess_color_white_selected">✓ White</string>
     <string name="chess_color_black_selected">✓ Black</string>
     <string name="chess_create_game">Create Game</string>
-    <string name="chess_turn_white">White's turn</string>
-    <string name="chess_turn_black">Black's turn</string>
     <string name="chess_result_draw">Draw</string>
     <string name="chess_result_you_won">You won!</string>
     <string name="chess_result_you_lost">You lost</string>
     <string name="chess_result_white_wins">White wins</string>
     <string name="chess_result_black_wins">Black wins</string>
-    <string name="chess_waiting_for_opponent_accept">Waiting for opponent to accept challenge</string>
     <string name="chess_resign">Resign</string>
     <string name="chess_continue">Continue</string>
     <string name="namecoin_settings_explanation">Namecoin names (.bit, d/, id/) are resolved by querying the Namecoin blockchain. Choose ElectrumX (light-client) or Namecoin Core RPC (your own full node) below.</string>
@@ -8686,10 +8683,6 @@
     <string name="chess_result_notation">Result: %1$s</string>
     <string name="chess_round">Round %1$s</string>
     <string name="chess_your_turn">Your turn</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d move</item>
-        <item quantity="other">%1$d moves</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Waiting for signer approval... (%1$ss)</string>
     <string name="signing_default_label">Signing</string>
     <string name="signing_progress">%1$s (%2$s of %3$s)</string>
@@ -8757,9 +8750,7 @@
     <string name="chess_lobby_tab_lobby">Lobby</string>
     <string name="chess_join_as_white">Join as White</string>
     <string name="chess_join_as_black">Join as Black</string>
-    <string name="chess_join_by_moving">Open seat: your first move takes it</string>
     <string name="chess_open_seat">Open seat</string>
-    <string name="chess_to_move">To move</string>
     <string name="chess_flip_board">Flip board</string>
     <string name="chess_resign_confirm_title">Resign this game?</string>
     <string name="chess_resign_confirm_text">Your opponent wins. This cannot be undone.</string>
@@ -8791,7 +8782,6 @@
     <string name="agent_work_toast_file_failed">Couldn't file the task — check you can post here</string>
     <string name="agent_work_source_gated">gated</string>
     <string name="agent_work_source_direct">direct</string>
-    <string name="chess_game_default_name">Chess Game</string>
     <string name="profile_broadcast_updating">Updating %1$s...</string>
     <string name="profile_broadcast_updated">Updated %1$s</string>
     <string name="profile_broadcast_failed">Failed to update %1$s</string>
@@ -8851,8 +8841,6 @@
     <string name="ots_settings_active_explorer">Active explorer</string>
     <string name="ots_settings_known_explorers">Known compatible explorers</string>
     <string name="ots_settings_mempool_hint">Any Mempool-compatible REST API is supported (e.g. self-hosted mempool.space).</string>
-    <string name="chess_live_open_challenge">Open challenge</string>
-    <string name="chess_live_opponents_turn">Opponent's turn</string>
     <string name="chess_live_white_wins">White wins!</string>
     <string name="chess_live_black_wins">Black wins!</string>
     <string name="chess_live_draw_exclaim">Draw!</string>

@@ -45,29 +45,22 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.jesterGameEvents
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chess_color_black
 import com.vitorpamplona.amethyst.commons.resources.chess_color_white
-import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_black
 import com.vitorpamplona.amethyst.commons.resources.chess_join_as_white
-import com.vitorpamplona.amethyst.commons.resources.chess_live_open_challenge
-import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
-import com.vitorpamplona.amethyst.commons.resources.chess_moves_count
 import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
 import com.vitorpamplona.amethyst.commons.resources.chess_result_black_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
 import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_result_you_lost
 import com.vitorpamplona.amethyst.commons.resources.chess_result_you_won
-import com.vitorpamplona.amethyst.commons.resources.chess_turn_black
-import com.vitorpamplona.amethyst.commons.resources.chess_turn_white
-import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
+import com.vitorpamplona.amethyst.commons.resources.route_chess
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.KindCard
 import com.vitorpamplona.amethyst.commons.ui.note.types.KindTone
-import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -114,14 +107,13 @@ fun ChessGameCard(
     val game by observeChessGame(startNote, accountViewModel.account.userProfile().pubkeyHex)
     val snapshot = game ?: return
 
-    val (status, tone) = chessStatus(snapshot)
+    val status = chessStatus(snapshot)
 
     KindCard(
         icon = MaterialSymbols.ChessKnight,
-        title = stringRes(if (snapshot.isOpenSeat) Res.string.chess_live_open_challenge else Res.string.chess_game_default_name),
-        subtitle = if (snapshot.moveCount > 0) pluralStringRes(Res.plurals.chess_moves_count, snapshot.moveCount, snapshot.moveCount) else null,
-        status = status,
-        statusTone = tone,
+        title = stringRes(Res.string.route_chess),
+        status = status?.first,
+        statusTone = status?.second,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ChessBoard(
@@ -175,17 +167,14 @@ private fun CardPlayer(
     }
 }
 
+/** The chip a card needs: how the game ended, or that the user is to move. The board and the seats say the rest. */
 @Composable
-private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone> {
+private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone>? {
     val status = game.state.gameStatus
     return when {
         status is GameStatus.Finished -> resultLabel(status.result, game.myColor.takeIf { !game.isOpenSeat })
-        game.isWaitingForOpponent -> stringRes(Res.string.chess_waiting_for_opponent_accept) to KindTone.Warning
-        game.isJoinable -> stringRes(Res.string.chess_open_seat) to KindTone.Primary
-        game.isMyTurn -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
-        game.myColor != null && !game.isOpenSeat -> stringRes(Res.string.chess_live_opponents_turn) to KindTone.Neutral
-        game.state.currentPosition.activeColor == Color.WHITE -> stringRes(Res.string.chess_turn_white) to KindTone.Neutral
-        else -> stringRes(Res.string.chess_turn_black) to KindTone.Neutral
+        game.isMyTurn && !game.isJoinable -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
+        else -> null
     }
 }
 

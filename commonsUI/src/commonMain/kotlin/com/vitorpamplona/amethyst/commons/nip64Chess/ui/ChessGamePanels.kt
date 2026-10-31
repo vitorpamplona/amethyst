@@ -57,7 +57,6 @@ import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_next
 import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_previous
 import com.vitorpamplona.amethyst.commons.resources.chess_move_navigator_start
 import com.vitorpamplona.amethyst.commons.resources.chess_resign
-import com.vitorpamplona.amethyst.commons.resources.chess_to_move
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.Color
@@ -97,11 +96,6 @@ fun ChessPlayerStrip(
                 Modifier
                     .size(10.dp)
                     .background(MaterialTheme.colorScheme.primary, CircleShape),
-            )
-            Text(
-                text = stringRes(Res.string.chess_to_move),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
             )
         }
     }
@@ -211,15 +205,15 @@ private fun MoveCell(
 }
 
 /**
- * Stepping through the game and the board's own actions: first, back, forward and last; flip;
- * and resign when the user plays this game ([onResign] null otherwise).
+ * Stepping through the game and the board's own actions: first, back, forward and last; flip, for
+ * a spectator ([onFlip] null otherwise); and resign, for a player ([onResign] null otherwise).
  */
 @Composable
 fun ChessGameToolbar(
     shownPly: Int,
     lastPly: Int,
     onSelectPly: (Int) -> Unit,
-    onFlip: () -> Unit,
+    onFlip: (() -> Unit)?,
     onResign: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
@@ -237,8 +231,10 @@ fun ChessGameToolbar(
             Icon(MaterialSymbols.SkipNext, stringRes(Res.string.chess_move_navigator_final))
         }
         Spacer(Modifier.weight(1f))
-        IconButton(onClick = onFlip) {
-            Icon(MaterialSymbols.SwapVert, stringRes(Res.string.chess_flip_board))
+        if (onFlip != null) {
+            IconButton(onClick = onFlip) {
+                Icon(MaterialSymbols.SwapVert, stringRes(Res.string.chess_flip_board))
+            }
         }
         if (onResign != null) {
             IconButton(onClick = onResign) {

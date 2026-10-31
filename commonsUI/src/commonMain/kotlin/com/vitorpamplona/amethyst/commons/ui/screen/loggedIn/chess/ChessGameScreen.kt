@@ -38,7 +38,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -52,7 +51,6 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
-import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
 import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
@@ -64,7 +62,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessGameFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip64Chess.ChessGameNameGenerator
 
 /**
  * The board of one game. The game streams in over its own REQ for as long as the screen is open,
@@ -91,13 +88,10 @@ fun ChessGameScreen(
         .metadata.stateFlow
         .collectAsStateWithLifecycle()
 
-    val defaultGameName = stringRes(Res.string.chess_game_default_name)
-    val gameName = remember(gameId) { ChessGameNameGenerator.extractDisplayName(gameId) ?: defaultGameName }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(gameName) },
+                title = {},
                 navigationIcon = {
                     IconButton(onClick = { nav.popBack() }) {
                         Icon(

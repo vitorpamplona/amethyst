@@ -8397,14 +8397,11 @@
     <string name="chess_color_white_selected">✓ Brancas</string>
     <string name="chess_color_black_selected">✓ Pretas</string>
     <string name="chess_create_game">Criar Partida</string>
-    <string name="chess_turn_white">Vez das Brancas</string>
-    <string name="chess_turn_black">Vez das Pretas</string>
     <string name="chess_result_draw">Empate</string>
     <string name="chess_result_you_won">Você venceu!</string>
     <string name="chess_result_you_lost">Você perdeu</string>
     <string name="chess_result_white_wins">Brancas vencem</string>
     <string name="chess_result_black_wins">Pretas vencem</string>
-    <string name="chess_waiting_for_opponent_accept">Aguardando o oponente aceitar o desafio</string>
     <string name="chess_resign">Abandonar</string>
     <string name="chess_continue">Continuar</string>
     <string name="namecoin_settings_explanation">Nomes Namecoin (.bit, d/, id/) são resolvidos consultando o blockchain da Namecoin. Escolha abaixo entre ElectrumX (cliente leve) ou Namecoin Core RPC (seu próprio nó completo).</string>
@@ -8574,10 +8571,6 @@
     <string name="chess_result_notation">Resultado: %1$s</string>
     <string name="chess_round">Rodada %1$s</string>
     <string name="chess_your_turn">Sua vez</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d lance</item>
-        <item quantity="other">%1$d lances</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Aguardando aprovação do assinador... (%1$ss)</string>
     <string name="signing_default_label">Assinando</string>
     <string name="signing_progress">%1$s (%2$s de %3$s)</string>
@@ -8669,7 +8662,6 @@
     <string name="agent_work_toast_file_failed">Não foi possível registrar a tarefa — verifique se você pode publicar aqui</string>
     <string name="agent_work_source_gated">com aprovação</string>
     <string name="agent_work_source_direct">direta</string>
-    <string name="chess_game_default_name">Jogo de xadrez</string>
     <string name="profile_broadcast_updating">Atualizando %1$s...</string>
     <string name="profile_broadcast_updated">Atualizado: %1$s</string>
     <string name="profile_broadcast_failed">Falha ao atualizar %1$s</string>
@@ -8729,8 +8721,6 @@
     <string name="ots_settings_active_explorer">Explorador ativo</string>
     <string name="ots_settings_known_explorers">Exploradores compatíveis conhecidos</string>
     <string name="ots_settings_mempool_hint">Qualquer API REST compatível com o Mempool é suportada (ex.: mempool.space auto-hospedado).</string>
-    <string name="chess_live_open_challenge">Desafio aberto</string>
-    <string name="chess_live_opponents_turn">Vez do oponente</string>
     <string name="chess_live_white_wins">As brancas vencem!</string>
     <string name="chess_live_black_wins">As pretas vencem!</string>
     <string name="chess_live_draw_exclaim">Empate!</string>

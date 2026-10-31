@@ -8949,14 +8949,11 @@
     <string name="chess_color_white_selected">✓ Bílá</string>
     <string name="chess_color_black_selected">✓ Černá</string>
     <string name="chess_create_game">Vytvořit hru</string>
-    <string name="chess_turn_white">Na tahu je bílý</string>
-    <string name="chess_turn_black">Na tahu je černý</string>
     <string name="chess_result_draw">Remíza</string>
     <string name="chess_result_you_won">Vyhráli jste!</string>
     <string name="chess_result_you_lost">Prohráli jste</string>
     <string name="chess_result_white_wins">Bílý vyhrál</string>
     <string name="chess_result_black_wins">Černý vyhrál</string>
-    <string name="chess_waiting_for_opponent_accept">Čeká se, až soupeř přijme výzvu</string>
     <string name="chess_resign">Vzdát</string>
     <string name="chess_continue">Pokračovat</string>
     <string name="namecoin_settings_explanation">Jména Namecoin (.bit, d/, id/) se překládají dotazem na blockchain Namecoin. Níže zvolte ElectrumX (lehký klient) nebo Namecoin Core RPC (vlastní plný uzel).</string>
@@ -9130,12 +9127,6 @@
     <string name="chess_result_notation">Výsledek: %1$s</string>
     <string name="chess_round">Kolo %1$s</string>
     <string name="chess_your_turn">Jste na tahu</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d tah</item>
-        <item quantity="few">%1$d tahy</item>
-        <item quantity="many">%1$d tahů</item>
-        <item quantity="other">%1$d tahů</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Čekání na schválení podepisovatelem... (%1$ss)</string>
     <string name="signing_default_label">Podepisování</string>
     <string name="signing_progress">%1$s (%2$s z %3$s)</string>
@@ -9227,7 +9218,6 @@
     <string name="agent_work_toast_file_failed">Úlohu se nepodařilo zadat — ověřte, že sem můžete přispívat</string>
     <string name="agent_work_source_gated">se schválením</string>
     <string name="agent_work_source_direct">přímo</string>
-    <string name="chess_game_default_name">Šachová hra</string>
     <string name="profile_broadcast_updating">Aktualizace: %1$s...</string>
     <string name="profile_broadcast_updated">Aktualizováno: %1$s</string>
     <string name="profile_broadcast_failed">Aktualizace se nezdařila: %1$s</string>
@@ -9289,8 +9279,6 @@
     <string name="ots_settings_active_explorer">Aktivní průzkumník</string>
     <string name="ots_settings_known_explorers">Známé kompatibilní průzkumníky</string>
     <string name="ots_settings_mempool_hint">Podporováno je jakékoli REST API kompatibilní s Mempool (např. vlastní hostovaný mempool.space).</string>
-    <string name="chess_live_open_challenge">Otevřená výzva</string>
-    <string name="chess_live_opponents_turn">Na tahu je soupeř</string>
     <string name="chess_live_white_wins">Bílý vyhrál!</string>
     <string name="chess_live_black_wins">Černý vyhrál!</string>
     <string name="chess_live_draw_exclaim">Remíza!</string>

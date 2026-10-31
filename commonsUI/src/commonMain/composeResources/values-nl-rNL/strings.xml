@@ -8357,14 +8357,11 @@
     <string name="chess_color_white_selected">✓ Wit</string>
     <string name="chess_color_black_selected">✓ Zwart</string>
     <string name="chess_create_game">Spel maken</string>
-    <string name="chess_turn_white">Wit is aan zet</string>
-    <string name="chess_turn_black">Zwart is aan zet</string>
     <string name="chess_result_draw">Remise</string>
     <string name="chess_result_you_won">Je hebt gewonnen!</string>
     <string name="chess_result_you_lost">Je hebt verloren</string>
     <string name="chess_result_white_wins">Wit wint</string>
     <string name="chess_result_black_wins">Zwart wint</string>
-    <string name="chess_waiting_for_opponent_accept">Wachten tot de tegenstander de uitdaging accepteert</string>
     <string name="chess_resign">Opgeven</string>
     <string name="chess_continue">Doorgaan</string>
     <string name="namecoin_settings_explanation">Namecoin-namen (.bit, d/, id/) worden opgezocht via de Namecoin-blockchain. Kies hieronder ElectrumX (light client) of Namecoin Core RPC (je eigen full node).</string>
@@ -8534,10 +8531,6 @@
     <string name="chess_result_notation">Uitslag: %1$s</string>
     <string name="chess_round">Ronde %1$s</string>
     <string name="chess_your_turn">Jij bent aan zet</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d zet</item>
-        <item quantity="other">%1$d zetten</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Wachten op goedkeuring van signer... (%1$ss)</string>
     <string name="signing_default_label">Ondertekenen</string>
     <string name="signing_progress">%1$s (%2$s van %3$s)</string>
@@ -8629,7 +8622,6 @@
     <string name="agent_work_toast_file_failed">Kon de taak niet indienen — controleer of je hier mag posten</string>
     <string name="agent_work_source_gated">met goedkeuring</string>
     <string name="agent_work_source_direct">direct</string>
-    <string name="chess_game_default_name">Schaakpartij</string>
     <string name="profile_broadcast_updating">%1$s bijwerken...</string>
     <string name="profile_broadcast_updated">%1$s bijgewerkt</string>
     <string name="profile_broadcast_failed">Bijwerken van %1$s mislukt</string>
@@ -8689,8 +8681,6 @@
     <string name="ots_settings_active_explorer">Actieve explorer</string>
     <string name="ots_settings_known_explorers">Bekende compatibele explorers</string>
     <string name="ots_settings_mempool_hint">Elke Mempool-compatibele REST API wordt ondersteund (bijv. zelfgehoste mempool.space).</string>
-    <string name="chess_live_open_challenge">Open uitdaging</string>
-    <string name="chess_live_opponents_turn">Tegenstander is aan zet</string>
     <string name="chess_live_white_wins">Wit wint!</string>
     <string name="chess_live_black_wins">Zwart wint!</string>
     <string name="chess_live_draw_exclaim">Remise!</string>

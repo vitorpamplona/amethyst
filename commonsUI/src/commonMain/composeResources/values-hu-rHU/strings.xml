@@ -8357,14 +8357,11 @@
     <string name="chess_color_white_selected">✓ Világos</string>
     <string name="chess_color_black_selected">✓ Sötét</string>
     <string name="chess_create_game">Játék létrehozása</string>
-    <string name="chess_turn_white">A világos következik</string>
-    <string name="chess_turn_black">A sötét következik</string>
     <string name="chess_result_draw">Döntetlen</string>
     <string name="chess_result_you_won">Ön nyert!</string>
     <string name="chess_result_you_lost">Ön veszített</string>
     <string name="chess_result_white_wins">Világos nyert</string>
     <string name="chess_result_black_wins">Sötét nyert</string>
-    <string name="chess_waiting_for_opponent_accept">Várakozás az ellenfél kihívásának elfogadására</string>
     <string name="chess_resign">Feladás</string>
     <string name="chess_continue">Folytatás</string>
     <string name="namecoin_settings_explanation">A Namecoin nevek (.bit, d/, id/) feloldása a Namecoin blokklánc lekérdezésével történik. Válassza alább az ElectrumX (könnyű kliens) vagy a Namecoin Core RPC (saját teljes csomópont) lehetőséget.</string>
@@ -8534,10 +8531,6 @@
     <string name="chess_result_notation">Eredmény: %1$s</string>
     <string name="chess_round">%1$s. forduló</string>
     <string name="chess_your_turn">Ön következik</string>
-    <plurals name="chess_moves_count">
-        <item quantity="one">%1$d lépés</item>
-        <item quantity="other">%1$d lépés</item>
-    </plurals>
     <string name="signing_waiting_for_signer">Várakozás az aláíró jóváhagyására… (%1$s mp)</string>
     <string name="signing_default_label">Aláírás</string>
     <string name="signing_progress">%1$s (%2$s / %3$s)</string>
@@ -8629,7 +8622,6 @@
     <string name="agent_work_toast_file_failed">Nem sikerült beküldeni a feladatot – ellenőrizze, hogy tud-e bejegyzéseket közzétenni itt</string>
     <string name="agent_work_source_gated">jóváhagyási kapuval</string>
     <string name="agent_work_source_direct">közvetlen</string>
-    <string name="chess_game_default_name">Sakkjátszma</string>
     <string name="profile_broadcast_updating">%1$s frissítése…</string>
     <string name="profile_broadcast_updated">%1$s frissítve</string>
     <string name="profile_broadcast_failed">Nem sikerült frissíteni: %1$s</string>
@@ -8689,8 +8681,6 @@
     <string name="ots_settings_active_explorer">Aktív felfedező</string>
     <string name="ots_settings_known_explorers">Ismert kompatibilis felfedezők</string>
     <string name="ots_settings_mempool_hint">Bármilyen Mempool-kompatibilis REST API támogatott (pl. saját üzemeltetésű mempool.space).</string>
-    <string name="chess_live_open_challenge">Nyílt kihívás</string>
-    <string name="chess_live_opponents_turn">Az ellenfél következik</string>
     <string name="chess_live_white_wins">Világos nyert!</string>
     <string name="chess_live_black_wins">Sötét nyert!</string>
     <string name="chess_live_draw_exclaim">Döntetlen!</string>
