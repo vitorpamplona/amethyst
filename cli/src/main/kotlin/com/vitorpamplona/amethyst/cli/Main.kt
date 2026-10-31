@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.cli.commands.BlossomCommands
 import com.vitorpamplona.amethyst.cli.commands.Bolt12Commands
 import com.vitorpamplona.amethyst.cli.commands.BunkerCommand
 import com.vitorpamplona.amethyst.cli.commands.BuzzCommands
+import com.vitorpamplona.amethyst.cli.commands.ChessCommands
 import com.vitorpamplona.amethyst.cli.commands.ConcordCommands
 import com.vitorpamplona.amethyst.cli.commands.CordnCommands
 import com.vitorpamplona.amethyst.cli.commands.CountCommand
@@ -316,6 +317,7 @@ private suspend fun dispatch(argv: Array<String>): Int {
         "nsite" -> NsiteCommands.dispatch(dataDir, tail)
         "napplet" -> NappletCommands.dispatch(dataDir, tail)
         "releases" -> ReleasesCommands.dispatch(dataDir, tail)
+        "chess" -> ChessCommands.dispatch(dataDir, tail)
         "store" -> StoreCommands.dispatch(dataDir, tail)
         "follow" -> FollowCommand.follow(dataDir, tail)
         "unfollow" -> FollowCommand.unfollow(dataDir, tail)
@@ -382,6 +384,7 @@ private fun printVerbList() {
         |  trust:       trust graperank fof
         |  media/sites: blossom emoji nsite napplet podcast podcast20 git
         |  releases:    releases
+        |  games:       chess
         |  payments:    cashu offer debit
         |  signing:     bunker
         """.trimMargin(),
@@ -758,6 +761,17 @@ private fun printUsage() {
         |        [--android-flavor F] [--android-abis A]  --any-key; --dry-run signs + prints
         |        [--notes-file F] [--url-base URL]       (`amy releases --help` for details)
         |        [--relay URL[,URL]] [--dry-run] [--any-key]
+        |
+        |Chess (Jester kind:30, as the app plays it):
+        |  chess challenge [--opponent USER]           open (or direct) a game; prints its game_id
+        |        [--color white|black]
+        |  chess show GAME_ID                         players, moves, whose turn, result
+        |  chess move GAME_ID FROM TO                 play a move (e2 e4; promote with e7 e8q)
+        |  chess resign GAME_ID                       resign a game you play
+        |  chess play GAME_ID [--engine random|minimax] [--depth N] [--seed N]
+        |        [--max-plies N] [--think-ms MS]      a bot plays your side until the game ends;
+        |        [--timeout SECS]
+        |                                              takes an open seat by moving in it
         |
         |Contacts (NIP-02 kind:3):
         |  follow USER [--timeout SECS]               add USER to your contact list

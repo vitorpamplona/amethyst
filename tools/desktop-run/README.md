@@ -87,6 +87,11 @@ The options only set `AMETHYST_LOGIN` / `AMETHYST_SIGNUP`, which the app reads i
 variables work on a plain `./gradlew :desktopApp:run` (from the environment: `-Damethyst.login=`
 also works there, but shows in `ps`, so keep it to public keys).
 
+`AMETHYST_LOCAL_RELAYS=ws://127.0.0.1:7798[,…]` adds relays to the startup account's local relays,
+which count as its outbox, inbox and Global. With an account whose relay list names only that relay
+(set up with `amy`), a run reads and writes on a relay you started (`amy serve`) and nothing reaches
+public relays. `cli/tests/chess/chess-ui.sh` sets this up for chess: bots playing each other or you.
+
 - **Read-only, preferred:** log in with any public `npub` (the one above is jack's). That loads real
   feeds, profiles and notifications and cannot sign or publish anything.
 - **Flows that sign** (posting, reacting, settings that publish lists): use a throwaway account from

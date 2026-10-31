@@ -185,7 +185,13 @@ fun main(args: Array<String>) {
     if (startupKey != null && startupSignUpName != null) {
         Log.w("AmethystDesktop", "Both AMETHYST_LOGIN and AMETHYST_SIGNUP are set: logging in, not signing up")
     }
-    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey, startupSignUpName)
+    val startupLocalRelays =
+        startupSetting("AMETHYST_LOCAL_RELAYS", "amethyst.localRelays")
+            ?.split(',')
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            .orEmpty()
+    val modules = DesktopAppModules(filesDir, version, isDebug, startupKey, startupSignUpName, startupLocalRelays)
 
     // Images go through the role builder, so each URL follows the user's Tor choice for images.
     // `blossom:` images resolve to the server that holds the blob, and gated Blossom hosts get a

@@ -28,11 +28,6 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
-import com.vitorpamplona.quartz.nip64Chess.Color
-import com.vitorpamplona.quartz.nip64Chess.GameResult
-import com.vitorpamplona.quartz.nip64Chess.GameTermination
-import com.vitorpamplona.quartz.nip64Chess.PieceType
-import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
@@ -74,55 +69,13 @@ class ChessGameViewModel(
         from: String,
         to: String,
     ) {
-        val current = game.value ?: return
-        val myColor = current.myColor ?: return
-        if (!current.isMyTurn) return
-
-        val (square, promotion) = parsePromotion(to)
-        val engine = ChessEngine()
-        engine.loadFen(current.engine.getFen())
-        val result = engine.makeMove(from, square, promotion)
-        val san = result.san ?: return
-        if (!result.success) return
-
-        val history = current.state.moveHistory + san
-        // Nobody to tag yet when the challenger opens an untaken game; the builder skips a blank key.
-        val opponent = current.opponentPubkey.orEmpty()
-        val head = current.state.headEventId
-        val template =
-            when {
-                engine.isCheckmate() ->
-                    JesterEvent.buildEndMove(gameId, head, san, engine.getFen(), history, opponent, winnerResult(myColor), GameTermination.CHECKMATE)
-                engine.isStalemate() ->
-                    JesterEvent.buildEndMove(gameId, head, san, engine.getFen(), history, opponent, GameResult.DRAW, GameTermination.STALEMATE)
-                else ->
-                    JesterEvent.buildMove(gameId, head, san, engine.getFen(), history, opponent)
-            }
-
-        account.signAndComputeBroadcast(template)
+        game.value?.moveTemplate(from, to)?.let { account.signAndComputeBroadcast(it) }
     }
 
     /** Ends the game in the opponent's favour. */
     suspend fun resign() {
-        val current = game.value ?: return
-        val myColor = current.myColor ?: return
-        if (current.isFinished || current.isOpenSeat) return
-
-        account.signAndComputeBroadcast(
-            JesterEvent.buildEndMove(
-                startEventId = gameId,
-                headEventId = current.state.headEventId,
-                move = null,
-                fen = current.engine.getFen(),
-                history = current.state.moveHistory,
-                opponentPubkey = current.opponentPubkey.orEmpty(),
-                result = winnerResult(myColor.opposite()),
-                termination = GameTermination.RESIGNATION,
-            ),
-        )
+        game.value?.resignTemplate()?.let { account.signAndComputeBroadcast(it) }
     }
-
-    private fun winnerResult(winner: Color) = if (winner == Color.WHITE) GameResult.WHITE_WINS else GameResult.BLACK_WINS
 
     class Factory(
         val gameId: HexKey,
@@ -134,18 +87,4 @@ class ChessGameViewModel(
             extras: CreationExtras,
         ): T = ChessGameViewModel(gameId, account) as T
     }
-}
-
-/** Splits a promotion suffix off a target square: `e8q` is `e8` promoting to a queen. */
-internal fun parsePromotion(to: String): Pair<String, PieceType?> {
-    if (to.length != 3) return to to null
-    val promotion =
-        when (to.last().lowercaseChar()) {
-            'q' -> PieceType.QUEEN
-            'r' -> PieceType.ROOK
-            'b' -> PieceType.BISHOP
-            'n' -> PieceType.KNIGHT
-            else -> null
-        }
-    return if (promotion != null) to.take(2) to promotion else to to null
 }

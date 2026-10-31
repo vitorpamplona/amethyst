@@ -22,11 +22,14 @@ package com.vitorpamplona.amethyst.commons.nip64Chess
 
 import androidx.compose.runtime.Immutable
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterEvent
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterGameEvents
 import com.vitorpamplona.quartz.nip64Chess.jester.JesterProtocol
+import com.vitorpamplona.quartz.nip64Chess.jester.toJesterEvent
 
 /**
  * A Jester game as LocalCache holds it: the start note, with every move linked to it as a reply
@@ -39,6 +42,26 @@ fun Note.jesterGameEvents(): JesterGameEvents? {
         startEvent = start,
         moves = replies.mapNotNull { reply -> (reply.event as? JesterEvent)?.takeIf { it.isMoveEvent() } },
     )
+}
+
+/** The REQs that load one game: its start event, and every kind-30 event that points at it. */
+fun chessGameFilters(gameId: HexKey): List<Filter> =
+    listOf(
+        Filter(ids = listOf(gameId)),
+        Filter(kinds = listOf(JesterEvent.KIND), tags = mapOf("e" to listOf(gameId))),
+    )
+
+/**
+ * The game [gameId] out of events as a relay hands them over, for code that has no LocalCache
+ * (`amy`). Null until its start event is among them.
+ */
+fun jesterGameEvents(
+    gameId: HexKey,
+    events: Iterable<Event>,
+): JesterGameEvents? {
+    val jester = events.mapNotNull { it as? JesterEvent ?: it.toJesterEvent() }.distinctBy { it.id }
+    val start = jester.firstOrNull { it.id == gameId && it.isStartEvent() } ?: return null
+    return JesterGameEvents(start, jester.filter { it.isMoveEvent() && it.startEventId() == gameId })
 }
 
 /** The start note of the game [this] Jester event belongs to: itself for a start, its first `e` for a move. */
