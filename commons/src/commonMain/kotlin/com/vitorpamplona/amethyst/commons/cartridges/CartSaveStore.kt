@@ -32,33 +32,70 @@ import kotlinx.coroutines.flow.first
 import okio.IOException
 
 /**
- * What games save with `cartdata(id)`: 64 numbers per id (high scores, progress, settings). The
- * id is the game's own name for its save, so two posts of the same game share it, as they do on
- * the original console. Kept for the install, not per account.
+ * What games save with `cartdata(id)`: 64 numbers per id (high scores, progress, settings). Kept for
+ * the install, not per account.
+ *
+ * The id is the game's own name for its save, and any cart may name any id: on the original console
+ * that is how a game's sequel reads its progress, but here carts come from strangers, and a joke cart
+ * naming a popular game's id would wipe that game's high scores. So saves are kept per cart: a
+ * [forCart] view sees only the ids its own cart (by the sha256 of its bytes) wrote. Two posts of the
+ * same file share their saves; another cart never sees them.
  */
 class CartSaveStore(
     private val store: DataStore<Preferences>,
-) : KikoSaveStore {
-    /** Every save, by id. They are 512 characters each, and few games use one. */
-    override suspend fun loadAll(): Map<String, IntArray> {
+) {
+    /** The saves of the cart whose bytes hash to what [cartHash] returns; nothing while it returns null. */
+    fun forCart(cartHash: () -> String?): KikoSaveStore =
+        object : KikoSaveStore {
+            override suspend fun loadAll(): Map<String, IntArray> = cartHash()?.let { loadAll(it) } ?: emptyMap()
+
+            override suspend fun save(saves: Map<String, IntArray>) {
+                cartHash()?.let { save(it, saves) }
+            }
+        }
+
+    /** Every save of [cart], by id. They are 512 characters each, and few games use one. */
+    suspend fun loadAll(cart: String): Map<String, IntArray> {
+        val prefix = prefixOf(cart)
         val prefs = store.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }.first()
         val saves = HashMap<String, IntArray>()
         for ((key, value) in prefs.asMap()) {
-            if (!key.name.startsWith(PREFIX) || value !is String) continue
-            decode(value)?.let { saves[key.name.removePrefix(PREFIX)] = it }
+            if (!key.name.startsWith(prefix) || value !is String) continue
+            decode(value)?.let { saves[key.name.removePrefix(prefix)] = it }
         }
         return saves
     }
 
-    override suspend fun save(saves: Map<String, IntArray>) {
+    /**
+     * Writes [saves] for [cart]. Ids the store doesn't have yet are dropped once it holds
+     * [MAX_STORED_SAVES], so carts played one after another can't grow it without bound.
+     */
+    suspend fun save(
+        cart: String,
+        saves: Map<String, IntArray>,
+    ) {
+        val prefix = prefixOf(cart)
         store.edit { prefs ->
-            for ((id, values) in saves) prefs[stringPreferencesKey(PREFIX + id)] = encode(values)
+            var count = prefs.asMap().keys.count { it.name.startsWith(PREFIX) }
+            for ((id, values) in saves) {
+                val key = stringPreferencesKey(prefix + id)
+                if (key !in prefs) {
+                    if (count >= MAX_STORED_SAVES) continue
+                    count++
+                }
+                prefs[key] = encode(values)
+            }
         }
     }
 
     companion object {
         private const val PREFIX = "cart_"
         const val VALUES = KikoSaveStore.VALUES
+
+        /** Save ids kept across every cart; each is about 600 bytes. */
+        const val MAX_STORED_SAVES = 1_024
+
+        private fun prefixOf(cart: String) = "$PREFIX${cart.lowercase()}_"
 
         /** Eight hex digits per number, the raw 16:16 bits. */
         internal fun encode(values: IntArray): String = values.joinToString("") { it.toUInt().toString(16).padStart(8, '0') }
