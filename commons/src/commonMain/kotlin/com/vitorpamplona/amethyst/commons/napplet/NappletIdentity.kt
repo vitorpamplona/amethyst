@@ -69,5 +69,5 @@ data class NappletIdentity(
         }
 
     /** NAP-STORAGE instance namespace, stable for this host launch and isolated from sibling launches. */
-    val instanceStorageCoordinate: String = "$storageCoordinate:instance:${instanceId.orEmpty()}"
+    val instanceStorageCoordinate: String = "$storageCoordinate${DataStoreNappletStorage.INSTANCE_MARK}${instanceId.orEmpty()}"
 }

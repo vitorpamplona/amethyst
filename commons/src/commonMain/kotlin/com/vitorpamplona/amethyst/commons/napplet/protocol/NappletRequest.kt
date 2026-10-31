@@ -110,6 +110,11 @@ sealed interface NappletRequest {
      * **without publishing** (the web app sends it to relays itself). Unlike [Publish] this honors the
      * app-supplied `created_at` (NIP-07 apps rely on it); the shell still fixes `pubkey` to the real
      * signer, so the app can never sign as another identity. Exposed only to nSites (website mode).
+     *
+     * Gated on [NappletCapability.SIGNER], which only the website posture holds and no NIP-5D manifest
+     * can declare: a locked napplet that could reach this would hold raw signatures dated whenever it
+     * likes (a future-dated replaceable event takes the user's slot for good), to publish after the
+     * user revoked it.
      */
     data class SignEvent(
         val kind: Int,
@@ -117,7 +122,7 @@ sealed interface NappletRequest {
         val content: String,
         val createdAt: Long,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.RELAY
+        override val capability get() = NappletCapability.SIGNER
         override val signsAsUser get() = true
 
         override fun equals(other: Any?): Boolean {

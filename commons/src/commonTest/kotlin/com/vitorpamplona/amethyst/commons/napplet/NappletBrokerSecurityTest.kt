@@ -20,15 +20,20 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppConnectResult
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.AppSignerPolicy
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.InMemoryNostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrConnectPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrOpDecision
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConsentPrompt
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerOp
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
+import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.permissions.PermissionDecision
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -37,6 +42,10 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.utils.TimeUtils
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -78,6 +87,7 @@ class NappletBrokerSecurityTest {
         val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
         // The state after one "Connect": every declared capability granted for good.
         ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_ALWAYS)
+        ledger.record(applet, NappletCapability.SIGNER, GrantState.ALLOW_ALWAYS)
         return NappletBroker(
             signer = user,
             ledger = ledger,
@@ -204,5 +214,129 @@ class NappletBrokerSecurityTest {
             val merged = AccountNappletRelayGateway.merged(listOf(rumor, signed), listOf(Filter(kinds = listOf(1, 14))))
 
             assertEquals(listOf(signed), merged)
+        }
+
+    private class CountingSignerPrompt(
+        private val answer: SignerOpGrant,
+    ) : NostrSignerConsentPrompt {
+        var calls = 0
+
+        override suspend fun request(
+            identity: NappletIdentity,
+            op: NostrSignerOp,
+            request: NappletRequest,
+        ): SignerOpGrant {
+            calls++
+            return answer
+        }
+    }
+
+    // nostr.signEvent hands back a raw signature dated whenever the app likes. Only the website
+    // posture (SIGNER) may have it; a NIP-5D manifest declaring `relay` must not.
+    @Test
+    fun aNip5dNappletCannotGetARawSignature() =
+        runTest {
+            val declared = resolveRequiredCapabilities(listOf("relay", "identity", "storage", "outbox")).capabilities
+            val broker = broker(emptyList(), AppSignerPolicy.REASONABLE)
+
+            val response = broker.handle(applet, NappletRequest.SignEvent(kind = 30023, tags = arrayOf(arrayOf("d", "article")), content = "x", createdAt = 4102444800), declared)
+
+            assertIs<NappletResponse.Denied>(response)
+        }
+
+    @Test
+    fun aWebsiteStillGetsNip07SignEvent() =
+        runTest {
+            val broker = broker(emptyList(), AppSignerPolicy.REASONABLE)
+
+            val response = broker.handle(applet, NappletRequest.SignEvent(kind = 1, tags = emptyArray(), content = "hi", createdAt = 1234), NappletCapability.WEBSITE_CAPABILITIES)
+
+            assertEquals(1234L, assertIs<NappletResponse.Published>(response).event.createdAt)
+        }
+
+    // Consent fatigue: a napplet looping a follow-list publish must not bring the dialog straight back.
+    @Test
+    fun aDeclinedPromptStaysQuietForAWhile() =
+        runTest {
+            var now = 1_000_000L
+            val prompt = CountingSignerPrompt(SignerOpGrant.DenyOnce)
+            val signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore())
+            signerLedger.setPolicy(signerCoordinate, AppSignerPolicy.REASONABLE)
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            ledger.record(applet, NappletCapability.RELAY, GrantState.ALLOW_ALWAYS)
+            val broker =
+                NappletBroker(
+                    signer = user,
+                    ledger = ledger,
+                    consentPrompt = NeverAsk,
+                    relay = FixedRelay(emptyList()),
+                    signerLedger = signerLedger,
+                    signerConsentPrompt = prompt,
+                    nowMillis = { now },
+                )
+            val followList = NappletRequest.Publish(3, arrayOf(arrayOf("p", stranger.pubKey)), "")
+
+            repeat(10) { assertIs<NappletResponse.Denied>(broker.handle(applet, followList, setOf(NappletCapability.RELAY))) }
+            assertEquals(1, prompt.calls)
+
+            now += NappletBroker.DECLINE_BACKOFF_MS + 1
+            broker.handle(applet, followList, setOf(NappletCapability.RELAY))
+            assertEquals(2, prompt.calls)
+
+            // A second decline in a row waits twice as long.
+            now += NappletBroker.DECLINE_BACKOFF_MS + 1
+            broker.handle(applet, followList, setOf(NappletCapability.RELAY))
+            assertEquals(2, prompt.calls)
+        }
+
+    @Test
+    fun blockingAnAppDeniesCapabilitiesItHasNotDeclaredYet() =
+        runTest {
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val broker =
+                NappletBroker(
+                    signer = user,
+                    ledger = ledger,
+                    consentPrompt = NeverAsk,
+                    signerLedger = NostrSignerPermissionLedger(InMemoryNostrSignerPermissionStore()),
+                    nostrConnectPrompt =
+                        object : NostrConnectPrompt {
+                            override suspend fun request(
+                                identity: NappletIdentity,
+                                declared: Set<NappletCapability>,
+                            ) = AppConnectResult.Blocked
+                        },
+                )
+
+            broker.handle(applet, NappletRequest.GetPublicKey, setOf(NappletCapability.IDENTITY))
+
+            NappletCapability.entries.forEach { assertEquals(PermissionDecision.DENY, ledger.decide(applet, it), "$it") }
+        }
+
+    @Test
+    fun anAppCannotPileUpRequestsBehindAnOpenDialog() =
+        runTest {
+            val gate = CompletableDeferred<Unit>()
+            val ledger = NappletPermissionLedger(InMemoryNappletPermissionStore())
+            val prompt =
+                object : NappletConsentPrompt {
+                    override suspend fun request(
+                        identity: NappletIdentity,
+                        capability: NappletCapability,
+                        request: NappletRequest,
+                    ): GrantState {
+                        gate.await()
+                        return GrantState.ALLOW_ONCE
+                    }
+                }
+            val broker = NappletBroker(signer = user, ledger = ledger, consentPrompt = prompt, storage = null)
+            val asks = List(NappletBroker.MAX_WAITING_PROMPTS + 10) { async { broker.handle(applet, NappletRequest.GetPublicKey, setOf(NappletCapability.IDENTITY)) } }
+            advanceUntilIdle()
+
+            val refusedAtOnce = asks.count { it.isCompleted }
+            gate.complete(Unit)
+            asks.awaitAll()
+
+            assertEquals(10, refusedAtOnce)
         }
 }
