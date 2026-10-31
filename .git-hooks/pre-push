@@ -62,10 +62,13 @@ if [ "${PREPUSH_KMP_METADATA:-}" = "1" ]; then
     )
 fi
 
+# --no-parallel: run in parallel, commonsUI's Android and metadata compiles share one Kotlin daemon
+# at once and together pass its 6 GB heap (kotlin.daemon.jvmargs), failing with OutOfMemoryError;
+# each alone fits. Builds outside the hook stay parallel.
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
-    ./gradlew "${TASKS[@]}" --quiet
+    ./gradlew "${TASKS[@]}" --no-parallel --quiet
 else
-    ./gradlew "${TASKS[@]}" :desktopApp:test --quiet
+    ./gradlew "${TASKS[@]}" :desktopApp:test --no-parallel --quiet
 fi
 status=$?
 
