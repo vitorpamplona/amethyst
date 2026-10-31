@@ -769,8 +769,11 @@ class NappletBroker(
         const val DECLINE_BACKOFF_MS = 5_000L
         const val MAX_DECLINE_BACKOFF_MS = 5L * 60_000L
 
-        /** Requests one app may have waiting on a consent dialog at once. */
-        const val MAX_WAITING_PROMPTS = 32
+        /**
+         * Requests one app may have waiting on a consent dialog at once. An app's first load fires bursts
+         * (a hundred storage reads behind the one first prompt is ordinary), so this only bounds a flood.
+         */
+        const val MAX_WAITING_PROMPTS = 1_000
         private const val MAX_DECLINED_REMEMBERED = 1_024
         private const val RESOURCE_MAX_BYTES = 10L * 1024L * 1024L
         private const val RESOURCE_MAX_URLS = 16

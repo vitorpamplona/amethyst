@@ -27,6 +27,7 @@ import android.os.Bundle
 import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -37,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.ui.stringRes
+import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
@@ -145,10 +147,21 @@ object NappletLauncher {
         instanceId: String,
     ): Bundle? =
         NappletLaunch
-            .fromManifest(manifest)
+            .fromManifest(newestKnown(manifest))
             .onFailure { Log.w(TAG, "Refusing inline NIP-5D launch", it) }
             .getOrNull()
             ?.let { buildLaunchParams(context, it.inline(instanceId)) }
+
+    /**
+     * The newest version of [manifest]'s app this device has seen. Grants are kept per app, not per
+     * version, so they carry over updates; a stranger's note could otherwise embed an older signed
+     * version of an app the user trusts, one with a hole since fixed, and run it with today's grants.
+     */
+    private fun newestKnown(manifest: NappletManifest): NappletManifest {
+        val address = (manifest as? AddressableEvent)?.address() ?: return manifest
+        val known = LocalCache.getAddressableNoteIfExists(address)?.event as? NappletManifest ?: return manifest
+        return NappletLaunch.newerOf(manifest, known)
+    }
 
     /**
      * The launch parameters for running the webxdc [app] posted in [postId] by [poster] inside its
