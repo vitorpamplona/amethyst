@@ -46,7 +46,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustSetup
 import com.vitorpamplona.amethyst.commons.viewmodels.WebOfTrustViewModel
 import com.vitorpamplona.amethyst.commons.wot.nudge.WebOfTrustNudgeRules
-import com.vitorpamplona.amethyst.commons.wot.nudge.followsOfFollowsCount
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -94,15 +93,12 @@ fun WebOfTrustNudge(
     val completed by viewModel.completed.collectAsStateWithLifecycle()
     val others = remember(follows) { follows.authors - account.signer.pubKey }
 
-    // Faces with a picture first, and the follows-of-follows estimate: both read the whole cache.
-    val sample by produceState(CircleSample.EMPTY, others) {
+    // Faces with a picture first: reads every follow in the cache.
+    val faces by produceState(emptyList<HexKey>(), others) {
         value =
             withContext(Dispatchers.Default) {
                 val withPicture = others.filter { account.cache.getUserIfExists(it)?.profilePicture() != null }
-                CircleSample(
-                    faces = (withPicture + others).distinct().take(6),
-                    extended = account.followsOfFollowsCount(others),
-                )
+                (withPicture + others).distinct().take(6)
             }
     }
 
@@ -130,19 +126,22 @@ fun WebOfTrustNudge(
         account.settings.hideWebOfTrustNudgeUntil(until)
     }
 
-    CircleRingsCard(
-        self = userFace(account.signer.pubKey, accountViewModel, nav),
-        faces = sample.faces.map { key -> userFace(key, accountViewModel, nav) },
-        followCount = others.size,
-        extendedCount = sample.extended,
-        providers = providers,
-        selected = selected,
-        onSelect = { selectedId = it.id },
-        activation = activation,
-        onActivate = { viewModel.setUp(onboarding) },
-        onNotNow = { hide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
-        // The sign-up runs in the view model: putting the card away mid-way would hide its progress.
-        onDismiss = { if (!working) hide(WebOfTrustNudgeRules.FOREVER) },
+    CircleHeroCard(
+        CircleNudge(
+            self = userFace(account.signer.pubKey, accountViewModel, nav),
+            faces = faces.map { key -> userFace(key, accountViewModel, nav) },
+            followCount = others.size,
+            // The circle the provider will compute, on average: nothing here counts it.
+            extendedCount = maxOf(WebOfTrustNudgeRules.TYPICAL_CIRCLE, others.size) - others.size,
+            providers = providers,
+            selected = selected,
+            activation = activation,
+            onSelect = { selectedId = it.id },
+            onActivate = { viewModel.setUp(onboarding) },
+            onNotNow = { hide(TimeUtils.now() + WebOfTrustNudgeRules.SNOOZE_SECONDS) },
+            // The sign-up runs in the view model: putting the card away mid-way would hide its progress.
+            onDismiss = { if (!working) hide(WebOfTrustNudgeRules.FOREVER) },
+        ),
         modifier = modifier,
     )
 }
@@ -152,15 +151,6 @@ private fun userFace(
     accountViewModel: AccountViewModel,
     nav: INav,
 ): NudgeFace = { size -> UserPicture(key, size, accountViewModel = accountViewModel, nav = nav) }
-
-private class CircleSample(
-    val faces: List<HexKey>,
-    val extended: Int,
-) {
-    companion object {
-        val EMPTY = CircleSample(emptyList(), 0)
-    }
-}
 
 /** The provider's own account picture when it has one, else a plain tile. */
 @Composable
