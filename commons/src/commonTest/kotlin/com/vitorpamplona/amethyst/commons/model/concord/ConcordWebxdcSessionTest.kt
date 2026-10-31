@@ -93,4 +93,39 @@ class ConcordWebxdcSessionTest {
             assertEquals(2, session.webxdcSignals(general).size)
             assertTrue(alice.pubKey.lowercase() in session.observedAuthors.value)
         }
+
+    // Any member can send signals, and nothing consumes them yet: what is held stays bounded in bytes.
+    @Test
+    fun aFloodOfBigSignalsIsBoundedInBytes() =
+        runTest {
+            val community = ConcordCommunityFactory.create(owner, "Nostrichs", createdAt = 1L, relays = listOf("wss://r.example"))
+            val entry =
+                ConcordCommunityListEntry(
+                    id = community.communityIdHex,
+                    owner = community.ownerPubKey,
+                    ownerSalt = community.ownerSalt.toHexKey(),
+                    root = community.communityRoot.toHexKey(),
+                    rootEpoch = community.rootEpoch,
+                    controlPk = community.controlPkHex,
+                    controlRoot = community.controlRoot.toHexKey(),
+                    relays = listOf("wss://r.example"),
+                    name = "Nostrichs",
+                )
+            val session = ConcordCommunitySession(entry, owner.pubKey) { _, _, _, _ -> }
+            community.genesisWraps.forEach { session.ingest(it) }
+            val general = community.generalChannelIdHex
+            val plane = assertNotNull(session.currentChannelPlane(general))
+            // A wrap carries at most NIP-44's 64 KiB, so a flood is many signals near that size.
+            val payload = "x".repeat(40_000)
+
+            repeat(150) { i ->
+                val update = ConcordWebxdc.stateUpdate(alice.pubKey, general, plane.epoch, "uuid-$i", payload, createdAt = 10L + i)
+                session.ingest(ConcordStreamEnvelope.wrap(update, plane.key, alice, encrypted = true, createdAt = update.createdAt))
+            }
+
+            val held = session.webxdcSignals(general)
+            assertTrue(held.sumOf { ConcordCommunitySession.webxdcWeight(it) } <= ConcordCommunitySession.MAX_WEBXDC_BYTES_PER_CHANNEL)
+            assertTrue(held.size < 150, "the oldest were let go: ${held.size}")
+            assertEquals("uuid-149", ConcordWebxdc.sessionOf(held.last()))
+        }
 }

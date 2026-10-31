@@ -45,6 +45,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.net.InetSocketAddress
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
@@ -160,6 +161,37 @@ class WebxdcFilesTest {
             val files = files("$base/game.xdc", "ab".repeat(32))
             assertFalse(files.isAvailable("/"))
             assertNull(files.find("/index.html"))
+        }
+
+    // Every app the user starts can unpack to the archive cap, and on desktop this folder is kept for
+    // good: the apps opened longest ago go once they all pass the budget.
+    @Test
+    fun bundlesOpenedLongestAgoAreLetGoPastTheBudget() =
+        runBlocking {
+            val root = folder.newFolder()
+            val bundles = WebxdcBundles(root, maxBytes = 250_000)
+            val apps =
+                (1..4).map { n ->
+                    val archive = zip("index.html" to "<p>$n</p>", "data.bin" to "x".repeat(100_000))
+                    served["/app$n.xdc"] = archive
+                    sha256(archive).toHexKey()
+                }
+            apps.forEachIndexed { i, hash ->
+                assertNotNull(bundles.open("$base/app${i + 1}.xdc", hash, emptyList(), client))
+                // The file clock is coarse: make each later open count as later.
+                File(File(root, hash), WebxdcBundles.COMPLETE).setLastModified(1_000_000L * (i + 1))
+            }
+            // App 1 is opened again, so app 2 is now the one used longest ago.
+            assertNotNull(bundles.open("$base/app1.xdc", apps[0], emptyList(), client))
+            val five = zip("index.html" to "<p>5</p>", "data.bin" to "y".repeat(100_000))
+            served["/app5.xdc"] = five
+            assertNotNull(bundles.open("$base/app5.xdc", sha256(five).toHexKey(), emptyList(), client))
+
+            val kept = root.list()!!.toSet()
+            assertTrue("the newest stays: $kept", sha256(five).toHexKey() in kept)
+            assertTrue("the one opened again stays: $kept", apps[0] in kept)
+            assertFalse("the one opened longest ago goes: $kept", apps[1] in kept)
+            assertTrue(root.walkTopDown().filter { it.isFile }.sumOf { it.length() } <= 250_000)
         }
 
     @Test
