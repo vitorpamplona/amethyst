@@ -1426,8 +1426,6 @@
     <string name="poll_submit">Gửi</string>
     <string name="poll_view_results">Xem kết quả</string>
     <string name="restart">Khởi động lại</string>
-    <string name="chess_accept">Chấp nhận</string>
-    <string name="chess_decline">Từ chối</string>
     <string name="new_chess_game">Trò chơi cờ vua mới</string>
     <string name="chess_loading_game">Đang tải trò chơi…</string>
     <string name="chess_game_not_found">Không tìm thấy trò chơi</string>

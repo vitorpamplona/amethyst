@@ -2967,8 +2967,6 @@
     <string name="poll_results_no_votes">Brak głosów</string>
     <string name="poll_results_checking_completeness">Sprawdzanie liczby oddanych głosów…</string>
     <string name="restart">Zrestartuj</string>
-    <string name="chess_accept">Akceptuj</string>
-    <string name="chess_decline">Odrzuć</string>
     <string name="new_chess_game">Nowa gra w Szachy</string>
     <string name="chess_loading_game">Ładowanie gry\u2026</string>
     <string name="chess_game_not_found">Gra nie znaleziona</string>

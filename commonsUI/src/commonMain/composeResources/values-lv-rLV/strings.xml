@@ -1448,8 +1448,6 @@
     <string name="poll_submit">Iesniegt</string>
     <string name="poll_view_results">Skatīt rezultātus</string>
     <string name="restart">Restartēt</string>
-    <string name="chess_accept">Pieņemt</string>
-    <string name="chess_decline">Noraidīt</string>
     <string name="new_chess_game">Jauna šaha spēle</string>
     <string name="chess_loading_game">Ielādē spēli…</string>
     <string name="chess_game_not_found">Spēle nav atrasta</string>

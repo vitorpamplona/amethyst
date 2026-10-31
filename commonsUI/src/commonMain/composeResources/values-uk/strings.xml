@@ -1455,8 +1455,6 @@
     <string name="poll_submit">Надіслати</string>
     <string name="poll_view_results">Переглянути результати</string>
     <string name="restart">Перезапустити</string>
-    <string name="chess_accept">Прийняти</string>
-    <string name="chess_decline">Відхилити</string>
     <string name="new_chess_game">Нова шахова партія</string>
     <string name="chess_loading_game">Завантаження гри…</string>
     <string name="chess_game_not_found">Гру не знайдено</string>

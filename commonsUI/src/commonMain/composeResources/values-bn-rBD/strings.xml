@@ -1436,8 +1436,6 @@
     <string name="poll_submit">জমা দিন</string>
     <string name="poll_view_results">ফলাফল দেখুন</string>
     <string name="restart">পুনরায় শুরু করুন</string>
-    <string name="chess_accept">গ্রহণ করুন</string>
-    <string name="chess_decline">প্রত্যাখ্যান করুন</string>
     <string name="new_chess_game">নতুন দাবা খেলা</string>
     <string name="chess_loading_game">খেলা লোড হচ্ছে…</string>
     <string name="chess_game_not_found">খেলা পাওয়া যায়নি</string>

@@ -1451,8 +1451,6 @@
     <string name="poll_submit">Indienen</string>
     <string name="poll_view_results">Resultaten bekijken</string>
     <string name="restart">Opnieuw starten</string>
-    <string name="chess_accept">Accepteren</string>
-    <string name="chess_decline">Weigeren</string>
     <string name="new_chess_game">Nieuw schaakspel</string>
     <string name="chess_loading_game">Spel laden…</string>
     <string name="chess_game_not_found">Spel niet gevonden</string>

@@ -20,12 +20,20 @@
  */
 package com.vitorpamplona.amethyst.commons.nip64Chess.ui
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -35,11 +43,15 @@ import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.GameStatus
 import com.vitorpamplona.amethyst.commons.nip64Chess.jesterGameEvents
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.chess_accept
+import com.vitorpamplona.amethyst.commons.resources.chess_color_black
+import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
+import com.vitorpamplona.amethyst.commons.resources.chess_join_as_black
+import com.vitorpamplona.amethyst.commons.resources.chess_join_as_white
 import com.vitorpamplona.amethyst.commons.resources.chess_live_open_challenge
 import com.vitorpamplona.amethyst.commons.resources.chess_live_opponents_turn
 import com.vitorpamplona.amethyst.commons.resources.chess_moves_count
+import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
 import com.vitorpamplona.amethyst.commons.resources.chess_result_black_wins
 import com.vitorpamplona.amethyst.commons.resources.chess_result_draw
 import com.vitorpamplona.amethyst.commons.resources.chess_result_white_wins
@@ -50,15 +62,19 @@ import com.vitorpamplona.amethyst.commons.resources.chess_turn_white
 import com.vitorpamplona.amethyst.commons.resources.chess_waiting_for_opponent_accept
 import com.vitorpamplona.amethyst.commons.resources.chess_your_turn
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.KindCard
-import com.vitorpamplona.amethyst.commons.ui.note.types.KindCardUsers
 import com.vitorpamplona.amethyst.commons.ui.note.types.KindTone
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip64Chess.ChessPiece
 import com.vitorpamplona.quartz.nip64Chess.Color
 import com.vitorpamplona.quartz.nip64Chess.GameResult
+import com.vitorpamplona.quartz.nip64Chess.PieceType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -85,8 +101,9 @@ fun observeChessGame(
 }
 
 /**
- * A chess game in a feed: who plays whom, whose turn it is or how it ended, and the board.
- * Opening it (the note's own click, or Accept on a seat the user can take) goes to the board.
+ * A chess game in a feed: the position with its last move, who plays which colour, and whose turn
+ * it is or how it ended. Opening it (the note's own click, or Join on a seat the user can take)
+ * goes to the board.
  */
 @Composable
 fun ChessGameCard(
@@ -106,11 +123,53 @@ fun ChessGameCard(
         status = status,
         statusTone = tone,
     ) {
-        KindCardUsers(listOfNotNull(snapshot.whitePubkey, snapshot.blackPubkey), accountViewModel, nav)
-        ChessBoard(position = snapshot.state.currentPosition, boardSize = 200.dp, showCoordinates = false)
-        if (snapshot.isOpenSeat && snapshot.myColor != null && !snapshot.isWaitingForOpponent) {
-            Button(onClick = { nav.nav(Route.ChessGame(snapshot.gameId)) }) {
-                Text(stringRes(Res.string.chess_accept))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ChessBoard(
+                position = snapshot.state.currentPosition,
+                boardSize = 128.dp,
+                showCoordinates = false,
+                flipped = snapshot.myColor == Color.BLACK,
+                lastMove = snapshot.replay.last.lastMove,
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                CardPlayer(Color.WHITE, snapshot.whitePubkey, accountViewModel, nav)
+                CardPlayer(Color.BLACK, snapshot.blackPubkey, accountViewModel, nav)
+                if (snapshot.isJoinable && accountViewModel.account.isWriteable()) {
+                    Button(onClick = { nav.nav(Route.ChessGame(snapshot.gameId)) }) {
+                        Text(stringRes(if (snapshot.myColor == Color.WHITE) Res.string.chess_join_as_white else Res.string.chess_join_as_black))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** One side of the game: its king, then the player, or the open seat. */
+@Composable
+private fun CardPlayer(
+    color: Color,
+    pubkey: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Image(
+            imageVector = ChessPiece(PieceType.KING, color).toImageVector(),
+            contentDescription = stringRes(if (color == Color.WHITE) Res.string.chess_color_white else Res.string.chess_color_black),
+            modifier = Modifier.size(20.dp),
+        )
+        if (pubkey == null) {
+            Text(
+                text = stringRes(Res.string.chess_open_seat),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            LoadUser(pubkey) { user ->
+                if (user != null) {
+                    ClickableUserPicture(baseUser = user, size = 24.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
+                    UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
+                }
             }
         }
     }
@@ -122,6 +181,7 @@ private fun chessStatus(game: ChessGameSnapshot): Pair<String, KindTone> {
     return when {
         status is GameStatus.Finished -> resultLabel(status.result, game.myColor.takeIf { !game.isOpenSeat })
         game.isWaitingForOpponent -> stringRes(Res.string.chess_waiting_for_opponent_accept) to KindTone.Warning
+        game.isJoinable -> stringRes(Res.string.chess_open_seat) to KindTone.Primary
         game.isMyTurn -> stringRes(Res.string.chess_your_turn) to KindTone.Primary
         game.myColor != null && !game.isOpenSeat -> stringRes(Res.string.chess_live_opponents_turn) to KindTone.Neutral
         game.state.currentPosition.activeColor == Color.WHITE -> stringRes(Res.string.chess_turn_white) to KindTone.Neutral

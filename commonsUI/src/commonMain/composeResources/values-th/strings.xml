@@ -1449,8 +1449,6 @@
     <string name="poll_submit">ส่ง</string>
     <string name="poll_view_results">ดูผลลัพธ์</string>
     <string name="restart">เริ่มใหม่</string>
-    <string name="chess_accept">ยอมรับ</string>
-    <string name="chess_decline">ปฏิเสธ</string>
     <string name="new_chess_game">เกมหมากรุกใหม่</string>
     <string name="chess_loading_game">กำลังโหลดเกม…</string>
     <string name="chess_game_not_found">ไม่พบเกม</string>

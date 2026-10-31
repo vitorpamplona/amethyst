@@ -1451,8 +1451,6 @@
     <string name="poll_submit">சமர்ப்பி</string>
     <string name="poll_view_results">முடிவுகளைக் காண்</string>
     <string name="restart">மறுதொடக்கம்</string>
-    <string name="chess_accept">ஏற்கவும்</string>
-    <string name="chess_decline">மறுக்கவும்</string>
     <string name="new_chess_game">புதிய சதுரங்க விளையாட்டு</string>
     <string name="chess_loading_game">விளையாட்டை ஏற்றுகிறது…</string>
     <string name="chess_game_not_found">விளையாட்டு கண்டுபிடிக்கப்படவில்லை</string>

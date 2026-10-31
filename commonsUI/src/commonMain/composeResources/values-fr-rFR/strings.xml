@@ -1565,8 +1565,6 @@
     <string name="poll_submit">Valider</string>
     <string name="poll_view_results">Voir les résultats</string>
     <string name="restart">Redémarrer</string>
-    <string name="chess_accept">Accepter</string>
-    <string name="chess_decline">Refuser</string>
     <string name="new_chess_game">Nouvelle partie d'échecs</string>
     <string name="chess_loading_game">Chargement de la partie\u2026</string>
     <string name="chess_game_not_found">Partie introuvable</string>

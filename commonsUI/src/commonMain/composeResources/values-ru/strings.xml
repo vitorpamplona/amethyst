@@ -1455,8 +1455,6 @@
     <string name="poll_submit">Отправить</string>
     <string name="poll_view_results">Посмотреть результаты</string>
     <string name="restart">Перезапустить</string>
-    <string name="chess_accept">Принять</string>
-    <string name="chess_decline">Отклонить</string>
     <string name="new_chess_game">Новая шахматная партия</string>
     <string name="chess_loading_game">Загрузка партии…</string>
     <string name="chess_game_not_found">Партия не найдена</string>

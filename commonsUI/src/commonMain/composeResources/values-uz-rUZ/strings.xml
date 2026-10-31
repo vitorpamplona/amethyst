@@ -1435,8 +1435,6 @@
     <string name="poll_submit">Yuborish</string>
     <string name="poll_view_results">Natijalarni ko'rish</string>
     <string name="restart">Qayta boshlash</string>
-    <string name="chess_accept">Qabul qilish</string>
-    <string name="chess_decline">Rad etish</string>
     <string name="new_chess_game">Yangi shaxmat o'yini</string>
     <string name="chess_loading_game">O'yin yuklanmoqda…</string>
     <string name="chess_game_not_found">O'yin topilmadi</string>

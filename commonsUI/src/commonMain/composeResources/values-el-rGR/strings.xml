@@ -1429,8 +1429,6 @@
     <string name="poll_submit">Υποβολή</string>
     <string name="poll_view_results">Προβολή αποτελεσμάτων</string>
     <string name="restart">Επανεκκίνηση</string>
-    <string name="chess_accept">Αποδοχή</string>
-    <string name="chess_decline">Απόρριψη</string>
     <string name="new_chess_game">Νέο παιχνίδι σκακιού</string>
     <string name="chess_loading_game">Φόρτωση παιχνιδιού…</string>
     <string name="chess_game_not_found">Το παιχνίδι δεν βρέθηκε</string>

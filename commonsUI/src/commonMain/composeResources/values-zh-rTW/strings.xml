@@ -1443,8 +1443,6 @@
     <string name="poll_submit">提交</string>
     <string name="poll_view_results">查看結果</string>
     <string name="restart">重新啟動</string>
-    <string name="chess_accept">接受</string>
-    <string name="chess_decline">拒絕</string>
     <string name="new_chess_game">新棋局</string>
     <string name="chess_loading_game">載入遊戲中…</string>
     <string name="chess_game_not_found">找不到棋局</string>

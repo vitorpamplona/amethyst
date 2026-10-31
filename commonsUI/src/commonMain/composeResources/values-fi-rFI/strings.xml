@@ -1438,8 +1438,6 @@
     <string name="poll_submit">Lähetä</string>
     <string name="poll_view_results">Näytä tulokset</string>
     <string name="restart">Käynnistä uudelleen</string>
-    <string name="chess_accept">Hyväksy</string>
-    <string name="chess_decline">Hylkää</string>
     <string name="new_chess_game">Uusi shakkipeli</string>
     <string name="chess_loading_game">Ladataan peliä…</string>
     <string name="chess_game_not_found">Peliä ei löydy</string>

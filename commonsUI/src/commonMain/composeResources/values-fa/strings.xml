@@ -1451,8 +1451,6 @@
     <string name="poll_submit">ثبت</string>
     <string name="poll_view_results">مشاهده نتایج</string>
     <string name="restart">راه‌اندازی مجدد</string>
-    <string name="chess_accept">قبول</string>
-    <string name="chess_decline">رد</string>
     <string name="new_chess_game">بازی شطرنج جدید</string>
     <string name="chess_loading_game">در حال بارگذاری بازی…</string>
     <string name="chess_game_not_found">بازی یافت نشد</string>

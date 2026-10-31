@@ -1434,8 +1434,6 @@
     <string name="poll_submit">Wasilisha</string>
     <string name="poll_view_results">Tazama matokeo</string>
     <string name="restart">Anzisha upya</string>
-    <string name="chess_accept">Kubali</string>
-    <string name="chess_decline">Kataa</string>
     <string name="new_chess_game">Mchezo Mpya wa Sataranji</string>
     <string name="chess_loading_game">Inapakia mchezo…</string>
     <string name="chess_game_not_found">Mchezo Haukupatikana</string>

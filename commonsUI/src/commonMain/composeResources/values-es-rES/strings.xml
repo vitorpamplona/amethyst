@@ -1448,8 +1448,6 @@
     <string name="poll_submit">Enviar</string>
     <string name="poll_view_results">Ver resultados</string>
     <string name="restart">Reiniciar</string>
-    <string name="chess_accept">Aceptar</string>
-    <string name="chess_decline">Rechazar</string>
     <string name="new_chess_game">Nueva partida de ajedrez</string>
     <string name="chess_loading_game">Cargando partida…</string>
     <string name="chess_game_not_found">Partida no encontrada</string>

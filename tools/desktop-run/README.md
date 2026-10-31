@@ -44,6 +44,7 @@ Join steps with a quoted `";"` to run them in one JVM (each JVM start costs abou
 |---|---|
 | `shot <file.png> [x y w h]` | Screenshot of the whole screen, or a region (zoom in on a detail) |
 | `click x y`, `dclick x y`, `rclick x y`, `move x y` | Mouse, in screen pixels (= window pixels: no WM, so the window is undecorated) |
+| `down x y`, `up x y` | Press and hold the left button, release it: a drag is `down`, a few `move`s, `up` |
 | `type <text...>` | Pastes the text through the clipboard + Ctrl+V. Works for any character and layout |
 | `key <chord...>` | `enter`, `tab`, `escape`, `ctrl+k`, `ctrl+shift+n`, `f5`, `down`, `pagedown`, ... |
 | `scroll x y n` | Mouse wheel at (x, y); positive `n` scrolls down |

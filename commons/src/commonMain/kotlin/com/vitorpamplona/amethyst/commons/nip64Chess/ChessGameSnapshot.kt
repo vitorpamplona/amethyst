@@ -59,6 +59,8 @@ class ChessGameSnapshot(
     val viewerPubkey: HexKey,
     /** The colour the viewer plays, or can take: the empty seat of someone else's open challenge. Null for spectators. */
     val myColor: Color?,
+    /** Every position from the start to now, for stepping back and for highlighting the last move. */
+    val replay: ChessReplay,
 ) {
     val whitePubkey: HexKey? get() = state.whitePubkey
     val blackPubkey: HexKey? get() = state.blackPubkey
@@ -82,6 +84,9 @@ class ChessGameSnapshot(
 
     val lastActivityAt: Long get() = state.lastMoveAt ?: state.challengeCreatedAt
 
+    /** True when [myColor] is a seat the viewer would take by moving, not one they hold. */
+    val isJoinable: Boolean get() = isOpenSeat && myColor != null && !isWaitingForOpponent
+
     companion object {
         fun build(
             events: JesterGameEvents,
@@ -104,7 +109,7 @@ class ChessGameSnapshot(
                         }
                 }
 
-            return ChessGameSnapshot(start.id, state, result.engine, start.pubKey, viewerPubkey, myColor)
+            return ChessGameSnapshot(start.id, state, result.engine, start.pubKey, viewerPubkey, myColor, ChessReplay.of(state.moveHistory))
         }
 
         /** An open challenge seats anyone; a direct one only the player it was filed for. */

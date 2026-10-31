@@ -1450,8 +1450,6 @@
     <string name="poll_submit">提交</string>
     <string name="poll_view_results">查看结果</string>
     <string name="restart">重启</string>
-    <string name="chess_accept">接受</string>
-    <string name="chess_decline">拒绝</string>
     <string name="new_chess_game">新的国际象棋游戏</string>
     <string name="chess_loading_game">正在加载游戏\u2026</string>
     <string name="chess_game_not_found">未找到游戏</string>

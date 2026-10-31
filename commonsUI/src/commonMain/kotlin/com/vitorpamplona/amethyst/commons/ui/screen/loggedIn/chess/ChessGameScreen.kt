@@ -20,9 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -44,20 +46,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
-import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameSnapshot
 import com.vitorpamplona.amethyst.commons.nip64Chess.ChessGameViewModel
 import com.vitorpamplona.amethyst.commons.nip64Chess.ui.LiveChessGameScreen
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
-import com.vitorpamplona.amethyst.commons.resources.chess_color_black
-import com.vitorpamplona.amethyst.commons.resources.chess_color_white
 import com.vitorpamplona.amethyst.commons.resources.chess_game_default_name
 import com.vitorpamplona.amethyst.commons.resources.chess_game_not_found
 import com.vitorpamplona.amethyst.commons.resources.chess_loading_game
+import com.vitorpamplona.amethyst.commons.resources.chess_open_seat
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
+import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chess.datasource.ChessGameFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -149,22 +152,40 @@ private fun ChessBoardContent(
     nav: INav,
     modifier: Modifier,
 ) {
-    val whiteHex = game.whitePubkey.orEmpty()
-    val blackHex = game.blackPubkey.orEmpty()
-    val white = remember(whiteHex) { whiteHex.ifEmpty { null }?.let { LocalCache.checkGetOrCreateUser(it) } }
-    val black = remember(blackHex) { blackHex.ifEmpty { null }?.let { LocalCache.checkGetOrCreateUser(it) } }
-
     LiveChessGameScreen(
         game = game,
-        onMoveMade = { from, to, _ -> accountViewModel.launchSigner { viewModel.move(from, to) } },
+        onMoveMade = { from, to -> accountViewModel.launchSigner { viewModel.move(from, to) } },
         onResign = { accountViewModel.launchSigner { viewModel.resign() } },
+        player = { pubkey -> ChessPlayer(pubkey, accountViewModel, nav) },
         modifier = modifier,
-        whiteName = white?.toBestDisplayName() ?: stringRes(Res.string.chess_color_white),
-        whiteHex = whiteHex,
-        whiteAvatarUrl = white?.profilePicture(),
-        blackName = black?.toBestDisplayName() ?: stringRes(Res.string.chess_color_black),
-        blackHex = blackHex,
-        blackAvatarUrl = black?.profilePicture(),
-        onPlayerClick = { pubkeyHex -> if (pubkeyHex.isNotEmpty()) nav.nav(Route.Profile(pubkeyHex)) },
+        canPlay = accountViewModel.account.isWriteable(),
     )
+}
+
+/** A player beside the board: avatar and name, opening their profile; or the seat nobody has taken. */
+@Composable
+private fun ChessPlayer(
+    pubkey: String?,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    if (pubkey == null) {
+        Text(
+            text = stringRes(Res.string.chess_open_seat),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        return
+    }
+    LoadUser(pubkey) { user ->
+        if (user == null) return@LoadUser
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.clickable { nav.nav(Route.Profile(pubkey)) },
+        ) {
+            ClickableUserPicture(baseUser = user, size = 32.dp, accountViewModel = accountViewModel, onClick = { nav.nav(Route.Profile(pubkey)) })
+            UsernameDisplay(baseUser = user, accountViewModel = accountViewModel)
+        }
+    }
 }

@@ -1417,8 +1417,6 @@
     <string name="poll_submit">Invia</string>
     <string name="poll_view_results">Visualizza risultati</string>
     <string name="restart">Riavvia</string>
-    <string name="chess_accept">Accetta</string>
-    <string name="chess_decline">Rifiuta</string>
     <string name="new_chess_game">Nuova partita a scacchi</string>
     <string name="chess_loading_game">Caricamento partita…</string>
     <string name="chess_game_not_found">Partita non trovata</string>

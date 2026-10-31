@@ -1438,8 +1438,6 @@
     <string name="poll_submit">送信</string>
     <string name="poll_view_results">結果を表示</string>
     <string name="restart">再起動</string>
-    <string name="chess_accept">承諾</string>
-    <string name="chess_decline">拒否</string>
     <string name="new_chess_game">新しいチェスゲーム</string>
     <string name="chess_loading_game">ゲームを読み込み中…</string>
     <string name="chess_game_not_found">ゲームが見つかりません</string>

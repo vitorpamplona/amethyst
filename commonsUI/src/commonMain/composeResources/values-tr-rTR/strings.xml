@@ -1444,8 +1444,6 @@
     <string name="poll_submit">Gönder</string>
     <string name="poll_view_results">Sonuçları gör</string>
     <string name="restart">Yeniden başlat</string>
-    <string name="chess_accept">Kabul et</string>
-    <string name="chess_decline">Reddet</string>
     <string name="new_chess_game">Yeni Satranç Oyunu</string>
     <string name="chess_loading_game">Oyun yükleniyor…</string>
     <string name="chess_game_not_found">Oyun Bulunamadı</string>

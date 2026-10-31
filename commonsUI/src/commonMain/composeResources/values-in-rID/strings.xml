@@ -1421,8 +1421,6 @@
     <string name="poll_submit">Kirim</string>
     <string name="poll_view_results">Lihat hasil</string>
     <string name="restart">Mulai ulang</string>
-    <string name="chess_accept">Terima</string>
-    <string name="chess_decline">Tolak</string>
     <string name="new_chess_game">Permainan Catur Baru</string>
     <string name="chess_loading_game">Memuat permainan…</string>
     <string name="chess_game_not_found">Permainan Tidak Ditemukan</string>

@@ -1452,8 +1452,6 @@
     <string name="poll_submit">Absenden</string>
     <string name="poll_view_results">Ergebnisse anzeigen</string>
     <string name="restart">Neu starten</string>
-    <string name="chess_accept">Annehmen</string>
-    <string name="chess_decline">Ablehnen</string>
     <string name="new_chess_game">Neues Schachspiel</string>
     <string name="chess_loading_game">Spiel wird geladen…</string>
     <string name="chess_game_not_found">Spiel nicht gefunden</string>

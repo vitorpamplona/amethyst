@@ -1432,8 +1432,6 @@
     <string name="poll_submit">Enviar</string>
     <string name="poll_view_results">Ver resultados</string>
     <string name="restart">Reiniciar</string>
-    <string name="chess_accept">Aceitar</string>
-    <string name="chess_decline">Recusar</string>
     <string name="new_chess_game">Novo Jogo de Xadrez</string>
     <string name="chess_loading_game">Carregando jogo…</string>
     <string name="chess_game_not_found">Jogo não encontrado</string>

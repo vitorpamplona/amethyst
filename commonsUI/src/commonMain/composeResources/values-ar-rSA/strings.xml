@@ -1450,8 +1450,6 @@
     <string name="poll_submit">إرسال</string>
     <string name="poll_view_results">عرض النتائج</string>
     <string name="restart">إعادة التشغيل</string>
-    <string name="chess_accept">قبول</string>
-    <string name="chess_decline">رفض</string>
     <string name="new_chess_game">لعبة شطرنج جديدة</string>
     <string name="chess_loading_game">جارٍ تحميل اللعبة…</string>
     <string name="chess_game_not_found">اللعبة غير موجودة</string>
