@@ -77,22 +77,46 @@ class WebOfTrustNudgeRenderTest {
     private val me = face("V", 2)
 
     private val brainstorm = CircleProvider("brainstorm", "Brainstorm", face("B", 3))
+    private val vertex = CircleProvider("vertex", "Vertex", face("V", 6))
 
     @Composable
-    private fun rings(activation: CircleActivation) =
-        CircleRingsCard(
-            me,
-            follows,
-            followCount = 182,
-            extendedCount = 12_400,
-            providers = listOf(brainstorm),
-            selected = brainstorm,
-            onSelect = {},
-            activation = activation,
-            onActivate = {},
-            onNotNow = {},
-            onDismiss = {},
-        )
+    private fun rings(
+        activation: CircleActivation,
+        followCount: Int = 182,
+        extendedCount: Int = 12_400,
+        providers: List<CircleProvider> = listOf(brainstorm),
+    ) = CircleRingsCard(
+        me,
+        follows,
+        followCount = followCount,
+        extendedCount = extendedCount,
+        providers = providers,
+        selected = brainstorm,
+        onSelect = {},
+        activation = activation,
+        onActivate = {},
+        onNotNow = {},
+        onDismiss = {},
+    )
+
+    private fun nudge(
+        activation: CircleActivation = CircleActivation.Offer,
+        extendedCount: Int = 12_400,
+    ) = CircleNudge(
+        me,
+        follows,
+        followCount = 182,
+        extendedCount = extendedCount,
+        providers = listOf(brainstorm, vertex),
+        selected = brainstorm,
+        activation = activation,
+        onSelect = {},
+        onActivate = {},
+        onNotNow = {},
+        onDismiss = {},
+    )
+
+    private val failed = CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")
 
     private val scenarios: Map<String, @Composable () -> Unit> =
         linkedMapOf(
@@ -114,18 +138,31 @@ class WebOfTrustNudgeRenderTest {
             "3-friends" to { FriendsUseItCard(follows, listOf("Alice", "Bob", "Carol", "Dan", "Eve", "Fiatjaf"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
             "3b-friends-one" to { FriendsUseItCard(follows.take(1), listOf("Alice"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
             "4-rings" to { rings(CircleActivation.Offer) },
+            "4a-rings-loading" to { rings(CircleActivation.Offer, followCount = 3, extendedCount = 0) },
             "4b-rings-menu" to {
                 // The scene does not draw popups: the open menu, drawn in place under the row.
                 Column(Modifier.padding(horizontal = 28.dp)) {
-                    CircleProviderPicker(listOf(brainstorm), brainstorm, {}, enabled = true)
+                    CircleProviderLine(listOf(brainstorm, vertex), brainstorm, {}, enabled = true)
                     Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
-                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm), brainstorm) {} }
+                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm, vertex), brainstorm) {} }
                     }
                 }
             },
             "4c-rings-working" to { rings(CircleActivation.Working("Signing in…")) },
             "4d-rings-failed" to { rings(CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")) },
             "4e-rings-activated" to { rings(CircleActivation.Activated) },
+            "pa-hero" to { CircleHeroCard(nudge()) },
+            "pa-hero-loading" to { CircleHeroCard(nudge(extendedCount = 0)) },
+            "pa-hero-working" to { CircleHeroCard(nudge(CircleActivation.Working("Signing in…"))) },
+            "pa-hero-failed" to { CircleHeroCard(nudge(failed)) },
+            "pa-hero-activated" to { CircleHeroCard(nudge(CircleActivation.Activated)) },
+            "pb-banner" to { CircleBannerCard(nudge()) },
+            "pb-banner-loading" to { CircleBannerCard(nudge(extendedCount = 0)) },
+            "pb-banner-activated" to { CircleBannerCard(nudge(CircleActivation.Activated)) },
+            "pc-spotlight" to { CircleSpotlightCard(nudge()) },
+            "pc-spotlight-activated" to { CircleSpotlightCard(nudge(CircleActivation.Activated)) },
+            "pd-sorted" to { CircleSortedCard(nudge()) },
+            "pd-sorted-failed" to { CircleSortedCard(nudge(failed)) },
             "5-strips" to {
                 Column {
                     CircleFirstStrip(CircleStripPlace.THREAD, onTurnOn = {}, onDismiss = {}, replyCount = 42)
