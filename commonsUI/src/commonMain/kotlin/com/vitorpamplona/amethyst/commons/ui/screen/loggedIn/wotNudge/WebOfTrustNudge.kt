@@ -50,8 +50,12 @@ import com.vitorpamplona.amethyst.commons.wot.nudge.followsOfFollowsCount
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderOnboarding
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.withContext
 
 /**
@@ -96,13 +100,22 @@ fun WebOfTrustNudge(
 
     // Faces with a picture first, and the follows-of-follows estimate: both read the whole cache.
     val sample by produceState(CircleSample.EMPTY, others) {
-        value =
+        suspend fun count() =
             withContext(Dispatchers.Default) {
                 val withPicture = others.filter { account.cache.getUserIfExists(it)?.profilePicture() != null }
                 CircleSample(
                     faces = (withPicture + others).distinct().take(6),
                     extended = account.followsOfFollowsCount(others),
                 )
+            }
+        value = count()
+        // The follows' own lists keep arriving after the card shows: each one grows the circle.
+        account.cache.live.newEventBundles
+            .filter { bundle -> bundle.any { note -> (note.event as? ContactListEvent)?.pubKey in others } }
+            .conflate()
+            .collect {
+                value = count()
+                delay(RECOUNT_MS)
             }
     }
 
@@ -154,6 +167,9 @@ private fun userFace(
     accountViewModel: AccountViewModel,
     nav: INav,
 ): NudgeFace = { size -> UserPicture(key, size, accountViewModel = accountViewModel, nav = nav) }
+
+/** At most one recount of the circle per this many milliseconds: it walks every follow's list. */
+private const val RECOUNT_MS = 2_000L
 
 private class CircleSample(
     val faces: List<HexKey>,
