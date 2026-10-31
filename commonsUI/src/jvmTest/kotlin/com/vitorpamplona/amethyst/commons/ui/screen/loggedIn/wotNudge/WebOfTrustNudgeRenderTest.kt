@@ -102,12 +102,13 @@ class WebOfTrustNudgeRenderTest {
     private fun nudge(
         activation: CircleActivation = CircleActivation.Offer,
         extendedCount: Int = 12_400,
+        providers: List<CircleProvider> = listOf(brainstorm, vertex),
     ) = CircleNudge(
         me,
         follows,
         followCount = 182,
         extendedCount = extendedCount,
-        providers = listOf(brainstorm, vertex),
+        providers = providers,
         selected = brainstorm,
         activation = activation,
         onSelect = {},
@@ -152,6 +153,16 @@ class WebOfTrustNudgeRenderTest {
             "4d-rings-failed" to { rings(CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")) },
             "4e-rings-activated" to { rings(CircleActivation.Activated) },
             "pa-hero" to { CircleHeroCard(nudge()) },
+            "pa-hero-one-provider" to { CircleHeroCard(nudge(providers = listOf(brainstorm))) },
+            "pa-hero-menu-one-provider" to {
+                // The scene does not draw popups: the open menu, drawn in place under the pill.
+                Column(Modifier.padding(horizontal = 28.dp)) {
+                    CircleProviderLine(listOf(brainstorm), brainstorm, {}, enabled = true)
+                    Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm), brainstorm) {} }
+                    }
+                }
+            },
             "pa-hero-loading" to { CircleHeroCard(nudge(extendedCount = 0)) },
             "pa-hero-working" to { CircleHeroCard(nudge(CircleActivation.Working("Signing in…"))) },
             "pa-hero-failed" to { CircleHeroCard(nudge(failed)) },

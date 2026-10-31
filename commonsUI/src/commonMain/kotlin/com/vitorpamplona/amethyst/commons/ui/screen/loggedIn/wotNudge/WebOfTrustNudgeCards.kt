@@ -527,7 +527,10 @@ internal fun BenefitTile(
     }
 }
 
-/** "via Brainstorm": who computes the circle. Opens the app's rounded popup when there is another to pick. */
+/**
+ * "via Brainstorm ▾": who computes the circle, as a pill that always opens the provider menu. It
+ * looks like a control even with one provider, so users learn the provider is theirs to change.
+ */
 @Composable
 internal fun CircleProviderLine(
     providers: List<CircleProvider>,
@@ -537,26 +540,28 @@ internal fun CircleProviderLine(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val choosable = providers.size > 1
     Box(modifier) {
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(enabled = enabled && choosable) { expanded = true }
-                .padding(horizontal = 4.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        Surface(
+            onClick = { expanded = true },
+            enabled = enabled,
+            shape = RoundedCornerShape(50),
+            color = Color.Transparent,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
-            ProviderPicture(selected, 20.dp)
-            Text(
-                stringRes(Res.string.wot_nudge_via, selected.name),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            if (choosable) {
+            Row(
+                Modifier.padding(start = 6.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ProviderPicture(selected, 20.dp)
+                Text(
+                    stringRes(Res.string.wot_nudge_via, selected.name),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
                 Icon(MaterialSymbols.ExpandMore, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
             }
         }
