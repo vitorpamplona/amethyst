@@ -26,17 +26,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
+import com.vitorpamplona.kiko.player.KikoSaveStore
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.first
 import okio.IOException
-
-/** Where [CartSaves] keeps what games save: [CartSaveStore] in the app, a fake in tests. */
-interface CartSaveStorage {
-    /** Every save, by id. */
-    suspend fun loadAll(): Map<String, IntArray>
-
-    suspend fun save(saves: Map<String, IntArray>)
-}
 
 /**
  * What games save with `cartdata(id)`: 64 numbers per id (high scores, progress, settings). The
@@ -45,7 +38,7 @@ interface CartSaveStorage {
  */
 class CartSaveStore(
     private val store: DataStore<Preferences>,
-) : CartSaveStorage {
+) : KikoSaveStore {
     /** Every save, by id. They are 512 characters each, and few games use one. */
     override suspend fun loadAll(): Map<String, IntArray> {
         val prefs = store.data.catch { e -> if (e is IOException) emit(emptyPreferences()) else throw e }.first()
@@ -65,7 +58,7 @@ class CartSaveStore(
 
     companion object {
         private const val PREFIX = "cart_"
-        const val VALUES = 64
+        const val VALUES = KikoSaveStore.VALUES
 
         /** Eight hex digits per number, the raw 16:16 bits. */
         internal fun encode(values: IntArray): String = values.joinToString("") { it.toUInt().toString(16).padStart(8, '0') }

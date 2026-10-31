@@ -21,11 +21,8 @@
 package com.vitorpamplona.amethyst.commons.ui.cartridges
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 
-// No edge gestures, system bars or screen timeout to manage in a desktop window. (iOS shares
+// No system bars or screen timeout to manage in a desktop window. (iOS shares
 // this source set and has no player yet.)
-actual fun Modifier.claimSystemGestures(): Modifier = this
-
 @Composable
 actual fun CartWindowMode(fullScreen: Boolean) {}

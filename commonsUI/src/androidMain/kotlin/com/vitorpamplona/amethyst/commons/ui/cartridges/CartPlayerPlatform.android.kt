@@ -20,19 +20,15 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.cartridges
 
-import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.vitorpamplona.amethyst.commons.ui.components.getActivityWindow
-
-actual fun Modifier.claimSystemGestures(): Modifier = systemGestureExclusion()
 
 @Composable
 actual fun CartWindowMode(fullScreen: Boolean) {

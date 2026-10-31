@@ -21,13 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.cartridges
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-
-/**
- * Keeps the system's edge gestures off this area (Android's swipe-from-the-edge Back), so a
- * thumb sliding on the controls cannot close the game.
- */
-expect fun Modifier.claimSystemGestures(): Modifier
 
 /**
  * While the player is shown the screen stays on, for a game played with a gamepad or just

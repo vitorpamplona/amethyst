@@ -77,22 +77,47 @@ class WebOfTrustNudgeRenderTest {
     private val me = face("V", 2)
 
     private val brainstorm = CircleProvider("brainstorm", "Brainstorm", face("B", 3))
+    private val vertex = CircleProvider("vertex", "Vertex", face("V", 6))
 
     @Composable
-    private fun rings(activation: CircleActivation) =
-        CircleRingsCard(
-            me,
-            follows,
-            followCount = 182,
-            extendedCount = 12_400,
-            providers = listOf(brainstorm),
-            selected = brainstorm,
-            onSelect = {},
-            activation = activation,
-            onActivate = {},
-            onNotNow = {},
-            onDismiss = {},
-        )
+    private fun rings(
+        activation: CircleActivation,
+        followCount: Int = 182,
+        extendedCount: Int = 12_400,
+        providers: List<CircleProvider> = listOf(brainstorm),
+    ) = CircleRingsCard(
+        me,
+        follows,
+        followCount = followCount,
+        extendedCount = extendedCount,
+        providers = providers,
+        selected = brainstorm,
+        onSelect = {},
+        activation = activation,
+        onActivate = {},
+        onNotNow = {},
+        onDismiss = {},
+    )
+
+    private fun nudge(
+        activation: CircleActivation = CircleActivation.Offer,
+        extendedCount: Int = 12_400,
+        providers: List<CircleProvider> = listOf(brainstorm, vertex),
+    ) = CircleNudge(
+        me,
+        follows,
+        followCount = 182,
+        extendedCount = extendedCount,
+        providers = providers,
+        selected = brainstorm,
+        activation = activation,
+        onSelect = {},
+        onActivate = {},
+        onNotNow = {},
+        onDismiss = {},
+    )
+
+    private val failed = CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")
 
     private val scenarios: Map<String, @Composable () -> Unit> =
         linkedMapOf(
@@ -114,18 +139,41 @@ class WebOfTrustNudgeRenderTest {
             "3-friends" to { FriendsUseItCard(follows, listOf("Alice", "Bob", "Carol", "Dan", "Eve", "Fiatjaf"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
             "3b-friends-one" to { FriendsUseItCard(follows.take(1), listOf("Alice"), onSetUp = {}, onUseTheirs = {}, onDismiss = {}) },
             "4-rings" to { rings(CircleActivation.Offer) },
+            "4a-rings-loading" to { rings(CircleActivation.Offer, followCount = 3, extendedCount = 0) },
             "4b-rings-menu" to {
                 // The scene does not draw popups: the open menu, drawn in place under the row.
                 Column(Modifier.padding(horizontal = 28.dp)) {
-                    CircleProviderPicker(listOf(brainstorm), brainstorm, {}, enabled = true)
+                    CircleProviderLine(listOf(brainstorm, vertex), brainstorm, {}, enabled = true)
                     Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
-                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm), brainstorm) {} }
+                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm, vertex), brainstorm) {} }
                     }
                 }
             },
             "4c-rings-working" to { rings(CircleActivation.Working("Signing in…")) },
             "4d-rings-failed" to { rings(CircleActivation.Failed("Could not reach Brainstorm. Check your connection and try again.")) },
             "4e-rings-activated" to { rings(CircleActivation.Activated) },
+            "pa-hero" to { CircleHeroCard(nudge()) },
+            "pa-hero-one-provider" to { CircleHeroCard(nudge(providers = listOf(brainstorm))) },
+            "pa-hero-menu-one-provider" to {
+                // The scene does not draw popups: the open menu, drawn in place under the pill.
+                Column(Modifier.padding(horizontal = 28.dp)) {
+                    CircleProviderLine(listOf(brainstorm), brainstorm, {}, enabled = true)
+                    Box(Modifier.padding(top = 4.dp, bottom = 8.dp)) {
+                        RoundedMenuSurface { CircleProviderMenu(listOf(brainstorm), brainstorm) {} }
+                    }
+                }
+            },
+            "pa-hero-loading" to { CircleHeroCard(nudge(extendedCount = 0)) },
+            "pa-hero-working" to { CircleHeroCard(nudge(CircleActivation.Working("Signing in…"))) },
+            "pa-hero-failed" to { CircleHeroCard(nudge(failed)) },
+            "pa-hero-activated" to { CircleHeroCard(nudge(CircleActivation.Activated)) },
+            "pb-banner" to { CircleBannerCard(nudge()) },
+            "pb-banner-loading" to { CircleBannerCard(nudge(extendedCount = 0)) },
+            "pb-banner-activated" to { CircleBannerCard(nudge(CircleActivation.Activated)) },
+            "pc-spotlight" to { CircleSpotlightCard(nudge()) },
+            "pc-spotlight-activated" to { CircleSpotlightCard(nudge(CircleActivation.Activated)) },
+            "pd-sorted" to { CircleSortedCard(nudge()) },
+            "pd-sorted-failed" to { CircleSortedCard(nudge(failed)) },
             "5-strips" to {
                 Column {
                     CircleFirstStrip(CircleStripPlace.THREAD, onTurnOn = {}, onDismiss = {}, replyCount = 42)
@@ -154,6 +202,7 @@ class WebOfTrustNudgeRenderTest {
         name: String,
         dark: Boolean,
         content: @Composable () -> Unit,
+        atMillis: Long = 600,
     ) {
         val scene =
             ImageComposeScene(width = width, height = height, density = Density(2f)) {
@@ -168,8 +217,13 @@ class WebOfTrustNudgeRenderTest {
             }
         try {
             // A frame into the animations, so a spinner shows as a spinner.
-            scene.render(0)
-            val png = scene.render(600_000_000).encodeToData(EncodedImageFormat.PNG)!!.bytes
+            // Step the clock in frames so animations and effects run on the way.
+            var t = 0L
+            while (t < atMillis) {
+                scene.render(t * 1_000_000)
+                t += 100
+            }
+            val png = scene.render(atMillis * 1_000_000).encodeToData(EncodedImageFormat.PNG)!!.bytes
             val image = ImageIO.read(ByteArrayInputStream(png))
             val background = image.getRGB(1, image.height - 1)
             // Crop the empty background below the card.
@@ -184,6 +238,20 @@ class WebOfTrustNudgeRenderTest {
             scene.close()
         }
     }
+
+    @Test
+    fun activatedCardCountsDownThenCloses() {
+        var closed = false
+        val card: @Composable () -> Unit = { CircleHeroCard(nudge(CircleActivation.Activated).copyWith(onDismiss = { closed = true })) }
+        render("pa-hero-activated-2s", dark = false, card, atMillis = 2_500)
+        assertTrue(!closed, "closed before the countdown ran out")
+        render("pa-hero-activated-4s", dark = true, card, atMillis = 4_500)
+        assertTrue(!closed, "closed before the countdown ran out")
+        render("pa-hero-activated-done", dark = false, card, atMillis = ACTIVATED_CLOSE_MS + 500L)
+        assertTrue(closed, "did not close itself after ${ACTIVATED_CLOSE_MS}ms")
+    }
+
+    private fun CircleNudge.copyWith(onDismiss: () -> Unit) = CircleNudge(self, faces, followCount, extendedCount, providers, selected, activation, onSelect, onActivate, onNotNow, onDismiss)
 
     @Test
     fun everyNudgeRendersInBothThemes() {
