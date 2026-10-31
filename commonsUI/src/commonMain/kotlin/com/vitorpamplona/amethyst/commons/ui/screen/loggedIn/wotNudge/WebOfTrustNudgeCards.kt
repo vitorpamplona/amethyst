@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wotNudge
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
@@ -58,6 +59,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +67,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -438,19 +443,44 @@ internal fun CircleActivateButton(
     }
 }
 
-/** After activation: the provider is computing; one line and a way to put the card away. */
+/** How long the card stays after activating before it closes itself. */
+internal const val ACTIVATED_CLOSE_MS = 5_000
+
+/**
+ * After activation: the provider computes the circle in the background and the results show up
+ * on their own. Says so, drains a bar for [ACTIVATED_CLOSE_MS], then calls [onClose].
+ */
 @Composable
-internal fun CircleMappingRow(onDismiss: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
-        Text(
-            stringRes(Res.string.wot_nudge_activated_title),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
-        )
-        TextButton(onClick = onDismiss) { Text(stringRes(Res.string.wot_nudge_got_it)) }
+internal fun CircleActivatedPanel(
+    providerName: String,
+    onClose: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val remaining = remember { Animatable(1f) }
+    LaunchedEffect(Unit) {
+        remaining.animateTo(0f, tween(ACTIVATED_CLOSE_MS, easing = LinearEasing))
+        onClose()
     }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Icon(MaterialSymbols.CheckCircle, contentDescription = null, tint = scheme.primary, filled = true, modifier = Modifier.size(22.dp))
+        Text(stringRes(Res.string.wot_nudge_activated_title), fontSize = 18.sp, lineHeight = 22.sp, fontWeight = FontWeight.Bold, color = scheme.onSurface)
+    }
+    Text(
+        stringRes(Res.string.wot_nudge_activated_body, providerName),
+        style = MaterialTheme.typography.bodyLarge,
+        color = scheme.onSurface,
+        modifier = Modifier.padding(top = 6.dp),
+    )
+    // The time left before the card closes, read in the draw phase only.
+    val track = scheme.primary.copy(alpha = 0.15f)
+    val bar = scheme.primary
+    Box(
+        Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 10.dp).height(4.dp).drawBehind {
+            val corner = CornerRadius(size.height / 2)
+            drawRoundRect(track, cornerRadius = corner)
+            drawRoundRect(bar, size = Size(size.width * remaining.value, size.height), cornerRadius = corner)
+        },
+    )
 }
 
 /** The headline: everyone in the circle, then how it splits between follows and the people they trust. */

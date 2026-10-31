@@ -202,6 +202,7 @@ class WebOfTrustNudgeRenderTest {
         name: String,
         dark: Boolean,
         content: @Composable () -> Unit,
+        atMillis: Long = 600,
     ) {
         val scene =
             ImageComposeScene(width = width, height = height, density = Density(2f)) {
@@ -216,8 +217,13 @@ class WebOfTrustNudgeRenderTest {
             }
         try {
             // A frame into the animations, so a spinner shows as a spinner.
-            scene.render(0)
-            val png = scene.render(600_000_000).encodeToData(EncodedImageFormat.PNG)!!.bytes
+            // Step the clock in frames so animations and effects run on the way.
+            var t = 0L
+            while (t < atMillis) {
+                scene.render(t * 1_000_000)
+                t += 100
+            }
+            val png = scene.render(atMillis * 1_000_000).encodeToData(EncodedImageFormat.PNG)!!.bytes
             val image = ImageIO.read(ByteArrayInputStream(png))
             val background = image.getRGB(1, image.height - 1)
             // Crop the empty background below the card.
@@ -232,6 +238,20 @@ class WebOfTrustNudgeRenderTest {
             scene.close()
         }
     }
+
+    @Test
+    fun activatedCardCountsDownThenCloses() {
+        var closed = false
+        val card: @Composable () -> Unit = { CircleHeroCard(nudge(CircleActivation.Activated).copyWith(onDismiss = { closed = true })) }
+        render("pa-hero-activated-2s", dark = false, card, atMillis = 2_500)
+        assertTrue(!closed, "closed before the countdown ran out")
+        render("pa-hero-activated-4s", dark = true, card, atMillis = 4_500)
+        assertTrue(!closed, "closed before the countdown ran out")
+        render("pa-hero-activated-done", dark = false, card, atMillis = ACTIVATED_CLOSE_MS + 500L)
+        assertTrue(closed, "did not close itself after ${ACTIVATED_CLOSE_MS}ms")
+    }
+
+    private fun CircleNudge.copyWith(onDismiss: () -> Unit) = CircleNudge(self, faces, followCount, extendedCount, providers, selected, activation, onSelect, onActivate, onNotNow, onDismiss)
 
     @Test
     fun everyNudgeRendersInBothThemes() {

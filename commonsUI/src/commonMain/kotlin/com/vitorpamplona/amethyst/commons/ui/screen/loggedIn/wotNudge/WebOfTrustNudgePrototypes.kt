@@ -120,12 +120,15 @@ fun CircleHeroCard(
             CircleCount(nudge.followCount, nudge.extendedCount, 44.sp)
         }
         Spacer(Modifier.height(12.dp))
-        Text(
-            stringRes(Res.string.wot_nudge_hero_body),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        Spacer(Modifier.height(14.dp))
+        // Once activated the pitch has done its job: the panel below takes its place.
+        if (nudge.activation != CircleActivation.Activated) {
+            Text(
+                stringRes(Res.string.wot_nudge_hero_body),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Spacer(Modifier.height(14.dp))
+        }
         CircleAction(nudge, stringRes(Res.string.wot_nudge_activate))
     }
 }
@@ -372,7 +375,7 @@ private fun CircleAction(
     label: String,
 ) {
     if (nudge.activation == CircleActivation.Activated) {
-        CircleMappingRow(nudge.onDismiss)
+        CircleActivatedPanel(nudge.selected.name, nudge.onDismiss)
         return
     }
     if (nudge.activation is CircleActivation.Failed) CircleError(nudge.activation)
