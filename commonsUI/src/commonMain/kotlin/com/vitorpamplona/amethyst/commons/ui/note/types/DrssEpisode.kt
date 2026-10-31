@@ -55,11 +55,12 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.allGoodColor
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgress
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip92IMeta.imetas
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 
 /** An episode's audio file: where it is and, when the event says, its type. */
 @Immutable
@@ -93,15 +94,21 @@ fun Event.episodeAudio(): EpisodeAudio? =
 fun observeMyListening(
     episode: AddressableNote,
     accountViewModel: AccountViewModel,
-): State<DrssListenProgressEvent?> {
+): State<DrssListenProgress?> {
     val drss = accountViewModel.account.drss
     val flow =
         remember(episode.address) {
-            drss
-                .progressNote(episode.address)
-                .flow()
-                .metadata.stateFlow
-                .map { drss.progressOf(episode.address) }
+            // The kind-30078 record, or the kind-30054 one drss has not moved yet.
+            merge(
+                drss
+                    .progressNote(episode.address)
+                    .flow()
+                    .metadata.stateFlow,
+                drss
+                    .legacyProgressNote(episode.address)
+                    .flow()
+                    .metadata.stateFlow,
+            ).map { drss.progressOf(episode.address) }
         }
     return flow.collectAsStateWithLifecycle(drss.progressOf(episode.address))
 }
@@ -126,7 +133,7 @@ fun DrssHeardBadge(
 
 @Composable
 fun DrssHeardBadge(
-    progress: DrssListenProgressEvent,
+    progress: DrssListenProgress,
     modifier: Modifier = Modifier,
 ) {
     val position = progress.position()

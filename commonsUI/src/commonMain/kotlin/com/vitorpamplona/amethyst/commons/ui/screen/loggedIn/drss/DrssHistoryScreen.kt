@@ -65,7 +65,7 @@ import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgress
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.utils.TimeUtils
 
@@ -76,7 +76,7 @@ private val BarShape = RoundedCornerShape(4.dp)
 
 /**
  * drss.io's history: what the user listened to, by the day they last saved their place in it, and
- * the feeds they heard most. Everything comes from their listening records (kind 30054), so it
+ * the feeds they heard most. Everything comes from their listening records (kind 30078), so it
  * matches what drss shows.
  */
 @Composable
@@ -124,7 +124,7 @@ fun DrssHistoryScreen(
 
 @Composable
 private fun DrssHistoryRow(
-    record: DrssListenProgressEvent,
+    record: DrssListenProgress,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {

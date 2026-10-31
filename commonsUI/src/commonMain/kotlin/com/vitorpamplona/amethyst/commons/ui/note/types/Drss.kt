@@ -135,7 +135,7 @@ import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.feedList.tags.FeedTag
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgress
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
 import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
@@ -388,7 +388,7 @@ private fun sourceHost(source: String): String =
         source
     }
 
-// ---- 30054 listening progress ----
+// ---- listening progress (30078, and the older 30054) ----
 
 /**
  * drss.io's listening progress: the episode's cover and title, the feed it comes from, and how far
@@ -400,8 +400,8 @@ fun RenderDrssListenProgress(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val event by observeNoteEvent<DrssListenProgressEvent>(note, accountViewModel)
-    val progress = event ?: return
+    val event by observeNoteEvent<Event>(note, accountViewModel)
+    val progress = event as? DrssListenProgress ?: return
     val episode = remember(progress) { progress.episode() }
 
     if (episode == null) {
@@ -466,7 +466,7 @@ private fun DrssEpisodeRow(
 
 /** How far the listener got: a bar, the time heard and left, or a finished check and the play count. */
 @Composable
-private fun DrssListenBar(progress: DrssListenProgressEvent) {
+private fun DrssListenBar(progress: DrssListenProgress) {
     val position = progress.position()
     val duration = progress.durationInSeconds()?.takeIf { it > 0 }
     val finished = progress.completedAt() != null && position == null

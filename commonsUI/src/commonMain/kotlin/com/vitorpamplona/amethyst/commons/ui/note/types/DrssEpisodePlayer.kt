@@ -118,7 +118,7 @@ private val PanelShape = RoundedCornerShape(12.dp)
 
 /**
  * A long-form episode's audio, resumed where the user left it and saving where they are as they
- * listen, in drss.io's listening-progress records (kind 30054), with drss's controls: skips, the
+ * listen, in drss.io's listening-progress records (kind 30078), with drss's controls: skips, the
  * feed's speed, chapters from the show notes, and clips. Starts on its own when [autoPlay] is set
  * and calls [onEnded] when the episode plays to its end. Draws nothing for an article without
  * audio.
