@@ -52,6 +52,5 @@ No connection, sync or broadcast status is shown: chess behaves like every other
 ## Next
 
 What remains of the protocol gaps (notifications, chat, the `#l` end label, retiring 30064–30068)
-is in quartz's `quartz/plans/2026-10-30-jester-chess-gaps.md`. This code needs a quartz release
-that carries `mainLine()` and `buildChallenge()` (after 2.10.1); until then build with
-`-PquartzDir=../quartz`.
+is in quartz's `quartz/plans/2026-10-30-jester-chess-gaps.md`. `mainLine()` and
+`buildChallenge()` shipped in quartz 2.11.0.
