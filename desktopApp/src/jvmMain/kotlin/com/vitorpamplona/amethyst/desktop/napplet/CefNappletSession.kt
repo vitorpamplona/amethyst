@@ -58,6 +58,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonPrimitive
 import org.cef.CefClient
 import org.cef.CefSettings
+import org.cef.OS
 import org.cef.browser.CefBrowser
 import org.cef.browser.CefFrame
 import org.cef.browser.CefMessageRouter
@@ -80,11 +81,14 @@ import org.cef.misc.StringRef
 import org.cef.network.CefRequest
 import org.cef.network.CefResponse
 import java.awt.Component
+import java.awt.event.HierarchyEvent
+import java.awt.event.HierarchyListener
 import java.io.InputStream
 import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.SwingUtilities
+import javax.swing.Timer
 
 /**
  * One open napplet or nSite window: its Chromium browser, the trusted shell it loads, and the bridge
@@ -697,12 +701,9 @@ class CefNappletSession(
         runtime.trimBlobCache()
         // On the AWT thread, where the browser's component lives: a logout closes windows from a
         // background coroutine, and tearing Chromium down there raced the window still painting it.
-        val teardown = {
+        val closeBrowser = {
+            Log.d(TAG) { "Closing the browser of ${launch.identity.coordinate}" }
             runCatching {
-                // The page goes first, whatever Chromium then does with the close: a closed window's
-                // browser was seen living on unseen, its game still running and playing. Dropping the
-                // app's frame from the trusted shell ends its document, timers and sound at once.
-                browser?.executeJavaScript(DROP_APP_FRAME, NappletWebContract.SHELL_URL, 0)
                 // Without this, Chromium only asks the browser's window to close, and waits for it.
                 browser?.setCloseAllowed()
                 browser?.close(true)
@@ -711,6 +712,16 @@ class CefNappletSession(
                 client?.dispose()
             }.onFailure { Log.w(TAG, "Browser did not close cleanly", it) }
             Unit
+        }
+        val teardown = {
+            runCatching {
+                // The page goes first, whatever Chromium then does with the close: a closed window's
+                // browser was seen living on unseen, its game still running and playing. Dropping the
+                // app's frame from the trusted shell ends its document, timers and sound at once.
+                browser?.executeJavaScript(DROP_APP_FRAME, NappletWebContract.SHELL_URL, 0)
+            }.onFailure { Log.w(TAG, "Could not drop the app's frame", it) }
+            val component = browser?.uiComponent
+            if (component != null && component.isDisplayable) closeOnceDetached(component, closeBrowser) else closeBrowser()
         }
         if (browser != null && !made) {
             // Asked for, not made yet: onAfterCreated runs the teardown, unless it ran meanwhile.
@@ -726,6 +737,38 @@ class CefNappletSession(
             if (!now) return
         }
         if (SwingUtilities.isEventDispatchThread()) teardown() else SwingUtilities.invokeLater(teardown)
+    }
+
+    /**
+     * Closes the browser only after its window has taken its component down. Taking a live browser's
+     * component out of a window is JCEF's ordinary hide and reparent; doing it to a closed one is not:
+     * JCEF's listener sets the native view's visibility without checking whether the browser closed,
+     * so a window disposed after [CefBrowser.close] made macOS touch a view Chromium had already freed,
+     * and the app crashed on Close. A window that never goes still has its browser closed, later.
+     */
+    private fun closeOnceDetached(
+        component: Component,
+        closeBrowser: () -> Unit,
+    ) {
+        val done = AtomicBoolean(false)
+        val closeOnce = {
+            if (done.compareAndSet(false, true)) {
+                // JCEF hid the view by queueing a call to the main thread that holds the view's raw
+                // pointer and never checks that the browser still exists. Closing frees the view, so
+                // the close waits until the main thread has run that call.
+                SwingUtilities.invokeLater { if (OS.isMacintosh()) MacMainThread.afterQueuedWork(closeBrowser) else closeBrowser() }
+            }
+        }
+        component.addHierarchyListener(
+            object : HierarchyListener {
+                override fun hierarchyChanged(e: HierarchyEvent) {
+                    if (e.changeFlags and HierarchyEvent.DISPLAYABILITY_CHANGED.toLong() == 0L || component.isDisplayable) return
+                    component.removeHierarchyListener(this)
+                    closeOnce()
+                }
+            },
+        )
+        Timer(DETACH_WAIT_MS) { closeOnce() }.apply { isRepeats = false }.start()
     }
 
     /** A [NappletSiteServer.Response], to Chromium, streamed: a large script or wasm file isn't loaded whole. */
@@ -784,6 +827,9 @@ class CefNappletSession(
         private const val DROP_APP_FRAME = "var f=document.getElementById('app');if(f)f.remove();"
 
         private const val TAG = "CefNappletSession"
+
+        // How long a closing window may take to drop its browser before the browser closes anyway.
+        private const val DETACH_WAIT_MS = 2_000
 
         // A note is a small picture: no need for more, and every frame is copied.
         private const val OFFSCREEN_FRAME_RATE = 30
