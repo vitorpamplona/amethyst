@@ -53,6 +53,7 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogSink
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,6 +66,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import org.cef.browser.CefBrowser
+import org.cef.browser.OffscreenCefBrowser
+import org.cef.handler.CefFocusHandlerAdapter
+import org.cef.handler.CefLifeSpanHandlerAdapter
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -607,6 +612,81 @@ class CefNappletSessionTest {
         }
 
     @Test
+    fun openingAndClosingNappletsOverAndOverKeepsChromiumAlive() =
+        runBlocking {
+            val runtime = cefRuntime()
+
+            // Busy pages, like the games people open and close: they paint and write all the time.
+            fun probe(name: String) =
+                """
+                <!doctype html><html><body style="margin:0;height:100vh;background:rgb(255,0,0)"><script>
+                window.napplet.storage.setItem('early', '$name');
+                setInterval(function () { document.body.textContent = String(Date.now()); }, 16);
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val cycles = System.getenv("AMETHYST_CEF_CYCLES")?.toIntOrNull() ?: 15
+            cycleNapplets(cycles, runtime, ::probe)
+
+            // Chromium is still there and still serves a new window.
+            val lastStorage = RecordingStorage()
+            show(session(probe("last"), lastStorage, runtime))
+            withTimeout(60_000) { while (lastStorage.values["early"] == null) delay(50) }
+            assertEquals("last", lastStorage.values["early"])
+        }
+
+    /**
+     * Closes a window's session as the app does: the session on the AWT thread, and the window that
+     * held the browser right after.
+     */
+    private fun closeWindow(session: CefNappletSession) {
+        SwingUtilities.invokeAndWait {
+            session.close()
+            frames.removeLast().dispose()
+        }
+    }
+
+    private suspend fun cycleNapplets(
+        cycles: Int,
+        runtime: DesktopNappletRuntime,
+        probe: (String) -> ByteArray,
+    ) {
+        repeat(cycles) { i ->
+            // A window, closed the way its Close button does.
+            val windowStorage = RecordingStorage()
+            val window = session(probe("window$i"), windowStorage, runtime)
+            show(window)
+            withTimeout(60_000) { while (windowStorage.values["early"] == null) delay(50) }
+            closeWindow(window)
+
+            // An nSite's window, at its own origin and with a network route.
+            val siteIndex = "<!doctype html><html><body><p>site $i</p><script>setInterval(function () { document.title = String(Date.now()); }, 16);</script></body></html>"
+            val site = site(mapOf("/index.html" to siteIndex.encodeToByteArray()), runtime, NostrSignerInternal(KeyPair()), NostrSignerInternal(KeyPair()))
+            show(site)
+            delay(300)
+            closeWindow(site)
+
+            // A run inside a note, closed as the note scrolls away.
+            val noteStorage = RecordingStorage()
+            val view = OffscreenNappletView().apply { resize(320, 240, 1.0) }
+            val note = session(probe("note$i"), noteStorage, runtime, offscreen = view)
+            note.start()
+            withTimeout(60_000) { while (noteStorage.values["early"] == null) delay(50) }
+            note.close()
+
+            // A window closed in the same breath it was shown, before Chromium made its browser.
+            val hasty = session(probe("hasty$i"), RecordingStorage(), runtime)
+            show(hasty)
+            closeWindow(hasty)
+
+            // A note's run stopped before its first frame.
+            val quick = session(probe("quick$i"), RecordingStorage(), runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
+            quick.start()
+            withTimeout(60_000) { quick.state.first { it is CefNappletSession.State.Showing } }
+            quick.close()
+        }
+    }
+
+    @Test
     fun aSiteRunsAtItsOwnOriginWithNip07() =
         runBlocking {
             val runtime = cefRuntime()
@@ -769,6 +849,53 @@ class CefNappletSessionTest {
             withTimeout(30_000) { while (first.values.getValue("width").toInt() > before * 2 / 3) delay(100) }
             delay(1_000)
             assertEquals(otherBefore, second.values.getValue("width").toInt(), "the other window kept its size")
+        }
+
+    @Test
+    fun focusingAnOffscreenBrowserDoesNotLoopWithChromium() =
+        runBlocking {
+            cefRuntime()
+            val app = sharedEngine.app()
+            val gotFocus = AtomicInteger()
+            val client = app.createClient()
+            client.addFocusHandler(
+                object : CefFocusHandlerAdapter() {
+                    override fun onGotFocus(browser: CefBrowser) {
+                        gotFocus.incrementAndGet()
+                    }
+                },
+            )
+            val created = CompletableDeferred<Unit>()
+            client.addLifeSpanHandler(
+                object : CefLifeSpanHandlerAdapter() {
+                    override fun onAfterCreated(browser: CefBrowser) {
+                        created.complete(Unit)
+                    }
+                },
+            )
+            val view = OffscreenNappletView()
+            val browser = OffscreenCefBrowser(client, "about:blank", null, 30, view)
+            view.browser = browser
+            browser.createImmediately()
+            withTimeout(60_000) { created.await() }
+            try {
+                // Chromium answers a windowless browser's SetFocus(true) with OnGotFocus, and JCEF's
+                // client answers that with setFocus(true): passed on every time, the two called each
+                // other until the thread ran out of stack (a StackOverflowError swallowed by JNI).
+                SwingUtilities.invokeAndWait { view.focus(true) }
+                delay(1_000)
+                assertTrue(gotFocus.get() in 1..2, "Chromium reported focus ${gotFocus.get()} times for one focus")
+                SwingUtilities.invokeAndWait { view.focus(false) }
+                SwingUtilities.invokeAndWait { view.focus(true) }
+                delay(1_000)
+                assertTrue(gotFocus.get() in 2..4, "Chromium reported focus ${gotFocus.get()} times for two focuses")
+            } finally {
+                SwingUtilities.invokeAndWait {
+                    browser.setCloseAllowed()
+                    browser.close(true)
+                    client.dispose()
+                }
+            }
         }
 
     @Test
