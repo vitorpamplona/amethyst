@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaPlaybackState
 import com.vitorpamplona.amethyst.desktop.service.media.VideoPixelAspect
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
+import com.vitorpamplona.amethyst.desktop.service.media.VideoTimeline
 import com.vitorpamplona.quartz.utils.Log
 import io.github.kdroidfilter.composemediaplayer.VideoPlayerState
 import kotlinx.coroutines.Dispatchers
@@ -195,6 +196,7 @@ fun DesktopVideoPlayer(
     // the rest keep theirs paused where they stopped.
     var onScreen by remember { mutableStateOf(false) }
     val holdsEngine = autoPlayWhenVisible && loaded
+    LaunchedEffect(onScreen, url) { if (onScreen) VideoTimeline.appeared(url) }
     LaunchedEffect(holdsEngine, onScreen, url) {
         if (holdsEngine && onScreen) {
             delay(CARD_ENGINE_DELAY_MS)
@@ -310,7 +312,10 @@ fun DesktopVideoPlayer(
     // this a stream that fails to start ("live doesn't start") leaves no trace.
     val errorReason = videoState?.errorReason
     LaunchedEffect(errorReason) {
-        if (errorReason != null) Log.w("DesktopVideoPlayer") { "Can't play $url: $errorReason" }
+        if (errorReason != null) {
+            Log.w("DesktopVideoPlayer") { "Can't play $url: $errorReason" }
+            VideoTimeline.mark(url) { "error: $errorReason" }
+        }
     }
 
     // A size timeout gets one more native open before Chromium is tried: by then the downloads it

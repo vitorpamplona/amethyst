@@ -26,9 +26,11 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Proxy
+import java.net.URI
 import java.nio.file.Files
 import java.util.Collections
 import java.util.concurrent.Executors
@@ -73,6 +75,8 @@ class VideoIndexPrefetchTest {
                     exchange.responseHeaders.add("Content-Type", "video/mp4")
                     exchange.responseHeaders.add("Accept-Ranges", "bytes")
                     val from = range?.removePrefix("bytes=")?.substringBefore('-')?.toInt() ?: 0
+                    // A host slow to answer for the media past the index.
+                    if (exchange.requestURI.path == "/slow.mp4" && from >= moovEnd) Thread.sleep(3_000)
                     val to =
                         range
                             ?.substringAfter('-')
@@ -175,6 +179,27 @@ class VideoIndexPrefetchTest {
                 assertContentEquals(file, whole.body.bytes())
             }
         assertEquals(listOf("bytes=$moovEnd-${file.size - 1}"), ranges.toList())
+    }
+
+    @Test
+    fun theIndexOnDiskGoesOutBeforeASlowHostAnswersForTheRest() {
+        val original = "$base/slow.mp4?run=${System.nanoTime()}"
+        runBlocking { VideoIndexPrefetch.prefetch(original) }
+        // The JDK's client, as the engines read: OkHttp's holds a body's last bytes until more arrive.
+        val connection = URI(MediaRelay.relayUrlFor(original)!!).toURL().openConnection(Proxy.NO_PROXY) as HttpURLConnection
+        try {
+            connection.setRequestProperty("Range", "bytes=0-")
+            val started = System.currentTimeMillis()
+            val input = connection.inputStream
+            val index = input.readNBytes(moovEnd.toInt())
+            val took = System.currentTimeMillis() - started
+            assertContentEquals(file.copyOf(moovEnd.toInt()), index)
+            // The host takes 3 s to answer for what follows the index.
+            assertTrue(took < 1_500, "the index on disk waited $took ms for the host")
+            assertContentEquals(file.copyOfRange(moovEnd.toInt(), file.size), input.readAllBytes())
+        } finally {
+            connection.disconnect()
+        }
     }
 
     @Test
