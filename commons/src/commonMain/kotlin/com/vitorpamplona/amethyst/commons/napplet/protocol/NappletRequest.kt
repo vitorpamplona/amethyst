@@ -51,6 +51,13 @@ sealed interface NappletRequest {
      */
     val signsAsUser: Boolean get() = false
 
+    /**
+     * Whether the user's consent to the [capability] is asked before this runs. False only for a
+     * request that grants nothing by itself: a keyboard action binding (a UI affordance, not key
+     * access), and an `fs` request other than a pick, which reaches only what a pick handed over.
+     */
+    val asksConsent: Boolean get() = true
+
     /** Read the active user's public key. */
     data object GetPublicKey : NappletRequest {
         override val capability get() = NappletCapability.IDENTITY
@@ -356,6 +363,7 @@ sealed interface NappletRequest {
         val binding: String? = null,
     ) : NappletRequest {
         override val capability get() = NappletCapability.KEYS
+        override val asksConsent get() = false
     }
 
     /** `keys.unregisterAction` — drop a previously registered action (fire-and-forget). */
@@ -363,6 +371,7 @@ sealed interface NappletRequest {
         val actionId: String,
     ) : NappletRequest {
         override val capability get() = NappletCapability.KEYS
+        override val asksConsent get() = false
     }
 
     /**
@@ -425,6 +434,8 @@ sealed interface NappletRequest {
          * access, so they are the ones consent gates; the rest act on what a pick already granted.
          */
         val picks: Boolean get() = false
+
+        override val asksConsent get() = picks
     }
 
     /** Which NAP-FS picker a [FsPick] opens. [wire] is its operation name. */

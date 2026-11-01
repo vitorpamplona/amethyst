@@ -38,19 +38,19 @@ class NappletFsPathsTest {
         assertFalse(NappletFsPaths.isValid("/picked/../etc/passwd"))
         assertFalse(NappletFsPaths.isValid("/picked\\photo.png"))
         assertFalse(NappletFsPaths.isValid("/picked/a\u0000b"))
-        assertFalse(NappletFsPaths.isValid("/picked/gnp.‮exe"))
+        assertFalse(NappletFsPaths.isValid("/picked/gnp.\u202Eexe"))
     }
 
     @Test
     fun namesBecomeOneSafeSegment() {
         assertEquals("a_b_c.png", NappletFsPaths.sanitizeName("a/b\\c.png"))
-        assertEquals("evil_gnp.exe", NappletFsPaths.sanitizeName("evil‮gnp.exe"))
+        assertEquals("evil_gnp.exe", NappletFsPaths.sanitizeName("evil\u202Egnp.exe"))
         assertEquals("file", NappletFsPaths.sanitizeName(".."))
         assertEquals("file", NappletFsPaths.sanitizeName("  "))
         val long = NappletFsPaths.sanitizeName("x".repeat(300) + ".png")
         assertEquals(NappletFsPaths.MAX_NAME_LENGTH, long.length)
         assertTrue(long.endsWith(".png"))
-        assertTrue(NappletFsPaths.isValid("/picked/" + NappletFsPaths.sanitizeName("a/\u0007⁦b")))
+        assertTrue(NappletFsPaths.isValid("/picked/" + NappletFsPaths.sanitizeName("a/\u0007\u2066b")))
     }
 
     @Test

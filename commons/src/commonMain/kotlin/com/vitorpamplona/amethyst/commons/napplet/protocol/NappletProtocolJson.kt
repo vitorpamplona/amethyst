@@ -544,13 +544,10 @@ object NappletProtocolJson {
                         if (response.plan.missingAuthors.isNotEmpty()) putJsonArray("missingAuthors") { response.plan.missingAuthors.forEach { add(it) } }
                     }
                 }
-                // NAP-FS results go out through encodeFsResponse; a non-fs request never gets one.
-                is NappletResponse.FsFailure -> {
+                // Only an fs.* request gets one, and those go out through encodeFsResponse.
+                is NappletResponse.Fs -> {
                     put("ok", false)
-                    put("error", response.error)
-                }
-                is NappletResponse.FsInfoResult, is NappletResponse.FsPicked, is NappletResponse.FsMetadata, is NappletResponse.FsReadResult, is NappletResponse.FsWritten -> {
-                    put("ok", true)
+                    put("error", "unsupported")
                 }
                 is NappletResponse.Denied -> {
                     put("ok", false)

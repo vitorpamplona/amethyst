@@ -184,12 +184,9 @@ class NappletBroker(
 
         val authorized =
             when {
-                // Keyboard/command action registration is a shell-mediated UI affordance, not key
-                // access — declared is enough; it never prompts.
-                request is NappletRequest.RegisterAction || request is NappletRequest.UnregisterAction -> true
-                // NAP-FS: only a pick grants anything (and only what the user then picks), so only a
-                // pick asks. Reads and writes reach just the files a pick already handed over.
-                request is NappletRequest.Fs && !request.picks -> true
+                // Grants nothing by itself (a keyboard action binding, an fs read or write of what a
+                // pick handed over): declared is enough; it never prompts.
+                !request.asksConsent -> true
                 // Cosmetic capabilities (theme) never prompt.
                 !capability.requiresConsent -> true
                 // A standing allow short-circuits, except for per-use capabilities (e.g. payments).
@@ -210,10 +207,8 @@ class NappletBroker(
             }
         }
 
-        if (request is NappletRequest.Fs) return executeFiles(identity, request, files)
-
         return try {
-            execute(identity, request)
+            execute(identity, request, files)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -302,6 +297,7 @@ class NappletBroker(
     private suspend fun execute(
         identity: NappletIdentity,
         request: NappletRequest,
+        files: NappletFsSession?,
     ): NappletResponse =
         when (request) {
             is NappletRequest.GetPublicKey -> NappletResponse.PublicKey(signer.pubKey)
@@ -493,8 +489,7 @@ class NappletBroker(
                 )
             }
 
-            // Routed to the surface's files by handle(), which never brings them here.
-            is NappletRequest.Fs -> NappletResponse.FsFailure(NappletFsError.UNSUPPORTED)
+            is NappletRequest.Fs -> executeFiles(identity, request, files)
 
             is NappletRequest.UploadBlob -> {
                 val gateway = upload ?: return NappletResponse.Unsupported("upload.upload")

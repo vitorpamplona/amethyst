@@ -52,14 +52,18 @@ class FakeNappletFilePort : NappletFilePort {
 
     override suspend fun size(handle: String): Long? = (disk[handle] ?: throw NappletFsException(NappletFsError.NOT_FOUND)).size.toLong()
 
+    var reads = 0
+        private set
+
     override suspend fun read(
         handle: String,
         offset: Long,
         length: Int,
-    ): ByteArray {
+    ): NappletFsChunk {
+        reads++
         val bytes = disk[handle] ?: throw NappletFsException(NappletFsError.NOT_FOUND)
-        if (offset >= bytes.size) return ByteArray(0)
-        return bytes.copyOfRange(offset.toInt(), minOf(bytes.size, offset.toInt() + length))
+        if (offset >= bytes.size) return NappletFsChunk(ByteArray(0), bytes.size.toLong())
+        return NappletFsChunk(bytes.copyOfRange(offset.toInt(), minOf(bytes.size, offset.toInt() + length)), bytes.size.toLong())
     }
 
     override suspend fun write(

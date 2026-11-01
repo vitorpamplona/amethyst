@@ -98,6 +98,12 @@ class NappletPickedFile(
     val writable: Boolean = false,
 )
 
+/** What one [NappletFilePort.read] returns: the [bytes] read, and the file's [size] when known. */
+class NappletFsChunk(
+    val bytes: ByteArray,
+    val size: Long?,
+)
+
 /** How a write lands in the file. */
 sealed interface NappletFsWriteMode {
     /** The file becomes exactly the written bytes. */
@@ -135,13 +141,14 @@ interface NappletFilePort {
     suspend fun size(handle: String): Long?
 
     /**
-     * Up to [length] bytes of [handle] from [offset]: fewer only at the end of the file, none past it.
+     * Up to [length] bytes of [handle] from [offset] (fewer only at the end of the file, none past it),
+     * with the file's size when the platform can tell, read from the same opening of the file.
      */
     suspend fun read(
         handle: String,
         offset: Long,
         length: Int,
-    ): ByteArray
+    ): NappletFsChunk
 
     /**
      * Writes [data] to [handle] as [mode] says and returns the file's resulting size, or null when the

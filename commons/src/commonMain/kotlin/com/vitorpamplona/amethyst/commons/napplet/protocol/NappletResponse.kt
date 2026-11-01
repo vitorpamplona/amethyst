@@ -208,6 +208,9 @@ sealed interface NappletResponse {
         val reason: String,
     ) : NappletResponse
 
+    /** A NAP-FS result. They go out only through the `fs.*` reply shape, never the generic one. */
+    sealed interface Fs : NappletResponse
+
     /** A NAP-FS `FsRoot`. */
     data class FsRoot(
         val path: String,
@@ -229,17 +232,17 @@ sealed interface NappletResponse {
         val roots: List<FsRoot>,
         val maxReadBytes: Int,
         val maxWriteBytes: Int,
-    ) : NappletResponse
+    ) : Fs
 
     /** A successful pick: the entries the user chose, as virtual paths. */
     data class FsPicked(
         val entries: List<FsEntry>,
-    ) : NappletResponse
+    ) : Fs
 
     /** `fs.stat`. */
     data class FsMetadata(
         val entry: FsEntry,
-    ) : NappletResponse
+    ) : Fs
 
     /** `fs.read`: [bytes] read from [offset]; [eof] when nothing follows them. */
     data class FsReadResult(
@@ -247,7 +250,7 @@ sealed interface NappletResponse {
         val offset: Long,
         val eof: Boolean,
         val size: Long? = null,
-    ) : NappletResponse {
+    ) : Fs {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is FsReadResult) return false
@@ -261,10 +264,10 @@ sealed interface NappletResponse {
     data class FsWritten(
         val bytesWritten: Int,
         val size: Long? = null,
-    ) : NappletResponse
+    ) : Fs
 
     /** A failed `fs.*` request, with its NAP-FS [error] code. */
     data class FsFailure(
         val error: String,
-    ) : NappletResponse
+    ) : Fs
 }

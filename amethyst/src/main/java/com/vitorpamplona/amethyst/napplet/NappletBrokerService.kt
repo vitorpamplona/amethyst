@@ -148,6 +148,8 @@ class NappletBrokerService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // A token that the registry's cap pushed out was never given back: its surface is gone.
+        NappletLaunchRegistry.onEvicted = ::dropFiles
         scope.launch(Dispatchers.Main.immediate) {
             Amethyst.instance.uiPrefs.value.theme
                 .collect { broadcastTheme() }
@@ -178,6 +180,7 @@ class NappletBrokerService : Service() {
     override fun onDestroy() {
         liveSubscriptions.closeAll()
         identityWatch.stopAll()
+        NappletLaunchRegistry.onEvicted = null
         files.keys.toList().forEach(::dropFiles)
         themeRecipients.clear()
         // Every applet/browser surface has unbound, so the "session" the user granted for is over.

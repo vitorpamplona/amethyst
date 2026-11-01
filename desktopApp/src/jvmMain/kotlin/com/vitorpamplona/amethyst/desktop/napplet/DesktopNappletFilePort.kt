@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFilePort
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsChunk
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsError
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsException
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsPaths
@@ -38,14 +39,16 @@ import java.io.IOException
 import java.io.RandomAccessFile
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 
 /**
  * NAP-FS on the desktop: the system's file dialog, and the files it returns. A handle is the chosen
  * file's absolute path, which stays in this process; the napplet sees only its virtual path.
  *
- * A replace writes beside the file and moves it into place, so a failed write leaves the old file;
- * an append that fails is cut back to where it started.
+ * A replace writes beside the file and moves it into place, so a failed write leaves the old file
+ * ([replace] has the details); an append that fails is cut back to where it started.
  */
 class DesktopNappletFilePort(
     /** The dialogs' owner, so they open over the napplet's window; null centers them on screen. */
@@ -94,15 +97,16 @@ class DesktopNappletFilePort(
         handle: String,
         offset: Long,
         length: Int,
-    ): ByteArray =
+    ): NappletFsChunk =
         withContext(Dispatchers.IO) {
             guard {
                 RandomAccessFile(handle, "r").use { file ->
-                    if (offset >= file.length()) return@use ByteArray(0)
-                    val buffer = ByteArray(minOf(length.toLong(), file.length() - offset).toInt())
+                    val size = file.length()
+                    if (offset >= size) return@use NappletFsChunk(ByteArray(0), size)
+                    val buffer = ByteArray(minOf(length.toLong(), size - offset).toInt())
                     file.seek(offset)
                     file.readFully(buffer)
-                    buffer
+                    NappletFsChunk(buffer, size)
                 }
             }
         }
@@ -138,22 +142,51 @@ class DesktopNappletFilePort(
             }
         }
 
+    /**
+     * Replaces [target]'s content. The new bytes go to a file beside it that then takes its place, so a
+     * failed write leaves the old file whole; the swap happens beside the real file a symlink points
+     * to, so the link stays a link, and the new file keeps the old one's permissions. Where no file
+     * can be made beside it (a folder the user can't add to), the file is rewritten in place.
+     */
     private fun replace(
         target: File,
         data: ByteArray,
     ): Long {
-        val partial = File(target.parentFile, ".${target.name}.part")
-        try {
-            partial.writeBytes(data)
+        val real = if (target.exists()) target.toPath().toRealPath() else target.toPath()
+        val partial = real.resolveSibling(".${real.fileName}.part")
+        val staged =
             try {
-                Files.move(partial.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+                Files.write(partial, data)
+                true
+            } catch (e: IOException) {
+                discardStaged(partial)
+                false
+            }
+        if (!staged) {
+            RandomAccessFile(real.toFile(), "rw").use { file ->
+                file.setLength(0)
+                file.write(data)
+            }
+            return data.size.toLong()
+        }
+        try {
+            if (Files.exists(real)) {
+                runCatching { Files.setPosixFilePermissions(partial, Files.getPosixFilePermissions(real)) }
+            }
+            try {
+                Files.move(partial, real, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
             } catch (e: AtomicMoveNotSupportedException) {
-                Files.move(partial.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                Files.move(partial, real, StandardCopyOption.REPLACE_EXISTING)
             }
         } finally {
-            if (partial.exists() && !partial.delete()) partial.deleteOnExit()
+            discardStaged(partial)
         }
         return data.size.toLong()
+    }
+
+    /** Removes what [replace] staged, and only a file: never something else that held the name. */
+    private fun discardStaged(partial: Path) {
+        if (Files.isRegularFile(partial, LinkOption.NOFOLLOW_LINKS)) runCatching { Files.delete(partial) }
     }
 
     /** The napplet's extension rules as a dialog filter; null (show everything) when any rule is a MIME type. */

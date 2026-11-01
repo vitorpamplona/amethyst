@@ -26,12 +26,14 @@ import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsWriteMode
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /** The desktop's bytes behind NAP-FS, on real files. The pickers themselves need a person. */
 class DesktopNappletFilePortTest {
@@ -48,8 +50,10 @@ class DesktopNappletFilePortTest {
         runBlocking {
             val file = File(dir, "photo.png").apply { writeBytes(ByteArray(100) { it.toByte() }) }
             assertEquals(100L, port.size(file.absolutePath))
-            assertContentEquals(ByteArray(10) { (90 + it).toByte() }, port.read(file.absolutePath, 90, 64))
-            assertEquals(0, port.read(file.absolutePath, 100, 64).size)
+            val tail = port.read(file.absolutePath, 90, 64)
+            assertContentEquals(ByteArray(10) { (90 + it).toByte() }, tail.bytes)
+            assertEquals(100L, tail.size)
+            assertEquals(0, port.read(file.absolutePath, 100, 64).bytes.size)
             assertEquals(NappletFsError.NOT_FOUND, assertFailsWith<NappletFsException> { port.read(File(dir, "gone").absolutePath, 0, 1) }.code)
         }
 
@@ -64,6 +68,29 @@ class DesktopNappletFilePortTest {
             // The replace went through a file beside it that is gone again.
             assertFalse(File(dir, ".export.png.part").exists())
             assertEquals(listOf("export.png"), dir.list()!!.toList())
+        }
+
+    @Test
+    fun replaceKeepsASymlinkAndThePermissions() =
+        runBlocking {
+            val real = File(dir, "real.png").apply { writeText("old") }
+            Files.setPosixFilePermissions(real.toPath(), PosixFilePermissions.fromString("rw-r-----"))
+            val link = File(dir, "latest.png").toPath()
+            Files.createSymbolicLink(link, real.toPath())
+            port.write(link.toString(), "new".encodeToByteArray(), NappletFsWriteMode.Replace)
+            assertTrue(Files.isSymbolicLink(link))
+            assertEquals("new", real.readText())
+            assertEquals("rw-r-----", PosixFilePermissions.toString(Files.getPosixFilePermissions(real.toPath())))
+        }
+
+    @Test
+    fun replaceWritesInPlaceWhereNoFileCanBeMadeBesideIt() =
+        runBlocking {
+            val file = File(dir, "out.txt").apply { writeText("a much longer old text") }
+            // Something already holds the name the new bytes would be staged under.
+            assertTrue(File(dir, ".out.txt.part").mkdir())
+            assertEquals(5L, port.write(file.absolutePath, "short".encodeToByteArray(), NappletFsWriteMode.Replace))
+            assertEquals("short", file.readText())
         }
 
     @Test

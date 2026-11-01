@@ -23,9 +23,7 @@ package com.vitorpamplona.amethyst.napplet
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import android.webkit.MimeTypeMap
-import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import com.vitorpamplona.amethyst.commons.browser.FileChooserAccept
 import com.vitorpamplona.amethyst.commons.napplet.NappletPickedFiles
@@ -33,18 +31,14 @@ import com.vitorpamplona.amethyst.napplethost.NappletFileChooser
 import com.vitorpamplona.quartz.utils.Log
 
 /**
- * Invisible main-process host for one NAP-FS pick ([NappletFsPickerCoordinator]). It shows the
- * system's document picker and reports on every exit, a choice, a cancel or a system teardown,
- * because the napplet's `fs.pick*` call waits on it.
+ * Invisible main-process host for one NAP-FS pick ([NappletFsPickerCoordinator]): the system's
+ * document picker, reported on every exit by [PickerHostActivity].
  *
  * What comes back is filtered as a page's file input is ([NappletPickedFiles]): only other apps'
  * `content://` documents, never one of this app's own providers, whose files would otherwise be read
  * with this app's permissions and handed to the napplet.
  */
-class NappletFsPickerActivity : ComponentActivity() {
-    private var token: String? = null
-    private var reported = false
-
+class NappletFsPickerActivity : PickerHostActivity<NappletFsPickerCoordinator.Ask, List<Uri>>(NappletFsPickerCoordinator.handoff) {
     // Field, not a local: registerForActivityResult must run before this activity reaches STARTED.
     private val picker =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -52,19 +46,7 @@ class NappletFsPickerActivity : ComponentActivity() {
             finish()
         }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        val token = intent.getStringExtra(NappletFsPickerCoordinator.EXTRA_TOKEN)
-        this.token = token
-        val ask = token?.let { NappletFsPickerCoordinator.pendingFor(it) }
-        // Nothing waits under this token (the napplet went away), or this is a recreated instance whose
-        // picker result can no longer be matched: report nothing rather than stack a second picker.
-        if (ask == null || savedInstanceState != null) {
-            finish()
-            return
-        }
-
+    override fun launch(ask: NappletFsPickerCoordinator.Ask) {
         runCatching { picker.launch(intentFor(ask)) }
             .onFailure { e ->
                 Log.w(TAG, "No document picker available", e)
@@ -72,7 +54,7 @@ class NappletFsPickerActivity : ComponentActivity() {
             }
     }
 
-    private fun intentFor(ask: NappletFsPickerCoordinator.Pending): Intent {
+    private fun intentFor(ask: NappletFsPickerCoordinator.Ask): Intent {
         val save = ask.kind == NappletFsPickerCoordinator.Kind.SAVE
         val intent =
             Intent(if (save) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
@@ -112,24 +94,6 @@ class NappletFsPickerActivity : ComponentActivity() {
         return uris
             .filter { NappletPickedFiles.mayHandToPage(it.scheme, it.authority, isOwnCapture = false) { authority -> NappletFileChooser.isOwnAuthority(this, authority) } }
             .takeIf { it.isNotEmpty() }
-    }
-
-    /** Fail-open toward the napplet: any unreported teardown still settles its pick. */
-    override fun finish() {
-        report(null)
-        super.finish()
-    }
-
-    /** The system can destroy this host without [finish] (a low-memory kill under the picker). */
-    override fun onDestroy() {
-        report(null)
-        super.onDestroy()
-    }
-
-    private fun report(uris: List<Uri>?) {
-        if (reported) return
-        reported = true
-        token?.let { NappletFsPickerCoordinator.complete(it, uris) }
     }
 
     private companion object {

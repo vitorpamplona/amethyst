@@ -110,6 +110,33 @@ class NappletFsSessionTest {
         }
 
     @Test
+    fun eachChunkOpensTheFileOnce() =
+        runTest {
+            val entry = pickOpen("big.psd", bytes(200_000))
+            var offset = 0L
+            var chunks = 0
+            while (true) {
+                val chunk = assertIs<NappletResponse.FsReadResult>(session.execute(NappletRequest.FsRead(entry.path, offset, 65_536)))
+                chunks++
+                offset += chunk.bytes.size
+                if (chunk.eof) break
+            }
+            assertEquals(200_000L, offset)
+            assertEquals(chunks, port.reads)
+        }
+
+    @Test
+    fun aMultiSelectNeverPassesTheEntryCap() =
+        runTest {
+            port.opens.addLast(List(NappletFsSession.MAX_ENTRIES - 1) { NappletPickedFile("h$it", "f$it.txt", 0) })
+            assertEquals(NappletFsSession.MAX_ENTRIES - 1, assertIs<NappletResponse.FsPicked>(session.execute(NappletRequest.FsPick(FsPickKind.FILES))).entries.size)
+            port.opens.addLast(List(5) { NappletPickedFile("g$it", "g$it.txt", 0) })
+            assertEquals(1, assertIs<NappletResponse.FsPicked>(session.execute(NappletRequest.FsPick(FsPickKind.FILES))).entries.size)
+            assertFails(NappletFsError.QUOTA_EXCEEDED, session.execute(NappletRequest.FsPick(FsPickKind.FILES)))
+            assertEquals(2, port.pickerShown)
+        }
+
+    @Test
     fun readsAreBoundedAndPathsChecked() =
         runTest {
             val entry = pickOpen("a.txt", bytes(10))

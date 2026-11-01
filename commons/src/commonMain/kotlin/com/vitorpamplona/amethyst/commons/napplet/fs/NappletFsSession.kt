@@ -152,10 +152,13 @@ class NappletFsSession(
             dismissals = 0
             quietUntil = 0L
 
-            // A pickFile result holds exactly one file, whatever the platform handed back.
-            val chosen = if (request.kind == NappletRequest.FsPickKind.FILE) picked.take(1) else picked
             val shown =
                 lock.withLock {
+                    // A pickFile result holds exactly one file, whatever the platform handed back, and a
+                    // multi-select only gets the room the session has left.
+                    val room = MAX_ENTRIES - entries.size
+                    if (room <= 0) return fail(NappletFsError.QUOTA_EXCEEDED)
+                    val chosen = picked.take(if (request.kind == NappletRequest.FsPickKind.FILE) 1 else room)
                     chosen.map { file ->
                         val permissions =
                             if (save) {
@@ -205,13 +208,10 @@ class NappletFsSession(
             val entry = find(request.path)
             if (!entry.present) return@withLock fail(NappletFsError.NOT_FOUND)
             if (NappletFsPermission.READ !in entry.permissions) return@withLock fail(NappletFsError.PERMISSION_DENIED)
-            val size = port.size(entry.handle)
-            val bytes =
-                if (length == 0L || (size != null && offset >= size)) {
-                    ByteArray(0)
-                } else {
-                    port.read(entry.handle, offset, length.toInt())
-                }
+            // One call opens the file once for both the bytes and its size.
+            val chunk = port.read(entry.handle, offset, length.toInt())
+            val bytes = chunk.bytes
+            val size = chunk.size
             if (bytes.size > length) throw NappletFsException(NappletFsError.IO_ERROR)
             val eof =
                 if (size != null) {

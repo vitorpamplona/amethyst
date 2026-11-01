@@ -21,18 +21,12 @@
 package com.vitorpamplona.amethyst.napplet
 
 import android.content.Context
-import android.content.Intent
 import android.net.Uri
-import com.vitorpamplona.quartz.utils.Log
-import kotlinx.coroutines.CompletableDeferred
-import java.util.UUID
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Runs a NAP-FS picker (`fs.pickFile`, `pickFiles`, `pickSaveFile`) for the broker, which lives in a
- * Service and has no Activity to start one from. The request waits here under a one-time token and
- * [NappletFsPickerActivity] shows the system's document picker for it, as [WebFileChooserCoordinator]
- * does for a page's `<input type="file">`.
+ * Service and has no Activity to start one from: [PickerHandoff] gives the request to
+ * [NappletFsPickerActivity], which shows the system's document picker.
  *
  * The pickers are the Storage Access Framework's (`ACTION_OPEN_DOCUMENT`, `ACTION_CREATE_DOCUMENT`):
  * their grant belongs to the app, not to the Activity that asked, so the files stay readable from the
@@ -49,15 +43,14 @@ object NappletFsPickerCoordinator {
      * One picker to show: [accept] holds the napplet's advisory filters as HTML `accept` tokens (MIME
      * types or `.ext`; empty shows everything), [title] names a new file.
      */
-    class Pending(
+    class Ask(
         val kind: Kind,
         val accept: List<String>,
         val title: String?,
         val wantsWrite: Boolean,
-        val result: CompletableDeferred<List<Uri>?>,
     )
 
-    private val pending = ConcurrentHashMap<String, Pending>()
+    val handoff = PickerHandoff<Ask, List<Uri>>(NappletFsPickerActivity::class.java, "NappletFsPicker")
 
     /** Shows the picker and returns what the user chose, or null when they cancelled or no picker could run. */
     suspend fun pick(
@@ -66,39 +59,8 @@ object NappletFsPickerCoordinator {
         accept: List<String>,
         title: String?,
         wantsWrite: Boolean,
-    ): List<Uri>? {
-        val token = UUID.randomUUID().toString()
-        val request = Pending(kind, accept, title, wantsWrite, CompletableDeferred())
-        pending[token] = request
-        try {
-            val launch =
-                Intent(context, NappletFsPickerActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    .putExtra(EXTRA_TOKEN, token)
-            val started = runCatching { context.startActivity(launch) }
-            if (started.isFailure) {
-                Log.w(TAG, "Could not start the NAP-FS picker host", started.exceptionOrNull())
-                return null
-            }
-            return request.result.await()
-        } finally {
-            // Cancelled (the surface went away) or answered: nothing is left waiting under the token.
-            pending.remove(token)
-        }
-    }
+    ): List<Uri>? = handoff.await(context, Ask(kind, accept, title, wantsWrite), START_TIMEOUT_MS)
 
-    /** Called by [NappletFsPickerActivity] to learn what to show. */
-    fun pendingFor(token: String): Pending? = pending[token]
-
-    /** Called by [NappletFsPickerActivity] with the outcome; null = nothing chosen. Resolves at most once. */
-    fun complete(
-        token: String,
-        uris: List<Uri>?,
-    ) {
-        pending.remove(token)?.result?.complete(uris)
-    }
-
-    const val EXTRA_TOKEN = "napplet_fs_picker_token"
-
-    private const val TAG = "NappletFsPicker"
+    /** How long the picker host may take to come up before the pick ends as nothing chosen. */
+    private const val START_TIMEOUT_MS = 10_000L
 }
