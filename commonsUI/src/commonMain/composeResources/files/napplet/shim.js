@@ -54,6 +54,19 @@
   // injected for the page) directly. __nappletDirectBridge selects that path.
   var DIRECT = false; try { DIRECT = !!window.__nappletDirectBridge; } catch (_) {}
   var recvWired = false;
+  // In the shell's frame, NAP rides a MessagePort made for this document (NIP-5D Transport). The
+  // shim runs before any page script, so it makes the channel, keeps one end in this closure and
+  // hands the other to the shell in the one window-level message it sends, `napplet.hello`. The
+  // shell binds the napplet's identity to that port, so a document that later takes this frame's
+  // place has no channel. The send is bound now, while MessagePort's prototype is still the
+  // browser's own.
+  var portSend = null;
+  if (!DIRECT) {
+    var channel = new MessageChannel();
+    portSend = MessagePort.prototype.postMessage.bind(channel.port1);
+    channel.port1.onmessage = function(e){ onIncoming(e.data); };
+    parent.postMessage({ type: 'napplet.hello' }, '*', [channel.port2]);
+  }
   function rawSend(s){
     if (DIRECT) {
       var b = window.__nappletBridge; if (!b) return;
@@ -61,7 +74,7 @@
       if (!recvWired) { recvWired = true; b.onmessage = function(e){ onIncoming(e.data); }; }
       b.postMessage(s);
     } else {
-      parent.postMessage(JSON.parse(s), '*');
+      portSend(JSON.parse(s));
     }
   }
   function send(env){ env.id = env.id || ('r' + (seq++)); rawSend(JSON.stringify(env)); return env.id; }
@@ -123,11 +136,8 @@
     if (msg.ok !== false && !msg.error) p.resolve(msg);
     else { var err = new Error(msg.reason || msg.operation || msg.error || 'napplet error'); err.napplet = msg; p.reject(err); }
   }
-  // The shell-relayed path listens for window messages from the parent; the direct-bridge path wires
-  // its receive channel in rawSend (above) the first time it posts.
-  if (!DIRECT) {
-    window.addEventListener('message', function(e){ if (e.source !== parent) return; onIncoming(e.data); });
-  }
+  // The shell-relayed path receives on its port (wired above); the direct-bridge path wires its
+  // receive channel in rawSend the first time it posts.
   function field(promise, name){ return promise.then(function(m){ return m[name]; }); }
   function resourceCall(type, fields, opts){
     var signal = opts && opts.signal;

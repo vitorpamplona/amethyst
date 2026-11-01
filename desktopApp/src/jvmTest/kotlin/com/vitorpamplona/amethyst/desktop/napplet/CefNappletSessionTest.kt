@@ -74,6 +74,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -1220,6 +1221,163 @@ class CefNappletSessionTest {
             withTimeout(30_000) { asks.asked("note-1").first { it } }
             assertEquals(0, prompts.get(), "nothing was asked from inside the note")
             assertFalse(storage.values.containsKey("boot"), "the write that needed the user was refused")
+        }
+
+    /**
+     * NIP-5D binds a napplet's identity to the document the shell verified, not to its frame: a
+     * frame keeps its `Window` when it navigates itself, so a document loaded later in the same
+     * frame must reach nothing. Each route replaces the verified document with bytes nobody
+     * signed; those bytes then try the old window-level channel and a hello of their own.
+     */
+    @Test
+    fun aDocumentThatReplacesTheVerifiedNappletReachesNothing() =
+        runBlocking {
+            val runtime = cefRuntime()
+
+            fun stage2(route: String) =
+                """
+                <!doctype html><html><body><script>
+                new Image().src = '$serverUrl/landed?landed_$route=1';
+                for (var i = 0; i < 5; i++) parent.postMessage({ type: 'storage.set', id: 'w' + i, key: 'window_$route', value: '1' }, '*');
+                var c = new MessageChannel();
+                parent.postMessage({ type: 'napplet.hello' }, '*', [c.port2]);
+                c.port1.postMessage({ type: 'storage.set', id: 'p1', key: 'port_$route', value: '1' });
+                </script></body></html>
+                """.trimIndent()
+
+            blobs["stage2-network"] = stage2("network").encodeToByteArray()
+
+            // A JS string literal of [text], safe inside an inline script (no `</script>` in it).
+            fun literal(text: String) = Json.encodeToString(String.serializer(), text).replace("</", "<\\/")
+            val targets =
+                mapOf(
+                    "network" to "'$serverUrl/stage2-network'",
+                    "data" to "'data:text/html;base64,' + btoa(${literal(stage2("data"))})",
+                    "blob" to "URL.createObjectURL(new Blob([${literal(stage2("blob"))}], { type: 'text/html' }))",
+                )
+            // How the replacement takes the frame. The napplet/evil fixture (rung 9) uses location.replace
+            // and, failing that, document.open.
+            val swaps =
+                mapOf(
+                    "network" to "location.href = %s;",
+                    "data" to "location.replace(%s);",
+                    "blob" to "location.href = %s;",
+                )
+            val routes =
+                targets.mapValues { (route, target) -> swaps.getValue(route).replace("%s", target) } +
+                    ("open" to "document.open(); document.write(${literal(stage2("open"))}); document.close();")
+            for ((route, swap) in routes) {
+                val storage = RecordingStorage()
+                val html =
+                    """
+                    <!doctype html><html><body><script>
+                    (async function () {
+                      await window.napplet.storage.setItem('verified', '1');
+                      // Written only if the navigation was refused and this document is still here.
+                      setTimeout(function () { window.napplet.storage.setItem('stayed', '1'); }, 3000);
+                      $swap
+                    })();
+                    </script></body></html>
+                    """.trimIndent().encodeToByteArray()
+                val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
+                session.start()
+                withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+                withTimeout(60_000) { while (storage.values["verified"] == null) delay(100) }
+                // Long enough for the navigation, the replacement's messages and the broker's replies.
+                delay(8_000)
+                println("route=$route stored=${storage.values.keys}")
+                assertFalse(storage.values.containsKey("window_$route"), "$route: a replaced document reached the broker over the window")
+                assertFalse(storage.values.containsKey("port_$route"), "$route: a replaced document bound a port of its own")
+                session.close()
+            }
+        }
+
+    /**
+     * A reload is a new document in the same frame. The shell binds identity to the document it
+     * verified, so the second one gets no channel: it never reads or writes the napplet's storage,
+     * and the frame is torn down instead.
+     */
+    @Test
+    fun aSecondDocumentInTheSameFrameGetsNoChannel() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            val html =
+                """
+                <!doctype html><html><body><script>
+                (async function () {
+                  var loads = Number(await window.napplet.storage.getItem('loads') || '0') + 1;
+                  await window.napplet.storage.setItem('loads', String(loads));
+                  if (loads === 1) location.reload();
+                })();
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
+            session.start()
+            withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+            withTimeout(60_000) { while (storage.values["loads"] == null) delay(100) }
+            delay(6_000)
+            assertEquals("1", storage.values["loads"], "the reloaded document reached the broker as the napplet")
+        }
+
+    /**
+     * A napplet gets one hello. A second one, or a NAP message sent at the window instead of the
+     * port, ends the binding: nothing it sends after that reaches the broker.
+     */
+    @Test
+    fun aSecondHelloEndsTheNappletsChannel() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val storage = RecordingStorage()
+            val html =
+                """
+                <!doctype html><html><body><script>
+                (async function () {
+                  await window.napplet.storage.setItem('first', '1');
+                  var c = new MessageChannel();
+                  parent.postMessage({ type: 'napplet.hello' }, '*', [c.port2]);
+                  c.port1.postMessage({ type: 'storage.set', id: 'f1', key: 'forged', value: '1' });
+                  // Later than the hello: a port message and a window message travel on separate
+                  // queues, so one sent alongside it may still land first.
+                  setTimeout(function () { window.napplet.storage.setItem('after', '1'); }, 1000);
+                })();
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
+            session.start()
+            withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+            withTimeout(60_000) { while (storage.values["first"] == null) delay(100) }
+            delay(5_000)
+            assertFalse(storage.values.containsKey("forged"), "the second hello's port reached the broker")
+            assertFalse(storage.values.containsKey("after"), "the first port still worked once the second hello arrived")
+        }
+
+    /** A site moves between its own pages; each page says hello and keeps the channel. */
+    @Test
+    fun aSiteKeepsItsChannelAcrossItsOwnPages() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val user = NostrSignerInternal(KeyPair())
+            val author = NostrSignerInternal(KeyPair())
+            val prompts = SitePrompts()
+
+            fun page(
+                name: String,
+                next: String?,
+            ) = """
+                <!doctype html><html><body><script>
+                (async function () {
+                  var pubkey = await window.nostr.getPublicKey();
+                  await fetch('$serverUrl/report?$name=' + pubkey, { mode: 'no-cors' }).catch(function () {});
+                  ${if (next != null) "location.href = '$next';" else ""}
+                })();
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            show(site(mapOf("/index.html" to page("first", "/second.html"), "/second.html" to page("second", null)), runtime, user, author, prompts))
+
+            withTimeout(60_000) { while (reports["second"] == null) delay(100) }
+            assertEquals(user.pubKey, reports["first"])
+            assertEquals(user.pubKey, reports["second"], "the second page reached the signer too")
         }
 
     private fun ImageBitmap.centerPixel(): Color = toPixelMap()[width / 2, height / 2]

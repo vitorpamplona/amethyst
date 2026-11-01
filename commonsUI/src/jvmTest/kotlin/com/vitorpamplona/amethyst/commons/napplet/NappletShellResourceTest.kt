@@ -51,7 +51,11 @@ class NappletShellResourceTest {
             assertContains(shell, "sandbox=\"${NappletWebContract.APP_SANDBOX_PLACEHOLDER}\"")
             assertContains(shell, NappletWebContract.APP_BOOTSTRAP_PLACEHOLDER)
             assertContains(shell, "e.source !== iframe.contentWindow")
-            assertContains(shell, "iframe.contentWindow.postMessage(msg, '*')")
+            // NAP rides the port handed over in napplet.hello, never the frame's Window.
+            assertContains(shell, "e.data.type === 'napplet.hello' && e.ports && e.ports.length === 1")
+            assertContains(shell, "port.postMessage(msg)")
+            assertFalse(shell.contains("iframe.contentWindow.postMessage"))
+            assertContains(shell, "function bindOneDocument()")
             assertFalse(shell.contains("allow-same-origin"))
         }
 }
