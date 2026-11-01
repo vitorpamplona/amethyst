@@ -154,6 +154,13 @@ object GlobalMediaPlayer {
 
     private const val RETIRE_DELAY_MS = 2_000L
 
+    // How long a paused engine may take to get its card's picture; one that doesn't stays unheld.
+    private const val PICTURE_WAIT_MS = 30_000L
+
+    // How long a retired engine with no poster yet keeps streaming, so its card's poster can be made.
+    private const val POSTER_GRACE_MS = 3_000L
+    private const val POSTER_POLL_MS = 200L
+
     // The longest an open waits for its video's index to land on disk (see prefetchIndex).
     private const val INDEX_PREFETCH_TIMEOUT_MS = 20_000L
 
@@ -676,6 +683,7 @@ object GlobalMediaPlayer {
                         restorePosition(engine, url, restartIfEnded = false)
                     }
                     publishShape(engine, url)
+                    awaitPicture(engine, url)
                 }.onFailure { Log.w(TAG) { "Paused open failed for $url: ${it.message}" } }
         }
     }
@@ -785,6 +793,30 @@ object GlobalMediaPlayer {
     }
 
     @Volatile private var foregroundJob: Job? = null
+
+    /**
+     * Marks [engine]'s relay session as having its card's picture once it has the media and enough
+     * of the file's start is on disk for a poster (VideoThumbnailCache.startIsHeld): from then on its
+     * streams give way to the watched video (MediaRelay.markPictured). Bounded: an engine that
+     * never gets there keeps streaming as before, unheld.
+     */
+    private suspend fun awaitPicture(
+        engine: VideoPlayerState,
+        url: String,
+    ) {
+        val session = engineSessions[engine] ?: return
+        val started = System.currentTimeMillis()
+        val pictured =
+            withTimeoutOrNull(PICTURE_WAIT_MS) {
+                snapshotFlow { engine.hasMedia }.first { it }
+                if (VideoDiskCache.cacheable(url)) while (!posterBytesHeld(url)) delay(POSTER_POLL_MS)
+                true
+            } ?: false
+        if (pictured) MediaRelay.markPictured(session)
+        VideoTimeline.mark(url) { "card picture ${if (pictured) "ready" else "not ready"} after ${System.currentTimeMillis() - started} ms; its streams ${if (pictured) "now give way" else "stay unheld"}" }
+    }
+
+    private fun posterBytesHeld(url: String): Boolean = VideoDiskCache.heldStart(url)?.let { (held, total) -> VideoThumbnailCache.startIsHeld(held, total) } ?: false
 
     /**
      * Why the native engine can't play [url]'s picture, as a codec error the card answers with
@@ -1541,7 +1573,27 @@ object GlobalMediaPlayer {
     /** Every video engine is made here, so GStreamer's segfault trap is off before any starts it. */
     private fun newVideoEngine(): VideoPlayerState {
         GStreamerSegtrap.disable()
+        macPlayerReported
         return createVideoPlayerState()
+    }
+
+    // Says, once, which macOS native player the engines use: Amethyst's build without the audio
+    // tap (desktopApp/native/macos-video-player), found on java.library.path, or the library's own,
+    // which crashes in that tap.
+    private val macPlayerReported: Unit by lazy {
+        if (!PlatformInfo.isMacOS) return@lazy
+        val ours =
+            System
+                .getProperty("java.library.path")
+                .orEmpty()
+                .split(File.pathSeparator)
+                .map { File(it, "libNativeVideoPlayer.dylib") }
+                .firstOrNull { it.isFile }
+        if (ours != null) {
+            Log.i(TAG) { "macOS video player: Amethyst's build without the audio tap, $ours" }
+        } else {
+            Log.w(TAG) { "macOS video player: the library's own, with the audio tap that crashes; ours is not on java.library.path" }
+        }
     }
 
     /**
@@ -1582,9 +1634,24 @@ object GlobalMediaPlayer {
             player.pause()
         }
         // Its downloads stop now, not when it is disposed: an open still running fails fast instead
-        // of finishing over the bandwidth the playing video needs.
-        engineSessions.remove(player)?.let { MediaRelay.revoke(it) }
-        engineUrls[player]?.let { url -> VideoTimeline.mark(url) { "engine retired, its downloads cut off" } }
+        // of finishing over the bandwidth the playing video needs. Unless its card has no poster
+        // yet: then it gets up to POSTER_GRACE_MS to stream what the poster is made from.
+        val session = engineSessions.remove(player)
+        val url = engineUrls[player]
+        if (session != null) {
+            if (url == null || MediaRelay.hasPicture(session) || VideoThumbnailCache.getCached(url) != null) {
+                MediaRelay.revoke(session)
+                url?.let { VideoTimeline.mark(it) { "engine retired, its downloads cut off" } }
+            } else {
+                scope.launch {
+                    withTimeoutOrNull(POSTER_GRACE_MS) {
+                        while (!posterBytesHeld(url)) delay(POSTER_POLL_MS)
+                    }
+                    MediaRelay.revoke(session)
+                    VideoTimeline.mark(url) { "engine retired, downloads cut off after the poster grace (poster bytes held: ${posterBytesHeld(url)})" }
+                }
+            }
+        }
         retiring += player
         retired += player
         scope.launch(Dispatchers.Main) {

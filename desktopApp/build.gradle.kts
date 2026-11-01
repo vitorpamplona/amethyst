@@ -156,6 +156,8 @@ dependencies {
 tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
     val overrides = listOf("amethyst.platform", "amethyst.appearance", "amethyst.accent", "amethyst.login", "amethyst.signup", "amethyst.videoTimeline")
     val dockIcon = project.file("src/jvmMain/resources/icon.icns")
+    val videoPlayerDir = layout.buildDirectory.dir("macVideoPlayer")
+    dependsOn("buildMacVideoPlayer")
     doFirst {
         overrides.forEach { key -> System.getProperty(key)?.let { jvmArgs("-D$key=$it") } }
         // macOS: names the Dock's entry for the plain JVM `run` starts (the packaged app takes its
@@ -163,9 +165,88 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
         // bundle the binary sits in, and the JDK's java is its own bundle.
         if (System.getProperty("os.name").startsWith("Mac")) {
             jvmArgs("-Xdock:name=Amethyst", "-Xdock:icon=${dockIcon.absolutePath}")
+            // The video player without the audio tap (see native/macos-video-player), from where it
+            // is built: $APPDIR means nothing outside a package. Added last, so this one wins.
+            jvmArgs("-Djava.library.path=${videoPlayerDir.get().asFile.absolutePath}")
         }
     }
 }
+
+// --- macOS video player without the audio tap (see native/macos-video-player/README.md) ---
+// ComposeMediaPlayer's own native player crashes in its audio tap; this builds the vendored source
+// with the tap removed, and the app's resources carry it. macOS only: Windows and Linux play
+// through other engines, without that tap.
+abstract class BuildMacVideoPlayer
+    @Inject
+    constructor(
+        private val exec: ExecOperations,
+    ) : DefaultTask() {
+        @get:InputDirectory
+        @get:PathSensitive(PathSensitivity.RELATIVE)
+        abstract val sources: DirectoryProperty
+
+        // The ComposeMediaPlayer version the app depends on: the vendored source must be that one's.
+        @get:Input
+        abstract val libraryVersion: Property<String>
+
+        @get:Input
+        abstract val jdkHome: Property<String>
+
+        @get:OutputDirectory
+        abstract val output: DirectoryProperty
+
+        @TaskAction
+        fun build() {
+            val dir = sources.get().asFile
+            val vendored = File(dir, "VERSION").readText().trim()
+            check(vendored == libraryVersion.get()) {
+                "native/macos-video-player is ComposeMediaPlayer $vendored, the app depends on ${libraryVersion.get()}: " +
+                    "update it or drop it (see its README)"
+            }
+            val out = output.get().asFile.apply { mkdirs() }
+            val target = "arm64-apple-macosx14.0"
+            val bridge = File(temporaryDir, "jni_bridge.o")
+            val jdk = jdkHome.get()
+            exec.exec {
+                commandLine(
+                    "clang", "-c", "-arch", "arm64", "-target", target,
+                    "-I$jdk/include", "-I$jdk/include/darwin",
+                    File(dir, "jni_bridge.c").path, "-o", bridge.path,
+                )
+            }
+            exec.exec {
+                commandLine(
+                    "swiftc", "-emit-library", "-module-name", "NativeVideoPlayer", "-target", target,
+                    "-o", File(out, "libNativeVideoPlayer.dylib").path,
+                    File(dir, "NativeVideoPlayer.swift").path, bridge.path,
+                    "-O", "-whole-module-optimization",
+                )
+            }
+        }
+    }
+
+val isMacHost = System.getProperty("os.name").startsWith("Mac")
+
+val buildMacVideoPlayer =
+    tasks.register<BuildMacVideoPlayer>("buildMacVideoPlayer") {
+        sources.set(layout.projectDirectory.dir("native/macos-video-player"))
+        libraryVersion.set(libs.versions.composemediaplayer.get())
+        jdkHome.set(System.getProperty("java.home"))
+        output.set(layout.buildDirectory.dir("macVideoPlayer"))
+        onlyIf { isMacHost }
+    }
+
+// The app's resources, plus the player built above under macos/ (the folder Compose adds on macOS).
+val syncAppResources =
+    tasks.register<Sync>("syncAppResources") {
+        from(layout.projectDirectory.dir("src/jvmMain/appResources"))
+        if (isMacHost) {
+            from(buildMacVideoPlayer.flatMap { it.output }) { into("macos") }
+        }
+        into(layout.buildDirectory.dir("appResources"))
+    }
+
+tasks.matching { it.name == "prepareAppResources" }.configureEach { dependsOn(syncAppResources) }
 
 compose.desktop {
     application {
@@ -196,6 +277,11 @@ compose.desktop {
         // The shared app reads its version from here (there is no BuildConfig on desktop).
         jvmArgs += "-Damethyst.version=$appVersion"
 
+        // ComposeMediaPlayer loads its native player from java.library.path before the one in its
+        // jar: point it at the resources, which carry the build without the audio tap. Only the
+        // macOS package (each package is built on its own OS); the dev run overrides it below.
+        if (isMacHost) jvmArgs += "-Djava.library.path=\$APPDIR/resources"
+
         // Forward overrides from the gradle invocation to the launched app's JVM, so
         // `./gradlew :desktopApp:run -Damethyst.dataDir=/tmp/amy` keeps a test profile apart.
         listOf("amethyst.dataDir", "amethyst.debug", "amethyst.update.devCheck", "amethyst.update.pretendVersion").forEach { key ->
@@ -203,7 +289,7 @@ compose.desktop {
         }
 
         nativeDistributions {
-            appResourcesRootDir.set(project.layout.projectDirectory.dir("src/jvmMain/appResources"))
+            appResourcesRootDir.set(syncAppResources.map { project.layout.buildDirectory.dir("appResources").get() })
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.Rpm)
             // Output of ./gradlew suggestRuntimeModules (+ java.management already present)
             modules(

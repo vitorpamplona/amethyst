@@ -122,6 +122,7 @@ class MediaRelaySessionTest {
         val original = "$base/clip.mp4?run=${System.nanoTime()}"
         val watched = MediaRelay.newSession()
         val background = MediaRelay.newSession()
+        MediaRelay.markPictured(background)
         try {
             loopback
                 .newCall(
@@ -152,6 +153,36 @@ class MediaRelaySessionTest {
                             .substringBefore('-')
                             .toInt() >= 256 * 1024,
                     )
+                }
+        } finally {
+            MediaRelay.setForeground(null, starting = false)
+        }
+    }
+
+    @Test
+    fun aStreamWhoseCardHasNoPictureYetDoesNotGiveWay() {
+        val original = "$base/clip.mp4?run=${System.nanoTime()}"
+        val watched = MediaRelay.newSession()
+        val background = MediaRelay.newSession()
+        try {
+            loopback
+                .newCall(
+                    Request
+                        .Builder()
+                        .url(MediaRelay.streamingUrl(original, background)!!)
+                        .header("Range", "bytes=0-")
+                        .build(),
+                ).execute()
+                .use { response ->
+                    val input = response.body.byteStream()
+                    val head = input.readNBytes(256 * 1024)
+                    MediaRelay.setForeground(watched, starting = true)
+                    val started = System.currentTimeMillis()
+                    val rest = input.readNBytes(Int.MAX_VALUE)
+                    // Read straight through while the watched video was still starting.
+                    assertTrue(System.currentTimeMillis() - started < 5_000)
+                    assertContentEquals(file, head + rest)
+                    assertEquals(1, ranges.size)
                 }
         } finally {
             MediaRelay.setForeground(null, starting = false)
