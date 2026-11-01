@@ -38,6 +38,13 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class UploadOrchestratorClientTest {
+    // A strict BlossomClient mock whose uploadOrHeld runs the upload it wraps, as the real one does
+    // when the server takes it (or refuses a blob it doesn't hold: the upload's error comes through).
+    private fun blossomMock(): BlossomClient =
+        mockk<BlossomClient>().also { client ->
+            coEvery { client.uploadOrHeld(any(), any(), any(), any(), any()) } coAnswers { arg<suspend () -> BlossomUploadResult>(4).invoke() }
+        }
+
     @BeforeTest
     fun setup() {
         mockkObject(BlossomAuth)
@@ -54,7 +61,7 @@ class UploadOrchestratorClientTest {
     @Test
     fun uploadCallsClientWithCorrectParameters() =
         runTest {
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
             val fileSlot = slot<File>()
             val contentTypeSlot = slot<String>()
             val urlSlot = slot<String>()
@@ -113,7 +120,7 @@ class UploadOrchestratorClientTest {
     @Test
     fun uploadPassesSameFileWhenNoStripExif() =
         runTest {
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
             val fileSlot = slot<File>()
 
             coEvery {
@@ -151,7 +158,7 @@ class UploadOrchestratorClientTest {
     @Test
     fun uploadComputesMetadata() =
         runTest {
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
 
             coEvery {
                 mockClient.upload(any<java.io.File>(), any<String>(), any<String>(), any())
@@ -186,7 +193,7 @@ class UploadOrchestratorClientTest {
     @Test
     fun uploadPassesAuthHeaderToClient() =
         runTest {
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
             val authSlot = slot<String?>()
 
             coEvery {
@@ -227,7 +234,7 @@ class UploadOrchestratorClientTest {
             // A server that refuses opaque blobs (415) must not fail the upload while
             // another listed server would take it -- and the retry has to send the very
             // bytes the cipher and hash describe.
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
             val servers = mutableListOf<String>()
             val bodies = mutableListOf<ByteArray>()
             coEvery {
@@ -268,7 +275,7 @@ class UploadOrchestratorClientTest {
     @Test
     fun whenEveryServerFailsTheSelectedServersErrorIsThrown() =
         runTest {
-            val mockClient = mockk<BlossomClient>()
+            val mockClient = blossomMock()
             coEvery {
                 mockClient.upload(file = any(), contentType = any(), serverBaseUrl = any(), authHeader = any())
             } answers { throw IllegalStateException("refused by ${arg<String>(2)}") }

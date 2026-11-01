@@ -186,7 +186,8 @@ object BlossomCommands {
                     BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", ctx.signer, servers = listOf(server))
                 }
             return withPayment(server) {
-                val result = if (media) client.media(file, mime, server, auth) else client.upload(file, mime, server, auth)
+                // `media` may be transformed by the server, so only a plain upload counts a blob it already holds.
+                val result = if (media) client.media(file, mime, server, auth) else client.uploadOrHeld(hash, file.length(), mime, server) { client.upload(file, mime, server, auth) }
                 Output.emit(
                     mapOf(
                         "url" to result.url,

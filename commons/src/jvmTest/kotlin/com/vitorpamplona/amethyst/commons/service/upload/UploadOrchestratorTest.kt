@@ -77,6 +77,43 @@ class UploadOrchestratorTest {
         }
 
     @Test
+    fun aFallbackServerGoesOutOnItsOwnClient() =
+        runTest {
+            val selected = FakeBlossomClient(failNext = true)
+            val fallback = FakeBlossomClient()
+            val clients = mapOf("https://down.test" to selected, "https://up.test" to fallback)
+            val result =
+                UploadOrchestrator(selected) { clients.getValue(it) }.upload(
+                    file = makeJpeg(40, 30),
+                    alt = "test",
+                    serverBaseUrl = "https://down.test",
+                    signer = signer,
+                    fallbackServerBaseUrls = listOf("https://up.test"),
+                )
+            assertTrue(result.blossom.url!!.startsWith("https://up.test/"), "landed on the fallback: ${result.blossom.url}")
+            assertEquals(1, selected.uploads)
+            assertEquals(1, fallback.uploads)
+        }
+
+    @Test
+    fun aRefusedUploadTheServerAlreadyHoldsIsDoneThere() =
+        runTest {
+            val selected = FakeBlossomClient(failNext = true, holds = true)
+            val fallback = FakeBlossomClient()
+            val clients = mapOf("https://picked.test" to selected, "https://other.test" to fallback)
+            val result =
+                UploadOrchestrator(selected) { clients.getValue(it) }.upload(
+                    file = makeJpeg(40, 30),
+                    alt = "test",
+                    serverBaseUrl = "https://picked.test",
+                    signer = signer,
+                    fallbackServerBaseUrls = listOf("https://other.test"),
+                )
+            assertEquals("https://picked.test/${result.metadata.sha256}", result.blossom.url, "kept on the server the user picked")
+            assertEquals(0, fallback.uploads)
+        }
+
+    @Test
     fun passesThroughAnimatedGifUnchanged() =
         runTest {
             // Synthetic animated-GIF magic so the sniffer returns Animated.
@@ -258,9 +295,17 @@ class UploadOrchestratorTest {
      */
     private class FakeBlossomClient(
         private val failNext: Boolean = false,
+        // Whether a HEAD for the blob finds it (BUD-01).
+        private val holds: Boolean = false,
     ) : BlossomClient() {
         var lastUploadedFile: File? = null
         var lastUploadedBytes: ByteArray? = null
+        var uploads = 0
+
+        override suspend fun has(
+            hash: String,
+            serverBaseUrl: String,
+        ) = holds
 
         override suspend fun upload(
             file: File,
@@ -269,6 +314,7 @@ class UploadOrchestratorTest {
             authHeader: String?,
             onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)?,
         ): BlossomUploadResult {
+            uploads++
             lastUploadedFile = file
             lastUploadedBytes = file.readBytes()
             if (failNext) throw RuntimeException("simulated upload failure")
