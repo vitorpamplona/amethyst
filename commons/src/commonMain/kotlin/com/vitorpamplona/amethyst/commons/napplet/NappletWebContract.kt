@@ -135,9 +135,10 @@ object NappletWebContract {
         }
 
         // NIP-5D identity is bound to the exact verified bytes that execute: they reach the
-        // opaque-origin child as a srcdoc, never a navigated src.
+        // opaque-origin child as a srcdoc, never a navigated src. The shell binds that identity to
+        // the one document the srcdoc makes, and to nothing that replaces it in the frame.
         val parts = requireNotNull(artifactParts) { "A napplet's shell needs its verified artifact" }
-        val open = "var b=atob('".encodeToByteArray()
+        val open = "bindOneDocument();var b=atob('".encodeToByteArray()
         val close =
             (
                 "'),u=new Uint8Array(b.length);" +

@@ -95,7 +95,7 @@ class NappletWebContractShellTest {
     ): String {
         val encoded = Base64.getEncoder().encodeToString(artifact)
         val bootstrap =
-            "var b=atob('$encoded'),u=new Uint8Array(b.length);" +
+            "bindOneDocument();var b=atob('$encoded'),u=new Uint8Array(b.length);" +
                 "for(var j=0;j<b.length;j++)u[j]=b.charCodeAt(j);" +
                 "iframe.srcdoc=new TextDecoder('utf-8').decode(u);"
         return shellHtml
