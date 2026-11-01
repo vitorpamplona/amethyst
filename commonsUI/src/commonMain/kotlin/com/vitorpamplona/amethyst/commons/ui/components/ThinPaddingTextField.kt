@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckContextMenu
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.SpellCheckedInnerTextField
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.VisualOffsetMapping
 import com.vitorpamplona.amethyst.commons.ui.spellcheck.rememberSpellCheckFieldState
+import com.vitorpamplona.amethyst.commons.ui.text.TransformedTextInputGuard
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.coroutines.flow.drop
 
@@ -169,53 +170,55 @@ fun ThinPaddingTextField(
 
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         SpellCheckContextMenu(spellCheckable, spell) {
-            BasicTextField(
-                state = state,
-                modifier =
-                    contentModifier
-                        .defaultMinSize(
-                            minWidth = TextFieldDefaults.MinWidth,
-                            minHeight = 36.dp,
-                        ),
-                enabled = enabled,
-                readOnly = readOnly,
-                textStyle = mergedTextStyle,
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = keyboardOptions,
-                lineLimits = lineLimits,
-                interactionSource = interactionSource,
-                inputTransformation = inputTransformation,
-                outputTransformation = outputTransformation,
-                onKeyboardAction = onKeyboardAction,
-                onTextLayout = spell?.onTextLayout,
-                scrollState = scrollState,
-                decorator = { innerTextField ->
-                    TextFieldDefaults.DecorationBox(
-                        value = state.text.toString(),
-                        visualTransformation = VisualTransformation.None,
-                        innerTextField =
-                            if (spellCheckable) {
-                                { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
-                            } else {
-                                innerTextField
-                            },
-                        placeholder = placeholder,
-                        label = label,
-                        leadingIcon = leadingIcon,
-                        trailingIcon = trailingIcon,
-                        prefix = prefix,
-                        suffix = suffix,
-                        supportingText = supportingText,
-                        shape = shape,
-                        singleLine = singleLine,
-                        enabled = enabled,
-                        isError = isError,
-                        interactionSource = interactionSource,
-                        colors = colors,
-                        contentPadding = contentPadding,
-                    )
-                },
-            )
+            TransformedTextInputGuard(active = outputTransformation != null) {
+                BasicTextField(
+                    state = state,
+                    modifier =
+                        contentModifier
+                            .defaultMinSize(
+                                minWidth = TextFieldDefaults.MinWidth,
+                                minHeight = 36.dp,
+                            ),
+                    enabled = enabled,
+                    readOnly = readOnly,
+                    textStyle = mergedTextStyle,
+                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = keyboardOptions,
+                    lineLimits = lineLimits,
+                    interactionSource = interactionSource,
+                    inputTransformation = inputTransformation,
+                    outputTransformation = outputTransformation,
+                    onKeyboardAction = onKeyboardAction,
+                    onTextLayout = spell?.onTextLayout,
+                    scrollState = scrollState,
+                    decorator = { innerTextField ->
+                        TextFieldDefaults.DecorationBox(
+                            value = state.text.toString(),
+                            visualTransformation = VisualTransformation.None,
+                            innerTextField =
+                                if (spellCheckable) {
+                                    { SpellCheckedInnerTextField(spell, scrollState, singleLine, innerTextField) }
+                                } else {
+                                    innerTextField
+                                },
+                            placeholder = placeholder,
+                            label = label,
+                            leadingIcon = leadingIcon,
+                            trailingIcon = trailingIcon,
+                            prefix = prefix,
+                            suffix = suffix,
+                            supportingText = supportingText,
+                            shape = shape,
+                            singleLine = singleLine,
+                            enabled = enabled,
+                            isError = isError,
+                            interactionSource = interactionSource,
+                            colors = colors,
+                            contentPadding = contentPadding,
+                        )
+                    },
+                )
+            }
         }
     }
 }

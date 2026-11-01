@@ -88,7 +88,7 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
@@ -577,9 +577,7 @@ fun SendDirectMessageTo(
                 },
                 spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,
@@ -613,9 +611,7 @@ fun SendDirectMessageTo(
                 },
                 spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,

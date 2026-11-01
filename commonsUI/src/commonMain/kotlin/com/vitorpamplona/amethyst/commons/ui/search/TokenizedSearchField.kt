@@ -58,6 +58,7 @@ import com.vitorpamplona.amethyst.commons.search.ActivePicker
 import com.vitorpamplona.amethyst.commons.search.KindCandidate
 import com.vitorpamplona.amethyst.commons.search.KindRegistry
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.text.TransformedTextInputGuard
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
@@ -148,43 +149,45 @@ fun TokenizedSearchField(
         }
 
     Column(modifier) {
-        BasicTextField(
-            state = state.textState,
-            modifier =
-                fieldModifier
-                    .fillMaxWidth()
-                    .onFocusChanged { state.onFocusChanged(it.isFocused) }
-                    .onPreviewKeyEvent { event ->
-                        if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
-                        handleKey(event.key, state, picker, highlighted, rows, people, groups, kinds, onSubmit) { highlighted = it }
-                    },
-            textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
-            lineLimits = TextFieldLineLimits.SingleLine,
-            interactionSource = interactionSource,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            onKeyboardAction = KeyboardActionHandler { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() },
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            // The caret is read inside the transformation, not keyed on here: the field re-runs it
-            // whenever a state it read changes, so a new instance per caret move is not needed.
-            outputTransformation = remember(state, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state::settleCaret, styles, displayName, groupName, scopeName) },
-            decorator =
-                TextFieldDecorator { inner ->
-                    if (decorationBox != null) {
-                        decorationBox(inner)
-                    } else {
-                        Box {
-                            if (state.text.isEmpty()) {
-                                Text(
-                                    placeholder,
-                                    style = textStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                )
+        TransformedTextInputGuard {
+            BasicTextField(
+                state = state.textState,
+                modifier =
+                    fieldModifier
+                        .fillMaxWidth()
+                        .onFocusChanged { state.onFocusChanged(it.isFocused) }
+                        .onPreviewKeyEvent { event ->
+                            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                            handleKey(event.key, state, picker, highlighted, rows, people, groups, kinds, onSubmit) { highlighted = it }
+                        },
+                textStyle = textStyle.copy(color = MaterialTheme.colorScheme.onSurface),
+                lineLimits = TextFieldLineLimits.SingleLine,
+                interactionSource = interactionSource,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                onKeyboardAction = KeyboardActionHandler { if (!takeEnter(state, picker, highlighted, people, groups, kinds)) onSubmit() },
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                // The caret is read inside the transformation, not keyed on here: the field re-runs it
+                // whenever a state it read changes, so a new instance per caret move is not needed.
+                outputTransformation = remember(state, styles, displayName, groupName, scopeName) { SearchTokenTransformation(state::settleCaret, styles, displayName, groupName, scopeName) },
+                decorator =
+                    TextFieldDecorator { inner ->
+                        if (decorationBox != null) {
+                            decorationBox(inner)
+                        } else {
+                            Box {
+                                if (state.text.isEmpty()) {
+                                    Text(
+                                        placeholder,
+                                        style = textStyle,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    )
+                                }
+                                inner()
                             }
-                            inner()
                         }
-                    }
-                },
-        )
+                    },
+            )
+        }
 
         when (picker) {
             is ActivePicker.Calendar ->

@@ -40,7 +40,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.messagefield.IMessageField
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -101,7 +101,7 @@ fun MessageField(
                 unfocusedBorderColor = Color.Transparent,
             ),
         spellCheck = true,
-        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = rememberUrlUserTagOutputTransformation(),
         textStyle = LocalTextStyle.current.copy(textDirection = TextDirection.Content),
         contentPadding =
             TextFieldDefaults.contentPaddingWithoutLabel(

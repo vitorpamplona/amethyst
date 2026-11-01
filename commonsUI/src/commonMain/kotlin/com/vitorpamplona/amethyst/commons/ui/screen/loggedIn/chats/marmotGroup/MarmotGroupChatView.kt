@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_confirm_t
 import com.vitorpamplona.amethyst.commons.resources.marmot_out_of_sync_reset
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_create
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
@@ -309,7 +309,7 @@ fun MarmotGroupMessageComposer(
             },
             inputTransformation = MentionPreservingInputTransformation,
             spellCheck = true,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {
