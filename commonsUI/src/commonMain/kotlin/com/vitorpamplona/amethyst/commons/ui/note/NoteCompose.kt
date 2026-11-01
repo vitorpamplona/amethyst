@@ -614,6 +614,7 @@ import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
@@ -2189,6 +2190,7 @@ internal fun RenderNoteRow(
             is UnrecognizedKind30406Event,
             // drss.io's reader: listening progress, generated shows, list folders, lists and
             // provenance notes, drawn the way drss draws them (types/Drss.kt).
+            is DrssListenProgressAppDataEvent,
             is DrssListenProgressEvent,
             -> RenderDrssListenProgress(baseNote, accountViewModel, nav)
             is DrssShowEvent -> RenderDrssShow(baseNote, accountViewModel, nav)

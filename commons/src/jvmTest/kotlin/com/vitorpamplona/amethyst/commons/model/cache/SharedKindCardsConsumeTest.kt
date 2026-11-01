@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.readWriteLists.DrssReadWriteListsEvent
 import com.vitorpamplona.quartz.experimental.kanban.board.KanbanBoardEvent
@@ -70,10 +71,24 @@ class SharedKindCardsConsumeTest {
         // NIP-78 preference.
         val saved = event("0a", 30004, 1_700_000_000L, arrayOf("d", "drss-podcasts"), arrayOf("title", "podcasts"), arrayOf("a", "30023:${"bb".repeat(32)}:episode-1"))
         val preference = event("0b", 30078, 1_700_000_000L, arrayOf("d", "read-write-lists"), arrayOf("a", "30101:$owner:drss"))
+        // drss's listening progress, a NIP-78 record since it left kind 30054.
+        val progress =
+            event(
+                "0c",
+                30078,
+                1_700_000_000L,
+                arrayOf("d", "drss-listen-progress:episode-1"),
+                arrayOf("a", "30023:${"bb".repeat(32)}:episode-1"),
+                arrayOf("L", "drss"),
+                arrayOf("l", "listen-progress", "drss"),
+                arrayOf("position", "733"),
+                arrayOf("duration", "2744"),
+            )
 
         assertIs<ArticleCurationSetEvent>(saved)
         assertIs<DrssReadWriteListsEvent>(preference)
-        listOf(saved, preference).forEach {
+        assertIs<DrssListenProgressAppDataEvent>(progress)
+        listOf(saved, preference, progress).forEach {
             assertTrue(cache.justConsume(it, null, true), it.toJson())
             assertSame(it, cache.stored(it))
         }

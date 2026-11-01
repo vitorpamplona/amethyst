@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.drss
 
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.tags.aTag.ATag
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
@@ -39,9 +39,9 @@ class DrssHistoryTest {
         duration: Long? = null,
         completedAt: Long? = null,
         plays: Long? = null,
-    ): DrssListenProgressEvent {
-        val template = DrssListenProgressEvent.build(ATag(LongFormContentEvent.KIND, show, episode, null), position, duration, completedAt, plays, createdAt = 1)
-        return DrssListenProgressEvent("0".repeat(64), me, 1, template.tags, "", "0".repeat(128))
+    ): DrssListenProgressAppDataEvent {
+        val template = DrssListenProgressAppDataEvent.build(ATag(LongFormContentEvent.KIND, show, episode, null), position, duration, completedAt, plays, createdAt = 1)
+        return DrssListenProgressAppDataEvent("0".repeat(64), me, 1, template.tags, "", "0".repeat(128))
     }
 
     @Test

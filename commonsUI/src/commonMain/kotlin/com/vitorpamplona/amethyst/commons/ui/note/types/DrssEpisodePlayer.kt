@@ -38,7 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -59,7 +59,6 @@ import com.vitorpamplona.amethyst.commons.drss.DrssChapter
 import com.vitorpamplona.amethyst.commons.drss.DrssChapters
 import com.vitorpamplona.amethyst.commons.drss.DrssClipWatch
 import com.vitorpamplona.amethyst.commons.drss.DrssListenRates
-import com.vitorpamplona.amethyst.commons.drss.DrssListenSession
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -101,7 +100,6 @@ import com.vitorpamplona.quartz.drss.clips.clipRangeMillis
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip84Highlights.HighlightEvent
-import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -117,11 +115,13 @@ private const val CLIP_NUDGE_MS = 1_000L
 private val PanelShape = RoundedCornerShape(12.dp)
 
 /**
- * A long-form episode's audio, resumed where the user left it and saving where they are as they
- * listen, in drss.io's listening-progress records (kind 30054), with drss's controls: skips, the
- * feed's speed, chapters from the show notes, and clips. Starts on its own when [autoPlay] is set
- * and calls [onEnded] when the episode plays to its end. Draws nothing for an article without
- * audio.
+ * A long-form episode's audio, resumed where drss.io's listening-progress record (kind 30078, or
+ * the older 30054) left it, with drss's controls: skips, the feed's speed, chapters from the show
+ * notes, and clips. Starts on its own when [autoPlay] is set and calls [onEnded] when the episode
+ * plays to its end. Draws nothing for an article without audio.
+ *
+ * Amethyst reads those records but writes none: kind 30078 is NIP-78 app data, which only the app
+ * that owns it signs.
  */
 @Composable
 fun DrssEpisodeAudio(
@@ -133,7 +133,6 @@ fun DrssEpisodeAudio(
 ) {
     val audio = remember(event) { event.episodeAudio() } ?: return
     val progress by observeMyListening(note, accountViewModel)
-    val session = remember(note.address) { DrssListenSession() }
     val control = remember(note.address) { EpisodeControl() }
     val chapters = remember(event) { DrssChapters.parse(event.content) }
     val account = accountViewModel.account
@@ -148,22 +147,10 @@ fun DrssEpisodeAudio(
     val clipWatch = remember(note.address) { mutableStateOf<DrssClipWatch?>(null) }
     var capture by remember(note.address) { mutableStateOf<LongRange?>(null) }
 
-    val save: (DrssListenSession.Save) -> Unit =
-        remember(note.address) {
-            { save ->
-                if (account.isWriteable()) {
-                    accountViewModel.launchSigner {
-                        account.drss.saveProgress(note.address, save.position, save.durationInSeconds, save.countsAPlay, save.ended, account)
-                    }
-                }
-            }
-        }
-    val currentSave by rememberUpdatedState(save)
     val ended by rememberUpdatedState(onEnded)
 
-    DisposableEffect(note.address) {
+    LaunchedEffect(note.address) {
         if (autoPlay) control.play()
-        onDispose { session.onLeave()?.let(currentSave) }
     }
 
     val playRange: (LongRange) -> Unit =
@@ -175,7 +162,7 @@ fun DrssEpisodeAudio(
         }
 
     val onPlayhead: (EpisodePlayhead) -> Unit =
-        remember(session, control) {
+        remember(control) {
             { sample ->
                 val wasEnded = playhead.value?.hasEnded == true
                 playhead.value = sample
@@ -189,14 +176,6 @@ fun DrssEpisodeAudio(
                         DrssClipWatch.Step.KEEP -> {}
                     }
                 }
-                session
-                    .onSample(
-                        positionInSeconds = sample.positionMillis / 1000.0,
-                        durationInSeconds = sample.durationMillis?.let { it / 1000.0 },
-                        isPlaying = sample.isPlaying,
-                        hasEnded = sample.hasEnded,
-                        nowMillis = TimeUtils.nowMillis(),
-                    )?.let(currentSave)
                 if (sample.hasEnded && !wasEnded) ended?.invoke()
             }
         }

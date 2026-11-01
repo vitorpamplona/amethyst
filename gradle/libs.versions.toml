@@ -79,9 +79,9 @@ media3 = "1.11.1"
 mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz.
-# 2.11.0 adds the Jester chess main line (JesterGameEvents.mainLine), jesterui-style direct
-# challenges and draw offers, and replays PGN moves by the rules; the chess screens build on it.
-quartzKmp = "2.11.0"
+# 2.13.0 reads and writes drss.io's listening progress as kind 30078 (DrssListenProgressAppDataEvent),
+# where drss moved it from 30054.
+quartzKmp = "2.13.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
 # the version above: 2.9.0 removed no public API they use.

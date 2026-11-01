@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.drss
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgress
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 
 /** How much of one feed the user has heard: time, episodes started, and episodes finished. */
@@ -33,13 +33,13 @@ data class DrssFeedHeard(
     val finished: Int,
 )
 
-/** drss.io's history figures, read from the user's listening records (kind 30054). */
+/** drss.io's history figures, read from the user's listening records. */
 object DrssHistory {
     /**
      * About how long the user has listened to one episode: every finished play is its whole
      * length, plus where they are in the current one.
      */
-    fun heardSeconds(record: DrssListenProgressEvent): Long {
+    fun heardSeconds(record: DrssListenProgress): Long {
         val position = record.position() ?: 0
         val duration = record.durationInSeconds() ?: 0
         val plays = record.plays() ?: if (record.completedAt() != null) 1 else 0
@@ -47,7 +47,7 @@ object DrssHistory {
     }
 
     /** One line per feed the records belong to, the most heard first. */
-    fun feedsHeard(records: List<DrssListenProgressEvent>): List<DrssFeedHeard> =
+    fun feedsHeard(records: List<DrssListenProgress>): List<DrssFeedHeard> =
         records
             .groupBy { it.episode()?.pubKeyHex }
             .mapNotNull { (feed, own) ->

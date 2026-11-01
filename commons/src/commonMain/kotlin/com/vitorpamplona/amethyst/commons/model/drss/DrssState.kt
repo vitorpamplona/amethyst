@@ -39,6 +39,8 @@ import com.vitorpamplona.quartz.drss.eventList.DrssEventListEvent
 import com.vitorpamplona.quartz.drss.eventList.tags.ListItemTag
 import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgress
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
@@ -188,17 +190,22 @@ class DrssState(
      * references it: progress, saves and provenance load with the account but no screen holds them,
      * and a collected note comes back empty until a screen fetches it again.
      */
-    private val pinned = MutableStateFlow<Set<AddressableNote>>(PINNED_KINDS.flatMapTo(mutableSetOf()) { existing(it) })
+    private val pinned = MutableStateFlow<Set<AddressableNote>>(PINNED_KINDS.flatMapTo(mutableSetOf()) { kind -> existing(kind).filter { isPinned(it.address) } })
+
+    /** The user's drss records by kind, and of the user's NIP-78 preferences only the listening records. */
+    private fun isPinned(address: Address) =
+        address.kind in PINNED_KINDS &&
+            (address.kind != DrssListenProgressAppDataEvent.KIND || address.dTag.startsWith(DrssListenProgressAppDataEvent.D_TAG_PREFIX))
 
     private fun pin(notes: Set<Note>) {
-        val mine = notes.filterIsInstance<AddressableNote>().filter { it.address.pubKeyHex == me && it.address.kind in PINNED_KINDS }
+        val mine = notes.filterIsInstance<AddressableNote>().filter { it.address.pubKeyHex == me && isPinned(it.address) }
         if (mine.isNotEmpty()) pinned.update { it + mine }
     }
 
     fun newNotes(newNotes: Set<Note>) {
         pin(newNotes)
         if (hasItemInNoteList(newNotes)) versions.update { it + 1 }
-        if (newNotes.anyNotNullEvent { it.pubKey == me && it.kind == DrssListenProgressEvent.KIND }) progressVersions.update { it + 1 }
+        if (newNotes.anyNotNullEvent { it.pubKey == me && it is DrssListenProgress }) progressVersions.update { it + 1 }
     }
 
     private val progressVersions = MutableStateFlow(0)
@@ -206,11 +213,18 @@ class DrssState(
     /** Ticks whenever one of the user's listening records arrives or changes. */
     val progressVersion: StateFlow<Int> = progressVersions
 
-    /** The user's listening records (kind 30054) the cache holds, last saved first. */
-    fun myProgress(): List<DrssListenProgressEvent> =
-        pinned.value
-            .mapNotNull { if (it.address.kind == DrssListenProgressEvent.KIND) it.event as? DrssListenProgressEvent else null }
-            .sortedByDescending { it.createdAt }
+    /**
+     * The user's listening records the cache holds, one per episode, last saved first. drss keeps
+     * them in kind 30078 and moves the older kind-30054 ones there; an episode with both shows the
+     * 30078 one.
+     */
+    fun myProgress(): List<DrssListenProgress> {
+        val records = pinned.value.mapNotNull { it.event as? DrssListenProgress }
+        val current = records.filterIsInstance<DrssListenProgressAppDataEvent>()
+        val lifted = current.mapNotNullTo(mutableSetOf()) { it.episodeAddressId() }
+        val legacy = records.filter { it is DrssListenProgressEvent && it.episodeAddressId() !in lifted }
+        return (current + legacy).sortedByDescending { it.createdAt }
+    }
 
     /** The playback speed of each feed, kept on this device as drss.io keeps it in the browser. */
     val rates = DrssListenRates()
@@ -221,37 +235,29 @@ class DrssState(
 
     // ---- listening progress ----
 
-    /** The note that holds the user's progress through [episode]; drss keys it by the episode's `d`. */
-    fun progressNote(episode: Address): AddressableNote = cache.getOrCreateAddressableNote(Address(DrssListenProgressEvent.KIND, me, episode.dTag))
+    // Read-only: drss keeps these records in kind 30078, NIP-78 app data that only drss signs, so
+    // Amethyst shows them and resumes from them but never writes one.
 
-    /** The user's progress through [episode], when the record at its `d` is about this episode. */
-    fun progressOf(episode: Address): DrssListenProgressEvent? =
-        (cache.getAddressableNoteIfExists(Address(DrssListenProgressEvent.KIND, me, episode.dTag))?.event as? DrssListenProgressEvent)
-            ?.takeIf { it.episodeAddressId() == episode.toValue() }
+    /**
+     * The note that holds the user's progress through [episode]: a kind-30078 record whose `d` is
+     * `drss-listen-progress:` and the episode's `d`.
+     */
+    fun progressNote(episode: Address): AddressableNote = cache.getOrCreateAddressableNote(DrssListenProgressAppDataEvent.createAddress(me, episode))
 
-    /** Saves where the user is in [episode], by drss's rules (see [DrssListenProgressEvent.next]). */
-    suspend fun saveProgress(
+    /**
+     * The user's progress through [episode], when the record at its `d` is about this episode: the
+     * kind-30078 record, or the kind-30054 one drss has not moved yet.
+     */
+    fun progressOf(episode: Address): DrssListenProgress? =
+        recordAt(DrssListenProgressAppDataEvent.createAddress(me, episode), episode)
+            ?: recordAt(Address(DrssListenProgressEvent.KIND, me, episode.dTag), episode)
+
+    private fun recordAt(
+        address: Address,
         episode: Address,
-        position: Long?,
-        durationInSeconds: Long?,
-        countsAPlay: Boolean,
-        ended: Boolean,
-        account: Account,
-    ) {
-        val note = progressNote(episode)
-        val earlier = progressOf(episode)
-        val template =
-            DrssListenProgressEvent.next(
-                earlier = earlier,
-                episode = ATag(episode, null),
-                position = position,
-                durationInSeconds = durationInSeconds,
-                countsAPlay = countsAPlay,
-                ended = ended,
-                createdAt = nextCreatedAt(note.event),
-            )
-        publish(signer.sign(template), note, account)
-    }
+    ): DrssListenProgress? =
+        (cache.getAddressableNoteIfExists(address)?.event as? DrssListenProgress)
+            ?.takeIf { it.episodeAddressId() == episode.toValue() }
 
     /**
      * Clips [startMillis]..[endMillis] of [episode] as a highlight of it with [note] as the
@@ -633,6 +639,7 @@ class DrssState(
     companion object {
         private val PINNED_KINDS =
             setOf(
+                DrssListenProgressAppDataEvent.KIND,
                 DrssListenProgressEvent.KIND,
                 ArticleCurationSetEvent.KIND,
                 DrssProvenanceFolderEvent.KIND,

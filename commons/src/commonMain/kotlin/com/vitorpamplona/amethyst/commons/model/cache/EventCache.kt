@@ -165,6 +165,7 @@ import com.vitorpamplona.quartz.drss.feedList.DrssFeedListEvent
 import com.vitorpamplona.quartz.drss.feedList.UnrecognizedKind30100Event
 import com.vitorpamplona.quartz.drss.listFolder.DrssListFolderEvent
 import com.vitorpamplona.quartz.drss.listFolder.UnrecognizedKind30101Event
+import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressAppDataEvent
 import com.vitorpamplona.quartz.drss.listenProgress.DrssListenProgressEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceEvent
 import com.vitorpamplona.quartz.drss.provenance.DrssProvenanceFolderEvent
@@ -4122,6 +4123,7 @@ open class EventCache :
                 is AppRecommendationEvent,
                 is AppSpecificDataEvent,
                 is DrssReadWriteListsEvent,
+                is DrssListenProgressAppDataEvent,
                 is AttestationEvent,
                 is AttestationRequestEvent,
                 is AttestorRecommendationEvent,
@@ -4230,7 +4232,7 @@ open class EventCache :
                 is AuthoredPodcastsEvent,
                 is FavoritePodcastsListEvent,
                 is Podcasting20EpisodeEvent,
-                // drss.io's listening progress and other shapes on 30054: stored at their address,
+                // drss.io's legacy listening progress and other shapes on 30054: stored at their address,
                 // so a newer non-episode version still supersedes an older episode there and a quote
                 // finds them. The episode feeds pick `is PodcastEpisode`, so no feed draws them.
                 is DrssListenProgressEvent,
