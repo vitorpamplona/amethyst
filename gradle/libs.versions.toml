@@ -145,9 +145,15 @@ fourkoma = "1.2.0"
 # Phase 2 (Gemini App Functions) — both still pre-stable as of May 2026.
 # Scoped to the play flavor only (see amethyst/build.gradle.kts) so the
 # fdroid channel doesn't pull in Google alpha dependencies.
-# Capped by appfunctions-service: `appfunctions` and `appfunctions-compiler`
-# publish alpha10, but -service stopped at alpha09, and all three share this
-# ref. Check every artifact before bumping, not just the main one.
+# Held at alpha09, the last release with a separate `appfunctions-service`
+# (which pins `appfunctions` to exactly its own version). From alpha10 the
+# service lives in `appfunctions` itself, and beta01 needs a port: `@AppFunction`
+# became `@AppFunctionDeclaration` (with an explicit `isDescribedByKDoc`),
+# `AppFunctionContext` is gone, functions must sit in an `AppFunctionService`
+# marked `@AppFunctionServiceEntryPoint` that the app's manifest declares (the
+# library no longer merges one in), and `app_metadata`'s `description` is now
+# `instructions`. Drop `androidx-appfunctions-service` when porting, and check
+# on a device that Gemini still lists the functions.
 appfunctions = "1.0.0-alpha09"
 ksp = "2.3.13"
 
