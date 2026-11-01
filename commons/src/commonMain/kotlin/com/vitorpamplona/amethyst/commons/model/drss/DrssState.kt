@@ -235,14 +235,14 @@ class DrssState(
 
     // ---- listening progress ----
 
+    // Read-only: drss keeps these records in kind 30078, NIP-78 app data that only drss signs, so
+    // Amethyst shows them and resumes from them but never writes one.
+
     /**
      * The note that holds the user's progress through [episode]: a kind-30078 record whose `d` is
      * `drss-listen-progress:` and the episode's `d`.
      */
     fun progressNote(episode: Address): AddressableNote = cache.getOrCreateAddressableNote(DrssListenProgressAppDataEvent.createAddress(me, episode))
-
-    /** The note of the kind-30054 record drss kept for [episode] before it moved them to 30078. */
-    fun legacyProgressNote(episode: Address): AddressableNote = cache.getOrCreateAddressableNote(Address(DrssListenProgressEvent.KIND, me, episode.dTag))
 
     /**
      * The user's progress through [episode], when the record at its `d` is about this episode: the
@@ -258,38 +258,6 @@ class DrssState(
     ): DrssListenProgress? =
         (cache.getAddressableNoteIfExists(address)?.event as? DrssListenProgress)
             ?.takeIf { it.episodeAddressId() == episode.toValue() }
-
-    /**
-     * Saves where the user is in [episode], by drss's rules (see [DrssListenProgressAppDataEvent.next]),
-     * as a kind-30078 record. A kind-30054 record's completion and plays merge in, even when a
-     * 30078 record was saved before it loaded; drss deletes those when it moves them, so Amethyst
-     * leaves them alone.
-     */
-    suspend fun saveProgress(
-        episode: Address,
-        position: Long?,
-        durationInSeconds: Long?,
-        countsAPlay: Boolean,
-        ended: Boolean,
-        account: Account,
-    ) {
-        val note = progressNote(episode)
-        val current = recordAt(DrssListenProgressAppDataEvent.createAddress(me, episode), episode)
-        val legacy = recordAt(Address(DrssListenProgressEvent.KIND, me, episode.dTag), episode)
-        val template =
-            DrssListenProgressAppDataEvent.next(
-                earlier = listOfNotNull(current, legacy),
-                episode = ATag(episode, null),
-                position = position,
-                durationInSeconds = durationInSeconds,
-                countsAPlay = countsAPlay,
-                ended = ended,
-                createdAt = nextCreatedAt(note.event),
-            )
-        // The first 30078 save of an episode goes where its 30054 record was seen, as an edit would.
-        val seenOn = if (current == null && legacy != null) legacyProgressNote(episode) else note
-        publish(signer.sign(template), seenOn, account)
-    }
 
     /**
      * Clips [startMillis]..[endMillis] of [episode] as a highlight of it with [note] as the
