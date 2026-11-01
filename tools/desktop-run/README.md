@@ -92,6 +92,11 @@ which count as its outbox, inbox and Global. With an account whose relay list na
 (set up with `amy`), a run reads and writes on a relay you started (`amy serve`) and nothing reaches
 public relays. `cli/tests/chess/chess-ui.sh` sets this up for chess: bots playing each other or you.
 
+`./gradlew :desktopApp:run -Damethyst.debug=true -Damethyst.videoTimeline=true` logs each video's
+start step by step, stamped with the milliseconds since its card came on screen: the held open, the
+play path, the index prefetch, every relay request (disk or network, the host's time to answer), the
+size known and the first frame. `grep VideoTimeline` the log; `grep 'first frame'` for start times.
+
 - **Read-only, preferred:** log in with any public `npub` (the one above is jack's). That loads real
   feeds, profiles and notifications and cannot sign or publish anything.
 - **Flows that sign** (posting, reacting, settings that publish lists): use a throwaway account from

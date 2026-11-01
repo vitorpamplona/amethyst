@@ -28,11 +28,15 @@ import com.vitorpamplona.quartz.utils.Log
  * the engine held back, the open, the index prefetch, each relay request (disk or network, the
  * host's time to first byte, bytes, how it ended), the size known, the first frame.
  *
- * `adb`-free: read it with `grep VideoTimeline` in the desktop log. Off below debug level, at no cost.
+ * Off unless asked for: `./gradlew :desktopApp:run -Damethyst.debug=true -Damethyst.videoTimeline=true`,
+ * then `grep VideoTimeline` in the log. It writes about six lines a second while a feed of videos
+ * scrolls, which would bury every other debug line. Off, it costs a flag check per step.
  */
 internal object VideoTimeline {
     private const val TAG = "VideoTimeline"
     private const val MAX_TRACKED = 512
+
+    private val enabled: Boolean = System.getProperty("amethyst.videoTimeline") == "true"
 
     // When each video's card last came on screen, by URL.
     private val appeared =
@@ -42,6 +46,7 @@ internal object VideoTimeline {
 
     /** [url]'s card came on screen: its timeline starts over from now. */
     fun appeared(url: String) {
+        if (!enabled) return
         synchronized(appeared) { appeared[url] = System.currentTimeMillis() }
         Log.d(TAG) { "+0 ms ${short(url)} card on screen" }
     }
@@ -51,6 +56,7 @@ internal object VideoTimeline {
         url: String,
         detail: () -> String,
     ) {
+        if (!enabled) return
         Log.d(TAG) {
             val since = synchronized(appeared) { appeared[url] }
             val stamp = if (since == null) "+?" else "+${System.currentTimeMillis() - since}"
