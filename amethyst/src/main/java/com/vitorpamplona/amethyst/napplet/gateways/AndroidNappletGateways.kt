@@ -39,9 +39,9 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletPrompts
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
-import com.vitorpamplona.amethyst.commons.napplet.NappletUploadGateway
-import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
+import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
@@ -52,11 +52,7 @@ import com.vitorpamplona.amethyst.napplet.NappletConsentCoordinator
 import com.vitorpamplona.amethyst.napplet.NsiteNetworkRegistry
 import com.vitorpamplona.amethyst.napplet.currentNappletThemeColors
 import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomUploader
-import com.vitorpamplona.crypto.sha2.sha256
-import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import okhttp3.OkHttpClient
-import java.io.ByteArrayInputStream
 
 /**
  * The account adapter: turns a signed-in [Account] into a configured [NappletBroker] through the
@@ -130,7 +126,9 @@ class AndroidNappletGateways(
             },
             prompts = prompts,
             theme = NappletThemeGateway { currentNappletThemeColors(context) },
-            upload = NappletUploadGateway { bytes, contentType, filename -> uploadBlob(bytes, contentType, filename) },
+            // The bytes come from the sandbox process in one Binder transaction, so they stay as small as
+            // a NAP-FS write.
+            upload = AccountNappletUploadGateway(account, Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads, maxBytes = NappletFsSession.MAX_WRITE_BYTES.toLong()),
             notify = notify,
         )
 
@@ -173,37 +171,6 @@ class AndroidNappletGateways(
      * event, via the app's existing [BlossomUploader]. Returns null when there's no server or the
      * upload fails. Consent is enforced by the broker before this runs.
      */
-    private suspend fun uploadBlob(
-        bytes: ByteArray,
-        contentType: String,
-        filename: String?,
-    ): NappletUploadResult? {
-        val server =
-            account.blossomServers
-                .getBlossomServersList()
-                ?.servers()
-                ?.firstOrNull() ?: return null
-        val hash = sha256(bytes).toHexKey()
-        val result =
-            runCatchingCancellable {
-                BlossomUploader().upload(
-                    openStream = { ByteArrayInputStream(bytes) },
-                    hash = hash,
-                    length = bytes.size.toLong(),
-                    baseFileName = filename,
-                    contentType = contentType,
-                    alt = null,
-                    sensitiveContent = null,
-                    serverBaseUrl = server,
-                    okHttpClient = Amethyst.instance.roleBasedHttpClientBuilder::okHttpClientForUploads,
-                    httpAuth = { h, size, alt -> account.createBlossomUploadAuth(h, size, alt) },
-                    context = context,
-                )
-            }.getOrNull() ?: return null
-        val url = result.url ?: return null
-        return NappletUploadResult(url, result.sha256, result.size, result.type)
-    }
-
     companion object {
         /** Notification channel for napplet-originated notifications (NAP `notify`). */
         private const val NOTIFY_CHANNEL_ID = "napplet_notifications"

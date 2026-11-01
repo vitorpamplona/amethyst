@@ -25,6 +25,8 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentCatalog
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentDispatcher
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
@@ -33,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -43,6 +46,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +56,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
@@ -106,6 +111,12 @@ class DesktopNappletHost(
     private var themeColors = NappletThemeColors("#0E0E10", "#E6E6E6", "#9A82DB")
 
     init {
+        // NAP-INTENT: a handler is one of the napplets the user pinned, opened in a window of its own.
+        runtime.intents =
+            NappletIntentDispatcher(
+                catalog = { NappletIntentCatalog.of(modules.favoriteApps) },
+                launch = { handler -> withContext(Dispatchers.Main) { open(handler.manifest).getOrNull() } },
+            )
         // A window signs as the account that opened it. When that account is no longer the one
         // logged in, its windows close rather than keep acting for someone who left.
         modules.applicationIOScope.launch {
@@ -311,5 +322,6 @@ class DesktopNappletHost(
             },
             prompts = consent,
             theme = NappletThemeGateway { themeColors },
+            upload = AccountNappletUploadGateway(account, modules.roleBasedHttpClientBuilder::okHttpClientForUploads),
         )
 }

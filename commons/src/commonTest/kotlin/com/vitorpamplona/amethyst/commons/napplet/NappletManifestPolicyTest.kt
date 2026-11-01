@@ -74,7 +74,7 @@ class NappletManifestPolicyTest {
         // The published Minesweeper and Game Boy Color napplets require outbox.
         assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).isLaunchable())
         assertTrue(manifest(arrayOf("R", "identity"), arrayOf("R", "outbox"), arrayOf("R", "relay"), arrayOf("R", "resource")).isLaunchable())
-        assertEquals(listOf("upload"), manifest(arrayOf("R", "outbox"), arrayOf("R", "upload"), arrayOf("R", "fs")).unsupportedRequired())
+        assertEquals(listOf("notify"), manifest(arrayOf("R", "outbox"), arrayOf("R", "notify"), arrayOf("R", "fs")).unsupportedRequired())
         assertEquals(listOf("identity", "outbox"), manifest(arrayOf("R", "identity"), arrayOf("R", "outbox")).exposedDomains())
     }
 

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 
 /**
  * Asks the user to decide a capability the napplet does not yet have a standing grant for.
@@ -205,13 +206,34 @@ class NappletUploadResult(
 )
 
 /**
- * Bridges the broker to Blossom upload for [NappletCapability.UPLOAD]. Returns the upload result,
- * or `null` on failure. A `null` gateway answers with `Unsupported`.
+ * Bridges the broker to Blossom upload for [NappletCapability.UPLOAD] (NAP-UPLOAD's `blossom` rail).
+ * Returns the upload result, or `null` on failure. A `null` gateway answers with `Unsupported`.
  */
 fun interface NappletUploadGateway {
+    /**
+     * The largest upload accepted, in bytes. The host's transport bounds it: on Android the bytes
+     * cross a Binder transaction from the sandbox process, which holds far less than a desktop window.
+     */
+    val maxBytes: Long get() = DEFAULT_MAX_BYTES
+
+    /** Whether a server to upload to is configured, for `upload.info` and to fail early. */
+    suspend fun hasServer(): Boolean = true
+
     suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         filename: String?,
     ): NappletUploadResult?
+
+    companion object {
+        const val DEFAULT_MAX_BYTES: Long = 16L * 1024 * 1024
+    }
+}
+
+/**
+ * What NAP-COMMON needs of the account beyond the relays: its current kind 3 follow list, which a
+ * follow or unfollow edits (keeping every other tag and the content). Null when none is known.
+ */
+fun interface NappletCommonGateway {
+    fun followList(): ContactListEvent?
 }

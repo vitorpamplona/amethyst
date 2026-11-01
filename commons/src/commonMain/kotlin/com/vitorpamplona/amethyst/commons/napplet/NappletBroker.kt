@@ -40,7 +40,17 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.toNarrowSignerOp
 import com.vitorpamplona.amethyst.commons.napplet.protocol.toSignerOp
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
+import com.vitorpamplona.quartz.nip01Core.metadata.MetadataEvent
+import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
+import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
+import com.vitorpamplona.quartz.nip02FollowList.tags.ContactTag
+import com.vitorpamplona.quartz.nip25Reactions.ReactionEvent
+import com.vitorpamplona.quartz.nip30CustomEmoji.EmojiUrlTag
+import com.vitorpamplona.quartz.nip56Reports.ReportEvent
+import com.vitorpamplona.quartz.nip56Reports.ReportType
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
@@ -94,6 +104,8 @@ class NappletBroker(
     private val nowMillis: () -> Long = { TimeUtils.nowMillis() },
     // Where a request that needed the user, from an app running inside a note, is recorded instead.
     private val inlineAsks: NappletInlineAsks = NappletInlineAsks.shared,
+    // NAP-COMMON: the account's follow list. Reads and events go through [outbox].
+    private val common: NappletCommonGateway? = null,
 ) {
     // Serializes the consent-prompt path so concurrent requests queue into one dialog at a time
     // (see [authorizeWithConsent]). Only the prompt is held here; non-prompting paths and execute()
@@ -112,6 +124,22 @@ class NappletBroker(
     // consent dialog is open.
     private val sessionAllows = mutableSetOf<String>()
     private val sessionLock = Mutex()
+
+    // NAP-UPLOAD: each napplet's recent uploads, by "<coordinate>|<uploadId>", for `upload.status`.
+    // An upload completes before its result is sent, so this only ever holds finished ones; the
+    // oldest go past [MAX_REMEMBERED_UPLOADS].
+    private val uploads = LinkedHashMap<String, NappletResponse.Uploaded>()
+    private val uploadsLock = Mutex()
+
+    private suspend fun rememberUpload(
+        coordinate: String,
+        upload: NappletResponse.Uploaded,
+    ) = uploadsLock.withLock {
+        val key = "$coordinate|${upload.uploadId}"
+        uploads.remove(key)
+        uploads[key] = upload
+        while (uploads.size > MAX_REMEMBERED_UPLOADS) uploads.remove(uploads.keys.first())
+    }
 
     private suspend fun hasSessionGrant(key: String): Boolean = sessionLock.withLock { key in sessionAllows }
 
@@ -163,6 +191,15 @@ class NappletBroker(
 
         if (capability !in declared) {
             return NappletResponse.Denied(capability, "This napplet did not declare the '${capability.name.lowercase()}' capability.")
+        }
+
+        // A NAP-COMMON action is the event the shell builds for it: from here on it is that publish,
+        // gated as `common`, so the consent and signer prompts show the actual event.
+        if (request is NappletRequest.CommonAction) {
+            return when (val plan = planCommonAction(request)) {
+                is CommonPlan.Publish -> handle(identity, plan.request, declared, files)
+                is CommonPlan.Answer -> plan.response
+            }
         }
 
         // A standing denial always wins, even for signer-self-gated capabilities.
@@ -493,8 +530,49 @@ class NappletBroker(
 
             is NappletRequest.UploadBlob -> {
                 val gateway = upload ?: return NappletResponse.Unsupported("upload.upload")
-                val res = gateway.upload(request.bytes, request.contentType, request.filename) ?: return NappletResponse.Failed("Upload failed.")
-                NappletResponse.Uploaded(res.url, res.sha256, res.size, res.mimeType)
+                // NAP-UPLOAD's error strings: no upload was created, so the napplet gets one of these.
+                if (request.rail != null && request.rail != UPLOAD_RAIL) return NappletResponse.Failed("unsupported rail")
+                if (request.bytes.size > gateway.maxBytes) return NappletResponse.Failed("file too large")
+                if (!gateway.hasServer()) return NappletResponse.Failed("no server configured")
+                val res = gateway.upload(request.bytes, request.contentType, request.filename) ?: return NappletResponse.Failed("upload failed")
+                val done = NappletResponse.Uploaded(res.url, res.sha256, res.size, res.mimeType, updatedAt = TimeUtils.now())
+                rememberUpload(identity.coordinate, done)
+                done
+            }
+
+            is NappletRequest.CommonEncodeNip19 -> NappletCommonNip19.encode(request)
+
+            is NappletRequest.CommonDecodeNip19 -> NappletCommonNip19.decode(request.value)
+
+            is NappletRequest.CommonGetProfile -> {
+                val reader = outbox ?: return NappletResponse.Unsupported("common.getProfile")
+                val (pubkey, hints) = NappletCommonNip19.pubkeyOf(request.target) ?: return NappletResponse.CommonFailure("invalid-profile-target")
+                val found = reader.query(listOf(Filter(kinds = listOf(MetadataEvent.KIND), authors = listOf(pubkey), limit = 1)), listOf(pubkey), hints.map { it.url }, COMMON_READ_TIMEOUT_MS)
+                NappletResponse.CommonProfile(
+                    pubkey,
+                    found.events
+                        .map { it.event }
+                        .filter { it.kind == MetadataEvent.KIND && it.pubKey == pubkey }
+                        .maxByOrNull { it.createdAt },
+                )
+            }
+
+            is NappletRequest.CommonFollows -> {
+                val gateway = common ?: return NappletResponse.Unsupported("common.follows")
+                NappletResponse.CommonFollowList(gateway.followList()?.verifiedFollowKeySet()?.toList() ?: emptyList())
+            }
+
+            // Turned into a Publish in handle() before it gets here.
+            is NappletRequest.CommonAction -> NappletResponse.Unsupported("common")
+
+            is NappletRequest.UploadInfo -> {
+                val gateway = upload ?: return NappletResponse.Unsupported("upload.info")
+                NappletResponse.UploadInfo(enabled = gateway.hasServer(), maxBytes = gateway.maxBytes)
+            }
+
+            is NappletRequest.UploadStatus -> {
+                upload ?: return NappletResponse.Unsupported("upload.status")
+                uploadsLock.withLock { uploads["${identity.coordinate}|${request.uploadId}"] } ?: NappletResponse.Failed("unknown upload")
             }
         }
 
@@ -541,6 +619,91 @@ class NappletBroker(
      * sees a key, can never sign as another identity (the signer fixes `pubkey`), and cannot
      * backdate (`created_at` is the host clock).
      */
+    private sealed interface CommonPlan {
+        class Publish(
+            val request: NappletRequest.Publish,
+        ) : CommonPlan
+
+        class Answer(
+            val response: NappletResponse,
+        ) : CommonPlan
+    }
+
+    private fun publishing(template: EventTemplate<*>) = CommonPlan.Publish(NappletRequest.Publish(template.kind, template.tags, template.content, NappletCapability.COMMON))
+
+    private fun refusing(error: String) = CommonPlan.Answer(NappletResponse.CommonFailure(error))
+
+    /**
+     * The event a NAP-COMMON action publishes, or the answer when there is nothing to publish: a
+     * target that isn't valid, or a follow-list change that changes nothing. Reads only public data
+     * (the follow list, the reacted or reported event), before any prompt.
+     */
+    private suspend fun planCommonAction(request: NappletRequest.CommonAction): CommonPlan =
+        when (request) {
+            is NappletRequest.CommonFollow -> {
+                val gateway = common ?: return CommonPlan.Answer(NappletResponse.Unsupported("common.follow"))
+                val keys = request.pubkeys.map { NappletCommonNip19.pubkeyOf(it)?.first ?: return refusing("invalid-pubkey") }.distinct()
+                if (keys.isEmpty()) return refusing("invalid-pubkey")
+                val current = gateway.followList()
+                val tags = current?.tags ?: emptyArray()
+                val followed = tags.mapNotNullTo(HashSet()) { ContactTag.parseKey(it) }
+                val newTags =
+                    if (request.follow) {
+                        tags + keys.filter { it !in followed }.map { arrayOf("p", it) }
+                    } else {
+                        tags.filterNot { tag -> ContactTag.parseKey(tag)?.let { it in keys } == true }.toTypedArray()
+                    }
+                // Idempotent: nothing to add or remove publishes nothing.
+                if (newTags.size == tags.size) {
+                    CommonPlan.Answer(NappletResponse.CommonUnchanged(current))
+                } else {
+                    CommonPlan.Publish(NappletRequest.Publish(ContactListEvent.KIND, newTags, current?.content ?: "", NappletCapability.COMMON))
+                }
+            }
+
+            is NappletRequest.CommonReact -> {
+                if (!NappletCommonNip19.isHexKey(request.targetEventId)) return refusing("invalid-target")
+                val shortcode = SHORTCODE.matchEntire(request.reaction)?.groupValues?.get(1)
+                val emojiUrl = request.customEmojiHref
+                when {
+                    shortcode != null -> if (emojiUrl == null || !emojiUrl.startsWith("https://")) return refusing("invalid-reaction")
+                    emojiUrl != null -> return refusing("invalid-reaction")
+                    !isReactionText(request.reaction) -> return refusing("invalid-reaction")
+                }
+                val target = commonEvent(request.targetEventId) ?: return refusing("invalid-target")
+                if (shortcode != null && emojiUrl != null) {
+                    publishing(ReactionEvent.build(EmojiUrlTag(shortcode, emojiUrl), EventHintBundle(target)))
+                } else {
+                    publishing(ReactionEvent.build(request.reaction, EventHintBundle(target)))
+                }
+            }
+
+            is NappletRequest.CommonReport -> {
+                val type = REPORT_REASONS[request.reason] ?: return refusing("invalid-report-reason")
+                if (request.eventId != null) {
+                    if (!NappletCommonNip19.isHexKey(request.eventId)) return refusing("invalid-target")
+                    // NIP-56 names the author of a reported event; one that can't be found is not guessed.
+                    val reported = commonEvent(request.eventId) ?: return refusing("author-unresolved")
+                    if (request.pubkey != null && NappletCommonNip19.pubkeyOf(request.pubkey)?.first != reported.pubKey) return refusing("invalid-target")
+                    publishing(ReportEvent.build(reported, type, request.text))
+                } else {
+                    val user = request.pubkey?.let { NappletCommonNip19.pubkeyOf(it)?.first } ?: return refusing("invalid-pubkey")
+                    publishing(ReportEvent.build(user, type, request.text))
+                }
+            }
+        }
+
+    // A native event by id, from the cache or the relays, verified.
+    private suspend fun commonEvent(id: HexKey): Event? =
+        outbox
+            ?.getEvent(id, null, emptyList(), COMMON_READ_TIMEOUT_MS)
+            ?.events
+            ?.firstOrNull { it.event.id == id }
+            ?.event
+
+    // NIP-25 content: "+", "-", or one emoji. An emoji is not a word: nothing ASCII, no spaces, short.
+    private fun isReactionText(reaction: String): Boolean = reaction == "+" || reaction == "-" || (reaction.isNotEmpty() && reaction.length <= MAX_EMOJI_CHARS && reaction.none { it.code < 0x80 || it.isWhitespace() })
+
     private suspend fun signAndPublish(
         kind: Int,
         tags: Array<Array<String>>,
@@ -808,6 +971,33 @@ class NappletBroker(
          * the dialog per request; short enough that a deliberate user retry seconds later prompts again.
          */
         private const val CANCEL_REPROMPT_COOLDOWN_MS = 3_000L
+
+        /** How long a NAP-COMMON read (a profile, a reacted or reported event) waits on relays. */
+        private const val COMMON_READ_TIMEOUT_MS = 5_000L
+
+        // A NIP-30 shortcode reaction, `:name:`.
+        private val SHORTCODE = Regex("^:([A-Za-z0-9_-]+):$")
+
+        // The longest emoji kept as one reaction: a family or a flag with modifiers, not a sentence.
+        private const val MAX_EMOJI_CHARS = 16
+
+        // NAP-COMMON's report reasons, which are NIP-56's.
+        private val REPORT_REASONS =
+            mapOf(
+                "nudity" to ReportType.NUDITY,
+                "malware" to ReportType.MALWARE,
+                "profanity" to ReportType.PROFANITY,
+                "illegal" to ReportType.ILLEGAL,
+                "spam" to ReportType.SPAM,
+                "impersonation" to ReportType.IMPERSONATION,
+                "other" to ReportType.OTHER,
+            )
+
+        /** The one NAP-UPLOAD rail offered: Blossom. */
+        const val UPLOAD_RAIL = "blossom"
+
+        /** Uploads kept for `upload.status`, across every napplet. */
+        private const val MAX_REMEMBERED_UPLOADS = 64
 
         /**
          * How long a prompt stays quiet after it was declined twice in a row; each further decline

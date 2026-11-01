@@ -589,6 +589,23 @@ class CefNappletSession(
             if (closed) runtime.incBus.remove(this)
             return
         }
+        // NAP-INTENT: an invoke may open the handler's window, so it runs off this thread.
+        NappletRequestRouter.routeIntent(launch.declared, payload)?.let { outcome ->
+            val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
+            when (outcome) {
+                is NappletRequestRouter.Outcome.Intent -> {
+                    val intents = runtime.intents
+                    if (intents == null) {
+                        if (id != null) send(withId(NappletProtocolJson.encodeIntentFailure(NappletProtocolJson.readType(payload) ?: "intent.invoke", "intent unavailable"), id))
+                    } else {
+                        scope.launch { intents.handle(this@CefNappletSession, launch.identity, ::send, outcome.request)?.let { send(withId(it, id)) } }
+                    }
+                }
+                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                else -> {}
+            }
+            return
+        }
         val arrivedAt = runtime.liveSubscriptions.arrival()
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
@@ -719,6 +736,7 @@ class CefNappletSession(
         fsSession?.close()
         runtime.liveSubscriptions.closeAllFor(this)
         runtime.incBus.remove(this)
+        runtime.intents?.remove(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
         scope.cancel()

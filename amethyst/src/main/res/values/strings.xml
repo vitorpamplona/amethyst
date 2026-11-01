@@ -535,6 +535,8 @@
     <string name="napplet_cap_inc">Messaging</string>
     <string name="napplet_cap_outbox">Outbox</string>
     <string name="napplet_cap_fs">Files</string>
+    <string name="napplet_cap_common">Social actions</string>
+    <string name="napplet_cap_intent">Open other apps</string>
     <string name="muted_button">Muted. Click to unmute</string>
     <string name="mute_button">Sound on. Click to mute</string>
     <string name="play">Play</string>

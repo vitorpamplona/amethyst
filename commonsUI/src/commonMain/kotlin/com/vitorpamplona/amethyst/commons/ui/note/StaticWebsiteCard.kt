@@ -61,9 +61,11 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.isLaunchable
+import com.vitorpamplona.amethyst.commons.napplet.unsupportedRequired
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_card_kind
 import com.vitorpamplona.amethyst.commons.resources.napplet_card_permissions
+import com.vitorpamplona.amethyst.commons.resources.napplet_card_unsupported
 import com.vitorpamplona.amethyst.commons.resources.nsite_open
 import com.vitorpamplona.amethyst.commons.resources.nsite_root_site
 import com.vitorpamplona.amethyst.commons.resources.nsite_servers
@@ -106,6 +108,9 @@ class NappletCardInfo(
 
     /** Valid NIP-5D, and every required domain is one this shell implements. */
     val launchable: Boolean = event.isLaunchable()
+
+    /** The required domains this shell doesn't implement: why a valid napplet has no Open. */
+    val unsupported: List<String> = event.unsupportedRequired()
 }
 
 /** What a site card shows, read off a [RootSiteEvent] or [NamedSiteEvent] once per event. */
@@ -158,6 +163,13 @@ private fun NappletManifestCard(
     PrefetchNappletFiles((event as Event).pubKey, identifier.orEmpty(), info.artifactFiles, info.servers)
     val canOpen = info.launchable && launcher.opensNapplets
     val label = info.title ?: identifier ?: NAPPLET_LABEL
+    // Where napplets run at all, a card without Open says why instead of just lacking the button.
+    val notice =
+        if (launcher.opensNapplets && info.unsupported.isNotEmpty()) {
+            stringResource(Res.string.napplet_card_unsupported, info.unsupported.joinToString(", "))
+        } else {
+            null
+        }
 
     StaticWebsiteCard(
         title = info.title,
@@ -168,6 +180,7 @@ private fun NappletManifestCard(
         isNapplet = true,
         requires = info.required,
         icon = icon,
+        notice = notice,
         // The card itself never executes code: Open and Run here hand the napplet to the platform's sandbox.
         onOpen =
             if (canOpen) {
@@ -237,6 +250,8 @@ fun StaticWebsiteCard(
     isNapplet: Boolean,
     requires: List<String> = emptyList(),
     icon: String? = null,
+    // Shown under the description, e.g. why there is no Open button.
+    notice: String? = null,
     onOpen: (() -> Unit)? = null,
     // Optional trailing slot in the header row (the favorite star).
     headerActions: @Composable (() -> Unit)? = null,
@@ -294,6 +309,14 @@ fun StaticWebsiteCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        notice?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
             )
         }
 

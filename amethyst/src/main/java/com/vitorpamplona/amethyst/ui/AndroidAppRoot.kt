@@ -50,7 +50,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
-import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.ui.tor.TorConnectionFailureDialog
 
 /** Android's fill of the shared [AppRoot]: the app graph, the Activity's effects and the Android-only screens. */
@@ -93,11 +92,7 @@ object AndroidAppRoot : AppRoot {
 
     @Composable
     override fun ShellOverlay(accountViewModel: AccountViewModel) {
-        // Pull each pinned nsite/napplet's manifest into LocalCache (and keep a device-local copy)
-        // so its favorite resolves as reliably as a pinned web app's URL — the data the embedded
-        // preloader below and the full-screen launcher both need. Not API-gated: every device's
-        // launcher benefits, and it's the only preload step that runs below API 30.
-        FavoriteAppManifestPreloader(accountViewModel)
+        // The favorites' manifests are kept in LocalCache by the shared shell (FavoriteAppManifestPreloader).
         // Persistent layer that keeps pinned embedded tabs (browser / nsite / napplet) warm by
         // holding their surfaces attached. Below the drawer (drawn by the shell) and below
         // dialogs (separate windows). API 30+ only, matching the embedded-surface feature.

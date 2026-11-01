@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
+package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,13 +26,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNote
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
@@ -43,7 +45,7 @@ private const val MANIFEST_OFFLINE_FALLBACK_MS = 2_000L
 
 /**
  * Keeps every favorited nsite/napplet (a [FavoriteApp.NostrApp]) resolvable in [LocalCache] the way a
- * pinned web app's URL always is — closing the gap where [EmbeddedTabPreloader] could not warm a
+ * pinned web app's URL always is — closing the gap where Android's `EmbeddedTabPreloader` could not warm a
  * Nostr-app favorite because its manifest event had simply never been fetched (favorites store only a
  * `kind:pubkey:dtag` coordinate, and nothing pulled that addressable event in until the user opened
  * the napplet/nsite discovery screen). For each favorite this:
@@ -60,8 +62,8 @@ private const val MANIFEST_OFFLINE_FALLBACK_MS = 2_000L
  */
 @Composable
 fun FavoriteAppManifestPreloader(accountViewModel: AccountViewModel) {
-    val favorites by Amethyst.instance.favoriteApps.favorites
-        .collectAsStateWithLifecycle()
+    val registry = LocalAppServices.current.favoriteApps
+    val favorites by registry.favorites.collectAsStateWithLifecycle()
     val coordinates =
         remember(favorites) {
             favorites.filterIsInstance<FavoriteApp.NostrApp>().map { it.coordinate }
@@ -69,7 +71,7 @@ fun FavoriteAppManifestPreloader(accountViewModel: AccountViewModel) {
 
     coordinates.forEach { coordinate ->
         key(coordinate) {
-            WatchFavoriteManifest(coordinate, accountViewModel)
+            WatchFavoriteManifest(coordinate, registry, accountViewModel)
         }
     }
 }
@@ -77,6 +79,7 @@ fun FavoriteAppManifestPreloader(accountViewModel: AccountViewModel) {
 @Composable
 private fun WatchFavoriteManifest(
     coordinate: String,
+    registry: FavoriteAppsRegistry,
     accountViewModel: AccountViewModel,
 ) {
     val note = remember(coordinate) { LocalCache.checkGetOrCreateAddressableNote(coordinate) } ?: return
@@ -92,7 +95,7 @@ private fun WatchFavoriteManifest(
     LaunchedEffect(event?.id) {
         val resolved = event ?: return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            Amethyst.instance.favoriteApps.cacheManifest(coordinate, resolved.toJson())
+            registry.cacheManifest(coordinate, resolved.toJson())
         }
     }
 
@@ -104,7 +107,7 @@ private fun WatchFavoriteManifest(
         delay(MANIFEST_OFFLINE_FALLBACK_MS)
         if (LocalCache.getAddressableNoteIfExists(coordinate)?.event != null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
-            val cached = Amethyst.instance.favoriteApps.cachedManifest(coordinate) ?: return@withContext
+            val cached = registry.cachedManifest(coordinate) ?: return@withContext
             Event.fromJsonOrNull(cached)?.let { LocalCache.justConsume(it, null, false) }
         }
     }

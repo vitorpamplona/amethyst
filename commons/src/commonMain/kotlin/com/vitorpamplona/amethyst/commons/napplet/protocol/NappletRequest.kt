@@ -91,13 +91,19 @@ sealed interface NappletRequest {
         val kind: Int,
         val tags: Array<Array<String>>,
         val content: String,
+        /**
+         * The domain the napplet used. A NAP-COMMON action ([CommonAction]) becomes the event it
+         * publishes, built by the shell, and stays gated as `common`, not `relay`.
+         */
+        val via: NappletCapability = NappletCapability.RELAY,
     ) : NappletRequest {
-        override val capability get() = NappletCapability.RELAY
+        override val capability get() = via
         override val signsAsUser get() = true
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Publish) return false
+            if (via != other.via) return false
             if (kind != other.kind) return false
             if (content != other.content) return false
             if (tags.size != other.tags.size) return false
@@ -405,22 +411,109 @@ sealed interface NappletRequest {
         override val capability get() = NappletCapability.RESOURCE
     }
 
-    /** Upload a blob to the user's Blossom server (`upload.upload`). */
+    /**
+     * Upload a blob to the user's Blossom server (`upload.upload`). [rail] is the NAP-UPLOAD rail the
+     * napplet asked for, null to let the shell pick; only `blossom` is offered.
+     */
     data class UploadBlob(
         val bytes: ByteArray,
         val contentType: String,
         val filename: String? = null,
+        val rail: String? = null,
     ) : NappletRequest {
         override val capability get() = NappletCapability.UPLOAD
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is UploadBlob) return false
-            return contentType == other.contentType && filename == other.filename && bytes.contentEquals(other.bytes)
+            return contentType == other.contentType && filename == other.filename && rail == other.rail && bytes.contentEquals(other.bytes)
         }
 
-        override fun hashCode(): Int = 31 * (31 * contentType.hashCode() + filename.hashCode()) + bytes.contentHashCode()
+        override fun hashCode(): Int = 31 * (31 * (31 * contentType.hashCode() + filename.hashCode()) + rail.hashCode()) + bytes.contentHashCode()
     }
+
+    /** `upload.info`: the rails and limits the shell offers. Advisory introspection, so it never prompts. */
+    data object UploadInfo : NappletRequest {
+        override val capability get() = NappletCapability.UPLOAD
+        override val asksConsent get() = false
+    }
+
+    /** `upload.status`: the latest status of this napplet's own upload [uploadId]. Never prompts. */
+    data class UploadStatus(
+        val uploadId: String,
+    ) : NappletRequest {
+        override val capability get() = NappletCapability.UPLOAD
+        override val asksConsent get() = false
+    }
+
+    /** A NAP-COMMON request (`common.*`): NIP-19 helpers, profile and follow reads, social actions. */
+    sealed interface Common : NappletRequest {
+        override val capability get() = NappletCapability.COMMON
+    }
+
+    /**
+     * `common.encodeNip19`: a public NIP-19 identifier of [type] (`npub`, `note`, `nprofile`, `nevent`,
+     * `naddr`, `nrelay`) from the fields that type takes. Pure computation, so it never prompts.
+     */
+    data class CommonEncodeNip19(
+        val type: String,
+        val hex: String? = null,
+        val pubkey: String? = null,
+        val eventId: String? = null,
+        val identifier: String? = null,
+        val kind: Int? = null,
+        val author: String? = null,
+        val relay: String? = null,
+        val relays: List<String> = emptyList(),
+    ) : Common {
+        override val asksConsent get() = false
+    }
+
+    /** `common.decodeNip19`: the fields of a public NIP-19 [value]. Pure computation, never prompts. */
+    data class CommonDecodeNip19(
+        val value: String,
+    ) : Common {
+        override val asksConsent get() = false
+    }
+
+    /** `common.getProfile`: the latest kind 0 of [target], a hex key, `npub` or `nprofile`. */
+    data class CommonGetProfile(
+        val target: String,
+    ) : Common
+
+    /** `common.follows`: the hex keys on the user's kind 3 follow list. */
+    data object CommonFollows : Common
+
+    /**
+     * A NAP-COMMON action that publishes an event the shell builds: the broker turns it into a
+     * [Publish] (via `common`) before any gate, so the consent and signer prompts show that event.
+     */
+    sealed interface CommonAction : Common
+
+    /** `common.follow` / `common.unfollow`: add or remove [pubkeys] (`npub`s) on the user's kind 3. */
+    data class CommonFollow(
+        val pubkeys: List<String>,
+        val follow: Boolean,
+    ) : CommonAction
+
+    /** `common.react`: a NIP-25 kind 7 [reaction] to the event [targetEventId]. */
+    data class CommonReact(
+        val targetEventId: String,
+        val reaction: String,
+        val customEmojiHref: String? = null,
+    ) : CommonAction
+
+    /**
+     * `common.report`: a NIP-56 kind 1984 for the event [eventId] (with its author) or the user
+     * [pubkey] (a hex key or `npub`), for [reason], with the report [text].
+     */
+    data class CommonReport(
+        val eventId: String?,
+        val pubkey: String?,
+        val relay: String?,
+        val reason: String,
+        val text: String,
+    ) : CommonAction
 
     /**
      * A NAP-FS request (`fs.*`). Its paths, options and bytes come from the napplet and are checked by

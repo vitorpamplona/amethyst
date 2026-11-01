@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIntentRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -125,6 +126,19 @@ class NappletRequestRouterTest {
                 route("""{"type":"inc.subscribe","topic":"news"}"""),
             )
             assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.emit","topic":7}"""))
+        }
+
+    @Test
+    fun intentRequestsGoToTheDispatcher() =
+        runTest {
+            val invoke = route("""{"type":"intent.invoke","id":"i1","request":{"archetype":"feed","action":"open","convention":"napplet:feed/open","payload":{"a":"b"}}}""")
+            assertIs<NappletRequestRouter.Outcome.Intent>(invoke)
+            assertEquals(NappletIntentRequest.Ready, (route("""{"type":"intent.ready"}""") as NappletRequestRouter.Outcome.Intent).request)
+            // Without the declaration, an invoke is refused as IntentResult{ok:false}.
+            val refused = NappletRequestRouter.routeIntent(emptySet(), """{"type":"intent.invoke","id":"i2","request":{"archetype":"feed","action":"open","convention":"napplet:feed/open"}}""")
+            assertIs<NappletRequestRouter.Outcome.Reply>(refused)
+            assertTrue(refused.payload.contains("\"ok\":false"))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, NappletRequestRouter.routeIntent(emptySet(), """{"type":"intent.ready"}"""))
         }
 
     @Test

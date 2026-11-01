@@ -47,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [];
+  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [], uploadHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -110,6 +110,13 @@
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
     if (msg.type && msg.type.indexOf('inc.') === 0 && incIncoming(msg)) return;
+    if (msg.type === 'intent.deliver') {
+      if (intentDeliveryHandlers.length) intentDeliveryHandlers.slice().forEach(function(h){ incSafe(h, msg.delivery); });
+      else if (intentDeliveries.length < 64) intentDeliveries.push(msg.delivery);
+      return;
+    }
+    if (msg.type === 'intent.changed') { intentChangedHandlers.slice().forEach(function(h){ incSafe(h, msg.availability); }); return; }
+    if (msg.type === 'upload.status.changed') { uploadHandlers.slice().forEach(function(h){ try { h(msg.status); } catch (_) {} }); return; }
     if (msg.type === 'fs.changed') { fsHandlers.slice().forEach(function(h){ try { h(msg.change); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
@@ -150,7 +157,23 @@
     return new Blob([bytes], { type: mime });
   }
   function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
-  function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  function bytesToB64(bytes){
+    var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), parts = [];
+    // In slices: one fromCharCode call per byte made multi-megabyte uploads crawl.
+    for (var i = 0; i < u.length; i += 0x8000) parts.push(String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)));
+    return btoa(parts.join(''));
+  }
+  // A NAP-COMMON reply without the envelope's own fields.
+  function commonResult(m){ var out = {}; for (var k in m) if (k !== 'type' && k !== 'id') out[k] = m[k]; if (out.ok === undefined) out.ok = !out.error; return out; }
+  // follow('npub1…', 'npub1…') or follow(['npub1…', …]).
+  function commonKeys(args){ return (args.length === 1 && Array.isArray(args[0])) ? args[0].slice() : Array.prototype.slice.call(args); }
+  // The bytes of an upload's `data`, whatever form the napplet handed over.
+  function uploadBytes(data){
+    if (typeof Blob !== 'undefined' && data instanceof Blob) return data.arrayBuffer().then(function(b){ return new Uint8Array(b); });
+    if (data instanceof ArrayBuffer) return Promise.resolve(new Uint8Array(data));
+    if (ArrayBuffer.isView(data)) return Promise.resolve(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return Promise.reject(new TypeError('upload data must be a Blob, ArrayBuffer or typed array'));
+  }
   // NAP-INC: topics and channels between napplets, routed by the shell under runtime-assigned endpoint
   // identifiers. Several on(topic) handlers share one shell subscription per topic: the wire's
   // inc.unsubscribe drops the whole topic, so it goes out only when the last handler closes.
@@ -303,6 +326,89 @@
       broadcast: function(payload){ var env = {}; if (payload !== undefined) env.payload = payload; post('inc.channel.broadcast', env); }
     }
   };
+  // NAP-INTENT. The URI is normalized here, as the runtime-provided binding must: archetype, action,
+  // the queryless convention, the query as a text payload (INC's rules), and a `#naddr` fragment as a
+  // handlerHint. Deliveries wait here until the napplet registers onDelivery.
+  var intentDeliveries = [], intentDeliveryHandlers = [], intentChangedHandlers = [];
+  var B32 = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+  function bech32Bytes(str, hrp){
+    var s = str.toLowerCase();
+    if (s !== str && str.toUpperCase() !== str) return null;
+    var pos = s.lastIndexOf('1');
+    if (pos < 1 || pos + 7 > s.length || s.substring(0, pos) !== hrp) return null;
+    var data = [], i;
+    for (i = pos + 1; i < s.length; i++) { var d = B32.indexOf(s.charAt(i)); if (d < 0) return null; data.push(d); }
+    var values = [];
+    for (i = 0; i < hrp.length; i++) values.push(hrp.charCodeAt(i) >> 5);
+    values.push(0);
+    for (i = 0; i < hrp.length; i++) values.push(hrp.charCodeAt(i) & 31);
+    var GEN = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3], chk = 1;
+    values.concat(data).forEach(function(v){ var b = chk >>> 25; chk = ((chk & 0x1ffffff) << 5) ^ v; for (var j = 0; j < 5; j++) if ((b >>> j) & 1) chk ^= GEN[j]; });
+    if (chk !== 1) return null;
+    var acc = 0, bits = 0, out = [];
+    data.slice(0, data.length - 6).forEach(function(v){ acc = ((acc << 5) | v) & 0xffff; bits += 5; while (bits >= 8) { bits -= 8; out.push((acc >> bits) & 255); } });
+    return new Uint8Array(out);
+  }
+  // A bare naddr of a kind 35129 napplet -> { address: "35129:<pubkey>:<d>", relays? }.
+  function naddrHint(fragment){
+    var bytes = bech32Bytes(fragment, 'naddr'), d = null, author = null, kind = null, relays = [];
+    if (!bytes) throw new TypeError('intent URI fragment must be a bare naddr');
+    var text = new TextDecoder();
+    for (var i = 0; i + 2 <= bytes.length;) {
+      var t = bytes[i], l = bytes[i + 1], v = bytes.subarray(i + 2, i + 2 + l);
+      if (v.length !== l) break;
+      if (t === 0) d = text.decode(v);
+      else if (t === 1) relays.push(text.decode(v));
+      else if (t === 2 && l === 32) author = Array.prototype.map.call(v, function(b){ return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+      else if (t === 3 && l === 4) kind = ((v[0] << 24) | (v[1] << 16) | (v[2] << 8) | v[3]) >>> 0;
+      i += 2 + l;
+    }
+    if (kind !== 35129 || !author || !d) throw new TypeError('intent handler hint must be a kind 35129 napplet address');
+    var hint = { address: '35129:' + author + ':' + d };
+    if (relays.length) hint.relays = relays;
+    return hint;
+  }
+  function intentRequest(uri, options, mustOpen){
+    if (typeof uri !== 'string' || uri.indexOf('napplet:') !== 0) throw new TypeError('intent needs a napplet:<archetype>/<intent> URI');
+    var opts = options || {}, fragment = null, hash = uri.indexOf('#');
+    if (hash >= 0) { fragment = uri.substring(hash + 1); uri = uri.substring(0, hash); }
+    var routed = incTranspose(uri, opts.payload, opts.payload !== undefined);
+    var m = /^napplet:([^\/?#]+)\/([^\/?#]+)$/.exec(routed.topic);
+    if (!m) throw new TypeError('invalid convention');
+    if (mustOpen && m[2] !== 'open') throw new TypeError('open takes a napplet:<archetype>/open URI');
+    var request = { archetype: m[1], action: m[2], convention: routed.topic };
+    if (routed.hasPayload) request.payload = routed.payload;
+    if (opts.handler !== undefined) request.handler = opts.handler;
+    if (opts.behavior !== undefined) request.behavior = opts.behavior;
+    if (fragment !== null) {
+      if (opts.handlerHint !== undefined) throw new TypeError('a URI fragment and a handlerHint cannot be combined');
+      request.handlerHint = naddrHint(fragment);
+    } else if (opts.handlerHint !== undefined) request.handlerHint = opts.handlerHint;
+    return request;
+  }
+  function intentInvoke(uri, options, mustOpen){
+    var request;
+    try { request = intentRequest(uri, options, mustOpen); } catch (e) { return Promise.reject(e); }
+    return field(call('intent.invoke', { request: request }), 'result');
+  }
+  var intentDomain = {
+    invoke: function(uri, options){ return intentInvoke(uri, options, false); },
+    open: function(uri, options){ return intentInvoke(uri, options, true); },
+    available: function(archetype){ return field(call('intent.available', { archetype: archetype }), 'availability'); },
+    handlers: function(){ return field(call('intent.handlers'), 'handlers'); },
+    onChanged: function(handler){
+      if (typeof handler !== 'function') return { close: function(){} };
+      intentChangedHandlers.push(handler);
+      return { close: function(){ incRemove(intentChangedHandlers, handler); } };
+    },
+    onDelivery: function(handler){
+      if (typeof handler !== 'function') return { close: function(){} };
+      intentDeliveryHandlers.push(handler);
+      var waiting = intentDeliveries; intentDeliveries = [];
+      waiting.forEach(function(d){ incSafe(handler, d); });
+      return { close: function(){ incRemove(intentDeliveryHandlers, handler); } };
+    }
+  };
   // Build the methods Amethyst actually implements, then project only the explicit domains the
   // trusted host authorized for this launch. Domain-object presence is the NIP-5D availability
   // signal; there is deliberately no legacy window.napplet.shell capability probe.
@@ -413,10 +519,47 @@
         return handle;
       }
     },
+    // NAP-COMMON. Results are the spec's objects, `ok` and `error` included, so a refusal resolves
+    // with `ok: false` instead of rejecting; `follows()` resolves to the hex keys.
+    common: {
+      encodeNip19: function(input){ return callResult('common.encodeNip19', { input: input }).then(commonResult); },
+      decodeNip19: function(value){ return callResult('common.decodeNip19', { value: value }).then(commonResult); },
+      getProfile: function(target){ return callResult('common.getProfile', { target: target }).then(commonResult); },
+      follows: function(){
+        return callResult('common.follows').then(function(m){ if (m.ok === false) throw new Error(m.error || 'unsupported'); return m.pubkeys || []; });
+      },
+      follow: function(){ return callResult('common.follow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      unfollow: function(){ return callResult('common.unfollow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      react: function(id, reaction, customEmojiHref){
+        var env = { targetEventId: id, reaction: reaction }; if (customEmojiHref !== undefined) env.customEmojiHref = customEmojiHref;
+        return callResult('common.react', env).then(commonResult);
+      },
+      // Takes a CommonReportTarget, or the shorthand: an npub for a user, a hex id for an event.
+      report: function(target, reason, text){
+        if (typeof target === 'string') target = target.indexOf('npub1') === 0 ? { type: 'pubkey', pubkey: target } : { type: 'event', id: target };
+        return callResult('common.report', { target: target, reason: reason, text: text || '' }).then(commonResult);
+      }
+    },
+    // NAP-UPLOAD. `request.data` (a Blob, ArrayBuffer or typed array) crosses as base64 text, which
+    // the bridge carries; the napplet never encodes it. Results are the spec's UploadResult objects.
     upload: {
-      // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
-      // a Blob from a stock napplet). Resolves to the uploaded URL.
-      blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
+      info: function(){ return field(call('upload.info'), 'info'); },
+      upload: function(request){
+        if (!request || typeof request !== 'object') return Promise.reject(new TypeError('upload request must be an object'));
+        return uploadBytes(request.data).then(function(bytes){
+          var req = { dataBase64: bytesToB64(bytes) };
+          var mime = request.mimeType || (typeof Blob !== 'undefined' && request.data instanceof Blob ? request.data.type : '');
+          if (mime) req.mimeType = mime;
+          ['rail', 'filename', 'caption', 'noTransform', 'metadata'].forEach(function(k){ if (request[k] !== undefined) req[k] = request[k]; });
+          return field(call('upload.upload', { request: req }), 'result');
+        });
+      },
+      status: function(uploadId){ return field(call('upload.status', { uploadId: uploadId }), 'status'); },
+      onStatus: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        uploadHandlers.push(handler);
+        return { close: function(){ var i = uploadHandlers.indexOf(handler); if (i >= 0) uploadHandlers.splice(i, 1); } };
+      }
     },
     // NAP-FS: the files the user picks for this napplet. File bytes cross as standard base64 text both
     // ways, as the web binding carries them (a Uint8Array or ArrayBuffer given to write is encoded
@@ -448,6 +591,7 @@
       }
     },
     inc: incDomain,
+    intent: intentDomain,
     theme: {
       get: function(){ return field(call('theme.get'), 'theme'); },
       onChanged: function(handler){
@@ -466,6 +610,8 @@
     if (typeof domain === 'string' && Object.prototype.hasOwnProperty.call(available, domain)) napplet[domain] = available[domain];
   });
   window.napplet = Object.freeze(napplet);
+  // Tells the runtime this napplet can take intent deliveries (they wait here until onDelivery).
+  if (napplet.intent) post('intent.ready');
 
   // ---- IME agent (in-app browser only) -------------------------------------------------------
   // The embedded browser surface renders cross-process via SurfaceControlViewHost, which forwards

@@ -45,4 +45,6 @@ fun NappletCapability.labelResId(): Int =
         NappletCapability.INC -> R.string.napplet_cap_inc
         NappletCapability.OUTBOX -> R.string.napplet_cap_outbox
         NappletCapability.FS -> R.string.napplet_cap_fs
+        NappletCapability.COMMON -> R.string.napplet_cap_common
+        NappletCapability.INTENT -> R.string.napplet_cap_intent
     }

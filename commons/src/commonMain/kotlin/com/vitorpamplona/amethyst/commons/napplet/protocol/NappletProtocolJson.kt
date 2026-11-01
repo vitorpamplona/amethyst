@@ -172,6 +172,144 @@ object NappletProtocolJson {
         }
     }
 
+    /** The `intent.*` request types [decodeIntentRequest] knows. */
+    val INTENT_REQUEST_TYPES = setOf("intent.invoke", "intent.available", "intent.handlers", "intent.ready")
+
+    /**
+     * The NAP-INTENT request in [envelopeJson], or null when it is not one or a field it needs is
+     * missing. The invoke's `request.payload` stays raw JSON.
+     */
+    fun decodeIntentRequest(envelopeJson: String): NappletIntentRequest? {
+        val o = json.parseToJsonElement(envelopeJson) as? JsonObject ?: return null
+        return when (o.str("type")) {
+            "intent.invoke" -> {
+                val request = o["request"] as? JsonObject ?: return null
+                val hint = request["handlerHint"] as? JsonObject
+                NappletIntentRequest.Invoke(
+                    id = o.textOrNull("id") ?: return null,
+                    archetype = request.textOrNull("archetype") ?: return null,
+                    action = request.textOrNull("action") ?: return null,
+                    convention = request.textOrNull("convention") ?: return null,
+                    payload = request["payload"]?.toString(),
+                    handler = request.textOrNull("handler"),
+                    hintAddress = hint?.textOrNull("address"),
+                )
+            }
+            "intent.available" -> NappletIntentRequest.Available(o.textOrNull("id") ?: return null, o.textOrNull("archetype") ?: return null)
+            "intent.handlers" -> NappletIntentRequest.Handlers(o.textOrNull("id") ?: return null)
+            "intent.ready" -> NappletIntentRequest.Ready
+            else -> null
+        }
+    }
+
+    /** An `intent.invoke.result` (the host adds the `id`): accepted for [handler], or refused with [error]. */
+    fun encodeIntentInvokeResult(
+        request: NappletIntentRequest.Invoke,
+        handler: String?,
+        error: String? = null,
+    ): String =
+        buildJsonObject {
+            put("type", "intent.invoke.result")
+            putJsonObject("result") {
+                if (error != null || handler == null) {
+                    put("ok", false)
+                    put("error", error ?: "no handler")
+                } else {
+                    put("ok", true)
+                    put("archetype", request.archetype)
+                    put("action", request.action)
+                    put("convention", request.convention)
+                    put("handler", handler)
+                }
+            }
+        }.toString()
+
+    /** An `intent.available.result` (the host adds the `id`) carrying one [availability]. */
+    fun encodeIntentAvailableResult(availability: IntentAvailability): String =
+        buildJsonObject {
+            put("type", "intent.available.result")
+            put("availability", availabilityJson(availability))
+        }.toString()
+
+    /** An `intent.handlers.result` (the host adds the `id`) carrying every archetype's availability. */
+    fun encodeIntentHandlersResult(handlers: List<IntentAvailability>): String =
+        buildJsonObject {
+            put("type", "intent.handlers.result")
+            putJsonArray("handlers") { handlers.forEach { add(availabilityJson(it)) } }
+        }.toString()
+
+    /** The `<requestType>.result` for an intent request refused with [error] (no `intent` declared, malformed). */
+    fun encodeIntentFailure(
+        requestType: String,
+        error: String,
+    ): String =
+        buildJsonObject {
+            put("type", "$requestType.result")
+            when (requestType) {
+                "intent.invoke" ->
+                    putJsonObject("result") {
+                        put("ok", false)
+                        put("error", error)
+                    }
+                else -> put("error", error)
+            }
+        }.toString()
+
+    /** An `intent.deliver` push to the target: the convention, its payload, and the runtime-attested [sender]. */
+    fun encodeIntentDeliver(
+        sender: String,
+        archetype: String,
+        action: String,
+        convention: String,
+        payload: String?,
+    ): String =
+        buildJsonObject {
+            put("type", "intent.deliver")
+            putJsonObject("delivery") {
+                put("sender", sender)
+                put("archetype", archetype)
+                put("action", action)
+                put("convention", convention)
+                putRawPayload(payload)
+            }
+        }.toString()
+
+    private fun availabilityJson(availability: IntentAvailability) =
+        buildJsonObject {
+            put("archetype", availability.archetype)
+            put("available", availability.candidates.isNotEmpty())
+            putJsonArray("candidates") {
+                availability.candidates.forEach { candidate ->
+                    addJsonObject {
+                        put("id", candidate.id)
+                        candidate.title?.let { put("title", it) }
+                        putJsonArray("actions") {
+                            candidate.contracts
+                                .map { it.action }
+                                .distinct()
+                                .forEach { add(it) }
+                        }
+                        putJsonArray("conventions") {
+                            candidate.contracts
+                                .map { it.convention }
+                                .distinct()
+                                .forEach { add(it) }
+                        }
+                        putJsonArray("contracts") {
+                            candidate.contracts.forEach { contract ->
+                                addJsonObject {
+                                    put("convention", contract.convention)
+                                    putJsonArray("params") { contract.params.forEach { add(it) } }
+                                }
+                            }
+                        }
+                        put("isDefault", candidate.isDefault)
+                    }
+                }
+            }
+            put("hasDefault", availability.candidates.any { it.isDefault })
+        }
+
     /** The `inc.*` request types [decodeIncRequest] knows. */
     val INC_REQUEST_TYPES =
         setOf(
@@ -445,15 +583,50 @@ object NappletProtocolJson {
             "fs.watch" -> NappletRequest.FsWatch(o.text("path"))
             "fs.unwatch" -> NappletRequest.FsUnwatch(o.text("watchId"))
             "upload.upload" -> {
-                // UploadUploadMessage: { type, id, request: { data, mimeType?, filename?, ... } }.
-                // The Blob in `request.data` is inlined as base64 `request.dataBase64` by shell.html.
+                // UploadUploadMessage: { type, id, request: { data, rail?, mimeType?, filename?, ... } }.
+                // The binding sends the Blob in `request.data` as base64 `request.dataBase64`.
                 val request = o.getValue("request").jsonObject
                 NappletRequest.UploadBlob(
                     bytes = lenientBase64.decode(request.req("dataBase64")),
                     contentType = request.str("mimeType") ?: "application/octet-stream",
                     filename = request.str("filename"),
+                    rail = request.str("rail"),
                 )
             }
+            "common.encodeNip19" -> {
+                val input = o.getValue("input").jsonObject
+                NappletRequest.CommonEncodeNip19(
+                    type = input.text("type"),
+                    hex = input.optionalText("hex"),
+                    pubkey = input.optionalText("pubkey"),
+                    eventId = input.optionalText("eventId"),
+                    identifier = input.optionalText("identifier"),
+                    kind = input.integer("kind")?.toInt(),
+                    author = input.optionalText("author"),
+                    relay = input.optionalText("relay"),
+                    relays = input.strList("relays") ?: emptyList(),
+                )
+            }
+            "common.decodeNip19" -> NappletRequest.CommonDecodeNip19(o.text("value"))
+            "common.getProfile" -> NappletRequest.CommonGetProfile(o.text("target"))
+            "common.follows" -> NappletRequest.CommonFollows
+            "common.follow", "common.unfollow" ->
+                NappletRequest.CommonFollow(
+                    // One npub or several.
+                    pubkeys = o.strList("pubkeys") ?: listOfNotNull(o.optionalText("pubkeys")),
+                    follow = o.str("type") == "common.follow",
+                )
+            "common.react" -> NappletRequest.CommonReact(o.text("targetEventId"), o.text("reaction"), o.optionalText("customEmojiHref"))
+            "common.report" -> {
+                val target = o.getValue("target").jsonObject
+                when (target.str("type")) {
+                    "event" -> NappletRequest.CommonReport(target.text("id"), target.optionalText("pubkey"), target.optionalText("relay"), o.text("reason"), o.optionalText("text") ?: "")
+                    "pubkey" -> NappletRequest.CommonReport(null, target.text("pubkey"), target.optionalText("relay"), o.text("reason"), o.optionalText("text") ?: "")
+                    else -> throw IllegalArgumentException("target.type is not event or pubkey")
+                }
+            }
+            "upload.info" -> NappletRequest.UploadInfo
+            "upload.status" -> NappletRequest.UploadStatus(o.text("uploadId"))
             else -> {
                 // Any other identity.* read (getProfile/getRelays/getFollows/getList/...) routes through
                 // a generic IdentityRead; the broker/gateway decides which are implemented.
@@ -474,6 +647,8 @@ object NappletProtocolJson {
     ): String {
         if (requestType.startsWith("outbox.")) outboxFailure(requestType, response)?.let { return it }
         if (requestType.startsWith(FS_PREFIX)) return encodeFsResponse(requestType, response)
+        if (requestType.startsWith(UPLOAD_PREFIX)) encodeUploadResponse(requestType, response)?.let { return it }
+        if (requestType.startsWith(COMMON_PREFIX)) return encodeCommonResponse(requestType, response)
         if (requestType in setOf("resource.info", "resource.bytes", "resource.bytesMany")) {
             val failure =
                 when (response) {
@@ -581,15 +756,14 @@ object NappletProtocolJson {
                     put("error", response.error)
                     response.message?.let { put("message", it) }
                 }
-                is NappletResponse.Uploaded -> {
-                    // UploadResult: { ok, uploadId, status, url?, sha256?, size?, mimeType?, ... }.
-                    put("ok", true)
-                    put("uploadId", response.sha256 ?: response.url)
-                    put("status", "completed")
-                    put("url", response.url)
-                    response.sha256?.let { put("sha256", it) }
-                    response.size?.let { put("size", it) }
-                    response.mimeType?.let { put("mimeType", it) }
+                // Shaped by encodeUploadResponse / encodeCommonResponse for their domains; nothing else answers with these.
+                is NappletResponse.Uploaded, is NappletResponse.UploadInfo,
+                is NappletResponse.CommonEncoded, is NappletResponse.CommonDecoded, is NappletResponse.CommonProfile,
+                is NappletResponse.CommonFollowList, is NappletResponse.CommonUnchanged,
+                -> put("ok", true)
+                is NappletResponse.CommonFailure -> {
+                    put("ok", false)
+                    put("error", response.error)
                 }
                 is NappletResponse.Paid -> {
                     put("ok", true)
@@ -715,6 +889,160 @@ object NappletProtocolJson {
             }
             put("error", error)
         }.toString()
+    }
+
+    /**
+     * NAP-COMMON replies: every one carries `ok`, and `error` (one of its codes) when it failed. An
+     * action answers with the event it published (`eventId`, `event`).
+     */
+    private fun encodeCommonResponse(
+        requestType: String,
+        response: NappletResponse,
+    ): String =
+        buildJsonObject {
+            put("type", "$requestType.result")
+            when (response) {
+                is NappletResponse.CommonEncoded -> {
+                    put("ok", true)
+                    put("value", response.value)
+                    put("nip19Type", response.nip19Type)
+                }
+                is NappletResponse.CommonDecoded -> {
+                    put("ok", true)
+                    put("nip19Type", response.nip19Type)
+                    response.text.forEach { (key, value) -> put(key, value) }
+                    response.kind?.let { put("kind", it) }
+                    if (response.relays.isNotEmpty()) putJsonArray("relays") { response.relays.forEach { add(it) } }
+                }
+                is NappletResponse.CommonProfile -> {
+                    put("ok", true)
+                    put("pubkey", response.pubkey)
+                    val event = response.event
+                    // The profile as the metadata JSON says it; content that isn't an object is no profile.
+                    put("profile", event?.let { runCatching { json.parseToJsonElement(it.content) as? JsonObject }.getOrNull() } ?: JsonNull)
+                    if (event != null) put("result", relayEventResult(OutboxEvent(event, emptyList())))
+                }
+                is NappletResponse.CommonFollowList -> {
+                    put("ok", true)
+                    putJsonArray("pubkeys") { response.pubkeys.forEach { add(it) } }
+                }
+                is NappletResponse.Published -> {
+                    put("ok", true)
+                    put("eventId", response.event.id)
+                    put("event", json.parseToJsonElement(response.event.toJson()))
+                }
+                is NappletResponse.CommonUnchanged -> {
+                    put("ok", true)
+                    response.event?.let {
+                        put("eventId", it.id)
+                        put("event", json.parseToJsonElement(it.toJson()))
+                    }
+                }
+                is NappletResponse.CommonFailure -> {
+                    put("ok", false)
+                    put("error", response.error)
+                }
+                is NappletResponse.Denied -> {
+                    put("ok", false)
+                    put("error", "user-denied")
+                }
+                is NappletResponse.Unsupported -> {
+                    put("ok", false)
+                    put("error", "unsupported")
+                }
+                else -> {
+                    put("ok", false)
+                    put("error", if (requestType in COMMON_ACTIONS) "publish-failed" else "unsupported")
+                }
+            }
+        }.toString()
+
+    /**
+     * NAP-UPLOAD replies: `upload.upload.result` carries `result` (an `UploadResult`),
+     * `upload.status.result` carries `status` (an `UploadStatus`), `upload.info.result` carries `info`.
+     * A request that created no upload is answered with a top-level `error` only. Null for a response
+     * this domain does not shape (the generic encoder handles it).
+     */
+    private fun encodeUploadResponse(
+        requestType: String,
+        response: NappletResponse,
+    ): String? {
+        val body: JsonObject =
+            when (response) {
+                is NappletResponse.Uploaded ->
+                    buildJsonObject {
+                        put(if (requestType == "upload.status") "status" else "result", uploadRecord(response, withUpdatedAt = requestType == "upload.status"))
+                    }
+                is NappletResponse.UploadInfo ->
+                    buildJsonObject {
+                        putJsonObject("info") {
+                            putJsonArray("rails") {
+                                addJsonObject {
+                                    put("rail", UPLOAD_RAIL)
+                                    put("enabled", response.enabled)
+                                    putJsonArray("returns") { add("https") }
+                                }
+                            }
+                            put("maxBytes", response.maxBytes)
+                        }
+                    }
+                is NappletResponse.Denied -> buildJsonObject { put("error", "policy denied") }
+                is NappletResponse.Unsupported -> buildJsonObject { put("error", "unsupported rail") }
+                is NappletResponse.Failed -> buildJsonObject { put("error", response.reason) }
+                else -> return null
+            }
+        return buildJsonObject {
+            put("type", "$requestType.result")
+            body.forEach { (key, value) -> put(key, value) }
+        }.toString()
+    }
+
+    // NAP-UPLOAD's UploadResult / UploadStatus for a completed blossom upload, with its NIP-94 tags.
+    private fun uploadRecord(
+        upload: NappletResponse.Uploaded,
+        withUpdatedAt: Boolean,
+    ) = buildJsonObject {
+        put("ok", true)
+        put("uploadId", upload.uploadId)
+        put("status", "complete")
+        put("rail", UPLOAD_RAIL)
+        put("url", upload.url)
+        upload.sha256?.let { put("sha256", it) }
+        upload.size?.let { put("size", it) }
+        upload.mimeType?.let { put("mimeType", it) }
+        putJsonArray("nip94") {
+            add(
+                buildJsonArray {
+                    add("url")
+                    add(upload.url)
+                },
+            )
+            upload.mimeType?.let { mime ->
+                add(
+                    buildJsonArray {
+                        add("m")
+                        add(mime)
+                    },
+                )
+            }
+            upload.sha256?.let { hash ->
+                add(
+                    buildJsonArray {
+                        add("x")
+                        add(hash)
+                    },
+                )
+            }
+            upload.size?.let { size ->
+                add(
+                    buildJsonArray {
+                        add("size")
+                        add(size.toString())
+                    },
+                )
+            }
+        }
+        if (withUpdatedAt) put("updatedAt", upload.updatedAt)
     }
 
     /**
@@ -897,6 +1225,14 @@ object NappletProtocolJson {
         }
 
     private const val FS_PREFIX = "fs."
+    private const val UPLOAD_PREFIX = "upload."
+    private const val COMMON_PREFIX = "common."
+
+    // The NAP-COMMON operations that publish an event.
+    private val COMMON_ACTIONS = setOf("common.follow", "common.unfollow", "common.react", "common.report")
+
+    // The one NAP-UPLOAD rail the shell offers.
+    private const val UPLOAD_RAIL = "blossom"
 
     private val IDENTITY_READ_TYPES =
         setOf(

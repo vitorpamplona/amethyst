@@ -110,5 +110,6 @@ fun buildAccountNappletBroker(
             },
         recentEncryptions = recentEncryptions,
         outbox = AccountNappletOutboxGateway(account),
+        common = NappletCommonGateway { account.kind3FollowList.getFollowListEvent() },
     )
 }

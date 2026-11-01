@@ -47,6 +47,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentCatalog
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentDispatcher
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
@@ -55,9 +57,14 @@ import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletFilePort
 import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletGateways
+import com.vitorpamplona.amethyst.napplethost.NappletHostActivity
+import com.vitorpamplona.amethyst.napplethost.NappletHostContract
 import com.vitorpamplona.amethyst.napplethost.NappletIpc
 import com.vitorpamplona.amethyst.ui.MainActivity
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -68,6 +75,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -138,6 +146,31 @@ class NappletBrokerService : Service() {
         val launchToken: String,
     )
 
+    // NAP-INTENT: a handler is one of the napplets the user pinned, opened full screen. Keyed by the
+    // launch token the target runs under, which is what its `intent.ready` arrives with.
+    private val intents by lazy {
+        NappletIntentDispatcher(
+            catalog = { NappletIntentCatalog.of(Amethyst.instance.favoriteApps) },
+            launch = { handler -> withContext(Dispatchers.Main) { launchHandler(handler.manifest) } },
+        )
+    }
+
+    // Opens [manifest] in the sandbox host and returns the launch token it runs under, or null when refused.
+    private fun launchHandler(manifest: NappletManifest): String? {
+        val identifier = (manifest as? NamedNappletEvent)?.identifier() ?: ""
+        val params = NappletLauncher.buildLaunchParams(this, manifest, (manifest as Event).pubKey, identifier) ?: return null
+        val token = params.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN) ?: return null
+        val intent =
+            Intent(this, NappletHostActivity::class.java).apply {
+                putExtras(params)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        return runCatching { startActivity(intent) }.map { token }.getOrElse {
+            Log.w("NappletBrokerService", "Could not open an intent handler", it)
+            null
+        }
+    }
+
     // Streams identity.changed to a watching applet. Bound to the surface's LAUNCH account, not the
     // app's active one: a surface acts as the account that opened it for its whole life, so switching
     // accounts elsewhere is not an identity change *for it*. Announcing the newly-active pubkey here
@@ -159,6 +192,7 @@ class NappletBrokerService : Service() {
         NappletLaunchRegistry.onEvicted = { token ->
             dropFiles(token)
             incBus.removeAll { endpoint -> endpoint.launchToken == token }
+            intents.remove(token)
         }
         scope.launch(Dispatchers.Main.immediate) {
             Amethyst.instance.uiPrefs.value.theme
@@ -240,6 +274,7 @@ class NappletBrokerService : Service() {
             msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
                 NappletLaunchRegistry.unregister(token)
                 incBus.removeAll { endpoint -> endpoint.launchToken == token }
+                intents.remove(token)
                 identityWatch.stop(token)
                 dropFiles(token)
                 val prefix = "$token\u0000"
@@ -521,6 +556,21 @@ class NappletBrokerService : Service() {
                 else -> return true
             }
         }
+        // NAP-INTENT: an invoke may open the handler, which waits on the main thread, so it runs in a coroutine.
+        if (launchToken != null && requestType.startsWith("intent.")) {
+            when (val outcome = NappletRequestRouter.routeIntent(declared, payload, requestType)) {
+                null -> {}
+                is NappletRequestRouter.Outcome.Intent -> {
+                    scope.launch { intents.handle(launchToken, identity, { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) } }
+                    return true
+                }
+                is NappletRequestRouter.Outcome.Reply -> {
+                    reply(replyTo, requestId, outcome.payload)
+                    return true
+                }
+                else -> return true
+            }
+        }
         val tracksResourceRequest = requestType == "resource.bytes" || requestType == "resource.bytesMany"
 
         val requestJob =
@@ -557,7 +607,7 @@ class NappletBrokerService : Service() {
                     is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId, arrivedAt)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
                     // Routed above, before this coroutine started.
-                    is NappletRequestRouter.Outcome.Inc -> {}
+                    is NappletRequestRouter.Outcome.Inc, is NappletRequestRouter.Outcome.Intent -> {}
                 }
             }
         if (tracksResourceRequest) {
