@@ -117,7 +117,7 @@ import com.vitorpamplona.amethyst.commons.resources.marmot_poll_pick_many
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_pick_one
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_question
 import com.vitorpamplona.amethyst.commons.resources.marmot_poll_stays_open
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.insets.imePaddingSafe
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
@@ -508,7 +508,7 @@ private fun PollTextField(
             onKeyboardAction = { onEnter() },
             lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = maxLines),
             inputTransformation = PollInputTransformation,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             // The field focus moves to (Enter, Tab, a tap) is the one the suggestions follow.
             modifier =
                 modifier.onFocusChanged { if (it.isFocused) onEdited() }.onPreviewKeyEvent { event ->

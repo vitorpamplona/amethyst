@@ -43,7 +43,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.chat_composer_hint
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -178,7 +178,7 @@ fun NestEditFieldRow(
                     unfocusedIndicatorColor = Color.Transparent,
                 ),
             spellCheck = true,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
         )
     }
 }

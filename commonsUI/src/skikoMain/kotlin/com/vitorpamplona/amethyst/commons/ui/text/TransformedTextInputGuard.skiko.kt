@@ -23,4 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.text
 import androidx.compose.runtime.Composable
 
 @Composable
-actual fun TransformedTextInputGuard(content: @Composable () -> Unit) = content()
+actual fun TransformedTextInputGuard(
+    active: Boolean,
+    content: @Composable () -> Unit,
+) = content()

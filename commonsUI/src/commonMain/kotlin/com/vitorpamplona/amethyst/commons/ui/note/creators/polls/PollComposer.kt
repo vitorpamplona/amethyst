@@ -124,7 +124,7 @@ import com.vitorpamplona.amethyst.commons.resources.sats
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
 import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.note.rememberIs24HourClock
@@ -299,7 +299,7 @@ private fun PollOptionRow(
                 onKeyboardAction = { onNext() },
                 lineLimits = TextFieldLineLimits.MultiLine(maxHeightInLines = 3),
                 inputTransformation = OptionInputTransformation,
-                outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+                outputTransformation = rememberUrlUserTagOutputTransformation(),
                 modifier =
                     Modifier
                         .weight(1f)

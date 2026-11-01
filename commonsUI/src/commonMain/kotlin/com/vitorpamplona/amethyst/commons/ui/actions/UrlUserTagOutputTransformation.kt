@@ -22,6 +22,9 @@ package com.vitorpamplona.amethyst.commons.ui.actions
 
 import androidx.compose.foundation.text.input.OutputTransformation
 import androidx.compose.foundation.text.input.TextFieldBuffer
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.style.TextDecoration
@@ -32,6 +35,14 @@ import com.vitorpamplona.amethyst.commons.ui.text.MENTION_REGEX
 import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.utils.urldetector.detection.UrlDetector
 import kotlin.coroutines.cancellation.CancellationException
+
+/**
+ * The field's [UrlUserTagOutputTransformation], kept across recompositions. BasicTextField keys its
+ * transformed state on the transformation's equality: a new instance per recomposition restarts a
+ * focused field's keyboard session and drops the mention cache.
+ */
+@Composable
+fun rememberUrlUserTagOutputTransformation(color: Color = MaterialTheme.colorScheme.primary): UrlUserTagOutputTransformation = remember(color) { UrlUserTagOutputTransformation(color) }
 
 class UrlUserTagOutputTransformation(
     val color: Color,

@@ -153,7 +153,7 @@ fun OutlinedThinPaddingTextField(
 
     CompositionLocalProvider(LocalTextSelectionColors provides colors.textSelectionColors) {
         SpellCheckContextMenu(spellCheckable, spell) {
-            TransformedTextInputGuard {
+            TransformedTextInputGuard(active = outputTransformation != null) {
                 BasicTextField(
                     state = state,
                     modifier =

@@ -78,7 +78,7 @@ import com.vitorpamplona.amethyst.commons.resources.concord_typing_many
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_one
 import com.vitorpamplona.amethyst.commons.resources.concord_typing_two
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.components.rememberLongNotice
@@ -591,7 +591,7 @@ private fun ConcordMessageComposer(
             },
             inputTransformation = MentionPreservingInputTransformation,
             spellCheck = true,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {

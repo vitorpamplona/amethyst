@@ -60,7 +60,7 @@ import com.vitorpamplona.amethyst.commons.resources.public_message
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.TakePictureButton
@@ -454,9 +454,7 @@ fun SendDirectMessageTo(
                 },
                 spellCheck = true,
                 outputTransformation =
-                    UrlUserTagOutputTransformation(
-                        MaterialTheme.colorScheme.primary,
-                    ),
+                    rememberUrlUserTagOutputTransformation(),
                 colors =
                     OutlinedTextFieldDefaults.colors(
                         unfocusedBorderColor = Color.Transparent,

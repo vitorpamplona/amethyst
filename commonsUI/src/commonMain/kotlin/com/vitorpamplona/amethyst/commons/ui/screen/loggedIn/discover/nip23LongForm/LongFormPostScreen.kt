@@ -104,7 +104,7 @@ import com.vitorpamplona.amethyst.commons.resources.your_article_title
 import com.vitorpamplona.amethyst.commons.resources.zapraiser
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.GallerySelectSingle
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromFiles
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
@@ -434,7 +434,7 @@ private fun MarkdownPostScreenBody(
                                 unfocusedBorderColor = Color.Transparent,
                             ),
                         spellCheck = true,
-                        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+                        outputTransformation = rememberUrlUserTagOutputTransformation(),
                         keyboardOptions =
                             KeyboardOptions.Default.copy(
                                 capitalization = KeyboardCapitalization.Sentences,

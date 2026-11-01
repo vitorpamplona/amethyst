@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cordn_composer_hint
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUri
 import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
 import com.vitorpamplona.amethyst.commons.ui.note.creators.emojiSuggestions.WatchAndLoadMyEmojiList
@@ -229,7 +230,7 @@ fun CordnComposer(
             // image — takes the same encrypted-upload path as the file picker.
             onContentReceived = { uri, mimeType -> onAttach(uri, mimeType) },
             inputTransformation = MentionPreservingInputTransformation,
-            outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+            outputTransformation = rememberUrlUserTagOutputTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = EditFieldBorder,
             placeholder = {

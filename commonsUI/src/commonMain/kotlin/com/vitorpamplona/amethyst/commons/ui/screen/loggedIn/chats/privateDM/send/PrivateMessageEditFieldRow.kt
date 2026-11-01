@@ -62,7 +62,7 @@ import com.vitorpamplona.amethyst.commons.resources.this_message_will_disappear_
 import com.vitorpamplona.amethyst.commons.resources.upload_without_encryption_warning
 import com.vitorpamplona.amethyst.commons.service.upload.ui.StrippingFailureDialog
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
-import com.vitorpamplona.amethyst.commons.ui.actions.UrlUserTagOutputTransformation
+import com.vitorpamplona.amethyst.commons.ui.actions.rememberUrlUserTagOutputTransformation
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.SelectFromGallery
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.ThinPaddingTextField
@@ -251,7 +251,7 @@ fun EditField(
                 unfocusedIndicatorColor = Color.Transparent,
             ),
         spellCheck = true,
-        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = rememberUrlUserTagOutputTransformation(),
     )
 }
 

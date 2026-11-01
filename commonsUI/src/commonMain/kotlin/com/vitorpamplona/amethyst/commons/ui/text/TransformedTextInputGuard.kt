@@ -37,6 +37,12 @@ import androidx.compose.runtime.Composable
  * On Android this commits the commands queued so far before a `setSelection` that arrives inside a
  * batch, so the selection is mapped through the text it lands in. Other platforms don't batch IME
  * commands this way and render [content] as is.
+ *
+ * @param active false renders [content] as is: a field without an OutputTransformation has no
+ *   offset mapping to go stale. Keep it constant for a field; flipping it recreates [content].
  */
 @Composable
-expect fun TransformedTextInputGuard(content: @Composable () -> Unit)
+expect fun TransformedTextInputGuard(
+    active: Boolean = true,
+    content: @Composable () -> Unit,
+)

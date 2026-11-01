@@ -39,7 +39,12 @@ private val SelectionSafeInterceptor =
     }
 
 @Composable
-actual fun TransformedTextInputGuard(content: @Composable () -> Unit) = InterceptPlatformTextInput(SelectionSafeInterceptor, content)
+actual fun TransformedTextInputGuard(
+    active: Boolean,
+    content: @Composable () -> Unit,
+) {
+    if (active) InterceptPlatformTextInput(SelectionSafeInterceptor, content) else content()
+}
 
 /**
  * Commits the batch queued so far before forwarding a `setSelection` (or select-all) that arrives

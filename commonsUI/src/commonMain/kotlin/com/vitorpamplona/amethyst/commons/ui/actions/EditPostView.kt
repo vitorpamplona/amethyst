@@ -390,7 +390,7 @@ private fun MessageField(postViewModel: EditPostViewModel) {
         onTextChanged = { postViewModel.onMessageChanged() },
         inputTransformation = MentionPreservingInputTransformation,
         spellCheck = true,
-        outputTransformation = UrlUserTagOutputTransformation(MaterialTheme.colorScheme.primary),
+        outputTransformation = rememberUrlUserTagOutputTransformation(),
         keyboardOptions =
             KeyboardOptions.Default.copy(
                 capitalization = KeyboardCapitalization.Sentences,
