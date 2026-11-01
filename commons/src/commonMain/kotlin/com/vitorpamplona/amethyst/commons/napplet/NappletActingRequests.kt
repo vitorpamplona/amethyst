@@ -44,6 +44,8 @@ object NappletActingRequests {
             "common.unfollow",
             "common.react",
             "common.report",
+            // NAP-INTENT: opens another napplet over whatever the user is doing.
+            "intent.invoke",
             "value.payInvoice",
             "upload.upload",
             "notify.create",

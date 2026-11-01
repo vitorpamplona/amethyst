@@ -24,7 +24,7 @@ Status: implemented and automated checks passed; interactive device/UI verificat
 | Theme | onChanged local subscription; automatic updates for every exposed theme domain | Add shim delivery and host lifecycle-scoped push |
 | Identity | Verified endpoint binding and optional resource clarified; operations unchanged | Preserve launch-account binding and resource policy; audit |
 | Shell | Optional environment/readiness; no mandatory handshake | Not exposed by Amethyst; remain absent |
-| Intent | Manifest-based dispatch, retained delivery, parameter contracts, naddr recommendations | Not exposed by Amethyst; remain absent; preserve metadata for future support |
+| Intent | Manifest-based dispatch, retained delivery, parameter contracts, naddr recommendations | Implemented 2026-11-01 (`2026-11-01-nap-upload-common-intent.md`): favorites as the catalog, delivery on `intent.ready` |
 | INC | Authenticated endpoint IDs replace dTag routing | Implemented 2026-11-01 (`2026-11-01-nap-inc.md`): topics and channels under runtime endpoint ids on Android and desktop |
 | Relay | Draft PR #2 aligns availability; read envelopes and optional sidecar remain | Existing event wrapper and cleartext broker preserved; no prefetch enabled |
 | Storage | Draft PR #3 adds manifest-kind/snapshot-id scope | Include signed kind and event id in runtime identity; separate root, named, snapshot, publisher and artifact |

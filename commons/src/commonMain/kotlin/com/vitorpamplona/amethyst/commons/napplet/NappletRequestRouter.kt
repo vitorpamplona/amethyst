@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIntentRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -79,6 +80,39 @@ object NappletRequestRouter {
         data class Inc(
             val request: NappletIncRequest,
         ) : Outcome
+
+        /**
+         * A NAP-INTENT message for the host's `NappletIntentDispatcher`, which resolves the handler
+         * among the user's installed napplets, starts it and delivers to it. Only for a napplet that
+         * declared `intent`.
+         */
+        data class Intent(
+            val request: NappletIntentRequest,
+        ) : Outcome
+    }
+
+    /**
+     * The [Outcome] of an `intent.*` [payload], or null when it is not one. Never suspends; the host
+     * acts on [Outcome.Intent] where it can launch a napplet. Without the `intent` declaration, the
+     * requests that expect an answer are refused and the rest dropped.
+     */
+    fun routeIntent(
+        declared: Set<NappletCapability>,
+        payload: String,
+        requestType: String? = runCatching { NappletProtocolJson.readType(payload) }.getOrNull(),
+    ): Outcome? {
+        if (requestType == null || !requestType.startsWith("intent.")) return null
+        val request = runCatching { NappletProtocolJson.decodeIntentRequest(payload) }.getOrNull()
+        val hasId = runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null
+        if (request == null) {
+            return if (hasId && requestType in NappletProtocolJson.INTENT_REQUEST_TYPES) {
+                Outcome.Reply(NappletProtocolJson.encodeIntentFailure(requestType, if (requestType == "intent.invoke") "invalid convention" else "malformed request"))
+            } else {
+                Outcome.Ignore
+            }
+        }
+        if (NappletCapability.INTENT in declared) return Outcome.Intent(request)
+        return if (hasId && request !is NappletIntentRequest.Ready) Outcome.Reply(NappletProtocolJson.encodeIntentFailure(requestType, "intent unavailable")) else Outcome.Ignore
     }
 
     /**
@@ -130,6 +164,7 @@ object NappletRequestRouter {
     ): Outcome {
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return Outcome.Ignore
         if (requestType.startsWith("inc.")) return routeInc(declared, payload, requestType) ?: Outcome.Ignore
+        if (requestType.startsWith("intent.")) return routeIntent(declared, payload, requestType) ?: Outcome.Ignore
 
         // Fire-and-forget edge ops that never reach the broker.
         when (requestType) {

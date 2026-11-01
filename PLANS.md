@@ -62,7 +62,7 @@ them under each folder's `archive/` via the per-module index above.
 
 | Module | Plan | Summary |
 | ------ | ---- | ------- |
-| amethyst | [napplet-inter-applet](amethyst/plans/2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not built. NAP-INC shipped 2026-11-01 ([nap-inc](commons/plans/2026-11-01-nap-inc.md)); NAP-INTENT still deferred. |
+| amethyst | [napplet-inter-applet](amethyst/plans/2026-06-20-napplet-inter-applet.md) | NAP-INC / NAP-INTENT inter-applet messaging; prerequisites (multi-applet hosting, archetype registry, `MESSAGING` capability) not built. NAP-INC shipped 2026-11-01 ([nap-inc](commons/plans/2026-11-01-nap-inc.md)); NAP-INTENT shipped 2026-11-01 ([nap-upload-common-intent](commons/plans/2026-11-01-nap-upload-common-intent.md)). |
 | quartz | [local-headers-explorer](https://github.com/vitorpamplona/quartz/blob/main/quartz/plans/2026-05-08-local-headers-explorer.md) | Headers-only Bitcoin P2P client to verify NIP-03 OTS attestations without a trusted block explorer. |
 | quartz | [giftwrap-deletion-requests](https://github.com/vitorpamplona/quartz/blob/main/quartz/plans/2026-06-12-giftwrap-deletion-requests.md) | Let a recipient-authored kind-5 delete/block a gift wrap (kind 1059) addressed to them. |
 | quartz | [incremental-negentropy-storage](https://github.com/vitorpamplona/quartz/blob/main/quartz/plans/2026-07-03-incremental-negentropy-storage.md) | Always-current (created_at, id) index so cold NEG-OPENs stop paying a full scan + seal. |

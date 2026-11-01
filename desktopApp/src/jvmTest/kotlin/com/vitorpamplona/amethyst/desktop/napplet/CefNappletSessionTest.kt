@@ -37,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletConsentPrompt
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineAsks
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentCatalog
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentDispatcher
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
@@ -56,6 +58,8 @@ import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
+import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
+import com.vitorpamplona.quartz.nip5dNapplets.tags.NappletIntent
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.LogSink
 import kotlinx.coroutines.CompletableDeferred
@@ -70,6 +74,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
 import org.cef.browser.CefBrowser
 import org.cef.browser.OffscreenCefBrowser
@@ -409,6 +416,66 @@ class CefNappletSessionTest {
             assertFalse(listenerStorage.values.containsKey("openError"))
             assertTrue(speakerStorage.values["peer"]!!.matches(Regex("[0-9a-f]{32}")))
             assertTrue(speakerStorage.values["peer"] != sender, "each napplet has its own endpoint id")
+        }
+
+    @Test
+    fun anIntentStartsItsHandlerAndIsDeliveredWhenItIsReady() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val declared = setOf(NappletCapability.STORAGE, NappletCapability.INTENT)
+
+            // The handler records what it is handed, whenever it registers for it.
+            val handler =
+                """
+                <!doctype html><html><body><script>
+                setTimeout(function () {
+                  window.napplet.intent.onDelivery(function (d) {
+                    window.napplet.storage.setItem('delivered', JSON.stringify(d));
+                  });
+                }, 1500);
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            // The source asks for a feed to be opened, by convention URI, and records the result.
+            val source =
+                """
+                <!doctype html><html><body><script>
+                window.napplet.intent.invoke('napplet:feed/open?filters=a%2Bb').then(function (r) {
+                  window.napplet.storage.setItem('result', JSON.stringify(r));
+                });
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+
+            val handlerStorage = RecordingStorage()
+            val launched = mutableListOf<CefNappletSession>()
+            val publisher = KeyPair()
+            val manifest =
+                NostrSignerInternal(publisher).sign(
+                    NamedNappletEvent.build("reader", "ab".repeat(32), "reads feeds", optional = listOf("intent"), archetypes = listOf("feed"), intents = listOf(NappletIntent("napplet:feed/open", listOf("filters")))),
+                )
+            runtime.intents =
+                NappletIntentDispatcher(
+                    catalog = { NappletIntentCatalog(listOfNotNull(NappletIntentCatalog.handlerOf(manifest))) },
+                    launch = {
+                        session(handler, handlerStorage, runtime, declared = declared).also {
+                            launched += it
+                            show(it)
+                        }
+                    },
+                )
+
+            val sourceStorage = RecordingStorage()
+            val sourceSession = session(source, sourceStorage, runtime, declared = declared).also { show(it) }
+
+            withTimeout(120_000) { while (handlerStorage.values["delivered"] == null || sourceStorage.values["result"] == null) delay(100) }
+            val result = Json.parseToJsonElement(sourceStorage.values["result"]!!).jsonObject
+            assertEquals("true", result["ok"]!!.jsonPrimitive.content)
+            assertEquals("35129:${publisher.pubKey.toHexKey()}:reader", result["handler"]!!.jsonPrimitive.content)
+            assertEquals(1, launched.size, "the handler was started for it")
+            val delivery = Json.parseToJsonElement(handlerStorage.values["delivered"]!!).jsonObject
+            assertEquals("napplet:feed/open", delivery["convention"]!!.jsonPrimitive.content)
+            assertEquals("a+b", delivery["payload"]!!.jsonObject["filters"]!!.jsonPrimitive.content)
+            // The sender is the source's catalog id, from its launch, not anything it said.
+            assertEquals(NappletIntentCatalog.catalogId(sourceSession.launch.identity), delivery["sender"]!!.jsonPrimitive.content)
         }
 
     @Test

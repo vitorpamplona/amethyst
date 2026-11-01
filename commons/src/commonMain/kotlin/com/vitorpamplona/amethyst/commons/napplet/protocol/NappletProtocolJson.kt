@@ -172,6 +172,144 @@ object NappletProtocolJson {
         }
     }
 
+    /** The `intent.*` request types [decodeIntentRequest] knows. */
+    val INTENT_REQUEST_TYPES = setOf("intent.invoke", "intent.available", "intent.handlers", "intent.ready")
+
+    /**
+     * The NAP-INTENT request in [envelopeJson], or null when it is not one or a field it needs is
+     * missing. The invoke's `request.payload` stays raw JSON.
+     */
+    fun decodeIntentRequest(envelopeJson: String): NappletIntentRequest? {
+        val o = json.parseToJsonElement(envelopeJson) as? JsonObject ?: return null
+        return when (o.str("type")) {
+            "intent.invoke" -> {
+                val request = o["request"] as? JsonObject ?: return null
+                val hint = request["handlerHint"] as? JsonObject
+                NappletIntentRequest.Invoke(
+                    id = o.textOrNull("id") ?: return null,
+                    archetype = request.textOrNull("archetype") ?: return null,
+                    action = request.textOrNull("action") ?: return null,
+                    convention = request.textOrNull("convention") ?: return null,
+                    payload = request["payload"]?.toString(),
+                    handler = request.textOrNull("handler"),
+                    hintAddress = hint?.textOrNull("address"),
+                )
+            }
+            "intent.available" -> NappletIntentRequest.Available(o.textOrNull("id") ?: return null, o.textOrNull("archetype") ?: return null)
+            "intent.handlers" -> NappletIntentRequest.Handlers(o.textOrNull("id") ?: return null)
+            "intent.ready" -> NappletIntentRequest.Ready
+            else -> null
+        }
+    }
+
+    /** An `intent.invoke.result` (the host adds the `id`): accepted for [handler], or refused with [error]. */
+    fun encodeIntentInvokeResult(
+        request: NappletIntentRequest.Invoke,
+        handler: String?,
+        error: String? = null,
+    ): String =
+        buildJsonObject {
+            put("type", "intent.invoke.result")
+            putJsonObject("result") {
+                if (error != null || handler == null) {
+                    put("ok", false)
+                    put("error", error ?: "no handler")
+                } else {
+                    put("ok", true)
+                    put("archetype", request.archetype)
+                    put("action", request.action)
+                    put("convention", request.convention)
+                    put("handler", handler)
+                }
+            }
+        }.toString()
+
+    /** An `intent.available.result` (the host adds the `id`) carrying one [availability]. */
+    fun encodeIntentAvailableResult(availability: IntentAvailability): String =
+        buildJsonObject {
+            put("type", "intent.available.result")
+            put("availability", availabilityJson(availability))
+        }.toString()
+
+    /** An `intent.handlers.result` (the host adds the `id`) carrying every archetype's availability. */
+    fun encodeIntentHandlersResult(handlers: List<IntentAvailability>): String =
+        buildJsonObject {
+            put("type", "intent.handlers.result")
+            putJsonArray("handlers") { handlers.forEach { add(availabilityJson(it)) } }
+        }.toString()
+
+    /** The `<requestType>.result` for an intent request refused with [error] (no `intent` declared, malformed). */
+    fun encodeIntentFailure(
+        requestType: String,
+        error: String,
+    ): String =
+        buildJsonObject {
+            put("type", "$requestType.result")
+            when (requestType) {
+                "intent.invoke" ->
+                    putJsonObject("result") {
+                        put("ok", false)
+                        put("error", error)
+                    }
+                else -> put("error", error)
+            }
+        }.toString()
+
+    /** An `intent.deliver` push to the target: the convention, its payload, and the runtime-attested [sender]. */
+    fun encodeIntentDeliver(
+        sender: String,
+        archetype: String,
+        action: String,
+        convention: String,
+        payload: String?,
+    ): String =
+        buildJsonObject {
+            put("type", "intent.deliver")
+            putJsonObject("delivery") {
+                put("sender", sender)
+                put("archetype", archetype)
+                put("action", action)
+                put("convention", convention)
+                putRawPayload(payload)
+            }
+        }.toString()
+
+    private fun availabilityJson(availability: IntentAvailability) =
+        buildJsonObject {
+            put("archetype", availability.archetype)
+            put("available", availability.candidates.isNotEmpty())
+            putJsonArray("candidates") {
+                availability.candidates.forEach { candidate ->
+                    addJsonObject {
+                        put("id", candidate.id)
+                        candidate.title?.let { put("title", it) }
+                        putJsonArray("actions") {
+                            candidate.contracts
+                                .map { it.action }
+                                .distinct()
+                                .forEach { add(it) }
+                        }
+                        putJsonArray("conventions") {
+                            candidate.contracts
+                                .map { it.convention }
+                                .distinct()
+                                .forEach { add(it) }
+                        }
+                        putJsonArray("contracts") {
+                            candidate.contracts.forEach { contract ->
+                                addJsonObject {
+                                    put("convention", contract.convention)
+                                    putJsonArray("params") { contract.params.forEach { add(it) } }
+                                }
+                            }
+                        }
+                        put("isDefault", candidate.isDefault)
+                    }
+                }
+            }
+            put("hasDefault", availability.candidates.any { it.isDefault })
+        }
+
     /** The `inc.*` request types [decodeIncRequest] knows. */
     val INC_REQUEST_TYPES =
         setOf(

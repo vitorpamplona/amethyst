@@ -168,11 +168,12 @@ enum class NappletCapability {
                 "inc" -> INC
                 "upload" -> UPLOAD
                 "common" -> COMMON
+                "intent" -> INTENT
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc", "upload", "common")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc", "upload", "common", "intent")
     }
 }
 

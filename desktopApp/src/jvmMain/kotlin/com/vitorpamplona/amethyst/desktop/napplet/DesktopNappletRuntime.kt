@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
+import com.vitorpamplona.amethyst.commons.napplet.NappletIntentDispatcher
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
@@ -59,6 +60,10 @@ class DesktopNappletRuntime(
     val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
 
     val incBus = NappletIncBus<CefNappletSession>()
+
+    /** NAP-INTENT: set by the host, which is what can open the handler's window. */
+    @Volatile
+    var intents: NappletIntentDispatcher<CefNappletSession>? = null
 
     val routes = DesktopNappletRoutes(engine.router, torPort, scope)
 

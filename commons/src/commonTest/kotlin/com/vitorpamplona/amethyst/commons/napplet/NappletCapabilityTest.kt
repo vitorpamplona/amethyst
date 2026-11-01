@@ -38,12 +38,12 @@ class NappletCapabilityTest {
         assertTrue("inc" in NappletCapability.supportedNapDomains)
         assertEquals(NappletCapability.UPLOAD, NappletCapability.fromNapDomain("upload"))
         assertEquals(NappletCapability.COMMON, NappletCapability.fromNapDomain("common"))
+        assertEquals(NappletCapability.INTENT, NappletCapability.fromNapDomain("intent"))
     }
 
     @Test
     fun unknownDomainMapsToNullNotAFallbackGrant() {
         // Domains we don't broker yet must stay unknown (default-deny), not fall through.
-        assertNull(NappletCapability.fromNapDomain("intent"))
         assertNull(NappletCapability.fromNapDomain("cvm"))
         assertNull(NappletCapability.fromNapDomain("filesystem"))
         assertNull(NappletCapability.fromNapDomain("shell"))
@@ -57,13 +57,13 @@ class NappletCapabilityTest {
 
     @Test
     fun resolveSeparatesKnownFromUnknownAndFlags() {
-        val resolved = resolveRequiredCapabilities(listOf("identity", "relay", "intent", "value"))
+        val resolved = resolveRequiredCapabilities(listOf("identity", "relay", "notify", "value"))
 
         assertEquals(
             setOf(NappletCapability.IDENTITY, NappletCapability.RELAY),
             resolved.capabilities,
         )
-        assertEquals(listOf(UnknownNapDomain("intent"), UnknownNapDomain("value")), resolved.unknown)
+        assertEquals(listOf(UnknownNapDomain("notify"), UnknownNapDomain("value")), resolved.unknown)
         assertTrue(resolved.hasUnknown)
     }
 
