@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFilePort
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
@@ -131,6 +132,8 @@ class CefNappletSession(
      * which the note draws and forwards input to. Null for a window of its own.
      */
     val offscreen: OffscreenNappletView? = null,
+    /** Where NAP-FS picks and file bytes go: the system's file dialog, unless a test scripts them. */
+    private val filePort: NappletFilePort = DesktopNappletFilePort(),
 ) {
     sealed interface State {
         data object Loading : State
@@ -568,7 +571,7 @@ class CefNappletSession(
     // NAP-FS: the files the user picked for this window, gone when it closes. A napplet inside a note
     // gets one too, but the broker never lets it open a picker.
     private val fsSession: NappletFsSession? =
-        if (NappletCapability.FS in launch.declared) NappletFsSession(DesktopNappletFilePort()) else null
+        if (NappletCapability.FS in launch.declared) NappletFsSession(filePort) else null
 
     private fun handle(payload: String) {
         if (closed) return
