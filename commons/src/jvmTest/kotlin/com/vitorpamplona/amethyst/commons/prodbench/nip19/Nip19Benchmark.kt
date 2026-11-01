@@ -102,12 +102,11 @@ class Nip19Benchmark {
             var best = Double.MAX_VALUE
             var bestBytes = 0.0
             repeat(5) {
-                val tid = Thread.currentThread().id
-                val a0 = threadBean.getThreadAllocatedBytes(tid)
+                val a0 = threadBean.currentThreadAllocatedBytes
                 val t0 = System.nanoTime()
                 repeat(reps) { for (i in 0 until N) sink += op(i).hashCode() }
                 val ns = (System.nanoTime() - t0).toDouble() / (reps.toLong() * N)
-                val bytes = (threadBean.getThreadAllocatedBytes(tid) - a0).toDouble() / (reps.toLong() * N)
+                val bytes = (threadBean.currentThreadAllocatedBytes - a0).toDouble() / (reps.toLong() * N)
                 if (ns < best) {
                     best = ns
                     bestBytes = bytes

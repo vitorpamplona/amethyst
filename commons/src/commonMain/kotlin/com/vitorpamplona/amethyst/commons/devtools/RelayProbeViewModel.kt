@@ -231,7 +231,7 @@ class RelayProbeViewModel(
             // A probe cancelled by a restart may still answer; its relay may not be in this run.
             if (result.relay !in current.results) return@update current
             current.copy(
-                results = current.results.put(result.relay, result),
+                results = current.results.putting(result.relay, result),
                 newest = newest,
             )
         }

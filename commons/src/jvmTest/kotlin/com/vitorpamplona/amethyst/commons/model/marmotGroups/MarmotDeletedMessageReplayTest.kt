@@ -24,7 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.AccountMarmotActions
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
-import com.vitorpamplona.quartz.nip09Deletions.DeletionEvent
+import com.vitorpamplona.quartz.nip09Deletions.DeletionRequestEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import kotlin.test.Test
 import kotlin.test.assertFalse
@@ -43,7 +43,7 @@ class MarmotDeletedMessageReplayTest {
     fun aDeletedMessageDecryptedAgainIsNotLoaded() {
         val cache = EventCache()
         val message = signer.sign<ChatEvent>(1_000, ChatEvent.KIND, emptyArray(), "this one gets deleted")
-        val deletion = signer.sign<DeletionEvent>(1_001, DeletionEvent.KIND, arrayOf(arrayOf("e", message.id)), "")
+        val deletion = signer.sign<DeletionRequestEvent>(1_001, DeletionRequestEvent.KIND, arrayOf(arrayOf("e", message.id)), "")
 
         assertNotNull(AccountMarmotActions.indexMarmotInnerEvent(cache, message).note.event)
         AccountMarmotActions.indexMarmotInnerEvent(cache, deletion)

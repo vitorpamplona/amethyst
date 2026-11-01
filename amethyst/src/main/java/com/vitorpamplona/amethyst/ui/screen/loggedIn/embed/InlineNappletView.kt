@@ -131,6 +131,9 @@ fun InlineNappletView(
 
     AndroidView(
         factory = { ctx ->
+            // androidx.privacysandbox.ui is deprecated with no successor; the napplet sandbox
+            // still renders through it until it is replaced.
+            @Suppress("DEPRECATION")
             SandboxedSdkView(ctx).also {
                 controller.attachView(it)
                 controller.onShown()

@@ -149,7 +149,7 @@ fourkoma = "1.2.0"
 # publish alpha10, but -service stopped at alpha09, and all three share this
 # ref. Check every artifact before bumping, not just the main one.
 appfunctions = "1.0.0-alpha09"
-ksp = "2.3.12"
+ksp = "2.3.13"
 
 [libraries]
 abedElazizShe-video-compressor-fork = { group = "com.github.davotoula", name = "LightCompressor-enhanced", version.ref = "lightcompressor-enhanced" }

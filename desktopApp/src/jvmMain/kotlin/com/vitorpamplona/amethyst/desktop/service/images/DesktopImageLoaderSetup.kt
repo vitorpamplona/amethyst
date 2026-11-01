@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.desktop.service.images
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.svg.SvgDecoder
@@ -43,7 +44,7 @@ object DesktopImageLoaderSetup {
      * [blossomServerResolver] loads `blossom:` URIs from the server that holds the blob; [readAuth]
      * signs the retry when a gated Blossom host answers 401.
      */
-    @OptIn(DelicateCoilApi::class)
+    @OptIn(DelicateCoilApi::class, ExperimentalCoilApi::class)
     fun setup(
         clientForUrl: (String) -> Call.Factory,
         blossomServerResolver: (() -> BlossomServerResolver)? = null,

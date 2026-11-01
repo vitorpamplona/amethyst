@@ -275,8 +275,8 @@ class RelayConsoleViewModel(
         @OptIn(ExperimentalAtomicApi::class)
         val frame = ConsoleFrame(nextId.fetchAndAdd(1), direction, text, TimeUtils.nowMillis(), label, system)
         _frames.update { current ->
-            val next = current.add(frame)
-            if (next.size > MAX_FRAMES) next.removeAt(0) else next
+            val next = current.adding(frame)
+            if (next.size > MAX_FRAMES) next.removingAt(0) else next
         }
     }
 

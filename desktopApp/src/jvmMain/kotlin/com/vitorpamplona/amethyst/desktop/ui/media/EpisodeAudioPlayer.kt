@@ -128,7 +128,7 @@ internal fun episodePlayhead(
             !state.isBuffering &&
             duration != null &&
             last?.let { it.hasEnded || (it.isPlaying && it.positionMillis >= duration - ENDED_WITHIN_MS) } == true
-    return if (playedToTheEnd && duration != null) {
+    return if (playedToTheEnd) {
         EpisodePlayhead(positionMillis = duration, durationMillis = duration, isPlaying = false, hasEnded = true)
     } else {
         EpisodePlayhead(positionMillis = state.currentTime, durationMillis = duration, isPlaying = state.isPlaying, hasEnded = false)

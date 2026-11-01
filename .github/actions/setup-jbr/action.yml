@@ -42,5 +42,5 @@ runs:
       uses: actions/setup-java@v6.0.1
       with:
         distribution: jdkfile
-        jdkFile: ${{ steps.download.outputs.file }}
+        jdk-file: ${{ steps.download.outputs.file }}
         java-version: ${{ steps.download.outputs.version }}

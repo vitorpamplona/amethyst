@@ -25,10 +25,10 @@ import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Test
 import java.io.File
 import java.util.zip.ZipFile
+import kotlin.test.fail
 
 /**
  * Every class Quartz's `EventFactory` can build gets a card of its own in the feed.
@@ -46,6 +46,7 @@ import java.util.zip.ZipFile
 class NoteComposeKindCoverageTest {
     companion object {
         /** Kinds whose card IS the text card: `RenderTextEvent` is written for them. */
+        @Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
         private val TEXT_CARD_KINDS: Set<Class<out Event>> =
             setOf(
                 TextNoteEvent::class.java,
@@ -65,18 +66,18 @@ class NoteComposeKindCoverageTest {
         // Resolved rather than assumed: a wrong root would read nothing and pass for the wrong reason.
         generateSequence(File(".").absoluteFile) { it.parentFile }
             .firstOrNull { File(it, NOTE_COMPOSE).isFile }
-            ?: fail("cannot locate the repository root from ${File(".").absolutePath}") as Nothing
+            ?: fail("cannot locate the repository root from ${File(".").absolutePath}")
     }
 
     /** quartz lives in its own repo; commonsUI's build passes its sources (checkout dir or sources jar). */
     private val eventFactorySource: String by lazy {
-        val path = System.getProperty("quartz.sources") ?: fail("quartz.sources is not set; run this test through Gradle") as Nothing
+        val path = System.getProperty("quartz.sources") ?: fail("quartz.sources is not set; run this test through Gradle")
         val sources = File(path)
         if (sources.isDirectory) {
             File(sources, EVENT_FACTORY).readText()
         } else {
             ZipFile(sources).use { zip ->
-                val entry = zip.getEntry("commonMain/$EVENT_FACTORY") ?: fail("$path has no commonMain/$EVENT_FACTORY") as Nothing
+                val entry = zip.getEntry("commonMain/$EVENT_FACTORY") ?: fail("$path has no commonMain/$EVENT_FACTORY")
                 zip.getInputStream(entry).use { it.readBytes().decodeToString() }
             }
         }
@@ -136,7 +137,7 @@ class NoteComposeKindCoverageTest {
             .toSet()
             .map { name ->
                 val fqn = imports[name] ?: "com.vitorpamplona.quartz.utils.$name"
-                load(fqn) ?: fail("EventFactory builds $name but $fqn does not load") as Nothing
+                load(fqn) ?: fail("EventFactory builds $name but $fqn does not load")
             }.toSet()
     }
 
@@ -175,7 +176,7 @@ class NoteComposeKindCoverageTest {
         source: String,
         name: String,
     ): String {
-        val declaration = Regex("""\bfun $name\(""").find(source) ?: fail("fun $name not found in NoteCompose.kt") as Nothing
+        val declaration = Regex("""\bfun $name\(""").find(source) ?: fail("fun $name not found in NoteCompose.kt")
 
         // Skip the parameter list, whose default values may hold braces of their own.
         var i = declaration.range.last

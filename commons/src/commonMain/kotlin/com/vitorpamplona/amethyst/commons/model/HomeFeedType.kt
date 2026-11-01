@@ -101,6 +101,9 @@ enum class HomeFeedType(
     HIGHLIGHTS("highlights", listOf(HighlightEvent.KIND)),
     POLLS("polls", listOf(PollEvent.KIND, ZapPollEvent.KIND, PollResponseEvent.KIND)),
     CLASSIFIEDS("classifieds", listOf(ClassifiedsEvent.KIND)),
+
+    // TorrentCommentEvent is spec-deprecated (replaced by NIP-22) but old torrent threads still use it.
+    @Suppress("DEPRECATION")
     TORRENTS("torrents", listOf(TorrentEvent.KIND, TorrentCommentEvent.KIND)),
     VOICE("voice", listOf(VoiceEvent.KIND, VoiceReplyEvent.KIND)),
     LIVE_ACTIVITIES("live_activities", listOf(LiveActivitiesEvent.KIND, LiveActivitiesChatMessageEvent.KIND, LiveActivitiesClipEvent.KIND)),

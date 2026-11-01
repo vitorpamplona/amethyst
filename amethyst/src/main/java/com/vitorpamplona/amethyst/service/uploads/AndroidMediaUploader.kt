@@ -495,9 +495,7 @@ class AndroidMediaUploader(
                         return finishVerified(uploadResult, url, sent.hash, sent.size, localContentType ?: check.contentType, originalContentType, originalHash)
                     }
 
-                    ImageDownloader.ServedCheck.HeadNotSupported -> {
-                        Unit
-                    }
+                    ImageDownloader.ServedCheck.HeadNotSupported -> {}
                 }
             }
 

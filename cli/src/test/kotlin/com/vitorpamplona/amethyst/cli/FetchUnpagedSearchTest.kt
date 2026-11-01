@@ -83,7 +83,7 @@ class FetchUnpagedSearchTest {
             assertEquals(0, r.exit, r.stderr)
             val result = JsonNode.parse(r.stdoutLines.single())
             assertEquals(0, result["count"].asInt(), "--limit $limit: $result")
-            assertEquals(listOf(relay.url.normalizeRelayUrl().url), result["unpaged_relays"]?.map { it.asText() }, "--limit $limit: $result")
+            assertEquals(listOf(relay.url.normalizeRelayUrl().url), result["unpaged_relays"].map { it.asText() }, "--limit $limit: $result")
         }
     }
 
@@ -115,7 +115,7 @@ class FetchUnpagedSearchTest {
         val result = JsonNode.parse(r.stdoutLines.single())
         assertEquals(1, result["count"].asInt(), "the search still returns its hits: $result ${r.stderr}")
         val unpaged = result["unpaged_relays"]
-        assertTrue(unpaged != null && unpaged.isArray, "the relay that could not be paged is listed: $result")
+        assertTrue(unpaged.isArray, "the relay that could not be paged is listed: $result")
         assertEquals(listOf(relay.url.normalizeRelayUrl().url), unpaged.map { it.asText() })
         assertTrue(r.stderr.contains("amy sync"), "the warning names the command that downloads everything: ${r.stderr}")
         assertFalse(result.has("relay_errors"), "the relay answered; it is not an error: $result")

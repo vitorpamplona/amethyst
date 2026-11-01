@@ -95,6 +95,14 @@ allprojects {
 }
 
 subprojects {
+    // mockk attaches its agent at runtime, which appends to the boot class path, and a JVM on the
+    // default class-data-sharing archive then prints "Sharing is only supported for boot loader
+    // classes because bootstrap classpath has been appended" in every test run that mocks.
+    // Test JVMs gain nothing measurable from CDS, so they run without it.
+    tasks.withType<Test>().configureEach {
+        jvmArgs("-Xshare:off")
+    }
+
     afterEvaluate {
         // The Kotlin Multiplatform plugin never registers a plain `test` task: it creates one
         // task per target (jvmTest, androidUnitTest, linuxX64Test, ...) plus the `allTests`

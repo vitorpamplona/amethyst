@@ -73,6 +73,7 @@ class HomeFeedTypeTest {
         assertNull(HomeFeedType.fromCode("future-kind"))
     }
 
+    @Suppress("DEPRECATION") // TorrentCommentEvent: replaced by NIP-22, still part of the Torrents feed
     @Test
     fun picturesVideosShortsAndTorrentsOwnTheirKinds() {
         assertEquals(listOf(PictureEvent.KIND), HomeFeedType.PICTURES.kinds)

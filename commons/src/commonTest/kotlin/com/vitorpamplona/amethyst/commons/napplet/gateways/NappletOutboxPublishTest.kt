@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet.gateways
 
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.currentTime
@@ -30,6 +31,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class NappletOutboxPublishTest {
     private val fast = RelayUrlNormalizer.normalize("wss://fast.example.com")
     private val slow = RelayUrlNormalizer.normalize("wss://slow.example.com")

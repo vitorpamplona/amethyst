@@ -52,6 +52,10 @@ class NamecoinServices(
     private val httpClients: RoleBasedHttpClientBuilder,
     private val scope: CoroutineScope,
 ) : NamecoinClients {
+    // Custom servers still trust the user's pins through ElectrumXClient's shared store
+    // (usePinnedTrustStore). Moving each pin onto its server's pinnedCertsPem, as Quartz 3.0.0
+    // requires, changes how the pins are stored and is left for that migration.
+    @Suppress("DEPRECATION")
     val electrumXClient by lazy {
         val client = ElectrumXClient(socketFactory = { httpClients.socketFactoryForNip05() })
         scope.launch {
@@ -152,6 +156,7 @@ class NamecoinServices(
     override suspend fun probeCoreRpc(config: NamecoinCoreRpcConfig): RpcProbeResult = coreRpcClient.probe(config)
 
     override fun addPinnedCert(pem: String) {
+        @Suppress("DEPRECATION") // the shared store, see electrumXClient
         electrumXClient.addPinnedCert(pem)
         coreRpcClient.addPinnedCert(pem)
     }

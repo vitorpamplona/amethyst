@@ -58,6 +58,7 @@ class NamecoinSettingsTest {
         assertEquals("abc123def.onion", s.host)
         assertEquals(50001, s.port)
         assertFalse(s.useSsl)
+        @Suppress("DEPRECATION") // the custom-server trust path NamecoinServices still uses
         assertTrue(s.usePinnedTrustStore)
     }
 
@@ -133,6 +134,7 @@ class NamecoinSettingsTest {
         assertTrue(servers[0].useSsl)
         assertEquals("server2.onion", servers[1].host)
         assertFalse(servers[1].useSsl)
+        @Suppress("DEPRECATION") // the custom-server trust path NamecoinServices still uses
         assertTrue(servers[1].usePinnedTrustStore)
     }
 
