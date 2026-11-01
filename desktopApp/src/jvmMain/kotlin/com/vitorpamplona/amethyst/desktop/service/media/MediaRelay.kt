@@ -176,6 +176,10 @@ object MediaRelay {
         val range = exchange.requestHeaders.getFirst("Range")
         val keep = method == "GET" && VideoDiskCache.cacheable(original)
         if (keep && runCatching { VideoDiskCache.serve(exchange, original, range) }.getOrDefault(false)) return
+        if (keep) {
+            val held = runCatching { VideoDiskCache.heldPrefix(original, range) }.getOrNull()
+            if (held != null && sendStitched(exchange, original, held)) return
+        }
 
         val request =
             Request
@@ -207,7 +211,7 @@ object MediaRelay {
                     }
 
                     else -> {
-                        sendBody(exchange, response, if (keep && response.isSuccessful) cacheWriterFor(original, response) else null)
+                        sendBody(exchange, response, if (keep && response.isSuccessful) VideoDiskCache.writerFor(original, response) else null)
                     }
                 }
             }
@@ -244,24 +248,66 @@ object MediaRelay {
         if (body.isNotEmpty()) exchange.responseBody.write(body)
     }
 
-    /** Where the bytes of [response] for [original] go on disk too, or null when they are not kept. */
-    private fun cacheWriterFor(
+    /**
+     * Answers a GET whose range starts in bytes on disk ([held]) with those bytes, then the rest
+     * fetched from the network, as one response. The engine asks for a whole file from its start: of
+     * an episode whose index [VideoIndexPrefetch] fetched it then waits only for what follows.
+     * Returns false, having sent nothing, when the network won't give the rest as a range.
+     */
+    private fun sendStitched(
+        exchange: HttpExchange,
         original: String,
-        response: Response,
-    ): VideoDiskCache.Writer? {
-        val type = response.header("Content-Type")
-        if (response.code == 206) {
-            // "bytes <first>-<last>/<total>"
-            val cr = response.header("Content-Range") ?: return null
-            val first = cr.substringAfter("bytes ", "").substringBefore('-').toLongOrNull() ?: return null
-            val total = cr.substringAfter('/', "").toLongOrNull() ?: return null
-            return VideoDiskCache.writer(original, first, total, type)
+        held: VideoDiskCache.HeldPrefix,
+    ): Boolean {
+        val request =
+            Request
+                .Builder()
+                .url(original)
+                .header("Range", "bytes=${held.heldEnd}-${held.range.last}")
+                .apply { exchange.requestHeaders.getFirst("Accept")?.let { header("Accept", it) } }
+                .build()
+        val response =
+            try {
+                MediaHttp.client(original).newCall(request).execute()
+            } catch (e: IOException) {
+                Log.d(TAG) { "Relay of $original ended: ${e.message}" }
+                return false
+            }
+        response.use {
+            val rest =
+                response
+                    .header("Content-Range")
+                    ?.substringAfter("bytes ", "")
+                    ?.substringBefore('-')
+                    ?.toLongOrNull()
+            if (response.code != 206 || rest != held.heldEnd) return false
+            val partial = exchange.requestHeaders.getFirst("Range") != null
+            exchange.responseHeaders.add("Content-Type", held.contentType)
+            exchange.responseHeaders.add("Accept-Ranges", "bytes")
+            if (partial) exchange.responseHeaders.add("Content-Range", "bytes ${held.range.first}-${held.range.last}/${held.total}")
+            exchange.sendResponseHeaders(if (partial) 206 else 200, held.range.last - held.range.first + 1)
+            val cache = VideoDiskCache.writerFor(original, response)
+            // From here the request is answered, however it ends.
+            try {
+                exchange.responseBody.let { out ->
+                    VideoDiskCache.copyHeld(original, held.range.first, held.heldEnd, out)
+                    response.body.byteStream().use { input ->
+                        val buf = ByteArray(64 * 1024)
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            cache?.let { c -> runCatching { c.write(buf, n) } }
+                            out.write(buf, 0, n)
+                        }
+                    }
+                }
+            } catch (e: IOException) {
+                Log.d(TAG) { "Relay of $original ended: ${e.message}" }
+            } finally {
+                cache?.let { c -> runCatching { c.close() } }
+            }
+            return true
         }
-        if (response.code == 200) {
-            val total = response.body.contentLength().takeIf { it > 0 } ?: return null
-            return VideoDiskCache.writer(original, 0, total, type)
-        }
-        return null
     }
 
     private fun sendBody(

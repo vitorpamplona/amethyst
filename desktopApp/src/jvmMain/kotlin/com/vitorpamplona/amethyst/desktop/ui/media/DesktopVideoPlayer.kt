@@ -99,6 +99,16 @@ private const val STILL_VIDEO_MILLIS = 300L
 // How long a card stays on screen before it opens its own engine.
 private const val CARD_ENGINE_DELAY_MS = 300L
 
+// How long a card stays the one in view before it plays: a scroll through a Shorts feed made each
+// card it passed the playing video for ~60 ms, and every one of those starts pulled bytes the video
+// the user stopped on then waited behind.
+private const val PLAY_SETTLE_MS = 250L
+
+// What macOS's engine reports when AVFoundation hasn't read the video's size within its 5 s wait.
+// Behind a scroll's other downloads a playable MP4 timed out this way, and went to Chromium as if
+// the engine couldn't decode it.
+private const val SIZE_TIMEOUT_ERROR = "Failed to retrieve video size"
+
 /**
  * An inline video. Every instance draws the one [GlobalMediaPlayer] engine when its [url] is the
  * loaded one, and its thumbnail otherwise.
@@ -266,6 +276,8 @@ fun DesktopVideoPlayer(
                     if (mine) GlobalMediaPlayer.claimVideoSurface(surfaceOwner)
                     val ended = mine && state.position >= 0.99f
                     if (autoPlayWhenVisible && loaded && !ended && (!mine || !state.isPlaying)) {
+                        // Cancelled when another card takes the middle first, as a scroll passes this one.
+                        delay(PLAY_SETTLE_MS)
                         GlobalMediaPlayer.playVideo(url, owner = surfaceOwner)
                     }
                 } else if (hasBeenVisible[0] && pauseWhenHidden && mine) {
@@ -299,6 +311,18 @@ fun DesktopVideoPlayer(
     val errorReason = videoState?.errorReason
     LaunchedEffect(errorReason) {
         if (errorReason != null) Log.w("DesktopVideoPlayer") { "Can't play $url: $errorReason" }
+    }
+
+    // A size timeout gets one more native open before Chromium is tried: by then the downloads it
+    // waited behind are usually done. A second one means the engine really can't read the file (an
+    // audio-only MP4, a codec it lacks), and Chromium takes it as before.
+    var retriedNatively by remember(url) { mutableStateOf(false) }
+    val retryNatively = errorReason == SIZE_TIMEOUT_ERROR && !retriedNatively
+    LaunchedEffect(retryNatively) {
+        if (!retryNatively) return@LaunchedEffect
+        retriedNatively = true
+        Log.d("DesktopVideoPlayer") { "Retrying $url natively after a size timeout" }
+        GlobalMediaPlayer.retryVideo(url, surfaceOwner, chosen = videoState?.isChosen == true)
     }
 
     // Read in composition, so an anamorphic video's pixel ratio corrects the shape when it lands.
@@ -391,7 +415,9 @@ fun DesktopVideoPlayer(
             if (errorReason != null) {
                 var chromiumFailed by remember(url) { mutableStateOf(false) }
                 // What the native engine can't decode (WebM on macOS) may still play in Chromium.
-                if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumMediaSession.canTry(url)) {
+                if (retryNatively) {
+                    VideoPoster(poster, thumbnail, Modifier.fillMaxSize()) { posterFailed = true }
+                } else if (chromium != null && !chromiumFailed && !errorReason.startsWith(NETWORK_ERROR) && ChromiumMediaSession.canTry(url)) {
                     ChromiumVideoPane(
                         chromium,
                         url,
