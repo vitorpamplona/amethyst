@@ -43,7 +43,7 @@ jna = "5.19.1"
 # the native bundle it downloads on first use is Chromium, whose libcef.so includes FFmpeg (LGPL-2.1).
 jcefmaven = "152.0.6"
 # Hunspell spell checking for the desktop composers (pure Java, Apache-2.0).
-lucene = "10.5.2"
+lucene = "10.6.0"
 javaKeyring = "1.0.4"
 kmpTorRuntime = "2.6.0"
 kmpTorResource = "409.5.0"
@@ -55,7 +55,7 @@ kotlinxCollectionsImmutable = "0.5.2"
 kotlinxCoroutinesCore = "1.11.0"
 kotlinxSerialization = "1.12.0"
 genaiProofreading = "1.0.0-beta1"
-genaiPrompt = "1.0.0-beta4"
+genaiPrompt = "1.0.0-beta5"
 genaiRewriting = "1.0.0-beta1"
 genaiImageDescription = "1.0.0-beta1"
 languageId = "17.0.6"
@@ -85,15 +85,15 @@ quartzKmp = "2.13.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp). Their current releases were built against quartz 2.7.3 and run on
 # the version above: 2.9.0 removed no public API they use.
-marmotKmp = "2.2.0"
-cordnKmp = "1.2.0"
+marmotKmp = "2.2.1"
+cordnKmp = "1.2.1"
 # Crypto primitives (vitorpamplona/crypto-kmp) come with quartz, the MLS engine (vitorpamplona/mls-kmp)
 # with marmot and cordn; commons also declares them because it imports them directly. Keep them at the
 # versions those libraries were built against.
 cryptoKmp = "2.1.0"
 # The fantasy-console cart runtime behind the note cart player (vitorpamplona/kiko-kmp): kiko runs a
 # cart, kiko-player plays it in real time (commons), kiko-compose shows it (commonsUI).
-kikoKmp = "0.2.0"
+kikoKmp = "0.2.3"
 mlsKmp = "1.3.0"
 # Pure-Kotlin QUIC v1 + HTTP/3 + WebTransport, split out of this repo into vitorpamplona/quic-kmp.
 quicKmp = "1.2.0"
@@ -139,15 +139,21 @@ androidxExifinterface = "1.4.2"
 kotlinTest = "2.4.21"
 core = "1.7.0"
 sqlite = "2.7.1"
-ktor = "3.6.0"
+ktor = "3.6.1"
 fourkoma = "1.2.0"
 
 # Phase 2 (Gemini App Functions) — both still pre-stable as of May 2026.
 # Scoped to the play flavor only (see amethyst/build.gradle.kts) so the
 # fdroid channel doesn't pull in Google alpha dependencies.
-# Capped by appfunctions-service: `appfunctions` and `appfunctions-compiler`
-# publish alpha10, but -service stopped at alpha09, and all three share this
-# ref. Check every artifact before bumping, not just the main one.
+# Held at alpha09, the last release with a separate `appfunctions-service`
+# (which pins `appfunctions` to exactly its own version). From alpha10 the
+# service lives in `appfunctions` itself, and beta01 needs a port: `@AppFunction`
+# became `@AppFunctionDeclaration` (with an explicit `isDescribedByKDoc`),
+# `AppFunctionContext` is gone, functions must sit in an `AppFunctionService`
+# marked `@AppFunctionServiceEntryPoint` that the app's manifest declares (the
+# library no longer merges one in), and `app_metadata`'s `description` is now
+# `instructions`. Drop `androidx-appfunctions-service` when porting, and check
+# on a device that Gemini still lists the functions.
 appfunctions = "1.0.0-alpha09"
 ksp = "2.3.13"
 
