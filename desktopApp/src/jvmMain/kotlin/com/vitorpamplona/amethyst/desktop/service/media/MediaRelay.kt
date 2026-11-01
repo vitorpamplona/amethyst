@@ -161,6 +161,7 @@ object MediaRelay {
      */
     fun revoke(session: String) {
         revoked += session
+        pictured -= session
         sessionCalls.remove(session)?.let { calls -> synchronized(calls) { calls.toList() }.forEach { it.cancel() } }
     }
 
@@ -527,15 +528,29 @@ object MediaRelay {
 
     private fun mustYield(session: String?): Boolean =
         synchronized(foregroundLock) {
-            foregroundStarting && session != foreground
+            foregroundStarting && session != foreground && hasPicture(session)
         }
+
+    // Sessions whose engine shows its first frame and whose start is on disk for a poster (see
+    // markPictured). Until then a stream doesn't give way: holding it left the cards beside the
+    // watched video blank, waiting for their first frame, and cut short the bytes their poster is
+    // made from.
+    private val pictured: MutableSet<String> = ConcurrentHashMap.newKeySet()
+
+    /** The engine streaming as [session] has its card's picture: from now on its streams give way. */
+    fun markPictured(session: String) {
+        pictured += session
+    }
+
+    /** Whether the engine streaming as [session] has its picture; Chromium's streams always give way. */
+    fun hasPicture(session: String?): Boolean = session == null || session in pictured
 
     // Waits until the watched video moves; false when it waited the whole MAX_HOLD_MS, so a video
     // that never starts holds every other stream only once.
     private fun awaitTurn(session: String?): Boolean {
         val deadline = System.currentTimeMillis() + MAX_HOLD_MS
         synchronized(foregroundLock) {
-            while (foregroundStarting && session != foreground) {
+            while (foregroundStarting && session != foreground && hasPicture(session)) {
                 if (session != null && session in revoked) return true
                 val left = deadline - System.currentTimeMillis()
                 if (left <= 0) return false
