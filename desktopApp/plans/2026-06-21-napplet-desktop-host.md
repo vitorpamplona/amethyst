@@ -184,7 +184,7 @@ Open:
 - While any site is on the open web, Chromium's own services go direct too (one process-wide
   route, as on Android).
 - No developer console panel: console messages and load errors go to the log.
-- Not offered: upload, notify, keys.onAction, the inc bus (not in Amethyst's supported domains).
+- Not offered: upload, notify, keys.onAction. The inc bus is offered since 2026-11-01 (`commons/plans/2026-11-01-nap-inc.md`).
 - No foreground hold (`NappletHeldRequests`) or `identity.changed` push yet; acting requests are
   still consent-gated.
 - Native Wayland (JBR's `WaylandWindow`) is unverified: CEF's windowed mode is X11.

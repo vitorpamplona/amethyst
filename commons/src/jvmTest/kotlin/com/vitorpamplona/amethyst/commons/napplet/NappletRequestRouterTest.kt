@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -100,28 +101,38 @@ class NappletRequestRouterTest {
         }
 
     @Test
-    fun incSubscribeAndEmitBecomeBusOps() =
+    fun incRequestsGoToTheBus() =
         runTest {
             assertEquals(
-                NappletRequestRouter.Outcome.SubscribeInc("news"),
-                route("""{"type":"inc.subscribe","topic":"news"}"""),
+                NappletRequestRouter.Outcome.Inc(NappletIncRequest.Subscribe("a1", "news")),
+                route("""{"type":"inc.subscribe","id":"a1","topic":"news"}"""),
             )
             assertEquals(
-                NappletRequestRouter.Outcome.UnsubscribeInc("news"),
+                NappletRequestRouter.Outcome.Inc(NappletIncRequest.Unsubscribe("news")),
                 route("""{"type":"inc.unsubscribe","topic":"news"}"""),
             )
-            val emit = route("""{"type":"inc.emit","topic":"news","payload":{"text":"hi"}}""")
-            assertIs<NappletRequestRouter.Outcome.EmitInc>(emit)
-            assertEquals("news", emit.topic)
-            assertTrue(emit.payloadRaw.contains("hi"))
+            assertEquals(
+                NappletRequestRouter.Outcome.Inc(NappletIncRequest.Emit("news", """{"text":"hi"}""")),
+                route("""{"type":"inc.emit","topic":"news","payload":{"text":"hi"}}"""),
+            )
+            assertEquals(
+                NappletRequestRouter.Outcome.Inc(NappletIncRequest.ChannelOpen("c1", "peer")),
+                route("""{"type":"inc.channel.open","id":"c1","target":"peer"}"""),
+            )
+            // A subscribe has nothing to correlate its result with without an id.
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.subscribe","topic":"news"}"""))
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.emit","topic":7}"""))
         }
 
     @Test
-    fun incIsIgnoredWhenNotDeclared() =
-        runTest {
-            val outcome = NappletRequestRouter.route(broker(), applet, emptySet(), """{"type":"inc.emit","topic":"t","payload":1}""")
-            assertEquals(NappletRequestRouter.Outcome.Ignore, outcome)
-        }
+    fun incWithoutTheDeclarationIsRefused() {
+        assertEquals(NappletRequestRouter.Outcome.Ignore, NappletRequestRouter.routeInc(emptySet(), """{"type":"inc.emit","topic":"t","payload":1}"""))
+        val subscribe = NappletRequestRouter.routeInc(emptySet(), """{"type":"inc.subscribe","id":"a1","topic":"t"}""")
+        assertIs<NappletRequestRouter.Outcome.Reply>(subscribe)
+        assertTrue(subscribe.payload.contains("\"error\""))
+        // Anything else is not inc's business.
+        assertEquals(null, NappletRequestRouter.routeInc(emptySet(), """{"type":"relay.query","id":"q"}"""))
+    }
 
     @Test
     fun unknownAndMalformedRequestsAreSilentlyIgnored() =

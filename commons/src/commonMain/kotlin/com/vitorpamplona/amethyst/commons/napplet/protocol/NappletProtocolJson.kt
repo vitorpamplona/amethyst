@@ -32,6 +32,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonObjectBuilder
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.add
 import kotlinx.serialization.json.addJsonObject
@@ -150,27 +151,119 @@ object NappletProtocolJson {
             put("subId", subId)
         }.toString()
 
-    /** The `topic` of an `inc.*` envelope (the pub/sub topic the napplet emits to or subscribes on). */
-    fun readTopic(envelopeJson: String): String? = json.parseToJsonElement(envelopeJson).jsonObject.str("topic")
+    /**
+     * The NAP-INC request in [envelopeJson], or null when its type is not an `inc.*` operation or a
+     * field it needs is missing or not text. A `payload` stays raw JSON text, null when absent.
+     */
+    fun decodeIncRequest(envelopeJson: String): NappletIncRequest? {
+        val o = json.parseToJsonElement(envelopeJson) as? JsonObject ?: return null
+        val payload = o["payload"]?.toString()
+        return when (o.str("type")) {
+            "inc.subscribe" -> NappletIncRequest.Subscribe(o.textOrNull("id") ?: return null, o.textOrNull("topic") ?: return null)
+            "inc.unsubscribe" -> NappletIncRequest.Unsubscribe(o.textOrNull("topic") ?: return null)
+            "inc.emit" -> NappletIncRequest.Emit(o.textOrNull("topic") ?: return null, payload)
+            "inc.channel.open" -> NappletIncRequest.ChannelOpen(o.textOrNull("id") ?: return null, o.textOrNull("target") ?: return null)
+            "inc.channel.emit" -> NappletIncRequest.ChannelEmit(o.textOrNull("channelId") ?: return null, payload)
+            "inc.channel.broadcast" -> NappletIncRequest.ChannelBroadcast(payload)
+            "inc.channel.list" -> NappletIncRequest.ChannelList(o.textOrNull("id") ?: return null)
+            "inc.channel.close" -> NappletIncRequest.ChannelClose(o.textOrNull("channelId") ?: return null)
+            else -> null
+        }
+    }
 
-    /** The raw `payload` JSON element of an `inc.emit`, serialized back to a string (`"null"` if absent). */
-    fun readPayloadRaw(envelopeJson: String): String = (json.parseToJsonElement(envelopeJson).jsonObject["payload"] ?: JsonNull).toString()
+    /** An `inc.subscribe.result` (the host adds the `id`); an [error] means the subscription was not registered. */
+    fun encodeIncSubscribeResult(error: String? = null): String =
+        buildJsonObject {
+            put("type", "inc.subscribe.result")
+            error?.let { put("error", it) }
+        }.toString()
 
     /**
-     * An `inc.event` push: delivers [topic]'s [payloadRaw] (a raw JSON value) to a subscriber, tagged
-     * with the emitting napplet's [sender] coordinate. Mirrors the kehto runtime's inc-bus contract.
+     * An `inc.event` push: [topic]'s [payload] (raw JSON, omitted when null) for a subscriber, from
+     * the runtime-assigned endpoint identifier [sender] of the napplet that emitted it.
      */
     fun encodeIncEvent(
         topic: String,
-        payloadRaw: String,
+        payload: String?,
         sender: String,
     ): String =
         buildJsonObject {
             put("type", "inc.event")
             put("topic", topic)
-            put("payload", runCatching { json.parseToJsonElement(payloadRaw) }.getOrDefault(JsonNull))
             put("sender", sender)
+            putRawPayload(payload)
         }.toString()
+
+    /** An `inc.channel.open.result` (the host adds the `id`): the channel and its peer, or the [error] that kept it closed. */
+    fun encodeIncChannelOpenResult(
+        channelId: String?,
+        peer: String?,
+        error: String? = null,
+    ): String =
+        buildJsonObject {
+            put("type", "inc.channel.open.result")
+            channelId?.let { put("channelId", it) }
+            peer?.let { put("peer", it) }
+            error?.let { put("error", it) }
+        }.toString()
+
+    /** An `inc.channel.opened` push to the target of a new channel; [peer] is the opener's endpoint identifier. */
+    fun encodeIncChannelOpened(
+        channelId: String,
+        peer: String,
+    ): String =
+        buildJsonObject {
+            put("type", "inc.channel.opened")
+            put("channelId", channelId)
+            put("peer", peer)
+        }.toString()
+
+    /** An `inc.channel.event` push: [payload] (raw JSON, omitted when null) from the channel peer [sender]. */
+    fun encodeIncChannelEvent(
+        channelId: String,
+        sender: String,
+        payload: String?,
+    ): String =
+        buildJsonObject {
+            put("type", "inc.channel.event")
+            put("channelId", channelId)
+            put("sender", sender)
+            putRawPayload(payload)
+        }.toString()
+
+    /** An `inc.channel.list.result` (the host adds the `id`): each open channel as `{id, peer}`. */
+    fun encodeIncChannelListResult(channels: List<Pair<String, String>>): String =
+        buildJsonObject {
+            put("type", "inc.channel.list.result")
+            putJsonArray("channels") {
+                channels.forEach { (id, peer) ->
+                    addJsonObject {
+                        put("id", id)
+                        put("peer", peer)
+                    }
+                }
+            }
+        }.toString()
+
+    /** An `inc.channel.closed` push: [channelId] is over, for the [reason] given (if any). */
+    fun encodeIncChannelClosed(
+        channelId: String,
+        reason: String? = null,
+    ): String =
+        buildJsonObject {
+            put("type", "inc.channel.closed")
+            put("channelId", channelId)
+            reason?.let { put("reason", it) }
+        }.toString()
+
+    // The payload came in as JSON the napplet sent, and goes out as the same value.
+    private fun JsonObjectBuilder.putRawPayload(payload: String?) {
+        if (payload == null) return
+        put("payload", runCatching { json.parseToJsonElement(payload) }.getOrDefault(JsonNull))
+    }
+
+    // A text field, or null when it is absent or not a JSON string.
+    private fun JsonObject.textOrNull(key: String): String? = (this[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
 
     /** A `keys.action` push: the user triggered the registered keyboard/command action [actionId]. */
     fun encodeKeysAction(actionId: String): String =

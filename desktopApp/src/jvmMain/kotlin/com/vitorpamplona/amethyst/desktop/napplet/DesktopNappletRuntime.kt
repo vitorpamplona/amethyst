@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.desktop.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
+import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
@@ -35,7 +36,7 @@ import java.io.File
 
 /**
  * What every napplet and nSite window shares: the browser engine, the blob cache, the network route,
- * and the live relay subscriptions.
+ * the live relay subscriptions, and the NAP-INC bus the napplets talk to each other over.
  *
  * [httpClient] fetches blobs, through Tor or not; [torPort] is the Tor SOCKS port while Tor runs
  * (null otherwise); [nappletBlobsUseTor] is whether a napplet's own blob downloads go through Tor,
@@ -56,6 +57,8 @@ class DesktopNappletRuntime(
     val attendance = NappletAttendance<CefNappletSession>()
 
     val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
+
+    val incBus = NappletIncBus<CefNappletSession>()
 
     val routes = DesktopNappletRoutes(engine.router, torPort, scope)
 

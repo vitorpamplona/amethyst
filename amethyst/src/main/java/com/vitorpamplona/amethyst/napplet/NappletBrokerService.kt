@@ -46,6 +46,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
+import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
 import com.vitorpamplona.amethyst.commons.napplet.NappletLiveSubscriptions
 import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
@@ -128,8 +129,14 @@ class NappletBrokerService : Service() {
         files.remove(launchToken)?.close()
     }
 
-    // The app-wide inc pub/sub bus: routes inc.emit between live napplet sessions as inc.event pushes.
-    private val incBus = NappletIncBus { replyTo, payload -> push(replyTo, payload) }
+    // NAP-INC between the live napplet surfaces. A surface is its reply Messenger plus the launch token
+    // it runs under, so a tab that loads another napplet becomes a new endpoint, not the old one.
+    private val incBus = NappletIncBus<IncEndpoint>()
+
+    private data class IncEndpoint(
+        val replyTo: Messenger,
+        val launchToken: String,
+    )
 
     // Streams identity.changed to a watching applet. Bound to the surface's LAUNCH account, not the
     // app's active one: a surface acts as the account that opened it for its whole life, so switching
@@ -149,7 +156,10 @@ class NappletBrokerService : Service() {
     override fun onCreate() {
         super.onCreate()
         // A token that the registry's cap pushed out was never given back: its surface is gone.
-        NappletLaunchRegistry.onEvicted = ::dropFiles
+        NappletLaunchRegistry.onEvicted = { token ->
+            dropFiles(token)
+            incBus.removeAll { endpoint -> endpoint.launchToken == token }
+        }
         scope.launch(Dispatchers.Main.immediate) {
             Amethyst.instance.uiPrefs.value.theme
                 .collect { broadcastTheme() }
@@ -179,6 +189,7 @@ class NappletBrokerService : Service() {
 
     override fun onDestroy() {
         liveSubscriptions.closeAll()
+        incBus.removeAll { true }
         identityWatch.stopAll()
         NappletLaunchRegistry.onEvicted = null
         files.keys.toList().forEach(::dropFiles)
@@ -218,7 +229,7 @@ class NappletBrokerService : Service() {
         // WebView) in the `:napplet` process past onDestroy — reclaimable only by killing the process.
         if (msg.what == NappletIpc.MSG_RELEASE_CLIENT) {
             msg.replyTo?.let {
-                incBus.removeAll(it)
+                incBus.removeAll { endpoint -> endpoint.replyTo == it }
                 liveSubscriptions.closeAllFor(it)
                 attendance.forget(it)
                 themeRecipients.remove(it)
@@ -228,6 +239,7 @@ class NappletBrokerService : Service() {
             // give back its own.
             msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
                 NappletLaunchRegistry.unregister(token)
+                incBus.removeAll { endpoint -> endpoint.launchToken == token }
                 identityWatch.stop(token)
                 dropFiles(token)
                 val prefix = "$token\u0000"
@@ -492,6 +504,22 @@ class NappletBrokerService : Service() {
             resourceRequests.remove(resourceRequestKey)?.cancel()
             return true
         }
+        // NAP-INC is routed here, on the thread the message came in on, so a napplet's messages reach
+        // the bus in the order it sent them (the request coroutines below run on a thread pool).
+        if (launchToken != null) {
+            when (val outcome = NappletRequestRouter.routeInc(declared, payload)) {
+                null -> {}
+                is NappletRequestRouter.Outcome.Inc -> {
+                    incBus.handle(IncEndpoint(replyTo, launchToken), { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) }
+                    return true
+                }
+                is NappletRequestRouter.Outcome.Reply -> {
+                    reply(replyTo, requestId, outcome.payload)
+                    return true
+                }
+                else -> return true
+            }
+        }
         val tracksResourceRequest = requestType == "resource.bytes" || requestType == "resource.bytesMany"
 
         val requestJob =
@@ -527,9 +555,8 @@ class NappletBrokerService : Service() {
                         liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey), arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt) { push(replyTo, it) }
                     is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId, arrivedAt)
                     is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
-                    is NappletRequestRouter.Outcome.SubscribeInc -> incBus.subscribe(replyTo, outcome.topic)
-                    is NappletRequestRouter.Outcome.UnsubscribeInc -> incBus.unsubscribe(replyTo, outcome.topic)
-                    is NappletRequestRouter.Outcome.EmitInc -> incBus.emit(replyTo, identity.coordinate, outcome.topic, outcome.payloadRaw)
+                    // Routed above, before this coroutine started.
+                    is NappletRequestRouter.Outcome.Inc -> {}
                 }
             }
         if (tracksResourceRequest) {

@@ -575,6 +575,19 @@ class CefNappletSession(
 
     private fun handle(payload: String) {
         if (closed) return
+        // NAP-INC goes to the bus now, on the thread the message came in on, so a napplet's messages
+        // reach it in the order it sent them (the coroutines below run on a thread pool).
+        NappletRequestRouter.routeInc(launch.declared, payload)?.let { outcome ->
+            val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
+            when (outcome) {
+                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, ::send, outcome.request)?.let { send(withId(it, id)) }
+                is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
+                else -> {}
+            }
+            // Closed meanwhile: close() may have left the bus before this put the window back on it.
+            if (closed) runtime.incBus.remove(this)
+            return
+        }
         val arrivedAt = runtime.liveSubscriptions.arrival()
         scope.launch {
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
@@ -584,7 +597,7 @@ class CefNappletSession(
                 is NappletRequestRouter.Outcome.OpenSubscription ->
                     runtime.liveSubscriptions.open(this@CefNappletSession, outcome.subId, outcome.filters, account, arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt, ::send)
                 is NappletRequestRouter.Outcome.CloseSubscription -> runtime.liveSubscriptions.close(this@CefNappletSession, outcome.subId, arrivedAt)
-                // The inc bus is not offered on desktop (INC is not a supported NAP domain).
+                // NAP-INC was routed above, before this coroutine started.
                 else -> {}
             }
         }
@@ -704,6 +717,7 @@ class CefNappletSession(
         files?.close()
         fsSession?.close()
         runtime.liveSubscriptions.closeAllFor(this)
+        runtime.incBus.remove(this)
         runtime.attendance.forget(this)
         if (isWebsite) runtime.routes.release(this)
         scope.cancel()

@@ -109,6 +109,7 @@
     // identity.changed push: the active user's key changed (account switch / connect / disconnect).
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
+    if (msg.type && msg.type.indexOf('inc.') === 0 && incIncoming(msg)) return;
     if (msg.type === 'fs.changed') { fsHandlers.slice().forEach(function(h){ try { h(msg.change); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
@@ -150,6 +151,156 @@
   }
   function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
   function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  // NAP-INC: topics and channels between napplets, routed by the shell under runtime-assigned endpoint
+  // identifiers. Several on(topic) handlers share one shell subscription per topic: the wire's
+  // inc.unsubscribe drops the whole topic, so it goes out only when the last handler closes.
+  var incTopics = {}, incChannels = {}, incUnclaimed = [], incOpenedHandlers = [];
+  // How many unclaimed inbound handles, or undelivered messages on one channel, the binding keeps.
+  // Past it the channel is closed (NAP-INC: never drop them silently).
+  var INC_BUFFER = 256;
+  function incLater(fn){ Promise.resolve().then(fn); }
+  function incSafe(cb, arg){ try { cb(arg); } catch (_) {} }
+  function incRemove(list, item){ var i = list.indexOf(item); if (i >= 0) list.splice(i, 1); }
+  // Convention URI napplet:<archetype>/<intent>?a=b -> stable topic + text payload { a: 'b' }.
+  // Values stay text (a '+' is a plus); a fragment, bad percent-encoding, a repeated name, or a query
+  // together with an explicit payload is refused before anything is sent.
+  function incTranspose(topic, payload, hasPayload){
+    if (typeof topic !== 'string' || topic === '') throw new TypeError('inc topic must be a non-empty string');
+    if (topic.indexOf('napplet:') !== 0) return { topic: topic, payload: payload, hasPayload: hasPayload };
+    if (topic.indexOf('#') >= 0) throw new TypeError('inc convention URI must not have a fragment');
+    var q = topic.indexOf('?');
+    if (q < 0) return { topic: topic, payload: payload, hasPayload: hasPayload };
+    var stable = topic.substring(0, q), query = topic.substring(q + 1);
+    if (query === '') return { topic: stable, payload: payload, hasPayload: hasPayload };
+    if (hasPayload) throw new TypeError('inc convention URI query and an explicit payload cannot be combined');
+    var params = {};
+    query.split('&').forEach(function(pair){
+      if (pair === '') return;
+      var eq = pair.indexOf('=');
+      var name, value;
+      try {
+        name = decodeURIComponent(eq < 0 ? pair : pair.substring(0, eq));
+        value = eq < 0 ? '' : decodeURIComponent(pair.substring(eq + 1));
+      } catch (_) { throw new TypeError('inc convention URI has malformed percent-encoding'); }
+      if (Object.prototype.hasOwnProperty.call(params, name)) throw new TypeError('inc convention URI repeats ' + name);
+      params[name] = value;
+    });
+    return { topic: stable, payload: params, hasPayload: true };
+  }
+  function incChannel(channelId, peer){
+    var ch = incChannels[channelId];
+    if (ch) { if (peer && !ch.handle.peer) ch.handle.peer = peer; return ch; }
+    ch = { handlers: [], closedHandlers: [], buffer: [], closed: null, closing: false };
+    incChannels[channelId] = ch;
+    function closeChannel(){ if (ch.closed || ch.closing) return; ch.closing = true; post('inc.channel.close', { channelId: channelId }); }
+    ch.close = closeChannel;
+    ch.handle = {
+      id: channelId,
+      peer: peer || '',
+      emit: function(payload){
+        if (ch.closed || ch.closing) return;
+        var env = { channelId: channelId }; if (payload !== undefined) env.payload = payload;
+        post('inc.channel.emit', env);
+      },
+      on: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        ch.handlers.push(handler);
+        // Messages that came before anyone listened go to the first handler, in order.
+        var queued = ch.buffer; ch.buffer = [];
+        queued.forEach(function(event){ incSafe(handler, event); });
+        return { close: function(){ incRemove(ch.handlers, handler); } };
+      },
+      onClosed: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        if (ch.closed) { var record = ch.closed; incLater(function(){ incSafe(handler, record); }); return { close: function(){} }; }
+        ch.closedHandlers.push(handler);
+        return { close: function(){ incRemove(ch.closedHandlers, handler); } };
+      },
+      close: closeChannel
+    };
+    return ch;
+  }
+  function incIncoming(msg){
+    if (msg.type === 'inc.event') {
+      var topic = incTopics[msg.topic]; if (!topic) return true;
+      var event = { topic: msg.topic, sender: msg.sender }; if (msg.payload !== undefined) event.payload = msg.payload;
+      topic.handlers.slice().forEach(function(h){ incSafe(h, event); });
+      return true;
+    }
+    if (msg.type === 'inc.channel.opened') {
+      if (typeof msg.channelId !== 'string') return true;
+      var opened = incChannel(msg.channelId, msg.peer);
+      if (incOpenedHandlers.length) incOpenedHandlers.slice().forEach(function(h){ incSafe(h, opened.handle); });
+      else if (incUnclaimed.length >= INC_BUFFER) opened.close();
+      else incUnclaimed.push(opened);
+      return true;
+    }
+    if (msg.type === 'inc.channel.event') {
+      if (typeof msg.channelId !== 'string') return true;
+      var ch = incChannel(msg.channelId, null); if (ch.closed || ch.closing) return true;
+      var cev = { channelId: msg.channelId, sender: msg.sender }; if (msg.payload !== undefined) cev.payload = msg.payload;
+      if (ch.handlers.length) ch.handlers.slice().forEach(function(h){ incSafe(h, cev); });
+      else if (ch.buffer.length >= INC_BUFFER) ch.close();
+      else ch.buffer.push(cev);
+      return true;
+    }
+    if (msg.type === 'inc.channel.closed') {
+      if (typeof msg.channelId !== 'string') return true;
+      var gone = incChannel(msg.channelId, null); if (gone.closed) return true;
+      var record = { channelId: msg.channelId }; if (typeof msg.reason === 'string') record.reason = msg.reason;
+      gone.closed = record;
+      delete incChannels[msg.channelId];
+      gone.closedHandlers.splice(0).forEach(function(h){ incSafe(h, record); });
+      return true;
+    }
+    return false;
+  }
+  var incDomain = {
+    emit: function(topic, payload){
+      var routed = incTranspose(topic, payload, arguments.length > 1 && payload !== undefined);
+      var env = { topic: routed.topic }; if (routed.hasPayload) env.payload = routed.payload;
+      post('inc.emit', env);
+    },
+    on: function(topicName, handler){
+      if (typeof topicName !== 'string' || topicName === '') throw new TypeError('inc topic must be a non-empty string');
+      if (typeof handler !== 'function') throw new TypeError('inc handler must be a function');
+      var topic = incTopics[topicName];
+      if (!topic) {
+        topic = incTopics[topicName] = { handlers: [] };
+        topic.ready = call('inc.subscribe', { topic: topicName }).then(function(){}, function(err){
+          // Not registered: forget it, so a later on() asks again.
+          if (incTopics[topicName] === topic) delete incTopics[topicName];
+          throw err;
+        });
+        topic.ready.catch(function(){});
+      }
+      topic.handlers.push(handler);
+      var closed = false;
+      var subscription = { close: function(){
+        if (closed) return; closed = true;
+        incRemove(topic.handlers, handler);
+        if (!topic.handlers.length && incTopics[topicName] === topic) { delete incTopics[topicName]; post('inc.unsubscribe', { topic: topicName }); }
+      } };
+      // Settles once the shell registered the topic, or rejects with its reason.
+      Object.defineProperty(subscription, 'ready', { value: topic.ready, enumerable: false });
+      return subscription;
+    },
+    channel: {
+      open: function(target){
+        if (typeof target !== 'string' || target === '') return Promise.reject(new TypeError('inc channel target must be an endpoint identifier'));
+        return call('inc.channel.open', { target: target }).then(function(m){ return incChannel(m.channelId, m.peer || target).handle; });
+      },
+      onOpened: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        incOpenedHandlers.push(handler);
+        var waiting = incUnclaimed; incUnclaimed = [];
+        waiting.forEach(function(ch){ incSafe(handler, ch.handle); });
+        return { close: function(){ incRemove(incOpenedHandlers, handler); } };
+      },
+      list: function(){ return field(call('inc.channel.list'), 'channels').then(function(list){ return Array.isArray(list) ? list : []; }); },
+      broadcast: function(payload){ var env = {}; if (payload !== undefined) env.payload = payload; post('inc.channel.broadcast', env); }
+    }
+  };
   // Build the methods Amethyst actually implements, then project only the explicit domains the
   // trusted host authorized for this launch. Domain-object presence is the NIP-5D availability
   // signal; there is deliberately no legacy window.napplet.shell capability probe.
@@ -294,6 +445,7 @@
         } };
       }
     },
+    inc: incDomain,
     theme: {
       get: function(){ return field(call('theme.get'), 'theme'); },
       onChanged: function(handler){

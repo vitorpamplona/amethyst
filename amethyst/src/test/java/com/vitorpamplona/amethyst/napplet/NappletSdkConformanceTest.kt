@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
@@ -269,8 +270,9 @@ class NappletSdkConformanceTest {
     // ---------- still-open gaps ----------
 
     @Test
-    fun gapIncIsNotModeled() {
-        // inter-napplet comms (inc.emit / inc.subscribe / inc.event) are not modeled. Audit ➖.
+    fun incIsTheBusNotTheBroker() {
+        // NAP-INC goes to the host's inc bus, never to the broker: the broker decodes no inc.* request.
         assertNull(NappletProtocolJson.decodeRequest("""{"type":"inc.emit","topic":"t"}"""))
+        assertEquals(NappletIncRequest.Emit("t", null), NappletProtocolJson.decodeIncRequest("""{"type":"inc.emit","topic":"t"}"""))
     }
 }

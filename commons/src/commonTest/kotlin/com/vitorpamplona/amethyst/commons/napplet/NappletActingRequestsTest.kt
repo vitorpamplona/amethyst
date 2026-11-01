@@ -34,6 +34,8 @@ class NappletActingRequestsTest {
             "upload.upload",
             "notify.create",
             "inc.emit",
+            "inc.channel.emit",
+            "inc.channel.broadcast",
             "nostr.signEvent",
             "nostr.nip44Encrypt",
             "nostr.nip44Decrypt",

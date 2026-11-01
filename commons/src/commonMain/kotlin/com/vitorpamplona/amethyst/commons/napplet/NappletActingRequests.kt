@@ -38,6 +38,8 @@ object NappletActingRequests {
             "upload.upload",
             "notify.create",
             "inc.emit",
+            "inc.channel.emit",
+            "inc.channel.broadcast",
             // NAP-FS: a picker pops up over whatever the user is doing, and a write changes their file.
             "fs.pickFile",
             "fs.pickFiles",
