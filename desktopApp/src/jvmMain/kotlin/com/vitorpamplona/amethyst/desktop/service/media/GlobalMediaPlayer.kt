@@ -154,6 +154,9 @@ object GlobalMediaPlayer {
 
     private const val RETIRE_DELAY_MS = 2_000L
 
+    // The longest an open waits for its video's index to land on disk (see prefetchIndex).
+    private const val INDEX_PREFETCH_TIMEOUT_MS = 20_000L
+
     // How long a retired engine may take to finish an open still in flight before it goes anyway.
     private const val RETIRE_LOAD_TIMEOUT_MS = 15_000L
 
@@ -625,6 +628,8 @@ object GlobalMediaPlayer {
                 heldEngines.update { it - engine }
             }
             if (shutDown || engine in retired) return@launch
+            prefetchIndex(url)
+            if (shutDown || engine in retired) return@launch
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
                 .onSuccess {
                     // Paused on the frame where this video was the last time it played, so its card
@@ -672,6 +677,15 @@ object GlobalMediaPlayer {
                     }
                 }.first()
         }
+    }
+
+    /**
+     * Gets [url]'s index on disk before an engine opens it (see [VideoIndexPrefetch]): the macOS and
+     * Windows engines' 5 s wait for the video's size starts at the open. Bounded, so a host that
+     * stalls only delays the open.
+     */
+    private suspend fun prefetchIndex(url: String) {
+        withTimeoutOrNull(INDEX_PREFETCH_TIMEOUT_MS) { VideoIndexPrefetch.prefetch(url) }
     }
 
     /** Returns once [engine], a card's, has started opening its video: its paused open may be held back. */
@@ -1352,7 +1366,12 @@ object GlobalMediaPlayer {
         downloading: (Boolean) -> Unit,
     ): Boolean {
         val source = resolveSource(url, state, downloading) ?: return false
-        if (source.file != null) player.openFile(PlatformFile(source.file)) else player.openUri(source.uri)
+        if (source.file != null) {
+            player.openFile(PlatformFile(source.file))
+        } else {
+            prefetchIndex(url)
+            player.openUri(source.uri)
+        }
         return true
     }
 

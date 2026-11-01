@@ -24,8 +24,10 @@ import com.sun.net.httpserver.HttpExchange
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.desktop.app.DesktopInstance
 import com.vitorpamplona.quartz.utils.Log
+import okhttp3.Response
 import java.io.File
 import java.io.IOException
+import java.io.OutputStream
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -48,12 +50,15 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Only plain http(s) media is kept. Like the poster cache, nothing that went over Tor and nothing
  * encrypted touches the disk; HLS is left alone (a live playlist must not be replayed). The whole
- * cache stays under [MAX_DISK_BYTES], oldest first out, and a file over [MAX_FILE_BYTES] is not kept.
+ * cache stays under [MAX_DISK_BYTES], oldest first out, and of a file over [MAX_FILE_BYTES] only its
+ * first [MAX_HEAD_BYTES] are kept: enough for the index at the front of an hour-long episode, which
+ * [VideoIndexPrefetch] fetches before the engine opens it.
  */
 object VideoDiskCache {
     private const val TAG = "VideoDiskCache"
     private const val MAX_DISK_BYTES = 2L * 1024 * 1024 * 1024
     private const val MAX_FILE_BYTES = 256L * 1024 * 1024
+    internal const val MAX_HEAD_BYTES = 16L * 1024 * 1024
     private const val TRIM_EVERY_BYTES = 64L * 1024 * 1024
     private const val TRIM_EVERY_MILLIS = 60_000L
 
@@ -132,7 +137,9 @@ object VideoDiskCache {
         total: Long,
         contentType: String?,
     ): Writer? {
-        if (total <= 0 || total > MAX_FILE_BYTES || start < 0 || start >= total) return null
+        if (total <= 0 || start < 0 || start >= total) return null
+        val limit = if (total > MAX_FILE_BYTES) MAX_HEAD_BYTES else total
+        if (start >= limit) return null
         val entry = entryFor(url, create = true, total = total, contentType = contentType) ?: return null
         // The server now reports another size: what is on disk is another file.
         if (entry.total != total) {
@@ -140,7 +147,84 @@ object VideoDiskCache {
             entries.remove(url)
             return writer(url, start, total, contentType)
         }
-        return Writer(entry, start)
+        return Writer(entry, start, limit)
+    }
+
+    /** Where the bytes of [response] for [url] go on disk too, or null when they are not kept. */
+    fun writerFor(
+        url: String,
+        response: Response,
+    ): Writer? {
+        val type = response.header("Content-Type")
+        if (response.code == 206) {
+            // "bytes <first>-<last>/<total>"
+            val cr = response.header("Content-Range") ?: return null
+            val first = cr.substringAfter("bytes ", "").substringBefore('-').toLongOrNull() ?: return null
+            val total = cr.substringAfter('/', "").toLongOrNull() ?: return null
+            return writer(url, first, total, type)
+        }
+        if (response.code == 200) {
+            val total = response.body.contentLength().takeIf { it > 0 } ?: return null
+            return writer(url, 0, total, type)
+        }
+        return null
+    }
+
+    /**
+     * The part of a GET for [url] with [rangeHeader] that is on disk when it holds the start of the
+     * range but not all of it: the relay sends that from disk and fetches only the rest. Null when
+     * nothing at the start is held, or all of it is (then [serve] answers it).
+     */
+    fun heldPrefix(
+        url: String,
+        rangeHeader: String?,
+    ): HeldPrefix? {
+        val entry = entryFor(url, create = false) ?: return null
+        val range = parseRange(rangeHeader, entry.total) ?: return null
+        val end = entry.heldThrough(range.first)
+        if (end <= range.first || end > range.last) return null
+        return HeldPrefix(range, end, entry.total, entry.contentType)
+    }
+
+    /** The requested [range] of a file [total] bytes long, of which bytes up to [heldEnd] (exclusive) are on disk. */
+    class HeldPrefix(
+        val range: LongRange,
+        val heldEnd: Long,
+        val total: Long,
+        val contentType: String,
+    )
+
+    /** Writes [url]'s bytes from [first] up to [end] (exclusive), which are on disk, to [out]. */
+    fun copyHeld(
+        url: String,
+        first: Long,
+        end: Long,
+        out: OutputStream,
+    ) {
+        val entry = entryFor(url, create = false) ?: throw IOException("$url is not on disk")
+        entry.touch()
+        RandomAccessFile(entry.data, "r").use { file ->
+            file.seek(first)
+            val buf = ByteArray(64 * 1024)
+            var left = end - first
+            while (left > 0) {
+                val n = file.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                if (n < 0) throw IOException("$url is shorter on disk than its index says")
+                out.write(buf, 0, n)
+                left -= n
+            }
+        }
+    }
+
+    /** [url]'s first bytes on disk, up to [max] and without a gap; null when it holds none. */
+    fun readStart(
+        url: String,
+        max: Int,
+    ): ByteArray? {
+        val entry = entryFor(url, create = false) ?: return null
+        val length = minOf(entry.heldFromStart(), max.toLong()).toInt()
+        if (length <= 0) return null
+        return RandomAccessFile(entry.data, "r").use { file -> ByteArray(length).also { file.readFully(it) } }
     }
 
     /**
@@ -162,15 +246,20 @@ object VideoDiskCache {
     class Writer internal constructor(
         private val entry: Entry,
         private var position: Long,
+        // Nothing at or past this is kept: the end of the file, or of the head kept of a big one.
+        private val limit: Long,
     ) {
         fun write(
             buf: ByteArray,
             count: Int,
         ) {
             if (count <= 0) return
-            entry.write(position, buf, count)
+            val kept = minOf(count.toLong(), limit - position).toInt()
+            if (kept > 0) {
+                entry.write(position, buf, kept)
+                writtenSinceTrim.addAndGet(kept.toLong())
+            }
             position += count
-            writtenSinceTrim.addAndGet(count.toLong())
         }
 
         fun close() {
@@ -266,6 +355,10 @@ object VideoDiskCache {
             first: Long,
             last: Long,
         ): Boolean = spans.any { first >= it.first && last <= it.last }
+
+        /** Where the held bytes starting at [first] end (exclusive); [first] itself when it isn't held. */
+        @Synchronized
+        fun heldThrough(first: Long): Long = spans.firstOrNull { first in it }?.let { it.last + 1 } ?: first
 
         /** How many bytes from the start of the file it holds without a gap. */
         @Synchronized
