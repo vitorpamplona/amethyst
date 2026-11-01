@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
+import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletIncRequest
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -71,22 +72,50 @@ object NappletRequestRouter {
             val payloads: List<String>,
         ) : Outcome
 
-        /** Subscribe this napplet to the inc bus [topic]; it then receives `inc.event` pushes (fire-and-forget). */
-        data class SubscribeInc(
-            val topic: String,
-        ) : Outcome
-
-        /** Stop receiving inc-bus [topic] events (fire-and-forget). */
-        data class UnsubscribeInc(
-            val topic: String,
-        ) : Outcome
-
-        /** Emit [payloadRaw] on inc-bus [topic]; the host fans it out as `inc.event` to other subscribers. */
-        data class EmitInc(
-            val topic: String,
-            val payloadRaw: String,
+        /**
+         * A NAP-INC message for the host's `NappletIncBus`, which routes it to the other napplets and
+         * may answer it. Only for a napplet that declared `inc`.
+         */
+        data class Inc(
+            val request: NappletIncRequest,
         ) : Outcome
     }
+
+    /**
+     * The [Outcome] of an `inc.*` [payload], or null when it is not one. Never suspends, so a host
+     * calls it on the thread the message arrived on, before anything that could reorder it: two
+     * emits, or a channel's messages, must reach the bus in the order the napplet sent them. A host
+     * that already read the envelope's type passes it as [requestType] to save a parse.
+     *
+     * NAP-INC is authorized on the `inc` declaration alone. Without it, the requests that expect an
+     * answer get one that says so and the rest are dropped. A known request that is malformed gets an
+     * error when it has an id to answer; an unknown `inc.*` type stays silent, as other unknown types do.
+     */
+    fun routeInc(
+        declared: Set<NappletCapability>,
+        payload: String,
+        requestType: String? = runCatching { NappletProtocolJson.readType(payload) }.getOrNull(),
+    ): Outcome? {
+        if (requestType == null || !requestType.startsWith("inc.")) return null
+        val request = runCatching { NappletProtocolJson.decodeIncRequest(payload) }.getOrNull()
+        if (request == null) {
+            val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
+            return if (id != null && requestType in NappletProtocolJson.INC_REQUEST_TYPES) {
+                Outcome.Reply(NappletProtocolJson.encodeIncFailure(requestType, "malformed request"))
+            } else {
+                Outcome.Ignore
+            }
+        }
+        if (NappletCapability.INC in declared) return Outcome.Inc(request)
+        return when (request) {
+            is NappletIncRequest.Subscribe -> Outcome.Reply(NappletProtocolJson.encodeIncSubscribeResult(INC_UNAVAILABLE))
+            is NappletIncRequest.ChannelOpen -> Outcome.Reply(NappletProtocolJson.encodeIncChannelOpenResult(null, null, INC_UNAVAILABLE))
+            is NappletIncRequest.ChannelList -> Outcome.Reply(NappletProtocolJson.encodeIncChannelListResult(emptyList()))
+            else -> Outcome.Ignore
+        }
+    }
+
+    private const val INC_UNAVAILABLE = "inc unavailable"
 
     /**
      * [files] is the surface's NAP-FS session ([NappletFsSession]), which the host makes per running
@@ -100,6 +129,7 @@ object NappletRequestRouter {
         files: NappletFsSession? = null,
     ): Outcome {
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return Outcome.Ignore
+        if (requestType.startsWith("inc.")) return routeInc(declared, payload, requestType) ?: Outcome.Ignore
 
         // Fire-and-forget edge ops that never reach the broker.
         when (requestType) {
@@ -108,24 +138,6 @@ object NappletRequestRouter {
                 return if (subId != null) Outcome.CloseSubscription(subId) else Outcome.Ignore
             }
             "resource.cancel" -> return Outcome.Ignore
-            // inc bus: a topic pub/sub between napplets/services, authorized on the INC declaration
-            // alone. The host owns the cross-session fan-out.
-            "inc.subscribe" -> {
-                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
-                return if (topic != null && NappletCapability.INC in declared) Outcome.SubscribeInc(topic) else Outcome.Ignore
-            }
-            "inc.unsubscribe" -> {
-                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
-                return if (topic != null) Outcome.UnsubscribeInc(topic) else Outcome.Ignore
-            }
-            "inc.emit" -> {
-                val topic = runCatching { NappletProtocolJson.readTopic(payload) }.getOrNull()
-                return if (topic != null && NappletCapability.INC in declared) {
-                    Outcome.EmitInc(topic, runCatching { NappletProtocolJson.readPayloadRaw(payload) }.getOrDefault("null"))
-                } else {
-                    Outcome.Ignore
-                }
-            }
         }
 
         val request =

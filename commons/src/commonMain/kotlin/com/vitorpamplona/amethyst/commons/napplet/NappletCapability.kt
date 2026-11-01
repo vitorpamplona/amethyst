@@ -77,7 +77,11 @@ enum class NappletCapability {
     /** `notify` — create/list/dismiss user-facing notifications (`notify.*`). */
     NOTIFY,
 
-    /** `inc` — a topic pub/sub bus between napplets/services (`inc.emit`/`inc.event`). */
+    /**
+     * `inc` — NAP-INC: topics (`inc.emit` / `inc.event`) and point-to-point channels between the
+     * napplets running in this app, routed by the host's `NappletIncBus` under runtime-assigned
+     * endpoint identifiers. Authorized on the declaration alone, like the upstream reference shell.
+     */
     INC,
 
     /**
@@ -147,11 +151,12 @@ enum class NappletCapability {
                 "theme" -> THEME
                 "outbox" -> OUTBOX
                 "fs" -> FS
+                "inc" -> INC
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc")
     }
 }
 

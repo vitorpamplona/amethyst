@@ -215,6 +215,7 @@ class CefNappletSessionTest {
         runtime: DesktopNappletRuntime,
         servedBytes: ByteArray = html,
         offscreen: OffscreenNappletView? = null,
+        declared: Set<NappletCapability> = setOf(NappletCapability.STORAGE),
     ): CefNappletSession {
         val hash = sha256(html).toHexKey()
         blobs[hash] = servedBytes
@@ -230,8 +231,8 @@ class CefNappletSessionTest {
             NappletLaunch(
                 identity = NappletIdentity(author.pubKey.toHexKey(), "probe", hash),
                 profile = HostProfile.NAPPLET,
-                declared = setOf(NappletCapability.STORAGE),
-                requires = listOf("storage"),
+                declared = declared,
+                requires = declared.map { it.name.lowercase() },
                 title = "Probe",
                 paths = listOf(PathTag("/index.html", hash)),
                 servers = listOf(serverUrl),
@@ -352,6 +353,62 @@ class CefNappletSessionTest {
             withTimeout(60_000) { while (windowStorage.values["early"] == null) delay(100) }
             assertEquals("window", windowStorage.values["early"], "the window opened as the note's run closed reaches the broker")
             kept.close()
+        }
+
+    @Test
+    fun twoNappletsTalkOverInc() =
+        runBlocking {
+            val runtime = cefRuntime()
+            val declared = setOf(NappletCapability.STORAGE, NappletCapability.INC)
+
+            // Listens on a topic; on the first event it opens a channel back to whoever sent it.
+            val listener =
+                """
+                <!doctype html><html><body><script>
+                var inc = window.napplet.inc, opened = false;
+                var sub = inc.on('napplet:profile/open', function (e) {
+                  if (opened) return; opened = true;
+                  window.napplet.storage.setItem('pubkey', e.payload.pubkey);
+                  window.napplet.storage.setItem('sender', e.sender);
+                  inc.channel.open(e.sender).then(function (ch) {
+                    ch.on(function (m) { window.napplet.storage.setItem('ack', JSON.stringify(m.payload)); ch.close(); });
+                    ch.emit({ hello: 'speaker' });
+                  }, function (err) { window.napplet.storage.setItem('openError', String(err.message)); });
+                });
+                sub.ready.then(function () { window.napplet.storage.setItem('ready', 'yes'); });
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+            // Emits a convention URI until a channel opens to it, answers on it, and records its end.
+            val speaker =
+                """
+                <!doctype html><html><body><script>
+                var inc = window.napplet.inc;
+                var timer = setInterval(function () { inc.emit('napplet:profile/open?pubkey=ab%2Bc'); }, 200);
+                inc.channel.onOpened(function (ch) {
+                  clearInterval(timer);
+                  window.napplet.storage.setItem('peer', ch.peer);
+                  ch.on(function (m) { window.napplet.storage.setItem('hello', m.payload.hello); ch.emit({ ok: true }); });
+                  ch.onClosed(function (c) { window.napplet.storage.setItem('closed', c.channelId === ch.id ? 'yes' : 'wrong id'); });
+                });
+                </script></body></html>
+                """.trimIndent().encodeToByteArray()
+
+            val listenerStorage = RecordingStorage()
+            val speakerStorage = RecordingStorage()
+            show(session(listener, listenerStorage, runtime, declared = declared))
+            withTimeout(60_000) { while (listenerStorage.values["ready"] == null) delay(100) }
+            show(session(speaker, speakerStorage, runtime, declared = declared))
+
+            withTimeout(60_000) { while (speakerStorage.values["closed"] == null || listenerStorage.values["ack"] == null) delay(100) }
+            assertEquals("ab+c", listenerStorage.values["pubkey"], "the convention URI's query reached the listener as its payload")
+            val sender = listenerStorage.values["sender"]!!
+            assertTrue(sender.matches(Regex("[0-9a-f]{32}")), "the sender is a runtime endpoint id, not the d tag: $sender")
+            assertEquals("speaker", speakerStorage.values["hello"])
+            assertEquals("""{"ok":true}""", listenerStorage.values["ack"])
+            assertEquals("yes", speakerStorage.values["closed"], "closing the channel told the other end")
+            assertFalse(listenerStorage.values.containsKey("openError"))
+            assertTrue(speakerStorage.values["peer"]!!.matches(Regex("[0-9a-f]{32}")))
+            assertTrue(speakerStorage.values["peer"] != sender, "each napplet has its own endpoint id")
         }
 
     @Test
