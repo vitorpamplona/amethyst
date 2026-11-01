@@ -48,6 +48,11 @@ data class EncryptedUploadResult(
 
 class UploadOrchestrator(
     private val client: BlossomClient = BlossomClient(),
+    /**
+     * The client for a server: a fallback server goes out on its own route (the app may send one
+     * server through Tor and another not), not on the selected server's. Defaults to [client].
+     */
+    private val clientFor: (serverBaseUrl: String) -> BlossomClient = { client },
 ) {
     /**
      * Upload an image file to a Blossom server, optionally re-encoding
@@ -141,13 +146,16 @@ class UploadOrchestrator(
             // 5. Upload.
             val result =
                 uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
-                    client.upload(
-                        file = finalFile,
-                        contentType = metadata.mimeType,
-                        serverBaseUrl = server,
-                        authHeader = authHeader,
-                        onProgress = onProgress,
-                    )
+                    val blossom = clientFor(server)
+                    blossom.uploadOrHeld(metadata.sha256, metadata.size, metadata.mimeType, server) {
+                        blossom.upload(
+                            file = finalFile,
+                            contentType = metadata.mimeType,
+                            serverBaseUrl = server,
+                            authHeader = authHeader,
+                            onProgress = onProgress,
+                        )
+                    }
                 }
 
             return UploadResult(blossom = result, metadata = metadata)
@@ -248,13 +256,16 @@ class UploadOrchestrator(
             // encrypted hash stay valid wherever it lands.
             val result =
                 uploadToFirstAccepting(serverBaseUrl, fallbackServerBaseUrls) { server ->
-                    client.upload(
-                        bytes = encrypted,
-                        contentType = uploadContentType,
-                        serverBaseUrl = server,
-                        authHeader = authHeader,
-                        onProgress = onProgress,
-                    )
+                    val blossom = clientFor(server)
+                    blossom.uploadOrHeld(encryptedHash, encryptedSize.toLong(), uploadContentType, server) {
+                        blossom.upload(
+                            bytes = encrypted,
+                            contentType = uploadContentType,
+                            serverBaseUrl = server,
+                            authHeader = authHeader,
+                            onProgress = onProgress,
+                        )
+                    }
                 }
 
             return EncryptedUploadResult(

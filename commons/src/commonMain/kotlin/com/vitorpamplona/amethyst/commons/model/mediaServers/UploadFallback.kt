@@ -29,7 +29,8 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
  *
  * Servers differ in what they accept, and nothing tells the user in advance: primal,
  * azzamo and blossom.band answer an encrypted (application/octet-stream) blob with
- * 415, some demand payment, some are simply down. With a single target, picking the
+ * 415, nostr.download refuses an image it finds perceptually identical to one it holds
+ * (409, `X-Identical-Media`), some demand payment, some are simply down. With a single target, picking the
  * wrong one meant a failed upload and a retry by hand; the settings screen already told
  * users uploads "try each server from the top down".
  *

@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerName
 import com.vitorpamplona.amethyst.commons.model.mediaServers.ServerType
+import com.vitorpamplona.amethyst.commons.model.mediaServers.blossomUploadOrder
 import com.vitorpamplona.amethyst.commons.notices.UserNoticeSink
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.desktop_upload_server_not_supported
@@ -86,7 +87,7 @@ import org.jetbrains.skia.Image as SkiaImage
  * [videoCompressor], which transcodes it with the composer's quality level or remuxes the original
  * without metadata; every server type then starts from the bytes the JVM pipeline prepares
  * (re-encoded, or stripped of metadata). Blossom and Buzz workspaces go through its BUD-02 upload
- * with fallbacks, and NIP-96 through the shared [Nip96Uploader].
+ * (a Blossom upload falls back through the picker's other servers, as on Android), and NIP-96 through the shared [Nip96Uploader].
  */
 class DesktopMediaUploader(
     private val clientFor: (serverBaseUrl: String) -> BlossomClient,
@@ -131,6 +132,16 @@ class DesktopMediaUploader(
 
     private fun isBlossom(server: ServerName) = server.type == ServerType.Blossom || server.type == ServerType.BuzzWorkspace
 
+    // Each server it tries goes out on its own client, so a fallback keeps its own route.
+    private fun pipeline(server: ServerName) = BlossomUploadPipeline(clientFor(server.baseUrl), clientFor)
+
+    // After the selected server, the rest of the Blossom servers the picker offered, as Android tries
+    // them (blossomUploadOrder). A Buzz workspace keeps its single target.
+    private fun fallbacks(
+        server: ServerName,
+        account: Account,
+    ): List<String> = blossomUploadOrder(server, account.blossomServers.hostNameFlow.value).drop(1).map { it.baseUrl }
+
     private suspend fun notSupported(progress: UploadOrchestrator) = progress.error(UploadError.FAILED_TO_UPLOAD_MEDIA, loadStringRes(Res.string.desktop_upload_server_not_supported))
 
     private fun failed(
@@ -162,10 +173,11 @@ class DesktopMediaUploader(
             withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING, onStrippingFailed = onStrippingFailed) { file, prepared ->
                 progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
                 val result =
-                    BlossomUploadPipeline(clientFor(server.baseUrl)).upload(
+                    pipeline(server).upload(
                         file = file,
                         alt = alt,
                         serverBaseUrl = server.baseUrl,
+                        fallbackServerBaseUrls = fallbacks(server, account),
                         signer = forcedSigner ?: account.signer,
                         stripExif = stripMetadata && !prepared,
                         quality = if (prepared) null else compressionQuality.toTarget(),
@@ -212,10 +224,11 @@ class DesktopMediaUploader(
             withVideoPrepared(progress, uri, mimeType, compressionQuality, useH265, stripMetadata, convertGifToMp4, BLOSSOM_COMPRESSING_CEILING, onStrippingFailed = onStrippingFailed) { file, prepared ->
                 progress.updateState(BLOSSOM_COMPRESSING_CEILING, UploadingState.Uploading)
                 val result =
-                    BlossomUploadPipeline(clientFor(server.baseUrl)).uploadEncrypted(
+                    pipeline(server).uploadEncrypted(
                         file = file,
                         cipher = cipher,
                         serverBaseUrl = server.baseUrl,
+                        fallbackServerBaseUrls = fallbacks(server, account),
                         signer = forcedSigner ?: account.signer,
                         stripExif = stripMetadata && !prepared,
                         quality = if (prepared) null else compressionQuality.toTarget(),

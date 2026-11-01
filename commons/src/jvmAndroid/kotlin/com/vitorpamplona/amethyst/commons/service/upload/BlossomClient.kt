@@ -28,6 +28,7 @@ import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentProof
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomPaymentRequired
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUploadResult
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -247,6 +248,37 @@ open class BlossomClient(
         }
 
     /**
+     * The blob [put] stores on [serverBaseUrl], or, when the server refuses the upload, the blob it
+     * already holds under [hash]: a server may answer an upload of a blob it has with an error (a
+     * 409) instead of its descriptor, as BUD-02 asks. A blob under that exact hash is these bytes, so
+     * the upload is done; anything else fails as it was.
+     *
+     * A refusal that names some other blob is not that: nostr.download refuses an image it finds
+     * perceptually identical to one it holds (409 with `X-Identical-Media` naming that blob), which
+     * is different bytes under a different hash. That stays a failure, and the caller moves on to its
+     * next server.
+     *
+     * Only for an upload stored as sent (BUD-02 `/upload`): a BUD-05 `/media` upload may be
+     * transformed, so the original hash says nothing about what the server would have kept.
+     */
+    suspend fun uploadOrHeld(
+        hash: HexKey,
+        size: Long,
+        contentType: String?,
+        serverBaseUrl: String,
+        put: suspend () -> BlossomUploadResult,
+    ): BlossomUploadResult =
+        try {
+            put()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (!has(hash, serverBaseUrl)) throw e
+            Log.d(TAG) { "$serverBaseUrl refused $hash, which it already holds: ${e.message}" }
+            heldDescriptor(hash, size, contentType, serverBaseUrl)
+        }
+
+    /**
      * BUD-01 HEAD probe: does [serverBaseUrl] hold [hash]? A cheap "which server
      * has which blob" check that needs no auth on most servers.
      */
@@ -408,5 +440,15 @@ open class BlossomClient(
         private val MIRROR_UNSUPPORTED_CODES = setOf(404, 405, 501)
 
         private const val CONTENT_DIGEST_HEADER = "Content-Digest"
+
+        private const val TAG = "BlossomClient"
+
+        /** What [uploadOrHeld] reports for a blob [serverBaseUrl] already holds under [hash]. */
+        fun heldDescriptor(
+            hash: HexKey,
+            size: Long,
+            contentType: String?,
+            serverBaseUrl: String,
+        ) = BlossomUploadResult(url = BlossomServerUrl.blob(serverBaseUrl, hash), sha256 = hash, size = size, type = contentType)
     }
 }

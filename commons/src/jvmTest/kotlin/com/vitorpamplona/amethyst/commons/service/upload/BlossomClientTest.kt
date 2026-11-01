@@ -109,6 +109,41 @@ class BlossomClientTest {
             .body(body)
             .build()
 
+    // A server that refuses every upload with a 409, and answers HEAD for the blob with [holdStatus].
+    private fun refusingServer(holdStatus: Int) =
+        dispatchingOkHttp { request ->
+            when (request.method) {
+                "PUT" -> response(request, 409, headers = Headers.headersOf("X-Reason", "Blob already exists."))
+                "HEAD" -> response(request, holdStatus)
+                else -> response(request, 404)
+            }
+        }
+
+    @Test
+    fun anUploadRefusedForABlobTheServerHoldsIsStored() =
+        runTest {
+            val bytes = "hi".toByteArray()
+            val hash = sha256(bytes).toHexKey()
+            val client = BlossomClient(refusingServer(holdStatus = 200))
+            val result = client.uploadOrHeld(hash, bytes.size.toLong(), "text/plain", "https://cdn.example.com") { client.upload(bytes, "text/plain", "https://cdn.example.com", "Nostr x") }
+            assertEquals("https://cdn.example.com/$hash", result.url)
+            assertEquals(hash, result.sha256)
+            assertEquals(2L, result.size)
+        }
+
+    @Test
+    fun anUploadRefusedForABlobTheServerLacksStillFails() =
+        runTest {
+            val bytes = "hi".toByteArray()
+            val hash = sha256(bytes).toHexKey()
+            val client = BlossomClient(refusingServer(holdStatus = 404))
+            val error =
+                assertFailsWith<RuntimeException> {
+                    client.uploadOrHeld(hash, bytes.size.toLong(), "text/plain", "https://cdn.example.com") { client.upload(bytes, "text/plain", "https://cdn.example.com", "Nostr x") }
+                }
+            assertTrue(error.message!!.contains("Blob already exists"), "the server's own reason is kept")
+        }
+
     @Test
     fun mirrorThrowsUnsupportedOnMissingEndpoint() =
         runTest {

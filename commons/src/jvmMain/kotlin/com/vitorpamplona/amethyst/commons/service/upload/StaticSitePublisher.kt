@@ -88,7 +88,8 @@ class StaticSitePublisher(
                 val hash = sha256(bytes).toHexKey()
                 val mime = runCatching { Files.probeContentType(file.toPath()) }.getOrNull() ?: "application/octet-stream"
                 val auth = BlossomAuth.createUploadAuth(hash, file.length(), "Upload ${file.name}", signer)
-                val result = client.upload(file, mime, server, auth)
+                // A republish sends unchanged files again; a server that already holds one may refuse it.
+                val result = client.uploadOrHeld(hash, file.length(), mime, server) { client.upload(file, mime, server, auth) }
                 require(result.sha256 == null || result.sha256.equals(hash, ignoreCase = true)) { "Upload server returned a different artifact hash" }
                 UploadedFile(webPath, hash, file.length(), result.url)
             }

@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.failed_to_delete_with_message
 import com.vitorpamplona.amethyst.commons.resources.failed_to_upload_to_server_with_message
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomPaymentException
 import com.vitorpamplona.amethyst.commons.service.upload.ReopenableStreamBody
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
@@ -192,6 +193,11 @@ class BlossomUploader {
                     response.body.use { body ->
                         convertToMediaResult(parseResults(body.string()))
                     }
+                } else if (!useMediaEndpoint && BlossomClient(client).has(hash, serverBaseUrl)) {
+                    // A server may refuse an upload of a blob it already holds instead of answering with
+                    // its descriptor. A blob under this exact hash is these bytes, so it is uploaded. (A
+                    // refusal naming a perceptually identical, different blob is not; see uploadOrHeld.)
+                    convertToMediaResult(BlossomClient.heldDescriptor(hash, length, contentType, serverBaseUrl))
                 } else if (response.code == 402) {
                     // BUD-07: paid server. Surface the payment challenge so the caller can
                     // tell the user (auto-settlement via the NIP-60 wallet is a follow-up).
