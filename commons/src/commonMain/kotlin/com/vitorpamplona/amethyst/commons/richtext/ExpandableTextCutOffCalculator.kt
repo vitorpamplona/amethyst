@@ -45,12 +45,17 @@ class ExpandableTextCutOffCalculator {
                     // if it is still too big, finds the first space or new line BEFORE the cut off.
                     val newString = content.take(SHORT_TEXT_LENGTH)
 
-                    val firstSpaceBeforeCut =
-                        newString.lastIndexOf(' ').let { if (it < 0) newString.length else it }
-                    val firstNewLineBeforeCut =
-                        newString.lastIndexOf('\n').let { if (it < 0) newString.length else it }
+                    // The last break of either kind. Each must count as missing (-1) on its own:
+                    // a text with spaces but no new line still cuts at its last space.
+                    val lastBreakBeforeCut = maxOf(newString.lastIndexOf(' '), newString.lastIndexOf('\n'))
+                    val cutBefore = if (lastBreakBeforeCut < 0) newString.length else lastBreakBeforeCut
 
-                    maxOf(firstSpaceBeforeCut, firstNewLineBeforeCut)
+                    // No break between the cut and TOO_FAR_SEARCH_THE_OTHER_WAY, so one word runs
+                    // across SHORT_TEXT_LENGTH, from after the last break before it to `min`. When
+                    // that word is a token the parser draws as a single widget (a cashu token, an
+                    // invoice, a nostr: link), cutting it leaves an unparseable fragment, and
+                    // cutting before it hides the widget behind "Show More": keep it whole.
+                    if (isAtomicToken(content, lastBreakBeforeCut + 1)) min else cutBefore
                 } else {
                     min
                 }
@@ -62,6 +67,22 @@ class ExpandableTextCutOffCalculator {
                 content.length
             }
         }
+
+        /**
+         * Whether the word at [from] is drawn as one widget whose size does not depend on its
+         * length, so it must never be split: cashu tokens, lightning invoices and LNURLs, CLINK
+         * offers and NIP-19 entities. Mirrors the prefixes `RichTextParser.wordIdentifier` checks.
+         */
+        private fun isAtomicToken(
+            content: String,
+            from: Int,
+        ): Boolean =
+            content.startsWith("cashuA", from, true) ||
+                content.startsWith("cashuB", from, true) ||
+                content.startsWith("lnbc", from, true) ||
+                content.startsWith("lnurl", from, true) ||
+                content.startsWith("noffer1", from, true) ||
+                RichTextParser.startsWithNIP19Scheme(content, from)
     }
 }
 

@@ -58,4 +58,42 @@ class ExpandableTextCutOffCalculatorTest {
     fun testImage() {
         assertEquals(350, ExpandableTextCutOffCalculator.indexToCutOff(image))
     }
+
+    // The whole content of a kind 1 note: one cashu token, far past SHORT_TEXT_LENGTH.
+    val cashuToken: String =
+        "cashuBv2FteCJodHRwczovL21pbnQubWluaWJpdHMuY2FzaC9CaXRjb2luYXVjc2F0YXSfv2FpWCEB_A7A5ZzW-gG3qI-M13_Ogf0eZLymfXUumEmSt6PDqCFhcJ-_YWEBYXN4QGM3Nzk2ODFkZTFlMWFmZTljNDExZWQxZWFkNWIyMDgzNmVhNzAzYzYwYmJiYTA5YmU1MzE1MTZhNTZjZDRjNjdhY1ghA03ZbonFOji_Gd2pwruReEH7mghH9HiV3ex2nTV2J9ls_79hYQRhc3hANjQzNmZkZWQ2MDM5NDBkNTMwMWU3NWRjNmM1ZWRkNWYyMGZmNTg2Y2FlYTYyNjNmMDcyZTIyNzY4OWM2YWFhMGFjWCED56BOO5RG5_h3KpltJjzLM4HEDfUoKteZgBKYd3oNdjr_v2FhGEBhc3hAMjQ4ODM3MWIyOTI0ZTVlYmIwODY3N2YzOTI4YjZiY2Q5MzdkMmUxMDM1ZmJiZGMzYjdjZjVjMjE1MThlZGU0OGFjWCEDoSKBhpGLEYYzO1NwArKds-BeU5Q8J5npey2_k3jDpWr______w"
+
+    @Test
+    fun aLoneCashuTokenIsNotCut() {
+        assertEquals(cashuToken.length, ExpandableTextCutOffCalculator.indexToCutOff(cashuToken))
+    }
+
+    @Test
+    fun aCashuTokenAfterProseIsNotCut() {
+        val post = "Here are some sats: " + cashuToken
+        assertEquals(post.length, ExpandableTextCutOffCalculator.indexToCutOff(post))
+    }
+
+    @Test
+    fun aCashuTokenIsKeptWholeAndTheRestIsCut() {
+        val post = cashuToken + " " + "Lorem ipsum dolor sit amet. ".repeat(40)
+        assertEquals(cashuToken.length, ExpandableTextCutOffCalculator.indexToCutOff(post))
+    }
+
+    @Test
+    fun aLongInvoiceIsNotCut() {
+        val invoice = "lnbc10u1p" + "q".repeat(600)
+        assertEquals(invoice.length, ExpandableTextCutOffCalculator.indexToCutOff(invoice))
+    }
+
+    @Test
+    fun proseBeforeAnOpaqueBlobIsCutAtItsLastSpace() {
+        val post = "Here is the dump: " + "AjL2Kc8m" + "x".repeat(800)
+        assertEquals(17, ExpandableTextCutOffCalculator.indexToCutOff(post))
+    }
+
+    @Test
+    fun anOpaqueBlobIsStillCut() {
+        assertEquals(350, ExpandableTextCutOffCalculator.indexToCutOff("AjL2Kc8m" + "x".repeat(800)))
+    }
 }
