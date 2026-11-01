@@ -449,7 +449,9 @@ class DesktopAppModules(
 
     val nip46ClientStore by lazy { DataStoreNip46ClientStore(appStores.getDataStore(DataStoreNip46ClientStore.FILE_NAME)) }
 
-    val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope) }
+    // Hydrated as it is made, as Android's Application does: until init() the registry neither reads
+    // the stored favorites nor writes any, so every pin was lost when the app closed.
+    val favoriteApps by lazy { FavoriteAppsRegistry(appStores.getDataStore(FavoriteAppsRegistry.FILE_NAME), applicationIOScope).also { it.init() } }
 
     val browserHistory by lazy { BrowserHistoryRegistry(appStores.getDataStore(BrowserHistoryRegistry.FILE_NAME), applicationIOScope) }
 

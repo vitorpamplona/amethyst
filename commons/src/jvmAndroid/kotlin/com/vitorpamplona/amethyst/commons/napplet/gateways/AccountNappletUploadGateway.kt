@@ -26,57 +26,87 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletUploadResult
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 
 /**
- * NAP-UPLOAD's `blossom` rail for a logged-in [account]: the bytes go to the first server on the
- * account's Blossom list (kind 10063), authorized by a kind 24242 upload event the account signs.
- * The napplet never sees the server, the credentials or the signer.
+ * NAP-UPLOAD's `blossom` rail for a logged-in [account]: the bytes go to the account's Blossom servers
+ * (kind 10063), in its order, authorized by a kind 24242 upload event the account signs. The napplet
+ * never sees the servers, the credentials or the signer.
  *
- * [client] gives the HTTP client for an upload to a URL, so the app's Tor choice for uploads
- * applies. A success is reported only for a blob the server stored under the hash of the bytes sent.
+ * [client] gives the HTTP client for an upload to a URL, so the app's Tor choice for uploads applies.
  */
 class AccountNappletUploadGateway(
     private val account: Account,
-    private val client: (url: String) -> OkHttpClient,
+    client: (url: String) -> OkHttpClient,
     override val maxBytes: Long = NappletUploadGateway.DEFAULT_MAX_BYTES,
 ) : NappletUploadGateway {
-    private fun server(): String? =
-        account.blossomServers
-            .getBlossomServersList()
-            ?.servers()
-            ?.firstOrNull()
+    private val uploader =
+        NappletBlossomUploader(
+            servers = {
+                account.blossomServers
+                    .getBlossomServersList()
+                    ?.servers()
+                    .orEmpty()
+            },
+            auth = { hash, size, alt -> account.createBlossomUploadAuth(hash, size, alt).toAuthorizationHeader() },
+            blossom = { server -> BlossomClient(client(server)) },
+        )
 
-    override suspend fun hasServer(): Boolean = server() != null
+    override suspend fun hasServer(): Boolean = uploader.hasServer()
 
     override suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         filename: String?,
+    ): NappletUploadResult? = uploader.upload(bytes, contentType, filename)
+}
+
+/**
+ * Puts a blob on the first of [servers] that takes it, trying at most [MAX_SERVERS]. A success is
+ * reported only for a blob stored under the hash of the bytes sent: a server that reports another
+ * hash (it transformed the file) is passed over. A server that refuses the upload but already holds
+ * that exact hash counts as storing it; some servers answer a duplicate with an error, and the bytes
+ * there are provably these.
+ */
+class NappletBlossomUploader(
+    private val servers: () -> List<String>,
+    private val auth: suspend (hash: String, size: Long, alt: String) -> String,
+    private val blossom: (server: String) -> BlossomClient,
+) {
+    fun hasServer(): Boolean = servers().isNotEmpty()
+
+    suspend fun upload(
+        bytes: ByteArray,
+        contentType: String,
+        filename: String?,
     ): NappletUploadResult? {
-        val server = server() ?: return null
         val hash = sha256(bytes).toHexKey()
-        return try {
-            val auth = account.createBlossomUploadAuth(hash, bytes.size.toLong(), filename ?: "Upload $hash").toAuthorizationHeader()
-            val stored = BlossomClient(client(server)).upload(bytes, contentType, server, auth)
-            val url = stored.url ?: return null
-            // A server that stored something else (or transformed it) did not store these bytes.
-            if (stored.sha256 != null && stored.sha256 != hash) {
+        for (server in servers().take(MAX_SERVERS)) {
+            val client = blossom(server)
+            try {
+                val stored = client.upload(bytes, contentType, server, auth(hash, bytes.size.toLong(), filename ?: "Upload $hash"))
+                val url = stored.url
+                if (url != null && (stored.sha256 == null || stored.sha256 == hash)) {
+                    return NappletUploadResult(url, hash, stored.size ?: bytes.size.toLong(), stored.type ?: contentType)
+                }
                 Log.w(TAG) { "$server stored ${stored.sha256} for an upload of $hash" }
-                return null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "Upload to $server failed", e)
+                if (client.has(hash, server)) return NappletUploadResult(BlossomServerUrl.blob(server, hash), hash, bytes.size.toLong(), contentType)
             }
-            NappletUploadResult(url, hash, stored.size ?: bytes.size.toLong(), stored.type ?: contentType)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Upload to $server failed", e)
-            null
         }
+        return null
     }
 
     companion object {
         private const val TAG = "NappletUpload"
+
+        /** Servers one upload tries before it fails. */
+        const val MAX_SERVERS = 3
     }
 }

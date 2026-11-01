@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannel
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.BuzzDmJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedChatTailPreload
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.publicChannels.relayGroup.datasource.RelayGroupJoinedStatePreload
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.favorites.FavoriteAppManifestPreloader
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelHost
 import com.vitorpamplona.amethyst.commons.unicodeEmoji.ui.EmojiPanelScope
@@ -328,6 +329,9 @@ private fun AppNavigation(
             EmojiPanelHost {
                 Box(Modifier.fillMaxSize()) {
                     BuildNavigation(nav, destinations, root)
+                    // Each pinned nsite/napplet's manifest, pulled into LocalCache and kept on the device,
+                    // so a favorite opens, and serves as an intent handler, on every platform.
+                    FavoriteAppManifestPreloader(accountViewModel)
                     root.ShellOverlay(accountViewModel)
                 }
             }
