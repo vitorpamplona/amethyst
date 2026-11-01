@@ -506,11 +506,12 @@ class NappletBrokerService : Service() {
         }
         // NAP-INC is routed here, on the thread the message came in on, so a napplet's messages reach
         // the bus in the order it sent them (the request coroutines below run on a thread pool).
-        if (launchToken != null) {
-            when (val outcome = NappletRequestRouter.routeInc(declared, payload)) {
+        // The bus only connects surfaces launched as the same account.
+        if (launchToken != null && requestType.startsWith("inc.")) {
+            when (val outcome = NappletRequestRouter.routeInc(declared, payload, requestType)) {
                 null -> {}
                 is NappletRequestRouter.Outcome.Inc -> {
-                    incBus.handle(IncEndpoint(replyTo, launchToken), { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) }
+                    incBus.handle(IncEndpoint(replyTo, launchToken), session.accountPubKey, { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) }
                     return true
                 }
                 is NappletRequestRouter.Outcome.Reply -> {

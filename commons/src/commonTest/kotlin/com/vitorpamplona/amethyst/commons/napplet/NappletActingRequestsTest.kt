@@ -33,9 +33,6 @@ class NappletActingRequestsTest {
             "value.payInvoice",
             "upload.upload",
             "notify.create",
-            "inc.emit",
-            "inc.channel.emit",
-            "inc.channel.broadcast",
             "nostr.signEvent",
             "nostr.nip44Encrypt",
             "nostr.nip44Decrypt",
@@ -44,7 +41,7 @@ class NappletActingRequestsTest {
 
     @Test
     fun readsFlow() {
-        listOf("identity.getPublicKey", "identity.getRelays", "relay.query", "relay.subscribe", "relay.close", "storage.get", "resource.bytes", "theme.get", null)
+        listOf("identity.getPublicKey", "identity.getRelays", "relay.query", "relay.subscribe", "relay.close", "storage.get", "resource.bytes", "theme.get", "inc.emit", "inc.channel.emit", "inc.channel.close", null)
             .forEach { assertFalse(NappletActingRequests.actsForUser(it), it.toString()) }
     }
 }

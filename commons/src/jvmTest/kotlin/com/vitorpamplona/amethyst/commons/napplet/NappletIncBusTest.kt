@@ -43,12 +43,17 @@ class NappletIncBusTest {
 
     private fun pushesTo(surface: String) = inbox.getOrPut(surface) { mutableListOf() }
 
+    // Surfaces are launched as account "alice" unless the test says otherwise.
     private fun send(
         surface: String,
         request: NappletIncRequest,
-    ): JsonObject? = bus.handle(surface, { pushesTo(surface) += Json.parseToJsonElement(it).jsonObject }, request)?.let { Json.parseToJsonElement(it).jsonObject }
+        account: String = "alice",
+    ): JsonObject? = bus.handle(surface, account, { pushesTo(surface) += Json.parseToJsonElement(it).jsonObject }, request)?.let { Json.parseToJsonElement(it).jsonObject }
 
-    private fun idOf(surface: String) = bus.endpointId(surface) { pushesTo(surface) += Json.parseToJsonElement(it).jsonObject }
+    private fun idOf(
+        surface: String,
+        account: String = "alice",
+    ) = bus.endpointId(surface, account) { pushesTo(surface) += Json.parseToJsonElement(it).jsonObject }
 
     private fun JsonObject.text(key: String) = this[key]?.jsonPrimitive?.content
 
@@ -177,5 +182,17 @@ class NappletIncBusTest {
         send("a", NappletIncRequest.ChannelOpen("2", idOf("c")))
         assertEquals("too many channels", send("a", NappletIncRequest.ChannelOpen("3", idOf("d")))?.text("error"))
         assertTrue(pushesTo("d").isEmpty())
+    }
+
+    @Test
+    fun nappletsOfAnotherAccountAreNotThere() {
+        send("mine", NappletIncRequest.Subscribe("1", "t"))
+        send("theirs", NappletIncRequest.Subscribe("2", "t"), account = "bob")
+        send("theirs", NappletIncRequest.Emit("t", "1"), account = "bob")
+        assertTrue(pushesTo("mine").isEmpty(), "an emit stays inside its account")
+
+        val theirs = idOf("theirs", account = "bob")
+        assertEquals("target not found", send("mine", NappletIncRequest.ChannelOpen("3", theirs))?.text("error"))
+        assertTrue(pushesTo("theirs").isEmpty())
     }
 }

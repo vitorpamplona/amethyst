@@ -119,9 +119,23 @@ class NappletRequestRouterTest {
                 NappletRequestRouter.Outcome.Inc(NappletIncRequest.ChannelOpen("c1", "peer")),
                 route("""{"type":"inc.channel.open","id":"c1","target":"peer"}"""),
             )
-            // A subscribe has nothing to correlate its result with without an id.
-            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.subscribe","topic":"news"}"""))
+            // A subscribe without an id still subscribes; there is just no id to answer.
+            assertEquals(
+                NappletRequestRouter.Outcome.Inc(NappletIncRequest.Subscribe("", "news")),
+                route("""{"type":"inc.subscribe","topic":"news"}"""),
+            )
             assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.emit","topic":7}"""))
+        }
+
+    @Test
+    fun aMalformedIncRequestWithAnIdIsAnswered() =
+        runTest {
+            val malformed = route("""{"type":"inc.channel.open","id":"r1","target":123}""")
+            assertIs<NappletRequestRouter.Outcome.Reply>(malformed)
+            assertTrue(malformed.payload.contains("inc.channel.open.result"))
+            assertTrue(malformed.payload.contains("\"error\""))
+            // An unknown inc type stays silent, like any unknown type.
+            assertEquals(NappletRequestRouter.Outcome.Ignore, route("""{"type":"inc.channel.info","id":"r2"}"""))
         }
 
     @Test

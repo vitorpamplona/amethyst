@@ -264,6 +264,8 @@
     on: function(topicName, handler){
       if (typeof topicName !== 'string' || topicName === '') throw new TypeError('inc topic must be a non-empty string');
       if (typeof handler !== 'function') throw new TypeError('inc handler must be a function');
+      // An emit routes a convention URI on its queryless topic, so a listener with a query would never match.
+      if (topicName.indexOf('napplet:') === 0 && /[?#]/.test(topicName)) throw new TypeError('inc.on takes the stable topic, without a query or fragment');
       var topic = incTopics[topicName];
       if (!topic) {
         topic = incTopics[topicName] = { handlers: [] };

@@ -577,10 +577,11 @@ class CefNappletSession(
         if (closed) return
         // NAP-INC goes to the bus now, on the thread the message came in on, so a napplet's messages
         // reach it in the order it sent them (the coroutines below run on a thread pool).
+        // The bus only connects windows opened by the same account.
         NappletRequestRouter.routeInc(launch.declared, payload)?.let { outcome ->
             val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
             when (outcome) {
-                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, ::send, outcome.request)?.let { send(withId(it, id)) }
+                is NappletRequestRouter.Outcome.Inc -> runtime.incBus.handle(this, accountPubKey, ::send, outcome.request)?.let { send(withId(it, id)) }
                 is NappletRequestRouter.Outcome.Reply -> send(withId(outcome.payload, id))
                 else -> {}
             }

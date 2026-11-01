@@ -36,8 +36,10 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
  * two copies of one napplet, or a root and a named napplet of one author, are different peers).
  * `sender` and `peer` always come from that binding; nothing a napplet sends can set them.
  *
- * Topics match by exact string equality, and an emit never reaches its own sender. A channel is
- * authorized once, on open: the target must be a live endpoint other than the opener. Messages are
+ * Every endpoint belongs to a partition, the account its surface was launched as: napplets only
+ * reach napplets of the same account, as every other per-surface resource is bound to it. Topics
+ * match by exact string equality, and an emit never reaches its own sender. A channel is authorized
+ * once, on open: the target must be a live endpoint of the same partition other than the opener. Messages are
  * pushed after the lock is released, in the order they were decided, so a target's
  * `inc.channel.opened` is queued before [handle] returns the opener's `inc.channel.open.result`.
  *
@@ -51,6 +53,7 @@ class NappletIncBus<K : Any>(
 ) {
     private class Endpoint<K>(
         val key: K,
+        val partition: String,
         val id: String,
         val deliver: (String) -> Unit,
     ) {
@@ -77,23 +80,26 @@ class NappletIncBus<K : Any>(
     private val subscribers = HashMap<String, LinkedHashSet<Endpoint<K>>>()
     private val channels = HashMap<String, Channel<K>>()
 
-    /** The endpoint identifier of [key], assigned now if it has none; [deliver] pushes to it. */
-    fun endpointId(
+    /** The endpoint identifier of [key], assigned now if it has none. For tests: hosts only [handle]. */
+    internal fun endpointId(
         key: K,
+        partition: String,
         deliver: (String) -> Unit,
-    ): String = synchronized(lock) { endpointOf(key, deliver).id }
+    ): String = synchronized(lock) { endpointOf(key, partition, deliver).id }
 
     /**
-     * Acts on [request] from the surface [key] (whose pushes go to [deliver]) and returns the reply
-     * the host sends back with the request's id, or null for a fire-and-forget message.
+     * Acts on [request] from the surface [key], launched as the account [partition] and whose pushes
+     * go to [deliver], and returns the reply the host sends back with the request's id, or null for a
+     * fire-and-forget message.
      */
     fun handle(
         key: K,
+        partition: String,
         deliver: (String) -> Unit,
         request: NappletIncRequest,
     ): String? {
         val out = ArrayList<Delivery>()
-        val reply = synchronized(lock) { decide(endpointOf(key, deliver), request, out) }
+        val reply = synchronized(lock) { decide(endpointOf(key, partition, deliver), request, out) }
         out.forEach { it.to(it.payload) }
         return reply
     }
@@ -122,12 +128,13 @@ class NappletIncBus<K : Any>(
 
     private fun endpointOf(
         key: K,
+        partition: String,
         deliver: (String) -> Unit,
     ): Endpoint<K> =
         endpoints.getOrPut(key) {
             var id = newEndpointId()
             while (id in endpointsById) id = newEndpointId()
-            Endpoint(key, id, deliver).also { endpointsById[id] = it }
+            Endpoint(key, partition, id, deliver).also { endpointsById[id] = it }
         }
 
     private fun decide(
@@ -152,8 +159,13 @@ class NappletIncBus<K : Any>(
             }
 
             is NappletIncRequest.Emit -> {
+                // Every subscriber gets the same envelope: built once, and only if someone gets it.
+                var event: String? = null
                 subscribers[request.topic]?.forEach { subscriber ->
-                    if (subscriber !== from) out += Delivery(subscriber.deliver, NappletProtocolJson.encodeIncEvent(request.topic, request.payload, from.id))
+                    if (subscriber !== from && subscriber.partition == from.partition) {
+                        val envelope = event ?: NappletProtocolJson.encodeIncEvent(request.topic, request.payload, from.id).also { event = it }
+                        out += Delivery(subscriber.deliver, envelope)
+                    }
                 }
                 null
             }
@@ -170,6 +182,7 @@ class NappletIncBus<K : Any>(
             }
 
             is NappletIncRequest.ChannelBroadcast -> {
+                // Each channel has its own id, so each peer's envelope differs.
                 from.channels.forEach { channelId ->
                     val channel = channels[channelId] ?: return@forEach
                     out += Delivery(channel.peerOf(from).deliver, NappletProtocolJson.encodeIncChannelEvent(channelId, from.id, request.payload))
@@ -201,7 +214,8 @@ class NappletIncBus<K : Any>(
         target: String,
         out: MutableList<Delivery>,
     ): String {
-        val peer = endpointsById[target]
+        // Another account's napplet is not there for this one, so it can't learn that it exists.
+        val peer = endpointsById[target]?.takeIf { it.partition == from.partition }
         val error =
             when {
                 peer == null -> "target not found"

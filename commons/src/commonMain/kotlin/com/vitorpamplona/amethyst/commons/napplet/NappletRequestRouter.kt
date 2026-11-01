@@ -84,18 +84,28 @@ object NappletRequestRouter {
     /**
      * The [Outcome] of an `inc.*` [payload], or null when it is not one. Never suspends, so a host
      * calls it on the thread the message arrived on, before anything that could reorder it: two
-     * emits, or a channel's messages, must reach the bus in the order the napplet sent them.
+     * emits, or a channel's messages, must reach the bus in the order the napplet sent them. A host
+     * that already read the envelope's type passes it as [requestType] to save a parse.
      *
      * NAP-INC is authorized on the `inc` declaration alone. Without it, the requests that expect an
-     * answer get one that says so and the rest are dropped.
+     * answer get one that says so and the rest are dropped. A known request that is malformed gets an
+     * error when it has an id to answer; an unknown `inc.*` type stays silent, as other unknown types do.
      */
     fun routeInc(
         declared: Set<NappletCapability>,
         payload: String,
+        requestType: String? = runCatching { NappletProtocolJson.readType(payload) }.getOrNull(),
     ): Outcome? {
-        val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return null
-        if (!requestType.startsWith("inc.")) return null
-        val request = runCatching { NappletProtocolJson.decodeIncRequest(payload) }.getOrNull() ?: return Outcome.Ignore
+        if (requestType == null || !requestType.startsWith("inc.")) return null
+        val request = runCatching { NappletProtocolJson.decodeIncRequest(payload) }.getOrNull()
+        if (request == null) {
+            val id = runCatching { NappletProtocolJson.readId(payload) }.getOrNull()
+            return if (id != null && requestType in NappletProtocolJson.INC_REQUEST_TYPES) {
+                Outcome.Reply(NappletProtocolJson.encodeIncFailure(requestType, "malformed request"))
+            } else {
+                Outcome.Ignore
+            }
+        }
         if (NappletCapability.INC in declared) return Outcome.Inc(request)
         return when (request) {
             is NappletIncRequest.Subscribe -> Outcome.Reply(NappletProtocolJson.encodeIncSubscribeResult(INC_UNAVAILABLE))
@@ -119,7 +129,7 @@ object NappletRequestRouter {
         files: NappletFsSession? = null,
     ): Outcome {
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return Outcome.Ignore
-        routeInc(declared, payload)?.let { return it }
+        if (requestType.startsWith("inc.")) return routeInc(declared, payload, requestType) ?: Outcome.Ignore
 
         // Fire-and-forget edge ops that never reach the broker.
         when (requestType) {

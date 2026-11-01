@@ -159,7 +159,8 @@ object NappletProtocolJson {
         val o = json.parseToJsonElement(envelopeJson) as? JsonObject ?: return null
         val payload = o["payload"]?.toString()
         return when (o.str("type")) {
-            "inc.subscribe" -> NappletIncRequest.Subscribe(o.textOrNull("id") ?: return null, o.textOrNull("topic") ?: return null)
+            // NAP-INC gives a subscribe an id for its result; one sent without still subscribes.
+            "inc.subscribe" -> NappletIncRequest.Subscribe(o.textOrNull("id").orEmpty(), o.textOrNull("topic") ?: return null)
             "inc.unsubscribe" -> NappletIncRequest.Unsubscribe(o.textOrNull("topic") ?: return null)
             "inc.emit" -> NappletIncRequest.Emit(o.textOrNull("topic") ?: return null, payload)
             "inc.channel.open" -> NappletIncRequest.ChannelOpen(o.textOrNull("id") ?: return null, o.textOrNull("target") ?: return null)
@@ -170,6 +171,29 @@ object NappletProtocolJson {
             else -> null
         }
     }
+
+    /** The `inc.*` request types [decodeIncRequest] knows. */
+    val INC_REQUEST_TYPES =
+        setOf(
+            "inc.subscribe",
+            "inc.unsubscribe",
+            "inc.emit",
+            "inc.channel.open",
+            "inc.channel.emit",
+            "inc.channel.broadcast",
+            "inc.channel.list",
+            "inc.channel.close",
+        )
+
+    /** The `<requestType>.result` (the host adds the `id`) for an `inc.*` request refused with [error]. */
+    fun encodeIncFailure(
+        requestType: String,
+        error: String,
+    ): String =
+        buildJsonObject {
+            put("type", "$requestType.result")
+            put("error", error)
+        }.toString()
 
     /** An `inc.subscribe.result` (the host adds the `id`); an [error] means the subscription was not registered. */
     fun encodeIncSubscribeResult(error: String? = null): String =
