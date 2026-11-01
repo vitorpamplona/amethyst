@@ -31,7 +31,7 @@ jobs:
         run: tools/agent-hooks/agent_config_check.py
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -106,7 +106,7 @@ jobs:
 
       - name: Set up JDK 21
         if: runner.os != 'Linux'
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -141,7 +141,7 @@ jobs:
       # branch fired (connect timeout / idle silence / NEG-ERR / disconnect),
       # and nobody could read it. Same action and pin as the Android job below.
       - name: Desktop Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         if: always()
         with:
           report_paths: '**/build/test-results/**/TEST-*.xml'
@@ -223,7 +223,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -292,7 +292,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -319,7 +319,7 @@ jobs:
             :commons:compileTestKotlinIosArm64
 
       - name: Commons iOS Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         if: always()
         with:
           report_paths: 'commons/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
@@ -348,7 +348,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -375,7 +375,7 @@ jobs:
             :commonsUI:compileTestKotlinIosArm64
 
       - name: CommonsUI iOS Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         if: always()
         with:
           report_paths: 'commonsUI/build/test-results/iosSimulatorArm64Test/TEST-*.xml'
@@ -417,7 +417,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -464,7 +464,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v6.0.1
+        uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: 21
@@ -548,7 +548,7 @@ jobs:
       # GITHUB_TOKEN is read-only). fail_on_failure preserves the old step's
       # behavior of marking the job red when a test fails.
       - name: Android Test Report
-        uses: mikepenz/action-junit-report@a9170d5795813c01ab4901ffb045b52bab4ab09d # v6.5.0
+        uses: mikepenz/action-junit-report@6ef3fdcfcd5f0b5d14df3e659ef19b8c6820f93d # v6.6.1
         if: always()
         with:
           report_paths: '**/build/test-results/**/TEST-*.xml'
