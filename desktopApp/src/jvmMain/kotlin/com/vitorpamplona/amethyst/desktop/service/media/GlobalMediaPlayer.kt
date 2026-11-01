@@ -292,6 +292,12 @@ object GlobalMediaPlayer {
     // that video was in [VideoViewedPositionCache], as Android's players do. Weak: an engine that is
     // gone needs no entry.
     private val engineUrls: MutableMap<VideoPlayerState, String> = Collections.synchronizedMap(WeakHashMap())
+
+    // The relay session each engine streams as, so retiring it cuts its downloads off (MediaRelay.revoke).
+    private val engineSessions: MutableMap<VideoPlayerState, String> = Collections.synchronizedMap(WeakHashMap())
+
+    private fun sessionOf(engine: VideoPlayerState): String = engineSessions.getOrPut(engine) { MediaRelay.newSession() }
+
     private var preMuteAudioVolume: Int = 100
 
     private var videoSyncJob: Job? = null
@@ -344,6 +350,7 @@ object GlobalMediaPlayer {
         val loaded = videoPlayer
         if (loaded != null && current.url == url && current.errorReason == null && !isHeldByOtherCard(loaded, owner)) {
             Log.d(TAG) { "playVideo reuse url=$url isPlaying=${current.isPlaying}" }
+            VideoTimeline.mark(url) { "play: reuses the open engine (hasMedia=${loaded.hasMedia})" }
             if (owner != null) _videoState.update { it.copy(owner = owner) }
             if (startAt > 0f) {
                 loaded.seekTo(startAt * 1000f)
@@ -361,6 +368,7 @@ object GlobalMediaPlayer {
         val undecodable = undecodableReason(url)
         if (undecodable != null) {
             Log.d(TAG) { "playVideo chromium url=$url ($undecodable)" }
+            VideoTimeline.mark(url) { "play: to Chromium ($undecodable)" }
             val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = null } }
             if (previous != null) parkOrRetire(previous, current.url.takeIf { current.errorReason == null }, url)
             startVideoSync(null, url)
@@ -410,6 +418,7 @@ object GlobalMediaPlayer {
             }
 
         Log.d(TAG) { "playVideo open url=$url (was=${current.url} err=${current.errorReason})" }
+        VideoTimeline.mark(url) { "play: opens a new engine" }
         engineUrls[player] = url
 
         // The kdroidFilter player retains `volume` and speed across openUri calls, so set both for
@@ -461,6 +470,7 @@ object GlobalMediaPlayer {
         owner: Any?,
     ) {
         Log.d(TAG) { "playVideo warm url=$url" }
+        VideoTimeline.mark(url) { "play: takes the engine opened ahead (hasMedia=${player.hasMedia}, loading=${player.isLoading})" }
         val previousUrl = _videoState.value.url
         val previous = synchronized(initLock) { videoPlayer.also { videoPlayer = player } }
         if (previous != null) parkOrRetire(previous, previousUrl, url)
@@ -483,6 +493,8 @@ object GlobalMediaPlayer {
                 owner = owner,
             )
         startVideoSync(player, url)
+        // Opened ahead without a prefetch: its codec is learned now that it plays.
+        if (VideoIndexPrefetch.videoCodecOf(url) == null) scope.launch { checkCodecWhilePlaying(player, url) }
 
         videoOpenJob?.cancel()
         videoOpenJob =
@@ -620,11 +632,15 @@ object GlobalMediaPlayer {
         keep: (VideoPlayerState) -> Unit,
     ) {
         if (shutDown) return
-        val streaming = MediaRelay.streamingUrl(url) ?: return
         val engine =
             runCatching { newVideoEngine() }
                 .onFailure { Log.w(TAG, "Paused video engine init failed", it) }
                 .getOrNull() ?: return
+        val streaming =
+            MediaRelay.streamingUrl(url, sessionOf(engine)) ?: run {
+                runCatching { engine.dispose() }
+                return
+            }
         runCatching {
             engine.volume = 0f
             engine.playbackSpeed = 1f
@@ -634,27 +650,21 @@ object GlobalMediaPlayer {
         synchronized(initLock) { keep(engine) }
         engineUrls[engine] = url
         Log.d(TAG) { "paused open url=$url" }
+        VideoTimeline.mark(url) { "engine made, paused open held until the watched video moves" }
         scope.launch(Dispatchers.IO) {
+            val holdStarted = System.currentTimeMillis()
             try {
                 holdBehindPlayingVideo(engine)
             } finally {
                 heldEngines.update { it - engine }
             }
-            if (shutDown || engine in retired) return@launch
-            prefetchIndex(url)
-            if (shutDown || engine in retired) return@launch
-            val undecodable = undecodableReason(url)
-            if (undecodable != null) {
-                // Left unopened. Once its index is read playVideo sends it to Chromium; if its card
-                // played it before then, it is the playing engine now, and goes there from here.
-                if (engine === videoPlayer) {
-                    Log.d(TAG) { "playing chromium url=$url ($undecodable)" }
-                    // Its engine reports nothing more, and would clear the error if it did.
-                    startVideoSync(null, url)
-                    _videoState.update { if (it.url == url) it.copy(isBuffering = false, isPlaying = false, errorReason = undecodable) else it }
-                }
-                return@launch
-            }
+            VideoTimeline.mark(url) { "paused open released after ${System.currentTimeMillis() - holdStarted} ms${if (engine in retired) " (retired meanwhile)" else ""}" }
+            // No index prefetch here: a scroll opens one of these per card, and their prefetches
+            // together took 14 to 44 s each, so the video the user stopped on waited behind them. Only
+            // the playing video prefetches (openSource, startWarmVideo). One already known to be
+            // undecodable stays unopened: playVideo sends it to Chromium.
+            if (shutDown || engine in retired || undecodableReason(url) != null) return@launch
+            VideoTimeline.mark(url) { "paused open: openUri" }
             runCatching { engine.openUri(streaming, InitialPlayerState.PAUSE) }
                 .onSuccess {
                     // Paused on the frame where this video was the last time it played, so its card
@@ -712,6 +722,69 @@ object GlobalMediaPlayer {
     private suspend fun prefetchIndex(url: String) {
         withTimeoutOrNull(INDEX_PREFETCH_TIMEOUT_MS) { VideoIndexPrefetch.prefetch(url) }
     }
+
+    /**
+     * Reads the codec of [url], which [player] (opened ahead, without a prefetch) now plays, and
+     * sends it to Chromium when the engine can't decode its picture: it would play the sound under
+     * the poster.
+     */
+    private suspend fun checkCodecWhilePlaying(
+        player: VideoPlayerState,
+        url: String,
+    ) {
+        prefetchIndex(url)
+        val undecodable = undecodableReason(url) ?: return
+        if (player !== videoPlayer || _videoState.value.url != url) return
+        Log.d(TAG) { "playing chromium url=$url ($undecodable)" }
+        runCatching { player.pause() }
+        // Its engine would clear the error with its next report.
+        startVideoSync(null, url)
+        _videoState.update { if (it.url == url) it.copy(isBuffering = false, isPlaying = false, errorReason = undecodable) else it }
+    }
+
+    /**
+     * Tells the relay which engine plays the watched video, and whether that video is still
+     * starting: until it moves, every other engine's stream gives way to it (MediaRelay.setForeground).
+     * Logs how long it took to start, from the play to its clock moving.
+     */
+    private fun followForeground(
+        player: VideoPlayerState?,
+        url: String,
+    ) {
+        foregroundJob?.cancel()
+        if (player == null) {
+            MediaRelay.setForeground(null, starting = false)
+            return
+        }
+        val session = sessionOf(player)
+        val since = System.currentTimeMillis()
+        foregroundJob =
+            scope.launch {
+                launch(Dispatchers.Main) {
+                    if (player.hasMedia) return@launch
+                    snapshotFlow { player.hasMedia }.first { it }
+                    VideoTimeline.mark(url) { "engine has the media: size ${player.metadata.width}x${player.metadata.height}, ${System.currentTimeMillis() - since} ms after the play" }
+                }
+                val gate = BackgroundOpenGate()
+                var started = false
+                var lastBuffering: Boolean? = null
+                _videoState.collect { state ->
+                    if (state.url == url && state.isBuffering != lastBuffering) {
+                        lastBuffering = state.isBuffering
+                        VideoTimeline.mark(url) { "watched: buffering=${state.isBuffering} playing=${state.isPlaying} at ${state.currentTime} ms" }
+                    }
+                    val starting = state.url == url && gate.check(state, videoPauseRequested) == Verdict.HOLD
+                    MediaRelay.setForeground(session, starting)
+                    if (!started && state.url == url && state.isPlaying && !starting) {
+                        started = true
+                        Log.d(TAG) { "started url=$url in ${System.currentTimeMillis() - since} ms" }
+                        VideoTimeline.mark(url) { "first frame: clock moving, ${System.currentTimeMillis() - since} ms after the play" }
+                    }
+                }
+            }
+    }
+
+    @Volatile private var foregroundJob: Job? = null
 
     /**
      * Why the native engine can't play [url]'s picture, as a codec error the card answers with
@@ -1396,16 +1469,20 @@ object GlobalMediaPlayer {
         state: MutableStateFlow<MediaPlaybackState>,
         downloading: (Boolean) -> Unit,
     ): Boolean {
-        val source = resolveSource(url, state, downloading) ?: return false
+        val source = resolveSource(url, state, sessionOf(player), downloading) ?: return false
         if (source.file != null) {
             player.openFile(PlatformFile(source.file))
         } else {
+            val prefetchStarted = System.currentTimeMillis()
+            VideoTimeline.mark(url) { "open: index prefetch" }
             prefetchIndex(url)
+            VideoTimeline.mark(url) { "open: index prefetch done in ${System.currentTimeMillis() - prefetchStarted} ms (codec ${VideoIndexPrefetch.videoCodecOf(url)})" }
             undecodableReason(url)?.let { reason ->
                 // The card takes it to Chromium.
                 state.update { if (it.url == url) it.copy(isBuffering = false, errorReason = reason) else it }
                 return false
             }
+            VideoTimeline.mark(url) { "open: openUri" }
             player.openUri(source.uri)
         }
         return true
@@ -1426,6 +1503,7 @@ object GlobalMediaPlayer {
     private suspend fun resolveSource(
         url: String,
         state: MutableStateFlow<MediaPlaybackState>,
+        session: String? = null,
         downloading: (Boolean) -> Unit,
     ): MediaSource? {
         val decrypted =
@@ -1451,7 +1529,7 @@ object GlobalMediaPlayer {
         if (decrypted != null) return MediaSource(decrypted.absolutePath, decrypted)
         // Anything else streams from the engine's own HTTP stack, unless it goes over Tor: then
         // through the relay, so the app's Tor-routed client fetches it, as on Android.
-        val streaming = MediaRelay.streamingUrl(url)
+        val streaming = MediaRelay.streamingUrl(url, session)
         if (streaming == null) {
             // It should go over Tor, which the relay can only do for http(s).
             state.update { if (it.url == url) it.copy(isBuffering = false, errorReason = "This video can't be played over Tor") else it }
@@ -1503,6 +1581,10 @@ object GlobalMediaPlayer {
             player.volume = 0f
             player.pause()
         }
+        // Its downloads stop now, not when it is disposed: an open still running fails fast instead
+        // of finishing over the bandwidth the playing video needs.
+        engineSessions.remove(player)?.let { MediaRelay.revoke(it) }
+        engineUrls[player]?.let { url -> VideoTimeline.mark(url) { "engine retired, its downloads cut off" } }
         retiring += player
         retired += player
         scope.launch(Dispatchers.Main) {
@@ -1544,6 +1626,7 @@ object GlobalMediaPlayer {
         url: String,
     ) {
         videoSyncJob?.cancel()
+        followForeground(player, url)
         if (player == null) return
         videoSyncJob =
             scope.launch {

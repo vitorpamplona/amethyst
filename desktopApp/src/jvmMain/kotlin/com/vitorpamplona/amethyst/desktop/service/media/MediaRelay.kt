@@ -24,6 +24,7 @@ import com.sun.net.httpserver.HttpExchange
 import com.sun.net.httpserver.HttpServer
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.quartz.utils.Log
+import okhttp3.Call
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
@@ -33,6 +34,8 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.security.SecureRandom
 import java.util.Base64
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -61,6 +64,11 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 object MediaRelay {
     private const val TAG = "MediaRelay"
+    private const val SESSION_PREFIX = "s."
+    private const val MAX_REVOKED = 4_096
+
+    // The longest a stream gives way to the watched video in one go.
+    private const val MAX_HOLD_MS = 10_000L
 
     // A playlist is read whole to rewrite it; a real one is a few KiB, so anything past this is not.
     private const val MAX_PLAYLIST_BYTES = 4L * 1024 * 1024
@@ -119,12 +127,64 @@ object MediaRelay {
      * risk to live streams. Null when [url] should go over Tor but cannot (not http(s)): handing it
      * to the engine would fetch it around Tor.
      */
-    fun streamingUrl(url: String): String? =
+    fun streamingUrl(
+        url: String,
+        session: String? = null,
+    ): String? =
         when {
-            MediaHttp.viaTor(url) -> relayUrlFor(url)
-            VideoDiskCache.cacheable(url) -> relayUrlFor(url) ?: url
+            MediaHttp.viaTor(url) -> relayUrlFor(url, session = session)
+            VideoDiskCache.cacheable(url) -> relayUrlFor(url, session = session) ?: url
             else -> url
         }
+
+    /** A new name for one engine's requests, which [revoke] cuts off. */
+    fun newSession(): String = ByteArray(9).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+
+    // Upstream calls in flight, by session, so revoke can cancel them.
+    private val sessionCalls = ConcurrentHashMap<String, MutableSet<Call>>()
+
+    // Sessions cut off, newest last: their requests are refused. Bounded; a session is one engine.
+    private val revoked: MutableSet<String> =
+        Collections.synchronizedSet(
+            Collections.newSetFromMap(
+                object : LinkedHashMap<String, Boolean>() {
+                    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Boolean>?) = size > MAX_REVOKED
+                },
+            ),
+        )
+
+    /**
+     * Cuts off the engine that streams as [session]: what it is downloading stops now and anything
+     * it asks for later is refused. A paused engine keeps buffering, and one retired after its card
+     * scrolled away kept downloading for up to 17 s, from the same hosts, often over the same HTTP/2
+     * connection, as the video the user stopped on.
+     */
+    fun revoke(session: String) {
+        revoked += session
+        sessionCalls.remove(session)?.let { calls -> synchronized(calls) { calls.toList() }.forEach { it.cancel() } }
+    }
+
+    private fun execute(
+        original: String,
+        request: Request,
+        session: String?,
+    ): Response {
+        val call = MediaHttp.client(original).newCall(request)
+        if (session == null) return call.execute()
+        val calls = sessionCalls.computeIfAbsent(session) { Collections.synchronizedSet(HashSet()) }
+        calls += call
+        // Revoked while this was being set up.
+        if (session in revoked) call.cancel()
+        return call.execute()
+    }
+
+    private fun release(
+        session: String?,
+        request: Request,
+    ) {
+        if (session == null) return
+        sessionCalls[session]?.removeIf { it.request() === request }
+    }
 
     /**
      * [url] as a relay address on [host], by default the next of the relay's origins; null when it is
@@ -133,11 +193,21 @@ object MediaRelay {
     fun relayUrlFor(
         url: String,
         host: String = hosts[Math.floorMod(nextOrigin.getAndIncrement(), ORIGINS)],
+        session: String? = null,
     ): String? {
         val parsed = url.toHttpUrlOrNull() ?: return null
         val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(parsed.toString().toByteArray())
-        return "http://$host/$secret/$encoded/${fileNameOf(parsed)}"
+        val named = session?.let { "$SESSION_PREFIX$it/" } ?: ""
+        return "http://$host/$secret/$encoded/$named${fileNameOf(parsed)}"
     }
+
+    /** The session a relay [path] (what follows the secret) streams as, or null. */
+    internal fun sessionFor(path: String): String? =
+        path
+            .split('/')
+            .getOrNull(1)
+            ?.takeIf { it.startsWith(SESSION_PREFIX) }
+            ?.removePrefix(SESSION_PREFIX)
 
     /** The original URL a relay [path] (what follows the secret) stands for, or null. */
     internal fun originalFor(path: String): String? {
@@ -167,18 +237,40 @@ object MediaRelay {
             return
         }
         val method = exchange.requestMethod
-        val original = originalFor(exchange.requestURI.rawPath.removePrefix("/$secret/"))
+        val path = exchange.requestURI.rawPath.removePrefix("/$secret/")
+        val original = originalFor(path)
         if (original == null || (method != "GET" && method != "HEAD")) {
             exchange.sendResponseHeaders(400, -1)
+            return
+        }
+        val session = sessionFor(path)
+        if (session != null && session in revoked) {
+            exchange.sendResponseHeaders(410, -1)
             return
         }
 
         val range = exchange.requestHeaders.getFirst("Range")
         val keep = method == "GET" && VideoDiskCache.cacheable(original)
-        if (keep && runCatching { VideoDiskCache.serve(exchange, original, range) }.getOrDefault(false)) return
+        val role =
+            if (session == null) {
+                "chromium"
+            } else if (session == synchronized(foregroundLock) { foreground }) {
+                "watched"
+            } else {
+                "background"
+            }
+        val started = System.currentTimeMillis()
+        VideoTimeline.mark(original) { "relay $method ${range ?: "whole"} ($role engine)" }
+        if (keep && runCatching { VideoDiskCache.serve(exchange, original, range) }.getOrDefault(false)) {
+            VideoTimeline.mark(original) { "relay ${range ?: "whole"}: served from disk in ${System.currentTimeMillis() - started} ms" }
+            return
+        }
         if (keep) {
             val held = runCatching { VideoDiskCache.heldPrefix(original, range) }.getOrNull()
-            if (held != null && sendStitched(exchange, original, held)) return
+            if (held != null && sendStitched(exchange, original, held, session)) {
+                VideoTimeline.mark(original) { "relay ${range ?: "whole"}: ${held.heldEnd / 1024} KiB from disk, then the network; ended after ${System.currentTimeMillis() - started} ms" }
+                return
+            }
         }
 
         val request =
@@ -193,7 +285,8 @@ object MediaRelay {
                 }.build()
 
         try {
-            MediaHttp.client(original).newCall(request).execute().use { response ->
+            execute(original, request, session).use { response ->
+                VideoTimeline.mark(original) { "relay ${range ?: "whole"}: host answered ${response.code} in ${System.currentTimeMillis() - started} ms" }
                 val playlist = response.isSuccessful && isPlaylist(response.request.url, response.header("Content-Type"))
                 forwardedResponseHeaders.forEach { name ->
                     if (playlist && name in playlistDroppedHeaders) return@forEach
@@ -211,14 +304,18 @@ object MediaRelay {
                     }
 
                     else -> {
-                        sendBody(exchange, response, if (keep && response.isSuccessful) VideoDiskCache.writerFor(original, response) else null)
+                        sendBody(exchange, original, response, keep, session)
+                        VideoTimeline.mark(original) { "relay ${range ?: "whole"}: done after ${System.currentTimeMillis() - started} ms" }
                     }
                 }
             }
         } catch (e: IOException) {
-            // The engine hung up mid-stream (a seek, a stop) or the upstream failed.
+            // The engine hung up mid-stream (a seek, a stop), the upstream failed, or the engine was cut off.
             Log.d(TAG) { "Relay of $original ended: ${e.message}" }
+            VideoTimeline.mark(original) { "relay ${range ?: "whole"}: ended after ${System.currentTimeMillis() - started} ms (${e.message})" }
             runCatching { exchange.sendResponseHeaders(502, -1) }
+        } finally {
+            release(session, request)
         }
     }
 
@@ -252,13 +349,31 @@ object MediaRelay {
      * Answers a GET whose range starts in bytes on disk ([held]) with those bytes, then the rest
      * fetched from the network, as one response. The engine asks for a whole file from its start: of
      * an episode whose index [VideoIndexPrefetch] fetched it then waits only for what follows.
-     * Returns false, having sent nothing, when the network won't give the rest as a range.
+     *
+     * The bytes on disk go out before the network is asked for the rest: a slow host took up to 10 s
+     * to answer at all, and the engine, waiting on that for an index already on disk, gave up on the
+     * video's size. When the host won't give the rest as a range the response ends short, and the
+     * engine asks again from there.
      */
     private fun sendStitched(
         exchange: HttpExchange,
         original: String,
         held: VideoDiskCache.HeldPrefix,
+        session: String?,
     ): Boolean {
+        val partial = exchange.requestHeaders.getFirst("Range") != null
+        exchange.responseHeaders.add("Content-Type", held.contentType)
+        exchange.responseHeaders.add("Accept-Ranges", "bytes")
+        if (partial) exchange.responseHeaders.add("Content-Range", "bytes ${held.range.first}-${held.range.last}/${held.total}")
+        exchange.sendResponseHeaders(if (partial) 206 else 200, held.range.last - held.range.first + 1)
+        val out = exchange.responseBody
+        try {
+            VideoDiskCache.copyHeld(original, held.range.first, held.heldEnd, out)
+            out.flush()
+        } catch (e: IOException) {
+            Log.d(TAG) { "Relay of $original ended: ${e.message}" }
+            return true
+        }
         val request =
             Request
                 .Builder()
@@ -266,31 +381,20 @@ object MediaRelay {
                 .header("Range", "bytes=${held.heldEnd}-${held.range.last}")
                 .apply { exchange.requestHeaders.getFirst("Accept")?.let { header("Accept", it) } }
                 .build()
-        val response =
-            try {
-                MediaHttp.client(original).newCall(request).execute()
-            } catch (e: IOException) {
-                Log.d(TAG) { "Relay of $original ended: ${e.message}" }
-                return false
-            }
-        response.use {
-            val rest =
-                response
-                    .header("Content-Range")
-                    ?.substringAfter("bytes ", "")
-                    ?.substringBefore('-')
-                    ?.toLongOrNull()
-            if (response.code != 206 || rest != held.heldEnd) return false
-            val partial = exchange.requestHeaders.getFirst("Range") != null
-            exchange.responseHeaders.add("Content-Type", held.contentType)
-            exchange.responseHeaders.add("Accept-Ranges", "bytes")
-            if (partial) exchange.responseHeaders.add("Content-Range", "bytes ${held.range.first}-${held.range.last}/${held.total}")
-            exchange.sendResponseHeaders(if (partial) 206 else 200, held.range.last - held.range.first + 1)
-            val cache = VideoDiskCache.writerFor(original, response)
-            // From here the request is answered, however it ends.
-            try {
-                exchange.responseBody.let { out ->
-                    VideoDiskCache.copyHeld(original, held.range.first, held.heldEnd, out)
+        try {
+            execute(original, request, session).use { response ->
+                val rest =
+                    response
+                        .header("Content-Range")
+                        ?.substringAfter("bytes ", "")
+                        ?.substringBefore('-')
+                        ?.toLongOrNull()
+                if (response.code != 206 || rest != held.heldEnd) {
+                    Log.d(TAG) { "Relay of $original ended after the bytes on disk: the host answered ${response.code}" }
+                    return true
+                }
+                val cache = VideoDiskCache.writerFor(original, response)
+                try {
                     response.body.byteStream().use { input ->
                         val buf = ByteArray(64 * 1024)
                         while (true) {
@@ -300,20 +404,31 @@ object MediaRelay {
                             out.write(buf, 0, n)
                         }
                     }
+                } finally {
+                    cache?.let { c -> runCatching { c.close() } }
                 }
-            } catch (e: IOException) {
-                Log.d(TAG) { "Relay of $original ended: ${e.message}" }
-            } finally {
-                cache?.let { c -> runCatching { c.close() } }
             }
-            return true
+        } catch (e: IOException) {
+            Log.d(TAG) { "Relay of $original ended: ${e.message}" }
+        } finally {
+            release(session, request)
         }
+        return true
     }
 
+    /**
+     * Sends [response]'s body to the engine. A stream of an engine other than the one the user
+     * watches gives way while that one starts (see [setForeground]): its upstream request is dropped,
+     * the engine's connection kept open, and the rest fetched from where it stopped once the watched
+     * video moves. Merely not reading would not do: OkHttp lets each HTTP/2 stream buffer 16 MiB
+     * before the host must stop sending.
+     */
     private fun sendBody(
         exchange: HttpExchange,
+        original: String,
         response: Response,
-        cache: VideoDiskCache.Writer? = null,
+        keep: Boolean,
+        session: String?,
     ) {
         val length = response.body.contentLength()
         exchange.sendResponseHeaders(
@@ -324,22 +439,110 @@ object MediaRelay {
                 else -> 0
             },
         )
-        if (length != 0L) {
-            try {
-                response.body.byteStream().use { input ->
-                    val buf = ByteArray(64 * 1024)
-                    while (true) {
-                        val n = input.read(buf)
-                        if (n < 0) break
-                        // Kept first: what the engine read before hanging up is worth keeping too.
-                        cache?.let { runCatching { it.write(buf, n) } }
-                        exchange.responseBody.write(buf, 0, n)
+        if (length == 0L) return
+        // Where this body sits in the file, so a dropped stream can be fetched on from there.
+        val contentRange = response.header("Content-Range")
+        var offset =
+            if (response.code == 206) contentRange?.substringAfter("bytes ", "")?.substringBefore('-')?.toLongOrNull() else 0L
+        val last =
+            if (response.code == 206) contentRange?.substringAfter('-', "")?.substringBefore('/')?.toLongOrNull() else length.takeIf { it > 0 }?.minus(1)
+        val canYield = response.isSuccessful && offset != null && last != null
+        var current = response
+        var cache = if (keep && response.isSuccessful) VideoDiskCache.writerFor(original, response) else null
+        val resumed = ArrayList<Request>()
+        var exempt = false
+        try {
+            val buf = ByteArray(64 * 1024)
+            while (true) {
+                val input = current.body.byteStream()
+                var yielded = false
+                while (true) {
+                    if (canYield && !exempt && mustYield(session)) {
+                        yielded = true
+                        break
                     }
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    // Kept first: what the engine read before hanging up is worth keeping too.
+                    cache?.let { runCatching { it.write(buf, n) } }
+                    exchange.responseBody.write(buf, 0, n)
+                    offset = offset?.plus(n)
                 }
-            } finally {
+                if (!yielded) break
+                current.close()
                 cache?.let { runCatching { it.close() } }
+                cache = null
+                val started = System.currentTimeMillis()
+                exempt = !awaitTurn(session)
+                Log.d(TAG) { "Held a stream of $original for ${System.currentTimeMillis() - started} ms while the watched video started" }
+                VideoTimeline.mark(original) { "relay: background stream held ${System.currentTimeMillis() - started} ms at byte $offset while the watched video started" }
+                if (session != null && session in revoked) throw IOException("cut off while held")
+                if (offset!! > last!!) break
+                val request =
+                    Request
+                        .Builder()
+                        .url(original)
+                        .header("Range", "bytes=$offset-$last")
+                        .build()
+                resumed += request
+                current = execute(original, request, session)
+                val from =
+                    current
+                        .header("Content-Range")
+                        ?.substringAfter("bytes ", "")
+                        ?.substringBefore('-')
+                        ?.toLongOrNull()
+                // The host won't give the rest as a range: the engine sees the stream end and asks again.
+                if (current.code != 206 || from != offset) break
+                if (keep) cache = VideoDiskCache.writerFor(original, current)
+            }
+        } finally {
+            if (current !== response) current.close()
+            cache?.let { runCatching { it.close() } }
+            resumed.forEach { release(session, it) }
+        }
+    }
+
+    // The engine the user watches, and whether its video is still starting: until it moves, every
+    // other engine's stream gives way (see sendBody). Guarded by foregroundLock.
+    private val foregroundLock = Object()
+    private var foreground: String? = null
+    private var foregroundStarting = false
+
+    /**
+     * The engine streaming as [session] plays the video the user watches; while [starting] (loading,
+     * its clock not yet moving) the other engines' streams give way to it. Null when none plays.
+     */
+    fun setForeground(
+        session: String?,
+        starting: Boolean,
+    ) {
+        synchronized(foregroundLock) {
+            if (foreground == session && foregroundStarting == (starting && session != null)) return
+            foreground = session
+            foregroundStarting = starting && session != null
+            foregroundLock.notifyAll()
+        }
+    }
+
+    private fun mustYield(session: String?): Boolean =
+        synchronized(foregroundLock) {
+            foregroundStarting && session != foreground
+        }
+
+    // Waits until the watched video moves; false when it waited the whole MAX_HOLD_MS, so a video
+    // that never starts holds every other stream only once.
+    private fun awaitTurn(session: String?): Boolean {
+        val deadline = System.currentTimeMillis() + MAX_HOLD_MS
+        synchronized(foregroundLock) {
+            while (foregroundStarting && session != foreground) {
+                if (session != null && session in revoked) return true
+                val left = deadline - System.currentTimeMillis()
+                if (left <= 0) return false
+                foregroundLock.wait(minOf(left, 500L))
             }
         }
+        return true
     }
 
     private fun isPlaylist(

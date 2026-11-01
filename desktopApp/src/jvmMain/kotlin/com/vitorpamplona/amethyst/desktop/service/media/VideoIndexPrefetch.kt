@@ -136,7 +136,9 @@ internal object VideoIndexPrefetch {
                 .url(url)
                 .header("Range", "bytes=$first-$last")
                 .build()
+        val started = System.currentTimeMillis()
         MediaHttp.client(url).newCall(request).execute().use { response ->
+            VideoTimeline.mark(url) { "prefetch bytes=$first-$last: host answered ${response.code} in ${System.currentTimeMillis() - started} ms" }
             if (response.code != 206) return false
             // A big file keeps only its head on disk: its tail is read into [copy] alone.
             val cache = VideoDiskCache.writerFor(url, response)
@@ -154,6 +156,7 @@ internal object VideoIndexPrefetch {
             } finally {
                 cache?.close()
             }
+            VideoTimeline.mark(url) { "prefetch bytes=$first-$last: ${(last - first + 1) / 1024} KiB in ${System.currentTimeMillis() - started} ms" }
             return true
         }
     }
