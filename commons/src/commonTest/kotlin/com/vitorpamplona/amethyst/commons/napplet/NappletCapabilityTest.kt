@@ -36,6 +36,8 @@ class NappletCapabilityTest {
         assertEquals(NappletCapability.THEME, NappletCapability.fromNapDomain("theme"))
         assertEquals(NappletCapability.INC, NappletCapability.fromNapDomain("inc"))
         assertTrue("inc" in NappletCapability.supportedNapDomains)
+        assertEquals(NappletCapability.UPLOAD, NappletCapability.fromNapDomain("upload"))
+        assertEquals(NappletCapability.COMMON, NappletCapability.fromNapDomain("common"))
     }
 
     @Test
@@ -47,7 +49,6 @@ class NappletCapabilityTest {
         assertNull(NappletCapability.fromNapDomain("shell"))
         assertNull(NappletCapability.fromNapDomain("keys"))
         assertNull(NappletCapability.fromNapDomain("value"))
-        assertNull(NappletCapability.fromNapDomain("upload"))
         assertNull(NappletCapability.fromNapDomain("notify"))
         assertNull(NappletCapability.fromNapDomain("Relay"))
         assertNull(NappletCapability.fromNapDomain(" storage "))

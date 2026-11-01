@@ -24,12 +24,16 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_common
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_common_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_fs
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_fs_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_identity_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_inc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_inc_desc
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_intent
+import com.vitorpamplona.amethyst.commons.resources.napplet_cap_intent_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_keys
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_keys_desc
 import com.vitorpamplona.amethyst.commons.resources.napplet_cap_notify
@@ -67,6 +71,8 @@ fun NappletCapability.symbol(): MaterialSymbol =
         NappletCapability.INC -> MaterialSymbols.SwapHoriz
         NappletCapability.OUTBOX -> MaterialSymbols.Public
         NappletCapability.FS -> MaterialSymbols.Folder
+        NappletCapability.COMMON -> MaterialSymbols.Group
+        NappletCapability.INTENT -> MaterialSymbols.AltRoute
     }
 
 /** Localized display name for a capability, shared by the consent dialog and the permissions screen. */
@@ -85,6 +91,8 @@ fun NappletCapability.labelRes(): StringResource =
         NappletCapability.INC -> Res.string.napplet_cap_inc
         NappletCapability.OUTBOX -> Res.string.napplet_cap_outbox
         NappletCapability.FS -> Res.string.napplet_cap_fs
+        NappletCapability.COMMON -> Res.string.napplet_cap_common
+        NappletCapability.INTENT -> Res.string.napplet_cap_intent
     }
 
 /** Localized one-line description of what a capability lets a napplet do. */
@@ -103,4 +111,6 @@ fun NappletCapability.descriptionRes(): StringResource =
         NappletCapability.INC -> Res.string.napplet_cap_inc_desc
         NappletCapability.OUTBOX -> Res.string.napplet_cap_outbox_desc
         NappletCapability.FS -> Res.string.napplet_cap_fs_desc
+        NappletCapability.COMMON -> Res.string.napplet_cap_common_desc
+        NappletCapability.INTENT -> Res.string.napplet_cap_intent_desc
     }

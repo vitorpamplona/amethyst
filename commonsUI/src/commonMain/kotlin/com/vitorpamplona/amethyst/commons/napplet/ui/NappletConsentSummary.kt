@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletRequest
 import com.vitorpamplona.amethyst.commons.napplet.resolveNappletMeta
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_consent_common
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_follow_added
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_follow_one
 import com.vitorpamplona.amethyst.commons.resources.napplet_consent_diff_follow_removed
@@ -350,7 +351,10 @@ class NappletConsentSummary(
             }
             NappletRequest.ResourceInfo, is NappletRequest.ResourceBytes, is NappletRequest.ResourceBytesMany ->
                 loadStringRes(Res.string.napplet_consent_resource)
-            is NappletRequest.UploadBlob -> loadStringRes(Res.string.napplet_consent_upload)
+            // info and status never prompt; worded like an upload should one ever be shown.
+            is NappletRequest.UploadBlob, NappletRequest.UploadInfo, is NappletRequest.UploadStatus -> loadStringRes(Res.string.napplet_consent_upload)
+            // Its actions reach the prompt as the event they publish; only its reads are asked as `common`.
+            is NappletRequest.Common -> loadStringRes(Res.string.napplet_consent_common)
             is NappletRequest.FsPick ->
                 loadStringRes(if (request.kind == NappletRequest.FsPickKind.SAVE_FILE) Res.string.napplet_consent_fs_save else Res.string.napplet_consent_fs_open)
             // Only picks ask: the rest act on what a pick already handed over.

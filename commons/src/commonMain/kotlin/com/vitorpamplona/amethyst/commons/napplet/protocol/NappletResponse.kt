@@ -159,12 +159,65 @@ sealed interface NappletResponse {
         val message: String? = null,
     ) : NappletResponse
 
-    /** Result of an `upload.upload`; [url] is where the blob can be fetched, plus NIP-94-ish metadata. */
+    /**
+     * A completed upload (`upload.upload`, or `upload.status` for one): [url] is where the blob can be
+     * fetched, with its NIP-94 metadata. [uploadId] is the shell's id for it, scoped to the napplet;
+     * [updatedAt] is when it completed, in seconds.
+     */
     data class Uploaded(
         val url: String,
         val sha256: String? = null,
         val size: Long? = null,
         val mimeType: String? = null,
+        val uploadId: String = sha256 ?: url,
+        val updatedAt: Long = 0,
+    ) : NappletResponse
+
+    /** `common.encodeNip19`: the encoded [value] and its [nip19Type]. */
+    data class CommonEncoded(
+        val value: String,
+        val nip19Type: String,
+    ) : NappletResponse
+
+    /**
+     * `common.decodeNip19`: the decoded identifier's fields, by their NAP-COMMON names (`hex`,
+     * `pubkey`, `eventId`, `identifier`, `author`, `relay` as text, `kind` as a number, `relays` as a list).
+     */
+    data class CommonDecoded(
+        val nip19Type: String,
+        val text: Map<String, String> = emptyMap(),
+        val kind: Int? = null,
+        val relays: List<String> = emptyList(),
+    ) : NappletResponse
+
+    /** `common.getProfile`: [pubkey]'s latest kind 0 [event], or null when none was found. */
+    data class CommonProfile(
+        val pubkey: String,
+        val event: Event?,
+    ) : NappletResponse
+
+    /** `common.follows`: the hex keys followed. */
+    data class CommonFollowList(
+        val pubkeys: List<String>,
+    ) : NappletResponse
+
+    /**
+     * A NAP-COMMON action that changed nothing (following someone already followed): [event] is the
+     * current list, published already, or null when there is none.
+     */
+    data class CommonUnchanged(
+        val event: Event?,
+    ) : NappletResponse
+
+    /** A NAP-COMMON request refused with one of its error codes (`invalid-pubkey`, `invalid-reaction`, ...). */
+    data class CommonFailure(
+        val error: String,
+    ) : NappletResponse
+
+    /** `upload.info`: whether the `blossom` rail can be used now, and the largest upload accepted. */
+    data class UploadInfo(
+        val enabled: Boolean,
+        val maxBytes: Long,
     ) : NappletResponse
 
     /** Result of a successful invoice payment; [preimage] is null when unconfirmed. */

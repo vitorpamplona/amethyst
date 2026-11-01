@@ -39,6 +39,11 @@ object NappletActingRequests {
             "relay.publish",
             "relay.publishEncrypted",
             "outbox.publish",
+            // NAP-COMMON's actions publish a follow list, a reaction or a report as the user.
+            "common.follow",
+            "common.unfollow",
+            "common.react",
+            "common.report",
             "value.payInvoice",
             "upload.upload",
             "notify.create",

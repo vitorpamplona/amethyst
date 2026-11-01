@@ -68,7 +68,7 @@ enum class NappletCapability {
     /** `resource` — sandboxed fetching of https/blossom/nostr/data resources. */
     RESOURCE,
 
-    /** `upload` — shell-mediated blob upload (Blossom). */
+    /** `upload` — NAP-UPLOAD: shell-mediated blob upload on the `blossom` rail, signed and sent by the shell. */
     UPLOAD,
 
     /** `theme` — read the host's current theme colors (`theme.get`). Cosmetic, read-only, no consent. */
@@ -97,6 +97,20 @@ enum class NappletCapability {
      * Consent covers asking to pick; the pick itself is the user's choice of what to share.
      */
     FS,
+
+    /**
+     * `common` — NAP-COMMON: public NIP-19 helpers, profile and follow-list reads, and the common
+     * social actions (follow, unfollow, react, report). The shell builds and signs every event; the
+     * napplet only names the targets, and each action reaches the signer prompt as the event it is.
+     */
+    COMMON,
+
+    /**
+     * `intent` — NAP-INTENT: hand a convention (`napplet:<archetype>/<action>`) to another napplet the
+     * user has installed, which the shell starts and delivers it to. The user picks which napplet
+     * handles each archetype; a napplet can never choose or change that.
+     */
+    INTENT,
     ;
 
     /**
@@ -152,11 +166,13 @@ enum class NappletCapability {
                 "outbox" -> OUTBOX
                 "fs" -> FS
                 "inc" -> INC
+                "upload" -> UPLOAD
+                "common" -> COMMON
                 else -> null
             }
 
         /** Exact NIP-5D domain names Amethyst currently exposes through its injection prelude. */
-        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc")
+        val supportedNapDomains: Set<String> = setOf("identity", "relay", "storage", "resource", "theme", "outbox", "fs", "inc", "upload", "common")
     }
 }
 

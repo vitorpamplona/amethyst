@@ -47,7 +47,7 @@
     install('sessionStorage');
   })();
 
-  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [];
+  var seq = 0, pending = {}, subs = {}, outboxSubs = {}, actions = {}, identityHandlers = [], themeHandlers = [], fsHandlers = [], uploadHandlers = [];
   // Transport. A napplet/nSite runs inside the trusted shell's iframe and talks to the shell via
   // postMessage (the shell relays to the native bridge). A top-level page opened in the in-app browser
   // has no shell parent, so it talks to the origin-scoped native bridge object (__nappletBridge,
@@ -110,6 +110,7 @@
     if (msg.type === 'identity.changed') { identityHandlers.slice().forEach(function(h){ try { h(msg.pubkey); } catch (_) {} }); return; }
     if (msg.type === 'theme.changed') { themeHandlers.slice().forEach(function(h){ try { h(msg.theme); } catch (_) {} }); return; }
     if (msg.type && msg.type.indexOf('inc.') === 0 && incIncoming(msg)) return;
+    if (msg.type === 'upload.status.changed') { uploadHandlers.slice().forEach(function(h){ try { h(msg.status); } catch (_) {} }); return; }
     if (msg.type === 'fs.changed') { fsHandlers.slice().forEach(function(h){ try { h(msg.change); } catch (_) {} }); return; }
     if (!msg.id) return;
     var p = pending[msg.id]; if (!p) return; delete pending[msg.id]; if (p.cleanup) p.cleanup();
@@ -150,7 +151,23 @@
     return new Blob([bytes], { type: mime });
   }
   function normFilters(filters){ return { filters: Array.isArray(filters) ? filters : [filters || {}] }; }
-  function bytesToB64(bytes){ var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes); var s=''; for (var i=0;i<u.length;i++) s+=String.fromCharCode(u[i]); return btoa(s); }
+  function bytesToB64(bytes){
+    var u = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes), parts = [];
+    // In slices: one fromCharCode call per byte made multi-megabyte uploads crawl.
+    for (var i = 0; i < u.length; i += 0x8000) parts.push(String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)));
+    return btoa(parts.join(''));
+  }
+  // A NAP-COMMON reply without the envelope's own fields.
+  function commonResult(m){ var out = {}; for (var k in m) if (k !== 'type' && k !== 'id') out[k] = m[k]; if (out.ok === undefined) out.ok = !out.error; return out; }
+  // follow('npub1…', 'npub1…') or follow(['npub1…', …]).
+  function commonKeys(args){ return (args.length === 1 && Array.isArray(args[0])) ? args[0].slice() : Array.prototype.slice.call(args); }
+  // The bytes of an upload's `data`, whatever form the napplet handed over.
+  function uploadBytes(data){
+    if (typeof Blob !== 'undefined' && data instanceof Blob) return data.arrayBuffer().then(function(b){ return new Uint8Array(b); });
+    if (data instanceof ArrayBuffer) return Promise.resolve(new Uint8Array(data));
+    if (ArrayBuffer.isView(data)) return Promise.resolve(new Uint8Array(data.buffer, data.byteOffset, data.byteLength));
+    return Promise.reject(new TypeError('upload data must be a Blob, ArrayBuffer or typed array'));
+  }
   // NAP-INC: topics and channels between napplets, routed by the shell under runtime-assigned endpoint
   // identifiers. Several on(topic) handlers share one shell subscription per topic: the wire's
   // inc.unsubscribe drops the whole topic, so it goes out only when the last handler closes.
@@ -413,10 +430,47 @@
         return handle;
       }
     },
+    // NAP-COMMON. Results are the spec's objects, `ok` and `error` included, so a refusal resolves
+    // with `ok: false` instead of rejecting; `follows()` resolves to the hex keys.
+    common: {
+      encodeNip19: function(input){ return callResult('common.encodeNip19', { input: input }).then(commonResult); },
+      decodeNip19: function(value){ return callResult('common.decodeNip19', { value: value }).then(commonResult); },
+      getProfile: function(target){ return callResult('common.getProfile', { target: target }).then(commonResult); },
+      follows: function(){
+        return callResult('common.follows').then(function(m){ if (m.ok === false) throw new Error(m.error || 'unsupported'); return m.pubkeys || []; });
+      },
+      follow: function(){ return callResult('common.follow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      unfollow: function(){ return callResult('common.unfollow', { pubkeys: commonKeys(arguments) }).then(commonResult); },
+      react: function(id, reaction, customEmojiHref){
+        var env = { targetEventId: id, reaction: reaction }; if (customEmojiHref !== undefined) env.customEmojiHref = customEmojiHref;
+        return callResult('common.react', env).then(commonResult);
+      },
+      // Takes a CommonReportTarget, or the shorthand: an npub for a user, a hex id for an event.
+      report: function(target, reason, text){
+        if (typeof target === 'string') target = target.indexOf('npub1') === 0 ? { type: 'pubkey', pubkey: target } : { type: 'event', id: target };
+        return callResult('common.report', { target: target, reason: reason, text: text || '' }).then(commonResult);
+      }
+    },
+    // NAP-UPLOAD. `request.data` (a Blob, ArrayBuffer or typed array) crosses as base64 text, which
+    // the bridge carries; the napplet never encodes it. Results are the spec's UploadResult objects.
     upload: {
-      // Sends the SDK's upload.upload; we inline the bytes as base64 (shell.html does the same for
-      // a Blob from a stock napplet). Resolves to the uploaded URL.
-      blob: function(bytes, contentType){ return field(call('upload.upload', { request: { dataBase64: bytesToB64(bytes), mimeType: contentType } }), 'url'); }
+      info: function(){ return field(call('upload.info'), 'info'); },
+      upload: function(request){
+        if (!request || typeof request !== 'object') return Promise.reject(new TypeError('upload request must be an object'));
+        return uploadBytes(request.data).then(function(bytes){
+          var req = { dataBase64: bytesToB64(bytes) };
+          var mime = request.mimeType || (typeof Blob !== 'undefined' && request.data instanceof Blob ? request.data.type : '');
+          if (mime) req.mimeType = mime;
+          ['rail', 'filename', 'caption', 'noTransform', 'metadata'].forEach(function(k){ if (request[k] !== undefined) req[k] = request[k]; });
+          return field(call('upload.upload', { request: req }), 'result');
+        });
+      },
+      status: function(uploadId){ return field(call('upload.status', { uploadId: uploadId }), 'status'); },
+      onStatus: function(handler){
+        if (typeof handler !== 'function') return { close: function(){} };
+        uploadHandlers.push(handler);
+        return { close: function(){ var i = uploadHandlers.indexOf(handler); if (i >= 0) uploadHandlers.splice(i, 1); } };
+      }
     },
     // NAP-FS: the files the user picks for this napplet. File bytes cross as standard base64 text both
     // ways, as the web binding carries them (a Uint8Array or ArrayBuffer given to write is encoded

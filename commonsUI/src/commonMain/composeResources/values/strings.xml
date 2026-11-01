@@ -151,6 +151,7 @@
     <string name="napplet_inline_stop">Stop</string>
     <string name="napplet_inline_needs_you">%1$s wants to ask you something. Open it to answer.</string>
     <string name="napplet_inline_failed">%1$s didn’t start here.</string>
+    <string name="napplet_card_unsupported">Amethyst can’t run this nApplet yet. It needs: %1$s</string>
 
     <!-- Custom emoji suggestions (NIP-30) -->
     <string name="use_direct_url">Use direct URL</string>
@@ -4855,6 +4856,10 @@
     <string name="napplet_cap_outbox_desc">Read people's posts from their own relays, and sign &amp; publish your events</string>
     <string name="napplet_cap_fs">Files</string>
     <string name="napplet_cap_fs_desc">Open and save files you pick</string>
+    <string name="napplet_cap_common">Social actions</string>
+    <string name="napplet_cap_common_desc">Look up profiles, and follow, react and report as you</string>
+    <string name="napplet_cap_intent">Open other apps</string>
+    <string name="napplet_cap_intent_desc">Hand a task to another nApplet you use</string>
     <string name="napplet_cap_keys">Keyboard actions</string>
     <string name="napplet_cap_keys_desc">Bind keyboard shortcuts</string>
     <string name="napplet_cap_notify">Notifications</string>
@@ -4917,6 +4922,7 @@
     </plurals>
     <string name="napplet_consent_get_pubkey">This nApplet wants to read your public key.</string>
     <string name="napplet_consent_identity_read">This nApplet wants to read your profile and account data.</string>
+    <string name="napplet_consent_common">This nApplet wants to look up profiles and see who you follow.</string>
     <string name="napplet_consent_nip44_decrypt">This site wants to decrypt a message from %1$s with your Nostr key.</string>
     <string name="napplet_consent_nip44_encrypt">This site wants to encrypt a message to %1$s with your Nostr key.</string>
     <string name="napplet_consent_notify">This nApplet wants to show you notifications.</string>

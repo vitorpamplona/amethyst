@@ -32,6 +32,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -259,12 +260,35 @@ class NappletSdkConformanceTest {
         assertEquals("image/png", up.contentType)
         assertEquals("a.png", up.filename)
 
-        // UploadResult: { ok, uploadId, status, url?, sha256?, ... }
-        val o = result("upload.upload", NappletResponse.Uploaded("https://b/abc", "abc", 2L, "image/png"))
+        // NAP-UPLOAD: upload.upload.result{ result: UploadResult{ ok, uploadId, status, rail, url, sha256, nip94 } }
+        val o = result("upload.upload", NappletResponse.Uploaded("https://b/abc", "abc", 2L, "image/png"))["result"]!!.jsonObject
         assertEquals("https://b/abc", o["url"]?.jsonPrimitive?.content)
         assertEquals("abc", o["sha256"]?.jsonPrimitive?.content)
-        assertTrue(o.containsKey("uploadId"))
-        assertEquals("completed", o["status"]?.jsonPrimitive?.content)
+        assertEquals("abc", o["uploadId"]?.jsonPrimitive?.content)
+        assertEquals("complete", o["status"]?.jsonPrimitive?.content)
+        assertEquals("blossom", o["rail"]?.jsonPrimitive?.content)
+        assertTrue(o["nip94"]!!.jsonArray.any { it.jsonArray[0].jsonPrimitive.content == "x" && it.jsonArray[1].jsonPrimitive.content == "abc" })
+
+        // upload.status.result carries the same record as `status`, with updatedAt.
+        val status = result("upload.status", NappletResponse.Uploaded("https://b/abc", "abc", updatedAt = 7))["status"]!!.jsonObject
+        assertEquals(7L, status["updatedAt"]?.jsonPrimitive?.content?.toLong())
+
+        // upload.info.result{ info: { rails: [{ rail, enabled, returns }], maxBytes } }
+        val info = result("upload.info", NappletResponse.UploadInfo(enabled = true, maxBytes = 10))["info"]!!.jsonObject
+        assertEquals(
+            "blossom",
+            info["rails"]!!
+                .jsonArray[0]
+                .jsonObject["rail"]
+                ?.jsonPrimitive
+                ?.content,
+        )
+        assertEquals(10L, info["maxBytes"]?.jsonPrimitive?.content?.toLong())
+
+        // No upload created: a top-level error string only.
+        val tooLarge = result("upload.upload", NappletResponse.Failed("file too large"))
+        assertEquals("file too large", tooLarge["error"]?.jsonPrimitive?.content)
+        assertFalse(tooLarge.containsKey("result"))
     }
 
     // ---------- still-open gaps ----------

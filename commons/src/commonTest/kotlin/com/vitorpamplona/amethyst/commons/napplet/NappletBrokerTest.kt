@@ -732,6 +732,60 @@ class NappletBrokerTest {
             assertIs<NappletResponse.Unsupported>(broker.handle(applet, NappletRequest.UploadBlob(ByteArray(0), "image/png"), allDeclared))
         }
 
+    private class FakeUpload(
+        private val server: Boolean = true,
+        override val maxBytes: Long = 4,
+    ) : NappletUploadGateway {
+        var uploads = 0
+
+        override suspend fun hasServer() = server
+
+        override suspend fun upload(
+            bytes: ByteArray,
+            contentType: String,
+            filename: String?,
+        ): NappletUploadResult {
+            uploads++
+            return NappletUploadResult("https://blossom.example/h$uploads", "h$uploads", bytes.size.toLong(), contentType)
+        }
+    }
+
+    private fun uploadBroker(
+        prompt: NappletConsentPrompt,
+        upload: NappletUploadGateway,
+    ) = NappletBroker(signer = signer, ledger = NappletPermissionLedger(InMemoryNappletPermissionStore()), consentPrompt = prompt, upload = upload)
+
+    @Test
+    fun uploadFollowsNapUpload() =
+        runTest {
+            val gateway = FakeUpload()
+            val broker = uploadBroker(ScriptedPrompt(GrantState.ALLOW_ALWAYS), gateway)
+
+            val done = broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1, 2), "image/png"), allDeclared)
+            assertIs<NappletResponse.Uploaded>(done)
+            assertEquals("h1", done.uploadId)
+            assertTrue(done.updatedAt > 0)
+            // The status of its own upload, and nobody else's.
+            assertEquals(done, broker.handle(applet, NappletRequest.UploadStatus("h1"), allDeclared))
+            val other = NappletIdentity(authorPubKey = "bb".repeat(32), identifier = "other")
+            assertIs<NappletResponse.Failed>(broker.handle(other, NappletRequest.UploadStatus("h1"), allDeclared))
+
+            // Refused before anything is sent: another rail, too many bytes.
+            assertEquals("unsupported rail", (broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1), "image/png", rail = "nip96"), allDeclared) as NappletResponse.Failed).reason)
+            assertEquals("file too large", (broker.handle(applet, NappletRequest.UploadBlob(ByteArray(5), "image/png"), allDeclared) as NappletResponse.Failed).reason)
+            assertEquals(1, gateway.uploads)
+        }
+
+    @Test
+    fun uploadWithoutAServerSaysSoAndInfoNeverPrompts() =
+        runTest {
+            val prompt = ScriptedPrompt(GrantState.ALLOW_ONCE)
+            val broker = uploadBroker(prompt, FakeUpload(server = false))
+            assertEquals(NappletResponse.UploadInfo(enabled = false, maxBytes = 4), broker.handle(applet, NappletRequest.UploadInfo, allDeclared))
+            assertEquals(0, prompt.calls, "info is advisory introspection")
+            assertEquals("no server configured", (broker.handle(applet, NappletRequest.UploadBlob(byteArrayOf(1), "image/png"), allDeclared) as NappletResponse.Failed).reason)
+        }
+
     @Test
     fun resourceInfoAndTypedFailuresFollowTheCurrentNapContract() =
         runTest {

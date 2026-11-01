@@ -33,6 +33,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -311,5 +312,6 @@ class DesktopNappletHost(
             },
             prompts = consent,
             theme = NappletThemeGateway { themeColors },
+            upload = AccountNappletUploadGateway(account, modules.roleBasedHttpClientBuilder::okHttpClientForUploads),
         )
 }
