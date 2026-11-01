@@ -22,7 +22,7 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 /**
  * The napplet / website requests that ACT for the user or use their key — publish, pay, upload, notify,
- * broadcast to other napplets, and a website's NIP-07 sign / encrypt / decrypt — as opposed to reading.
+ * broadcast to other napplets, open a file picker or write a file the user picked, and a website's NIP-07 sign / encrypt / decrypt — as opposed to reading.
  * A host holds these while the user isn't looking at the surface (it's parked off-screen, or the app is in
  * the background): pausing the WebView stops animations and media but not JavaScript, so without this an
  * "allow always" napplet or site could keep publishing, paying, signing or decrypting while the user looks
@@ -38,6 +38,12 @@ object NappletActingRequests {
             "upload.upload",
             "notify.create",
             "inc.emit",
+            // NAP-FS: a picker pops up over whatever the user is doing, and a write changes their file.
+            "fs.pickFile",
+            "fs.pickFiles",
+            "fs.pickDirectory",
+            "fs.pickSaveFile",
+            "fs.write",
             // NIP-07 (website posture). Decrypt counts too: it hands the page plaintext it couldn't read.
             "nostr.signEvent",
             "nostr.nip44Encrypt",

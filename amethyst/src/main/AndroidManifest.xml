@@ -768,6 +768,15 @@
             android:excludeFromRecents="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- Invisible host for a NAP-FS pick (fs.pickFile / pickFiles / pickSaveFile). The broker is a
+             Service, so the main process runs the system document picker here and the broker reads and
+             writes what the user chose. Standard launch mode for the same reason as above. -->
+        <activity
+            android:name=".napplet.NappletFsPickerActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|keyboard|uiMode|navigation|fontScale|density"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <!-- First-connect "Connect to Nostr" dialog. -->
         <activity
             android:name=".connectedApps.consent.SignerConnectActivity"

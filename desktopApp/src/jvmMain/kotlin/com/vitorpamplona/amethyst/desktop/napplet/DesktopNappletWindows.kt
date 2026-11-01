@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -41,8 +43,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,6 +67,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -93,7 +96,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_napplet
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_nsite
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_webxdc
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_back
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find_close
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_find_hint
@@ -127,8 +129,11 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.desktop.platform.AppWindow
 import com.vitorpamplona.amethyst.desktop.platform.IconResources
 import com.vitorpamplona.amethyst.desktop.platform.applyNativeWindowChrome
-import com.vitorpamplona.amethyst.desktop.platform.titleBarInsetTop
+import com.vitorpamplona.amethyst.desktop.platform.trafficLightsInsetStart
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
 import androidx.compose.material3.Icon as VectorIcon
+import java.awt.Window as AwtWindow
 
 /**
  * Every open napplet's and nSite's window. Composed inside the main window, so each one gets the
@@ -166,11 +171,12 @@ private fun NappletWindow(
 
         val state by session.state.collectAsState()
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            // The toolbar starts below the traffic lights; full screen has no title bar.
-            val titleBar = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else titleBarInsetTop
-            Column(Modifier.fillMaxSize().padding(top = titleBar)) {
+            // The toolbar shares the traffic lights' row, as the main window's top bars do, and starts
+            // after them; full screen has no title bar.
+            val trafficLights = if (windowState.placement == WindowPlacement.Fullscreen) 0.dp else trafficLightsInsetStart
+            Column(Modifier.fillMaxSize()) {
                 // The trusted chrome, drawn by Amethyst above the page, which can't draw over it.
-                SandboxToolbar(session, host, onAccessInfo = { showAccess = true })
+                SandboxToolbar(session, host, leadingInset = trafficLights, onAccessInfo = { showAccess = true })
                 HorizontalDivider()
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
@@ -195,19 +201,20 @@ private fun NappletWindow(
         // Its own window, above Chromium's: one question at a time, the oldest first.
         ConsentWindows(session, host)
 
-        if (showAccess) AccessWindow(session, host, onDone = { showAccess = false })
+        if (showAccess) AccessWindow(session, host, parent = window, onDone = { showAccess = false })
     }
 }
 
 /**
  * Back, forward, reload, the page's name and posture (which opens what it can access), find, zoom,
- * for an nSite while Tor is on the onion switch that moves it between Tor and the open web, and
- * Close, as Android's pill has.
+ * and for an nSite while Tor is on the onion switch that moves it between Tor and the open web, as
+ * Android's pill has. Unlike the pill, no Close: the window's own close button does that.
  */
 @Composable
 private fun SandboxToolbar(
     session: CefNappletSession,
     host: DesktopNappletHost,
+    leadingInset: Dp,
     onAccessInfo: () -> Unit,
 ) {
     val page by session.page.collectAsState()
@@ -217,7 +224,7 @@ private fun SandboxToolbar(
 
     Column(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 4.dp),
+            Modifier.fillMaxWidth().height(TOOLBAR_HEIGHT).padding(start = 4.dp + leadingInset, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -310,7 +317,6 @@ private fun SandboxToolbar(
                     Switch(checked = useTor, onCheckedChange = { host.setNetworkMode(session, it) })
                 }
             }
-            TextButton(onClick = { host.close(session) }) { Text(stringRes(Res.string.browser_pill_close)) }
         }
         if (finding) {
             FindBar(session, onClose = {
@@ -381,11 +387,16 @@ private fun ToolbarButton(
     }
 }
 
-/** What this napplet or site may ask for, in plain language, as Android's pill shows it. */
+/**
+ * What this napplet or site may ask for, in plain language, as Android's pill shows it: a popover
+ * over the app's window, without a title bar of its own. It is a window because Chromium's view
+ * draws over anything Compose puts in the app's window. Done, Esc or a click elsewhere closes it.
+ */
 @Composable
 private fun AccessWindow(
     session: CefNappletSession,
     host: DesktopNappletHost,
+    parent: AwtWindow,
     onDone: () -> Unit,
 ) {
     val isWebsite = session.launch.profile == HostProfile.WEBSITE
@@ -394,13 +405,42 @@ private fun AccessWindow(
         session.launch.declared
             .map { stringRes(it.labelRes()) }
             .sorted()
+    val size = DpSize(440.dp, 660.dp)
+    // Centred over the app's window, below its toolbar when the window is tall enough.
+    val position =
+        remember(parent) {
+            val x = parent.x + (parent.width - size.width.value) / 2
+            val y = parent.y + minOf(TOOLBAR_HEIGHT.value, maxOf(0f, (parent.height - size.height.value) / 2))
+            WindowPosition(x.dp, y.dp)
+        }
     DialogWindow(
         onCloseRequest = onDone,
-        state = rememberDialogState(size = DpSize(440.dp, 660.dp), position = WindowPosition.Aligned(Alignment.Center)),
+        state = rememberDialogState(size = size, position = position),
         title = stringRes(Res.string.browser_pill_access),
         icon = IconResources.adaptedBitmapPainter,
+        undecorated = true,
+        transparent = true,
+        resizable = false,
+        onKeyEvent = { event ->
+            (event.type == KeyEventType.KeyDown && event.key == Key.Escape).also { if (it) onDone() }
+        },
     ) {
-        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+        // macOS draws a shadow only for what the transparent window paints, so the rounded card has one.
+        window.rootPane.putClientProperty("Window.shadow", true)
+        DisposableEffect(window) {
+            val closeOnBlur =
+                object : WindowAdapter() {
+                    override fun windowLostFocus(e: WindowEvent) = onDone()
+                }
+            window.addWindowFocusListener(closeOnBlur)
+            onDispose { window.removeWindowFocusListener(closeOnBlur) }
+        }
+        Surface(
+            Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        ) {
             AccessInfoSheet(
                 title = session.launch.title,
                 isWebsite = isWebsite,
@@ -540,3 +580,5 @@ private fun MessagePane(
 private const val ZOOM_STEP = 10
 
 private fun Color.hex(): String = "#%06X".format(toArgb() and 0xFFFFFF)
+
+private val TOOLBAR_HEIGHT = 48.dp

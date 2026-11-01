@@ -235,8 +235,11 @@ object NappletFileChooser {
         return usable ?: captured?.let { arrayOf(it.uri) }
     }
 
-    /** Whether [authority] is a provider of this app (any of its processes), exported or not. */
-    private fun isOwnAuthority(
+    /**
+     * Whether [authority] is a provider of this app (any of its processes), exported or not. NAP-FS
+     * picks, made in the main process, refuse these too.
+     */
+    fun isOwnAuthority(
         context: Context,
         authority: String,
     ): Boolean =

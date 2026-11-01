@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet
 
+import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -87,11 +88,16 @@ object NappletRequestRouter {
         ) : Outcome
     }
 
+    /**
+     * [files] is the surface's NAP-FS session ([NappletFsSession]), which the host makes per running
+     * surface; null where the host offers no files, and every `fs.*` request is then `unsupported`.
+     */
     suspend fun route(
         broker: NappletBroker,
         identity: NappletIdentity,
         declared: Set<NappletCapability>,
         payload: String,
+        files: NappletFsSession? = null,
     ): Outcome {
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: return Outcome.Ignore
 
@@ -129,6 +135,9 @@ object NappletRequestRouter {
                     val subId = runCatching { NappletProtocolJson.readSubId(payload) }.getOrNull() ?: return Outcome.Ignore
                     return Outcome.Push(listOf(NappletProtocolJson.encodeOutboxClosed(subId, "invalid filter")))
                 }
+                if (requestType.startsWith("fs.") && runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
+                    return Outcome.Reply(NappletProtocolJson.encodeFsMalformed(requestType))
+                }
                 return if (runCatching { NappletProtocolJson.readId(payload) }.getOrNull() != null) {
                     val failure = if (requestType.startsWith("resource.")) NappletResponse.ResourceFailure("invalid-request", "Malformed resource request.") else NappletResponse.Failed("Malformed request.")
                     Outcome.Reply(NappletProtocolJson.encodeResponse(requestType, failure), failure)
@@ -137,7 +146,7 @@ object NappletRequestRouter {
                 }
             } ?: return Outcome.Ignore
 
-        val response = broker.handle(identity, request, declared)
+        val response = broker.handle(identity, request, declared, files)
 
         // A subscription streams pushes keyed by subId instead of sending a .result.
         if (requestType == "relay.subscribe") {

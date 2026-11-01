@@ -35,6 +35,14 @@ val titleBarInsetTop: Dp
     get() = if (PlatformInfo.isMacOS) 28.dp else 0.dp
 
 /**
+ * Room to leave at the start of a top bar that shares the macOS traffic lights' row, once
+ * `applyNativeWindowChrome` has made the title bar transparent: the three buttons and their margins.
+ * 0 dp on other platforms, whose title bar sits above the content.
+ */
+val trafficLightsInsetStart: Dp
+    get() = if (PlatformInfo.isMacOS) 72.dp else 0.dp
+
+/**
  * Applies platform-specific native window chrome.
  *
  * On macOS:

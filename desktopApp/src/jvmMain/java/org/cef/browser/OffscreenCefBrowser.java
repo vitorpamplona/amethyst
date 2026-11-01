@@ -30,6 +30,7 @@ import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
 import java.nio.ByteBuffer;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import org.cef.CefBrowserSettings;
 import org.cef.CefClient;
@@ -65,6 +66,7 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
     private final Component placeholder = new Canvas();
     private volatile Rectangle viewRect = new Rectangle(0, 0, 1, 1);
     private volatile double scale = 1.0;
+    private final AtomicBoolean focused = new AtomicBoolean(false);
 
     /** Paints at most {@code frameRate} frames a second. */
     public OffscreenCefBrowser(CefClient client, String url, CefRequestContext context, int frameRate, Listener listener) {
@@ -99,6 +101,19 @@ public final class OffscreenCefBrowser extends CefBrowser_N implements CefRender
 
     public void forwardKey(KeyEvent event) {
         sendKeyEvent(event);
+    }
+
+    /**
+     * Tells Chromium only when the focus changes. Chromium answers SetFocus(true) on a windowless
+     * browser with OnGotFocus, and JCEF's client answers that with setFocus(true): passed on each
+     * time, the two called each other until Chromium's UI thread ran out of stack, every time an
+     * inline napplet took focus (a StackOverflowError on the AWT thread on Linux; on macOS that
+     * thread is AppKit's main thread).
+     */
+    @Override
+    public void setFocus(boolean enable) {
+        if (focused.getAndSet(enable) == enable) return;
+        super.setFocus(enable);
     }
 
     @Override
